@@ -1052,6 +1052,7 @@ export function ContentEditor({ initialItem }: Props) {
               onChange={setUploadedVideo}
               contentId={baseline.id}
               disabled={saving}
+              acceptGif={(channel ?? "").toLowerCase().includes("facebook")}
             />
           </Card>
         )}

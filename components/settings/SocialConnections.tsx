@@ -67,81 +67,86 @@ function PinterestConsentDialog({
   onOpenChange: (v: boolean) => void;
   onConfirm: () => void;
 }) {
+  const tp = useTranslations("pinterestConsent");
+  const tc = useTranslations("common");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg" aria-describedby="pinterest-consent-desc">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PinterestIcon className="h-5 w-5 text-[#E60023]" />
-            Connecter Pinterest à Tipote
+            {tp("title")}
           </DialogTitle>
         </DialogHeader>
 
         <div id="pinterest-consent-desc" className="space-y-4 text-sm">
           <p className="text-muted-foreground">
-            Connecte ton compte Pinterest Business à Tipote pour créer et programmer
-            des épingles automatiquement depuis ton espace de travail.
+            {tp("description")}
           </p>
 
           <div className="rounded-lg border border-border p-4 space-y-3">
-            <p className="font-medium text-foreground">Tipote aura accès à :</p>
+            <p className="font-medium text-foreground">{tp("accessTitle")}</p>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
-                <span>Ton profil Pinterest (nom, photo de profil)</span>
+                <span>{tp("accessProfile")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
-                <span>Tes tableaux (pour choisir où publier tes épingles)</span>
+                <span>{tp("accessBoards")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
-                <span>Créer, modifier et supprimer des épingles en ton nom</span>
+                <span>{tp("accessPins")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
-                <span>Créer des tableaux en ton nom</span>
+                <span>{tp("accessCreateBoards")}</span>
               </li>
             </ul>
           </div>
 
           <div className="rounded-lg border border-border p-4 space-y-3">
-            <p className="font-medium text-foreground">Tes garanties :</p>
+            <p className="font-medium text-foreground">{tp("guaranteesTitle")}</p>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
-                <span>Tes données ne seront jamais revendues à des tiers.</span>
+                <span>{tp("guaranteeNoResell")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
-                <span>Aucune épingle ne sera publiée sans ta validation explicite.</span>
+                <span>{tp("guaranteeNoAutoPublish")}</span>
               </li>
               <li className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
-                <span>Tu peux déconnecter ton compte à tout moment depuis les Paramètres.</span>
+                <span>{tp("guaranteeDisconnect")}</span>
               </li>
             </ul>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            En continuant, tu acceptes nos{" "}
-            <a href="/legal/cgu" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-              Conditions d&apos;utilisation
-            </a>{" "}
-            et notre{" "}
-            <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-              Politique de confidentialité
-            </a>.
+            {tp.rich("legalNotice", {
+              terms: (chunks) => (
+                <a href="/legal/cgu" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                  {chunks}
+                </a>
+              ),
+              privacy: (chunks) => (
+                <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         </div>
 
         <div className="flex justify-end gap-2 pt-2 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuler
+            {tc("cancel")}
           </Button>
           <Button onClick={onConfirm} className="bg-[#E60023] hover:bg-[#C50000] text-white gap-2">
             <PinterestIcon className="h-4 w-4" />
-            Connecter Pinterest
+            {tp("connectButton")}
           </Button>
         </div>
       </DialogContent>

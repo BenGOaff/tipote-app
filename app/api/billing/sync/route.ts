@@ -37,15 +37,45 @@ function parseContactId(v: unknown): number | null {
   return null;
 }
 
-function inferPlanFromSubscription(sub: any): IncomingPlan | null {
+// Same ID mapping as the Systeme.io webhook — keep in sync
+const OFFER_PRICE_ID_TO_PLAN: Record<string, StoredPlan> = {
+  "offerprice-efbd353f": "beta",
+  "offerprice-3066719": "beta",
+  "offer-price-3066719": "beta",
+  "offer-price-3064431": "beta",
+  "3066719": "beta",
+  "3064431": "beta",
+  "offer-price-2963851": "basic",
+  "offer-price-3103584": "basic",
+  "2963851": "basic",
+  "3103584": "basic",
+  "offer-price-3103586": "pro",
+  "offer-price-3103591": "pro",
+  "3103586": "pro",
+  "3103591": "pro",
+  "offer-price-3103592": "elite",
+  "offer-price-3103593": "elite",
+  "3103592": "elite",
+  "3103593": "elite",
+};
+
+function inferPlanFromSubscription(sub: any): IncomingPlan | StoredPlan | null {
   const offer = sub?.offer_price_plan ?? sub?.offerPricePlan ?? null;
 
+  // First try: match offer-price ID against known mapping
+  const offerId = String(offer?.id ?? sub?.offer_price?.id ?? "").trim();
+  if (offerId && offerId in OFFER_PRICE_ID_TO_PLAN) {
+    return OFFER_PRICE_ID_TO_PLAN[offerId];
+  }
+
+  // Fallback: infer from name strings
   const name =
     `${offer?.inner_name ?? ""} ${offer?.name ?? ""} ${sub?.product_name ?? ""} ${sub?.product?.name ?? ""} ${sub?.name ?? ""}`
       .toLowerCase()
       .trim();
 
   if (!name) return null;
+  if (name.includes("beta")) return "beta";
   if (name.includes("elite")) return "elite";
   // ✅ compat legacy
   if (name.includes("essential")) return "essential";

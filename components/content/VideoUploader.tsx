@@ -22,10 +22,14 @@ type Props = {
   contentId?: string;
   /** Désactivé */
   disabled?: boolean;
+  /** Accepter aussi les GIF animés (Facebook les traite comme des Reels) */
+  acceptGif?: boolean;
 };
 
-const ACCEPTED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
-const ACCEPTED_EXTENSIONS = ".mp4,.webm,.mov";
+const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+const VIDEO_EXTENSIONS = ".mp4,.webm,.mov";
+const GIF_TYPE = "image/gif";
+const GIF_EXTENSION = ".gif";
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
 function formatSize(bytes: number): string {
@@ -46,7 +50,11 @@ export function VideoUploader({
   onChange,
   contentId,
   disabled = false,
+  acceptGif = false,
 }: Props) {
+  const ACCEPTED_TYPES = acceptGif ? [...VIDEO_TYPES, GIF_TYPE] : VIDEO_TYPES;
+  const ACCEPTED_EXTENSIONS = acceptGif ? `${VIDEO_EXTENSIONS},${GIF_EXTENSION}` : VIDEO_EXTENSIONS;
+  const formatLabel = acceptGif ? "MP4, WebM, MOV ou GIF" : "MP4, WebM ou MOV";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -60,7 +68,7 @@ export function VideoUploader({
       if (!ACCEPTED_TYPES.includes(file.type)) {
         toast({
           title: "Format non supporté",
-          description: `"${file.name}" n'est pas un fichier MP4, WebM ou MOV.`,
+          description: `"${file.name}" n'est pas un fichier ${formatLabel}.`,
           variant: "destructive",
         });
         return null;
@@ -154,7 +162,7 @@ export function VideoUploader({
         return null;
       }
     },
-    [contentId]
+    [contentId, acceptGif]
   );
 
   const handleFile = useCallback(
@@ -255,7 +263,7 @@ export function VideoUploader({
         </label>
         {video && (
           <span className="text-[11px] text-slate-500">
-            MP4, WebM, MOV - max 500 MB
+            {formatLabel} - max 500 MB
           </span>
         )}
       </div>
@@ -263,13 +271,21 @@ export function VideoUploader({
       {/* Preview */}
       {video && (
         <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-black">
-          <video
-            src={video.url}
-            className="w-full max-h-64 object-contain"
-            controls
-            preload="metadata"
-            onLoadedMetadata={handleLoadedMetadata}
-          />
+          {video.type === "image/gif" ? (
+            <img
+              src={video.url}
+              alt={video.filename}
+              className="w-full max-h-64 object-contain"
+            />
+          ) : (
+            <video
+              src={video.url}
+              className="w-full max-h-64 object-contain"
+              controls
+              preload="metadata"
+              onLoadedMetadata={handleLoadedMetadata}
+            />
+          )}
           <button
             type="button"
             onClick={removeVideo}
@@ -324,7 +340,7 @@ export function VideoUploader({
             Glisse ta vidéo ici ou clique pour parcourir
           </p>
           <p className="text-[11px] text-slate-400">
-            MP4, WebM ou MOV - max 500 MB
+            {formatLabel} - max 500 MB
           </p>
         </div>
       )}
@@ -332,7 +348,9 @@ export function VideoUploader({
       {video && (
         <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
           <AlertCircle className="h-3 w-3" />
-          La vidéo sera conservée dans Supabase Storage — l&apos;URL reste valide même pour les posts programmés.
+          {video.type === "image/gif"
+            ? "Le GIF animé sera publié comme vidéo sur Facebook (Reel) pour conserver l\u2019animation."
+            : "La vidéo sera conservée dans Supabase Storage \u2014 l\u2019URL reste valide même pour les posts programmés."}
         </div>
       )}
 

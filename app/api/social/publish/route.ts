@@ -40,6 +40,26 @@ function resolveImageUrl(meta: any): string | undefined {
 }
 
 /**
+ * Détecte si une URL ou un type MIME correspond à un GIF animé.
+ * Facebook traite les GIF animés comme des Reels/vidéos ; les publier
+ * via /{page-id}/photos ne conserve que la première frame.
+ */
+function isAnimatedGif(meta: any): boolean {
+  if (!meta) return false;
+  // Vérifier le type MIME de la première image uploadée
+  if (Array.isArray(meta.images) && meta.images.length > 0) {
+    const first = meta.images[0];
+    const type = (typeof first === "object" ? first?.type : "") || "";
+    const url = (typeof first === "string" ? first : first?.url) || "";
+    if (type === "image/gif" || url.toLowerCase().endsWith(".gif")) return true;
+  }
+  // Legacy
+  const legacyUrl = meta.image_url ?? "";
+  if (typeof legacyUrl === "string" && legacyUrl.toLowerCase().endsWith(".gif")) return true;
+  return false;
+}
+
+/**
  * Construit l'URL publique du post à partir de l'identifiant retourné par la plateforme.
  */
 function buildPostUrl(platform: string, postId?: string | null): string | null {
@@ -443,6 +463,14 @@ export async function POST(req: NextRequest) {
         n8nPayload.video_url = videoUrl;
       }
 
+      // Facebook : les GIF animés doivent être publiés comme vidéo (Reel),
+      // sinon Facebook ne conserve que la première frame.
+      if (platform === "facebook" && !videoUrl && resolvedImageUrl && isAnimatedGif(contentItem.meta)) {
+        n8nPayload.video_url = resolvedImageUrl;
+        n8nPayload.gif_as_video = true;
+        console.log(`[publish] Facebook: GIF detected, routing as video: ${resolvedImageUrl}`);
+      }
+
       // Pour Instagram, une image OU une vidéo est REQUISE
       if (platform === "instagram" && !resolvedImageUrl && !videoUrl) {
         return NextResponse.json(
@@ -556,8 +584,13 @@ export async function POST(req: NextRequest) {
     result = { ...liResult, postId: liResult.postUrn };
   } else if (platform === "facebook") {
     const fbVideoUrl = contentItem.meta?.video_url;
+    const fbGifAsVideo = !fbVideoUrl && directImageUrl && isAnimatedGif(contentItem.meta);
     if (fbVideoUrl) {
       result = await publishVideoToFacebookPage(accessToken, platformUserId, contentItem.content, fbVideoUrl);
+    } else if (fbGifAsVideo && directImageUrl) {
+      // GIF animé → publier comme vidéo (Reel) pour que Facebook conserve l'animation
+      console.log(`[publish-direct] Facebook: GIF detected, routing as video: ${directImageUrl}`);
+      result = await publishVideoToFacebookPage(accessToken, platformUserId, contentItem.content, directImageUrl);
     } else if (directImageUrl) {
       result = await publishPhotoToFacebookPage(accessToken, platformUserId, contentItem.content, directImageUrl);
     } else {

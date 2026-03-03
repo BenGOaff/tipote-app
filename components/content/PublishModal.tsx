@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, CheckCircle2, ExternalLink, AlertCircle, Settings, MessageCircle, Zap, User } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
@@ -120,6 +121,7 @@ export function PublishModal({
   const [ttBrandedContent, setTtBrandedContent] = React.useState(false);
   const [ttConsent, setTtConsent] = React.useState(false);
 
+  const t = useTranslations("publishModal");
   const label = PLATFORM_LABELS[platform] ?? platform;
   const color = PLATFORM_COLORS[platform] ?? "#6366F1";
   const connected = isConnected(platform);
@@ -375,16 +377,16 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-amber-500" />
-                {label} non connecté
+                {t("notConnectedTitle", { platform: label })}
               </DialogTitle>
               <DialogDescription>
-                Pour publier directement sur {label}, connecte d&apos;abord ton compte dans les paramètres.
+                {t("notConnectedDesc", { platform: label })}
               </DialogDescription>
             </DialogHeader>
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleClose}>
-                Annuler
+                {t("cancel")}
               </Button>
               <Button
                 onClick={() => {
@@ -394,7 +396,7 @@ export function PublishModal({
                 className="text-white hover:opacity-90"
               >
                 <Settings className="w-4 h-4 mr-2" />
-                Connecter {label}
+                {t("connectPlatform", { platform: label })}
               </Button>
             </DialogFooter>
           </>
@@ -404,11 +406,18 @@ export function PublishModal({
         {step === "confirm" && !isTikTok && (
           <>
             <DialogHeader>
-              <DialogTitle>Publier sur {label}</DialogTitle>
+              <DialogTitle>{t("publishOn", { platform: label })}</DialogTitle>
               <DialogDescription>
                 {hasAutoComments
-                  ? `Les auto-commentaires vont se lancer${hasBefore ? " avant" : ""}${hasBefore && hasAfter ? " et" : ""}${hasAfter ? " après" : ""} la publication de ton post sur ${label}.`
-                  : `Ton post va être publié directement sur ton compte ${label}. Confirmes-tu ?`}
+                  ? t("confirmAutoComment", {
+                      timing: hasBefore && hasAfter
+                        ? t("timingBeforeAfter")
+                        : hasBefore
+                          ? t("timingBefore")
+                          : t("timingAfter"),
+                      platform: label,
+                    })
+                  : t("confirmNormal", { platform: label })}
               </DialogDescription>
             </DialogHeader>
 
@@ -422,25 +431,25 @@ export function PublishModal({
               <div className="rounded-lg border border-primary/30 bg-primary/5 dark:bg-primary/10 p-3 text-sm">
                 <div className="flex items-center gap-2 text-primary font-medium mb-1">
                   <MessageCircle className="w-4 h-4" />
-                  Auto-commentaires activés
+                  {t("autoCommentsEnabled")}
                 </div>
                 <div className="text-xs text-primary/80 space-y-0.5">
-                  {hasBefore && <p>{autoCommentConfig!.nbBefore} commentaire{autoCommentConfig!.nbBefore > 1 ? "s" : ""} avant publication</p>}
-                  {hasAfter && <p>{autoCommentConfig!.nbAfter} commentaire{autoCommentConfig!.nbAfter > 1 ? "s" : ""} après publication</p>}
+                  {hasBefore && <p>{t("commentsBefore", { count: autoCommentConfig!.nbBefore })}</p>}
+                  {hasAfter && <p>{t("commentsAfter", { count: autoCommentConfig!.nbAfter })}</p>}
                 </div>
               </div>
             )}
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleClose}>
-                Annuler
+                {t("cancel")}
               </Button>
               <Button
                 onClick={handlePublish}
                 style={{ backgroundColor: color }}
                 className="text-white hover:opacity-90"
               >
-                {hasAutoComments ? "Lancer" : `Publier sur ${label}`}
+                {hasAutoComments ? t("launch") : t("publishOn", { platform: label })}
               </Button>
             </DialogFooter>
           </>
@@ -450,9 +459,9 @@ export function PublishModal({
         {step === "confirm" && isTikTok && (
           <>
             <DialogHeader>
-              <DialogTitle>Publier sur TikTok</DialogTitle>
+              <DialogTitle>{t("publishOn", { platform: "TikTok" })}</DialogTitle>
               <DialogDescription>
-                Configure les paramètres de ta publication TikTok.
+                {t("confirmNormal", { platform: "TikTok" })}
               </DialogDescription>
             </DialogHeader>
 
@@ -629,14 +638,14 @@ export function PublishModal({
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleClose}>
-                Annuler
+                {t("cancel")}
               </Button>
               <Button
                 onClick={handlePublish}
                 disabled={!ttCanPublish}
                 className="bg-black text-white hover:bg-black/90"
               >
-                {hasAutoComments ? "Lancer" : "Publier sur TikTok"}
+                {hasAutoComments ? t("launch") : t("publishOn", { platform: "TikTok" })}
               </Button>
             </DialogFooter>
           </>
@@ -648,10 +657,10 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-primary" />
-                Commentaires en cours...
+                {t("commentingTitle")}
               </DialogTitle>
               <DialogDescription>
-                Tipote commente des posts similaires avant de publier ton post. Ne ferme pas cette fenêtre.
+                {t("commentingDesc")}
               </DialogDescription>
             </DialogHeader>
 
@@ -661,10 +670,10 @@ export function PublishModal({
               </div>
               <div className="text-center space-y-1">
                 <p className="text-sm font-medium">
-                  Commentaires avant publication
+                  {t("commentingBeforeLabel")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {acProgress.before_done} / {acProgress.before_total} commentaires postés
+                  {t("commentingProgress", { done: acProgress.before_done, total: acProgress.before_total })}
                 </p>
               </div>
               {/* Progress bar */}
@@ -679,7 +688,7 @@ export function PublishModal({
                 />
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Cela peut prendre quelques minutes...
+                {t("commentingWait")}
               </p>
             </div>
           </>
@@ -689,17 +698,17 @@ export function PublishModal({
         {step === "publishing" && (
           <>
             <DialogHeader>
-              <DialogTitle>Publication en cours...</DialogTitle>
+              <DialogTitle>{t("publishingTitle")}</DialogTitle>
               <DialogDescription>
                 {isTikTok
-                  ? "Envoi de ton post sur TikTok. Le traitement peut prendre quelques minutes. Ne ferme pas cette fenêtre."
-                  : `Envoi de ton post sur ${label}. Ne ferme pas cette fenêtre.`}
+                  ? t("publishingTiktokDesc")
+                  : t("publishingDesc", { platform: label })}
               </DialogDescription>
             </DialogHeader>
 
             <div className="flex flex-col items-center gap-4 py-8">
               <Loader2 className="w-10 h-10 animate-spin" style={{ color }} />
-              <p className="text-sm text-muted-foreground">Publication sur {label}...</p>
+              <p className="text-sm text-muted-foreground">{t("publishingProgress", { platform: label })}</p>
             </div>
           </>
         )}
@@ -710,12 +719,12 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                Publié sur {label} !
+                {t("successTitle", { platform: label })}
               </DialogTitle>
               <DialogDescription>
                 {hasAfter
-                  ? `Ton post est en ligne sur ${label}. Tipote continue de commenter en arrière-plan.`
-                  : (result?.message ?? `Ton post est en ligne sur ${label}.`)}
+                  ? t("successAutoAfter", { platform: label })
+                  : (result?.message ?? t("successDesc", { platform: label }))}
               </DialogDescription>
             </DialogHeader>
 
@@ -723,7 +732,7 @@ export function PublishModal({
               {automationId && result?.postId && platform === "facebook" && (
                 <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
                   <Zap className="w-3.5 h-3.5 shrink-0" />
-                  Automatisation liée à ce post — le DM se déclenchera sur les commentaires de ce post uniquement.
+                  {t("automationLinked")}
                 </div>
               )}
               {result?.postUrl && (
@@ -733,11 +742,11 @@ export function PublishModal({
                   onClick={() => window.open(result.postUrl!, "_blank", "noopener")}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Voir sur {label}
+                  {t("viewOnPlatform", { platform: label })}
                 </Button>
               )}
               <Button onClick={handleClose} style={{ backgroundColor: color }} className="text-white hover:opacity-90">
-                Fermer
+                {t("cancel")}
               </Button>
             </div>
           </>
@@ -749,14 +758,14 @@ export function PublishModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-rose-600" />
-                Erreur de publication
+                {t("errorTitle")}
               </DialogTitle>
-              <DialogDescription>{result?.error ?? "Une erreur est survenue."}</DialogDescription>
+              <DialogDescription>{result?.error ?? "An error occurred."}</DialogDescription>
             </DialogHeader>
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleClose}>
-                Fermer
+                {t("cancel")}
               </Button>
               <Button
                 onClick={() => {
@@ -764,7 +773,7 @@ export function PublishModal({
                   setResult(null);
                 }}
               >
-                Réessayer
+                {t("retry")}
               </Button>
             </DialogFooter>
           </>

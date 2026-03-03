@@ -606,6 +606,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
               onChange={setUploadedVideo}
               contentId={savedContentId ?? undefined}
               disabled={isSaving}
+              acceptGif={isFacebook}
             />
           )}
 
