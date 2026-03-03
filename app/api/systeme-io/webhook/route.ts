@@ -333,19 +333,19 @@ async function sendMagicLink(email: string) {
 
 // ---------- GET = diagnostic only ----------
 // ⚠️ If Systeme.io hits GET instead of POST, the webhook body is lost.
-// This happens when tipote.com redirects (301/302) to www.tipote.com,
-// converting POST → GET. Systeme.io sees 200 OK but no user is created.
+// This happens when the webhook URL points to tipote.com/www.tipote.com
+// instead of app.tipote.com (the actual Next.js server).
 export async function GET(req: NextRequest) {
   console.warn(
     `[Systeme.io webhook] ⚠️ GET request received (expected POST). ` +
-    `Host: ${req.headers.get("host")} — This may indicate a domain redirect issue (tipote.com → www.tipote.com).`,
+    `Host: ${req.headers.get("host")} — Webhook URL must point to app.tipote.com`,
   );
 
   return NextResponse.json(
     {
       error: "This endpoint only accepts POST requests from Systeme.io webhooks. " +
         "If you are seeing this, the webhook URL may be misconfigured. " +
-        "Use https://www.tipote.com/api/systeme-io/webhook (with www).",
+        "Use https://app.tipote.com/api/systeme-io/webhook (not tipote.com or www.tipote.com).",
       route: "/api/systeme-io/webhook",
       host: req.headers.get("host"),
       method: "GET",
