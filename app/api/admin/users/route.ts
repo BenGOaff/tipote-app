@@ -64,6 +64,30 @@ export async function GET(req: NextRequest) {
 
     const users = (data ?? []) as UserRow[];
 
+    // Also search auth.users for users who have no profile yet (e.g. webhook missed).
+    // This ensures new signups are always visible in the admin dashboard.
+    if (q) {
+      const profileIds = new Set(users.map((u) => u.id));
+      try {
+        const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 500 });
+        const authUsers = (authData as any)?.users ?? [];
+        for (const au of authUsers) {
+          if (profileIds.has(au.id)) continue;
+          const auEmail = (au.email ?? "").toLowerCase();
+          if (!auEmail.includes(q)) continue;
+          users.push({
+            id: au.id,
+            email: auEmail,
+            plan: "free",
+            created_at: au.created_at ?? null,
+            updated_at: au.updated_at ?? null,
+          });
+        }
+      } catch {
+        // Best-effort: if listUsers fails, just return profiles
+      }
+    }
+
     return NextResponse.json({ ok: true, users });
   } catch (e) {
     return NextResponse.json(
@@ -112,6 +136,16 @@ export async function POST(req: NextRequest) {
 
     let oldPlan: string | null = null;
 
+    // Also try to find user in auth.users if not found in profiles
+    if (!userId && targetEmail) {
+      try {
+        const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 500 });
+        const authUsers = (authData as any)?.users ?? [];
+        const found = authUsers.find((u: any) => (u.email ?? "").toLowerCase() === targetEmail.toLowerCase());
+        if (found?.id) userId = found.id;
+      } catch { /* ignore */ }
+    }
+
     if (userId) {
       const { data: before } = await supabaseAdmin
         .from("profiles")
@@ -121,10 +155,16 @@ export async function POST(req: NextRequest) {
 
       oldPlan = (before?.plan ?? null) as any;
 
+      // Use upsert to create the profile row if it doesn't exist yet
+      // (happens when a user signed up but the Systeme.io webhook didn't fire)
       const { error } = await supabaseAdmin
         .from("profiles")
-        .update({ plan, updated_at: new Date().toISOString() } as any)
-        .eq("id", userId);
+        .upsert({
+          id: userId,
+          email: targetEmail || undefined,
+          plan,
+          updated_at: new Date().toISOString(),
+        } as any, { onConflict: "id" });
 
       if (error) {
         return NextResponse.json({ ok: false, error: error.message }, { status: 400 });

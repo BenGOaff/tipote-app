@@ -426,6 +426,17 @@ export async function POST(req: NextRequest) {
 
       const plan = inferPlanFromOffer({ id: offerId, name: offerName, inner_name: offerInner });
 
+      // Log when plan cannot be determined — helps debug installment payment IDs
+      if (!plan) {
+        console.warn(
+          `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". User ${resolvedEmail} will keep current plan.`,
+        );
+      } else {
+        console.log(
+          `[Systeme.io webhook] ✅ Plan inferred: ${plan} from offer_id="${offerId}" name="${offerName}"`,
+        );
+      }
+
       await upsertProfile({
         userId,
         email: resolvedEmail,

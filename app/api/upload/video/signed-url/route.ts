@@ -9,7 +9,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+// GIF animés inclus : Facebook les traite comme des Reels (vidéos)
+const ALLOWED_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "image/gif"]);
 const BUCKET = "content-videos";
 
 function sanitizeFilename(name: string): string {
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   if (!ALLOWED_TYPES.has(contentType)) {
     return NextResponse.json(
-      { error: `Format non supporté (${contentType}). Formats acceptés : MP4, WebM, MOV.` },
+      { error: `Format non supporté (${contentType}). Formats acceptés : MP4, WebM, MOV, GIF.` },
       { status: 400 }
     );
   }
