@@ -8,7 +8,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -48,8 +47,6 @@ export async function PATCH(request: NextRequest, context: Ctx) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = await getActiveProjectId(supabase, auth.user.id);
-
     const body = (await request.json().catch(() => null)) as PatchBody | null;
     if (!body || !("status" in body)) {
       return NextResponse.json({ ok: false, error: "Missing status" }, { status: 400 });
@@ -61,16 +58,14 @@ export async function PATCH(request: NextRequest, context: Ctx) {
     }
 
     // ✅ IMPORTANT: update via service_role (RLS-safe), filtré par (id + user_id) => pas de fuite
-    let updateQuery = supabaseAdmin
+    // Pas de filtre project_id : id + user_id suffit pour la sécurité
+    // et évite les échecs silencieux quand project_id est null.
+    const { data, error } = await supabaseAdmin
       .from("project_tasks")
       .update({ status: st, updated_at: new Date().toISOString() })
       .eq("id", id)
       .eq("user_id", auth.user.id)
-      .is("deleted_at", null);
-
-    if (projectId) updateQuery = updateQuery.eq("project_id", projectId);
-
-    const { data, error } = await updateQuery
+      .is("deleted_at", null)
       .select("id,user_id,status,updated_at")
       .maybeSingle<TaskRow>();
 
