@@ -10,7 +10,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { publishPost, uploadImageToLinkedIn } from "@/lib/linkedin";
-import { publishToFacebookPage, publishPhotoToFacebookPage, publishVideoToFacebookPage, publishToThreads, publishToInstagram, publishVideoToInstagram } from "@/lib/meta";
+import { publishToFacebookPage, publishPhotoToFacebookPage, publishMultiPhotoToFacebookPage, publishVideoToFacebookPage, publishToThreads, publishToInstagram, publishVideoToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
 import { createPin } from "@/lib/pinterest";
 import { publishPhoto as publishTikTokPhoto, publishVideo as publishTikTokVideo, type TikTokPublishOptions } from "@/lib/tiktok";
@@ -40,23 +40,20 @@ function resolveImageUrl(meta: any): string | undefined {
 }
 
 /**
- * Détecte si une URL ou un type MIME correspond à un GIF animé.
- * Facebook traite les GIF animés comme des Reels/vidéos ; les publier
- * via /{page-id}/photos ne conserve que la première frame.
+ * Résout toutes les URLs d'images depuis meta.
+ * Retourne un tableau d'URLs (vide si aucune image).
  */
-function isAnimatedGif(meta: any): boolean {
-  if (!meta) return false;
-  // Vérifier le type MIME de la première image uploadée
+function resolveAllImageUrls(meta: any): string[] {
+  if (!meta) return [];
   if (Array.isArray(meta.images) && meta.images.length > 0) {
-    const first = meta.images[0];
-    const type = (typeof first === "object" ? first?.type : "") || "";
-    const url = (typeof first === "string" ? first : first?.url) || "";
-    if (type === "image/gif" || url.toLowerCase().endsWith(".gif")) return true;
+    return meta.images
+      .map((img: any) => (typeof img === "string" ? img : img?.url))
+      .filter(Boolean) as string[];
   }
-  // Legacy
-  const legacyUrl = meta.image_url ?? "";
-  if (typeof legacyUrl === "string" && legacyUrl.toLowerCase().endsWith(".gif")) return true;
-  return false;
+  if (typeof meta.image_url === "string" && meta.image_url.trim()) {
+    return [meta.image_url];
+  }
+  return [];
 }
 
 /**
@@ -463,12 +460,13 @@ export async function POST(req: NextRequest) {
         n8nPayload.video_url = videoUrl;
       }
 
-      // Facebook : les GIF animés doivent être publiés comme vidéo (Reel),
-      // sinon Facebook ne conserve que la première frame.
-      if (platform === "facebook" && !videoUrl && resolvedImageUrl && isAnimatedGif(contentItem.meta)) {
-        n8nPayload.video_url = resolvedImageUrl;
-        n8nPayload.gif_as_video = true;
-        console.log(`[publish] Facebook: GIF detected, routing as video: ${resolvedImageUrl}`);
+      // Facebook : passer toutes les images pour le support multi-photos (carrousel)
+      if (platform === "facebook") {
+        const allImageUrls = resolveAllImageUrls(contentItem.meta);
+        if (allImageUrls.length > 1) {
+          n8nPayload.images = allImageUrls;
+          console.log(`[publish] Facebook: multi-photo post with ${allImageUrls.length} images`);
+        }
       }
 
       // Pour Instagram, une image OU une vidéo est REQUISE
@@ -584,13 +582,13 @@ export async function POST(req: NextRequest) {
     result = { ...liResult, postId: liResult.postUrn };
   } else if (platform === "facebook") {
     const fbVideoUrl = contentItem.meta?.video_url;
-    const fbGifAsVideo = !fbVideoUrl && directImageUrl && isAnimatedGif(contentItem.meta);
+    const allFbImages = resolveAllImageUrls(contentItem.meta);
     if (fbVideoUrl) {
       result = await publishVideoToFacebookPage(accessToken, platformUserId, contentItem.content, fbVideoUrl);
-    } else if (fbGifAsVideo && directImageUrl) {
-      // GIF animé → publier comme vidéo (Reel) pour que Facebook conserve l'animation
-      console.log(`[publish-direct] Facebook: GIF detected, routing as video: ${directImageUrl}`);
-      result = await publishVideoToFacebookPage(accessToken, platformUserId, contentItem.content, directImageUrl);
+    } else if (allFbImages.length > 1) {
+      // Multi-photos : carrousel Facebook via attached_media
+      console.log(`[publish-direct] Facebook: multi-photo post with ${allFbImages.length} images`);
+      result = await publishMultiPhotoToFacebookPage(accessToken, platformUserId, contentItem.content, allFbImages);
     } else if (directImageUrl) {
       result = await publishPhotoToFacebookPage(accessToken, platformUserId, contentItem.content, directImageUrl);
     } else {

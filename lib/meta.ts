@@ -513,8 +513,6 @@ export async function publishToFacebookPage(
 
 /**
  * Publie un post photo sur une Page Facebook (message + image URL).
- * Pour les GIF animés, utilise un upload multipart (source) au lieu de l'URL
- * afin d'empêcher Facebook de re-encoder le GIF en JPEG statique.
  */
 export async function publishPhotoToFacebookPage(
   pageAccessToken: string,
@@ -522,12 +520,6 @@ export async function publishPhotoToFacebookPage(
   message: string,
   imageUrl: string
 ): Promise<MetaPostResult> {
-  const isGif = imageUrl.toLowerCase().includes(".gif") || imageUrl.toLowerCase().includes("image/gif");
-
-  if (isGif) {
-    return publishGifToFacebookPage(pageAccessToken, pageId, message, imageUrl);
-  }
-
   const res = await fetch(`${GRAPH_API_BASE}/${pageId}/photos`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -548,76 +540,79 @@ export async function publishPhotoToFacebookPage(
 }
 
 /**
- * Publie un GIF animé sur une Page Facebook via upload multipart (source).
- * Le paramètre "url" de l'API Photos re-encode les images → perd l'animation.
- * En uploadant le binaire directement via "source", Facebook préserve le GIF.
+ * Publie un post multi-photos (carrousel) sur une Page Facebook.
+ * Processus en 2 étapes :
+ *   1. Upload chaque image en mode non-publié (published=false) → récupère media_fbid
+ *   2. Crée un post feed avec attached_media[] référençant chaque photo
+ * Doc : https://developers.facebook.com/docs/graph-api/reference/page/feed
  */
-async function publishGifToFacebookPage(
+export async function publishMultiPhotoToFacebookPage(
   pageAccessToken: string,
   pageId: string,
   message: string,
-  gifUrl: string
+  imageUrls: string[]
 ): Promise<MetaPostResult> {
-  try {
-    // Étape 1 : Télécharger le GIF
-    const gifRes = await fetch(gifUrl);
-    if (!gifRes.ok) {
-      console.warn(`[meta] GIF download failed (${gifRes.status}), falling back to URL upload`);
-      // Fallback: essayer avec l'URL classique (mieux que rien)
-      return publishPhotoViaUrl(pageAccessToken, pageId, message, gifUrl);
-    }
-    const gifBuffer = await gifRes.arrayBuffer();
+  if (imageUrls.length === 0) {
+    return { ok: false, error: "No images provided", statusCode: 400 };
+  }
+  if (imageUrls.length === 1) {
+    return publishPhotoToFacebookPage(pageAccessToken, pageId, message, imageUrls[0]);
+  }
 
-    // Étape 2 : Upload multipart avec le champ "source"
-    const formData = new FormData();
-    formData.append("source", new Blob([gifBuffer], { type: "image/gif" }), "animation.gif");
-    formData.append("message", message);
-    formData.append("access_token", pageAccessToken);
-
+  // Étape 1 : Uploader chaque image en mode non-publié
+  const photoIds: string[] = [];
+  for (const url of imageUrls) {
     const res = await fetch(`${GRAPH_API_BASE}/${pageId}/photos`, {
       method: "POST",
-      body: formData,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url,
+        published: false,
+        access_token: pageAccessToken,
+      }),
     });
 
-    if (res.ok) {
-      const json = await res.json();
-      return { ok: true, postId: json.post_id ?? json.id };
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[meta] Multi-photo upload failed for ${url}: ${errText}`);
+      return { ok: false, error: `Photo upload failed: ${errText}`, statusCode: res.status };
     }
 
-    const text = await res.text();
-    console.warn(`[meta] GIF multipart upload failed: ${text}, falling back to URL upload`);
-    // Fallback: essayer avec l'URL classique
-    return publishPhotoViaUrl(pageAccessToken, pageId, message, gifUrl);
-  } catch (err) {
-    console.error("[meta] GIF upload error:", err);
-    // Fallback ultime
-    return publishPhotoViaUrl(pageAccessToken, pageId, message, gifUrl);
+    const json = await res.json();
+    const photoId = json.id;
+    if (!photoId) {
+      return { ok: false, error: "No photo ID returned from unpublished upload", statusCode: 500 };
+    }
+    photoIds.push(photoId);
   }
-}
 
-/** Upload photo classique via URL (utilisé comme fallback). */
-function publishPhotoViaUrl(
-  pageAccessToken: string,
-  pageId: string,
-  message: string,
-  imageUrl: string
-): Promise<MetaPostResult> {
-  return fetch(`${GRAPH_API_BASE}/${pageId}/photos`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message,
-      url: imageUrl,
-      access_token: pageAccessToken,
-    }),
-  }).then(async (res) => {
-    if (res.ok) {
-      const json = await res.json();
-      return { ok: true, postId: json.post_id ?? json.id };
-    }
-    const text = await res.text();
-    return { ok: false, error: text, statusCode: res.status };
+  // Étape 2 : Créer le post feed avec attached_media
+  const feedBody: Record<string, unknown> = {
+    message,
+    access_token: pageAccessToken,
+  };
+  photoIds.forEach((id, index) => {
+    feedBody[`attached_media[${index}]`] = JSON.stringify({ media_fbid: id });
   });
+
+  const feedParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(feedBody)) {
+    feedParams.set(key, String(value));
+  }
+
+  const feedRes = await fetch(`${GRAPH_API_BASE}/${pageId}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: feedParams.toString(),
+  });
+
+  if (feedRes.ok) {
+    const feedJson = await feedRes.json();
+    return { ok: true, postId: feedJson.id };
+  }
+
+  const feedErrText = await feedRes.text();
+  return { ok: false, error: `Multi-photo feed post failed: ${feedErrText}`, statusCode: feedRes.status };
 }
 
 /**
