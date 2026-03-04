@@ -3,6 +3,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -45,10 +46,10 @@ type Props = {
 };
 
 const contentTypes = [
-  { id: "post", label: "Post Réseaux", icon: MessageSquare, color: "bg-blue-500" },
-  { id: "email", label: "Email", icon: Mail, color: "bg-green-500" },
-  { id: "blog", label: "Article Blog", icon: FileText, color: "bg-purple-500" },
-  { id: "video_script", label: "Script Vidéo", icon: Video, color: "bg-red-500" },
+  { id: "post", labelKey: "postSocial" as const, icon: MessageSquare, color: "bg-blue-500" },
+  { id: "email", labelKey: "email" as const, icon: Mail, color: "bg-green-500" },
+  { id: "blog", labelKey: "blogArticle" as const, icon: FileText, color: "bg-purple-500" },
+  { id: "video_script", labelKey: "videoScript" as const, icon: Video, color: "bg-red-500" },
 ];
 
 const platforms = [
@@ -63,11 +64,11 @@ const platforms = [
 ];
 
 const tones = [
-  { id: "professional", label: "Professionnel" },
-  { id: "casual", label: "Décontracté" },
-  { id: "inspirational", label: "Inspirant" },
-  { id: "educational", label: "Éducatif" },
-  { id: "humorous", label: "Humoristique" },
+  { id: "professional", labelKey: "professional" as const },
+  { id: "casual", labelKey: "casual" as const },
+  { id: "inspirational", labelKey: "inspirational" as const },
+  { id: "educational", labelKey: "educational" as const },
+  { id: "humorous", labelKey: "humorous" as const },
 ];
 
 function asString(v: unknown): string {
@@ -124,6 +125,7 @@ function buildContext(profile: AnyRecord | null, plan: AnyRecord | null) {
 export default function CreateHub({ profile, plan }: Props) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations('createHub');
 
   const [selectedType, setSelectedType] = useState<string>("post");
   const [title, setTitle] = useState("");
@@ -142,8 +144,8 @@ export default function CreateHub({ profile, plan }: Props) {
   async function handleGenerate() {
     if (!aiTopic.trim()) {
       toast({
-        title: "Sujet requis",
-        description: "Entrez un sujet pour générer du contenu",
+        title: t('subjectRequired'),
+        description: t('subjectRequiredDesc'),
         variant: "destructive",
       });
       return;
@@ -181,20 +183,20 @@ export default function CreateHub({ profile, plan }: Props) {
         | null;
 
       if (!res.ok || !data?.content) {
-        throw new Error(data?.error || "Impossible de générer le contenu");
+        throw new Error(data?.error || t('generationErrorDesc'));
       }
 
       setContent(data.content);
       if (!title.trim()) setTitle(aiTopic.slice(0, 60));
 
       toast({
-        title: "Contenu généré !",
-        description: "Vous pouvez maintenant le modifier avant de le sauvegarder",
+        title: t('contentGenerated'),
+        description: t('contentGeneratedDesc'),
       });
     } catch (e) {
       toast({
-        title: "Erreur de génération",
-        description: e instanceof Error ? e.message : "Impossible de générer le contenu",
+        title: t('generationError'),
+        description: e instanceof Error ? e.message : t('generationErrorDesc'),
         variant: "destructive",
       });
     } finally {
@@ -229,15 +231,15 @@ export default function CreateHub({ profile, plan }: Props) {
         | null;
 
       if (!res.ok || data?.ok === false) {
-        throw new Error(data?.error || "Sauvegarde impossible");
+        throw new Error(data?.error || t('saveError'));
       }
 
       router.push("/contents");
       router.refresh();
     } catch (e) {
       toast({
-        title: "Sauvegarde impossible",
-        description: e instanceof Error ? e.message : "Une erreur est survenue.",
+        title: t('saveError'),
+        description: e instanceof Error ? e.message : t('saveError'),
         variant: "destructive",
       });
     } finally {
@@ -266,14 +268,14 @@ export default function CreateHub({ profile, plan }: Props) {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Créer du contenu</h1>
+              <h1 className="text-xl font-display font-bold">{t('title')}</h1>
             </div>
           </header>
 
           <div className="p-6 max-w-4xl mx-auto space-y-6">
             {/* Type Selection */}
             <Card className="p-6">
-              <h3 className="text-lg font-bold mb-4">Type de contenu</h3>
+              <h3 className="text-lg font-bold mb-4">{t('contentType')}</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {contentTypes.map((type) => (
                   <button
@@ -291,7 +293,7 @@ export default function CreateHub({ profile, plan }: Props) {
                     >
                       <type.icon className="w-5 h-5 text-white" />
                     </div>
-                    <p className="font-medium">{type.label}</p>
+                    <p className="font-medium">{t(type.labelKey)}</p>
                   </button>
                 ))}
               </div>
@@ -304,19 +306,19 @@ export default function CreateHub({ profile, plan }: Props) {
                   <Sparkles className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Génération IA</h3>
+                  <h3 className="text-lg font-bold">{t('aiGeneration')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Décrivez votre sujet et laissez l&apos;IA créer le contenu
+                    {t('aiGenerationDesc')}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ai-topic">Sujet / Idée principale *</Label>
+                  <Label htmlFor="ai-topic">{t('topicLabel')}</Label>
                   <Input
                     id="ai-topic"
-                    placeholder="Ex: Les 5 erreurs à éviter en marketing digital"
+                    placeholder={t('topicPlaceholder')}
                     value={aiTopic}
                     onChange={(e) => setAiTopic(e.target.value)}
                   />
@@ -324,10 +326,10 @@ export default function CreateHub({ profile, plan }: Props) {
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Plateforme cible</Label>
+                    <Label>{t('targetPlatform')}</Label>
                     <Select value={platform} onValueChange={setPlatform}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner..." />
+                        <SelectValue placeholder={t('selectPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {platforms.map((p) => (
@@ -340,15 +342,15 @@ export default function CreateHub({ profile, plan }: Props) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Ton</Label>
+                    <Label>{t('tone')}</Label>
                     <Select value={aiTone} onValueChange={setAiTone}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Choisir un ton..." />
+                        <SelectValue placeholder={t('tonePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {tones.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.label}
+                        {tones.map((tone) => (
+                          <SelectItem key={tone.id} value={tone.id}>
+                            {t(tone.labelKey)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -365,12 +367,12 @@ export default function CreateHub({ profile, plan }: Props) {
                   {isGenerating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Génération en cours...
+                      {t('generatingBtn')}
                     </>
                   ) : (
                     <>
                       <Wand2 className="w-4 h-4 mr-2" />
-                      Générer le contenu
+                      {t('generateBtn')}
                     </>
                   )}
                 </Button>
@@ -380,20 +382,20 @@ export default function CreateHub({ profile, plan }: Props) {
             {/* Content Form */}
             <Card className="p-6 space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title">Titre *</Label>
+                <Label htmlFor="title">{t('titleLabel')}</Label>
                 <Input
                   id="title"
-                  placeholder="Ex: Post LinkedIn sur la productivité"
+                  placeholder={t('titlePlaceholder')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="content">Contenu</Label>
+                <Label htmlFor="content">{t('contentLabel')}</Label>
                 <Textarea
                   id="content"
-                  placeholder="Rédigez votre contenu ici ou utilisez la génération IA..."
+                  placeholder={t('contentPlaceholder')}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={12}
@@ -411,7 +413,7 @@ export default function CreateHub({ profile, plan }: Props) {
                 type="button"
               >
                 <Save className="w-4 h-4 mr-2" />
-                Brouillon
+                {t('saveDraft')}
               </Button>
 
               <Button
@@ -420,7 +422,7 @@ export default function CreateHub({ profile, plan }: Props) {
                 type="button"
               >
                 <CalendarDays className="w-4 h-4 mr-2" />
-                Programmer
+                {t('scheduleBtn')}
               </Button>
             </div>
 

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarDays, CheckCircle2 } from "lucide-react";
+import { useTranslations, useLocale } from 'next-intl';
 
 type ScheduleStep = "pick" | "confirmed";
 
@@ -29,10 +30,10 @@ type Props = {
   defaultTime?: string;
 };
 
-function formatDateFr(dateStr: string): string {
+function formatDateLocale(dateStr: string, locale: string): string {
   try {
     const d = new Date(dateStr + "T00:00:00");
-    return d.toLocaleDateString("fr-FR", {
+    return d.toLocaleDateString(locale, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -51,6 +52,9 @@ export function ScheduleModal({
   defaultDate,
   defaultTime,
 }: Props) {
+  const t = useTranslations('scheduleModal');
+  const locale = useLocale();
+
   const [step, setStep] = React.useState<ScheduleStep>("pick");
   const [date, setDate] = React.useState(defaultDate ?? "");
   const [time, setTime] = React.useState(defaultTime ?? "09:00");
@@ -95,17 +99,16 @@ export function ScheduleModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-primary" />
-                Programmer sur {platformLabel}
+                {t('title', { platform: platformLabel })}
               </DialogTitle>
               <DialogDescription>
-                Choisis la date et l&apos;heure de publication. Le contenu sera
-                programmé via Tipote.
+                {t('description')}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="schedule-date">Date de publication</Label>
+                <Label htmlFor="schedule-date">{t('dateLabel')}</Label>
                 <Input
                   id="schedule-date"
                   type="date"
@@ -116,7 +119,7 @@ export function ScheduleModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="schedule-time">Heure de publication</Label>
+                <Label htmlFor="schedule-time">{t('timeLabel')}</Label>
                 <Input
                   id="schedule-time"
                   type="time"
@@ -128,14 +131,14 @@ export function ScheduleModal({
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-                Annuler
+                {t('cancel')}
               </Button>
               <Button
                 onClick={handleConfirm}
                 disabled={!date || saving}
                 className=""
               >
-                {saving ? "Programmation..." : "Programmer"}
+                {saving ? t('scheduling') : t('schedule')}
               </Button>
             </DialogFooter>
           </>
@@ -146,19 +149,15 @@ export function ScheduleModal({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
-                Contenu programmé
+                {t('confirmedTitle')}
               </DialogTitle>
             </DialogHeader>
 
             <div className="rounded-lg border bg-green-50 p-4 text-sm text-green-800">
-              Ton contenu sera publié sur {platformLabel} le{" "}
-              <span className="font-semibold">{formatDateFr(confirmedDate)}</span> à{" "}
-              <span className="font-semibold">{confirmedTime}</span>.
+              {t('confirmedBody', { platform: platformLabel, date: formatDateLocale(confirmedDate, locale), time: confirmedTime })}
               <br />
               <br />
-              Pour modifier ou reprogrammer, rends-toi dans{" "}
-              <span className="font-semibold">tes contenus</span> ou sur{" "}
-              <span className="font-semibold">ton calendrier</span>.
+              {t('confirmedHint')}
             </div>
 
             <DialogFooter>
@@ -166,7 +165,7 @@ export function ScheduleModal({
                 onClick={() => onOpenChange(false)}
                 className=""
               >
-                Compris
+                {t('understood')}
               </Button>
             </DialogFooter>
           </>

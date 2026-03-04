@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -162,6 +163,7 @@ export const OfferDetailModal = ({
   offerType,
   onUpdateOffer,
 }: OfferDetailModalProps) => {
+  const t = useTranslations('strategyDetails');
   const config = offerConfig[offerType];
   const Icon = config.icon;
 
@@ -315,7 +317,7 @@ export const OfferDetailModal = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Target className={`w-5 h-5 ${config.color}`} />
-              <h3 className="font-semibold">Pourquoi cette offre ?</h3>
+              <h3 className="font-semibold">{t('whyOffer')}</h3>
             </div>
             {isEditing ? (
               <Textarea
@@ -338,7 +340,7 @@ export const OfferDetailModal = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <DollarSign className={`w-5 h-5 ${config.color}`} />
-              <h3 className="font-semibold">Pourquoi ce prix ?</h3>
+              <h3 className="font-semibold">{t('whyPrice')}</h3>
             </div>
             {isEditing ? (
               <Textarea
@@ -361,7 +363,7 @@ export const OfferDetailModal = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <FileText className={`w-5 h-5 ${config.color}`} />
-              <h3 className="font-semibold">Quoi créer ?</h3>
+              <h3 className="font-semibold">{t('whatToCreate')}</h3>
             </div>
             <ul className="space-y-2">
               {displayOffer.whatToCreate?.map((item, index) => (
@@ -393,7 +395,7 @@ export const OfferDetailModal = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Lightbulb className={`w-5 h-5 ${config.color}`} />
-              <h3 className="font-semibold">Comment créer ?</h3>
+              <h3 className="font-semibold">{t('howToCreate')}</h3>
             </div>
             {isEditing ? (
               <Textarea
@@ -416,7 +418,7 @@ export const OfferDetailModal = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Megaphone className={`w-5 h-5 ${config.color}`} />
-              <h3 className="font-semibold">Comment promouvoir ?</h3>
+              <h3 className="font-semibold">{t('howToPromote')}</h3>
             </div>
             <ul className="space-y-2">
               {displayOffer.howToPromote?.map((item, index) => (

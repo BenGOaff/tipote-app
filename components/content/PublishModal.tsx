@@ -237,7 +237,7 @@ export function PublishModal({
 
     const json: PublishResult = await res.json().catch(() => ({
       ok: false,
-      error: "Erreur de communication avec le serveur.",
+      error: t('serverError'),
     }));
 
     return json;
@@ -270,7 +270,7 @@ export function PublishModal({
       const savedId = await onBeforePublish();
       if (!savedId) {
         setStep("error");
-        setResult({ ok: false, error: "Impossible de sauvegarder le contenu." });
+        setResult({ ok: false, error: t('saveContentError') });
         return;
       }
       idToPublish = savedId;
@@ -310,13 +310,13 @@ export function PublishModal({
         publishResult = await doPublish(idToPublish, tiktokPayload);
         if (!publishResult.ok) {
           setStep("error");
-          setResult({ ok: false, error: publishResult.error ?? "Erreur inconnue" });
+          setResult({ ok: false, error: publishResult.error ?? t('unknownError') });
           return;
         }
         setResult(publishResult);
       } catch (e) {
         setStep("error");
-        setResult({ ok: false, error: e instanceof Error ? e.message : "Erreur réseau" });
+        setResult({ ok: false, error: e instanceof Error ? e.message : t('networkError') });
         return;
       }
 
@@ -335,7 +335,7 @@ export function PublishModal({
 
       if (!publishResult.ok) {
         setStep("error");
-        setResult({ ok: false, error: publishResult.error ?? "Erreur inconnue" });
+        setResult({ ok: false, error: publishResult.error ?? t('unknownError') });
         return;
       }
 
@@ -347,7 +347,7 @@ export function PublishModal({
       setStep("error");
       setResult({
         ok: false,
-        error: e instanceof Error ? e.message : "Erreur réseau",
+        error: e instanceof Error ? e.message : t('networkError'),
       });
     }
   };
@@ -469,9 +469,9 @@ export function PublishModal({
               {/* Point 1: Creator Info Display */}
               <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm">
                 <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground">Compte TikTok :</span>
+                <span className="text-muted-foreground">{t('tiktokAccount')}</span>
                 <span className="font-medium">
-                  {tiktokConnection?.platform_username ?? "Connecté"}
+                  {tiktokConnection?.platform_username ?? t('connected')}
                 </span>
               </div>
 
@@ -484,37 +484,37 @@ export function PublishModal({
 
               {/* Point 2: Privacy Level — NO default value, user MUST select */}
               <div className="space-y-1.5">
-                <Label>Visibilité *</Label>
+                <Label>{t('visibility')}</Label>
                 <Select value={ttPrivacy} onValueChange={setTtPrivacy}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionne la visibilité" />
+                    <SelectValue placeholder={t('selectVisibility')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PUBLIC_TO_EVERYONE">Public</SelectItem>
-                    <SelectItem value="MUTUAL_FOLLOW_FRIENDS">Amis (abonnements mutuels)</SelectItem>
-                    <SelectItem value="FOLLOWER_OF_CREATOR">Abonnés</SelectItem>
-                    <SelectItem value="SELF_ONLY">Moi uniquement</SelectItem>
+                    <SelectItem value="PUBLIC_TO_EVERYONE">{t('public')}</SelectItem>
+                    <SelectItem value="MUTUAL_FOLLOW_FRIENDS">{t('mutualFriends')}</SelectItem>
+                    <SelectItem value="FOLLOWER_OF_CREATOR">{t('followers')}</SelectItem>
+                    <SelectItem value="SELF_ONLY">{t('selfOnly')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Point 2: Interaction Toggles — NONE checked by default */}
               <div className="space-y-2">
-                <Label>Interactions</Label>
+                <Label>{t('interactions')}</Label>
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Autoriser les commentaires</span>
+                    <span className="text-sm">{t('allowComments')}</span>
                     <Switch checked={ttAllowComment} onCheckedChange={setTtAllowComment} />
                   </div>
                   {/* Duet & Stitch only for video (hidden for photo-only) */}
                   {hasVideo !== false && (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Autoriser les duos</span>
+                        <span className="text-sm">{t('allowDuets')}</span>
                         <Switch checked={ttAllowDuet} onCheckedChange={setTtAllowDuet} />
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Autoriser le Stitch</span>
+                        <span className="text-sm">{t('allowStitch')}</span>
                         <Switch checked={ttAllowStitch} onCheckedChange={setTtAllowStitch} />
                       </div>
                     </>
@@ -539,7 +539,7 @@ export function PublishModal({
               {/* Point 3: Commercial Content Disclosure */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="cursor-pointer">Contenu promotionnel</Label>
+                  <Label className="cursor-pointer">{t('promotionalContent')}</Label>
                   <Switch checked={ttBrandedToggle} onCheckedChange={setTtBrandedToggle} />
                 </div>
 
@@ -553,9 +553,9 @@ export function PublishModal({
                         className="mt-0.5"
                       />
                       <label htmlFor="tt-your-brand" className="text-sm cursor-pointer leading-tight">
-                        Ta marque
+                        {t('yourBrand')}
                         <span className="block text-xs text-muted-foreground">
-                          Ta publication sera étiquetée « Contenu promotionnel »
+                          {t('yourBrandDesc')}
                         </span>
                       </label>
                     </div>
@@ -567,9 +567,9 @@ export function PublishModal({
                         className="mt-0.5"
                       />
                       <label htmlFor="tt-branded-content" className="text-sm cursor-pointer leading-tight">
-                        Contenu de marque (partenariat rémunéré)
+                        {t('brandedContent')}
                         <span className="block text-xs text-muted-foreground">
-                          Ta publication sera étiquetée « Partenariat rémunéré »
+                          {t('brandedContentDesc')}
                         </span>
                       </label>
                     </div>
@@ -616,8 +616,7 @@ export function PublishModal({
                   className="mt-0.5"
                 />
                 <label htmlFor="tt-consent" className="text-xs cursor-pointer leading-relaxed">
-                  Je confirme vouloir publier ce contenu sur mon compte TikTok.
-                  Le traitement par TikTok peut prendre quelques minutes.
+                  {t('tiktokConsent')}
                 </label>
               </div>
 
@@ -626,11 +625,11 @@ export function PublishModal({
                 <div className="rounded-lg border border-primary/30 bg-primary/5 dark:bg-primary/10 p-3 text-sm">
                   <div className="flex items-center gap-2 text-primary font-medium mb-1">
                     <MessageCircle className="w-4 h-4" />
-                    Auto-commentaires activés
+                    {t('autoCommentsEnabledTt')}
                   </div>
                   <div className="text-xs text-primary/80 space-y-0.5">
-                    {hasBefore && <p>{autoCommentConfig!.nbBefore} commentaire{autoCommentConfig!.nbBefore > 1 ? "s" : ""} avant publication</p>}
-                    {hasAfter && <p>{autoCommentConfig!.nbAfter} commentaire{autoCommentConfig!.nbAfter > 1 ? "s" : ""} après publication</p>}
+                    {hasBefore && <p>{t('commentsBeforeTt', { count: autoCommentConfig!.nbBefore })}</p>}
+                    {hasAfter && <p>{t('commentsAfterTt', { count: autoCommentConfig!.nbAfter })}</p>}
                   </div>
                 </div>
               )}

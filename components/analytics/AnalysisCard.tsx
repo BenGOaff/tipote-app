@@ -4,8 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AIContent } from "@/components/ui/ai-content";
 import { Sparkles, Loader2 } from "lucide-react";
+import { useTranslations, useLocale } from 'next-intl';
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS, es, it, ar } from "date-fns/locale";
+import type { Locale } from "date-fns";
+
+const dateFnsLocales: Record<string, Locale> = { fr, en: enUS, es, it, ar };
 
 interface AnalysisCardProps {
   analysis: string | null;
@@ -14,6 +18,9 @@ interface AnalysisCardProps {
 }
 
 export const AnalysisCard = ({ analysis, month, isLoading }: AnalysisCardProps) => {
+  const t = useTranslations('analysisCard');
+  const locale = useLocale();
+
   if (isLoading) {
     return (
       <Card className="p-6">
@@ -22,8 +29,8 @@ export const AnalysisCard = ({ analysis, month, isLoading }: AnalysisCardProps) 
             <Loader2 className="w-5 h-5 text-primary-foreground animate-spin" />
           </div>
           <div>
-            <h3 className="text-lg font-bold">Analyse en cours...</h3>
-            <p className="text-sm text-muted-foreground">L&apos;IA examine tes données</p>
+            <h3 className="text-lg font-bold">{t('analyzing')}</h3>
+            <p className="text-sm text-muted-foreground">{t('analyzingDesc')}</p>
           </div>
         </div>
         <div className="space-y-3">
@@ -43,14 +50,14 @@ export const AnalysisCard = ({ analysis, month, isLoading }: AnalysisCardProps) 
             <Sparkles className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="text-lg font-bold">Diagnostic IA</h3>
+            <h3 className="text-lg font-bold">{t('aiDiagnosis')}</h3>
             <p className="text-sm text-muted-foreground">
-              Saisis tes métriques pour obtenir une analyse personnalisée
+              {t('enterMetrics')}
             </p>
           </div>
         </div>
         <p className="text-muted-foreground text-sm">
-          L&apos;IA analysera tes données et te donnera des recommandations concrètes pour améliorer tes résultats.
+          {t('analyzeRecommendations')}
         </p>
       </Card>
     );
@@ -64,10 +71,10 @@ export const AnalysisCard = ({ analysis, month, isLoading }: AnalysisCardProps) 
             <Sparkles className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h3 className="text-lg font-bold">Diagnostic IA</h3>
+            <h3 className="text-lg font-bold">{t('aiDiagnosis')}</h3>
             {month ? (
               <p className="text-sm text-muted-foreground">
-                Analyse de {format(new Date(month), "MMMM yyyy", { locale: fr })}
+                Analyse de {format(new Date(month), "MMMM yyyy", { locale: dateFnsLocales[locale] ?? fr })}
               </p>
             ) : null}
           </div>

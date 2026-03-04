@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 import { Button } from '@/components/ui/button'
 import { toast } from '@/hooks/use-toast'
@@ -28,6 +29,7 @@ function extractOkError(json: unknown): { ok: boolean; error?: string } {
 
 export function MarkTaskDoneButton({ taskId, initialStatus, className }: Props) {
   const router = useRouter()
+  const t = useTranslations('markTaskDone')
   const [pending, setPending] = useState(false)
   const [optimisticDone, setOptimisticDone] = useState<boolean | null>(null)
 
@@ -60,23 +62,23 @@ export function MarkTaskDoneButton({ taskId, initialStatus, className }: Props) 
       if (!res.ok || !ok) {
         setOptimisticDone(prev)
         toast({
-          title: 'Impossible de mettre à jour la tâche',
-          description: error || `Erreur ${res.status}`,
+          title: t('updateError'),
+          description: error || t('errorStatus', { status: res.status }),
           variant: 'destructive',
         })
         return
       }
 
       toast({
-        title: done ? 'Tâche remise à faire' : 'Tâche terminée',
-        description: done ? 'Tu peux la reprendre quand tu veux.' : 'Bravo 🎉',
+        title: done ? t('taskUndone') : t('taskDone'),
+        description: done ? t('taskUndoneDesc') : t('taskDoneDesc'),
       })
 
       router.refresh()
     } catch (e) {
       setOptimisticDone(prev)
       toast({
-        title: 'Erreur réseau',
+        title: t('networkError'),
         description: e instanceof Error ? e.message : 'Unknown error',
         variant: 'destructive',
       })
@@ -94,7 +96,7 @@ export function MarkTaskDoneButton({ taskId, initialStatus, className }: Props) 
       disabled={disabled}
       onClick={onClick}
     >
-      {pending ? '...' : done ? 'Annuler' : 'Marquer comme faite'}
+      {pending ? '...' : done ? t('undo') : t('markDone')}
     </Button>
   )
 }

@@ -4,6 +4,7 @@ import * as React from "react";
 import { useCallback, useRef, useState } from "react";
 import { Video, X, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { useTranslations } from 'next-intl';
 
 export type UploadedVideo = {
   url: string;
@@ -52,6 +53,7 @@ export function VideoUploader({
   disabled = false,
   acceptGif = false,
 }: Props) {
+  const t = useTranslations('videoUploader');
   const ACCEPTED_TYPES = acceptGif ? [...VIDEO_TYPES, GIF_TYPE] : VIDEO_TYPES;
   const ACCEPTED_EXTENSIONS = acceptGif ? `${VIDEO_EXTENSIONS},${GIF_EXTENSION}` : VIDEO_EXTENSIONS;
   const formatLabel = acceptGif ? "MP4, WebM, MOV ou GIF" : "MP4, WebM ou MOV";
@@ -67,8 +69,8 @@ export function VideoUploader({
     async (file: File): Promise<UploadedVideo | null> => {
       if (!ACCEPTED_TYPES.includes(file.type)) {
         toast({
-          title: "Format non supporté",
-          description: `"${file.name}" n'est pas un fichier ${formatLabel}.`,
+          title: t('unsupportedFormat'),
+          description: t('unsupportedFormatDesc', { name: file.name, formats: formatLabel }),
           variant: "destructive",
         });
         return null;
@@ -76,8 +78,8 @@ export function VideoUploader({
 
       if (file.size > MAX_FILE_SIZE) {
         toast({
-          title: "Fichier trop volumineux",
-          description: `"${file.name}" (${formatSize(file.size)}) dépasse la limite de 500 MB.`,
+          title: t('fileTooLarge'),
+          description: t('fileTooLargeDesc', { name: file.name, size: formatSize(file.size) }),
           variant: "destructive",
         });
         return null;
@@ -96,11 +98,11 @@ export function VideoUploader({
             contentId: contentId || undefined,
           }),
         });
-        const signedJson = await signedRes.json().catch(() => ({ ok: false, error: "Erreur réseau" }));
+        const signedJson = await signedRes.json().catch(() => ({ ok: false, error: t('networkError') }));
         if (!signedRes.ok || !signedJson.ok) {
           toast({
-            title: "Erreur d'upload",
-            description: signedJson.error ?? "Impossible de préparer l'upload.",
+            title: t('uploadError'),
+            description: signedJson.error ?? t('uploadPrepareError'),
             variant: "destructive",
           });
           return null;
@@ -108,8 +110,8 @@ export function VideoUploader({
         signedData = signedJson;
       } catch {
         toast({
-          title: "Erreur réseau",
-          description: "Impossible de préparer l'upload vidéo.",
+          title: t('networkError'),
+          description: t('networkErrorDesc'),
           variant: "destructive",
         });
         return null;
@@ -155,8 +157,8 @@ export function VideoUploader({
         };
       } catch (err) {
         toast({
-          title: "Erreur d'upload",
-          description: err instanceof Error ? err.message : "Upload échoué.",
+          title: t('uploadError'),
+          description: err instanceof Error ? err.message : t('uploadFailed'),
           variant: "destructive",
         });
         return null;
@@ -177,8 +179,8 @@ export function VideoUploader({
         if (result) {
           onChange(result);
           toast({
-            title: "Vidéo ajoutée",
-            description: `${result.filename} (${formatSize(result.size)}) uploadée.`,
+            title: t('videoAdded'),
+            description: t('videoAddedDesc', { name: result.filename, size: formatSize(result.size) }),
           });
         }
       } finally {
@@ -259,7 +261,7 @@ export function VideoUploader({
       <div className="flex items-center justify-between">
         <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
           <Video className="w-3.5 h-3.5 text-slate-500" />
-          Vidéo
+          {t('label')}
         </label>
         {video && (
           <span className="text-[11px] text-slate-500">
@@ -291,7 +293,7 @@ export function VideoUploader({
             onClick={removeVideo}
             disabled={disabled || uploading}
             className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
-            aria-label={`Supprimer ${video.filename}`}
+            aria-label={t('deleteLabel', { name: video.filename })}
           >
             <X className="h-4 w-4" />
           </button>
@@ -310,7 +312,7 @@ export function VideoUploader({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="text-xs text-slate-600">Upload en cours...</span>
+            <span className="text-xs text-slate-600">{t('uploading')}</span>
             <span className="text-xs text-slate-500 ml-auto">{Math.round(uploadProgress)}%</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
@@ -337,7 +339,7 @@ export function VideoUploader({
         >
           <Video className="h-8 w-8 text-slate-400" />
           <p className="text-xs text-slate-600">
-            Glisse ta vidéo ici ou clique pour parcourir
+            {t('dropText')}
           </p>
           <p className="text-[11px] text-slate-400">
             {formatLabel} - max 500 MB
@@ -350,7 +352,7 @@ export function VideoUploader({
           <AlertCircle className="h-3 w-3" />
           {video.type === "image/gif"
             ? "Le GIF animé sera publié comme vidéo sur Facebook (Reel) pour conserver l\u2019animation."
-            : "La vidéo sera conservée dans Supabase Storage \u2014 l\u2019URL reste valide même pour les posts programmés."}
+            : t('videoStorageHint')}
         </div>
       )}
 

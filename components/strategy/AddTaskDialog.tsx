@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export const AddTaskDialog = ({
   onAdd,
   phases,
 }: AddTaskDialogProps) => {
+  const t = useTranslations('strategyDetails');
   const [taskName, setTaskName] = useState("");
   const [selectedPhase, setSelectedPhase] = useState("0");
 
@@ -50,29 +52,29 @@ export const AddTaskDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Ajouter une tâche</DialogTitle>
+          <DialogTitle>{t('addTask')}</DialogTitle>
           <DialogDescription>
-            Crée une nouvelle tâche pour ta stratégie
+            {t('addTaskDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="taskName">Nom de la tâche</Label>
+            <Label htmlFor="taskName">{t('taskName')}</Label>
             <Input
               id="taskName"
               value={taskName}
               onChange={(e) => setTaskName(e.target.value)}
-              placeholder="Ex: Créer une landing page"
+              placeholder={t('taskPlaceholder')}
               autoFocus
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phase">Phase</Label>
+            <Label htmlFor="phase">{t('phase')}</Label>
             <Select value={selectedPhase} onValueChange={setSelectedPhase}>
               <SelectTrigger>
-                <SelectValue placeholder="Choisis une phase" />
+                <SelectValue placeholder={t('phasePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {phases.map((phase, index) => (

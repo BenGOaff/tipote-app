@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 import { emitCreditsUpdated } from '@/lib/credits/client'
 import { useCreditsBalance } from '@/lib/credits/useCreditsBalance'
@@ -37,13 +38,13 @@ function normalizeType(t: string) {
   return s
 }
 
-function metaForType(type: string) {
-  const t = normalizeType(type)
+function metaForType(type: string, t: (key: string) => string) {
+  const n = normalizeType(type)
 
-  if (t === 'email') {
+  if (n === 'email') {
     return {
-      title: 'Email',
-      subtitle: 'Un email clair, orienté conversion',
+      title: t('email'),
+      subtitle: t('emailSub'),
       placeholder:
         "Objectif de l'email, contexte, offre, cible, ton…\nEx: email de relance après découverte, ton direct, CTA prise de call.",
       defaultChannel: 'Email',
@@ -51,10 +52,10 @@ function metaForType(type: string) {
     }
   }
 
-  if (t === 'blog') {
+  if (n === 'blog') {
     return {
-      title: 'Article de blog',
-      subtitle: 'Structuré, lisible, SEO-friendly',
+      title: t('blogArticle'),
+      subtitle: t('blogSub'),
       placeholder:
         'Sujet, angle, cible, mots-clés (si tu en as), longueur…\nEx: "Comment trouver ses 10 premiers clients en B2B", ton pédagogique, plan H2/H3.',
       defaultChannel: 'Blog',
@@ -62,10 +63,10 @@ function metaForType(type: string) {
     }
   }
 
-  if (t === 'script') {
+  if (n === 'script') {
     return {
-      title: 'Script vidéo',
-      subtitle: "'Hook + structure + CTA'",
+      title: t('videoScript'),
+      subtitle: t('videoSub'),
       placeholder:
         'Sujet, format (Reel/TikTok/YouTube), durée, cible, ton…\nEx: 45s, hook fort, 3 points, CTA vers lead magnet.',
       defaultChannel: 'Vidéo',
@@ -74,8 +75,8 @@ function metaForType(type: string) {
   }
 
   return {
-    title: 'Post réseaux sociaux',
-    subtitle: 'LinkedIn, Threads, Facebook, X…',
+    title: t('postSocial'),
+    subtitle: t('postSocialSub'),
     placeholder:
       'Sujet, angle, cible, objectif, style…\nEx: post LinkedIn storytelling, 180–240 mots, ton direct, 1 CTA.',
     defaultChannel: 'LinkedIn',
@@ -85,9 +86,10 @@ function metaForType(type: string) {
 
 export function ContentGenerator({ type, defaultPrompt }: Props) {
   const router = useRouter()
+  const t = useTranslations('contentGenerator')
   const { refresh: refreshCredits } = useCreditsBalance({ auto: false })
 
-  const meta = useMemo(() => metaForType(type), [type])
+  const meta = useMemo(() => metaForType(type, t), [type, t])
 
   const [channel, setChannel] = useState<string>(meta.defaultChannel)
   const [tags, setTags] = useState<string>(() => (meta.defaultTags ?? []).join(', '))
@@ -133,7 +135,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
   const handleScheduleFromGenerator = useCallback(async (date: string, time: string) => {
     if (!result?.id) {
-      toast({ title: 'Erreur', description: 'Génère du contenu d\'abord.', variant: 'destructive' })
+      toast({ title: t('error'), description: t('generateFirst'), variant: 'destructive' })
       throw new Error('No content ID')
     }
 
@@ -162,7 +164,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
     const json = await res.json().catch(() => ({}))
     if (!res.ok || !json?.ok) {
-      toast({ title: 'Erreur', description: json?.error ?? 'Programmation impossible', variant: 'destructive' })
+      toast({ title: t('error'), description: json?.error ?? t('schedulingError'), variant: 'destructive' })
       throw new Error(json?.error ?? 'Failed')
     }
   }, [result, images, channel, saveImagesToContent])
@@ -179,9 +181,9 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
   const handleCopy = useCallback(() => {
     if (result?.content) {
       navigator.clipboard.writeText(result.content).then(() => {
-        toast({ title: 'Copié', description: 'Le contenu est dans le presse-papiers.' })
+        toast({ title: t('copied'), description: t('copiedDesc') })
       }).catch(() => {
-        toast({ title: 'Erreur', description: 'Impossible de copier.', variant: 'destructive' })
+        toast({ title: t('error'), description: t('copyError'), variant: 'destructive' })
       })
     }
   }, [result])
@@ -230,7 +232,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     const safeType = normalizeType(type)
 
     if (!safePrompt) {
-      setResult({ ok: false, error: 'Le brief est requis.' })
+      setResult({ ok: false, error: t('briefRequired') })
       return
     }
 
@@ -256,7 +258,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
       const data = (await res.json().catch(() => null)) as GenerateResponse | null
 
       if (!data) {
-        setResult({ ok: false, error: 'Réponse invalide.' })
+        setResult({ ok: false, error: t('invalidResponse') })
         return
       }
 
@@ -265,7 +267,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
         setResult({
           ok: false,
-          error: data?.error ?? 'Erreur lors de la génération.',
+          error: data?.error ?? t('generationError'),
           code,
         })
 
@@ -284,7 +286,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
     } catch (e) {
       setResult({
         ok: false,
-        error: e instanceof Error ? e.message : 'Erreur lors de la génération.',
+        error: e instanceof Error ? e.message : t('generationError'),
       })
 
     } finally {
@@ -300,14 +302,14 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
       const json = (await res.json().catch(() => null)) as any
 
       if (!res.ok || !json?.ok) {
-        setBillingSyncMsg(json?.error ? String(json.error) : "Impossible de vérifier l'abonnement.")
+        setBillingSyncMsg(json?.error ? String(json.error) : t('subscriptionCheckError'))
         return
       }
 
-      setBillingSyncMsg('Abonnement mis à jour. Tu peux réessayer.')
+      setBillingSyncMsg(t('subscriptionUpdated'))
       router.refresh()
     } catch (e) {
-      setBillingSyncMsg(e instanceof Error ? e.message : "Impossible de vérifier l'abonnement.")
+      setBillingSyncMsg(e instanceof Error ? e.message : t('subscriptionCheckError'))
     } finally {
       setBillingSyncing(false)
     }
@@ -319,13 +321,13 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-semibold text-slate-900">Crédits IA</p>
+            <p className="text-xs font-semibold text-slate-900">{t('aiCredits')}</p>
             <Link href="/settings?tab=billing" className="text-xs font-semibold text-primary hover:underline">
-              Gérer mes crédits
+              {t('manageCredits')}
             </Link>
           </div>
           <p className="mt-1 text-xs text-slate-600">
-            1 génération = 1 crédit
+            {t('oneGenOneCredit')}
           </p>
         </div>
       </section>
@@ -339,7 +341,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-700">Canal</span>
+            <span className="text-xs font-semibold text-slate-700">{t('channel')}</span>
             <input
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
@@ -351,18 +353,18 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div className="grid gap-2">
-            <label className="text-xs font-semibold text-slate-700">Tags</label>
+            <label className="text-xs font-semibold text-slate-700">{t('tags')}</label>
             <input
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="ex: lancement, preuve sociale"
             />
-            <p className="text-[11px] text-slate-500">Sépare par des virgules.</p>
+            <p className="text-[11px] text-slate-500">{t('tagsSeparator')}</p>
           </div>
 
           <div className="md:col-span-2 grid gap-2">
-            <label className="text-xs font-semibold text-slate-700">Brief</label>
+            <label className="text-xs font-semibold text-slate-700">{t('brief')}</label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -370,7 +372,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
               placeholder={meta.placeholder}
             />
             <p className="text-[11px] text-slate-500">
-              Astuce: sois précis (cible, objectif, ton, contraintes). Tu peux coller un exemple à imiter.
+              {t('briefTip')}
             </p>
           </div>
         </div>
@@ -382,14 +384,14 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             disabled={!canGenerate}
             className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-60"
           >
-            {loading ? 'Génération…' : 'Générer'}
+            {loading ? t('generating') : t('generate')}
           </button>
 
           <Link
             href="/contents"
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
           >
-            Voir mes contenus
+            {t('viewContents')}
           </Link>
         </div>
 
@@ -398,7 +400,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-slate-900">Contenu généré</p>
+                  <p className="text-sm font-semibold text-slate-900">{t('generatedContent')}</p>
                   {result.title ? <p className="text-xs text-slate-600">{result.title}</p> : null}
                   {result.warning ? <p className="text-xs font-semibold text-amber-700">{result.warning}</p> : null}
                   {result.saveError ? <p className="text-xs font-semibold text-rose-700">{result.saveError}</p> : null}
@@ -409,14 +411,14 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                     href={`/contents/${result.id}`}
                     className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
                   >
-                    Ouvrir le détail
+                    {t('openDetail')}
                   </Link>
                 ) : (
                   <Link
                     href="/contents"
                     className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
                   >
-                    Ouvrir Content Hub
+                    {t('openContentHub')}
                   </Link>
                 )}
               </div>
@@ -467,8 +469,8 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
-              <p className="text-sm font-semibold text-rose-800">Erreur</p>
-              <p className="mt-1 text-sm text-rose-800">{result.error ?? 'Erreur inconnue'}</p>
+              <p className="text-sm font-semibold text-rose-800">{t('error')}</p>
+              <p className="mt-1 text-sm text-rose-800">{result.error ?? t('unknownError')}</p>
 
               {result.code === 'NO_CREDITS' ? (
                 <div className="mt-3">
@@ -477,7 +479,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                       href="/settings?tab=billing"
                       className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
                     >
-                      Recharger mes crédits
+                      {t('rechargeCredits')}
                     </Link>
                     <button
                       type="button"
@@ -485,7 +487,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                       disabled={billingSyncing}
                       className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-60"
                     >
-                      {billingSyncing ? 'Vérification…' : "J'ai déjà payé"}
+                      {billingSyncing ? t('verifying') : t('alreadyPaid')}
                     </button>
                   </div>
 
