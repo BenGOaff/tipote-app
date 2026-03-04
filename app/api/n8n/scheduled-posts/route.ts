@@ -31,6 +31,23 @@ function resolveImageUrl(meta: any): string | undefined {
   return undefined;
 }
 
+/**
+ * Résout toutes les URLs d'images depuis meta.
+ * Retourne un tableau d'URLs (vide si aucune image).
+ */
+function resolveAllImageUrls(meta: any): string[] {
+  if (!meta) return [];
+  if (Array.isArray(meta.images) && meta.images.length > 0) {
+    return meta.images
+      .map((img: any) => (typeof img === "string" ? img : img?.url))
+      .filter(Boolean) as string[];
+  }
+  if (typeof meta.image_url === "string" && meta.image_url.trim()) {
+    return [meta.image_url];
+  }
+  return [];
+}
+
 function isMissingColumn(msg?: string | null) {
   const m = (msg ?? "").toLowerCase();
   return (
@@ -305,12 +322,11 @@ export async function GET(req: NextRequest) {
           postData.video_url = videoUrl;
         }
 
-        // TikTok : inclure toutes les images si disponibles
-        if (platform === "tiktok") {
-          if (Array.isArray(post.meta?.images) && post.meta.images.length > 0) {
-            postData.images = post.meta.images.map((img: any) =>
-              typeof img === "string" ? img : img?.url
-            ).filter(Boolean);
+        // TikTok et Facebook : inclure toutes les images si disponibles (multi-photos / carrousel)
+        if (platform === "tiktok" || platform === "facebook") {
+          const allImages = resolveAllImageUrls(post.meta);
+          if (allImages.length > 1) {
+            postData.images = allImages;
           }
         }
 
