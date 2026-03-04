@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 type StatsResponse =
   | { ok: true; total: number; done: number; completionRate: number }
@@ -10,42 +11,16 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function messageFor(rate: number, total: number) {
-  if (total === 0) {
-    return {
-      title: 'Démarrage en douceur',
-      body: "Ajoute 1–2 tâches simples et exécute la première aujourd’hui. Petit rythme, gros effet.",
-    };
-  }
-
-  if (rate >= 80) {
-    return {
-      title: 'Excellent rythme 🔥',
-      body: 'Tu es dans une très bonne dynamique. Garde ce niveau, et évite juste de surcharger ta journée.',
-    };
-  }
-
-  if (rate >= 50) {
-    return {
-      title: 'Bon cap ✅',
-      body: 'Tu avances bien. Pour passer un cran, verrouille une petite tâche facile en premier, puis attaque le cœur.',
-    };
-  }
-
-  if (rate >= 25) {
-    return {
-      title: 'On relance la machine',
-      body: "Choisis UNE action ultra-simple maintenant (5–10 min) pour relancer l'élan.",
-    };
-  }
-
-  return {
-    title: 'Un pas, tout de suite',
-    body: "Commence par la tâche la plus petite possible. L’objectif : un 1er ✅ aujourd’hui.",
-  };
+function messageKeyFor(rate: number, total: number): { titleKey: string; bodyKey: string } | null {
+  if (total === 0) return { titleKey: 'softStart', bodyKey: 'softStartBody' };
+  if (rate >= 80) return { titleKey: 'excellentPace', bodyKey: 'excellentPaceBody' };
+  if (rate >= 50) return { titleKey: 'goodCourse', bodyKey: 'goodCourseBody' };
+  if (rate >= 25) return { titleKey: 'relaunch', bodyKey: 'relaunchBody' };
+  return { titleKey: 'oneStep', bodyKey: 'oneStepBody' };
 }
 
 export function ExecutionFeedback() {
+  const t = useTranslations('executionFeedback');
   const [stats, setStats] = useState<StatsResponse | null>(null);
 
   useEffect(() => {
@@ -73,8 +48,10 @@ export function ExecutionFeedback() {
     if (!stats) return null;
     if (!stats.ok) return null;
     const rate = clamp(stats.completionRate, 0, 100);
-    return messageFor(rate, stats.total);
-  }, [stats]);
+    const keys = messageKeyFor(rate, stats.total);
+    if (!keys) return null;
+    return { title: t(keys.titleKey as any), body: t(keys.bodyKey as any) };
+  }, [stats, t]);
 
   if (!content) return null;
 

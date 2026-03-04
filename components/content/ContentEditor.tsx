@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
@@ -73,13 +74,16 @@ function normalizeStatusValue(status: string | null | undefined): string {
   return s;
 }
 
-function normalizeStatusLabel(status: string | null): string {
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  published: "published",
+  scheduled: "scheduled",
+  draft: "draft",
+  archived: "archived",
+};
+
+function normalizeStatusKey(status: string | null): string | null {
   const low = normalizeStatusValue(status);
-  if (low === "published") return "Publié";
-  if (low === "scheduled") return "Planifié";
-  if (low === "draft") return "Brouillon";
-  if (low === "archived") return "Archivé";
-  return status?.trim() || "—";
+  return STATUS_LABEL_KEYS[low] ?? null;
 }
 
 function badgeVariantForStatus(status: string | null): "default" | "secondary" | "outline" | "destructive" {
@@ -104,6 +108,7 @@ function toYmdOrEmpty(v: string | null | undefined) {
 
 export function ContentEditor({ initialItem }: Props) {
   const router = useRouter();
+  const tFilters = useTranslations("contentFilters");
 
   // Baseline local: permet un "dirty" fiable après save,
   // même si le refresh Next met un peu de temps ou renvoie un item équivalent.
@@ -377,7 +382,11 @@ export function ContentEditor({ initialItem }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const statusLabel = useMemo(() => normalizeStatusLabel(status), [status]);
+  const statusLabel = useMemo(() => {
+    const key = normalizeStatusKey(status);
+    if (key) return tFilters(key as any);
+    return status?.trim() || "—";
+  }, [status, tFilters]);
   const statusBadgeVariant = useMemo(() => badgeVariantForStatus(status), [status]);
 
   const baselineImages = useMemo(() => {

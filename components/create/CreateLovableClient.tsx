@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
+import { useTranslations } from 'next-intl';
 import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList, CalendarDays } from "lucide-react";
 
 import { ContentTypeCard } from "@/components/create/ContentTypeCard";
@@ -25,62 +26,14 @@ import { QuizForm } from "@/components/quiz/QuizForm";
 import { ContentStrategyForm } from "@/components/create/forms/ContentStrategyForm";
 
 const contentTypes = [
-  {
-    id: "post",
-    label: "Réseaux Sociaux",
-    description: "Posts LinkedIn, Threads, Facebook, X...",
-    icon: MessageSquare,
-    color: "bg-blue-500",
-  },
-  {
-    id: "email",
-    label: "Emails Marketing",
-    description: "Nurturing, séquences, newsletters...",
-    icon: Mail,
-    color: "bg-green-500",
-  },
-  {
-    id: "article",
-    label: "Blog",
-    description: "Articles, guides, tutoriels...",
-    icon: FileText,
-    color: "bg-purple-500",
-  },
-  {
-    id: "video",
-    label: "Scripts vidéo",
-    description: "YouTube, Reels, TikTok...",
-    icon: Video,
-    color: "bg-red-500",
-  },
-  {
-    id: "offer",
-    label: "Offres",
-    description: "Créer une offre irrésistible",
-    icon: Package,
-    color: "bg-orange-500",
-  },
-  {
-    id: "funnel",
-    label: "Funnels",
-    description: "Pages de vente, de capture ...",
-    icon: Route,
-    color: "bg-indigo-500",
-  },
-  {
-    id: "quiz",
-    label: "Quiz Lead Magnet",
-    description: "Quiz interactif pour capturer des emails",
-    icon: ClipboardList,
-    color: "bg-teal-500",
-  },
-  {
-    id: "strategy",
-    label: "Stratégie de contenu",
-    description: "Planifie ton contenu sur 7, 14 ou 30 jours",
-    icon: CalendarDays,
-    color: "bg-amber-500",
-  },
+  { id: "post", labelKey: "socialMedia", descriptionKey: "socialMediaDesc", icon: MessageSquare, color: "bg-blue-500" },
+  { id: "email", labelKey: "emailMarketing", descriptionKey: "emailMarketingDesc", icon: Mail, color: "bg-green-500" },
+  { id: "article", labelKey: "blog", descriptionKey: "blogDesc", icon: FileText, color: "bg-purple-500" },
+  { id: "video", labelKey: "videoScripts", descriptionKey: "videoScriptsDesc", icon: Video, color: "bg-red-500" },
+  { id: "offer", labelKey: "offers", descriptionKey: "offersDesc", icon: Package, color: "bg-orange-500" },
+  { id: "funnel", labelKey: "funnels", descriptionKey: "funnelsDesc", icon: Route, color: "bg-indigo-500" },
+  { id: "quiz", labelKey: "quizLeadMagnet", descriptionKey: "quizLeadMagnetDesc", icon: ClipboardList, color: "bg-teal-500" },
+  { id: "strategy", labelKey: "contentStrategy", descriptionKey: "contentStrategyDesc", icon: CalendarDays, color: "bg-amber-500" },
 ] as const;
 
 type ContentType = (typeof contentTypes)[number]["id"] | null;
@@ -374,6 +327,7 @@ async function pollGeneratedContent(
 export default function CreateLovableClient() {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations('createClient');
 
   const [selectedType, setSelectedType] = useState<ContentType>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -528,7 +482,7 @@ export default function CreateLovableClient() {
       }
 
       if (!res.ok) {
-        const apiMsg = (data && (data.error || data.message)) || rawText || "Impossible de générer";
+        const apiMsg = (data && (data.error || data.message)) || rawText || t('generateError');
         throw new Error(apiMsg);
       }
 
@@ -537,9 +491,8 @@ export default function CreateLovableClient() {
         const final = await pollGeneratedContent(jobId);
         if (!final) {
           toast({
-            title: "Génération",
-            description:
-              "La génération a démarré, mais aucun contenu n\u2019a été récupéré (timeout). Va voir dans \u00ab\u00a0Mes Contenus\u00a0\u00bb.",
+            title: t('generation'),
+            description: t('generationTimeout'),
             variant: "destructive",
           });
         }
@@ -550,8 +503,8 @@ export default function CreateLovableClient() {
 
       if (!text) {
         toast({
-          title: "Génération",
-          description: "Aucun contenu retourné.",
+          title: t('generation'),
+          description: t('noContent'),
           variant: "destructive",
         });
       }
@@ -559,8 +512,8 @@ export default function CreateLovableClient() {
       return { text: text || "", contentId: null };
     } catch (e: any) {
       toast({
-        title: "Erreur",
-        description: e?.message || "Impossible de générer",
+        title: t('error'),
+        description: e?.message || t('generateError'),
         variant: "destructive",
       });
       return { text: "", contentId: null };
@@ -572,7 +525,7 @@ export default function CreateLovableClient() {
   const handleSave = async (payload: any): Promise<string | null> => {
     // Auto-fill title if missing
     if (!payload?.title?.trim()) {
-      payload.title = payload.subject || payload.platform || "Nouveau contenu";
+      payload.title = payload.subject || payload.platform || t('newContent');
     }
 
     setIsSaving(true);
@@ -586,7 +539,7 @@ export default function CreateLovableClient() {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(json?.error || "Impossible de sauvegarder");
+        throw new Error(json?.error || t('saveError'));
       }
 
       const contentId = (json?.id as string) ?? null;
@@ -600,8 +553,8 @@ export default function CreateLovableClient() {
       return contentId;
     } catch (e: any) {
       toast({
-        title: "Erreur",
-        description: e?.message || "Impossible de sauvegarder",
+        title: t('error'),
+        description: e?.message || t('saveError'),
         variant: "destructive",
       });
       return null;
@@ -657,7 +610,7 @@ export default function CreateLovableClient() {
           <header className="h-16 flex items-center px-6 border-b bg-background">
             <SidebarTrigger />
             <div className="ml-4 flex items-center gap-2">
-              <h1 className="text-xl font-display font-bold">Créer</h1>
+              <h1 className="text-xl font-display font-bold">{t('create')}</h1>
             </div>
           </header>
 
@@ -667,11 +620,11 @@ export default function CreateLovableClient() {
                 <Card className="p-6 gradient-primary text-primary-foreground relative overflow-hidden">
                   <Badge className="absolute top-4 right-4 bg-white/20 text-white hover:bg-white/30">
                     <Sparkles className="w-3 h-3 mr-1" />
-                    Propulsé par IA
+                    {t('poweredByAI')}
                   </Badge>
-                  <h2 className="text-2xl font-bold mb-2">Quel type de contenu veux-tu créer ?</h2>
+                  <h2 className="text-2xl font-bold mb-2">{t('whatContent')}</h2>
                   <p className="text-primary-foreground/80">
-                    L&apos;IA utilisera tes paramètres Tipote pour générer du contenu aligné avec ta stratégie
+                    {t('aiAligned')}
                   </p>
                 </Card>
 
@@ -679,8 +632,8 @@ export default function CreateLovableClient() {
                   {contentTypes.map((type) => (
                     <ContentTypeCard
                       key={type.id}
-                      label={type.label}
-                      description={type.description}
+                      label={t(type.labelKey)}
+                      description={t(type.descriptionKey)}
                       icon={type.icon}
                       color={type.color}
                       onClick={() => {

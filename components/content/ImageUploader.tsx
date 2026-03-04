@@ -4,6 +4,7 @@ import * as React from "react";
 import { useCallback, useRef, useState } from "react";
 import { ImagePlus, X, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { useTranslations } from 'next-intl';
 
 export type UploadedImage = {
   url: string;
@@ -42,6 +43,7 @@ export function ImageUploader({
   maxImages = 4,
   disabled = false,
 }: Props) {
+  const t = useTranslations('imageUploader');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -52,8 +54,8 @@ export function ImageUploader({
     async (file: File): Promise<UploadedImage | null> => {
       if (!ACCEPTED_TYPES.includes(file.type)) {
         toast({
-          title: "Format non supporté",
-          description: `"${file.name}" n'est pas un PNG, JPG ou GIF.`,
+          title: t('unsupportedFormat'),
+          description: t('unsupportedFormatDesc', { name: file.name }),
           variant: "destructive",
         });
         return null;
@@ -61,8 +63,8 @@ export function ImageUploader({
 
       if (file.size > MAX_FILE_SIZE) {
         toast({
-          title: "Fichier trop volumineux",
-          description: `"${file.name}" (${formatSize(file.size)}) dépasse la limite de 10 MB.`,
+          title: t('fileTooLarge'),
+          description: t('fileTooLargeDesc', { name: file.name, size: formatSize(file.size) }),
           variant: "destructive",
         });
         return null;
@@ -81,8 +83,8 @@ export function ImageUploader({
 
       if (!res.ok || !json.ok) {
         toast({
-          title: "Erreur d'upload",
-          description: json.error ?? "Impossible d'uploader l'image.",
+          title: t('uploadError'),
+          description: json.error ?? t('uploadErrorDesc'),
           variant: "destructive",
         });
         return null;
@@ -96,7 +98,7 @@ export function ImageUploader({
         type: json.type,
       };
     },
-    [contentId]
+    [contentId, t]
   );
 
   const handleFiles = useCallback(
@@ -108,8 +110,8 @@ export function ImageUploader({
 
       if (fileArr.length > slotsAvailable) {
         toast({
-          title: "Trop d'images",
-          description: `Tu peux ajouter ${slotsAvailable} image${slotsAvailable > 1 ? "s" : ""} de plus (max ${maxImages}).`,
+          title: t('tooManyImages'),
+          description: t('tooManyImagesDesc', { count: slotsAvailable, max: maxImages }),
           variant: "destructive",
         });
       }
@@ -126,15 +128,15 @@ export function ImageUploader({
         if (successful.length > 0) {
           onChange([...images, ...successful]);
           toast({
-            title: "Image(s) ajoutée(s)",
-            description: `${successful.length} image${successful.length > 1 ? "s" : ""} uploadée${successful.length > 1 ? "s" : ""}.`,
+            title: t('imagesAdded'),
+            description: t('imagesAddedDesc', { count: successful.length }),
           });
         }
       } finally {
         setUploading(false);
       }
     },
-    [images, maxImages, onChange, uploadFile]
+    [images, maxImages, onChange, uploadFile, t]
   );
 
   const removeImage = useCallback(
@@ -200,14 +202,14 @@ export function ImageUploader({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <label className="text-xs font-semibold text-slate-700">
-          Images
+          {t('label')}
           <span className="ml-1 font-normal text-slate-500">
             ({images.length}/{maxImages})
           </span>
         </label>
         {images.length > 0 && (
           <span className="text-[11px] text-slate-500">
-            PNG, JPG, GIF - max 10 MB
+            {t('formatHint')}
           </span>
         )}
       </div>
@@ -230,7 +232,7 @@ export function ImageUploader({
                 onClick={() => removeImage(i)}
                 disabled={disabled || uploading}
                 className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-rose-600 disabled:opacity-50"
-                aria-label={`Supprimer ${img.filename}`}
+                aria-label={t('deleteLabel', { name: img.filename })}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -258,16 +260,16 @@ export function ImageUploader({
           {uploading ? (
             <>
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <p className="text-xs text-slate-600">Upload en cours...</p>
+              <p className="text-xs text-slate-600">{t('uploading')}</p>
             </>
           ) : (
             <>
               <ImagePlus className="h-6 w-6 text-slate-400" />
               <p className="text-xs text-slate-600">
-                Glisse une image ici ou clique pour parcourir
+                {t('dropText')}
               </p>
               <p className="text-[11px] text-slate-400">
-                PNG, JPG ou GIF - max 10 MB
+                {t('formatHint')}
               </p>
             </>
           )}
@@ -277,7 +279,7 @@ export function ImageUploader({
       {images.length >= maxImages && (
         <div className="flex items-center gap-1.5 text-[11px] text-amber-600">
           <AlertCircle className="h-3 w-3" />
-          Nombre maximum d&apos;images atteint ({maxImages})
+          {t('maxReached', { max: maxImages })}
         </div>
       )}
 

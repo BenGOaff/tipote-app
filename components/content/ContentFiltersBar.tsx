@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from 'next-intl';
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export function ContentFiltersBar({
 }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
+  const t = useTranslations('contentFilters');
 
   const [q, setQ] = useState<string>(initialQ);
   const [status, setStatus] = useState<string>(normalizeStatusForUi(initialStatus));
@@ -104,7 +106,7 @@ export function ContentFiltersBar({
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Rechercher un contenu…"
+              placeholder={t('searchPlaceholder')}
               className="h-8 w-full border-0 p-0 shadow-none focus-visible:ring-0"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -119,23 +121,23 @@ export function ContentFiltersBar({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex lg:items-center">
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="h-10 rounded-xl">
-              <SelectValue placeholder="Statut" />
+              <SelectValue placeholder={t('status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              <SelectItem value="draft">Brouillon</SelectItem>
-              <SelectItem value="scheduled">Planifié</SelectItem>
-              <SelectItem value="published">Publié</SelectItem>
-              <SelectItem value="archived">Archivé</SelectItem>
+              <SelectItem value="all">{t('all')}</SelectItem>
+              <SelectItem value="draft">{t('draft')}</SelectItem>
+              <SelectItem value="scheduled">{t('scheduled')}</SelectItem>
+              <SelectItem value="published">{t('published')}</SelectItem>
+              <SelectItem value="archived">{t('archived')}</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={type} onValueChange={setType}>
             <SelectTrigger className="h-10 rounded-xl">
-              <SelectValue placeholder="Type" />
+              <SelectValue placeholder={t('type')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les types</SelectItem>
+              <SelectItem value="all">{t('allTypes')}</SelectItem>
               {typeOptions.map((t) => (
                 <SelectItem key={t} value={t}>
                   {t}
@@ -146,10 +148,10 @@ export function ContentFiltersBar({
 
           <Select value={channel} onValueChange={setChannel}>
             <SelectTrigger className="h-10 rounded-xl">
-              <SelectValue placeholder="Canal" />
+              <SelectValue placeholder={t('channel')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les canaux</SelectItem>
+              <SelectItem value="all">{t('allChannels')}</SelectItem>
               {channelOptions.map((c) => (
                 <SelectItem key={c} value={c}>
                   {c}
@@ -160,10 +162,10 @@ export function ContentFiltersBar({
 
           <div className="flex gap-2">
             <Button onClick={apply} variant="outline" className="h-10 flex-1 rounded-xl lg:flex-none">
-              Filtrer
+              {t('filter')}
             </Button>
             <Button onClick={reset} variant="ghost" className="h-10 flex-1 rounded-xl lg:flex-none">
-              Reset
+              {t('reset')}
             </Button>
           </div>
         </div>

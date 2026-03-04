@@ -6,8 +6,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
+
 import { format, isSameDay } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS, es, it, ar } from "date-fns/locale";
+import type { Locale } from "date-fns";
+
+const dateFnsLocales: Record<string, Locale> = { fr, en: enUS, es, it, ar };
 
 import { FileText, Mail, Video, MessageSquare, Clock, CalendarDays } from "lucide-react";
 import type { ContentListItem } from "@/lib/types/content";
@@ -25,14 +31,6 @@ const statusColors: Record<string, string> = {
   planned: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
   published: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
   failed: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-};
-
-const statusLabels: Record<string, string> = {
-  draft: "Brouillon",
-  scheduled: "Planifié",
-  planned: "Planifié",
-  published: "Publié",
-  failed: "Erreur",
 };
 
 function safeString(v: unknown): string {
@@ -87,6 +85,9 @@ export function ContentCalendarView({
   contents: ContentListItem[];
   onSelectContent?: (content: ContentListItem) => void;
 }) {
+  const t = useTranslations('contentCalendar');
+  const locale = useLocale();
+
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   const getContentsForDate = (date: Date) => {
@@ -126,7 +127,7 @@ export function ContentCalendarView({
             mode="single"
             selected={selectedDate}
             onSelect={setSelectedDate}
-            locale={fr}
+            locale={dateFnsLocales[locale] ?? fr}
             modifiers={{
               scheduled: scheduledDays,
               published: publishedDays,
@@ -141,11 +142,11 @@ export function ContentCalendarView({
           <div className="mt-4 flex items-center justify-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/50" />
-              <span>Planifié</span>
+              <span>{t('scheduled')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/50" />
-              <span>Publié</span>
+              <span>{t('published')}</span>
             </div>
           </div>
         </Card>
@@ -157,7 +158,7 @@ export function ContentCalendarView({
           {selectedDate && (
             <>
               <h3 className="text-lg font-bold mb-4 capitalize">
-                {format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}
+                {format(selectedDate, "EEEE d MMMM yyyy", { locale: dateFnsLocales[locale] ?? fr })}
               </h3>
 
               {selectedContents.length === 0 ? (
@@ -165,7 +166,7 @@ export function ContentCalendarView({
                   <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                     <FileText className="w-6 h-6 text-muted-foreground" />
                   </div>
-                  <p className="text-muted-foreground text-sm">Aucun contenu pour cette date</p>
+                  <p className="text-muted-foreground text-sm">{t('noContent')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -174,7 +175,8 @@ export function ContentCalendarView({
 
                     const stKey = normalizeKeyStatus(content.status);
                     const badgeClass = statusColors[stKey] ?? statusColors.draft;
-                    const badgeLabel = statusLabels[stKey] ?? safeString(content.status) ?? "—";
+                    const statusTranslationKeys = ['draft', 'scheduled', 'published', 'failed'] as const;
+                    const badgeLabel = statusTranslationKeys.includes(stKey as any) ? t(stKey as typeof statusTranslationKeys[number]) : (safeString(content.status) || '—');
 
                     const scheduled = content.scheduled_date ? parseDateMaybeLocal(content.scheduled_date) : null;
                     // Show time from meta.scheduled_time (HH:MM) or from ISO timestamp
@@ -194,7 +196,7 @@ export function ContentCalendarView({
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{safeString(content.title) || "Sans titre"}</p>
+                          <p className="font-medium truncate">{safeString(content.title) || t('untitled')}</p>
 
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             {safeString(content.channel) ? <span className="capitalize">{safeString(content.channel)}</span> : null}
@@ -205,10 +207,10 @@ export function ContentCalendarView({
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {showTime && metaTime
-                                    ? `${format(scheduled, "d MMM", { locale: fr })} à ${metaTime}`
+                                    ? `${format(scheduled, "d MMM", { locale: dateFnsLocales[locale] ?? fr })} à ${metaTime}`
                                     : showTime
-                                      ? format(scheduled, "d MMM à HH:mm", { locale: fr })
-                                      : format(scheduled, "d MMM", { locale: fr })}
+                                      ? format(scheduled, "d MMM à HH:mm", { locale: dateFnsLocales[locale] ?? fr })
+                                      : format(scheduled, "d MMM", { locale: dateFnsLocales[locale] ?? fr })}
                                 </span>
                               </>
                             ) : null}
@@ -219,7 +221,7 @@ export function ContentCalendarView({
                           {stKey === "scheduled" && (
                             <span className="hidden group-hover:inline-flex items-center gap-1 text-xs text-primary">
                               <CalendarDays className="w-3 h-3" />
-                              Reprogrammer
+                              {t('reschedule')}
                             </span>
                           )}
                           <Badge className={badgeClass}>{badgeLabel}</Badge>

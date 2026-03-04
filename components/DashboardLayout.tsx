@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from 'next-intl';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export default function DashboardLayout({
   headerActions,
   contentClassName = "p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto",
 }: DashboardLayoutProps) {
+  const t = useTranslations('dashboardLayout');
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -40,7 +42,7 @@ export default function DashboardLayout({
               <Link href="/analytics">
                 <Button variant="outline" size="sm">
                   <BarChart3 className="w-4 h-4 mr-2" />
-                  Analytics détaillés
+                  {t('detailedAnalytics')}
                 </Button>
               </Link>
             ) : null}

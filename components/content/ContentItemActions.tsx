@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { useTranslations } from 'next-intl';
 import { toast } from "@/components/ui/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,7 @@ const PLATFORM_CONFIG: Record<string, { label: string; color: string; icon: Reac
 
 export function ContentItemActions({ id, title, status, scheduledDate, contentPreview, channel, type }: Props) {
   const router = useRouter();
+  const t = useTranslations('contentActions');
   const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | "unplan" | null>(null);
 
   const [planOpen, setPlanOpen] = React.useState(false);
@@ -151,15 +153,15 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
 
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Duplication impossible",
-          description: (json as any)?.error ?? "Erreur inconnue",
+          title: t('duplicateError'),
+          description: (json as any)?.error ?? t('unknownError'),
           variant: "destructive",
         });
         return;
       }
 
       const newId = (json as any)?.id as string | undefined;
-      toast({ title: "Dupliqué", description: "Le contenu a été dupliqué en brouillon." });
+      toast({ title: t('duplicatedTitle'), description: t('duplicatedDesc') });
 
       if (newId) {
         router.push(`/contents/${newId}`);
@@ -169,8 +171,8 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
       }
     } catch (e) {
       toast({
-        title: "Duplication impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        title: t('duplicateError'),
+        description: e instanceof Error ? e.message : t('unknownError'),
         variant: "destructive",
       });
     } finally {
@@ -186,19 +188,19 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
 
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Suppression impossible",
-          description: (json as any)?.error ?? "Erreur inconnue",
+          title: t('deleteError'),
+          description: (json as any)?.error ?? t('unknownError'),
           variant: "destructive",
         });
         return;
       }
 
-      toast({ title: "Supprimé", description: "Le contenu a été supprimé." });
+      toast({ title: t('deletedTitle'), description: t('deletedDesc') });
       router.refresh();
     } catch (e) {
       toast({
-        title: "Suppression impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        title: t('deleteError'),
+        description: e instanceof Error ? e.message : t('unknownError'),
         variant: "destructive",
       });
     } finally {
@@ -209,8 +211,8 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
   const onPlan = async () => {
     if (!planDate) {
       toast({
-        title: "Date manquante",
-        description: "Choisis une date de planification.",
+        title: t('missingDate'),
+        description: t('missingDateDesc'),
         variant: "destructive",
       });
       return;
@@ -232,20 +234,20 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
 
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Planification impossible",
-          description: (json as any)?.error ?? "Erreur inconnue",
+          title: t('planError'),
+          description: (json as any)?.error ?? t('unknownError'),
           variant: "destructive",
         });
         return;
       }
 
-      toast({ title: "Planifié", description: "La date de publication a été enregistrée." });
+      toast({ title: t('plannedTitle'), description: t('plannedDesc') });
       setPlanOpen(false);
       router.refresh();
     } catch (e) {
       toast({
-        title: "Planification impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        title: t('planError'),
+        description: e instanceof Error ? e.message : t('unknownError'),
         variant: "destructive",
       });
     } finally {
@@ -269,19 +271,19 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
 
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Deplanification impossible",
-          description: (json as any)?.error ?? "Erreur inconnue",
+          title: t('unplanError'),
+          description: (json as any)?.error ?? t('unknownError'),
           variant: "destructive",
         });
         return;
       }
 
-      toast({ title: "Déplanifié", description: "Le contenu repasse en brouillon." });
+      toast({ title: t('unplannedTitle'), description: t('unplannedDesc') });
       router.refresh();
     } catch (e) {
       toast({
-        title: "Deplanification impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        title: t('unplanError'),
+        description: e instanceof Error ? e.message : t('unknownError'),
         variant: "destructive",
       });
     } finally {
@@ -294,7 +296,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
     setPublishModalOpen(true);
   };
 
-  const planLabel = isPlanned && scheduledDate ? "Modifier date" : "Planifier";
+  const planLabel = isPlanned && scheduledDate ? t('editDate') : t('schedule');
 
   return (
     <>
@@ -302,19 +304,19 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
       <AlertDialog open={planOpen} onOpenChange={setPlanOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Planifier ce contenu</AlertDialogTitle>
+            <AlertDialogTitle>{t('scheduleTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Choisis une date et une heure de publication. Le statut sera automatiquement mis sur &quot;Planifié&quot;.
+              {t('scheduleDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor={planInputId}>Date</Label>
+              <Label htmlFor={planInputId}>{t('dateLabel')}</Label>
               <Input id={planInputId} type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`${planInputId}-time`}>Heure</Label>
+              <Label htmlFor={`${planInputId}-time`}>{t('timeLabel')}</Label>
               <Input id={`${planInputId}-time`} type="time" value={planTime} onChange={(e) => setPlanTime(e.target.value)} />
             </div>
           </div>
@@ -328,7 +330,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
               }}
               disabled={busy === "plan"}
             >
-              {busy === "plan" ? "Planification..." : "Enregistrer"}
+              {busy === "plan" ? t('scheduling') : t('schedule')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -359,7 +361,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
             <DropdownMenuItem asChild>
               <Link href={`/contents/${id}`} className="flex items-center gap-2">
                 <Pencil className="w-4 h-4" />
-                Voir / éditer
+                {t('viewEdit')}
               </Link>
             </DropdownMenuItem>
 
@@ -381,7 +383,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
                       disabled={busy !== null}
                     >
                       {config.icon}
-                      Publier sur {config.label}
+                      {t('publishOn', { platform: config.label })}
                     </DropdownMenuItem>
                   );
                 })}
@@ -412,7 +414,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
                 disabled={busy !== null}
               >
                 <CalendarX className="w-4 h-4" />
-                {busy === "unplan" ? "Déplanification..." : "Déplanifier"}
+                {busy === "unplan" ? t('unscheduling') : t('unschedule')}
               </DropdownMenuItem>
             ) : null}
 
@@ -425,7 +427,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
               disabled={busy !== null}
             >
               <Copy className="w-4 h-4" />
-              {busy === "duplicate" ? "Duplication..." : "Dupliquer"}
+              {busy === "duplicate" ? t('duplicating') : t('duplicate')}
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
@@ -436,7 +438,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
                 className="flex items-center gap-2 text-rose-600 focus:text-rose-600"
               >
                 <Trash2 className="w-4 h-4" />
-                Supprimer
+                {t('delete')}
               </DropdownMenuItem>
             </AlertDialogTrigger>
           </DropdownMenuContent>
@@ -444,11 +446,11 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
 
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce contenu ?</AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
               {title?.trim()
-                ? `"${title.trim()}" sera supprimé définitivement. Cette action est irréversible.`
-                : "Ce contenu sera supprimé définitivement. Cette action est irréversible."}
+                ? t('deleteDescNamed', { title: title.trim() })
+                : t('deleteDescGeneric')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -461,7 +463,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
               className="bg-rose-600 hover:bg-rose-700"
               disabled={busy === "delete"}
             >
-              {busy === "delete" ? "Suppression..." : "Supprimer"}
+              {busy === "delete" ? t('deleting') : t('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

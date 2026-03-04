@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { MessageCircle, Send, X, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -63,29 +64,12 @@ function toUiMessage(m: PersistedCoachMessage): CoachMessage {
   };
 }
 
-const QUICK_REPLIES: Array<{ id: string; label: string; message: string }> = [
-  {
-    id: "clients",
-    label: "Plus de clients",
-    message: "Je veux plus de clients. C’est quoi LE plan le plus rentable là, maintenant ?",
-  },
-  {
-    id: "sell",
-    label: "Vendre mieux",
-    message: "J’ai du mal à vendre. Qu’est-ce qui bloque le plus, selon toi ?",
-  },
-  {
-    id: "offer",
-    label: "Clarifier mon offre",
-    message: "Aide-moi à clarifier mon offre pour qu’elle se vende plus facilement.",
-  },
-  {
-    id: "week",
-    label: "Plan de la semaine",
-    message: "Fais-moi un plan simple pour cette semaine (priorités + séquence).",
-  },
-  { id: "deeper", label: "Go deeper", message: "go deeper" },
-];
+const QUICK_REPLY_KEYS = [
+  { id: "clients", labelKey: "moreClients", messageKey: "moreClientsMsg" },
+  { id: "sell", labelKey: "sellBetter", messageKey: "sellBetterMsg" },
+  { id: "offer", labelKey: "clarifyOffer", messageKey: "clarifyOfferMsg" },
+  { id: "week", labelKey: "weekPlan", messageKey: "weekPlanMsg" },
+] as const;
 
 const HIDDEN_PREFIXES = ["/auth", "/onboarding", "/strategy/pyramids", "/legal", "/q/"];
 
@@ -110,6 +94,7 @@ export function CoachWidget() {
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<CoachSuggestion[]>([]);
   const [locked, setLocked] = useState<boolean>(false);
+  const t = useTranslations('coach');
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -215,7 +200,7 @@ export function CoachWidget() {
     if (s.type === "open_tipote_tool") {
       const href = getToolHref(s.payload);
       if (!href) {
-        toast({ title: "Oups", description: "Lien de navigation manquant dans la suggestion." });
+        toast({ title: t('oops'), description: t('missingLink') });
         return;
       }
       setApplyingSuggestionId(s.id);
@@ -227,7 +212,7 @@ export function CoachWidget() {
         }).catch(() => null);
       } finally {
         setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
-        toast({ title: "OK", description: "Je t’ouvre l’outil." });
+        toast({ title: "OK", description: t('openTool') });
         setOpen(false);
         try {
           router.push(href);
@@ -255,15 +240,15 @@ export function CoachWidget() {
 
       if (!res.ok || !json?.ok) {
         toast({
-          title: "Oups",
-          description: json?.error || "Impossible d’appliquer la suggestion.",
+          title: t('oops'),
+          description: json?.error || t('applyError'),
         });
         return;
       }
 
       toast({
-        title: "Appliqué ✅",
-        description: "C’est fait. Tipote a été mis à jour.",
+        title: t('applied'),
+        description: t('appliedDesc'),
       });
 
       setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
@@ -272,15 +257,15 @@ export function CoachWidget() {
       const assistantLocalId = uid();
       const msg =
         s.type === "update_tasks"
-          ? "✅ Ok, j’ai mis à jour la tâche."
+          ? t('taskUpdated')
           : s.type === "update_offers"
-            ? "✅ Ok, j'ai mis à jour tes offres."
-            : "✅ Ok.";
+            ? t('offersUpdated')
+            : t('okGeneric');
 
       setMessages((m) => [...m, { id: assistantLocalId, role: "assistant", content: msg, createdAt: Date.now() }]);
       void persistOne("assistant", msg);
 
-      // 🔁 Important: si l’utilisateur est déjà sur la page concernée, on force un refresh soft.
+      // 🔁 Important: si l'utilisateur est déjà sur la page concernée, on force un refresh soft.
       // (sans toucher au layout, best-effort)
       try {
         router.refresh();
@@ -297,7 +282,7 @@ export function CoachWidget() {
     // Aucun changement UI structurel: on utilise un prompt natif best-effort.
     let reason: string | undefined = undefined;
     try {
-      const r = window.prompt("Pourquoi tu refuses ? (optionnel)", "");
+      const r = window.prompt(t('rejectPrompt'), "");
       if (typeof r === "string") {
         const clean = r.trim();
         if (clean) reason = clean.slice(0, 500);
@@ -322,8 +307,8 @@ export function CoachWidget() {
     } finally {
       setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
       toast({
-        title: "Noté",
-        description: reason ? "Je garde ta raison en tête." : "Je garde ça en tête.",
+        title: t('noted'),
+        description: reason ? t('notedWithReason') : t('notedGeneric'),
       });
     }
   }
@@ -369,8 +354,7 @@ export function CoachWidget() {
         if (res.status === 403 && code === "COACH_LOCKED") {
           setLocked(true);
 
-          const lockedText =
-            "Le coach premium est dispo sur les plans **Pro** et **Elite**. Si tu veux, je te dis exactement quoi upgrader et pourquoi (en 30 secondes).";
+          const lockedText = t('lockedText');
 
           const lockedLocalId = uid();
           setMessages((m) => [
@@ -387,7 +371,7 @@ export function CoachWidget() {
           return;
         }
 
-        const errorText = json?.error || "Oups — j’ai eu un souci. Réessaie dans 10 secondes.";
+        const errorText = json?.error || t('errorRetry');
         const errorLocalId = uid();
 
         setMessages((m) => [
@@ -404,7 +388,7 @@ export function CoachWidget() {
         return;
       }
 
-      const assistantText = (json.message || "").trim() || "Ok. Donne-moi 1 précision et on avance.";
+      const assistantText = (json.message || "").trim() || t('fallbackResponse');
 
       const assistantLocalId = uid();
       setMessages((m) => [
@@ -420,7 +404,7 @@ export function CoachWidget() {
 
       setSuggestions(Array.isArray(json.suggestions) ? json.suggestions : []);
     } catch (e: any) {
-      const errorText = e?.message || "Erreur réseau. Réessaie.";
+      const errorText = e?.message || t('networkError');
       const errorLocalId = uid();
 
       setMessages((m) => [
@@ -459,7 +443,7 @@ export function CoachWidget() {
           <Button
             onClick={() => setOpen(true)}
             className="rounded-full w-14 h-14 shadow-lg shadow-primary/20"
-            aria-label="Ouvrir le coach Tipote"
+            aria-label={t('openCoach')}
           >
             <MessageCircle className="w-6 h-6" />
           </Button>
@@ -475,12 +459,12 @@ export function CoachWidget() {
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div className="leading-tight">
-                  <div className="font-semibold">Coach Tipote</div>
-                  <div className="text-xs text-muted-foreground">Ton pote business (stratégie • vente • acquisition)</div>
+                  <div className="font-semibold">{t('coachTipote')}</div>
+                  <div className="text-xs text-muted-foreground">{t('coachSubtitle')}</div>
                 </div>
               </div>
 
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Fermer">
+              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label={t('close')}>
                 <X className="w-5 h-5" />
               </Button>
             </div>
@@ -507,7 +491,7 @@ export function CoachWidget() {
               {loading || bootstrapping ? (
                 <div className="flex justify-start">
                   <div className="bg-muted rounded-2xl rounded-bl-md px-3 py-2 text-sm text-muted-foreground">
-                    coach is thinking…
+                    {t('thinking')}
                   </div>
                 </div>
               ) : null}
@@ -526,7 +510,7 @@ export function CoachWidget() {
                           disabled={!!applyingSuggestionId}
                           onClick={() => void applySuggestion(s)}
                         >
-                          {applyingSuggestionId === s.id ? "…" : s.type === "open_tipote_tool" ? "Ouvrir" : "Valider"}
+                          {applyingSuggestionId === s.id ? "…" : s.type === "open_tipote_tool" ? t('openBtn') : t('validate')}
                         </Button>
                         <Button
                           type="button"
@@ -535,7 +519,7 @@ export function CoachWidget() {
                           disabled={!!applyingSuggestionId}
                           onClick={() => void rejectSuggestion(s)}
                         >
-                          Refuser
+                          {t('reject')}
                         </Button>
                       </div>
                     </div>
@@ -547,7 +531,7 @@ export function CoachWidget() {
                 <div className="rounded-xl border bg-card p-3 flex items-start gap-2">
                   <Lock className="w-4 h-4 mt-0.5" />
                   <div className="text-xs text-muted-foreground">
-                    Coach premium = Pro/Elite. Si tu veux, je te dis le chemin le plus rentable selon ton usage.
+                    {t('premiumNote')}
                   </div>
                 </div>
               ) : null}
@@ -556,7 +540,7 @@ export function CoachWidget() {
             <div className="border-t p-3">
               {showQuickReplies ? (
                 <div className="mb-2 flex flex-wrap gap-2">
-                  {QUICK_REPLIES.map((q) => (
+                  {QUICK_REPLY_KEYS.map((q) => (
                     <Button
                       key={q.id}
                       type="button"
@@ -564,12 +548,23 @@ export function CoachWidget() {
                       className="h-7 px-3 rounded-full text-xs"
                       onClick={() => {
                         setInput("");
-                        void sendText(q.message);
+                        void sendText(t(q.messageKey));
                       }}
                     >
-                      {q.label}
+                      {t(q.labelKey)}
                     </Button>
                   ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-7 px-3 rounded-full text-xs"
+                    onClick={() => {
+                      setInput("");
+                      void sendText("go deeper");
+                    }}
+                  >
+                    Go deeper
+                  </Button>
                 </div>
               ) : null}
 
@@ -583,7 +578,7 @@ export function CoachWidget() {
                       void send();
                     }
                   }}
-                  placeholder="Écris comme à un pote…"
+                  placeholder={t('writePlaceholder')}
                   className="flex-1 h-10 rounded-xl border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <Button onClick={() => void send()} disabled={!canSend} className="rounded-xl h-10 px-3">
@@ -591,7 +586,7 @@ export function CoachWidget() {
                 </Button>
               </div>
               <div className="mt-2 text-[11px] text-muted-foreground">
-                Réponses courtes, une idée à la fois. Si tu veux : “go deeper”.
+                {t('shortResponses')}
               </div>
             </div>
           </div>

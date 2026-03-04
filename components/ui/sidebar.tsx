@@ -188,26 +188,7 @@ const Sidebar = React.forwardRef<
   ) => {
     const { state, openMobile, setOpenMobile, isMobile } = useSidebar();
 
-    // ✅ Pixel-perfect Lovable + footer visible without scroll:
-    // - lock sidebar to viewport height
-    // - prevent whole sidebar from scrolling
-    // - SidebarContent becomes the scroll area
-    // - keep sidebar stuck while main page scrolls
-    if (collapsible === "none") {
-      return (
-        <div
-          ref={ref}
-          className={cn(
-            "sticky top-0 flex h-svh w-[--sidebar-width] flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
-            className,
-          )}
-          {...props}
-        >
-          {children}
-        </div>
-      );
-    }
-
+    // ✅ Mobile : toujours afficher la sidebar en Sheet (même si collapsible="none")
     if (isMobile) {
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile}>
@@ -225,6 +206,23 @@ const Sidebar = React.forwardRef<
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
+      );
+    }
+
+    // ✅ Desktop avec collapsible="none" : sidebar en flow normal (sticky, pas fixed)
+    // Empêche tout chevauchement avec le contenu principal.
+    if (collapsible === "none") {
+      return (
+        <div
+          ref={ref}
+          className={cn(
+            "hidden md:flex sticky top-0 h-svh w-[--sidebar-width] flex-col overflow-hidden bg-sidebar text-sidebar-foreground",
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </div>
       );
     }
 

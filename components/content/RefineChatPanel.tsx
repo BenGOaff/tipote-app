@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -23,14 +24,9 @@ type Props = {
   onContentUpdated: (newContent: string) => void;
 };
 
-const QUICK_ACTIONS = [
-  "Plus court",
-  "Plus percutant",
-  "Ton plus direct",
-  "Ajouter un CTA",
-  "Reformuler l'accroche",
-  "Plus de storytelling",
-];
+const QUICK_ACTION_KEYS = [
+  "shorter", "punchier", "moreDirect", "addCta", "reworkHook", "moreStorytelling",
+] as const;
 
 export function RefineChatPanel({
   currentContent,
@@ -38,6 +34,7 @@ export function RefineChatPanel({
   contentId,
   onContentUpdated,
 }: Props) {
+  const t = useTranslations('refineChat');
   const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -68,10 +65,10 @@ export function RefineChatPanel({
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.ok) {
-        const errMsg = data?.error || "Erreur lors de l'affinage";
+        const errMsg = data?.error || t('refineError');
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: `Erreur : ${errMsg}` },
+          { role: "assistant", content: t('errorPrefix', { message: errMsg }) },
         ]);
         return;
       }
@@ -79,7 +76,7 @@ export function RefineChatPanel({
       const refined = data.content as string;
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Contenu mis à jour." },
+        { role: "assistant", content: t('contentUpdated') },
       ]);
       onContentUpdated(refined);
       emitCreditsUpdated();
@@ -88,7 +85,7 @@ export function RefineChatPanel({
         ...prev,
         {
           role: "assistant",
-          content: `Erreur : ${e?.message || "Impossible de raffiner le contenu"}`,
+          content: t('errorPrefix', { message: e?.message || t('refineDefault') }),
         },
       ]);
     } finally {
@@ -115,7 +112,7 @@ export function RefineChatPanel({
         className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
       >
         <MessageCircle className="h-4 w-4 text-primary" />
-        Affiner avec Tipote
+        {t('refineWithTipote')}
       </button>
     );
   }
@@ -126,9 +123,9 @@ export function RefineChatPanel({
         <div className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-slate-900">
-            Affiner avec Tipote
+            {t('refineWithTipote')}
           </span>
-          <span className="text-xs text-muted-foreground">0.5 crédit / message</span>
+          <span className="text-xs text-muted-foreground">{t('creditPerMessage')}</span>
         </div>
         <Button
           variant="ghost"
@@ -136,21 +133,21 @@ export function RefineChatPanel({
           className="h-7 text-xs"
           onClick={() => setExpanded(false)}
         >
-          Fermer
+          {t('close')}
         </Button>
       </div>
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-1.5 px-4 py-2.5 border-b bg-slate-50/50">
-        {QUICK_ACTIONS.map((action) => (
+        {QUICK_ACTION_KEYS.map((key) => (
           <button
-            key={action}
+            key={key}
             type="button"
             disabled={loading}
-            onClick={() => sendInstruction(action)}
+            onClick={() => sendInstruction(t(key))}
             className="text-xs px-2.5 py-1 rounded-full border bg-white hover:bg-accent transition-colors disabled:opacity-50"
           >
-            {action}
+            {t(key)}
           </button>
         ))}
       </div>
@@ -177,7 +174,7 @@ export function RefineChatPanel({
           {loading && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
-              Tipote réfléchit...
+              {t('thinking')}
             </div>
           )}
         </div>
@@ -188,7 +185,7 @@ export function RefineChatPanel({
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ex: Raccourcis le texte, ajoute une question en accroche..."
+          placeholder={t('placeholder')}
           className="min-h-[40px] max-h-[80px] resize-none text-sm"
           rows={1}
           onKeyDown={(e) => {

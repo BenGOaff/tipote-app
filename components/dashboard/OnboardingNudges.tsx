@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowRight } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useTranslations } from 'next-intl';
 import { callStrategySSE } from "@/lib/strategySSE";
 
 type AnyRecord = Record<string, any>;
@@ -84,6 +85,7 @@ async function postJSON<T>(url: string, body?: unknown): Promise<T> {
 export default function OnboardingNudges(props: { planJson: unknown | null }) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations('onboardingNudges');
 
   const plan = useMemo(() => (asRecord(props.planJson) ? (props.planJson as AnyRecord) : null), [props.planJson]);
 
@@ -137,8 +139,8 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
       router.push("/strategy");
     } catch (e) {
       toast({
-        title: "Oups",
-        description: e instanceof Error ? e.message : "Impossible de générer la stratégie pour le moment.",
+        title: t('oops'),
+        description: e instanceof Error ? e.message : t('generateError'),
         variant: "destructive",
       });
       router.push("/strategy");
@@ -157,23 +159,23 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
             {selectedMissing ? (
               <>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">À faire</Badge>
-                  <p className="text-sm text-muted-foreground">Dernière étape pour débloquer ta stratégie complète</p>
+                  <Badge variant="outline">{t('toDo')}</Badge>
+                  <p className="text-sm text-muted-foreground">{t('lastStep')}</p>
                 </div>
-                <h3 className="mt-2 text-lg font-semibold">Choisis tes offres</h3>
+                <h3 className="mt-2 text-lg font-semibold">{t('chooseOffers')}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Tipote a généré 3 options. Sélectionne celle qui te ressemble le plus pour finaliser le plan 90 jours.
+                  {t('chooseOffersDesc')}
                 </p>
               </>
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">À finaliser</Badge>
-                  <p className="text-sm text-muted-foreground">On termine la stratégie + le plan d’action</p>
+                  <Badge variant="outline">{t('toFinalize')}</Badge>
+                  <p className="text-sm text-muted-foreground">{t('finishStrategy')}</p>
                 </div>
-                <h3 className="mt-2 text-lg font-semibold">Générer la stratégie complète</h3>
+                <h3 className="mt-2 text-lg font-semibold">{t('generateFullStrategy')}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Tes offres prennent vie : mission, positionnement, persona et tâches datées (90 jours).
+                  {t('generateFullStrategyDesc')}
                 </p>
               </>
             )}
@@ -183,17 +185,17 @@ export default function OnboardingNudges(props: { planJson: unknown | null }) {
             {selectedMissing ? (
               <Button onClick={generateFullStrategy} disabled={isGenerating} className="gap-2">
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {isGenerating ? "Génération..." : "Générer maintenant"}
+                {isGenerating ? t('generating') : t('generateNow')}
               </Button>
             ) : (
               <Button onClick={generateFullStrategy} disabled={isGenerating} className="gap-2">
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Générer maintenant
+                {t('generateNow')}
               </Button>
             )}
 
             <Button asChild variant="outline">
-              <Link href="/strategy">Voir / ajuster</Link>
+              <Link href="/strategy">{t('viewAdjust')}</Link>
             </Button>
           </div>
         </div>
