@@ -938,44 +938,98 @@ function injectFaqStyling(html: string): string {
 
 /**
  * Inject an inline email capture form into capture pages.
- * This ensures ALL capture templates have a visible form, not just capture-03.
- * The form includes: name, email, privacy checkbox, and submit button.
+ * CRITICAL: The form MUST be above the fold (inside the hero section).
+ * The form includes: first name, email, privacy checkbox, and submit button.
  * Skips injection if the template already has a <form> element.
+ *
+ * Placement strategy (in order of priority):
+ * 1. Replace the FIRST CTA button/link with the form (inside hero section)
+ * 2. Insert after the first </h1> if no CTA found
+ * 3. Insert at the end of the first <section> as fallback
  */
 function injectInlineCaptureForm(html: string, contentData: Record<string, any>): string {
   // Skip if template already has a form (e.g., capture-03) or already injected
   if (/<form[\s>]/i.test(html)) return html;
   if (html.includes("tipote-capture-form-wrap") || html.includes("tipote-capture-form")) return html;
 
-  const ctaText = safeString(contentData.cta_text || contentData.cta_label || contentData.cta_button_text || "Je m'inscris !");
+  const ctaText = safeString(contentData.cta_text || contentData.cta_label || contentData.cta_button_text || "Je m&#039;inscris !");
+  const ctaSub = safeString(contentData.cta_subtitle || "");
   const privacyUrl = safeString(contentData.legal_privacy_url || "");
 
+  // Build the inline form HTML — designed to sit inside the hero section
   const formHtml = `
-<div class="tipote-capture-form-wrap" style="max-width:480px;margin:32px auto;padding:32px 24px;background:rgba(255,255,255,0.97);border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);text-align:center;font-family:system-ui,sans-serif">
+<div class="tipote-capture-form-wrap" style="max-width:440px;margin:28px auto 12px;padding:0;text-align:center;font-family:inherit">
   <form id="tipote-capture-form" style="display:flex;flex-direction:column;gap:10px">
-    <input type="text" name="first_name" placeholder="Ton prénom" style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none;width:100%;box-sizing:border-box">
-    <input type="email" name="email" placeholder="Ton email" required style="padding:12px 16px;border:1px solid #ddd;border-radius:8px;font-size:1rem;outline:none;width:100%;box-sizing:border-box">
-    <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;font-size:0.8rem;color:#666;cursor:pointer;margin:4px 0">
-      <input type="checkbox" required style="margin-top:2px;accent-color:#2563eb;flex-shrink:0">
-      <span>J&#039;accepte de recevoir des emails.${privacyUrl ? ` <a href="${privacyUrl}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline">Politique de confidentialit&#233;</a>` : ""}</span>
+    <input type="text" name="first_name" placeholder="Ton pr&#233;nom" style="padding:14px 18px;border:2px solid rgba(255,255,255,0.2);border-radius:10px;font-size:1rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.95);color:#333">
+    <input type="email" name="email" placeholder="Ton adresse email" required style="padding:14px 18px;border:2px solid rgba(255,255,255,0.2);border-radius:10px;font-size:1rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.95);color:#333">
+    <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;font-size:0.78rem;color:rgba(255,255,255,0.7);cursor:pointer;margin:2px 0;line-height:1.4">
+      <input type="checkbox" required style="margin-top:3px;accent-color:var(--colors-primary,#2563eb);flex-shrink:0;width:16px;height:16px">
+      <span>J&#039;accepte la <a href="${privacyUrl || "#"}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">politique de confidentialit&#233;</a> et de recevoir des emails.</span>
     </label>
-    <button type="submit" class="cta-button cta-primary" style="padding:14px;background:var(--colors-primary,#2563eb);color:#fff;border:none;border-radius:8px;font-size:1.05rem;font-weight:600;cursor:pointer;margin-top:4px;width:100%">${escapeHtml(ctaText)}</button>
+    <button type="submit" class="cta-button cta-primary" style="padding:16px 24px;background:var(--colors-primary,#2563eb);color:#fff;border:none;border-radius:10px;font-size:1.1rem;font-weight:700;cursor:pointer;margin-top:4px;width:100%;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(0,0,0,0.2);transition:transform 0.2s,box-shadow 0.2s">${escapeHtml(ctaText)}</button>
+    ${ctaSub ? `<p style="font-size:0.75rem;color:rgba(255,255,255,0.6);margin:4px 0 0">${escapeHtml(ctaSub)}</p>` : ""}
   </form>
-  <p style="font-size:0.7rem;color:#999;margin:10px 0 0">Tes donn&#233;es sont prot&#233;g&#233;es et ne seront jamais partag&#233;es.</p>
 </div>`;
 
-  // Insert before <footer> if exists, otherwise before </body>
+  // Light-background variant (for templates with light hero sections)
+  const formHtmlLight = formHtml
+    .replace(/rgba\(255,255,255,0\.7\)/g, "rgba(0,0,0,0.5)")
+    .replace(/rgba\(255,255,255,0\.6\)/g, "rgba(0,0,0,0.4)")
+    .replace(/border:2px solid rgba\(255,255,255,0\.2\)/g, "border:2px solid rgba(0,0,0,0.1)")
+    .replace(/background:rgba\(255,255,255,0\.95\)/g, "background:rgba(255,255,255,1)")
+    .replace(/box-shadow:0 4px 16px rgba\(0,0,0,0\.2\)/g, "box-shadow:0 4px 16px var(--colors-primary,rgba(37,99,235,0.3))");
+
+  // Detect if hero section has a dark background
+  const heroSection = html.match(/<section[^>]*class="[^"]*hero[^"]*"[^>]*>([\s\S]*?)<\/section>/i);
+  const isDarkHero = heroSection ? /background[^:]*:\s*(?:linear-gradient[^;]*(?:#[0-3]|rgb\s*\(\s*[0-3])|#[0-3]|rgb\s*\(\s*[0-3])/.test(html.slice(0, html.indexOf("</section>"))) : true;
+  const formToInsert = isDarkHero ? formHtml : formHtmlLight;
+
+  // Strategy 1: Find the FIRST CTA button/link in the hero section and place the form AFTER it
+  // This ensures the form appears above the fold, right where the user expects to take action
+  const firstCtaMatch = html.match(
+    /(<a[^>]*class="[^"]*(?:cta|btn|button)[^"]*"[^>]*>[\s\S]*?<\/a>\s*(?:<span[^>]*class="[^"]*(?:cta-subtitle|cta-sub)[^"]*"[^>]*>[\s\S]*?<\/span>)?)/i
+  );
+
+  if (firstCtaMatch && firstCtaMatch.index != null) {
+    const insertPos = firstCtaMatch.index + firstCtaMatch[0].length;
+    // Only replace if this CTA is inside the first section (hero)
+    const beforeCta = html.slice(0, firstCtaMatch.index);
+    const sectionCount = (beforeCta.match(/<\/section>/gi) || []).length;
+    if (sectionCount === 0) {
+      // CTA is in the first section — replace it with the form
+      return html.slice(0, firstCtaMatch.index) + formToInsert + html.slice(insertPos);
+    }
+  }
+
+  // Strategy 2: Insert after the first </h1> (headline) in the hero
+  const h1EndIdx = html.indexOf("</h1>");
+  if (h1EndIdx !== -1) {
+    const insertPos = h1EndIdx + 5;
+    // Check we're still in the first section
+    const beforeH1 = html.slice(0, h1EndIdx);
+    if ((beforeH1.match(/<\/section>/gi) || []).length === 0) {
+      return html.slice(0, insertPos) + formToInsert + html.slice(insertPos);
+    }
+  }
+
+  // Strategy 3: Insert at the end of the first <section> (before its closing tag)
+  const firstSectionEnd = html.indexOf("</section>");
+  if (firstSectionEnd !== -1) {
+    return html.slice(0, firstSectionEnd) + formToInsert + html.slice(firstSectionEnd);
+  }
+
+  // Final fallback: before footer or before </body>
   const footerIdx = html.search(/<footer[\s>]/i);
   if (footerIdx !== -1) {
-    return html.slice(0, footerIdx) + formHtml + "\n" + html.slice(footerIdx);
+    return html.slice(0, footerIdx) + formToInsert + "\n" + html.slice(footerIdx);
   }
 
   const bodyIdx = html.lastIndexOf("</body>");
   if (bodyIdx !== -1) {
-    return html.slice(0, bodyIdx) + formHtml + "\n" + html.slice(bodyIdx);
+    return html.slice(0, bodyIdx) + formToInsert + "\n" + html.slice(bodyIdx);
   }
 
-  return html + formHtml;
+  return html + formToInsert;
 }
 
 // ---------- Legal footer injection ----------
@@ -996,8 +1050,34 @@ const LEGAL_LABELS: Record<string, { mentions: string; cgv: string; privacy: str
 // ---------- Brand override CSS ----------
 
 /**
- * Generate CSS that overrides hardcoded template colors/fonts with user's brand.
+ * Convert a hex color (#rrggbb or #rgb) to rgba(r,g,b,alpha).
+ * Used to generate matching shadow/border colors from brand primary.
+ */
+function hexToRgba(hex: string, alpha: number): string {
+  const c = hex.replace("#", "");
+  let r: number, g: number, b: number;
+  if (c.length === 3) {
+    r = parseInt(c[0] + c[0], 16);
+    g = parseInt(c[1] + c[1], 16);
+    b = parseInt(c[2] + c[2], 16);
+  } else {
+    r = parseInt(c.slice(0, 2), 16);
+    g = parseInt(c.slice(2, 4), 16);
+    b = parseInt(c.slice(4, 6), 16);
+  }
+  if (isNaN(r)) r = 37;
+  if (isNaN(g)) g = 99;
+  if (isNaN(b)) b = 235;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
+ * Generate CSS that overrides ALL hardcoded template colors/fonts with user's brand.
+ * Covers: backgrounds, gradients, box-shadows, text-shadows, borders, text-decoration,
+ * pseudo-elements, form focus states, accent colors, and typography.
+ *
  * This is critical because full-doc templates use hardcoded hex colors, not CSS variables.
+ * Without comprehensive overrides, you get visual mismatches like blue buttons with red shadows.
  */
 function buildBrandOverrideCss(brandTokens: Record<string, any> | null | undefined): string {
   if (!brandTokens || Object.keys(brandTokens).length === 0) return "";
@@ -1009,50 +1089,126 @@ function buildBrandOverrideCss(brandTokens: Record<string, any> | null | undefin
   const rules: string[] = [];
 
   if (primary) {
-    // Override CTA/button backgrounds
+    // Pre-compute shadow/border variations from primary color
+    const shadow40 = hexToRgba(primary, 0.4);
+    const shadow25 = hexToRgba(primary, 0.25);
+    const shadow15 = hexToRgba(primary, 0.15);
+    const shadow60 = hexToRgba(primary, 0.6);
+    const shadow10 = hexToRgba(primary, 0.1);
+
     rules.push(`
+/* ═══ BRAND COLOR OVERRIDE — PRIMARY: ${primary} ═══ */
+
+/* 1. CTA/Button backgrounds — solid brand color, no gradients */
 .cta-button, .cta-primary, .btn-primary, [class*="cta-button"], [class*="btn-primary"],
 button[class*="cta"], a[class*="cta"], .hero-cta, .main-cta,
-button[type="submit"], .command-button, .order-button {
+button[type="submit"], .command-button, .order-button, [class*="day-cta"] {
   background: ${primary} !important;
   background-color: ${primary} !important;
-}
-/* Override gradient buttons - replace with solid brand color */
-.cta-button, .cta-primary, .btn-primary, button[class*="cta"] {
   background-image: none !important;
+  border-color: ${primary} !important;
 }
-/* Override accent/highlight colors */
-.gold-text, .accent-text, [class*="gold-text"], [class*="accent"] {
+
+/* 2. CTA/Button BOX-SHADOWS — must match brand color, not template theme */
+.cta-button, .cta-primary, .btn-primary, [class*="cta-button"], [class*="btn-primary"],
+button[class*="cta"], a[class*="cta"], .hero-cta, .main-cta,
+button[type="submit"], .command-button, .order-button, [class*="day-cta"] {
+  box-shadow: 0 8px 24px ${shadow40} !important;
+}
+.cta-button:hover, .cta-primary:hover, .btn-primary:hover,
+[class*="cta-button"]:hover, [class*="btn-primary"]:hover,
+button[class*="cta"]:hover, a[class*="cta"]:hover, button[type="submit"]:hover {
+  box-shadow: 0 12px 32px ${shadow60} !important;
+}
+
+/* 3. Accent/highlight text colors */
+.gold-text, .accent-text, [class*="gold-text"], [class*="accent-text"],
+.highlight, .text-highlight, [class*="highlight"], .hook,
+[class*="headline-highlight"], [class*="text-curiosity"],
+.section-title::after, .section-emphasis, .accent-line {
   color: ${primary} !important;
 }
-/* Override header/hero backgrounds */
+
+/* 4. Decorative lines and pseudo-elements */
+.section-title::after, .accent-line, [class*="accent-line"], hr[class*="accent"] {
+  background: ${primary} !important;
+  background-image: none !important;
+}
+.headline-underline, [class*="headline-underline"] {
+  text-decoration-color: ${primary} !important;
+}
+
+/* 5. Card/element hover states — border + shadow */
+.benefit-card:hover, .feature-card:hover, .testimonial-card:hover,
+.goal-card:hover, [class*="card"]:hover {
+  border-color: ${primary} !important;
+  box-shadow: 0 8px 24px ${shadow15} !important;
+}
+
+/* 6. Numbered badges, benefit numbers, step indicators */
+.benefit-number, .step-number, [class*="number"], [class*="badge"] {
+  background: ${primary} !important;
+  background-image: none !important;
+}
+.badge-label, [class*="badge-label"] {
+  color: ${primary} !important;
+}
+
+/* 7. Form input focus states */
+input:focus, textarea:focus, select:focus,
+.form-input:focus, [class*="form-input"]:focus {
+  border-color: ${primary} !important;
+  box-shadow: 0 0 0 3px ${shadow10} !important;
+  outline-color: ${primary} !important;
+}
+input[type="checkbox"] {
+  accent-color: ${primary} !important;
+}
+
+/* 8. Capture form button */
+.tipote-capture-form-wrap button[type="submit"] {
+  background: ${primary} !important;
+  box-shadow: 0 4px 16px ${shadow40} !important;
+}
+
+/* 9. Header/border accents */
 .hero, .header, [class*="hero-section"], header {
   border-color: ${primary} !important;
 }
-/* Override badges and labels */
-.badge, [class*="badge"], .label, [class*="label"] {
-  background-color: ${primary} !important;
-  background-image: none !important;
-}
-/* Override border accents */
-.featured, [class*="featured"], .highlight, [class*="highlight"] {
+.featured, [class*="featured"] {
   border-color: ${primary} !important;
 }
-/* Override form button */
-.tipote-capture-form-wrap button[type="submit"] {
-  background: ${primary} !important;
+
+/* 10. Links */
+a:not([class]):not([data-legal]):not(.footer-links a) { color: ${primary}; }
+.footer-links a:hover { color: ${primary} !important; }
+
+/* 11. List bullets with color */
+ul li::before, ol li::before,
+.benefits-list li::before, [class*="benefits"] li::before,
+[class*="list"] li::before {
+  color: ${primary} !important;
 }
-/* Override links */
-a:not([class]):not([data-legal]) { color: ${primary}; }
+
+/* 12. Counter/social proof accent */
+.counter-number, [class*="counter-number"], .stats-number {
+  color: ${primary} !important;
+}
 `);
   }
 
   if (accent) {
+    const accentShadow = hexToRgba(accent, 0.3);
     rules.push(`
-/* Secondary/accent elements */
+/* ═══ BRAND ACCENT COLOR: ${accent} ═══ */
 .cta-secondary, .btn-secondary, [class*="cta-secondary"], [class*="btn-outline"] {
   border-color: ${accent} !important;
   color: ${accent} !important;
+}
+.cta-secondary:hover, .btn-secondary:hover {
+  background-color: ${accent} !important;
+  color: #fff !important;
+  box-shadow: 0 8px 24px ${accentShadow} !important;
 }
 .section-accent, [class*="section-accent"] {
   background-color: ${accent} !important;
@@ -1062,7 +1218,7 @@ a:not([class]):not([data-legal]) { color: ${primary}; }
 
   if (font) {
     rules.push(`
-/* Brand font override */
+/* ═══ BRAND FONT: ${font} ═══ */
 h1, h2, h3, h4, h5, h6,
 .hero-title, .main-headline, [class*="title"], [class*="heading"] {
   font-family: '${font}', sans-serif !important;

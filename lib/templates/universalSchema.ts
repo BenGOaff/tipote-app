@@ -255,6 +255,34 @@ const CAPTURE_FIELDS: UniversalField[] = [
     pageTypes: ["capture"],
     maxLength: 100,
   },
+  // --- Thank-you page (shown after form submission) ---
+  {
+    key: "thank_you_title",
+    kind: "scalar",
+    label: "Titre page de remerciements",
+    description: "Titre affiché après inscription. Doit confirmer et féliciter. Ex: 'Bravo, tu fais partie de l'aventure !', 'C'est fait ! Ton accès arrive...'.",
+    required: true,
+    pageTypes: ["capture"],
+    maxLength: 80,
+  },
+  {
+    key: "thank_you_message",
+    kind: "scalar",
+    label: "Message de remerciements",
+    description: "Message complet après inscription (2-3 phrases). Confirme ce que le prospect va recevoir, quand, et quelle est la prochaine étape. Ex: 'Tu vas recevoir ton guide par email dans les 5 prochaines minutes. Pense à vérifier tes spams !'.",
+    required: true,
+    pageTypes: ["capture"],
+    maxLength: 250,
+  },
+  {
+    key: "thank_you_cta_text",
+    kind: "scalar",
+    label: "Texte bouton page de remerciements",
+    description: "Texte optionnel d'un bouton CTA sur la page de remerciements (ex: 'Découvrir mon offre', 'Rejoindre la communauté'). Laisser vide si pas de CTA secondaire.",
+    required: false,
+    pageTypes: ["capture"],
+    maxLength: 40,
+  },
 ];
 
 // ---------- UNIVERSAL SALES SCHEMA ----------
