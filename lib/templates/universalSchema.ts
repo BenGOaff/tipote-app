@@ -36,17 +36,35 @@ const CAPTURE_FIELDS: UniversalField[] = [
     key: "logo_text",
     kind: "scalar",
     label: "Texte du logo",
-    description: "Nom de la marque ou de l'offre (source: user branding)",
+    description: "Nom de la marque ou de l'offre (source: user branding).",
     required: true,
     pageTypes: ["capture"],
     maxLength: 25,
   },
-  // --- Hero ---
+  {
+    key: "logo_subtitle",
+    kind: "scalar",
+    label: "Baseline du logo",
+    description: "Slogan ou baseline courte de la marque (3-5 mots max). Ex: 'Ton business, automatisé.'",
+    required: false,
+    pageTypes: ["capture"],
+    maxLength: 40,
+  },
+  // --- Hero (au-dessus de la ligne de flottaison) ---
+  {
+    key: "hook",
+    kind: "scalar",
+    label: "Hook / Accroche",
+    description: "Affirmation choc en MAJUSCULES qui capte l'attention en 1 seconde. Ex: 'ARRÊTE DE PERDRE DU TEMPS', 'LE SECRET DES TOP PERFORMERS'.",
+    required: true,
+    pageTypes: ["capture"],
+    maxLength: 60,
+  },
   {
     key: "hero_eyebrow",
     kind: "scalar",
     label: "Sur-titre hero",
-    description: "Phrase courte de contexte au-dessus du titre (catégorie, type d'offre, label)",
+    description: "Badge ou label court au-dessus du titre (type d'offre, exclusivité). Ex: 'GUIDE GRATUIT', 'MASTERCLASS OFFERTE'.",
     required: false,
     pageTypes: ["capture"],
     maxLength: 50,
@@ -54,8 +72,8 @@ const CAPTURE_FIELDS: UniversalField[] = [
   {
     key: "hero_title",
     kind: "scalar",
-    label: "Titre principal",
-    description: "Promesse de valeur irrésistible, spécifique, orientée résultat. Doit créer de la curiosité ou de l'urgence.",
+    label: "Titre principal (headline)",
+    description: "Promesse de valeur irrésistible, spécifique, orientée résultat. DOIT créer de la curiosité ou de l'urgence. C'est L'ÉLÉMENT LE PLUS IMPORTANT de la page.",
     required: true,
     pageTypes: ["capture"],
     maxLength: 120,
@@ -64,43 +82,98 @@ const CAPTURE_FIELDS: UniversalField[] = [
     key: "hero_subtitle",
     kind: "scalar",
     label: "Sous-titre hero",
-    description: "Complète la promesse : qui est concerné, quel résultat, sans quoi (éliminer les objections).",
+    description: "Complète la promesse : précise le mécanisme, le public cible, le résultat concret. Élimine la première objection.",
     required: true,
     pageTypes: ["capture"],
-    maxLength: 150,
+    maxLength: 160,
   },
-  // --- Benefits ---
+  {
+    key: "hero_description",
+    kind: "scalar",
+    label: "Paragraphe hero",
+    description: "Paragraphe d'amplification (2-3 phrases) qui développe la promesse avec empathie et spécificité. Explique pourquoi le visiteur devrait s'inscrire MAINTENANT.",
+    required: true,
+    pageTypes: ["capture"],
+    maxLength: 350,
+  },
+  // --- Puces promesses (bénéfices) ---
   {
     key: "benefits_title",
     kind: "scalar",
     label: "Titre section bénéfices",
-    description: "Introduit les bénéfices clés du lead magnet ou de l'offre gratuite.",
-    required: false,
+    description: "Introduit les bénéfices clés. Ex: 'Ce que tu vas découvrir', 'Dans ce guide, tu apprendras à...'.",
+    required: true,
     pageTypes: ["capture"],
     maxLength: 80,
   },
   {
     key: "benefits",
     kind: "array_scalar",
-    label: "Bénéfices / Puces promesses",
-    description: "Chaque puce = 1 bénéfice concret + conséquence positive. Phrase complète, spécifique, orientée résultat.",
+    label: "Puces promesses (bénéfices)",
+    description: "Chaque puce = 1 bénéfice concret + conséquence positive. Phrase COMPLÈTE, spécifique, orientée résultat. Format : 'Bénéfice précis pour que [conséquence désirable]'. JAMAIS de texte placeholder.",
     required: true,
     pageTypes: ["capture"],
+    minItems: 5,
+    maxItems: 7,
+    itemMaxLength: 130,
+  },
+  // --- Points de douleur / Identification ---
+  {
+    key: "problem_bullets",
+    kind: "array_scalar",
+    label: "Points de douleur / Identification",
+    description: "Situations frustrantes que vit le prospect. Le prospect doit se dire 'c'est exactement moi'. Phrase à la 2ème personne. Ex: 'Tu passes des heures à créer du contenu sans résultat'.",
+    required: false,
+    pageTypes: ["capture"],
     minItems: 3,
-    maxItems: 6,
-    itemMaxLength: 120,
+    maxItems: 5,
+    itemMaxLength: 100,
+  },
+  // --- Programme / Contenu de l'offre gratuite ---
+  {
+    key: "program_title",
+    kind: "scalar",
+    label: "Titre du programme/contenu",
+    description: "Introduit le contenu de l'offre gratuite. Ex: 'Au programme de cette masterclass', 'Ce guide en 3 étapes'.",
+    required: false,
+    pageTypes: ["capture"],
+    maxLength: 80,
+  },
+  {
+    key: "program_items",
+    kind: "array_object",
+    label: "Étapes / Modules / Jours",
+    description: "Contenu détaillé de l'offre gratuite. Adapte le vocabulaire (modules, étapes, jours, chapitres).",
+    required: false,
+    pageTypes: ["capture"],
+    minItems: 3,
+    maxItems: 5,
+    subFields: [
+      { key: "label", label: "Étiquette (JOUR 1, ÉTAPE 1, etc.)", maxLength: 20 },
+      { key: "title", label: "Titre de l'étape", maxLength: 80 },
+      { key: "description", label: "Description courte (1 phrase)", maxLength: 150 },
+    ],
   },
   // --- Social proof ---
   {
     key: "social_proof_text",
     kind: "scalar",
     label: "Preuve sociale",
-    description: "Chiffre ou fait de crédibilité (ex: '2 500+ entrepreneurs accompagnés').",
+    description: "Chiffre ou fait de crédibilité (ex: '2 500+ entrepreneurs accompagnés', 'Recommandé par 98% des participants').",
     required: false,
     pageTypes: ["capture"],
     maxLength: 80,
   },
   // --- About / Authority ---
+  {
+    key: "about_title",
+    kind: "scalar",
+    label: "Titre section À propos",
+    description: "Introduit l'auteur. Ex: 'Qui suis-je ?', 'Présenté par', 'Ton formateur'.",
+    required: false,
+    pageTypes: ["capture"],
+    maxLength: 50,
+  },
   {
     key: "about_name",
     kind: "scalar",
@@ -113,18 +186,33 @@ const CAPTURE_FIELDS: UniversalField[] = [
   {
     key: "about_description",
     kind: "scalar",
-    label: "Mini bio",
-    description: "1-2 phrases sur l'expertise et la mission de l'auteur.",
+    label: "Bio / Storytelling de l'auteur",
+    description: "Brief storytelling (3-5 phrases) : parcours, expertise, résultats obtenus. Le prospect doit se dire que l'auteur a vécu la même chose et a réussi. Crédibilité + connexion humaine.",
+    required: true,
+    pageTypes: ["capture"],
+    maxLength: 400,
+  },
+  // --- Testimonials (if user has provided them) ---
+  {
+    key: "testimonials",
+    kind: "array_object",
+    label: "Témoignages",
+    description: "Témoignages réels fournis par l'utilisateur. NE JAMAIS INVENTER de témoignages. Laisser un tableau vide si aucun témoignage fourni.",
     required: false,
     pageTypes: ["capture"],
-    maxLength: 200,
+    minItems: 0,
+    maxItems: 4,
+    subFields: [
+      { key: "content", label: "Texte du témoignage", maxLength: 200 },
+      { key: "author_name", label: "Nom", maxLength: 40 },
+    ],
   },
   // --- CTA ---
   {
     key: "cta_text",
     kind: "scalar",
     label: "Texte CTA principal",
-    description: "Verbe d'action orienté résultat, 2-5 mots. Ex: 'Je télécharge mon guide'.",
+    description: "Verbe d'action orienté résultat, 2-5 mots. Ex: 'Je télécharge mon guide', 'J'accède à la masterclass'. JAMAIS 'Cliquer ici' ou 'Soumettre'.",
     required: true,
     pageTypes: ["capture"],
     maxLength: 40,
@@ -133,17 +221,36 @@ const CAPTURE_FIELDS: UniversalField[] = [
     key: "cta_subtitle",
     kind: "scalar",
     label: "Sous-texte CTA",
-    description: "Réassurance sous le bouton. Ex: 'Accès gratuit et immédiat'.",
-    required: false,
+    description: "Réassurance sous le bouton. Ex: '100% gratuit, zéro spam', 'Accès immédiat par email'.",
+    required: true,
     pageTypes: ["capture"],
     maxLength: 50,
+  },
+  // --- Final push ---
+  {
+    key: "final_title",
+    kind: "scalar",
+    label: "Titre CTA final",
+    description: "Dernière accroche avant le bouton final (bas de page). Résume pourquoi agir maintenant.",
+    required: false,
+    pageTypes: ["capture"],
+    maxLength: 100,
+  },
+  {
+    key: "final_description",
+    kind: "scalar",
+    label: "Paragraphe CTA final",
+    description: "Dernier paragraphe émotionnel qui pousse à l'action.",
+    required: false,
+    pageTypes: ["capture"],
+    maxLength: 250,
   },
   // --- Footer ---
   {
     key: "footer_text",
     kind: "scalar",
     label: "Texte footer",
-    description: "Copyright ou mention légale courte.",
+    description: "Copyright ou mention légale courte. Ex: '© 2025 NomMarque · Tous droits réservés'.",
     required: false,
     pageTypes: ["capture"],
     maxLength: 100,
@@ -594,9 +701,11 @@ export function universalSchemaToPrompt(pageType: "capture" | "sales"): string {
   lines.push("- ZÉRO markdown (**, ##, -, >, etc.).");
   lines.push("- ZÉRO emoji.");
   lines.push("- Les strings : 1-2 phrases max, pas de sauts de ligne.");
-  lines.push("- Les listes : items courts, concrets (6-14 mots).");
+  lines.push("- Les puces promesses (benefits) : phrase COMPLÈTE (8-18 mots), bénéfice + conséquence.");
   lines.push("- CTA : verbe d'action clair, 2-5 mots, orienté résultat.");
   lines.push("- Style : premium, direct, très lisible. Zéro blabla.");
+  lines.push("- about_description : 3-5 phrases de storytelling avec crédibilité et connexion humaine.");
+  lines.push("- hero_description : 2-3 phrases d'amplification qui développent la promesse.");
   lines.push("- FAQ : chaque item DOIT avoir question ET réponse complète (2-3 phrases).");
 
   return lines.join("\n");
@@ -737,6 +846,51 @@ export function mapUniversalToTemplate(
     // Additional
     steps_section_title: ["program_title"],
     formations_section_title: ["program_title"],
+    // --- Capture template-specific fields ---
+    // capture-01 specific
+    hook: ["hook", "hero_eyebrow"],
+    logo_subtitle: ["logo_subtitle"],
+    about_label: ["about_title"],
+    about_story: ["about_description"],
+    // capture-02 specific
+    site_name_root: ["logo_text"],
+    site_name_full: ["logo_text"],
+    author_name: ["about_name"],
+    author_story: ["about_description"],
+    // capture-03 specific
+    hero_date: ["hero_eyebrow"],
+    benefits_intro: ["benefits_title"],
+    target_intro: ["benefits_title"],
+    target_conclusion: ["hero_description", "hero_subtitle"],
+    program_intro: ["program_title"],
+    quote_mission: ["about_description"],
+    coach_title: ["about_name"],
+    // capture-04 specific
+    hero_label: ["hero_eyebrow", "hook"],
+    hero_disclaimer: ["cta_subtitle"],
+    badge_label: ["hero_eyebrow"],
+    badge_title: ["hero_title"],
+    badge_dates: ["hero_eyebrow"],
+    how_title: ["benefits_title"],
+    how_subtitle: ["hero_description"],
+    how_emphasis: ["hero_subtitle"],
+    recognition_title: ["benefits_title"],
+    goals_title: ["program_title"],
+    goals_subtitle: ["hero_description"],
+    final_cta_subtitle: ["cta_subtitle"],
+    // capture-05 specific
+    for_me_question: ["benefits_title"],
+    for_me_answer: ["hero_description"],
+    transformation_question: ["benefits_title"],
+    transformation_headline: ["hero_title"],
+    trainer_proof: ["social_proof_text"],
+    counter_number: ["social_proof_text"],
+    before_after_intro: ["benefits_title"],
+    before_after_subtitle: ["hero_subtitle"],
+    bonus_title: ["benefits_title"],
+    bonus_subtitle: ["hero_subtitle"],
+    bonus_total_value: ["social_proof_text"],
+    bonus_offer_today: ["cta_subtitle"],
   };
 
   // Fill template-specific fields from universal data
@@ -856,6 +1010,53 @@ export function mapUniversalToTemplate(
     },
     // Footer
     footer_links: { source: "footer_links" },
+    // --- Capture template-specific arrays ---
+    // capture-02: promises (string array)
+    promises: { source: "benefits" },
+    // capture-03: target_profiles (object array with text field)
+    target_profiles: {
+      source: "problem_bullets",
+      fieldMap: { text: "_self" },
+    },
+    // capture-03: program_items (object array)
+    program_items: {
+      source: "program_items",
+      fieldMap: { item_title: "title", item_detail: "description" },
+    },
+    // capture-03: schedule_days (object array)
+    schedule_days: {
+      source: "program_items",
+      fieldMap: { day_title: "title" },
+    },
+    // capture-04: features (object array with title + description)
+    features: {
+      source: "program_items",
+      fieldMap: { title: "title", description: "description" },
+    },
+    // capture-04: daily_schedule (object array)
+    daily_schedule: {
+      source: "program_items",
+      fieldMap: { day_date: "label", day_title: "title" },
+    },
+    // capture-04: recognition_pains (string array)
+    recognition_pains: { source: "problem_bullets" },
+    // capture-04: goals (object array)
+    goals: {
+      source: "benefits",
+      fieldMap: { title: "_self", description: "_self" },
+    },
+    // capture-05: floating_labels (string array)
+    floating_labels: { source: "benefits" },
+    // capture-05: daily_program (object array)
+    daily_program: {
+      source: "program_items",
+      fieldMap: { day_label: "label", day_title: "title" },
+    },
+    // capture-05: before_points (string array)
+    before_points: { source: "problem_bullets" },
+    // capture-05: after_points (string array)
+    after_points: { source: "benefits" },
+    // capture-05: benefits (string array — already exists as direct copy from universal)
   };
 
   for (const tplArray of Object.keys(arraySelectors)) {
@@ -875,7 +1076,14 @@ export function mapUniversalToTemplate(
 
     // Map object array fields
     mapped[tplArray] = sourceArr.map((item: any) => {
-      if (typeof item === "string") return item;
+      if (typeof item === "string") {
+        // Source is a string array but template expects objects — use _self mapping
+        const out: Record<string, any> = {};
+        for (const [tplFieldName, uniFieldName] of Object.entries(mapDef.fieldMap!)) {
+          out[tplFieldName] = uniFieldName === "_self" ? item : "";
+        }
+        return out;
+      }
       const out: Record<string, any> = {};
       for (const [tplFieldName, uniFieldName] of Object.entries(mapDef.fieldMap!)) {
         out[tplFieldName] = item[uniFieldName] || "";

@@ -756,7 +756,18 @@ function buildPageSystemPrompt(params: {
 
   if (params.pageType === "capture") {
     lines.push("OBJECTIF : Créer une page de capture irrésistible qui pousse le visiteur à laisser son email.");
-    lines.push("Structure persuasive : Hook → Promesse → Bénéfices → Preuve sociale → CTA → Réassurance");
+    lines.push("Structure persuasive OBLIGATOIRE :");
+    lines.push("1. HOOK : Accroche choc en majuscules qui capte l'attention en 1 seconde");
+    lines.push("2. HEADLINE : Promesse de valeur irrésistible, spécifique, orientée résultat");
+    lines.push("3. SOUS-TITRE : Précise le mécanisme, le public cible, élimine la première objection");
+    lines.push("4. PARAGRAPHE HERO : 2-3 phrases qui développent la promesse avec empathie et spécificité");
+    lines.push("5. PUCES PROMESSES : 5-7 bénéfices concrets + conséquence positive (le coeur de la conversion)");
+    lines.push("6. PROGRAMME/CONTENU : Ce que contient l'offre gratuite (si pertinent)");
+    lines.push("7. PREUVE SOCIALE + AUTEUR : Bio storytelling crédible de l'auteur");
+    lines.push("8. CTA : Bouton orienté résultat + réassurance");
+    lines.push("");
+    lines.push("RÈGLE CLÉ : Le texte doit être RICHE et COMPLET. Une page de capture qui convertit a BEAUCOUP de contenu persuasif, pas juste un titre et un bouton.");
+    lines.push("CHAQUE champ requis doit contenir du VRAI copywriting, pas du texte générique ou placeholder.");
   } else {
     lines.push("OBJECTIF : Créer une page de vente qui VEND. Chaque mot doit rapprocher le prospect de l'achat.");
     lines.push("Structure : Hook → Problème → Agitation → Solution → Mécanisme → Preuves → Offre → Objections → Urgence → Garantie → CTA");

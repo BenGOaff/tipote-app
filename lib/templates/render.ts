@@ -325,47 +325,33 @@ function applyCapture01Replacements(html: string, contentData: Record<string, an
 
   // --- Hook ---
   const hook = escapeHtml(
-    pickFirstNonEmpty(contentData.hook, contentData.hero_kicker, "Affirmation choc qui capte l'attention ici")
+    pickFirstNonEmpty(contentData.hook, contentData.hero_eyebrow, contentData.hero_kicker, "Affirmation choc qui capte l'attention ici")
   );
   out = replaceAll(out, "Affirmation choc qui capte l'attention ici", hook);
 
-  // --- Hero title segments (preserve spans/classes) ---
-  const heroPrefix = escapeHtml(pickFirstNonEmpty(contentData.hero_title_prefix, "Rédige ici ta "));
-  const heroH1 = escapeHtml(
-    pickFirstNonEmpty(
-      contentData.hero_title_highlight1,
-      contentData.hero_highlight_1,
-      contentData.hero_title, // fallback (legacy)
-      contentData.headline,
-      "promesse de valeur unique"
-    )
-  );
-  const heroBetween1 = escapeHtml(
-    pickFirstNonEmpty(contentData.hero_title_between1, ", en une phrase claire qui exprime un ")
-  );
-  const heroH2 = escapeHtml(
-    pickFirstNonEmpty(contentData.hero_title_highlight2, contentData.hero_highlight_2, "bénéfice concret")
-  );
-  const heroBetween2 = escapeHtml(pickFirstNonEmpty(contentData.hero_title_between2, " pour ton "));
-  const heroH3 = escapeHtml(
-    pickFirstNonEmpty(contentData.hero_title_highlight3, contentData.hero_highlight_3, "audience cible")
-  );
-
-  out = replaceAll(out, "Rédige ici ta ", heroPrefix);
-  out = replaceAll(out, "promesse de valeur unique", heroH1);
-  out = replaceAll(out, ", en une phrase claire qui exprime un ", heroBetween1);
-  out = replaceAll(out, "bénéfice concret", heroH2);
-  out = replaceAll(out, " pour ton ", heroBetween2);
-  out = replaceAll(out, "audience cible", heroH3);
+  // --- Hero title ---
+  // The template has a complex multi-span hero title. When the AI generates a single hero_title
+  // (universal schema), replace the entire <h1> content with that title.
+  const heroTitle = pickFirstNonEmpty(contentData.hero_title, contentData.headline, "");
+  if (heroTitle) {
+    // Replace the entire hero title H1 content with the AI-generated title
+    out = out.replace(
+      /<h1 class="hero-title">([\s\S]*?)<\/h1>/,
+      `<h1 class="hero-title">\n            ${escapeHtml(heroTitle)}\n        </h1>`
+    );
+  }
 
   // --- Video overlay lines ---
-  const v1 = escapeHtml(pickFirstNonEmpty(contentData.video_line1, "Télécharge"));
-  const v2 = escapeHtml(pickFirstNonEmpty(contentData.video_line2, "ce template"));
-  const v3 = escapeHtml(pickFirstNonEmpty(contentData.video_line3, "offert"));
+  // If user provided a video embed URL, the video container is replaced elsewhere.
+  // Otherwise use the subtitle text or keep defaults.
+  const heroSub = pickFirstNonEmpty(contentData.hero_subtitle, "");
+  const v1 = escapeHtml(pickFirstNonEmpty(contentData.video_line1, heroSub ? "" : "Télécharge"));
+  const v2 = escapeHtml(pickFirstNonEmpty(contentData.video_line2, heroSub || "ce template"));
+  const v3 = escapeHtml(pickFirstNonEmpty(contentData.video_line3, heroSub ? "" : "offert"));
 
-  out = replaceAll(out, "Télécharge", v1);
-  out = replaceAll(out, "ce template", v2);
-  out = replaceAll(out, "offert", v3);
+  if (v1) out = replaceAll(out, "Télécharge", v1);
+  if (v2) out = replaceAll(out, "ce template", v2);
+  if (v3) out = replaceAll(out, "offert", v3);
 
   // --- Benefits section title ---
   const benefitsTitle = escapeHtml(
@@ -373,21 +359,40 @@ function applyCapture01Replacements(html: string, contentData: Record<string, an
   );
   out = replaceAll(out, "Explique ce que propose ton freebie", benefitsTitle);
 
-  // --- Benefits (3 cards) ---
+  // --- Benefits (cards) ---
+  // Template has 3 cards by default; replace existing ones and clone for extra items
   const benefitsArr = Array.isArray(contentData.benefits) ? contentData.benefits : [];
-  if (benefitsArr.length >= 3) {
+  if (benefitsArr.length >= 1) {
+    // Replace existing benefit card texts
     let idx = 0;
     out = out.replace(/<p class="benefit-text">([\s\S]*?)<\/p>/g, (m0) => {
       const val = benefitsArr[idx++];
       if (typeof val !== "string" || !val.trim()) return m0;
       return `<p class="benefit-text">\n${escapeHtml(val.trim())}\n                </p>`;
     });
+
+    // If we have more benefits than template cards, add extra cards
+    if (benefitsArr.length > 3) {
+      const extraCards = benefitsArr.slice(3).map((b: string, i: number) => {
+        if (typeof b !== "string" || !b.trim()) return "";
+        return `<div class="benefit-card">
+                <div class="benefit-number">${i + 4}</div>
+                <p class="benefit-text">\n${escapeHtml(b.trim())}\n                </p>
+            </div>`;
+      }).filter(Boolean).join("\n            ");
+      if (extraCards) {
+        out = out.replace(
+          /(<\/div>\s*<\/div>\s*<div style="text-align: center)/,
+          `</div>\n            ${extraCards}\n        </div>\n\n        <div style="text-align: center`
+        );
+      }
+    }
   }
 
   // --- About section ---
-  const aboutLabel = escapeHtml(pickFirstNonEmpty(contentData.about_label, "Présenté par :"));
+  const aboutLabel = escapeHtml(pickFirstNonEmpty(contentData.about_label, contentData.about_title, "Présenté par :"));
   const aboutName = escapeHtml(pickFirstNonEmpty(contentData.about_name, contentData.author_name, "Nom Prénom"));
-  const aboutStory = escapeHtml(pickFirstNonEmpty(contentData.about_story, ""));
+  const aboutStory = escapeHtml(pickFirstNonEmpty(contentData.about_story, contentData.about_description, ""));
 
   out = replaceAll(out, "Présenté par :", aboutLabel);
   out = replaceAll(out, "Nom Prénom", aboutName);
