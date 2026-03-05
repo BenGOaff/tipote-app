@@ -697,6 +697,7 @@ function buildPageSystemPrompt(params: {
   lines.push("- ZÉRO contenu inventé : pas de bonus, garanties, témoignages, prix, places non fournis.");
   lines.push("- ZÉRO emoji SAUF dans hero_visual_metrics[].icon (1 emoji par carte flottante).");
   lines.push("- ZÉRO lorem ipsum.");
+  lines.push("- ZÉRO mention de Tipote, d'IA, de coach IA, d'assistant IA, de chatbot Tipote, ou de toute technologie IA dans le contenu. La page est celle de L'UTILISATEUR, pour SES visiteurs. L'IA est invisible.");
   lines.push("- Utilise le NOM EXACT de l'offre fourni par l'utilisateur.");
   lines.push("- FAQ : question ET réponse complète (2-3 phrases). JAMAIS de question sans réponse.");
   lines.push("- Puces promesses : VRAIE phrase complète, PAS une instruction de rédaction.");

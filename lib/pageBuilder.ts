@@ -497,12 +497,13 @@ a { color: var(--brand); text-decoration: none; }
 .tp-steps::before {
   content: "";
   position: absolute;
-  left: 23px;
+  left: 0;
   top: 0;
   bottom: 0;
   width: 3px;
   background: var(--brand-15);
   border-radius: 2px;
+  display: none; /* Hide timeline — badges are now pills, not circles */
 }
 .tp-step {
   display: flex;
@@ -511,19 +512,24 @@ a { color: var(--brand); text-decoration: none; }
   position: relative;
 }
 .tp-step-badge {
-  width: 48px;
-  height: 48px;
+  min-width: 48px;
+  height: auto;
+  padding: 12px 16px;
   background: var(--brand);
   color: #fff;
-  border-radius: 50%;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   flex-shrink: 0;
   z-index: 1;
-  box-shadow: 0 0 0 6px var(--white);
+  box-shadow: 0 0 0 4px var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  line-height: 1.3;
 }
 .tp-section.alt .tp-step-badge { box-shadow: 0 0 0 6px var(--gray-50); }
 .tp-step-content { flex: 1; padding-top: 10px; }
@@ -1199,7 +1205,9 @@ export function buildPage(params: PageParams): string {
 
   if (isCapture) {
     sections += sectionHero(d);
-    sections += sectionBenefits(d, false);
+    // Benefits are already shown as bullet points in the hero section,
+    // so skip the separate benefits section to avoid duplication.
+    // Only show program section if it has distinct content from benefits.
     sections += sectionProgram(d);
     sections += sectionAbout(d);
     sections += sectionTestimonials(d);

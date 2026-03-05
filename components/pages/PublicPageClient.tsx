@@ -35,6 +35,9 @@ type PublicPageData = {
   thank_you_message?: string;
   thank_you_cta_text?: string;
   thank_you_cta_url?: string;
+  // Brand tokens for thank-you page styling
+  brand_tokens?: Record<string, any> | null;
+  content_data?: Record<string, any> | null;
   // Tracking pixels
   facebook_pixel_id?: string;
   google_tag_id?: string;
@@ -320,17 +323,24 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
       )}
 
       {/* Thank-you / confirmation page after successful capture */}
-      {captureSuccess && (
+      {captureSuccess && (() => {
+        const brandPrimary = (page.brand_tokens as any)?.["colors-primary"] || "#6c3aed";
+        const brandAccent = (page.brand_tokens as any)?.["colors-accent"] || brandPrimary;
+        const headingFont = (page.brand_tokens as any)?.["typography-heading"] || "'DM Sans', system-ui, sans-serif";
+        const logoText = (page.content_data as any)?.logo_text || "";
+        const footerText = (page.content_data as any)?.footer_text || "";
+        return (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+            background: `linear-gradient(135deg, ${brandPrimary}11 0%, ${brandPrimary}22 50%, ${brandAccent}18 100%)`,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 9999,
-            fontFamily: "system-ui, -apple-system, sans-serif",
+            fontFamily: "'DM Sans', system-ui, -apple-system, sans-serif",
           }}
         >
           <div style={{
@@ -340,19 +350,20 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
             textAlign: "center",
             maxWidth: 500,
             width: "90%",
-            boxShadow: "0 25px 80px rgba(0,0,0,0.3)",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.04)",
+            border: `1px solid ${brandPrimary}15`,
           }}>
             {/* Success icon */}
             <div style={{
               width: 72,
               height: 72,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #10b981, #059669)",
+              background: brandPrimary,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 24px",
-              boxShadow: "0 8px 30px rgba(16,185,129,0.3)",
+              boxShadow: `0 8px 30px ${brandPrimary}40`,
             }}>
               <svg width="36" height="36" fill="none" stroke="#fff" strokeWidth="3" viewBox="0 0 24 24">
                 <polyline points="20 6 9 17 4 12" />
@@ -365,6 +376,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
               marginBottom: 16,
               color: "#1c1c1c",
               lineHeight: 1.3,
+              fontFamily: `${headingFont}, 'DM Sans', system-ui, sans-serif`,
             }}>
               {page.thank_you_title || txt.thanksTitle}
             </h2>
@@ -387,16 +399,16 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
               alignItems: "center",
               gap: 10,
               padding: "12px 24px",
-              background: "#f0fdf4",
+              background: `${brandPrimary}0a`,
               borderRadius: 12,
-              border: "1px solid #bbf7d0",
+              border: `1px solid ${brandPrimary}20`,
               marginBottom: 24,
             }}>
-              <svg width="20" height="20" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24">
+              <svg width="20" height="20" fill="none" stroke={brandPrimary} strokeWidth="2" viewBox="0 0 24 24">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                 <polyline points="22,6 12,13 2,6" />
               </svg>
-              <span style={{ fontSize: "0.9rem", color: "#059669", fontWeight: 600 }}>
+              <span style={{ fontSize: "0.9rem", color: brandPrimary, fontWeight: 600 }}>
                 {page.address_form === "vous" ? "V\u00e9rifiez votre bo\u00eete email" : "V\u00e9rifie ta bo\u00eete email"}
               </span>
             </div>
@@ -411,7 +423,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
                   style={{
                     display: "inline-block",
                     padding: "14px 32px",
-                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    background: brandPrimary,
                     color: "#fff",
                     border: "none",
                     borderRadius: 12,
@@ -419,11 +431,11 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
                     fontWeight: 700,
                     textDecoration: "none",
                     cursor: "pointer",
-                    boxShadow: "0 4px 16px rgba(37,99,235,0.3)",
+                    boxShadow: `0 4px 16px ${brandPrimary}40`,
                     transition: "transform 0.15s, box-shadow 0.15s",
                   }}
                 >
-                  {page.thank_you_cta_text || (page.address_form === "vous" ? "Continuer" : "Continuer")}
+                  {page.thank_you_cta_text || "Continuer"}
                 </a>
               </div>
             )}
@@ -440,8 +452,23 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
               </p>
             )}
           </div>
+
+          {/* Footer matching main page */}
+          {(logoText || footerText) && (
+            <div style={{
+              marginTop: 32,
+              textAlign: "center",
+              color: "#888",
+              fontSize: "0.82rem",
+              lineHeight: 1.6,
+            }}>
+              {logoText && <div style={{ fontWeight: 700, marginBottom: 4, color: "#666" }}>{logoText}</div>}
+              {footerText && <div>{footerText}</div>}
+            </div>
+          )}
         </div>
-      )}
+        );
+      })()}
     </>
   );
 }
