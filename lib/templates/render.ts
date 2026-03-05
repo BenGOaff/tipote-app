@@ -621,9 +621,11 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
       } catch { /* ignore parse errors */ }
     }
 
-    // Inject brand CSS variables into full-doc templates (colors, fonts, etc.)
-    if (cssVars) {
-      const brandStyle = `<style>:root{${cssVars}}</style>`;
+    // Inject brand CSS variables AND override hardcoded colors in full-doc templates
+    if (cssVars || req.brandTokens) {
+      const brandOverrides = buildBrandOverrideCss(req.brandTokens);
+      const brandFont = buildBrandFontImport(req.brandTokens);
+      const brandStyle = `${brandFont}<style>:root{${cssVars}}${brandOverrides}</style>`;
       if (out.includes("</head>")) {
         out = out.replace("</head>", `${brandStyle}\n</head>`);
       } else if (out.includes("<body")) {
@@ -655,6 +657,9 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
   }
 
   const styleCss = mode === "kit" ? kitCss || css : css;
+  // Add brand font import for wrapped templates
+  const brandFontHtml = buildBrandFontImport(req.brandTokens);
+  const brandOverrideCss = buildBrandOverrideCss(req.brandTokens);
 
   // Inject inline capture form for capture pages
   if (kind === "capture") {
@@ -666,10 +671,10 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
 
   let doc = wrapAsDocument({
     htmlBody: out,
-    styleCss,
+    styleCss: styleCss + "\n" + brandOverrideCss,
     cssVars,
     mode,
-    headHtml: fontsHtml || "",
+    headHtml: (fontsHtml || "") + brandFontHtml,
   });
 
   // Inject contrast safety CSS
@@ -972,6 +977,103 @@ const LEGAL_LABELS: Record<string, { mentions: string; cgv: string; privacy: str
   it: { mentions: "Note legali", cgv: "Condizioni di vendita", privacy: "Privacy" },
   pt: { mentions: "Avisos legais", cgv: "Condi\u00e7\u00f5es de venda", privacy: "Pol\u00edtica de privacidade" },
 };
+
+// ---------- Brand override CSS ----------
+
+/**
+ * Generate CSS that overrides hardcoded template colors/fonts with user's brand.
+ * This is critical because full-doc templates use hardcoded hex colors, not CSS variables.
+ */
+function buildBrandOverrideCss(brandTokens: Record<string, any> | null | undefined): string {
+  if (!brandTokens || Object.keys(brandTokens).length === 0) return "";
+
+  const primary = brandTokens["colors-primary"] || "";
+  const accent = brandTokens["colors-accent"] || "";
+  const font = brandTokens["typography-heading"] || "";
+
+  const rules: string[] = [];
+
+  if (primary) {
+    // Override CTA/button backgrounds
+    rules.push(`
+.cta-button, .cta-primary, .btn-primary, [class*="cta-button"], [class*="btn-primary"],
+button[class*="cta"], a[class*="cta"], .hero-cta, .main-cta,
+button[type="submit"], .command-button, .order-button {
+  background: ${primary} !important;
+  background-color: ${primary} !important;
+}
+/* Override gradient buttons - replace with solid brand color */
+.cta-button, .cta-primary, .btn-primary, button[class*="cta"] {
+  background-image: none !important;
+}
+/* Override accent/highlight colors */
+.gold-text, .accent-text, [class*="gold-text"], [class*="accent"] {
+  color: ${primary} !important;
+}
+/* Override header/hero backgrounds */
+.hero, .header, [class*="hero-section"], header {
+  border-color: ${primary} !important;
+}
+/* Override badges and labels */
+.badge, [class*="badge"], .label, [class*="label"] {
+  background-color: ${primary} !important;
+  background-image: none !important;
+}
+/* Override border accents */
+.featured, [class*="featured"], .highlight, [class*="highlight"] {
+  border-color: ${primary} !important;
+}
+/* Override form button */
+.tipote-capture-form-wrap button[type="submit"] {
+  background: ${primary} !important;
+}
+/* Override links */
+a:not([class]):not([data-legal]) { color: ${primary}; }
+`);
+  }
+
+  if (accent) {
+    rules.push(`
+/* Secondary/accent elements */
+.cta-secondary, .btn-secondary, [class*="cta-secondary"], [class*="btn-outline"] {
+  border-color: ${accent} !important;
+  color: ${accent} !important;
+}
+.section-accent, [class*="section-accent"] {
+  background-color: ${accent} !important;
+}
+`);
+  }
+
+  if (font) {
+    rules.push(`
+/* Brand font override */
+h1, h2, h3, h4, h5, h6,
+.hero-title, .main-headline, [class*="title"], [class*="heading"] {
+  font-family: '${font}', sans-serif !important;
+}
+body {
+  font-family: '${font}', system-ui, -apple-system, sans-serif !important;
+}
+`);
+  }
+
+  return rules.join("\n");
+}
+
+/**
+ * Generate a Google Fonts import link for the user's brand font.
+ */
+function buildBrandFontImport(brandTokens: Record<string, any> | null | undefined): string {
+  if (!brandTokens) return "";
+  const font = brandTokens["typography-heading"] || "";
+  if (!font) return "";
+  // System fonts don't need import
+  const systemFonts = ["arial", "georgia", "times new roman", "courier new", "verdana", "tahoma", "trebuchet ms"];
+  if (systemFonts.includes(font.toLowerCase())) return "";
+  const encoded = encodeURIComponent(font);
+  return `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=${encoded}:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`;
+}
 
 function injectLegalFooterHtml(html: string, contentData: Record<string, any>, locale?: string): string {
   // Guard: prevent double injection of legal footer

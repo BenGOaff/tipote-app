@@ -249,6 +249,17 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [showTemplateSwap, setShowTemplateSwap] = useState(false);
   const [swapping, setSwapping] = useState(false);
 
+  // Image management panel
+  const [showImagePanel, setShowImagePanel] = useState(false);
+
+  // Thank-you page
+  const [showThankYouModal, setShowThankYouModal] = useState(false);
+  const [thankYouHeading, setThankYouHeading] = useState(page.content_data?.thank_you_heading || "Merci pour ton inscription !");
+  const [thankYouMessage, setThankYouMessage] = useState(page.content_data?.thank_you_message || "Tu vas recevoir un email de confirmation dans quelques instants. Pense à vérifier tes spams.");
+  const [thankYouCtaText, setThankYouCtaText] = useState(page.content_data?.thank_you_cta_text || "");
+  const [thankYouCtaUrl, setThankYouCtaUrl] = useState(page.content_data?.thank_you_cta_url || "");
+  const [savingThankYou, setSavingThankYou] = useState(false);
+
   // Inject inline edit script into HTML
   const getPreviewHtml = useCallback((html: string) => {
     const idx = html.lastIndexOf("</body>");
@@ -730,6 +741,31 @@ ${textContent.split("\n").map((line) => {
     input.click();
   }, [page.id]);
 
+  // Save thank-you page settings (direct DB columns, not content_data)
+  const saveThankYou = useCallback(async () => {
+    setSavingThankYou(true);
+    try {
+      await fetch(`/api/pages/${page.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          thank_you_title: thankYouHeading,
+          thank_you_message: thankYouMessage,
+          thank_you_cta_text: thankYouCtaText,
+          thank_you_cta_url: thankYouCtaUrl,
+        }),
+      });
+      setShowThankYouModal(false);
+    } catch { /* ignore */ } finally {
+      setSavingThankYou(false);
+    }
+  }, [page.id, thankYouHeading, thankYouMessage, thankYouCtaText, thankYouCtaUrl]);
+
+  // Detect image fields in content_data for the image panel
+  const imageFields = Object.entries(page.content_data || {}).filter(([key]) =>
+    /image|photo|logo|img|avatar|picture|visual/i.test(key) && !/color|font|class|style/i.test(key)
+  );
+
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
   const publishPreviewUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${publishSlug}` : `/p/${publishSlug}`;
   const isPublished = page.status === "published";
@@ -783,15 +819,27 @@ ${textContent.split("\n").map((line) => {
             <MousePointerClick className="w-4 h-4" />
           </button>
 
-          {/* Logo upload */}
+          {/* Image management panel */}
           <button
-            onClick={() => handleImageUpload("logo_image_url")}
-            disabled={uploadingImage}
-            className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
-            title="Changer le logo"
+            onClick={() => setShowImagePanel(!showImagePanel)}
+            className={`p-2 rounded-lg border transition-colors ${
+              showImagePanel ? "bg-orange-50 border-orange-300 text-orange-600 dark:bg-orange-950 dark:border-orange-700" : "hover:bg-muted text-muted-foreground"
+            }`}
+            title="Gérer les images"
           >
             {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
           </button>
+
+          {/* Thank-you page (capture only) */}
+          {(page.page_type === "capture" || page.template_kind === "capture") && (
+            <button
+              onClick={() => setShowThankYouModal(true)}
+              className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
+              title="Page de remerciement"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+          )}
 
           {/* View leads */}
           <button
@@ -1240,6 +1288,240 @@ ${textContent.split("\n").map((line) => {
                   {copied ? "Copié !" : "Copier le lien"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== IMAGE MANAGEMENT PANEL ==================== */}
+      {showImagePanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowImagePanel(false)}>
+          <div
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 pb-4 border-b">
+              <div>
+                <h2 className="text-lg font-bold">Images de ta page</h2>
+                <p className="text-sm text-muted-foreground">Ajoute ou remplace les images de ta page.</p>
+              </div>
+              <button onClick={() => setShowImagePanel(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Standard image slots */}
+              {[
+                { key: "logo_image_url", label: "Logo", desc: "Logo de ta marque (PNG/SVG transparent)" },
+                { key: "author_photo_url", label: "Photo auteur", desc: "Ta photo portrait (min 300x300px)" },
+                { key: "hero_img_url", label: "Image hero", desc: "Image principale en haut de page" },
+                { key: "about_img_url", label: "Image à propos", desc: "Photo pour la section qui suis-je" },
+                { key: "og_image_url", label: "Image de partage (OG)", desc: "Image pour les réseaux sociaux (1200x630px)" },
+              ].map(({ key, label, desc }) => {
+                const currentUrl = page.content_data?.[key] || "";
+                return (
+                  <div key={key} className="flex items-start gap-4 p-3 rounded-xl border bg-card">
+                    <div className="w-20 h-20 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
+                      {currentUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={currentUrl} alt={label} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold">{label}</h4>
+                      <p className="text-[10px] text-muted-foreground mb-2">{desc}</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { handleImageUpload(key); }}
+                          disabled={uploadingImage}
+                          className="px-3 py-1 rounded-md text-xs font-medium border hover:bg-muted flex items-center gap-1"
+                        >
+                          <Upload className="w-3 h-3" />
+                          {currentUrl ? "Remplacer" : "Ajouter"}
+                        </button>
+                        {currentUrl && (
+                          <button
+                            onClick={async () => {
+                              const nextCd = { ...page.content_data, [key]: "" };
+                              setPage((prev) => ({ ...prev, content_data: nextCd }));
+                              await refreshPreview(nextCd, page.brand_tokens);
+                              fetch(`/api/pages/${page.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ content_data: nextCd }),
+                              }).catch(() => {});
+                            }}
+                            className="px-3 py-1 rounded-md text-xs font-medium border text-destructive hover:bg-destructive/10 flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" />
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Additional image fields from content_data */}
+              {imageFields
+                .filter(([key]) => !["logo_image_url", "author_photo_url", "hero_img_url", "about_img_url", "og_image_url"].includes(key))
+                .map(([key, val]) => (
+                  <div key={key} className="flex items-start gap-4 p-3 rounded-xl border bg-card">
+                    <div className="w-20 h-20 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
+                      {val ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={String(val)} alt={key} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold">{key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</h4>
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={() => handleImageUpload(key)}
+                          disabled={uploadingImage}
+                          className="px-3 py-1 rounded-md text-xs font-medium border hover:bg-muted flex items-center gap-1"
+                        >
+                          <Upload className="w-3 h-3" />
+                          {val ? "Remplacer" : "Ajouter"}
+                        </button>
+                        {val && (
+                          <button
+                            onClick={async () => {
+                              const nextCd = { ...page.content_data, [key]: "" };
+                              setPage((prev) => ({ ...prev, content_data: nextCd }));
+                              await refreshPreview(nextCd, page.brand_tokens);
+                              fetch(`/api/pages/${page.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ content_data: nextCd }),
+                              }).catch(() => {});
+                            }}
+                            className="px-3 py-1 rounded-md text-xs font-medium border text-destructive hover:bg-destructive/10 flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" />
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+              <div className="rounded-xl border border-dashed p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Tu peux aussi ajouter des images directement sur la page en activant le mode édition
+                </p>
+                <button
+                  onClick={() => { setShowImagePanel(false); if (!editMode) toggleEditMode(); }}
+                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <MousePointerClick className="w-3 h-3 inline mr-1" />
+                  Activer le mode édition
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== THANK-YOU PAGE MODAL ==================== */}
+      {showThankYouModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowThankYouModal(false)}>
+          <div
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 pb-4 border-b">
+              <div>
+                <h2 className="text-lg font-bold">Page de remerciement</h2>
+                <p className="text-sm text-muted-foreground">
+                  Affichée après l&apos;inscription. Personnalise le message et ajoute un lien.
+                </p>
+              </div>
+              <button onClick={() => setShowThankYouModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Titre</label>
+                <input
+                  type="text"
+                  value={thankYouHeading}
+                  onChange={(e) => setThankYouHeading(e.target.value)}
+                  placeholder="Merci pour ton inscription !"
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                  maxLength={100}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Message</label>
+                <textarea
+                  value={thankYouMessage}
+                  onChange={(e) => setThankYouMessage(e.target.value)}
+                  placeholder="Tu vas recevoir un email..."
+                  className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+                  rows={4}
+                  maxLength={500}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Bouton (optionnel)</label>
+                <input
+                  type="text"
+                  value={thankYouCtaText}
+                  onChange={(e) => setThankYouCtaText(e.target.value)}
+                  placeholder="Rejoindre le groupe Facebook"
+                  className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
+                  maxLength={50}
+                />
+                <input
+                  type="url"
+                  value={thankYouCtaUrl}
+                  onChange={(e) => setThankYouCtaUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+
+              {/* Preview */}
+              <div className="rounded-xl border bg-muted/20 p-6 text-center">
+                <p className="text-xs text-muted-foreground mb-3">Aperçu</p>
+                <div className="text-3xl mb-2">&#10003;</div>
+                <h3 className="text-lg font-bold mb-2">{thankYouHeading || "Merci !"}</h3>
+                <p className="text-sm text-muted-foreground mb-4">{thankYouMessage || "..."}</p>
+                {thankYouCtaText && (
+                  <span className="inline-block px-6 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium">
+                    {thankYouCtaText}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 pt-4 border-t flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowThankYouModal(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveThankYou}
+                disabled={savingThankYou}
+                className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingThankYou ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Enregistrer
+              </button>
             </div>
           </div>
         </div>

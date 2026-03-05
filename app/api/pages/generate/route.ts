@@ -153,30 +153,45 @@ const TEMPLATE_NICHE_FIT: Record<string, Record<string, number>> = {
 
 // Template feature tags for smarter selection
 const TEMPLATE_FEATURES: Record<string, string[]> = {
-  "capture-01": ["minimal", "versatile"],
-  "capture-02": ["professional", "corporate"],
-  "capture-03": ["soft", "wellness", "feminine"],
-  "capture-04": ["bold", "business"],
-  "capture-05": ["dynamic", "fitness", "video"],
-  "sale-01": ["event", "corporate", "premium"],
-  "sale-02": ["versatile", "coaching"],
-  "sale-03": ["soft", "wellness"],
-  "sale-04": ["professional", "corporate"],
-  "sale-05": ["lifestyle", "casual"],
-  "sale-06": ["minimal", "business"],
+  "capture-01": ["minimal", "versatile", "lead_magnet", "ebook", "guide"],
+  "capture-02": ["professional", "corporate", "saas", "tool", "service"],
+  "capture-03": ["soft", "wellness", "feminine", "coaching"],
+  "capture-04": ["bold", "business", "lead_magnet", "saas"],
+  "capture-05": ["dynamic", "fitness", "video", "challenge", "event"],
+  "sale-01": ["event", "corporate", "premium", "seminaire"],
+  "sale-02": ["versatile", "coaching", "formation", "course"],
+  "sale-03": ["soft", "wellness", "coaching"],
+  "sale-04": ["professional", "corporate", "saas", "tool", "service"],
+  "sale-05": ["lifestyle", "casual", "coaching"],
+  "sale-06": ["minimal", "business", "saas", "service"],
   "sale-07": ["soft", "spiritual", "feminine"],
-  "sale-08": ["dynamic", "fitness"],
-  "sale-09": ["video", "course", "multimedia"],
-  "sale-10": ["professional", "versatile"],
-  "sale-11": ["elearning", "course", "structured"],
+  "sale-08": ["dynamic", "fitness", "challenge"],
+  "sale-09": ["video", "course", "multimedia", "formation"],
+  "sale-10": ["professional", "versatile", "service"],
+  "sale-11": ["elearning", "course", "structured", "formation"],
   "sale-12": ["fun", "casual", "lifestyle"],
-  "sale-13": ["professional", "versatile"],
+  "sale-13": ["professional", "versatile", "service"],
 };
+
+// Offer type detection for smarter template selection
+function detectOfferType(offerName: string, offerDescription: string, niche: string): string[] {
+  const text = `${offerName} ${offerDescription} ${niche}`.toLowerCase();
+  const tags: string[] = [];
+  if (/saas|logiciel|software|app|outil|tool|plateforme|platform/.test(text)) tags.push("saas", "tool");
+  if (/formation|cours|course|programme|training|elearning|e-learning|module/.test(text)) tags.push("formation", "course");
+  if (/coaching|accompagnement|mentorat|mentor/.test(text)) tags.push("coaching");
+  if (/challenge|défi|defi/.test(text)) tags.push("challenge", "event");
+  if (/webinaire|webinar|masterclass|atelier|workshop|séminaire|seminaire|événement|evenement/.test(text)) tags.push("event");
+  if (/ebook|e-book|guide|pdf|checklist|template|ressource|lead.?magnet|freebie/.test(text)) tags.push("lead_magnet", "ebook");
+  if (/service|prestation|consulting|agence|audit|diagnostic/.test(text)) tags.push("service");
+  if (/bien.?être|yoga|méditat|spiritualit|développement.?perso|fitness|sport|santé/.test(text)) tags.push("wellness", "soft");
+  return tags;
+}
 
 function pickBestTemplate(
   pageType: "capture" | "sales",
   niche: string,
-  options?: { hasVideo?: boolean; brandStyle?: string; offerLevel?: string },
+  options?: { hasVideo?: boolean; brandStyle?: string; offerLevel?: string; offerType?: string[] },
 ): string {
   const prefix = pageType === "capture" ? "capture-" : "sale-";
   const nicheKey = (niche || "").toLowerCase().replace(/[-\s]+/g, "_");
@@ -190,6 +205,22 @@ function pickBestTemplate(
 
     // Boost video-friendly templates when user has video
     if (options?.hasVideo && features.includes("video")) score += 3;
+
+    // Offer type matching (strongest signal)
+    if (options?.offerType && options.offerType.length > 0) {
+      const matchCount = options.offerType.filter(t => features.includes(t)).length;
+      score += matchCount * 3;
+
+      // PENALIZE challenge/event templates for non-challenge/event offers
+      const isChallenge = options.offerType.includes("challenge") || options.offerType.includes("event");
+      if (!isChallenge && (features.includes("challenge") || features.includes("event"))) {
+        score -= 5;
+      }
+      // PENALIZE challenge-specific capture (capture-05) for SaaS/service/lead magnet
+      if ((options.offerType.includes("saas") || options.offerType.includes("service") || options.offerType.includes("lead_magnet")) && id === "capture-05") {
+        score -= 8;
+      }
+    }
 
     // Brand style matching
     if (options?.brandStyle) {
@@ -375,10 +406,12 @@ export async function POST(req: NextRequest) {
 
         const templateKind = input.pageType === "sales" ? "vente" : "capture";
         const brandStyle = (profile as any)?.brand_style || (profile as any)?.brand_tone_of_voice || "";
+        const offerType = detectOfferType(input.offerName || "", input.offerDescription || "", niche);
         const templateId = input.templateId || pickBestTemplate(input.pageType, niche, {
           hasVideo: !!input.videoEmbedUrl,
           brandStyle,
           offerLevel: input.offerPrice ? (parseFloat(input.offerPrice.replace(/[^\d.]/g, "")) > 200 ? "high_ticket" : "low_ticket") : undefined,
+          offerType,
         });
 
         await wait(800);
@@ -417,6 +450,11 @@ export async function POST(req: NextRequest) {
           toneOfVoice,
           knowledgeSnippets,
           language: contentLocale,
+          offerType,
+          brandFont,
+          brandColorBase,
+          brandColorAccent,
+          authorName: fullName || firstName,
         });
 
         const userPrompt = buildPageUserPrompt({
@@ -721,11 +759,17 @@ function buildPageSystemPrompt(params: {
   toneOfVoice: string;
   knowledgeSnippets: string[];
   language?: string;
+  offerType?: string[];
+  brandFont?: string;
+  brandColorBase?: string;
+  brandColorAccent?: string;
+  authorName?: string;
 }): string {
   const lines: string[] = [];
 
   lines.push("Tu es Tipote, un copywriter direct-response expert de niveau mondial.");
   lines.push("Tu crées des pages web qui CONVERTISSENT, pas des pages génériques.");
+  lines.push("Tu rédiges du contenu FINAL prêt à publier, comme si un client payait 5000 € pour cette page.");
   lines.push("");
 
   if (params.pageType === "capture") {
@@ -784,18 +828,57 @@ function buildPageSystemPrompt(params: {
   lines.push("");
 
   // CRITICAL: Template adaptation instruction
-  lines.push("ADAPTATION DU TEMPLATE (RÈGLE FONDAMENTALE) :");
-  lines.push("- Le template ci-dessous est une INSPIRATION pour la structure visuelle (sections, mise en page, couleurs).");
-  lines.push("- Les noms de champs du template (\"daily_program\", \"goals\", \"schedule_days\", \"program_items\") sont des STRUCTURES DE DONNÉES, pas des instructions de contenu.");
-  lines.push("- Tu DOIS adapter TOUS les champs au contexte réel de l'offre :");
-  lines.push("  × Si le champ s'appelle \"daily_program\" mais que l'offre est un SaaS → remplis avec les fonctionnalités/modules du SaaS");
-  lines.push("  × Si le champ s'appelle \"goals\" mais que l'offre n'est pas un challenge → remplis avec les objectifs/résultats de l'offre réelle");
-  lines.push("  × Si le champ s'appelle \"schedule_days\" → adapte en étapes/phases du programme ou laisse vide si non pertinent");
-  lines.push("  × Si le champ s'appelle \"trainer_name\" → utilise le nom de l'auteur/créateur");
-  lines.push("- INTERDIT d'utiliser le vocabulaire du template quand il ne correspond pas à l'offre (\"exercice\", \"challenge\", \"séance\", \"entraînement\", \"jour 1/2/3\" pour un SaaS)");
-  lines.push("- Si un champ n'a AUCUN sens pour l'offre réelle, mets une string vide \"\" ou un tableau vide [].");
-  lines.push("- Le résultat final doit sembler avoir été écrit SUR MESURE pour cette offre, pas copié d'un template générique.");
+  lines.push("ADAPTATION DU TEMPLATE (RÈGLE FONDAMENTALE — LA PLUS IMPORTANTE) :");
+  lines.push("- Le template ci-dessous est une STRUCTURE DE DONNÉES pour la mise en page. Les noms des champs NE DICTENT PAS le contenu.");
+  lines.push("- Tu DOIS RÉINTERPRÉTER chaque champ selon l'offre réelle de l'utilisateur :");
   lines.push("");
+  lines.push("  EXEMPLES DE RÉINTERPRÉTATION CORRECTE :");
+  lines.push('  • "daily_program" pour un SaaS → modules ou fonctionnalités clés du logiciel');
+  lines.push('  • "daily_program" pour une formation → modules ou chapitres de la formation');
+  lines.push('  • "daily_program" pour un ebook → sections ou chapitres du guide');
+  lines.push('  • "day_label" → "MODULE 1", "ÉTAPE 1", "CHAPITRE 1", "FONCTIONNALITÉ 1" (selon l\'offre)');
+  lines.push('  • "day_title" → le titre réel du module/étape/chapitre');
+  lines.push('  • "trainer_name" → le nom de l\'auteur/créateur (fourni dans le contexte)');
+  lines.push('  • "hero_live_badge" → badge adapté : "ACCÈS IMMÉDIAT", "ESSAI GRATUIT", "GUIDE COMPLET", etc.');
+  lines.push('  • "counter_label" / "counter_number" → laisser vide "" si pas d\'urgence fournie');
+  lines.push('  • "challenge_name" → le nom réel de l\'offre');
+  lines.push('  • "bonus_*" → laisser vide si l\'utilisateur n\'a pas fourni de bonus');
+  lines.push("");
+  lines.push("  VOCABULAIRE INTERDIT (sauf si l'offre EST réellement un challenge/événement live) :");
+  lines.push('  × "challenge", "défi", "jour 1/2/3/4", "exercice", "séance", "entraînement"');
+  lines.push('  × "live", "replay", "en direct" (sauf si l\'offre inclut des lives)');
+  lines.push('  × "X places restantes", "14/100" (sauf si l\'utilisateur a fourni une urgence)');
+  lines.push('  × "inscris-toi au challenge", "rejoins le défi"');
+  lines.push("");
+  lines.push("  À la place, utilise le vocabulaire adapté à l'offre :");
+  lines.push('  - SaaS/Outil : "Essaie gratuitement", "Commence maintenant", "fonctionnalité", "module"');
+  lines.push('  - Formation : "Accède à la formation", "module", "leçon", "chapitre"');
+  lines.push('  - Ebook/Guide : "Télécharge ton guide", "chapitre", "section", "stratégie"');
+  lines.push('  - Coaching : "Réserve ta séance", "session", "accompagnement"');
+  lines.push('  - Service : "Demande ton devis", "prestation", "audit"');
+  lines.push("");
+  lines.push("- Si un champ n'a AUCUN sens pour l'offre réelle, mets une string vide \"\" ou un tableau vide [].");
+  lines.push("- Le résultat final doit sembler avoir été écrit SUR MESURE pour cette offre, comme si le template avait été conçu spécifiquement pour elle.");
+  lines.push("");
+
+  // Offer type context
+  if (params.offerType && params.offerType.length > 0) {
+    lines.push(`TYPE D'OFFRE DÉTECTÉ : ${params.offerType.join(", ")}`);
+    lines.push("Adapte TOUT le vocabulaire et la structure à ce type d'offre. Par exemple :");
+    if (params.offerType.includes("saas") || params.offerType.includes("tool")) {
+      lines.push('- Parle de "fonctionnalités", "intégrations", "essai gratuit", "dashboard"');
+      lines.push("- N'utilise JAMAIS \"challenge\", \"jour 1\", \"exercice\", \"live\"");
+    }
+    if (params.offerType.includes("formation") || params.offerType.includes("course")) {
+      lines.push('- Parle de "modules", "leçons", "compétences acquises"');
+      lines.push("- N'utilise JAMAIS \"challenge\" ou \"défi\" sauf si c'est dans le nom de l'offre");
+    }
+    if (params.offerType.includes("lead_magnet") || params.offerType.includes("ebook")) {
+      lines.push('- Parle de "contenu", "ressource", "guide", "stratégies"');
+      lines.push("- Garde un ton léger et prometteur — c'est gratuit, le but est de capturer l'email");
+    }
+    lines.push("");
+  }
 
   if (params.toneOfVoice) {
     lines.push(`TON DE VOIX DE LA MARQUE : ${params.toneOfVoice}`);
