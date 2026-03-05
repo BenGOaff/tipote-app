@@ -900,8 +900,9 @@ function buildPageUserPrompt(params: {
   lines.push("- INTERDIT les phrases génériques (\"bienvenue\", \"nous sommes ravis\", \"cliquer ici\").");
   lines.push("- INTERDIT les balises HTML (<br>, <span>, <strong>, etc.) — texte brut uniquement.");
   lines.push("- Pour les FAQ : TOUJOURS fournir question ET réponse complète. Jamais de question seule.");
-  lines.push("- Si des informations de l'offre manquent (nom, cible, bénéfices), invente des contenus plausibles et premium adaptés à la niche.");
-  lines.push("- Ne PAS inventer : bonus, prix, garanties, témoignages, noms de personnes. Seulement du copywriting.");
+  lines.push("- Si des informations de l'offre manquent (nom, cible, bénéfices), rédige du copywriting adapté à la niche. MAIS ne PAS inventer de fausses informations factuelles.");
+  lines.push("- Ne PAS inventer : bonus, prix, garanties, témoignages, noms de personnes, délais, statistiques, résultats chiffrés, certifications, partenariats, logos clients, durées de garantie. Seulement du copywriting (titres, accroches, descriptions, arguments de vente).");
+  lines.push("- RÈGLE CRITIQUE : si un champ conditionnel (bonus, garantie, témoignages, urgence) est marqué comme NON FOURNI dans les instructions ci-dessous, tu DOIS mettre des strings/tableaux vides. Ne JAMAIS remplir un champ conditionnel avec du contenu inventé.");
   lines.push("- Chaque titre, sous-titre et CTA doit être spécifique, percutant et orienté bénéfice.");
   lines.push("- Chaque puce/bullet doit être une VRAIE PHRASE COMPLÈTE décrivant un bénéfice concret. JAMAIS écrire \"Puce promesse irrésistible : bénéfice + conséquence\" — c'est une INSTRUCTION, pas du contenu. Exemple correct : \"Génère tes premiers clients en 7 jours grâce au système d'acquisition automatisé\".");
   lines.push("");
@@ -923,6 +924,15 @@ function buildPageUserPrompt(params: {
     lines.push("Utilise ces témoignages TELS QUELS. Ne les modifie pas. N'en invente pas d'autres.");
   } else {
     lines.push("TÉMOIGNAGES : L'utilisateur N'A PAS de témoignages. Pour tous les champs testimonials (testimonials, testimonials_title, visual_testimonials, etc.), mets des strings vides \"\" ou des tableaux vides []. N'invente AUCUN témoignage.");
+  }
+
+  // Conditional: guarantees
+  if (params.offerGuarantees.trim()) {
+    lines.push("");
+    lines.push(`GARANTIE : L'utilisateur a une garantie : "${params.offerGuarantees}". Utilise-la telle quelle dans les sections garantie. Ne la modifie pas et n'en invente pas d'autres.`);
+  } else {
+    lines.push("");
+    lines.push("GARANTIE : L'utilisateur N'A PAS de garantie. Pour tous les champs guarantee (guarantee_title, guarantee_text, etc.), mets des strings vides \"\". N'invente AUCUNE garantie (pas de \"satisfait ou remboursé\", pas de \"garantie 30 jours\", etc.).");
   }
 
   // Conditional: urgency/countdown
@@ -1057,6 +1067,39 @@ function sanitizeContentData(data: Record<string, any>, input: any): void {
       /counter|places_rest|remaining|spots/i.test(k)
     );
     for (const k of counterKeys) {
+      data[k] = Array.isArray(data[k]) ? [] : "";
+    }
+  }
+
+  // Strip invented guarantees if user didn't provide any
+  const hasGuarantees = !!(input.offerGuarantees || "").trim();
+  if (!hasGuarantees) {
+    const guaranteeKeys = Object.keys(data).filter(k =>
+      /guarantee|garantie/i.test(k)
+    );
+    for (const k of guaranteeKeys) {
+      data[k] = Array.isArray(data[k]) ? [] : "";
+    }
+  }
+
+  // Strip invented bonuses if user didn't provide any
+  const hasBonuses = !!(input.offerBonuses || "").trim();
+  if (!hasBonuses) {
+    const bonusKeys = Object.keys(data).filter(k =>
+      /^bonus/i.test(k)
+    );
+    for (const k of bonusKeys) {
+      data[k] = Array.isArray(data[k]) ? [] : "";
+    }
+  }
+
+  // Strip invented testimonials if user didn't provide any
+  const hasTestimonials = Array.isArray(input.testimonials) && input.testimonials.length > 0;
+  if (!hasTestimonials) {
+    const testimonialKeys = Object.keys(data).filter(k =>
+      /testimonial/i.test(k)
+    );
+    for (const k of testimonialKeys) {
       data[k] = Array.isArray(data[k]) ? [] : "";
     }
   }

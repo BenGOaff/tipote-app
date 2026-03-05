@@ -732,6 +732,22 @@ a { color: var(--brand); text-decoration: none; }
 .tp-faq-q { font-weight: 700; font-size: 1rem; color: var(--gray-900); margin-bottom: 8px; }
 .tp-faq-a { font-size: 0.92rem; color: var(--gray-600); line-height: 1.6; }
 
+/* ─── INLINE ILLUSTRATIONS ─── */
+.tp-illust {
+  max-width: 500px;
+  margin: 0 auto 32px;
+  opacity: 0;
+  animation: tp-fadeUp 0.8s ease 0.3s forwards;
+}
+.tp-illust svg { width: 100%; height: auto; }
+.tp-illust-problem { max-width: 420px; margin-bottom: 28px; }
+.tp-illust-solution { max-width: 420px; }
+.tp-illust-transform { max-width: 520px; margin: 32px auto; }
+.tp-illust-stats { max-width: 340px; margin: 24px auto 0; }
+.tp-divider { max-width: 800px; margin: 0 auto; opacity: 0.5; }
+.tp-benefit-icon-wrap { width: 44px; height: 44px; flex-shrink: 0; margin-bottom: 12px; }
+.tp-benefit-icon-wrap svg { width: 100%; height: 100%; }
+
 /* ─── RESPONSIVE ─── */
 @media (max-width: 900px) {
   .tp-hero-grid { grid-template-columns: 1fr !important; gap: 36px !important; }
@@ -858,6 +874,117 @@ function buildMockup(d: Record<string, any>): string {
   </div>`;
 }
 
+// ─────────────── Inline SVG Illustrations ───────────────
+// Premium contextual illustrations for sales pages — abstract, brand-colored,
+// designed to look like custom graphics (not stock/generic AI output).
+
+/** Abstract "tangled lines" illustration for the problem/pain section */
+function svgProblemIllustration(): string {
+  return `<div class="tp-illust tp-illust-problem" aria-hidden="true">
+  <svg viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M40 160C80 120 100 180 140 100S200 40 240 100S300 180 340 80" stroke="var(--brand-25)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M40 140C90 100 110 160 150 90S210 30 250 90S310 160 360 70" stroke="var(--brand-40)" stroke-width="2" stroke-linecap="round" fill="none" stroke-dasharray="8 6" opacity="0.5"/>
+    <circle cx="140" cy="100" r="6" fill="var(--brand)" opacity="0.7"/>
+    <circle cx="240" cy="100" r="6" fill="var(--brand)" opacity="0.5"/>
+    <circle cx="340" cy="80" r="4" fill="var(--brand)" opacity="0.3"/>
+    <path d="M60 40L80 60M80 40L60 60" stroke="var(--brand-40)" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M320 140L340 160M340 140L320 160" stroke="var(--brand-40)" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M200 170L210 180M210 170L200 180" stroke="var(--brand-25)" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</div>`;
+}
+
+/** "Ascending path" illustration for solution/transformation section */
+function svgSolutionIllustration(): string {
+  return `<div class="tp-illust tp-illust-solution" aria-hidden="true">
+  <svg viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 180C60 180 80 150 120 130S180 100 220 80S280 50 340 30" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M20 180C60 180 80 150 120 130S180 100 220 80S280 50 340 30" stroke="url(#sol-grad)" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <defs><linearGradient id="sol-grad" x1="20" y1="180" x2="340" y2="30" gradientUnits="userSpaceOnUse"><stop stop-color="var(--brand)" stop-opacity="0.1"/><stop offset="1" stop-color="var(--brand)" stop-opacity="0.8"/></linearGradient></defs>
+    <circle cx="120" cy="130" r="5" fill="var(--brand)" opacity="0.5"/>
+    <circle cx="220" cy="80" r="6" fill="var(--brand)" opacity="0.7"/>
+    <circle cx="340" cy="30" r="8" fill="var(--brand)" opacity="0.9"/>
+    <path d="M330 20L340 30L350 20" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <rect x="90" y="155" width="60" height="8" rx="4" fill="var(--brand-15)"/>
+    <rect x="90" y="155" width="30" height="8" rx="4" fill="var(--brand-40)"/>
+    <rect x="190" y="105" width="60" height="8" rx="4" fill="var(--brand-15)"/>
+    <rect x="190" y="105" width="45" height="8" rx="4" fill="var(--brand-40)"/>
+    <rect x="310" y="55" width="60" height="8" rx="4" fill="var(--brand-15)"/>
+    <rect x="310" y="55" width="55" height="8" rx="4" fill="var(--brand)"/>
+  </svg>
+</div>`;
+}
+
+/** Benefit icons — simple, abstract, brand-colored */
+function svgBenefitIcon(index: number): string {
+  const icons = [
+    // Target/Goal
+    `<svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="16" stroke="var(--brand)" stroke-width="2" opacity="0.3"/><circle cx="20" cy="20" r="10" stroke="var(--brand)" stroke-width="2" opacity="0.5"/><circle cx="20" cy="20" r="4" fill="var(--brand)"/></svg>`,
+    // Upward chart
+    `<svg viewBox="0 0 40 40" fill="none"><rect x="6" y="24" width="6" height="10" rx="2" fill="var(--brand)" opacity="0.3"/><rect x="16" y="16" width="6" height="18" rx="2" fill="var(--brand)" opacity="0.5"/><rect x="26" y="8" width="6" height="26" rx="2" fill="var(--brand)" opacity="0.8"/></svg>`,
+    // Shield/Security
+    `<svg viewBox="0 0 40 40" fill="none"><path d="M20 4L34 12V22C34 30 27.5 35 20 37C12.5 35 6 30 6 22V12L20 4Z" stroke="var(--brand)" stroke-width="2" fill="var(--brand-10)"/><path d="M14 20L18 24L26 16" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    // Lightning/Speed
+    `<svg viewBox="0 0 40 40" fill="none"><path d="M22 4L10 22H18L16 36L30 18H22L22 4Z" fill="var(--brand)" opacity="0.7"/></svg>`,
+    // Star/Quality
+    `<svg viewBox="0 0 40 40" fill="none"><path d="M20 4L24 14H34L26 22L29 34L20 26L11 34L14 22L6 14H16L20 4Z" fill="var(--brand)" opacity="0.6"/></svg>`,
+    // Infinity/Continuous
+    `<svg viewBox="0 0 40 40" fill="none"><path d="M12 20C12 16 8 14 8 20S12 24 16 20L24 20C24 24 28 26 32 20S28 14 24 20L16 20" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.7"/></svg>`,
+  ];
+  return icons[index % icons.length];
+}
+
+/** Decorative separator between sections */
+function svgSectionDivider(): string {
+  return `<div class="tp-divider" aria-hidden="true">
+  <svg viewBox="0 0 1200 60" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:40px;display:block">
+    <path d="M0 30C200 10 400 50 600 30S1000 10 1200 30" stroke="var(--brand-15)" stroke-width="1.5" fill="none"/>
+    <circle cx="600" cy="30" r="3" fill="var(--brand-25)"/>
+  </svg>
+</div>`;
+}
+
+/** Before/After comparison visual for transformation sections */
+function svgTransformationVisual(): string {
+  return `<div class="tp-illust tp-illust-transform" aria-hidden="true">
+  <svg viewBox="0 0 500 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="20" width="180" height="80" rx="12" fill="var(--gray-100)" stroke="var(--gray-200)" stroke-width="1.5"/>
+    <rect x="30" y="40" width="80" height="6" rx="3" fill="var(--gray-300)"/>
+    <rect x="30" y="54" width="60" height="6" rx="3" fill="var(--gray-200)"/>
+    <rect x="30" y="68" width="100" height="6" rx="3" fill="var(--gray-200)"/>
+    <path d="M220 60H280" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="6 4"/>
+    <path d="M270 50L280 60L270 70" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect x="310" y="20" width="180" height="80" rx="12" fill="var(--brand-10)" stroke="var(--brand)" stroke-width="1.5"/>
+    <rect x="330" y="40" width="80" height="6" rx="3" fill="var(--brand-40)"/>
+    <rect x="330" y="54" width="60" height="6" rx="3" fill="var(--brand-25)"/>
+    <rect x="330" y="68" width="100" height="6" rx="3" fill="var(--brand-25)"/>
+    <circle cx="460" cy="35" r="10" fill="var(--brand)" opacity="0.8"/>
+    <path d="M455 35L458 38L465 32" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</div>`;
+}
+
+/** Stats/metrics mini infographic */
+function svgStatsVisual(metrics: Array<{ label: string; pct: number }>): string {
+  if (metrics.length === 0) return "";
+  const bars = metrics.slice(0, 3).map((m, i) => {
+    const y = 20 + i * 35;
+    const w = Math.max(20, Math.min(280, (m.pct / 100) * 280));
+    const opacity = 0.5 + (m.pct / 100) * 0.5;
+    return `<text x="10" y="${y}" fill="var(--gray-500)" font-size="11" font-family="var(--body-font)">${esc(m.label)}</text>
+    <rect x="10" y="${y + 6}" width="280" height="10" rx="5" fill="var(--brand-10)"/>
+    <rect x="10" y="${y + 6}" width="${w}" height="10" rx="5" fill="var(--brand)" opacity="${opacity}">
+      <animate attributeName="width" from="0" to="${w}" dur="1.2s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+    </rect>`;
+  }).join("\n");
+
+  return `<div class="tp-illust tp-illust-stats" aria-hidden="true">
+  <svg viewBox="0 0 300 ${20 + metrics.length * 35 + 10}" fill="none" xmlns="http://www.w3.org/2000/svg">
+    ${bars}
+  </svg>
+</div>`;
+}
+
 // ─────────────── Section Builders ───────────────
 
 function sectionHero(d: Record<string, any>): string {
@@ -930,6 +1057,7 @@ function sectionBenefits(d: Record<string, any>, isSales: boolean): string {
     </div>
     <div class="tp-benefits-grid">
       ${items.map((b, i) => `<div class="tp-benefit-card">
+        <div class="tp-benefit-icon-wrap">${svgBenefitIcon(i)}</div>
         <div class="tp-benefit-num">${i + 1}</div>
         <p class="tp-benefit-text">${esc(b)}</p>
       </div>`).join("\n")}
@@ -974,6 +1102,7 @@ function sectionProblem(d: Record<string, any>): string {
       ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
       ${desc ? `<p class="tp-section-subtitle">${desc}</p>` : ""}
     </div>
+    ${svgProblemIllustration()}
     ${bullets.length > 0 ? `<div style="max-width:600px;margin:0 auto">
       ${bullets.map(b => `<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">
         <span style="color:var(--brand);font-size:1.2rem;flex-shrink:0">&#10005;</span>
@@ -996,6 +1125,8 @@ function sectionSolution(d: Record<string, any>): string {
       ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
       ${desc ? `<p class="tp-section-subtitle">${desc}</p>` : ""}
     </div>
+    ${svgSolutionIllustration()}
+    ${svgTransformationVisual()}
   </div>
 </section>`;
 }
@@ -1213,12 +1344,14 @@ export function buildPage(params: PageParams): string {
     sections += sectionTestimonials(d);
     sections += sectionFinalCta(d, true);
   } else {
-    // Sales page structure
+    // Sales page structure — with premium illustrations between sections
     sections += sectionHeroSales(d);
     sections += sectionProblem(d);
     sections += sectionSolution(d);
+    sections += svgSectionDivider();
     sections += sectionBenefits(d, true);
     sections += sectionProgram(d);
+    sections += svgSectionDivider();
     sections += sectionAbout(d);
     sections += sectionTestimonials(d);
     sections += sectionGuarantee(d);
