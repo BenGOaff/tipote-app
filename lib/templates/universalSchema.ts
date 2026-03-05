@@ -96,6 +96,70 @@ const CAPTURE_FIELDS: UniversalField[] = [
     pageTypes: ["capture"],
     maxLength: 350,
   },
+  // --- Header bar (urgency / target audience) ---
+  {
+    key: "header_bar_text",
+    kind: "scalar",
+    label: "Texte barre supérieure",
+    description: "Court message d'urgence ou de ciblage affiché dans le bandeau header. Ex: 'Pour les solopreneurs qui veulent scaler', 'Offre limitée : 48h restantes'. PAS de 'Ce template est offert'. JAMAIS de mention du template.",
+    required: false,
+    pageTypes: ["capture"],
+    maxLength: 80,
+  },
+  // --- Hero visual description (for AI-generated illustration) ---
+  {
+    key: "hero_visual_type",
+    kind: "scalar",
+    label: "Type de visuel hero",
+    description: "Type du visuel à générer dans la section hero. Choisis EXACTEMENT parmi : 'saas_dashboard' (pour SaaS/outil/app), 'ebook_cover' (pour ebook/guide/PDF), 'video_call' (pour coaching/call/consultation), 'checklist' (pour checklist/template/workbook), 'calendar' (pour challenge/programme sur plusieurs jours), 'certificate' (pour formation/certification), 'chat_interface' (pour chatbot/IA/assistant). Choisis le type le plus pertinent pour l'offre.",
+    required: true,
+    pageTypes: ["capture"],
+    maxLength: 30,
+  },
+  {
+    key: "hero_visual_title",
+    kind: "scalar",
+    label: "Titre affiché dans le visuel",
+    description: "Texte court affiché dans le mockup/illustration du hero. Doit refléter le contenu de l'offre. Ex: 'Plan stratégique 90 jours', 'Guide complet du SEO', 'Coaching personnalisé'.",
+    required: true,
+    pageTypes: ["capture"],
+    maxLength: 60,
+  },
+  {
+    key: "hero_visual_subtitle",
+    kind: "scalar",
+    label: "Sous-titre du visuel",
+    description: "Texte secondaire dans le mockup. Ex: 'Objectif : 5 000€/mois', '47 pages de stratégie', 'Session de 45 min'.",
+    required: false,
+    pageTypes: ["capture"],
+    maxLength: 60,
+  },
+  {
+    key: "hero_visual_items",
+    kind: "array_scalar",
+    label: "Éléments du visuel",
+    description: "3-5 éléments courts affichés dans le mockup (menu items, chapitres, étapes, features). Ex: ['Tableau de bord', 'Stratégie', 'Content Hub', 'Calendrier'].",
+    required: false,
+    pageTypes: ["capture"],
+    minItems: 3,
+    maxItems: 5,
+    itemMaxLength: 30,
+  },
+  {
+    key: "hero_visual_metrics",
+    kind: "array_object",
+    label: "Métriques flottantes du visuel",
+    description: "2-3 cartes flottantes avec statistique/résultat autour du mockup. Ex: { icon: '📈', value: '+127', label: 'Leads ce mois' }.",
+    required: false,
+    pageTypes: ["capture"],
+    minItems: 2,
+    maxItems: 3,
+    subFields: [
+      { key: "icon", label: "Emoji (1 seul)", maxLength: 5 },
+      { key: "value", label: "Valeur/titre court", maxLength: 25 },
+      { key: "label", label: "Label descriptif", maxLength: 30 },
+    ],
+  },
   // --- Puces promesses (bénéfices) ---
   {
     key: "benefits_title",
@@ -110,12 +174,12 @@ const CAPTURE_FIELDS: UniversalField[] = [
     key: "benefits",
     kind: "array_scalar",
     label: "Puces promesses (bénéfices)",
-    description: "Chaque puce = 1 bénéfice concret + conséquence positive. Phrase COMPLÈTE, spécifique, orientée résultat. Format : 'Bénéfice précis pour que [conséquence désirable]'. JAMAIS de texte placeholder.",
+    description: "Chaque puce = 1 bénéfice concret + conséquence positive. Phrase COURTE mais convaincante (6-12 mots). Format : 'Bénéfice précis pour [conséquence]'. JAMAIS de texte placeholder.",
     required: true,
     pageTypes: ["capture"],
-    minItems: 5,
-    maxItems: 7,
-    itemMaxLength: 130,
+    minItems: 3,
+    maxItems: 5,
+    itemMaxLength: 80,
   },
   // --- Points de douleur / Identification ---
   {
@@ -727,9 +791,9 @@ export function universalSchemaToPrompt(pageType: "capture" | "sales"): string {
   lines.push('- Aucune valeur null/undefined : si tu n\'as pas l\'info, mets une string vide "" ou un tableau vide [].');
   lines.push("- ZÉRO balise HTML — texte brut uniquement.");
   lines.push("- ZÉRO markdown (**, ##, -, >, etc.).");
-  lines.push("- ZÉRO emoji.");
+  lines.push("- ZÉRO emoji SAUF dans hero_visual_metrics[].icon (1 emoji par carte pour l'icône).");
   lines.push("- Les strings : 1-2 phrases max, pas de sauts de ligne.");
-  lines.push("- Les puces promesses (benefits) : phrase COMPLÈTE (8-18 mots), bénéfice + conséquence.");
+  lines.push("- Les puces promesses (benefits) : phrase COURTE mais convaincante (6-12 mots), bénéfice + conséquence.");
   lines.push("- CTA : verbe d'action clair, 2-5 mots, orienté résultat.");
   lines.push("- Style : premium, direct, très lisible. Zéro blabla.");
   lines.push("- about_description : 3-5 phrases de storytelling avec crédibilité et connexion humaine.");

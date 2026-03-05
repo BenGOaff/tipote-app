@@ -775,6 +775,19 @@ function buildPageSystemPrompt(params: {
     lines.push("");
     lines.push("RÈGLE CLÉ : Le texte doit être RICHE et COMPLET. Une page de capture qui convertit a BEAUCOUP de contenu persuasif, pas juste un titre et un bouton.");
     lines.push("CHAQUE champ requis doit contenir du VRAI copywriting, pas du texte générique ou placeholder.");
+    lines.push("");
+    lines.push("VISUEL HERO (illustration dans la section au-dessus de la ligne de flottaison) :");
+    lines.push("Tu dois remplir les champs hero_visual_* pour générer une illustration moderne à côté du texte.");
+    lines.push("CHOISIS le hero_visual_type selon l'offre :");
+    lines.push("- SaaS/outil/app → 'saas_dashboard' (mockup type dashboard avec sidebar, progress bar, tâches)");
+    lines.push("- Ebook/guide/PDF → 'ebook_cover' (mockup de couverture avec chapitres, badge gratuit)");
+    lines.push("- Coaching/call → 'video_call' (mockup d'interface vidéo avec avatar, boutons)");
+    lines.push("- Checklist/template/workbook → 'checklist' (mockup de liste avec items cochés)");
+    lines.push("- Challenge/programme → 'calendar' (mockup calendrier avec jours et progression)");
+    lines.push("- Formation/certification → 'certificate' (mockup diplôme/certificat)");
+    lines.push("- Chatbot/IA/assistant → 'chat_interface' (mockup de conversation chat)");
+    lines.push("Les hero_visual_items sont les éléments affichés dans le mockup (menu, chapitres, features).");
+    lines.push("Les hero_visual_metrics sont 2-3 cartes flottantes avec une stat/résultat impressionnant.");
   } else {
     lines.push("OBJECTIF : Créer une page de vente qui VEND. Chaque mot doit rapprocher le prospect de l'achat.");
     lines.push("Structure : Hook → Problème → Agitation → Solution → Mécanisme → Preuves → Offre → Objections → Urgence → Garantie → CTA");
@@ -816,7 +829,7 @@ function buildPageSystemPrompt(params: {
   lines.push("- ZÉRO markdown (**, ##, -, >, etc.).");
   lines.push("- ZÉRO placeholder/instruction (\"Décris ici...\", \"Puce promesse\", \"[Nom]\").");
   lines.push("- ZÉRO contenu inventé : pas de bonus, garanties, témoignages, prix, places non fournis.");
-  lines.push("- ZÉRO emoji.");
+  lines.push("- ZÉRO emoji SAUF dans hero_visual_metrics[].icon (1 emoji par carte flottante).");
   lines.push("- ZÉRO lorem ipsum.");
   lines.push("- Utilise le NOM EXACT de l'offre fourni par l'utilisateur.");
   lines.push("- FAQ : question ET réponse complète (2-3 phrases). JAMAIS de question sans réponse.");
