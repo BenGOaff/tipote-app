@@ -17,6 +17,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { mapUniversalToTemplate } from "./universalSchema";
 
 export type TemplateKind = "capture" | "vente";
 export type RenderMode = "preview" | "kit";
@@ -585,16 +586,25 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
   const merged = mergeTokens(tokens, req.brandTokens);
   const cssVars = cssVarsFromTokens(merged as any);
 
+  // Map universal contentData → template-specific fields using selectors.json
+  let effectiveContentData = req.contentData;
+  if (selectorsStr && req.contentData && Object.keys(req.contentData).length > 0) {
+    try {
+      const selectors = JSON.parse(selectorsStr);
+      effectiveContentData = mapUniversalToTemplate(req.contentData, selectors);
+    } catch { /* use original contentData */ }
+  }
+
   let out = html;
 
   // 1) conditionals first (remove absent sections before expanding)
-  out = renderConditionals(out, req.contentData);
+  out = renderConditionals(out, effectiveContentData);
 
   // 2) repeaters (so placeholders inside blocks are expanded)
-  out = renderRepeaters(out, req.contentData);
+  out = renderRepeaters(out, effectiveContentData);
 
   // 3) simple placeholders
-  out = renderPlaceholders(out, req.contentData);
+  out = renderPlaceholders(out, effectiveContentData);
 
   // 4) apply variant hooks
   out = applyVariant(out, req.variantId);
@@ -604,7 +614,7 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     kind,
     templateId,
     html: out,
-    contentData: req.contentData || {},
+    contentData: effectiveContentData || {},
   });
 
   const isFullDoc = looksLikeFullHtmlDocument(out);
@@ -614,16 +624,18 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     // For any full-doc template with selectors.json: inject contentData via script
     // This covers vente templates AND capture templates (capture-02 to 05) that
     // don't use {{placeholder}} syntax.
-    if (selectorsStr && req.contentData && Object.keys(req.contentData).length > 0) {
+    if (selectorsStr && effectiveContentData && Object.keys(effectiveContentData).length > 0) {
       try {
         const selectors = JSON.parse(selectorsStr);
-        out = injectVenteContentScript(out, req.contentData, selectors);
+        out = injectVenteContentScript(out, effectiveContentData, selectors);
       } catch { /* ignore parse errors */ }
     }
 
-    // Inject brand CSS variables into full-doc templates (colors, fonts, etc.)
-    if (cssVars) {
-      const brandStyle = `<style>:root{${cssVars}}</style>`;
+    // Inject brand CSS variables AND override hardcoded colors in full-doc templates
+    if (cssVars || req.brandTokens) {
+      const brandOverrides = buildBrandOverrideCss(req.brandTokens);
+      const brandFont = buildBrandFontImport(req.brandTokens);
+      const brandStyle = `${brandFont}<style>:root{${cssVars}}${brandOverrides}</style>`;
       if (out.includes("</head>")) {
         out = out.replace("</head>", `${brandStyle}\n</head>`);
       } else if (out.includes("<body")) {
@@ -635,54 +647,57 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     out = injectContrastSafety(out);
 
     // Replace hardcoded template placeholder text with actual content
-    out = replaceHardcodedTemplatePlaceholders(out, req.contentData);
+    out = replaceHardcodedTemplatePlaceholders(out, effectiveContentData);
 
     // Inject FAQ styling
     out = injectFaqStyling(out);
 
     // Inject inline capture form for capture pages (email + name + privacy checkbox)
     if (kind === "capture") {
-      out = injectInlineCaptureForm(out, req.contentData);
+      out = injectInlineCaptureForm(out, effectiveContentData);
     }
 
     // Inject legal footer if legal URLs are present in contentData
-    out = injectLegalFooterHtml(out, req.contentData);
+    out = injectLegalFooterHtml(out, effectiveContentData);
 
     // Final sanitization pass: strip ALL remaining placeholders from HTML
-    out = sanitizeHtmlPlaceholders(out, req.contentData);
+    out = sanitizeHtmlPlaceholders(out, effectiveContentData);
 
     return { html: out };
   }
 
   const styleCss = mode === "kit" ? kitCss || css : css;
+  // Add brand font import for wrapped templates
+  const brandFontHtml = buildBrandFontImport(req.brandTokens);
+  const brandOverrideCss = buildBrandOverrideCss(req.brandTokens);
 
   // Inject inline capture form for capture pages
   if (kind === "capture") {
-    out = injectInlineCaptureForm(out, req.contentData);
+    out = injectInlineCaptureForm(out, effectiveContentData);
   }
 
   // Inject legal footer for wrapped templates
-  out = injectLegalFooterHtml(out, req.contentData);
+  out = injectLegalFooterHtml(out, effectiveContentData);
 
   let doc = wrapAsDocument({
     htmlBody: out,
-    styleCss,
+    styleCss: styleCss + "\n" + brandOverrideCss,
     cssVars,
     mode,
-    headHtml: fontsHtml || "",
+    headHtml: (fontsHtml || "") + brandFontHtml,
   });
 
   // Inject contrast safety CSS
   doc = injectContrastSafety(doc);
 
   // Replace hardcoded template placeholder text
-  doc = replaceHardcodedTemplatePlaceholders(doc, req.contentData);
+  doc = replaceHardcodedTemplatePlaceholders(doc, effectiveContentData);
 
   // Inject FAQ styling
   doc = injectFaqStyling(doc);
 
   // Final sanitization pass: strip ALL remaining placeholders from HTML
-  doc = sanitizeHtmlPlaceholders(doc, req.contentData);
+  doc = sanitizeHtmlPlaceholders(doc, effectiveContentData);
 
   return { html: doc };
 }
@@ -972,6 +987,103 @@ const LEGAL_LABELS: Record<string, { mentions: string; cgv: string; privacy: str
   it: { mentions: "Note legali", cgv: "Condizioni di vendita", privacy: "Privacy" },
   pt: { mentions: "Avisos legais", cgv: "Condi\u00e7\u00f5es de venda", privacy: "Pol\u00edtica de privacidade" },
 };
+
+// ---------- Brand override CSS ----------
+
+/**
+ * Generate CSS that overrides hardcoded template colors/fonts with user's brand.
+ * This is critical because full-doc templates use hardcoded hex colors, not CSS variables.
+ */
+function buildBrandOverrideCss(brandTokens: Record<string, any> | null | undefined): string {
+  if (!brandTokens || Object.keys(brandTokens).length === 0) return "";
+
+  const primary = brandTokens["colors-primary"] || "";
+  const accent = brandTokens["colors-accent"] || "";
+  const font = brandTokens["typography-heading"] || "";
+
+  const rules: string[] = [];
+
+  if (primary) {
+    // Override CTA/button backgrounds
+    rules.push(`
+.cta-button, .cta-primary, .btn-primary, [class*="cta-button"], [class*="btn-primary"],
+button[class*="cta"], a[class*="cta"], .hero-cta, .main-cta,
+button[type="submit"], .command-button, .order-button {
+  background: ${primary} !important;
+  background-color: ${primary} !important;
+}
+/* Override gradient buttons - replace with solid brand color */
+.cta-button, .cta-primary, .btn-primary, button[class*="cta"] {
+  background-image: none !important;
+}
+/* Override accent/highlight colors */
+.gold-text, .accent-text, [class*="gold-text"], [class*="accent"] {
+  color: ${primary} !important;
+}
+/* Override header/hero backgrounds */
+.hero, .header, [class*="hero-section"], header {
+  border-color: ${primary} !important;
+}
+/* Override badges and labels */
+.badge, [class*="badge"], .label, [class*="label"] {
+  background-color: ${primary} !important;
+  background-image: none !important;
+}
+/* Override border accents */
+.featured, [class*="featured"], .highlight, [class*="highlight"] {
+  border-color: ${primary} !important;
+}
+/* Override form button */
+.tipote-capture-form-wrap button[type="submit"] {
+  background: ${primary} !important;
+}
+/* Override links */
+a:not([class]):not([data-legal]) { color: ${primary}; }
+`);
+  }
+
+  if (accent) {
+    rules.push(`
+/* Secondary/accent elements */
+.cta-secondary, .btn-secondary, [class*="cta-secondary"], [class*="btn-outline"] {
+  border-color: ${accent} !important;
+  color: ${accent} !important;
+}
+.section-accent, [class*="section-accent"] {
+  background-color: ${accent} !important;
+}
+`);
+  }
+
+  if (font) {
+    rules.push(`
+/* Brand font override */
+h1, h2, h3, h4, h5, h6,
+.hero-title, .main-headline, [class*="title"], [class*="heading"] {
+  font-family: '${font}', sans-serif !important;
+}
+body {
+  font-family: '${font}', system-ui, -apple-system, sans-serif !important;
+}
+`);
+  }
+
+  return rules.join("\n");
+}
+
+/**
+ * Generate a Google Fonts import link for the user's brand font.
+ */
+function buildBrandFontImport(brandTokens: Record<string, any> | null | undefined): string {
+  if (!brandTokens) return "";
+  const font = brandTokens["typography-heading"] || "";
+  if (!font) return "";
+  // System fonts don't need import
+  const systemFonts = ["arial", "georgia", "times new roman", "courier new", "verdana", "tahoma", "trebuchet ms"];
+  if (systemFonts.includes(font.toLowerCase())) return "";
+  const encoded = encodeURIComponent(font);
+  return `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=${encoded}:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`;
+}
 
 function injectLegalFooterHtml(html: string, contentData: Record<string, any>, locale?: string): string {
   // Guard: prevent double injection of legal footer

@@ -11,9 +11,10 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
-import { inferTemplateSchema, schemaToPrompt } from "@/lib/templates/schema";
 import { renderTemplateHtml } from "@/lib/templates/render";
 import { searchResourceChunks } from "@/lib/resources";
+import { universalSchemaToPrompt, mapUniversalToTemplate } from "@/lib/templates/universalSchema";
+import { buildCopywritingKnowledge } from "@/lib/knowledge/salesPageKnowledge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -124,89 +125,87 @@ const InputSchema = z.object({
   locale: z.string().optional(),
 });
 
-// ---------- Template selection scoring ----------
+// ---------- Template selection: DESIGN-ONLY scoring ----------
+// Templates are now niche-agnostic. Selection is based purely on VISUAL STYLE:
+// - Number of sections, layout density
+// - Color palette & gradients
+// - Animation style
+// - Button/CTA design
+// - Brand style preference
 
 type TemplateScore = { id: string; score: number };
 
-const TEMPLATE_NICHE_FIT: Record<string, Record<string, number>> = {
-  // capture templates
-  "capture-01": { coaching: 9, formation: 8, bien_etre: 7, business: 8, default: 7 },
-  "capture-02": { coaching: 8, consulting: 9, developpement_perso: 8, default: 7 },
-  "capture-03": { bien_etre: 9, spiritualite: 9, yoga: 9, default: 6 },
-  "capture-04": { business: 9, coaching: 8, formation: 8, default: 7 },
-  "capture-05": { fitness: 9, sport: 9, perte_poids: 9, default: 6 },
-  // sales templates
-  "sale-01": { business: 9, event: 10, seminaire: 10, formation: 8, default: 7 },
-  "sale-02": { coaching: 9, formation: 9, business: 8, default: 7 },
-  "sale-03": { bien_etre: 9, coaching: 8, default: 7 },
-  "sale-04": { business: 9, consulting: 9, formation: 8, default: 7 },
-  "sale-05": { coaching: 8, lifestyle: 8, default: 7 },
-  "sale-06": { business: 8, consulting: 8, default: 7 },
-  "sale-07": { bien_etre: 9, spiritualite: 8, default: 6 },
-  "sale-08": { fitness: 9, sport: 8, perte_poids: 9, default: 6 },
-  "sale-09": { video: 9, formation: 8, business: 7, default: 6 },
-  "sale-10": { business: 8, coaching: 8, default: 7 },
-  "sale-11": { formation: 9, elearning: 10, business: 8, default: 7 },
-  "sale-12": { lifestyle: 8, fun: 8, default: 7 },
-  "sale-13": { business: 8, coaching: 8, default: 7 },
-};
-
-// Template feature tags for smarter selection
-const TEMPLATE_FEATURES: Record<string, string[]> = {
-  "capture-01": ["minimal", "versatile"],
-  "capture-02": ["professional", "corporate"],
-  "capture-03": ["soft", "wellness", "feminine"],
-  "capture-04": ["bold", "business"],
-  "capture-05": ["dynamic", "fitness", "video"],
-  "sale-01": ["event", "corporate", "premium"],
-  "sale-02": ["versatile", "coaching"],
-  "sale-03": ["soft", "wellness"],
-  "sale-04": ["professional", "corporate"],
-  "sale-05": ["lifestyle", "casual"],
-  "sale-06": ["minimal", "business"],
-  "sale-07": ["soft", "spiritual", "feminine"],
-  "sale-08": ["dynamic", "fitness"],
-  "sale-09": ["video", "course", "multimedia"],
-  "sale-10": ["professional", "versatile"],
-  "sale-11": ["elearning", "course", "structured"],
-  "sale-12": ["fun", "casual", "lifestyle"],
-  "sale-13": ["professional", "versatile"],
+// Design style tags — describes the VISUAL character, NOT the niche
+const TEMPLATE_DESIGN_STYLE: Record<string, {
+  /** Visual style keywords */
+  styles: string[];
+  /** Number of content sections (density) */
+  sectionCount: "short" | "medium" | "long";
+  /** Has video embed area */
+  hasVideo: boolean;
+  /** Visual weight: light/airy or dense/packed */
+  density: "light" | "medium" | "dense";
+}> = {
+  // Capture templates
+  "capture-01": { styles: ["minimal", "clean", "light"], sectionCount: "short", hasVideo: false, density: "light" },
+  "capture-02": { styles: ["professional", "corporate", "modern"], sectionCount: "short", hasVideo: false, density: "medium" },
+  "capture-03": { styles: ["soft", "elegant", "serif"], sectionCount: "short", hasVideo: false, density: "light" },
+  "capture-04": { styles: ["bold", "dark", "gradient"], sectionCount: "short", hasVideo: false, density: "medium" },
+  "capture-05": { styles: ["dynamic", "energetic", "colorful"], sectionCount: "medium", hasVideo: true, density: "medium" },
+  // Sales templates
+  "sale-01": { styles: ["dark", "premium", "corporate", "gradient"], sectionCount: "long", hasVideo: false, density: "dense" },
+  "sale-02": { styles: ["dark", "gold", "premium", "gradient"], sectionCount: "long", hasVideo: true, density: "dense" },
+  "sale-03": { styles: ["soft", "warm", "elegant"], sectionCount: "medium", hasVideo: false, density: "medium" },
+  "sale-04": { styles: ["professional", "corporate", "modern", "clean"], sectionCount: "long", hasVideo: false, density: "dense" },
+  "sale-05": { styles: ["lifestyle", "casual", "bright"], sectionCount: "long", hasVideo: false, density: "medium" },
+  "sale-06": { styles: ["minimal", "bold", "typography", "xxl"], sectionCount: "medium", hasVideo: false, density: "light" },
+  "sale-07": { styles: ["soft", "spiritual", "serif", "pastel"], sectionCount: "medium", hasVideo: false, density: "light" },
+  "sale-08": { styles: ["dynamic", "bold", "red", "energetic", "gradient"], sectionCount: "long", hasVideo: false, density: "dense" },
+  "sale-09": { styles: ["dark", "gradient", "video", "modern"], sectionCount: "long", hasVideo: true, density: "medium" },
+  "sale-10": { styles: ["professional", "versatile", "clean"], sectionCount: "medium", hasVideo: false, density: "medium" },
+  "sale-11": { styles: ["dark", "tech", "structured", "grid"], sectionCount: "long", hasVideo: false, density: "dense" },
+  "sale-12": { styles: ["fun", "casual", "colorful", "tabs"], sectionCount: "medium", hasVideo: false, density: "medium" },
+  "sale-13": { styles: ["dark", "bold", "lime", "gradient", "energetic"], sectionCount: "long", hasVideo: false, density: "dense" },
 };
 
 function pickBestTemplate(
   pageType: "capture" | "sales",
-  niche: string,
-  options?: { hasVideo?: boolean; brandStyle?: string; offerLevel?: string },
+  options?: { hasVideo?: boolean; brandStyle?: string; preferredLength?: string },
 ): string {
   const prefix = pageType === "capture" ? "capture-" : "sale-";
-  const nicheKey = (niche || "").toLowerCase().replace(/[-\s]+/g, "_");
 
   const candidates: TemplateScore[] = [];
-  for (const [id, fits] of Object.entries(TEMPLATE_NICHE_FIT)) {
+  for (const [id, design] of Object.entries(TEMPLATE_DESIGN_STYLE)) {
     if (!id.startsWith(prefix)) continue;
-    let score = fits[nicheKey] ?? fits.default ?? 5;
+    let score = 5; // base score — all templates are equally valid for any niche
 
-    const features = TEMPLATE_FEATURES[id] || [];
+    // Boost video-capable templates when user has video
+    if (options?.hasVideo && design.hasVideo) score += 4;
 
-    // Boost video-friendly templates when user has video
-    if (options?.hasVideo && features.includes("video")) score += 3;
-
-    // Brand style matching
+    // Brand style matching (VISUAL preferences only)
     if (options?.brandStyle) {
       const style = options.brandStyle.toLowerCase();
-      if (style.includes("premium") && features.includes("premium")) score += 2;
-      if (style.includes("minimaliste") && features.includes("minimal")) score += 2;
-      if (style.includes("fun") && features.includes("fun")) score += 2;
-      if (style.includes("pro") && features.includes("professional")) score += 2;
-      if ((style.includes("doux") || style.includes("soft")) && features.includes("soft")) score += 2;
-      if (style.includes("bold") && features.includes("bold")) score += 2;
+      for (const tag of design.styles) {
+        if (style.includes(tag)) score += 2;
+      }
+      // Map common French brand descriptors to design tags
+      if (style.includes("premium") && design.styles.includes("premium")) score += 3;
+      if (style.includes("minimaliste") && design.styles.includes("minimal")) score += 3;
+      if (style.includes("fun") && design.styles.includes("fun")) score += 3;
+      if (style.includes("pro") && design.styles.includes("professional")) score += 3;
+      if ((style.includes("doux") || style.includes("soft") || style.includes("zen")) && design.styles.includes("soft")) score += 3;
+      if ((style.includes("audacieux") || style.includes("bold")) && design.styles.includes("bold")) score += 3;
+      if (style.includes("sombre") && design.styles.includes("dark")) score += 2;
+      if (style.includes("élégant") && design.styles.includes("elegant")) score += 2;
+      if ((style.includes("énergi") || style.includes("dynamique")) && design.styles.includes("energetic")) score += 2;
     }
 
-    // Offer level matching
-    if (options?.offerLevel) {
-      const level = options.offerLevel.toLowerCase();
-      if (level.includes("high") && features.includes("premium")) score += 2;
-      if (level.includes("lead") && features.includes("minimal")) score += 1;
+    // Preferred content length
+    if (options?.preferredLength) {
+      const pref = options.preferredLength.toLowerCase();
+      if (pref.includes("court") && design.sectionCount === "short") score += 2;
+      if (pref.includes("moyen") && design.sectionCount === "medium") score += 2;
+      if (pref.includes("long") && design.sectionCount === "long") score += 2;
     }
 
     candidates.push({ id, score });
@@ -214,7 +213,7 @@ function pickBestTemplate(
 
   if (candidates.length === 0) return pageType === "capture" ? "capture-01" : "sale-02";
 
-  // Sort by score descending, add a little randomness among top scorers
+  // Sort by score descending, pick random among top scorers (±1 point)
   candidates.sort((a, b) => b.score - a.score);
   const topScore = candidates[0].score;
   const topCandidates = candidates.filter((c) => c.score >= topScore - 1);
@@ -370,32 +369,35 @@ export async function POST(req: NextRequest) {
         await wait(600);
         send("step", { id: "profile", label: "J'analyse ton profil et ton activité...", progress: 10, done: true });
 
-        // ==================== STEP 2: Pick best template ====================
-        send("step", { id: "template", label: "Je choisis le meilleur design pour ta niche...", progress: 15 });
+        // ==================== STEP 2: Pick best template (DESIGN-ONLY) ====================
+        send("step", { id: "template", label: "Je choisis le meilleur design pour toi...", progress: 15 });
 
         const templateKind = input.pageType === "sales" ? "vente" : "capture";
         const brandStyle = (profile as any)?.brand_style || (profile as any)?.brand_tone_of_voice || "";
-        const templateId = input.templateId || pickBestTemplate(input.pageType, niche, {
+        const templateId = input.templateId || pickBestTemplate(input.pageType, {
           hasVideo: !!input.videoEmbedUrl,
           brandStyle,
-          offerLevel: input.offerPrice ? (parseFloat(input.offerPrice.replace(/[^\d.]/g, "")) > 200 ? "high_ticket" : "low_ticket") : undefined,
         });
 
         await wait(800);
         send("step", { id: "template", label: "Je choisis le meilleur design pour ta niche...", progress: 20, done: true, templateId });
 
-        // ==================== STEP 3: Load template schema ====================
+        // ==================== STEP 3: Prepare universal schema ====================
         send("step", { id: "schema", label: "Je prépare la structure de ta page...", progress: 25 });
 
-        const schema = await inferTemplateSchema({ kind: templateKind, templateId });
-        const schemaPrompt = schemaToPrompt(schema);
+        // Universal schema: same for ALL templates — content is niche-agnostic
+        const schemaPrompt = universalSchemaToPrompt(input.pageType);
 
         await wait(700);
         send("step", { id: "schema", label: "Je prépare la structure de ta page...", progress: 30, done: true });
 
-        // ==================== STEP 4: Search knowledge resources ====================
+        // ==================== STEP 4: Load copywriting knowledge ====================
         send("step", { id: "knowledge", label: "Je m'inspire des meilleures pages de vente...", progress: 35 });
 
+        // Static knowledge: always injected (proven copywriting frameworks)
+        const copywritingKnowledge = buildCopywritingKnowledge(input.pageType);
+
+        // Also search vector DB for additional context
         let knowledgeSnippets: string[] = [];
         try {
           const query = `${input.pageType === "sales" ? "page de vente" : "page de capture"} ${niche} ${input.offerName || ""} conversion copywriting`;
@@ -415,8 +417,13 @@ export async function POST(req: NextRequest) {
           schemaPrompt,
           niche,
           toneOfVoice,
+          copywritingKnowledge,
           knowledgeSnippets,
           language: contentLocale,
+          brandFont,
+          brandColorBase,
+          brandColorAccent,
+          authorName: fullName || firstName,
         });
 
         const userPrompt = buildPageUserPrompt({
@@ -592,14 +599,27 @@ export async function POST(req: NextRequest) {
         await wait(300);
         send("step", { id: "legal", label: "J'ajoute tes mentions légales...", progress: 88, done: true });
 
-        // ==================== STEP 9: Render HTML ====================
+        // ==================== STEP 9: Map universal content → template fields + Render HTML ====================
         send("step", { id: "render", label: "J'optimise ta page pour les téléphones...", progress: 90 });
+
+        // Load template's selectors.json to know which fields it expects
+        let templateSelectors: Record<string, any> = {};
+        try {
+          const fs = await import("node:fs/promises");
+          const path = await import("node:path");
+          const selectorsPath = path.join(process.cwd(), "src", "templates", templateKind, templateId, "selectors.json");
+          const raw = await fs.readFile(selectorsPath, "utf-8");
+          templateSelectors = JSON.parse(raw);
+        } catch { /* no selectors = use contentData as-is */ }
+
+        // Map universal contentData to template-specific field names
+        const mappedContentData = mapUniversalToTemplate(contentData, templateSelectors);
 
         let { html: renderedHtml } = await renderTemplateHtml({
           kind: templateKind,
           templateId,
           mode: "preview",
-          contentData,
+          contentData: mappedContentData,
           brandTokens: Object.keys(brandTokens).length > 0 ? brandTokens : null,
         });
 
@@ -719,13 +739,19 @@ function buildPageSystemPrompt(params: {
   schemaPrompt: string;
   niche: string;
   toneOfVoice: string;
+  copywritingKnowledge: string;
   knowledgeSnippets: string[];
   language?: string;
+  brandFont?: string;
+  brandColorBase?: string;
+  brandColorAccent?: string;
+  authorName?: string;
 }): string {
   const lines: string[] = [];
 
   lines.push("Tu es Tipote, un copywriter direct-response expert de niveau mondial.");
   lines.push("Tu crées des pages web qui CONVERTISSENT, pas des pages génériques.");
+  lines.push("Tu rédiges du contenu FINAL prêt à publier, comme si un client payait 5000 € pour cette page.");
   lines.push("");
 
   if (params.pageType === "capture") {
@@ -738,64 +764,59 @@ function buildPageSystemPrompt(params: {
   lines.push("");
 
   // ---- BLAIR WARREN ONE SENTENCE PERSUASION FRAMEWORK ----
-  lines.push("CADRE DE PERSUASION (Blair Warren — à utiliser comme fil conducteur du copywriting) :");
+  lines.push("CADRE DE PERSUASION (Blair Warren — fil conducteur du copywriting) :");
   lines.push("Le contenu doit naturellement intégrer ces 5 leviers psychologiques :");
-  lines.push("1. ENCOURAGER LES RÊVES : Montre au prospect que son rêve est atteignable grâce à cette offre. Peins le tableau de sa transformation.");
-  lines.push("2. JUSTIFIER LES ÉCHECS : Explique pourquoi ses tentatives passées n'ont pas fonctionné (ce n'est pas de sa faute, il n'avait pas la bonne méthode/le bon outil).");
-  lines.push("3. APAISER LES PEURS : Anticipe ses peurs et ses doutes, et rassure-le concrètement (garanties, simplicité, accompagnement).");
-  lines.push("4. CONFIRMER LES SOUPÇONS : Valide ce qu'il soupçonne déjà (\"Tu le savais au fond de toi...\", \"Ce que personne ne te dit...\").");
-  lines.push("5. TROUVER UN ENNEMI COMMUN : Identifie un obstacle externe (le système, les méthodes traditionnelles, la désinformation) pour se placer du côté du prospect.");
+  lines.push("1. ENCOURAGER LES RÊVES : Montre au prospect que son rêve est atteignable grâce à cette offre.");
+  lines.push("2. JUSTIFIER LES ÉCHECS : Explique pourquoi ses tentatives passées n'ont pas fonctionné.");
+  lines.push("3. APAISER LES PEURS : Anticipe ses doutes et rassure concrètement.");
+  lines.push("4. CONFIRMER LES SOUPÇONS : Valide ce qu'il soupçonne déjà.");
+  lines.push("5. TROUVER UN ENNEMI COMMUN : Identifie un obstacle externe pour se placer du côté du prospect.");
   lines.push("");
 
-  // ---- 5 CRITÈRES D'UN CONTENU DE VALEUR ----
-  lines.push("5 CRITÈRES OBLIGATOIRES DU CONTENU (chaque texte doit cocher les 5) :");
-  lines.push("- UTILE : Le lecteur doit pouvoir en tirer un bénéfice concret et immédiat.");
-  lines.push("- SPÉCIFIQUE : Donne une stratégie, un outil, une méthode précise — jamais de vague.");
-  lines.push("- CIBLÉ : Tu t'adresses à UNE seule audience avec SES mots, SES problèmes, SES rêves.");
-  lines.push("- APPLICABLE : Le lecteur repart avec une action concrète à mettre en place.");
-  lines.push("- UNIQUE : Le texte doit refléter la personnalité et l'expertise de l'auteur — pas un contenu générique interchangeable.");
+  // ---- 5 CRITÈRES DE CONTENU ----
+  lines.push("5 CRITÈRES OBLIGATOIRES (chaque texte doit cocher les 5) :");
+  lines.push("- UTILE : Bénéfice concret et immédiat.");
+  lines.push("- SPÉCIFIQUE : Stratégie, outil, méthode précise — jamais de vague.");
+  lines.push("- CIBLÉ : UNE audience, SES mots, SES problèmes, SES rêves.");
+  lines.push("- APPLICABLE : Action concrète pour le lecteur.");
+  lines.push("- UNIQUE : Personnalité de l'auteur, pas un contenu interchangeable.");
   lines.push("");
 
-  lines.push("RÈGLES CRITIQUES DE COPYWRITING :");
-  lines.push("- Parle directement au prospect (tu/vous selon le ton de la marque)");
-  lines.push("- Chaque titre doit créer de la curiosité ou de l'urgence");
-  lines.push("- Les bénéfices avant les caractéristiques, TOUJOURS");
-  lines.push("- Utilise des chiffres concrets quand possible (3 étapes, 7 jours, etc.)");
-  lines.push("- Les CTA doivent être orientés résultat, pas action (\"Je transforme mon business\" pas \"Cliquer ici\")");
-  lines.push("- Les textes doivent sonner comme un expert qui parle à un ami, pas comme un robot");
-  lines.push("- Adapte le vocabulaire à la niche et au public cible");
-  lines.push("- JAMAIS de phrases vides type \"bienvenue sur notre site\" ou \"nous sommes ravis\"");
+  lines.push("RÈGLES DE COPYWRITING :");
+  lines.push("- Parle directement au prospect (tu/vous selon le ton)");
+  lines.push("- Chaque titre = curiosité ou urgence");
+  lines.push("- Bénéfices avant caractéristiques, TOUJOURS");
+  lines.push("- Chiffres concrets (3 étapes, 7 jours, etc.)");
+  lines.push("- CTA orienté résultat (\"Je transforme mon business\" pas \"Cliquer ici\")");
+  lines.push("- Ton d'expert qui parle à un ami, pas de robot");
+  lines.push("- Vocabulaire adapté à la niche et au public");
+  lines.push("- JAMAIS de phrases vides (\"bienvenue\", \"nous sommes ravis\")");
   lines.push("");
 
-  lines.push("INTERDICTIONS ABSOLUES (violation = échec total) :");
-  lines.push("- ZÉRO balise HTML : pas de <br>, <span>, <strong>, <p>, <div>, etc. Texte brut uniquement.");
-  lines.push("- ZÉRO markdown : pas de **, ##, -, >, etc.");
-  lines.push("- ZÉRO placeholder/instruction : INTERDIT d'écrire des textes comme \"Écris un paragraphe qui...\", \"Décris ici...\", \"Puce promesse irrésistible : bénéfice + conséquence\", \"Option 1 : Explique l'option pourrie\", \"ton audience cible\". Ce sont des INSTRUCTIONS, pas du contenu. Rédige le VRAI texte final.");
-  lines.push("- ZÉRO contenu inventé : N'invente JAMAIS de bonus, de garanties, de témoignages, de prix, de compteurs de places, de noms de challenge qui n'existent pas.");
-  lines.push("  Si l'utilisateur n'a pas fourni de bonus → strings vides. Si pas d'urgence → strings vides pour countdown/timer.");
-  lines.push("  JAMAIS inventer : \"X places restantes\", \"14/100\", \"Il ne reste que...\", \"Challenge [Nom]\", \"Webinaire [Nom]\".");
-  lines.push("  JAMAIS utiliser de crochets [Nom], [Titre], [Bénéfice] — c'est un placeholder, pas du contenu.");
-  lines.push("- ZÉRO emoji dans les textes.");
-  lines.push("- ZÉRO lorem ipsum ou texte factice.");
-  lines.push("- Utilise le NOM EXACT de l'offre fourni par l'utilisateur. N'invente pas de nom de challenge, de formation ou de programme.");
-  lines.push("- Pour les FAQ : chaque item DOIT contenir une question ET une réponse complète (2-3 phrases minimum). JAMAIS de question sans réponse.");
-  lines.push("- Pour les puces promesses : chaque puce doit être une VRAIE phrase complète décrivant un bénéfice concret, PAS une instruction de rédaction.");
-  lines.push("- Le contenu doit correspondre EXACTEMENT à l'offre décrite. Si l'offre est un quiz → parler du quiz. Si c'est une formation → parler de la formation. Ne jamais imposer une structure (challenge, places limitées, etc.) qui ne correspond pas à l'offre.");
+  lines.push("INTERDICTIONS ABSOLUES :");
+  lines.push("- ZÉRO balise HTML (<br>, <span>, <strong>, etc.) — texte brut uniquement.");
+  lines.push("- ZÉRO markdown (**, ##, -, >, etc.).");
+  lines.push("- ZÉRO placeholder/instruction (\"Décris ici...\", \"Puce promesse\", \"[Nom]\").");
+  lines.push("- ZÉRO contenu inventé : pas de bonus, garanties, témoignages, prix, places non fournis.");
+  lines.push("- ZÉRO emoji.");
+  lines.push("- ZÉRO lorem ipsum.");
+  lines.push("- Utilise le NOM EXACT de l'offre fourni par l'utilisateur.");
+  lines.push("- FAQ : question ET réponse complète (2-3 phrases). JAMAIS de question sans réponse.");
+  lines.push("- Puces promesses : VRAIE phrase complète, PAS une instruction de rédaction.");
   lines.push("");
 
-  // CRITICAL: Template adaptation instruction
-  lines.push("ADAPTATION DU TEMPLATE (RÈGLE FONDAMENTALE) :");
-  lines.push("- Le template ci-dessous est une INSPIRATION pour la structure visuelle (sections, mise en page, couleurs).");
-  lines.push("- Les noms de champs du template (\"daily_program\", \"goals\", \"schedule_days\", \"program_items\") sont des STRUCTURES DE DONNÉES, pas des instructions de contenu.");
-  lines.push("- Tu DOIS adapter TOUS les champs au contexte réel de l'offre :");
-  lines.push("  × Si le champ s'appelle \"daily_program\" mais que l'offre est un SaaS → remplis avec les fonctionnalités/modules du SaaS");
-  lines.push("  × Si le champ s'appelle \"goals\" mais que l'offre n'est pas un challenge → remplis avec les objectifs/résultats de l'offre réelle");
-  lines.push("  × Si le champ s'appelle \"schedule_days\" → adapte en étapes/phases du programme ou laisse vide si non pertinent");
-  lines.push("  × Si le champ s'appelle \"trainer_name\" → utilise le nom de l'auteur/créateur");
-  lines.push("- INTERDIT d'utiliser le vocabulaire du template quand il ne correspond pas à l'offre (\"exercice\", \"challenge\", \"séance\", \"entraînement\", \"jour 1/2/3\" pour un SaaS)");
-  lines.push("- Si un champ n'a AUCUN sens pour l'offre réelle, mets une string vide \"\" ou un tableau vide [].");
-  lines.push("- Le résultat final doit sembler avoir été écrit SUR MESURE pour cette offre, pas copié d'un template générique.");
+  // ---- KNOWLEDGE ----
+  lines.push(params.copywritingKnowledge);
   lines.push("");
+
+  if (params.knowledgeSnippets.length > 0) {
+    lines.push("RESSOURCES ADDITIONNELLES (extraits de la base de connaissances) :");
+    params.knowledgeSnippets.forEach((s, i) => {
+      lines.push(`\n--- Ressource ${i + 1} ---`);
+      lines.push(s.slice(0, 1500));
+    });
+    lines.push("");
+  }
 
   if (params.toneOfVoice) {
     lines.push(`TON DE VOIX DE LA MARQUE : ${params.toneOfVoice}`);
@@ -809,43 +830,96 @@ function buildPageSystemPrompt(params: {
     lines.push("");
   }
 
-  if (params.knowledgeSnippets.length > 0) {
-    lines.push("RESSOURCES D'INSPIRATION (pages de vente qui convertissent) :");
-    lines.push("Inspire-toi de ces extraits pour la structure, les accroches et les techniques de persuasion.");
-    lines.push("NE COPIE PAS mot pour mot — adapte au contexte de l'utilisateur.");
-    params.knowledgeSnippets.forEach((s, i) => {
-      lines.push(`\n--- Ressource ${i + 1} ---`);
-      lines.push(s.slice(0, 1500));
-    });
-    lines.push("");
-  }
-
-  // Language
+  // ---- LANGUAGE & LOCALE ----
   const LOCALE_LABELS: Record<string, string> = {
     fr: "français", en: "English", es: "español", it: "italiano",
     pt: "português", de: "Deutsch", nl: "Nederlands", ar: "العربية",
-    tr: "Türkçe",
+    tr: "Türkçe", pl: "polski", ro: "română", ja: "日本語", zh: "中文",
+    ko: "한국어", ru: "русский", hi: "हिन्दी",
   };
   const lang = params.language || "fr";
   const langLabel = LOCALE_LABELS[lang] ?? lang;
-  if (lang !== "fr") {
-    lines.push(`LANGUE OBLIGATOIRE : ${langLabel}. Tout le contenu du JSON DOIT être rédigé en ${langLabel}.`);
-    lines.push("");
-  }
 
-  // Locale-specific conventions
-  const LOCALE_CONVENTIONS: Record<string, string> = {
-    fr: "Conventions françaises : prix en format \"497 €\" (espace avant €), virgule pour les décimaux (19,90 €), tutoiement par défaut, accents corrects (é, è, ê, à, ù, ç).",
-    en: "English conventions: prices as \"$497\" or \"£497\" (symbol before number), period for decimals ($19.90). Use 'you' form.",
-    es: "Convenciones españolas: precios como \"497 €\" (símbolo después), coma para decimales. Usar tuteo o ustedeo según el tono.",
-    de: "Deutsche Konventionen: Preise als \"497 €\" (Symbol nach Zahl), Komma für Dezimalstellen.",
-    it: "Convenzioni italiane: prezzi come \"497 €\", virgola per i decimali.",
-    pt: "Convenções portuguesas: preços como \"497 €\" ou \"R$ 497\", vírgula para decimais.",
+  lines.push("═══ LANGUE & LOCALISATION ═══");
+  lines.push(`LANGUE OBLIGATOIRE : ${langLabel}. TOUT le contenu du JSON DOIT être rédigé en ${langLabel}.`);
+  lines.push("");
+
+  // Comprehensive locale-specific copywriting guidance
+  const LOCALE_COPYWRITING: Record<string, string[]> = {
+    fr: [
+      "Conventions : prix \"497 €\" (espace avant €), virgule pour décimaux (19,90 €).",
+      "Accents corrects obligatoires (é, è, ê, à, ù, ç, î, ô).",
+      "Tutoiement par défaut sauf si le ton de voix indique le vouvoiement.",
+      "Style : direct, percutant, conversationnel. Évite le jargon corporate.",
+      "CTA en français naturel : \"Je m'inscris\", \"Je télécharge\", \"J'en profite\".",
+    ],
+    en: [
+      "Prices: \"$497\" or \"£497\" (symbol before number), period for decimals ($19.90).",
+      "Use 'you' — direct, conversational, confident tone.",
+      "CTA style: action-oriented (\"Get instant access\", \"Start my transformation\").",
+      "Copywriting should feel American direct-response — punchy, benefit-driven.",
+      "Use power words: discover, unlock, transform, proven, exclusive, instant.",
+    ],
+    es: [
+      "Precios: \"497 €\" o \"$497\" según el mercado (España vs Latam).",
+      "Coma para decimales (19,90 €).",
+      "Tuteo por defecto, ustedeo si el tono lo pide.",
+      "CTA: \"Accede ahora\", \"Descarga tu guía\", \"Quiero empezar\".",
+      "Copywriting: directo, emocional, cercano. Evitar anglicismos innecesarios.",
+    ],
+    de: [
+      "Preise: \"497 €\" (Symbol nach Zahl), Komma für Dezimalstellen (19,90 €).",
+      "Siezen (Sie) ist Standard, Duzen (du) nur bei informellem Ton.",
+      "CTA: \"Jetzt starten\", \"Kostenlos herunterladen\", \"Zugang sichern\".",
+      "Deutsch soll professionell, klar und direkt klingen — nicht zu werblich.",
+    ],
+    it: [
+      "Prezzi: \"497 €\", virgola per i decimali (19,90 €).",
+      "Dare del tu o del Lei secondo il tono del brand.",
+      "CTA: \"Inizia ora\", \"Scarica la guida\", \"Accedi subito\".",
+      "Copywriting: diretto, persuasivo, con un tocco personale.",
+    ],
+    pt: [
+      "Preços: \"497 €\" (Portugal) ou \"R$ 497\" (Brasil), vírgula para decimais.",
+      "Tratar por tu/você (BR) ou tu (PT) conforme o tom.",
+      "CTA: \"Comece agora\", \"Baixe seu guia\", \"Quero participar\".",
+      "Copywriting: direto, envolvente, com storytelling emocional.",
+    ],
+    nl: [
+      "Prijzen: \"€ 497\" (symbool voor getal), komma voor decimalen (€ 19,90).",
+      "Gebruik 'je/jij' tenzij formeel toon.",
+      "CTA: \"Start nu\", \"Download je gids\", \"Schrijf je in\".",
+    ],
+    ar: [
+      "الأسعار: \"497 €\" أو حسب السوق المستهدف.",
+      "الكتابة من اليمين إلى اليسار.",
+      "CTA: \"ابدأ الآن\"، \"حمّل الدليل\"، \"سجّل مجاناً\".",
+      "أسلوب مباشر وحماسي، مع احترام الثقافة المحلية.",
+    ],
+    tr: [
+      "Fiyatlar: \"497 €\" veya \"497 TL\", virgül ile ondalık (19,90 €).",
+      "Sen/siz kullanımı marka tonuna göre.",
+      "CTA: \"Hemen başla\", \"Rehberini indir\", \"Şimdi katıl\".",
+    ],
   };
-  if (LOCALE_CONVENTIONS[lang]) {
-    lines.push(LOCALE_CONVENTIONS[lang]);
-    lines.push("");
+
+  const localeRules = LOCALE_COPYWRITING[lang];
+  if (localeRules) {
+    localeRules.forEach((r) => lines.push(`- ${r}`));
+  } else {
+    lines.push(`- Rédige TOUT le contenu en ${langLabel}.`);
+    lines.push("- Adapte les conventions de prix, ponctuation et formules de politesse à cette langue.");
+    lines.push("- Les CTA doivent être dans cette langue, naturels et orientés action.");
   }
+  lines.push("");
+
+  // Multi-language copywriting quality instruction
+  lines.push("QUALITÉ MULTILINGUE :");
+  lines.push("- Le copywriting doit être AUSSI BON que si un copywriter natif l'avait écrit.");
+  lines.push("- Utilise les expressions idiomatiques naturelles de cette langue.");
+  lines.push("- Adapte les références culturelles au marché cible (pas de francismes en anglais, etc.).");
+  lines.push("- Les jeux de mots, accroches et formules doivent fonctionner DANS cette langue, pas être traduits.");
+  lines.push("");
 
   lines.push("CONTRAINTE DE SORTIE :");
   lines.push("- Retourne UNIQUEMENT un objet JSON valide.");

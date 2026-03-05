@@ -318,14 +318,14 @@
       "description": "3 jours dans une grille (grid 3 colonnes, gap 35px). Chaque jour a: badge (11px uppercase), date (13px uppercase doré), titre (24px bold), sous-titre optionnel (14px italic), et liste de 3-5 puces avec titre (12px uppercase doré) + description",
       "examples": [
         {
-          "day_badge": "JOUR 1",
-          "day_date": "25 Janvier",
-          "day_title": "Nom du Contenu",
-          "day_subtitle": "",
+          "day_badge": "MODULE 1",
+          "day_date": "",
+          "day_title": "Les fondamentaux de la prospection",
+          "day_subtitle": "Construis un système d'acquisition qui travaille pour toi",
           "day_bullets": [
             {
-              "bullet_title": "PUCE PROMESSE",
-              "bullet_text": "Bénéfice + conséquence concrète du bénéfice"
+              "bullet_title": "STRATÉGIE D'APPROCHE",
+              "bullet_text": "Identifie et contacte tes clients idéaux sans passer pour un vendeur"
             }
           ]
         }
@@ -346,7 +346,7 @@
         "day_title": {
           "type": "string",
           "maxLength": 60,
-          "description": "Titre du contenu du jour entre guillemets"
+          "description": "Titre du module/étape"
         },
         "day_subtitle": {
           "type": "string",
@@ -361,12 +361,12 @@
             "bullet_title": {
               "type": "string",
               "maxLength": 40,
-              "description": "Titre de la puce en uppercase"
+              "description": "Titre court du point clé"
             },
             "bullet_text": {
               "type": "string",
               "maxLength": 120,
-              "description": "Bénéfice + conséquence concrète"
+              "description": "Description du bénéfice concret"
             }
           },
           "description": "Liste de promesses pour ce jour"
@@ -449,7 +449,7 @@
       "intention": "authority_why",
       "description": "Explication de pourquoi c'est important de résoudre le problème (16px, line-height 1.8, plusieurs paragraphes possibles, max 350 caractères)",
       "examples": [
-        "Explique simplement pourquoi c'est important pour ton audience cible de résoudre son problème et d'atteindre son objectif le plus rapidement possible."
+        "Chaque mois qui passe sans système d'acquisition, tu perds des milliers d'euros de chiffre d'affaires potentiel. Le marché n'attend pas, et tes concurrents avancent."
       ],
       "maxLength": 350,
       "required": true
@@ -475,7 +475,7 @@
       "intention": "qualification_intro",
       "description": "Texte avant la liste de qualification (16px, line-height 1.8)",
       "examples": [
-        "Toi et moi nous savons que le temps est précieux c'est pourquoi je vais te décrire rapidement à qui s'adresse mon offre..."
+        "Je sais que ton temps est précieux. Alors laisse-moi te dire en 30 secondes si cette offre est faite pour toi."
       ],
       "maxLength": 200,
       "required": true
@@ -489,8 +489,8 @@
       "description": "3 critères de qualification avec titre bold et description. Format: SI TU... + explication",
       "examples": [
         {
-          "qualification_title": "SI TU EN VEUX PLUS !",
-          "qualification_text": "Décris ici ce que ton audience veut en plus : plus de temps, plus de ventes, plus d'argent... Alors c'est fait pour toi !"
+          "qualification_title": "SI TU VEUX PASSER AU NIVEAU SUPÉRIEUR",
+          "qualification_text": "Tu en as assez de stagner et tu veux enfin voir tes revenus décoller avec un système éprouvé ? Alors c'est fait pour toi !"
         }
       ],
       "minItems": 3,
@@ -530,7 +530,7 @@
       "intention": "authority_credentials",
       "description": "Texte qui présente ton expérience et crédibilité (17px, line-height 1.8, text-center)",
       "examples": [
-        "Je ne vais pas y aller par 4 chemins : je m'appelle [Ton Prénom], et ... décris ici ton expérience, tes réussites, ce qui fait qu'on peut te faire confiance..."
+        "Depuis 8 ans, j'aide des entrepreneurs à transformer leur activité en ligne. Plus de 3000 clients accompagnés et un chiffre d'affaires cumulé de 2M€ générés par mes élèves."
       ],
       "maxLength": 400,
       "required": true
@@ -543,7 +543,7 @@
       "intention": "social_proof_metrics",
       "description": "Texte qui insiste sur les preuves sociales (17px, plusieurs paragraphes possibles, max 300 caractères)",
       "examples": [
-        "Insiste sur les preuves sociales, montre tes récompenses, les notes de tes clients, screenshots de tes ventes... etc !"
+        "4.9/5 sur plus de 500 avis clients. Recommandé par les experts du secteur. Résultats concrets et mesurables dès les premières semaines."
       ],
       "maxLength": 300,
       "required": false
@@ -556,7 +556,7 @@
       "intention": "authority_journey",
       "description": "Explication du changement apporté par ta méthode (17px, text-center, possibilité de mettre ta méthode en doré)",
       "examples": [
-        "Explique le changement que ta méthode a eu sur ta propre vie, tes revenus etc... ou sur ceux d'un de tes clients."
+        "Grâce à cette méthode, mes revenus ont été multipliés par 5 en 18 mois. Aujourd'hui, mon business tourne en quasi-automatique."
       ],
       "maxLength": 250,
       "required": false
@@ -569,7 +569,7 @@
       "intention": "authority_vulnerability",
       "description": "Storytelling personnel avant/après (17px, text-center, possibilité de mettre des mots en gras, max 300 caractères)",
       "examples": [
-        "Au début j'avais TEL problème, c'était vraiment compliqué pour moi de... mais un jour j'ai mis TEL truc en place et voilà ce que ça a changé."
+        "Il y a 5 ans, je galérais à trouver des clients. Je passais 12h par jour à prospecter sans résultat. Puis j'ai découvert une approche radicalement différente."
       ],
       "maxLength": 300,
       "required": false
@@ -582,7 +582,7 @@
       "intention": "authority_transformation",
       "description": "État actuel après transformation (17px, text-center, avec bold)",
       "examples": [
-        "Maintenant je vis TELLE vie et c'est ce que je vais te montrer ici."
+        "Aujourd'hui je vis de ma passion, je travaille d'où je veux et je t'enseigne exactement comment j'y suis arrivé."
       ],
       "maxLength": 150,
       "required": false
@@ -935,15 +935,15 @@
       "examples": [
         {
           "info_title": "QUOI",
-          "info_text": "Challenge Virtuel, formation en ligne, accompagnement... explique le format de ton offre."
+          "info_text": "Formation complète en 6 modules vidéo + workbooks PDF + communauté privée d'entraide."
         },
         {
           "info_title": "QUAND",
-          "info_text": "Si ton offre est disponible pendant des dates précises, indique-les ici"
+          "info_text": "Accès immédiat et illimité. Avance à ton rythme, les modules restent disponibles à vie."
         },
         {
           "info_title": "POURQUOI",
-          "info_text": "Rappelle la promesse principale de ton offre"
+          "info_text": "Pour enfin avoir un système d'acquisition client qui tourne en automatique, même quand tu dors."
         }
       ],
       "minItems": 3,

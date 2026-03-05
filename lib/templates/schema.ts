@@ -344,16 +344,40 @@ function fieldRuleLineMax(max?: number): string {
   return ` (max ${Math.max(10, Math.floor(max))} caractères)`;
 }
 
+/**
+ * Strip instructional/meta text from schema descriptions before sending to AI.
+ * This prevents the AI from copying instruction text into content.
+ */
+function cleanDescriptionForPrompt(desc: string): string {
+  if (!desc) return "";
+  let s = desc;
+  // Remove CSS/visual instructions (e.g., "48px, bold, line-height 1.3")
+  s = s.replace(/\(\d+px[^)]*\)/g, "");
+  s = s.replace(/\d+px\s*,?\s*(bold|italic|uppercase|opacity|weight|line-height|max-width|margin|padding|border|gap|grid|background|gradient|radius|letter-spacing|font|color|display)[^.;,]*/gi, "");
+  // Remove format instructions like "en majuscules", "en italique"
+  s = s.replace(/\ben (majuscules|italique|gras|bold|uppercase)\b/gi, "");
+  // Remove placeholder instructions
+  s = s.replace(/Décris\s+ici\b[^.!]*/gi, "");
+  s = s.replace(/Explique\s+(ici|simplement|ce que|ton|ta|les)\b[^.!]*/gi, "");
+  s = s.replace(/Rédige\s+ici\b[^.!]*/gi, "");
+  s = s.replace(/Insiste\s+sur\b[^.!]*/gi, "");
+  // Remove CSS class references
+  s = s.replace(/\.[a-z-]+\b/g, "");
+  s = s.replace(/class\s*=\s*"[^"]*"/g, "");
+  // Clean up
+  return s.replace(/\s{2,}/g, " ").replace(/\(\s*,?\s*\)/g, "").trim();
+}
+
 export function schemaToPrompt(schema: InferredTemplateSchema): string {
   const lines: string[] = [];
   lines.push(`TEMPLATE_KIND: ${schema.kind}`);
   lines.push(`TEMPLATE_ID: ${schema.templateId}`);
   if (schema.name) lines.push(`TEMPLATE_NAME: ${schema.name}`);
-  if (schema.description) lines.push(`TEMPLATE_DESCRIPTION: ${schema.description}`);
   lines.push("");
   lines.push("CHAMPS À REMPLIR (JSON) :");
-  lines.push("Pour chaque champ, rédige un VRAI texte de copywriting professionnel adapté à l'offre.");
-  lines.push("NE RECOPIE JAMAIS les descriptions ou exemples ci-dessous — ils sont là pour te guider, pas pour être copiés.");
+  lines.push("Pour chaque champ, rédige un VRAI texte de copywriting FINAL prêt à publier.");
+  lines.push("Les descriptions ci-dessous sont des GUIDES INTERNES — ne les recopie JAMAIS dans le contenu.");
+  lines.push("Les noms des champs sont des IDENTIFIANTS TECHNIQUES — adapte leur contenu à l'offre réelle.");
   lines.push("");
 
   for (const f of schema.fields) {
@@ -364,7 +388,8 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
       let line = `- ${f.key}: string${fieldRuleLineMax(f.maxLength)}`;
       if (f.label) line += ` — ${f.label}`;
       lines.push(line);
-      if (f.description) lines.push(`  → Objectif : ${f.description}`);
+      const cleanDesc = cleanDescriptionForPrompt(f.description || "");
+      if (cleanDesc) lines.push(`  → ${cleanDesc}`);
       continue;
     }
     if (f.kind === "array_scalar") {
@@ -373,18 +398,21 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
       let line = `- ${f.key}: string[] (items: ${f.minItems}..${f.maxItems})${lenInfo}`;
       if (f.label) line += ` — ${f.label}`;
       lines.push(line);
-      if (f.description) lines.push(`  → Objectif : ${f.description}`);
+      const cleanDesc = cleanDescriptionForPrompt(f.description || "");
+      if (cleanDesc) lines.push(`  → ${cleanDesc}`);
       continue;
     }
     const inner = f.fields.map((x) => {
       let s = `${x.key}: string${fieldRuleLineMax(x.maxLength)}`;
-      if (x.description) s += ` (${x.description})`;
+      const cleanSub = cleanDescriptionForPrompt(x.description || "");
+      if (cleanSub) s += ` (${cleanSub})`;
       return s;
     }).join("; ");
     let line = `- ${f.key}: { ${inner} }[] (items: ${f.minItems}..${f.maxItems})`;
     if (f.label) line += ` — ${f.label}`;
     lines.push(line);
-    if (f.description) lines.push(`  → Objectif : ${f.description}`);
+    const cleanDesc = cleanDescriptionForPrompt(f.description || "");
+    if (cleanDesc) lines.push(`  → ${cleanDesc}`);
   }
 
   lines.push("");
@@ -396,18 +424,17 @@ export function schemaToPrompt(schema: InferredTemplateSchema): string {
   lines.push("- ZÉRO markdown (**, ##, >, -, etc.).");
   lines.push("- ZÉRO emoji.");
   lines.push("- Les strings : 1–2 phrases max, pas de sauts de ligne.");
-  lines.push("- Les listes : items courts, concrets (idéalement 6–14 mots). Chaque item doit être un VRAI texte, pas une instruction.");
-  lines.push("- CTA : verbe d'action clair, 2–5 mots max.");
+  lines.push("- Les listes : items courts, concrets (idéalement 6–14 mots). Chaque item est du VRAI TEXTE FINAL.");
+  lines.push("- CTA : verbe d'action clair, 2–5 mots max, orienté résultat.");
   lines.push("- Style : premium, direct, très lisible. Zéro blabla.");
   lines.push("- FAQ : chaque item DOIT avoir une question ET une réponse complète (2-3 phrases). JAMAIS de question sans réponse.");
-  lines.push("- INTERDIT : recopier les descriptions/objectifs ci-dessus. Ce sont des INSTRUCTIONS pour toi, pas du contenu. Ne JAMAIS écrire :");
-  lines.push('  × "Puce promesse irrésistible : bénéfice + conséquence + curiosité"');
-  lines.push('  × "Décris ici...", "Explique l\'option pourrie", "Promesse de ton offre"');
-  lines.push('  × "ton audience cible", "bénéfice + conséquence concrète du bénéfice"');
-  lines.push('  × "Nom du Contenu", "PUCE PROMESSE", "Bénéfice + conséquence concrète"');
-  lines.push('  × "Témoignage sincère d\'un client", "Description complète du bonus"');
-  lines.push("  Au lieu de ça, rédige du VRAI TEXTE FINAL spécifique à l'offre.");
-  lines.push("  Exemple correct : \"Maîtrise la prospection LinkedIn pour décrocher 5 rendez-vous qualifiés par semaine\"");
+  lines.push("- INTERDIT de recopier les descriptions/guides ci-dessus. Exemples de textes INTERDITS :");
+  lines.push('  × "Puce promesse irrésistible", "bénéfice + conséquence"');
+  lines.push('  × "Décris ici...", "Explique l\'option", "Promesse de ton offre"');
+  lines.push('  × "Nom du Contenu", "PUCE PROMESSE", "ton audience cible"');
+  lines.push('  × "Témoignage sincère d\'un client", "Description du bonus"');
+  lines.push('  × "Screenshot photo ou illustration de l\'exercice"');
+  lines.push("  Rédige du VRAI TEXTE spécifique à l'offre. Exemple : \"Maîtrise LinkedIn pour décrocher 5 RDV qualifiés par semaine\"");
 
   return lines.join("\n");
 }

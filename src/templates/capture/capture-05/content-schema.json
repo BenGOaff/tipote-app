@@ -1,8 +1,8 @@
 {
   "kind": "capture",
   "templateId": "capture-05",
-  "name": "Page de capture Challenge Affiliation Up-to-Challenge",
-  "description": "Template style affiliation/marketing digital avec labels flottants, badges live, programme détaillé et comparaison avant/après",
+  "name": "Page de capture dynamique avec programme et avant/après",
+  "description": "Template dynamique avec labels flottants, programme détaillé en étapes et comparaison avant/après. Adapté aux challenges, formations courtes, programmes et événements.",
   "fields": [
     {
       "key": "floating_labels",
@@ -27,10 +27,13 @@
       "label": "Label hero",
       "type": "string",
       "source": "ai",
-      "intention": "event_type",
-      "description": "Type d'événement",
+      "intention": "offer_type_label",
+      "description": "Type d'offre ou format en majuscules",
       "examples": [
-        "CHALLENGE GRATUIT EN LIGNE"
+        "CHALLENGE GRATUIT EN LIGNE",
+        "FORMATION GRATUITE",
+        "GUIDE COMPLET OFFERT",
+        "ACCÈS IMMÉDIAT"
       ],
       "maxLength": 30,
       "required": true
@@ -40,24 +43,27 @@
       "label": "Sous-titre hero",
       "type": "string",
       "source": "ai",
-      "intention": "urgency_timing",
-      "description": "Information de timing en majuscules pour créer urgence",
+      "intention": "urgency_or_detail",
+      "description": "Détail complémentaire ou accroche courte en majuscules",
       "examples": [
         "DU 10 AU 14 JANVIER 2025",
-        "DERNIERS JOURS"
+        "ACCÈS IMMÉDIAT ET GRATUIT",
+        "7 MODULES COMPLETS"
       ],
       "maxLength": 40,
       "required": true
     },
     {
       "key": "hero_live_badge",
-      "label": "Badge live",
+      "label": "Badge format",
       "type": "string",
       "source": "ai",
       "intention": "format_emphasis",
-      "description": "Badge qui indique le format live",
+      "description": "Badge décrivant le format de l'offre",
       "examples": [
-        "4 LIVES GRATUITS • En direct + Replays"
+        "4 LIVES GRATUITS + Replays",
+        "ACCÈS IMMÉDIAT + BONUS",
+        "100% GRATUIT + CERTIFICAT"
       ],
       "maxLength": 40,
       "required": true
@@ -188,30 +194,30 @@
     },
     {
       "key": "daily_program",
-      "label": "Programme quotidien",
+      "label": "Programme / Étapes",
       "type": "object[]",
       "source": "ai",
-      "intention": "daily_breakdown",
-      "description": "4 jours avec label, titre et points clés (2-3 puces)",
-      "minItems": 4,
+      "intention": "step_breakdown",
+      "description": "3-4 étapes, modules ou phases avec label, titre et points clés. Adapte au type d'offre : JOUR 1, MODULE 1, ÉTAPE 1, CHAPITRE 1, etc.",
+      "minItems": 3,
       "maxItems": 4,
       "itemSchema": {
         "day_label": {
           "type": "string",
           "maxLength": 15,
-          "description": "JOUR #X"
+          "description": "Label de l'étape (MODULE 1, ÉTAPE 1, JOUR 1, CHAPITRE 1...)"
         },
         "day_title": {
           "type": "string",
           "maxLength": 50,
-          "description": "Titre du concept/thème du jour"
+          "description": "Titre de cette étape/module"
         },
         "day_bullets": {
           "type": "string[]",
           "minItems": 2,
           "maxItems": 3,
           "itemMaxLength": 110,
-          "description": "Points clés abordés ce jour"
+          "description": "Points clés de cette étape"
         }
       },
       "required": true
@@ -262,24 +268,19 @@
       "type": "string",
       "source": "ai",
       "intention": "scarcity_setup",
-      "description": "Texte qui introduit la rareté",
-      "examples": [
-        "Il reste encore des places..."
-      ],
+      "description": "Texte d'urgence si fourni par l'utilisateur, sinon laisser vide",
+      "examples": [],
       "maxLength": 40,
       "required": false
     },
     {
       "key": "counter_number",
-      "label": "Nombre de places",
+      "label": "Nombre affiché",
       "type": "string",
       "source": "ai",
       "intention": "scarcity_metric",
-      "description": "X/Y places restantes",
-      "examples": [
-        "14/100",
-        "25/150"
-      ],
+      "description": "Nombre à afficher si urgence fournie, sinon laisser vide",
+      "examples": [],
       "maxLength": 10,
       "required": false
     },
@@ -420,14 +421,16 @@
     },
     {
       "key": "challenge_name",
-      "label": "Nom du challenge",
+      "label": "Nom de l'offre",
       "type": "string",
       "source": "user",
       "fallback": "placeholder",
-      "intention": "event_branding",
-      "description": "Nom du challenge pour footer",
+      "intention": "offer_branding",
+      "description": "Nom de l'offre affiché dans le footer",
       "examples": [
-        "Challenge Affiliation Express"
+        "Challenge Affiliation Express",
+        "Formation LinkedIn Pro",
+        "Guide Complet SEO"
       ],
       "maxLength": 40,
       "required": true
