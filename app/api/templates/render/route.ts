@@ -1,6 +1,7 @@
 // app/api/templates/render/route.ts
+// Render endpoint — now uses the programmatic page builder instead of template files.
 import { NextResponse } from "next/server";
-import { renderTemplateHtml } from "@/lib/templates/render";
+import { buildPage } from "@/lib/pageBuilder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,24 +20,10 @@ export async function POST(req: Request) {
     const body = (await req.json()) as Body;
 
     const kind: "capture" | "vente" = body?.kind === "vente" ? "vente" : "capture";
-    const templateId = String(body?.templateId ?? "").trim();
+    const pageType = kind === "vente" ? "sales" : "capture";
 
-    // renderTemplateHtml n'accepte que "preview" | "kit"
-    const mode: "preview" | "kit" =
-      body?.mode === "kit" || body?.mode === "preview_kit" ? "kit" : "preview";
-
-    if (!templateId) {
-      return NextResponse.json(
-        { ok: false, error: "Missing templateId" },
-        { status: 400 }
-      );
-    }
-
-    const { html } = await renderTemplateHtml({
-      kind,
-      templateId,
-      mode,
-      variantId: body?.variantId ?? null,
+    const html = buildPage({
+      pageType: pageType as "capture" | "sales",
       contentData: body?.contentData ?? {},
       brandTokens: body?.brandTokens ?? null,
     });

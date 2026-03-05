@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { renderTemplateHtml } from "@/lib/templates/render";
+import { buildPage } from "@/lib/pageBuilder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,10 +80,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       const brandTokens = updates.brand_tokens || current.brand_tokens;
 
       try {
-        const { html } = await renderTemplateHtml({
-          kind: current.template_kind as any,
-          templateId: current.template_id,
-          mode: "preview",
+        const pageType = current.template_kind === "vente" ? "sales" : "capture";
+        const html = buildPage({
+          pageType: pageType as "capture" | "sales",
           contentData,
           brandTokens: Object.keys(brandTokens || {}).length > 0 ? brandTokens : null,
         });
