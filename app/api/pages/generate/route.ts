@@ -683,6 +683,13 @@ export async function POST(req: NextRequest) {
           legal_mentions_url: termsUrl,
           legal_cgv_url: cgvUrl,
           legal_privacy_url: privacyUrl,
+          // Thank-you page content (capture pages)
+          ...(input.pageType === "capture" ? {
+            thank_you_title: (contentData.thank_you_title || "Merci pour ton inscription !").slice(0, 200),
+            thank_you_message: (contentData.thank_you_message || "Tu vas recevoir tes accès par email dans les prochaines minutes. Pense à vérifier tes spams !").slice(0, 500),
+            thank_you_cta_text: (contentData.thank_you_cta_text || "").slice(0, 100),
+            thank_you_cta_url: input.paymentUrl || "",
+          } : {}),
         };
 
         const { data: page, error: insertError } = await supabaseAdmin
