@@ -11,10 +11,11 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
-import { renderTemplateHtml } from "@/lib/templates/render";
+import { buildPage } from "@/lib/pageBuilder";
 import { searchResourceChunks } from "@/lib/resources";
-import { universalSchemaToPrompt, mapUniversalToTemplate } from "@/lib/templates/universalSchema";
+import { universalSchemaToPrompt } from "@/lib/templates/universalSchema";
 import { buildCopywritingKnowledge } from "@/lib/knowledge/salesPageKnowledge";
+import { buildNichePrompt } from "@/lib/knowledge/nicheRecommendations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,100 +126,7 @@ const InputSchema = z.object({
   locale: z.string().optional(),
 });
 
-// ---------- Template selection: DESIGN-ONLY scoring ----------
-// Templates are now niche-agnostic. Selection is based purely on VISUAL STYLE:
-// - Number of sections, layout density
-// - Color palette & gradients
-// - Animation style
-// - Button/CTA design
-// - Brand style preference
-
-type TemplateScore = { id: string; score: number };
-
-// Design style tags — describes the VISUAL character, NOT the niche
-const TEMPLATE_DESIGN_STYLE: Record<string, {
-  /** Visual style keywords */
-  styles: string[];
-  /** Number of content sections (density) */
-  sectionCount: "short" | "medium" | "long";
-  /** Has video embed area */
-  hasVideo: boolean;
-  /** Visual weight: light/airy or dense/packed */
-  density: "light" | "medium" | "dense";
-}> = {
-  // Capture templates
-  "capture-01": { styles: ["minimal", "clean", "light"], sectionCount: "short", hasVideo: false, density: "light" },
-  "capture-02": { styles: ["professional", "corporate", "modern"], sectionCount: "short", hasVideo: false, density: "medium" },
-  "capture-03": { styles: ["soft", "elegant", "serif"], sectionCount: "short", hasVideo: false, density: "light" },
-  "capture-04": { styles: ["bold", "dark", "gradient"], sectionCount: "short", hasVideo: false, density: "medium" },
-  "capture-05": { styles: ["dynamic", "energetic", "colorful"], sectionCount: "medium", hasVideo: true, density: "medium" },
-  // Sales templates
-  "sale-01": { styles: ["dark", "premium", "corporate", "gradient"], sectionCount: "long", hasVideo: false, density: "dense" },
-  "sale-02": { styles: ["dark", "gold", "premium", "gradient"], sectionCount: "long", hasVideo: true, density: "dense" },
-  "sale-03": { styles: ["soft", "warm", "elegant"], sectionCount: "medium", hasVideo: false, density: "medium" },
-  "sale-04": { styles: ["professional", "corporate", "modern", "clean"], sectionCount: "long", hasVideo: false, density: "dense" },
-  "sale-05": { styles: ["lifestyle", "casual", "bright"], sectionCount: "long", hasVideo: false, density: "medium" },
-  "sale-06": { styles: ["minimal", "bold", "typography", "xxl"], sectionCount: "medium", hasVideo: false, density: "light" },
-  "sale-07": { styles: ["soft", "spiritual", "serif", "pastel"], sectionCount: "medium", hasVideo: false, density: "light" },
-  "sale-08": { styles: ["dynamic", "bold", "red", "energetic", "gradient"], sectionCount: "long", hasVideo: false, density: "dense" },
-  "sale-09": { styles: ["dark", "gradient", "video", "modern"], sectionCount: "long", hasVideo: true, density: "medium" },
-  "sale-10": { styles: ["professional", "versatile", "clean"], sectionCount: "medium", hasVideo: false, density: "medium" },
-  "sale-11": { styles: ["dark", "tech", "structured", "grid"], sectionCount: "long", hasVideo: false, density: "dense" },
-  "sale-12": { styles: ["fun", "casual", "colorful", "tabs"], sectionCount: "medium", hasVideo: false, density: "medium" },
-  "sale-13": { styles: ["dark", "bold", "lime", "gradient", "energetic"], sectionCount: "long", hasVideo: false, density: "dense" },
-};
-
-function pickBestTemplate(
-  pageType: "capture" | "sales",
-  options?: { hasVideo?: boolean; brandStyle?: string; preferredLength?: string },
-): string {
-  const prefix = pageType === "capture" ? "capture-" : "sale-";
-
-  const candidates: TemplateScore[] = [];
-  for (const [id, design] of Object.entries(TEMPLATE_DESIGN_STYLE)) {
-    if (!id.startsWith(prefix)) continue;
-    let score = 5; // base score — all templates are equally valid for any niche
-
-    // Boost video-capable templates when user has video
-    if (options?.hasVideo && design.hasVideo) score += 4;
-
-    // Brand style matching (VISUAL preferences only)
-    if (options?.brandStyle) {
-      const style = options.brandStyle.toLowerCase();
-      for (const tag of design.styles) {
-        if (style.includes(tag)) score += 2;
-      }
-      // Map common French brand descriptors to design tags
-      if (style.includes("premium") && design.styles.includes("premium")) score += 3;
-      if (style.includes("minimaliste") && design.styles.includes("minimal")) score += 3;
-      if (style.includes("fun") && design.styles.includes("fun")) score += 3;
-      if (style.includes("pro") && design.styles.includes("professional")) score += 3;
-      if ((style.includes("doux") || style.includes("soft") || style.includes("zen")) && design.styles.includes("soft")) score += 3;
-      if ((style.includes("audacieux") || style.includes("bold")) && design.styles.includes("bold")) score += 3;
-      if (style.includes("sombre") && design.styles.includes("dark")) score += 2;
-      if (style.includes("élégant") && design.styles.includes("elegant")) score += 2;
-      if ((style.includes("énergi") || style.includes("dynamique")) && design.styles.includes("energetic")) score += 2;
-    }
-
-    // Preferred content length
-    if (options?.preferredLength) {
-      const pref = options.preferredLength.toLowerCase();
-      if (pref.includes("court") && design.sectionCount === "short") score += 2;
-      if (pref.includes("moyen") && design.sectionCount === "medium") score += 2;
-      if (pref.includes("long") && design.sectionCount === "long") score += 2;
-    }
-
-    candidates.push({ id, score });
-  }
-
-  if (candidates.length === 0) return pageType === "capture" ? "capture-01" : "sale-02";
-
-  // Sort by score descending, pick random among top scorers (±1 point)
-  candidates.sort((a, b) => b.score - a.score);
-  const topScore = candidates[0].score;
-  const topCandidates = candidates.filter((c) => c.score >= topScore - 1);
-  return topCandidates[Math.floor(Math.random() * topCandidates.length)].id;
-}
+// Template system removed — pages are now built programmatically via lib/pageBuilder.ts
 
 // ---------- Slug generation ----------
 
@@ -369,18 +277,14 @@ export async function POST(req: NextRequest) {
         await wait(600);
         send("step", { id: "profile", label: "J'analyse ton profil et ton activité...", progress: 10, done: true });
 
-        // ==================== STEP 2: Pick best template (DESIGN-ONLY) ====================
-        send("step", { id: "template", label: "Je choisis le meilleur design pour toi...", progress: 15 });
+        // ==================== STEP 2: Prepare design system ====================
+        send("step", { id: "template", label: "Je prépare ton design personnalisé...", progress: 15 });
 
         const templateKind = input.pageType === "sales" ? "vente" : "capture";
-        const brandStyle = (profile as any)?.brand_style || (profile as any)?.brand_tone_of_voice || "";
-        const templateId = input.templateId || pickBestTemplate(input.pageType, {
-          hasVideo: !!input.videoEmbedUrl,
-          brandStyle,
-        });
+        const templateId = "tipote-builder"; // No more template files — pages are built programmatically
 
-        await wait(800);
-        send("step", { id: "template", label: "Je choisis le meilleur design pour ta niche...", progress: 20, done: true, templateId });
+        await wait(400);
+        send("step", { id: "template", label: "Je prépare ton design personnalisé...", progress: 20, done: true });
 
         // ==================== STEP 3: Prepare universal schema ====================
         send("step", { id: "schema", label: "Je prépare la structure de ta page...", progress: 25 });
@@ -411,6 +315,9 @@ export async function POST(req: NextRequest) {
         // ==================== STEP 5: Generate copywriting ====================
         send("step", { id: "copy", label: input.pageType === "sales" ? "Je rédige ton texte de vente..." : "Je rédige ton texte de capture...", progress: 45 });
 
+        // Build niche-specific recommendations
+        const nichePrompt = buildNichePrompt(niche, input.offerDescription || input.offerName || "");
+
         // Build the AI prompt
         const systemPrompt = buildPageSystemPrompt({
           pageType: input.pageType,
@@ -419,6 +326,7 @@ export async function POST(req: NextRequest) {
           toneOfVoice,
           copywritingKnowledge,
           knowledgeSnippets,
+          nicheRecommendations: nichePrompt,
           language: contentLocale,
           brandFont,
           brandColorBase,
@@ -599,59 +507,16 @@ export async function POST(req: NextRequest) {
         await wait(300);
         send("step", { id: "legal", label: "J'ajoute tes mentions légales...", progress: 88, done: true });
 
-        // ==================== STEP 9: Map universal content → template fields + Render HTML ====================
+        // ==================== STEP 9: Build page with programmatic page builder ====================
         send("step", { id: "render", label: "J'optimise ta page pour les téléphones...", progress: 90 });
 
-        // Load template's selectors.json to know which fields it expects
-        let templateSelectors: Record<string, any> = {};
-        try {
-          const fs = await import("node:fs/promises");
-          const path = await import("node:path");
-          const selectorsPath = path.join(process.cwd(), "src", "templates", templateKind, templateId, "selectors.json");
-          const raw = await fs.readFile(selectorsPath, "utf-8");
-          templateSelectors = JSON.parse(raw);
-        } catch { /* no selectors = use contentData as-is */ }
-
-        // Map universal contentData to template-specific field names
-        const mappedContentData = mapUniversalToTemplate(contentData, templateSelectors);
-
-        let { html: renderedHtml } = await renderTemplateHtml({
-          kind: templateKind,
-          templateId,
-          mode: "preview",
-          contentData: mappedContentData,
+        // Build full HTML page using the programmatic page builder
+        let renderedHtml = buildPage({
+          pageType: input.pageType,
+          contentData,
           brandTokens: Object.keys(brandTokens).length > 0 ? brandTokens : null,
+          locale: contentLocale,
         });
-
-        // Post-render: inject payment URL into CTA links only (not legal/footer links)
-        if (payUrl) {
-          const safePayUrl = payUrl.replace(/"/g, "&quot;");
-          // Replace href="#" only on elements that are CTA-like (buttons, .cta-*, .btn-*)
-          renderedHtml = renderedHtml.replace(
-            /(<(?:a|button)\b[^>]*?)href\s*=\s*"#"([^>]*>)/gi,
-            (match, before, after) => {
-              const combined = (before + after).toLowerCase();
-              const isCta = /class="[^"]*(?:cta|btn|button|primary|command|order|rejoind)[^"]*"/.test(combined)
-                || combined.startsWith("<button");
-              return isCta ? `${before}href="${safePayUrl}"${after}` : match;
-            }
-          );
-          // Also replace href="#capture"
-          renderedHtml = renderedHtml.replace(/href\s*=\s*"#capture"/g, `href="${safePayUrl}"`);
-        }
-
-        // Post-render: inject brand logo image if available
-        if (brandLogoUrl) {
-          // Replace text-only logo with an <img> tag where the logo class exists
-          renderedHtml = renderedHtml.replace(
-            /(<[^>]*class="[^"]*logo[^"]*"[^>]*>)([\s\S]*?)(<\/[^>]+>)/i,
-            (match, openTag, content, closeTag) => {
-              // Only replace if content is short text (not already an img)
-              if (content.includes("<img") || content.trim().length > 100) return match;
-              return `${openTag}<img src="${brandLogoUrl.replace(/"/g, "&quot;")}" alt="Logo" style="max-height:40px;width:auto">${closeTag}`;
-            }
-          );
-        }
 
         send("step", { id: "render", label: "J'optimise ta page pour les téléphones...", progress: 93, done: true });
 
@@ -748,6 +613,7 @@ function buildPageSystemPrompt(params: {
   toneOfVoice: string;
   copywritingKnowledge: string;
   knowledgeSnippets: string[];
+  nicheRecommendations?: string;
   language?: string;
   brandFont?: string;
   brandColorBase?: string;
@@ -846,6 +712,12 @@ function buildPageSystemPrompt(params: {
       lines.push(`\n--- Ressource ${i + 1} ---`);
       lines.push(s.slice(0, 1500));
     });
+    lines.push("");
+  }
+
+  // ---- NICHE-SPECIFIC RECOMMENDATIONS ----
+  if (params.nicheRecommendations) {
+    lines.push(params.nicheRecommendations);
     lines.push("");
   }
 

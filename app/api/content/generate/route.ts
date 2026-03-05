@@ -30,7 +30,7 @@ import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
 import { inferTemplateSchema, schemaToPrompt } from "@/lib/templates/schema";
 import type { OfferMode, OfferSourceContext, OfferType } from "@/lib/prompts/content/offer";
 import { fetchPageText } from "@/lib/fetchPageText";
-import { renderTemplateHtml } from "@/lib/templates/render";
+// renderTemplateHtml removed — pages now use lib/pageBuilder.ts
 import { pickTitleFromContentData as pickTitleFromCD } from "@/lib/templates/pickTitle";
 
 import fs from "node:fs/promises";
