@@ -937,99 +937,514 @@ function injectFaqStyling(html: string): string {
 // ---------- Inline capture form injection ----------
 
 /**
- * Inject an inline email capture form into capture pages.
- * CRITICAL: The form MUST be above the fold (inside the hero section).
- * The form includes: first name, email, privacy checkbox, and submit button.
- * Skips injection if the template already has a <form> element.
+ * Build a contextual hero illustration HTML based on the visual type.
+ * Generates a modern mockup/animation adapted to the offer (SaaS, ebook, call, etc.)
+ * Uses brand colors via CSS variables.
+ */
+function buildHeroVisualHtml(contentData: Record<string, any>): string {
+  const visualType = safeString(contentData.hero_visual_type || "saas_dashboard");
+  const vTitle = escapeHtml(safeString(contentData.hero_visual_title || contentData.hero_title || ""));
+  const vSubtitle = escapeHtml(safeString(contentData.hero_visual_subtitle || ""));
+  const vItems: string[] = Array.isArray(contentData.hero_visual_items) ? contentData.hero_visual_items.map((i: any) => safeString(i)) : [];
+  const vMetrics: Array<{ icon: string; value: string; label: string }> = Array.isArray(contentData.hero_visual_metrics) ? contentData.hero_visual_metrics : [];
+
+  // Floating cards HTML (metrics)
+  const floatingCards = vMetrics.slice(0, 3).map((m, i) => {
+    const colorClasses = ["leads", "email", "success"];
+    const delays = ["0s", "1s", "2s"];
+    const positions = [
+      "top:-20px;right:-20px;",
+      "bottom:60px;left:-30px;",
+      "bottom:-15px;right:30px;",
+    ];
+    return `<div class="tpt-float-card" style="animation-delay:${delays[i]};${positions[i]}">
+      <div class="tpt-float-icon tpt-float-${colorClasses[i]}">${escapeHtml(safeString(m.icon || "&#10003;"))}</div>
+      <div class="tpt-float-content">
+        <span class="tpt-float-value">${escapeHtml(safeString(m.value || ""))}</span>
+        <span class="tpt-float-label">${escapeHtml(safeString(m.label || ""))}</span>
+      </div>
+    </div>`;
+  }).join("\n");
+
+  // Items list for the mockup interior
+  const itemsHtml = vItems.slice(0, 5).map((item, i) =>
+    `<div class="tpt-mock-item${i === 0 ? " active" : ""}"><span class="tpt-mock-icon"></span>${escapeHtml(item)}</div>`
+  ).join("\n");
+
+  // Build different mockup interiors based on visual type
+  let mockupContent = "";
+
+  if (visualType === "ebook_cover") {
+    const chapters = vItems.length > 0 ? vItems : ["Chapitre 1", "Chapitre 2", "Chapitre 3"];
+    mockupContent = `
+      <div class="tpt-mock-ebook">
+        <div class="tpt-mock-ebook-badge">GRATUIT</div>
+        <div class="tpt-mock-ebook-title">${vTitle}</div>
+        ${vSubtitle ? `<div class="tpt-mock-ebook-sub">${vSubtitle}</div>` : ""}
+        <div class="tpt-mock-ebook-chapters">
+          ${chapters.slice(0, 5).map((c, i) => `<div class="tpt-mock-ebook-ch"><span class="tpt-mock-ch-num">${i + 1}</span>${escapeHtml(typeof c === "string" ? c : "")}</div>`).join("\n")}
+        </div>
+      </div>`;
+  } else if (visualType === "video_call") {
+    mockupContent = `
+      <div class="tpt-mock-videocall">
+        <div class="tpt-mock-vc-header">${vTitle}</div>
+        <div class="tpt-mock-vc-grid">
+          <div class="tpt-mock-vc-avatar"><div class="tpt-mock-vc-circle">&#128100;</div><span>Expert</span></div>
+          <div class="tpt-mock-vc-avatar"><div class="tpt-mock-vc-circle tpt-mock-vc-you">&#128100;</div><span>Vous</span></div>
+        </div>
+        <div class="tpt-mock-vc-bar">
+          <span class="tpt-mock-vc-btn">&#127908;</span>
+          <span class="tpt-mock-vc-btn">&#127909;</span>
+          <span class="tpt-mock-vc-btn tpt-mock-vc-end">&#128308;</span>
+        </div>
+        ${vSubtitle ? `<div class="tpt-mock-vc-sub">${vSubtitle}</div>` : ""}
+      </div>`;
+  } else if (visualType === "checklist") {
+    const checks = vItems.length > 0 ? vItems : ["&#201;tape 1", "&#201;tape 2", "&#201;tape 3"];
+    mockupContent = `
+      <div class="tpt-mock-checklist">
+        <div class="tpt-mock-cl-title">${vTitle}</div>
+        ${vSubtitle ? `<div class="tpt-mock-cl-sub">${vSubtitle}</div>` : ""}
+        <div class="tpt-mock-cl-items">
+          ${checks.slice(0, 5).map((c, i) => `<div class="tpt-mock-cl-item${i < 2 ? " done" : ""}"><span class="tpt-mock-cl-check">${i < 2 ? "&#10003;" : ""}</span><span>${escapeHtml(typeof c === "string" ? c : "")}</span></div>`).join("\n")}
+        </div>
+      </div>`;
+  } else if (visualType === "calendar") {
+    const days = vItems.length > 0 ? vItems : ["Jour 1", "Jour 2", "Jour 3", "Jour 4", "Jour 5"];
+    mockupContent = `
+      <div class="tpt-mock-calendar">
+        <div class="tpt-mock-cal-header">${vTitle}</div>
+        ${vSubtitle ? `<div class="tpt-mock-cal-sub">${vSubtitle}</div>` : ""}
+        <div class="tpt-mock-cal-grid">
+          ${days.slice(0, 5).map((d, i) => `<div class="tpt-mock-cal-day${i < 2 ? " done" : i === 2 ? " current" : ""}"><span class="tpt-mock-cal-num">${i + 1}</span><span class="tpt-mock-cal-label">${escapeHtml(typeof d === "string" ? d : "")}</span></div>`).join("\n")}
+        </div>
+      </div>`;
+  } else if (visualType === "chat_interface") {
+    mockupContent = `
+      <div class="tpt-mock-chat">
+        <div class="tpt-mock-chat-header">${vTitle}</div>
+        <div class="tpt-mock-chat-msgs">
+          <div class="tpt-mock-chat-msg tpt-mock-chat-user">Comment augmenter mes ventes ?</div>
+          <div class="tpt-mock-chat-msg tpt-mock-chat-bot">Voici 3 strat&#233;gies prouv&#233;es pour booster tes conversions...</div>
+          <div class="tpt-mock-chat-typing"><span></span><span></span><span></span></div>
+        </div>
+      </div>`;
+  } else if (visualType === "certificate") {
+    mockupContent = `
+      <div class="tpt-mock-cert">
+        <div class="tpt-mock-cert-border">
+          <div class="tpt-mock-cert-badge">&#127942;</div>
+          <div class="tpt-mock-cert-title">${vTitle}</div>
+          ${vSubtitle ? `<div class="tpt-mock-cert-sub">${vSubtitle}</div>` : ""}
+          <div class="tpt-mock-cert-line"></div>
+          <div class="tpt-mock-cert-name">Votre nom ici</div>
+        </div>
+      </div>`;
+  } else {
+    // Default: saas_dashboard
+    mockupContent = `
+      <div class="tpt-mock-content">
+        <div class="tpt-mock-sidebar">${itemsHtml}</div>
+        <div class="tpt-mock-main">
+          <div class="tpt-mock-header">
+            <div class="tpt-mock-title">${vTitle}</div>
+            ${vSubtitle ? `<div class="tpt-mock-subtitle">${vSubtitle}</div>` : ""}
+          </div>
+          <div class="tpt-mock-progress">
+            <div class="tpt-mock-progress-header"><span>Progression</span><span class="tpt-mock-progress-val">75%</span></div>
+            <div class="tpt-mock-progress-bar"><div class="tpt-mock-progress-fill"></div></div>
+          </div>
+          <div class="tpt-mock-tasks">
+            <div class="tpt-mock-task done"><span class="tpt-mock-task-check">&#10003;</span><span>Configur&#233;</span></div>
+            <div class="tpt-mock-task done"><span class="tpt-mock-task-check">&#10003;</span><span>Lanc&#233;</span></div>
+            <div class="tpt-mock-task"><span class="tpt-mock-task-check"></span><span>En cours...</span></div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  return `<div class="tpt-hero-visual" data-tipote-visual="1" title="Cliquez pour remplacer par votre image">
+  <div class="tpt-mockup">
+    <div class="tpt-mock-browser">
+      <span class="tpt-dot red"></span><span class="tpt-dot yellow"></span><span class="tpt-dot green"></span>
+    </div>
+    ${mockupContent}
+  </div>
+  ${floatingCards}
+</div>`;
+}
+
+/**
+ * Inject a standardized capture hero section into ALL capture pages.
  *
- * Placement strategy (in order of priority):
- * 1. Replace the FIRST CTA button/link with the form (inside hero section)
- * 2. Insert after the first </h1> if no CTA found
- * 3. Insert at the end of the first <section> as fallback
+ * ARCHITECTURE:
+ * - Replaces the template's ENTIRE first section (hero) with a standard split layout
+ * - LEFT side: headline + subtitle + 3-5 bullet points + capture form (prénom, email, checkbox, CTA)
+ * - RIGHT side: contextual illustration/mockup (AI-generated, click-to-replace with user image)
+ * - NO logo, NO site name in the hero section
+ * - Header bar: urgency or target audience only (no "ce template est offert")
+ * - Footer: logo + legal links
+ * - Fully responsive
  */
 function injectInlineCaptureForm(html: string, contentData: Record<string, any>): string {
-  // Skip if template already has a form (e.g., capture-03) or already injected
-  if (/<form[\s>]/i.test(html)) return html;
-  if (html.includes("tipote-capture-form-wrap") || html.includes("tipote-capture-form")) return html;
+  // Skip if already injected
+  if (html.includes("tipote-capture-hero")) return html;
 
-  const ctaText = safeString(contentData.cta_text || contentData.cta_label || contentData.cta_button_text || "Je m&#039;inscris !");
+  const primary = "var(--colors-primary, #2563eb)";
+  const ctaText = escapeHtml(safeString(contentData.cta_text || contentData.cta_label || "Je m&#039;inscris !"));
   const ctaSub = safeString(contentData.cta_subtitle || "");
   const privacyUrl = safeString(contentData.legal_privacy_url || "");
+  const heroTitle = escapeHtml(safeString(contentData.hero_title || contentData.headline || ""));
+  const heroSubtitle = escapeHtml(safeString(contentData.hero_subtitle || ""));
+  const headerBarText = escapeHtml(safeString(contentData.header_bar_text || contentData.hero_eyebrow || ""));
+  const benefits: string[] = Array.isArray(contentData.benefits) ? contentData.benefits.filter((b: any) => typeof b === "string" && b.trim()) : [];
+  const logoText = safeString(contentData.logo_text || "");
+  const logoUrl = safeString(contentData.logo_image_url || "");
+  const authorPhoto = safeString(contentData.author_photo_url || contentData.about_img_url || contentData.brand_author_photo_url || "");
 
-  // Build the inline form HTML — designed to sit inside the hero section
-  const formHtml = `
-<div class="tipote-capture-form-wrap" style="max-width:440px;margin:28px auto 12px;padding:0;text-align:center;font-family:inherit">
-  <form id="tipote-capture-form" style="display:flex;flex-direction:column;gap:10px">
-    <input type="text" name="first_name" placeholder="Ton pr&#233;nom" style="padding:14px 18px;border:2px solid rgba(255,255,255,0.2);border-radius:10px;font-size:1rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.95);color:#333">
-    <input type="email" name="email" placeholder="Ton adresse email" required style="padding:14px 18px;border:2px solid rgba(255,255,255,0.2);border-radius:10px;font-size:1rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.95);color:#333">
-    <label style="display:flex;align-items:flex-start;gap:8px;text-align:left;font-size:0.78rem;color:rgba(255,255,255,0.7);cursor:pointer;margin:2px 0;line-height:1.4">
-      <input type="checkbox" required style="margin-top:3px;accent-color:var(--colors-primary,#2563eb);flex-shrink:0;width:16px;height:16px">
-      <span>J&#039;accepte la <a href="${privacyUrl || "#"}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">politique de confidentialit&#233;</a> et de recevoir des emails.</span>
-    </label>
-    <button type="submit" class="cta-button cta-primary" style="padding:16px 24px;background:var(--colors-primary,#2563eb);color:#fff;border:none;border-radius:10px;font-size:1.1rem;font-weight:700;cursor:pointer;margin-top:4px;width:100%;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(0,0,0,0.2);transition:transform 0.2s,box-shadow 0.2s">${escapeHtml(ctaText)}</button>
-    ${ctaSub ? `<p style="font-size:0.75rem;color:rgba(255,255,255,0.6);margin:4px 0 0">${escapeHtml(ctaSub)}</p>` : ""}
-  </form>
-</div>`;
+  // Build the illustration
+  const visualHtml = buildHeroVisualHtml(contentData);
 
-  // Light-background variant (for templates with light hero sections)
-  const formHtmlLight = formHtml
-    .replace(/rgba\(255,255,255,0\.7\)/g, "rgba(0,0,0,0.5)")
-    .replace(/rgba\(255,255,255,0\.6\)/g, "rgba(0,0,0,0.4)")
-    .replace(/border:2px solid rgba\(255,255,255,0\.2\)/g, "border:2px solid rgba(0,0,0,0.1)")
-    .replace(/background:rgba\(255,255,255,0\.95\)/g, "background:rgba(255,255,255,1)")
-    .replace(/box-shadow:0 4px 16px rgba\(0,0,0,0\.2\)/g, "box-shadow:0 4px 16px var(--colors-primary,rgba(37,99,235,0.3))");
+  // Build benefits bullets
+  const bulletsHtml = benefits.slice(0, 5).map(b =>
+    `<li style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:0.95rem;line-height:1.5;color:#e2e8f0">
+      <span style="color:${primary};font-size:1.1rem;flex-shrink:0;margin-top:2px">&#10003;</span>
+      <span>${escapeHtml(b)}</span>
+    </li>`
+  ).join("\n");
 
-  // Detect if hero section has a dark background
-  const heroSection = html.match(/<section[^>]*class="[^"]*hero[^"]*"[^>]*>([\s\S]*?)<\/section>/i);
-  const isDarkHero = heroSection ? /background[^:]*:\s*(?:linear-gradient[^;]*(?:#[0-3]|rgb\s*\(\s*[0-3])|#[0-3]|rgb\s*\(\s*[0-3])/.test(html.slice(0, html.indexOf("</section>"))) : true;
-  const formToInsert = isDarkHero ? formHtml : formHtmlLight;
+  // Build header bar (urgency/target only — no "ce template est offert")
+  const headerBar = headerBarText ? `<div class="tipote-capture-header-bar" style="background:${primary};color:#fff;text-align:center;padding:10px 16px;font-size:0.85rem;font-weight:600;letter-spacing:0.3px">${headerBarText}</div>` : "";
 
-  // Strategy 1: Find the FIRST CTA button/link in the hero section and place the form AFTER it
-  // This ensures the form appears above the fold, right where the user expects to take action
-  const firstCtaMatch = html.match(
-    /(<a[^>]*class="[^"]*(?:cta|btn|button)[^"]*"[^>]*>[\s\S]*?<\/a>\s*(?:<span[^>]*class="[^"]*(?:cta-subtitle|cta-sub)[^"]*"[^>]*>[\s\S]*?<\/span>)?)/i
-  );
+  // Build footer with logo + legal
+  const legalLinks: string[] = [];
+  if (contentData.legal_mentions_url) legalLinks.push(`<a href="${safeString(contentData.legal_mentions_url)}" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.6);text-decoration:underline">Mentions l&#233;gales</a>`);
+  if (contentData.legal_cgv_url) legalLinks.push(`<a href="${safeString(contentData.legal_cgv_url)}" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.6);text-decoration:underline">CGV</a>`);
+  if (privacyUrl) legalLinks.push(`<a href="${privacyUrl}" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.6);text-decoration:underline">Politique de confidentialit&#233;</a>`);
 
-  if (firstCtaMatch && firstCtaMatch.index != null) {
-    const insertPos = firstCtaMatch.index + firstCtaMatch[0].length;
-    // Only replace if this CTA is inside the first section (hero)
-    const beforeCta = html.slice(0, firstCtaMatch.index);
-    const sectionCount = (beforeCta.match(/<\/section>/gi) || []).length;
-    if (sectionCount === 0) {
-      // CTA is in the first section — replace it with the form
-      return html.slice(0, firstCtaMatch.index) + formToInsert + html.slice(insertPos);
+  const footerLogoHtml = logoUrl
+    ? `<img src="${safeString(logoUrl)}" alt="Logo" style="max-height:36px;width:auto;margin-bottom:12px">`
+    : (logoText ? `<div style="font-size:1.1rem;font-weight:700;color:rgba(255,255,255,0.8);margin-bottom:12px">${escapeHtml(logoText)}</div>` : "");
+
+  const footerHtml = `<footer class="tipote-capture-footer" style="background:#0f172a;text-align:center;padding:32px 16px;font-size:0.8rem;color:rgba(255,255,255,0.5);border-top:1px solid rgba(255,255,255,0.08)">
+    ${footerLogoHtml}
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px">${legalLinks.join("")}</div>
+  </footer>`;
+
+  // The complete capture hero section
+  const heroSection = `
+${headerBar}
+<section class="tipote-capture-hero" style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);min-height:100vh;display:flex;align-items:center;padding:60px 24px;position:relative;overflow:hidden">
+  <div style="max-width:1200px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center" class="tipote-hero-grid">
+    <!-- LEFT: Text + Form -->
+    <div class="tipote-hero-left" style="color:#fff">
+      <h1 style="font-size:clamp(1.6rem,3.5vw,2.8rem);font-weight:800;line-height:1.15;margin:0 0 16px;color:#fff">${heroTitle}</h1>
+      ${heroSubtitle ? `<p style="font-size:1.1rem;line-height:1.6;color:#cbd5e1;margin:0 0 24px">${heroSubtitle}</p>` : ""}
+      ${bulletsHtml ? `<ul style="list-style:none;padding:0;margin:0 0 28px">${bulletsHtml}</ul>` : ""}
+
+      <div class="tipote-capture-form-wrap" style="max-width:400px">
+        <form id="tipote-capture-form" style="display:flex;flex-direction:column;gap:10px">
+          <input type="text" name="first_name" placeholder="Ton pr&#233;nom" style="padding:14px 18px;border:2px solid rgba(255,255,255,0.15);border-radius:10px;font-size:1rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.08);color:#fff;transition:border-color .2s" onfocus="this.style.borderColor='${primary}'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'">
+          <input type="email" name="email" placeholder="Ton adresse email" required style="padding:14px 18px;border:2px solid rgba(255,255,255,0.15);border-radius:10px;font-size:1rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.08);color:#fff;transition:border-color .2s" onfocus="this.style.borderColor='${primary}'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'">
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:0.78rem;color:rgba(255,255,255,0.55);cursor:pointer;margin:2px 0;line-height:1.4">
+            <input type="checkbox" required style="margin-top:3px;accent-color:${primary};flex-shrink:0;width:16px;height:16px">
+            <span>J&#039;accepte la <a href="${privacyUrl || "#"}" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.7);text-decoration:underline">politique de confidentialit&#233;</a> et de recevoir des emails.</span>
+          </label>
+          <button type="submit" class="cta-button cta-primary" style="padding:16px 24px;background:${primary};color:#fff;border:none;border-radius:10px;font-size:1.1rem;font-weight:700;cursor:pointer;margin-top:4px;width:100%;letter-spacing:0.3px;box-shadow:0 8px 24px rgba(0,0,0,0.3);transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 32px rgba(0,0,0,0.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.3)'">${ctaText}</button>
+          ${ctaSub ? `<p style="font-size:0.75rem;color:rgba(255,255,255,0.45);margin:4px 0 0;text-align:center">${escapeHtml(ctaSub)}</p>` : ""}
+        </form>
+      </div>
+    </div>
+
+    <!-- RIGHT: Illustration (click-to-replace with user image) -->
+    <div class="tipote-hero-right" style="position:relative;display:flex;justify-content:center;align-items:center">
+      ${visualHtml}
+    </div>
+  </div>
+</section>`;
+
+  // Responsive CSS + visual styling + click-to-replace script
+  const heroCss = `<style>
+/* ═══ TIPOTE CAPTURE HERO — Standardized layout ═══ */
+@keyframes tpt-fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes tpt-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-12px); } }
+@keyframes tpt-progressFill { from { width:0%; } to { width:75%; } }
+@keyframes tpt-typing { 0%,80%,100% { opacity:.3; transform:scale(.8); } 40% { opacity:1; transform:scale(1); } }
+
+.tipote-capture-hero { animation: tpt-fadeIn 0.6s ease; }
+.tipote-hero-left { animation: tpt-fadeIn 0.5s ease 0.1s backwards; }
+.tipote-hero-right { animation: tpt-fadeIn 0.6s ease 0.3s backwards; }
+
+/* Visual mockup container */
+.tpt-hero-visual {
+  position:relative;width:100%;cursor:pointer;transition:transform .3s;
+}
+.tpt-hero-visual:hover { transform:scale(1.02); }
+.tpt-hero-visual::after {
+  content:"Cliquez pour changer l\\2019image";
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.7);color:#fff;padding:6px 14px;border-radius:8px;
+  font-size:0.72rem;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;
+}
+.tpt-hero-visual:hover::after { opacity:1; }
+
+/* When user replaces with custom image */
+.tpt-hero-visual img.tpt-user-image {
+  width:100%;max-width:520px;border-radius:16px;box-shadow:0 25px 80px rgba(0,0,0,0.3);
+  object-fit:cover;display:block;
+}
+
+/* Mockup frame */
+.tpt-mockup {
+  background:#fff;border-radius:16px;box-shadow:0 25px 80px rgba(0,0,0,0.25);
+  overflow:hidden;position:relative;width:100%;max-width:520px;
+}
+.tpt-mock-browser {
+  background:#f2f4f8;padding:12px 16px;display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid #e5e7eb;
+}
+.tpt-dot { width:10px;height:10px;border-radius:50%;display:inline-block; }
+.tpt-dot.red { background:#ff5f57; } .tpt-dot.yellow { background:#ffbd2e; } .tpt-dot.green { background:#28c840; }
+
+/* SaaS dashboard mockup */
+.tpt-mock-content { display:flex;min-height:280px; }
+.tpt-mock-sidebar { width:160px;background:#f7f8fb;padding:14px;border-right:1px solid #f0f0f0; }
+.tpt-mock-item { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:0.75rem;color:#6d6f90;margin-bottom:3px; }
+.tpt-mock-item.active { background:rgba(var(--colors-primary-rgb,37,99,235),0.1);color:var(--colors-primary,#2563eb);font-weight:500; }
+.tpt-mock-icon { width:14px;height:14px;background:currentColor;border-radius:3px;opacity:.4;flex-shrink:0; }
+.tpt-mock-main { flex:1;padding:18px;background:#fff; }
+.tpt-mock-header { margin-bottom:16px; }
+.tpt-mock-title { font-size:1rem;font-weight:600;color:#141414;margin-bottom:3px; }
+.tpt-mock-subtitle { font-size:0.75rem;color:#6d6f90; }
+.tpt-mock-progress { margin-bottom:16px; }
+.tpt-mock-progress-header { display:flex;justify-content:space-between;margin-bottom:6px; }
+.tpt-mock-progress-header span { font-size:0.7rem;color:#6d6f90; }
+.tpt-mock-progress-val { font-weight:600;color:var(--colors-primary,#2563eb) !important; }
+.tpt-mock-progress-bar { height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden; }
+.tpt-mock-progress-fill { height:100%;background:var(--colors-primary,#2563eb);border-radius:4px;width:0%;animation:tpt-progressFill 1.5s ease forwards;animation-delay:1s; }
+.tpt-mock-tasks { display:flex;flex-direction:column;gap:6px; }
+.tpt-mock-task { display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f7f8fb;border-radius:8px;font-size:0.75rem;color:#141414; }
+.tpt-mock-task-check { width:16px;height:16px;border-radius:50%;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.55rem; }
+.tpt-mock-task.done .tpt-mock-task-check { background:var(--colors-primary,#2563eb);border-color:var(--colors-primary,#2563eb);color:#fff; }
+.tpt-mock-task.done { color:#aaa; }
+.tpt-mock-task.done span:last-child { text-decoration:line-through; }
+
+/* Ebook mockup */
+.tpt-mock-ebook { padding:28px;text-align:center;min-height:280px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(135deg,#f8fafc,#eef2ff); }
+.tpt-mock-ebook-badge { display:inline-block;background:var(--colors-primary,#2563eb);color:#fff;padding:4px 14px;border-radius:20px;font-size:0.7rem;font-weight:700;margin-bottom:16px;letter-spacing:1px; }
+.tpt-mock-ebook-title { font-size:1.2rem;font-weight:700;color:#141414;margin-bottom:6px; }
+.tpt-mock-ebook-sub { font-size:0.8rem;color:#6d6f90;margin-bottom:18px; }
+.tpt-mock-ebook-chapters { text-align:left;max-width:280px;margin:0 auto; }
+.tpt-mock-ebook-ch { display:flex;align-items:center;gap:10px;padding:6px 0;font-size:0.78rem;color:#333;border-bottom:1px solid #eee; }
+.tpt-mock-ch-num { width:22px;height:22px;background:var(--colors-primary,#2563eb);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0; }
+
+/* Video call mockup */
+.tpt-mock-videocall { padding:20px;min-height:280px;display:flex;flex-direction:column;background:#1a1a2e; }
+.tpt-mock-vc-header { color:#fff;font-size:0.85rem;font-weight:600;text-align:center;margin-bottom:16px; }
+.tpt-mock-vc-grid { display:flex;gap:16px;justify-content:center;flex:1;align-items:center; }
+.tpt-mock-vc-avatar { text-align:center;color:#ccc;font-size:0.7rem; }
+.tpt-mock-vc-circle { width:100px;height:100px;border-radius:16px;background:#2a2a4a;display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin-bottom:6px; }
+.tpt-mock-vc-you { border:2px solid var(--colors-primary,#2563eb); }
+.tpt-mock-vc-bar { display:flex;gap:12px;justify-content:center;margin-top:16px; }
+.tpt-mock-vc-btn { width:36px;height:36px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;font-size:0.9rem; }
+.tpt-mock-vc-end { background:#dc2626; }
+.tpt-mock-vc-sub { color:#888;font-size:0.7rem;text-align:center;margin-top:10px; }
+
+/* Checklist mockup */
+.tpt-mock-checklist { padding:24px;min-height:280px; }
+.tpt-mock-cl-title { font-size:1rem;font-weight:600;color:#141414;margin-bottom:4px; }
+.tpt-mock-cl-sub { font-size:0.78rem;color:#6d6f90;margin-bottom:16px; }
+.tpt-mock-cl-items { display:flex;flex-direction:column;gap:8px; }
+.tpt-mock-cl-item { display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f7f8fb;border-radius:8px;font-size:0.8rem;color:#333; }
+.tpt-mock-cl-check { width:20px;height:20px;border-radius:6px;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.65rem;color:transparent; }
+.tpt-mock-cl-item.done .tpt-mock-cl-check { background:var(--colors-primary,#2563eb);border-color:var(--colors-primary,#2563eb);color:#fff; }
+.tpt-mock-cl-item.done { color:#999;text-decoration:line-through; }
+
+/* Calendar mockup */
+.tpt-mock-calendar { padding:20px;min-height:280px; }
+.tpt-mock-cal-header { font-size:1rem;font-weight:600;color:#141414;margin-bottom:4px; }
+.tpt-mock-cal-sub { font-size:0.78rem;color:#6d6f90;margin-bottom:16px; }
+.tpt-mock-cal-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px; }
+.tpt-mock-cal-day { padding:12px 8px;border-radius:10px;background:#f7f8fb;text-align:center;border:2px solid transparent; }
+.tpt-mock-cal-day.done { background:rgba(var(--colors-primary-rgb,37,99,235),0.1);border-color:var(--colors-primary,#2563eb); }
+.tpt-mock-cal-day.current { border-color:var(--colors-primary,#2563eb);background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.tpt-mock-cal-num { display:block;font-size:1.1rem;font-weight:700;color:#141414;margin-bottom:2px; }
+.tpt-mock-cal-label { font-size:0.65rem;color:#6d6f90; }
+
+/* Chat mockup */
+.tpt-mock-chat { padding:16px;min-height:280px;display:flex;flex-direction:column;background:#f8fafc; }
+.tpt-mock-chat-header { font-size:0.85rem;font-weight:600;color:#141414;padding:8px 12px;background:#fff;border-radius:10px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+.tpt-mock-chat-msgs { flex:1;display:flex;flex-direction:column;gap:10px; }
+.tpt-mock-chat-msg { padding:10px 14px;border-radius:12px;font-size:0.8rem;max-width:80%;line-height:1.4; }
+.tpt-mock-chat-user { background:var(--colors-primary,#2563eb);color:#fff;align-self:flex-end;border-bottom-right-radius:4px; }
+.tpt-mock-chat-bot { background:#fff;color:#333;align-self:flex-start;border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+.tpt-mock-chat-typing { display:flex;gap:4px;padding:10px 14px;background:#fff;border-radius:12px;align-self:flex-start;box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+.tpt-mock-chat-typing span { width:7px;height:7px;background:#aaa;border-radius:50%;animation:tpt-typing 1.4s infinite; }
+.tpt-mock-chat-typing span:nth-child(2) { animation-delay:.2s; }
+.tpt-mock-chat-typing span:nth-child(3) { animation-delay:.4s; }
+
+/* Certificate mockup */
+.tpt-mock-cert { padding:24px;min-height:280px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#fffbeb,#fef3c7); }
+.tpt-mock-cert-border { border:3px solid var(--colors-primary,#2563eb);border-radius:12px;padding:28px 32px;text-align:center;width:100%;background:#fff; }
+.tpt-mock-cert-badge { font-size:2.5rem;margin-bottom:10px; }
+.tpt-mock-cert-title { font-size:1.1rem;font-weight:700;color:#141414;margin-bottom:4px; }
+.tpt-mock-cert-sub { font-size:0.78rem;color:#6d6f90;margin-bottom:12px; }
+.tpt-mock-cert-line { width:60%;height:2px;background:var(--colors-primary,#2563eb);margin:12px auto;opacity:.4; }
+.tpt-mock-cert-name { font-size:0.9rem;color:#888;font-style:italic; }
+
+/* Floating metric cards */
+.tpt-float-card {
+  position:absolute;background:#fff;border-radius:12px;padding:12px 16px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.15);display:flex;align-items:center;gap:10px;
+  animation:tpt-float 4s ease-in-out infinite;z-index:2;
+}
+.tpt-float-icon { width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0; }
+.tpt-float-leads { background:#e0f2fe;color:#0284c7; }
+.tpt-float-email { background:#fce7f3;color:#db2777; }
+.tpt-float-success { background:#d1fae5;color:#059669; }
+.tpt-float-content { display:flex;flex-direction:column; }
+.tpt-float-value { font-size:0.95rem;font-weight:700;color:#141414; }
+.tpt-float-label { font-size:0.68rem;color:#6d6f90; }
+
+/* Responsive */
+@media (max-width:900px) {
+  .tipote-hero-grid { grid-template-columns:1fr !important;gap:40px !important; }
+  .tipote-hero-right { order:-1; }
+  .tpt-hero-visual { max-width:400px;margin:0 auto; }
+  .tpt-float-card { display:none; }
+  .tipote-capture-hero { padding:40px 20px !important;min-height:auto !important; }
+}
+@media (max-width:520px) {
+  .tipote-capture-hero h1 { font-size:1.5rem !important; }
+  .tpt-mockup { max-width:100%; }
+  .tpt-mock-sidebar { width:120px;padding:10px; }
+  .tpt-mock-main { padding:14px; }
+}
+</style>`;
+
+  // Click-to-replace script: lets user click the illustration to swap with their own image
+  const heroScript = `<script>
+(function(){
+  var visual = document.querySelector('.tpt-hero-visual[data-tipote-visual]');
+  if (!visual) return;
+  visual.addEventListener('click', function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.style.display = 'none';
+    input.addEventListener('change', function() {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        visual.innerHTML = '<img class="tpt-user-image" src="' + e.target.result + '" alt="Illustration">';
+        // Notify parent (editor) about the image change
+        try { parent.postMessage('tipote:hero-image:' + e.target.result.slice(0, 100), '*'); } catch(ex) {}
+      };
+      reader.readAsDataURL(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  });
+})();
+</script>`;
+
+  // ---- INJECTION STRATEGY ----
+  // Find the first <section> (hero) and EVERYTHING before the second <section> (or content after hero)
+  // Replace it entirely with our standardized hero section
+
+  // Find where to inject: remove template header + hero, keep remaining sections
+  let out = html;
+
+  // Remove the "Ce template de page de capture est 100% offert" header bar if present
+  out = out.replace(/<div[^>]*class="[^"]*(?:header-bar|top-bar|banner-bar|notice-bar|promo-bar)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, "");
+  // Also remove any header that contains "offert" or "template" text
+  out = out.replace(/<(?:header|div)[^>]*>[\s\S]*?(?:offert|template|télécharger)[\s\S]*?<\/(?:header|div)>/gi, "");
+
+  // Inject the CSS into <head>
+  if (out.includes("</head>")) {
+    out = out.replace("</head>", `${heroCss}\n</head>`);
+  } else {
+    out = heroCss + "\n" + out;
+  }
+
+  // Find and replace the first section (hero) entirely
+  // Strategy: find the first <section and replace up to its closing </section>
+  const firstSectionMatch = out.match(/<section[\s>]/i);
+  if (firstSectionMatch && firstSectionMatch.index != null) {
+    const sectionStart = firstSectionMatch.index;
+    // Find the matching </section> for the first section
+    let depth = 0;
+    let sectionEnd = -1;
+    let searchPos = sectionStart;
+    while (searchPos < out.length) {
+      const openIdx = out.indexOf("<section", searchPos);
+      const closeIdx = out.indexOf("</section>", searchPos);
+
+      if (closeIdx === -1) break; // no closing tag found
+
+      if (openIdx !== -1 && openIdx < closeIdx) {
+        depth++;
+        searchPos = openIdx + 8;
+      } else {
+        depth--;
+        if (depth === 0) {
+          sectionEnd = closeIdx + "</section>".length;
+          break;
+        }
+        searchPos = closeIdx + 10;
+      }
+    }
+
+    if (sectionEnd !== -1) {
+      // Replace the first section with our hero
+      out = out.slice(0, sectionStart) + heroSection + out.slice(sectionEnd);
+    } else {
+      // Fallback: insert before the first section
+      out = out.slice(0, sectionStart) + heroSection + out.slice(sectionStart);
+    }
+  } else {
+    // No section found — insert after <body> or at the beginning
+    const bodyMatch = out.match(/<body[^>]*>/i);
+    if (bodyMatch && bodyMatch.index != null) {
+      const insertPos = bodyMatch.index + bodyMatch[0].length;
+      out = out.slice(0, insertPos) + heroSection + out.slice(insertPos);
+    } else {
+      out = heroSection + out;
     }
   }
 
-  // Strategy 2: Insert after the first </h1> (headline) in the hero
-  const h1EndIdx = html.indexOf("</h1>");
-  if (h1EndIdx !== -1) {
-    const insertPos = h1EndIdx + 5;
-    // Check we're still in the first section
-    const beforeH1 = html.slice(0, h1EndIdx);
-    if ((beforeH1.match(/<\/section>/gi) || []).length === 0) {
-      return html.slice(0, insertPos) + formToInsert + html.slice(insertPos);
-    }
+  // Remove any existing <header> that's inside the template (we use our own header bar)
+  // But preserve the header if it's outside the first section (i.e., site navigation)
+  out = out.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, (match) => {
+    // Keep if it's our own header
+    if (match.includes("tipote-capture-header-bar")) return match;
+    return "";
+  });
+
+  // Remove any existing logo section in the hero (we don't want logos above the fold)
+  // This is handled by the hero replacement above
+
+  // Inject click-to-replace script before </body>
+  const bodyEndIdx = out.lastIndexOf("</body>");
+  if (bodyEndIdx !== -1) {
+    out = out.slice(0, bodyEndIdx) + heroScript + "\n" + out.slice(bodyEndIdx);
+  } else {
+    out += heroScript;
   }
 
-  // Strategy 3: Insert at the end of the first <section> (before its closing tag)
-  const firstSectionEnd = html.indexOf("</section>");
-  if (firstSectionEnd !== -1) {
-    return html.slice(0, firstSectionEnd) + formToInsert + html.slice(firstSectionEnd);
-  }
+  // Remove duplicate forms: if the template already had forms in other sections, remove them
+  // (we only want our hero form)
+  let formCount = 0;
+  out = out.replace(/<form[\s\S]*?<\/form>/gi, (match) => {
+    formCount++;
+    if (formCount === 1) return match; // Keep first (our hero form)
+    return ""; // Remove duplicates
+  });
 
-  // Final fallback: before footer or before </body>
-  const footerIdx = html.search(/<footer[\s>]/i);
-  if (footerIdx !== -1) {
-    return html.slice(0, footerIdx) + formToInsert + "\n" + html.slice(footerIdx);
-  }
-
-  const bodyIdx = html.lastIndexOf("</body>");
-  if (bodyIdx !== -1) {
-    return html.slice(0, bodyIdx) + formToInsert + "\n" + html.slice(bodyIdx);
-  }
-
-  return html + formToInsert;
+  return out;
 }
 
 // ---------- Legal footer injection ----------
@@ -1252,6 +1667,7 @@ function injectLegalFooterHtml(html: string, contentData: Record<string, any>, l
   // Check for: Tipote injected footer, template built-in footer, or legal URL links
   if (
     html.includes("tipote-legal-footer") ||
+    html.includes("tipote-capture-footer") ||
     html.includes("data-tipote-legal") ||
     html.includes('class="footer-links"') ||
     html.includes("class='footer-links'") ||
