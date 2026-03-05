@@ -630,11 +630,11 @@ function buildPageSystemPrompt(params: {
   if (params.pageType === "capture") {
     lines.push("OBJECTIF : Créer une page de capture irrésistible qui pousse le visiteur à laisser son email.");
     lines.push("Structure persuasive OBLIGATOIRE :");
-    lines.push("1. HOOK : Accroche choc en majuscules qui capte l'attention en 1 seconde");
+    lines.push("1. HOOK : Accroche choc qui capte l'attention en 1 seconde");
     lines.push("2. HEADLINE : Promesse de valeur irrésistible, spécifique, orientée résultat");
     lines.push("3. SOUS-TITRE : Précise le mécanisme, le public cible, élimine la première objection");
-    lines.push("4. PARAGRAPHE HERO : 2-3 phrases qui développent la promesse avec empathie et spécificité");
-    lines.push("5. PUCES PROMESSES : 5-7 bénéfices concrets + conséquence positive (le coeur de la conversion)");
+    lines.push("4. PARAGRAPHE HERO : 1-3 phrases qui développent la promesse avec empathie et spécificité");
+    lines.push("5. PUCES PROMESSES : 3-5 bénéfices concrets + conséquence positive (le coeur de la conversion)");
     lines.push("6. PROGRAMME/CONTENU : Ce que contient l'offre gratuite (si pertinent)");
     lines.push("7. PREUVE SOCIALE + AUTEUR : Bio storytelling crédible de l'auteur");
     lines.push("8. CTA : Bouton orienté résultat + réassurance");
@@ -681,13 +681,19 @@ function buildPageSystemPrompt(params: {
 
   lines.push("RÈGLES DE COPYWRITING :");
   lines.push("- Parle directement au prospect (tu/vous selon le ton)");
-  lines.push("- Chaque titre = curiosité ou urgence");
+  lines.push("- Chaque titre = curiosité ou urgence ou idée controversée ou chiffre choc non inventé");
+  lines.push("- Inspire-toi de formules copywriting éprouvées comme AIDA, PAS, PASTOR, BEFORE AFTER BRIDGE, ... sans jamais les citer");
   lines.push("- Bénéfices avant caractéristiques, TOUJOURS");
   lines.push("- Chiffres concrets (3 étapes, 7 jours, etc.)");
   lines.push("- CTA orienté résultat (\"Je transforme mon business\" pas \"Cliquer ici\")");
-  lines.push("- Ton d'expert qui parle à un ami, pas de robot");
+  lines.push("- Evite les tournures et expressions fréquemment utilisés par les IA génératives");
   lines.push("- Vocabulaire adapté à la niche et au public");
   lines.push("- JAMAIS de phrases vides (\"bienvenue\", \"nous sommes ravis\")");
+  lines.push("- Alterner phrases percutantes, courtes (5 mots) et moyennes (15 mots) pour créer du rythme");
+  lines.push("- Utiliser la voix active (pas passive)");
+  lines.push("- Te concentrer sur des conseils pratiques et actionnables");
+  lines.push("- Utiliser des données et exemples concrets");
+  lines.push("- Favorise la bonne compréhension du lecteur, guide le naturellement de section en section");
   lines.push("");
 
   lines.push("INTERDICTIONS ABSOLUES :");
@@ -701,6 +707,13 @@ function buildPageSystemPrompt(params: {
   lines.push("- Utilise le NOM EXACT de l'offre fourni par l'utilisateur.");
   lines.push("- FAQ : question ET réponse complète (2-3 phrases). JAMAIS de question sans réponse.");
   lines.push("- Puces promesses : VRAIE phrase complète, PAS une instruction de rédaction.");
+  lines.push("- Interdit d'utiliser de tirets longs (—).");
+  lines.push("- Interdit d'utiliser de métaphores ou clichés");
+  lines.push("- Interdit de faire de généralisations vagues");
+  lines.push("- Interdit d'ytiliser de tournures impersonnelles (Il convient de…, Il est recommandé de…, Cela permet de…)");
+  lines.push("- Interdit d'ajouter d'avertissements ou de notes non demandés");
+  lines.push("- Interdit d'utiliser d'adjectifs ou adverbes inutiles");
+  lines.push("- Interdit d'écrire de phrases hachées ou saccadées");
   lines.push("");
 
   // ---- KNOWLEDGE ----
