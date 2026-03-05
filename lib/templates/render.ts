@@ -17,6 +17,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { mapUniversalToTemplate } from "./universalSchema";
 
 export type TemplateKind = "capture" | "vente";
 export type RenderMode = "preview" | "kit";
@@ -585,16 +586,25 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
   const merged = mergeTokens(tokens, req.brandTokens);
   const cssVars = cssVarsFromTokens(merged as any);
 
+  // Map universal contentData → template-specific fields using selectors.json
+  let effectiveContentData = req.contentData;
+  if (selectorsStr && req.contentData && Object.keys(req.contentData).length > 0) {
+    try {
+      const selectors = JSON.parse(selectorsStr);
+      effectiveContentData = mapUniversalToTemplate(req.contentData, selectors);
+    } catch { /* use original contentData */ }
+  }
+
   let out = html;
 
   // 1) conditionals first (remove absent sections before expanding)
-  out = renderConditionals(out, req.contentData);
+  out = renderConditionals(out, effectiveContentData);
 
   // 2) repeaters (so placeholders inside blocks are expanded)
-  out = renderRepeaters(out, req.contentData);
+  out = renderRepeaters(out, effectiveContentData);
 
   // 3) simple placeholders
-  out = renderPlaceholders(out, req.contentData);
+  out = renderPlaceholders(out, effectiveContentData);
 
   // 4) apply variant hooks
   out = applyVariant(out, req.variantId);
@@ -604,7 +614,7 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     kind,
     templateId,
     html: out,
-    contentData: req.contentData || {},
+    contentData: effectiveContentData || {},
   });
 
   const isFullDoc = looksLikeFullHtmlDocument(out);
@@ -614,10 +624,10 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     // For any full-doc template with selectors.json: inject contentData via script
     // This covers vente templates AND capture templates (capture-02 to 05) that
     // don't use {{placeholder}} syntax.
-    if (selectorsStr && req.contentData && Object.keys(req.contentData).length > 0) {
+    if (selectorsStr && effectiveContentData && Object.keys(effectiveContentData).length > 0) {
       try {
         const selectors = JSON.parse(selectorsStr);
-        out = injectVenteContentScript(out, req.contentData, selectors);
+        out = injectVenteContentScript(out, effectiveContentData, selectors);
       } catch { /* ignore parse errors */ }
     }
 
@@ -637,21 +647,21 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
     out = injectContrastSafety(out);
 
     // Replace hardcoded template placeholder text with actual content
-    out = replaceHardcodedTemplatePlaceholders(out, req.contentData);
+    out = replaceHardcodedTemplatePlaceholders(out, effectiveContentData);
 
     // Inject FAQ styling
     out = injectFaqStyling(out);
 
     // Inject inline capture form for capture pages (email + name + privacy checkbox)
     if (kind === "capture") {
-      out = injectInlineCaptureForm(out, req.contentData);
+      out = injectInlineCaptureForm(out, effectiveContentData);
     }
 
     // Inject legal footer if legal URLs are present in contentData
-    out = injectLegalFooterHtml(out, req.contentData);
+    out = injectLegalFooterHtml(out, effectiveContentData);
 
     // Final sanitization pass: strip ALL remaining placeholders from HTML
-    out = sanitizeHtmlPlaceholders(out, req.contentData);
+    out = sanitizeHtmlPlaceholders(out, effectiveContentData);
 
     return { html: out };
   }
@@ -663,11 +673,11 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
 
   // Inject inline capture form for capture pages
   if (kind === "capture") {
-    out = injectInlineCaptureForm(out, req.contentData);
+    out = injectInlineCaptureForm(out, effectiveContentData);
   }
 
   // Inject legal footer for wrapped templates
-  out = injectLegalFooterHtml(out, req.contentData);
+  out = injectLegalFooterHtml(out, effectiveContentData);
 
   let doc = wrapAsDocument({
     htmlBody: out,
@@ -681,13 +691,13 @@ export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ 
   doc = injectContrastSafety(doc);
 
   // Replace hardcoded template placeholder text
-  doc = replaceHardcodedTemplatePlaceholders(doc, req.contentData);
+  doc = replaceHardcodedTemplatePlaceholders(doc, effectiveContentData);
 
   // Inject FAQ styling
   doc = injectFaqStyling(doc);
 
   // Final sanitization pass: strip ALL remaining placeholders from HTML
-  doc = sanitizeHtmlPlaceholders(doc, req.contentData);
+  doc = sanitizeHtmlPlaceholders(doc, effectiveContentData);
 
   return { html: doc };
 }
