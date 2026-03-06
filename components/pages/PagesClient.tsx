@@ -164,6 +164,9 @@ export default function PagesClient() {
         payload.offerDescription = offer.description || "";
         const price = formatPriceRange(offer);
         if (price) payload.offerPrice = price;
+        if (offer.pricing && offer.pricing.length > 0) {
+          payload.offerPricing = offer.pricing;
+        }
       }
     } else {
       payload.offerName = offerName;

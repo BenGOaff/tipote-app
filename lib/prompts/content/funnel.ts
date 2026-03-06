@@ -9,6 +9,13 @@
 export type FunnelPage = "capture" | "sales";
 export type FunnelMode = "from_offer" | "from_existing" | "from_scratch";
 
+export type FunnelPricingTier = {
+  label: string;
+  price: string;
+  period?: string;
+  description?: string;
+};
+
 export type FunnelOfferContext = {
   id: string;
   name: string | null;
@@ -22,6 +29,7 @@ export type FunnelOfferContext = {
   delivery: string | null;
   is_flagship?: boolean | null;
   updated_at?: string | null;
+  pricing?: FunnelPricingTier[] | null;
 };
 
 export type FunnelManual = {

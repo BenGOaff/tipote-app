@@ -5,6 +5,13 @@
  *  2. business_profiles.offers (user's own / affiliate offers from settings)
  */
 
+export type PricingTier = {
+  label: string;
+  price: string;
+  period?: string;
+  description?: string;
+};
+
 export type OfferOption = {
   id: string;
   name: string;
@@ -23,6 +30,7 @@ export type OfferOption = {
   target?: string | null;
   updated_at?: string | null;
   link?: string | null;
+  pricing?: PricingTier[] | null;
 };
 
 function isRecord(v: unknown): v is Record<string, any> {
@@ -131,6 +139,14 @@ export function levelLabel(level: string): string {
 }
 
 export function formatPriceRange(offer: OfferOption): string | null {
+  // If offer has pricing tiers, show a summary
+  if (offer.pricing && offer.pricing.length > 0) {
+    const prices = offer.pricing.map((t) => t.price).filter(Boolean);
+    if (prices.length === 1) return prices[0];
+    if (prices.length > 1) return prices.join(" / ");
+    return null;
+  }
+
   const min = typeof offer.price_min === "number" ? offer.price_min : null;
   const max = typeof offer.price_max === "number" ? offer.price_max : null;
   if (min == null && max == null) return null;
@@ -208,6 +224,19 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
         const priceStr = typeof o?.price === "string" ? o.price.trim() : typeof o?.price === "number" ? String(o.price) : "";
         const priceNum = toNumberOrNull(priceStr.replace(/[^\d.,]/g, "").replace(",", "."));
 
+        // Parse pricing tiers if present
+        const rawPricing = Array.isArray(o?.pricing) ? o.pricing : null;
+        const pricing: PricingTier[] | null = rawPricing
+          ? rawPricing
+              .filter((t: any) => t && (typeof t.label === "string" || typeof t.price === "string"))
+              .map((t: any) => ({
+                label: typeof t.label === "string" ? t.label.trim() : "",
+                price: typeof t.price === "string" ? t.price.trim() : "",
+                period: typeof t.period === "string" ? t.period.trim() : "",
+                description: typeof t.description === "string" ? t.description.trim() : "",
+              }))
+          : null;
+
         allOffers.push({
           id: `user:${userId}:${i}`,
           name,
@@ -223,6 +252,7 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
           target: typeof o?.target === "string" ? o.target.trim() || null : null,
           link: typeof o?.link === "string" ? o.link.trim() || null : null,
           updated_at: null,
+          pricing: pricing && pricing.length > 0 ? pricing : null,
         });
       }
     }
