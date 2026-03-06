@@ -45,7 +45,7 @@ export async function GET(_req: NextRequest) {
 
     let contentsQuery = supabase
       .from("content_item")
-      .select("id, status, created_at")
+      .select("id, status:statut, created_at")
       .eq("user_id", user.id);
     if (projectId) contentsQuery = contentsQuery.eq("project_id", projectId);
 

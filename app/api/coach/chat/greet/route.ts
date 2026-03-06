@@ -103,14 +103,14 @@ export async function GET(_req: NextRequest) {
 
     let tasksQuery = supabase
       .from("project_tasks")
-      .select("title, status, due_date, timeframe, updated_at")
+      .select("title, status, due_date, updated_at")
       .eq("user_id", user.id)
       .is("deleted_at", null);
     if (projectId) tasksQuery = tasksQuery.eq("project_id", projectId);
 
     let contentsQuery = supabase
       .from("content_item")
-      .select("title, status, type, scheduled_date, created_at")
+      .select("title:titre, status:statut, type, scheduled_date:date_planifiee, created_at")
       .eq("user_id", user.id);
     if (projectId) contentsQuery = contentsQuery.eq("project_id", projectId);
 

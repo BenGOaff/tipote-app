@@ -651,10 +651,10 @@ export default function TodayLovable() {
           const todayStr = new Date().toISOString().slice(0, 10);
           const schedRes = await supabase
             .from("content_item")
-            .select("title,channel,meta,scheduled_date")
+            .select("title:titre,channel:canal,meta,scheduled_date:date_planifiee")
             .eq("user_id", userId)
-            .eq("status", "scheduled")
-            .eq("scheduled_date", todayStr)
+            .eq("statut", "scheduled")
+            .eq("date_planifiee", todayStr)
             .limit(20);
           if (!schedRes.error && Array.isArray(schedRes.data)) {
             todayScheduled = schedRes.data.map((r: any) => ({
