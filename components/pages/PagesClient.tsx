@@ -311,7 +311,15 @@ export default function PagesClient() {
           <main className="flex-1 min-w-0 overflow-hidden">
             <PageBuilder
               initialPage={editPage}
-              onBack={() => { setView("list"); setEditPage(null); fetchPages(); }}
+              onBack={() => {
+                // Clear ?edit= from URL so the useEffect doesn't reopen the editor
+                if (typeof window !== "undefined") {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("edit");
+                  window.history.replaceState({}, "", url.pathname);
+                }
+                setView("list"); setEditPage(null); fetchPages();
+              }}
             />
           </main>
         </div>
