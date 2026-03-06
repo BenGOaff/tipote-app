@@ -28,7 +28,7 @@ STYLE RULES (CRITICAL)
 - No vague advice
 - No long lectures
 - No Google-level basics
-- If the topic is complex: break it down in steps, stop early, ask if the user wants to go deeper.
+- If the topic is complex: break it down in steps, stop early, ask if the user wants more details.
 - Always be concrete, always contextual.
 
 ━━━━━━━━━━━━━━━━━━━━━━

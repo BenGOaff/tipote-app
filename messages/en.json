@@ -1641,7 +1641,7 @@
     "coachSubtitle": "Your business buddy (strategy • sales • acquisition)",
     "openCoach": "Open Tipote coach",
     "close": "Close",
-    "thinking": "coach is thinking…",
+    "thinking": "Tipote is thinking…",
     "oops": "Oops",
     "missingLink": "Navigation link missing from the suggestion.",
     "openTool": "Opening the tool.",
@@ -1663,7 +1663,6 @@
     "fallbackResponse": "Ok. Give me 1 detail and we'll move forward.",
     "errorRetry": "Oops — I had an issue. Try again in 10 seconds.",
     "writePlaceholder": "Write like to a buddy…",
-    "shortResponses": "Short answers, one idea at a time. If you want: \"go deeper\".",
     "rejectPrompt": "Why do you refuse? (optional)"
   },
   "analysisCard": {

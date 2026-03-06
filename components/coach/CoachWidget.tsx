@@ -554,17 +554,6 @@ export function CoachWidget() {
                       {t(q.labelKey)}
                     </Button>
                   ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-7 px-3 rounded-full text-xs"
-                    onClick={() => {
-                      setInput("");
-                      void sendText("go deeper");
-                    }}
-                  >
-                    Go deeper
-                  </Button>
                 </div>
               ) : null}
 
@@ -584,9 +573,6 @@ export function CoachWidget() {
                 <Button onClick={() => void send()} disabled={!canSend} className="rounded-xl h-10 px-3">
                   <Send className="w-4 h-4" />
                 </Button>
-              </div>
-              <div className="mt-2 text-[11px] text-muted-foreground">
-                {t('shortResponses')}
               </div>
             </div>
           </div>

@@ -1638,7 +1638,7 @@
     "coachSubtitle": "Ton pote business (stratégie • vente • acquisition)",
     "openCoach": "Ouvrir le coach Tipote",
     "close": "Fermer",
-    "thinking": "coach is thinking…",
+    "thinking": "Tipote réfléchit…",
     "oops": "Oups",
     "missingLink": "Lien de navigation manquant dans la suggestion.",
     "openTool": "Je t'ouvre l'outil.",
@@ -1660,7 +1660,6 @@
     "fallbackResponse": "Ok. Donne-moi 1 précision et on avance.",
     "errorRetry": "Oups — j'ai eu un souci. Réessaie dans 10 secondes.",
     "writePlaceholder": "Écris comme à un pote…",
-    "shortResponses": "Réponses courtes, une idée à la fois. Si tu veux : \"go deeper\".",
     "rejectPrompt": "Pourquoi tu refuses ? (optionnel)"
   },
   "analysisCard": {
