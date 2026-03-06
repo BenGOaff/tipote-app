@@ -82,7 +82,7 @@ export function FunnelPreviewStep({
       htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title || "funnel"}</title>
+<title>${title || "page"}</title>
 <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:2rem;line-height:1.6;color:#1a1a1a}
 h1{font-size:2rem;margin-bottom:1rem}h2{font-size:1.5rem;margin-top:2rem}
 ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
@@ -95,7 +95,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = kitFileName || `${title || "funnel"}.html`;
+    a.download = kitFileName || `${title || "page"}.html`;
     a.click();
     URL.revokeObjectURL(url);
     toast({ title: "HTML téléchargé !" });
@@ -116,7 +116,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Titre du funnel"
+            placeholder="Titre de la page"
             className="font-semibold text-base"
           />
         </div>
@@ -146,7 +146,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
             <div className="h-[500px]">
               <iframe
                 srcDoc={renderedHtml}
-                title="Aperçu funnel"
+                title="Aperçu page"
                 className="w-full h-full border-0"
                 sandbox="allow-scripts"
               />

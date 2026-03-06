@@ -39,8 +39,8 @@ const TYPE_LABELS: Record<string, { label: string; hint: string }> = {
     hint: "Ex : structure + copywriting (promesse, preuves, objection, offre).",
   },
   funnel: {
-    label: "Funnel / Tunnel",
-    hint: "Ex : étapes (lead magnet → nurture → offre) + messages clés.",
+    label: "Page / Site vitrine",
+    hint: "Ex : page de capture, page de vente, site vitrine one-page.",
   },
 };
 
