@@ -100,7 +100,7 @@ async function callClaude(args: {
 // ---------- Types ----------
 
 const InputSchema = z.object({
-  pageType: z.enum(["capture", "sales"]),
+  pageType: z.enum(["capture", "sales", "showcase"]),
   // Optional: user can specify a template, otherwise Tipote picks the best one
   templateId: z.string().optional(),
   // User's offer info (optional - will use profile data if not provided)
@@ -221,8 +221,8 @@ export async function POST(req: NextRequest) {
 
   const input = parsed.data;
 
-  // Check credits: 5 for capture, 7 for sales
-  const creditCost = input.pageType === "sales" ? 7 : 5;
+  // Check credits: 5 for capture, 7 for sales/showcase
+  const creditCost = input.pageType === "capture" ? 5 : 7;
   const balance = await ensureUserCredits(userId);
   if (balance.total_remaining < creditCost) {
     return new Response(JSON.stringify({ error: `Crédits insuffisants (${creditCost} crédits requis).`, code: "NO_CREDITS", upgrade_url: "/settings?tab=billing" }), { status: 402, headers: { "content-type": "application/json" } });
@@ -290,7 +290,7 @@ export async function POST(req: NextRequest) {
         // ==================== STEP 2: Prepare design system ====================
         send("step", { id: "template", label: "Je prépare ton design personnalisé...", progress: 15 });
 
-        const templateKind = input.pageType === "sales" ? "vente" : "capture";
+        const templateKind = input.pageType === "sales" ? "vente" : input.pageType === "showcase" ? "vitrine" : "capture";
         const templateId = "tipote-builder"; // No more template files — pages are built programmatically
 
         await wait(400);
@@ -626,7 +626,7 @@ export async function POST(req: NextRequest) {
 // ---------- Prompt builders ----------
 
 function buildPageSystemPrompt(params: {
-  pageType: "capture" | "sales";
+  pageType: "capture" | "sales" | "showcase";
   schemaPrompt: string;
   niche: string;
   toneOfVoice: string;
@@ -673,6 +673,33 @@ function buildPageSystemPrompt(params: {
     lines.push("- Chatbot/IA/assistant → 'chat_interface' (mockup de conversation chat)");
     lines.push("Les hero_visual_items sont les éléments affichés dans le mockup (menu, chapitres, features).");
     lines.push("Les hero_visual_metrics sont 2-3 cartes flottantes avec une stat/résultat impressionnant.");
+  } else if (params.pageType === "showcase") {
+    lines.push("OBJECTIF : Créer un site vitrine professionnel, moderne et orienté action.");
+    lines.push("Le site vitrine est une ONE-PAGE qui présente l'activité, les services et redirige vers un lien (RDV, formulaire, essai gratuit, page de vente).");
+    lines.push("");
+    lines.push("CARACTÉRISTIQUES D'UN BON SITE VITRINE :");
+    lines.push("- Design moderne, professionnel, cohérent avec la marque");
+    lines.push("- Navigation intuitive : tout sur une seule page avec des ancres vers chaque section");
+    lines.push("- Contenu clair, concis et orienté client : proposition de valeur en quelques secondes");
+    lines.push("- CTA bien placés : 'Prendre rendez-vous', 'Essayer gratuitement', 'Demander un devis', 'Nous contacter'");
+    lines.push("- Éléments de confiance : témoignages, chiffres clés, certifications");
+    lines.push("- Section contact claire avec toutes les coordonnées");
+    lines.push("");
+    lines.push("Structure OBLIGATOIRE :");
+    lines.push("1. NAV : Navigation sticky avec logo + ancres vers les sections + CTA");
+    lines.push("2. HERO : Proposition de valeur + sous-titre + CTA principal + CTA secondaire (optionnel)");
+    lines.push("3. SERVICES : Grille de 3-6 services/fonctionnalités avec icône + titre + description");
+    lines.push("4. CHIFFRES CLÉS : 3-4 statistiques qui crédibilisent (si données disponibles)");
+    lines.push("5. AVANTAGES : Pourquoi choisir cette entreprise");
+    lines.push("6. PROCESSUS : Comment ça marche (3-5 étapes)");
+    lines.push("7. À PROPOS : Bio du fondateur/expert");
+    lines.push("8. TÉMOIGNAGES : Avis clients (si disponibles)");
+    lines.push("9. TARIFS : Grille tarifaire (si prix publics)");
+    lines.push("10. FAQ : Questions fréquentes");
+    lines.push("11. CONTACT : Coordonnées + CTA de contact");
+    lines.push("");
+    lines.push("RÈGLE CLÉ : Le ton est professionnel mais accessible. Pas de jargon marketing agressif.");
+    lines.push("Le visiteur doit comprendre EN 5 SECONDES ce que fait l'entreprise et comment la contacter.");
   } else {
     lines.push("OBJECTIF : Créer une page de vente qui VEND. Chaque mot doit rapprocher le prospect de l'achat.");
     lines.push("Structure : Hook → Problème → Agitation → Solution → Mécanisme → Preuves → Offre → Objections → Urgence → Garantie → CTA");
@@ -876,7 +903,7 @@ function buildPageSystemPrompt(params: {
 }
 
 function buildPageUserPrompt(params: {
-  pageType: "capture" | "sales";
+  pageType: "capture" | "sales" | "showcase";
   offerName: string;
   offerPromise: string;
   offerTarget: string;
@@ -898,7 +925,8 @@ function buildPageUserPrompt(params: {
 }): string {
   const lines: string[] = [];
 
-  lines.push(`Crée une ${params.pageType === "sales" ? "page de vente" : "page de capture"} pour :`);
+  const pageLabel = params.pageType === "sales" ? "page de vente" : params.pageType === "showcase" ? "site vitrine (one-page)" : "page de capture";
+  lines.push(`Crée une ${pageLabel} pour :`);
   lines.push("");
 
   if (params.offerName) lines.push(`Offre : ${params.offerName}`);
@@ -920,8 +948,27 @@ function buildPageUserPrompt(params: {
   if (params.firstName) lines.push(`Auteur : ${params.firstName}`);
   if (params.niche) lines.push(`Niche : ${params.niche}`);
   if (params.mission) lines.push(`Mission : ${params.mission}`);
-  if (params.paymentUrl) lines.push(`Lien de paiement : ${params.paymentUrl}`);
+  if (params.paymentUrl) lines.push(`Lien de paiement / CTA URL : ${params.paymentUrl}`);
   if (params.paymentButtonText) lines.push(`Texte du bouton paiement : ${params.paymentButtonText}`);
+
+  // For showcase: inject contact info from profile
+  if (params.pageType === "showcase") {
+    const p = params.profile as any;
+    const contactEmail = p?.contact_email || p?.email || "";
+    const phone = p?.phone || p?.contact_phone || "";
+    const address = p?.address || p?.contact_address || "";
+    const websiteUrl = p?.website_url || p?.site_url || "";
+    if (contactEmail) lines.push(`Email de contact : ${contactEmail}`);
+    if (phone) lines.push(`Téléphone : ${phone}`);
+    if (address) lines.push(`Adresse : ${address}`);
+    if (websiteUrl) lines.push(`Site web : ${websiteUrl}`);
+    lines.push("");
+    lines.push("INSTRUCTIONS VITRINE :");
+    lines.push("- Remplis contact_email, contact_phone, contact_address avec les infos ci-dessus (si disponibles).");
+    lines.push("- Le contact_cta_url doit pointer vers le lien de paiement/RDV fourni, ou '#sc-contact' par défaut.");
+    lines.push("- Les nav_links doivent correspondre aux sections de la page (ils seront ancrés automatiquement).");
+    lines.push("- Les chiffres clés (key_numbers) ne doivent PAS être inventés. Laisser un tableau vide si aucune donnée disponible.");
+  }
 
   // Add profile offers if available
   const offers = (params.profile as any)?.offers;

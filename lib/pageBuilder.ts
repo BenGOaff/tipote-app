@@ -13,7 +13,7 @@
 // ─────────────── Types ───────────────
 
 type PageParams = {
-  pageType: "capture" | "sales";
+  pageType: "capture" | "sales" | "showcase";
   contentData: Record<string, any>;
   brandTokens?: Record<string, any> | null;
   locale?: string;
@@ -1460,6 +1460,127 @@ function buildFontImport(font: string): string {
   return `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=${encoded}:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`;
 }
 
+// ─────────────── Showcase Sections ───────────────
+
+function sectionShowcaseNav(d: Record<string, any>): string {
+  const logoUrl = safe(d.logo_image_url || "");
+  const logoText = esc(safe(d.logo_text || ""));
+  const navItems: string[] = Array.isArray(d.nav_links) ? d.nav_links.filter((s: any) => typeof s === "string" && s.trim()) : [];
+  const ctaText = esc(safe(d.cta_text || "Contact"));
+  const ctaUrl = safe(d.cta_url || d.payment_url || "#sc-contact");
+
+  return `<nav style="position:sticky;top:0;z-index:100;background:var(--white);border-bottom:1px solid var(--gray-100);padding:12px 0">
+  <div class="tp-container" style="display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px">
+      ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" style="height:36px;object-fit:contain">` : ""}
+      ${logoText ? `<span style="font-family:var(--heading-font);font-weight:700;font-size:1.2rem;color:var(--gray-900)">${logoText}</span>` : ""}
+    </div>
+    <div style="display:flex;align-items:center;gap:24px">
+      ${navItems.map(item => `<a href="#sc-${esc(safe(item)).toLowerCase().replace(/\s+/g, "-")}" style="font-size:0.9rem;color:var(--gray-600);text-decoration:none;font-weight:500" data-editable="true">${esc(safe(item))}</a>`).join("")}
+      <a href="${esc(ctaUrl)}" style="background:var(--brand);color:var(--brand-text);padding:8px 20px;border-radius:var(--radius);font-size:0.9rem;font-weight:600;text-decoration:none" data-editable="true">${ctaText}</a>
+    </div>
+  </div>
+</nav>`;
+}
+
+function sectionShowcaseHero(d: Record<string, any>): string {
+  const eyebrow = esc(safe(d.hero_eyebrow || ""));
+  const title = esc(safe(d.hero_title || ""));
+  const subtitle = esc(safe(d.hero_subtitle || ""));
+  const desc = esc(safe(d.hero_description || ""));
+  const ctaText = esc(safe(d.cta_text || "Découvrir"));
+  const ctaUrl = safe(d.cta_url || d.payment_url || "#sc-services");
+  const secondaryCtaText = esc(safe(d.secondary_cta_text || ""));
+  const secondaryCtaUrl = safe(d.secondary_cta_url || "#sc-contact");
+
+  return `<section style="background:linear-gradient(135deg,var(--gray-900) 0%,#0f172a 100%);color:var(--white);padding:100px 0 80px;text-align:center;position:relative;overflow:hidden">
+  <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 0%,var(--brand-25) 0%,transparent 70%);pointer-events:none"></div>
+  <div class="tp-container" style="position:relative;z-index:1;max-width:800px">
+    ${eyebrow ? `<div style="display:inline-block;background:var(--brand-15);color:var(--brand-on-dark);padding:6px 16px;border-radius:20px;font-size:0.85rem;font-weight:600;margin-bottom:20px" data-editable="true">${eyebrow}</div>` : ""}
+    ${title ? `<h1 style="font-family:var(--heading-font);font-size:clamp(2rem,5vw,3.2rem);font-weight:900;line-height:1.15;margin-bottom:20px" data-editable="true">${title}</h1>` : ""}
+    ${subtitle ? `<p style="font-size:1.2rem;color:var(--gray-300);max-width:640px;margin:0 auto 24px;line-height:1.7" data-editable="true">${subtitle}</p>` : ""}
+    ${desc ? `<p style="font-size:1rem;color:var(--gray-400);max-width:580px;margin:0 auto 32px;line-height:1.7" data-editable="true">${desc}</p>` : ""}
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <a href="${esc(ctaUrl)}" class="tp-final-btn" data-editable="true">${ctaText}</a>
+      ${secondaryCtaText ? `<a href="${esc(secondaryCtaUrl)}" style="display:inline-block;padding:14px 32px;border-radius:var(--radius);font-weight:600;font-size:1rem;border:2px solid var(--gray-600);color:var(--white);text-decoration:none" data-editable="true">${secondaryCtaText}</a>` : ""}
+    </div>
+  </div>
+</section>`;
+}
+
+function sectionServices(d: Record<string, any>): string {
+  const title = esc(safe(d.services_title || ""));
+  const subtitle = esc(safe(d.services_subtitle || ""));
+  const items: Array<{ icon?: string; title?: string; description?: string }> = Array.isArray(d.services) ? d.services.filter((s: any) => s?.title) : [];
+  if (items.length === 0) return "";
+
+  const cols = items.length <= 3 ? items.length : (items.length === 4 ? 2 : 3);
+
+  return `<section id="sc-services" class="tp-section">
+  <div class="tp-container">
+    <div class="tp-section-header">
+      <div class="tp-accent-line"></div>
+      ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
+      ${subtitle ? `<p style="color:var(--gray-500);max-width:600px;margin:0 auto;line-height:1.7" data-editable="true">${subtitle}</p>` : ""}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:28px;max-width:${cols * 380}px;margin:0 auto">
+      ${items.map((s, i) => `<div style="background:var(--white);border:1px solid var(--gray-100);border-radius:var(--radius-lg);padding:32px 24px;text-align:center;box-shadow:var(--shadow-sm);transition:transform .2s,box-shadow .2s">
+        ${s.icon ? `<div style="font-size:2.5rem;margin-bottom:16px" data-editable="true">${esc(safe(s.icon))}</div>` : `<div style="width:48px;height:48px;border-radius:12px;background:var(--brand-10);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">${svgBenefitIcon(i)}</div>`}
+        <h3 style="font-family:var(--heading-font);font-size:1.15rem;font-weight:700;margin-bottom:10px;color:var(--gray-900)" data-editable="true">${esc(safe(s.title))}</h3>
+        ${s.description ? `<p style="font-size:0.92rem;color:var(--gray-500);line-height:1.7" data-editable="true">${esc(safe(s.description))}</p>` : ""}
+      </div>`).join("\n      ")}
+    </div>
+  </div>
+</section>`;
+}
+
+function sectionKeyNumbers(d: Record<string, any>): string {
+  const title = esc(safe(d.numbers_title || ""));
+  const items: Array<{ value?: string; label?: string }> = Array.isArray(d.key_numbers) ? d.key_numbers.filter((n: any) => n?.value) : [];
+  if (items.length === 0) return "";
+
+  return `<section class="tp-section alt">
+  <div class="tp-container">
+    ${title ? `<div class="tp-section-header"><h2 class="tp-section-title">${title}</h2></div>` : ""}
+    <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap">
+      ${items.map(n => `<div style="text-align:center;min-width:140px">
+        <div style="font-family:var(--heading-font);font-size:2.5rem;font-weight:900;color:var(--brand)" data-editable="true">${esc(safe(n.value))}</div>
+        <div style="font-size:0.9rem;color:var(--gray-500);margin-top:4px" data-editable="true">${esc(safe(n.label))}</div>
+      </div>`).join("\n      ")}
+    </div>
+  </div>
+</section>`;
+}
+
+function sectionContact(d: Record<string, any>): string {
+  const title = esc(safe(d.contact_title || ""));
+  const desc = esc(safe(d.contact_description || ""));
+  const ctaText = esc(safe(d.contact_cta_text || d.cta_text || "Prendre rendez-vous"));
+  const ctaUrl = safe(d.contact_cta_url || d.cta_url || d.payment_url || "#");
+  const email = esc(safe(d.contact_email || ""));
+  const phone = esc(safe(d.contact_phone || ""));
+  const address = esc(safe(d.contact_address || ""));
+
+  if (!title && !desc && !email) return "";
+
+  const infoItems: string[] = [];
+  if (email) infoItems.push(`<div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.2rem">&#9993;</span><a href="mailto:${email}" style="color:var(--brand);text-decoration:none" data-editable="true">${email}</a></div>`);
+  if (phone) infoItems.push(`<div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.2rem">&#9742;</span><span data-editable="true">${phone}</span></div>`);
+  if (address) infoItems.push(`<div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.2rem">&#128205;</span><span data-editable="true">${address}</span></div>`);
+
+  return `<section id="sc-contact" class="tp-section alt">
+  <div class="tp-container" style="max-width:700px;text-align:center">
+    <div class="tp-section-header">
+      <div class="tp-accent-line"></div>
+      ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
+    </div>
+    ${desc ? `<p style="color:var(--gray-600);line-height:1.7;margin-bottom:28px" data-editable="true">${desc}</p>` : ""}
+    <a href="${esc(ctaUrl)}" class="tp-final-btn" style="display:inline-block;margin-bottom:28px" data-editable="true">${ctaText}</a>
+    ${infoItems.length > 0 ? `<div style="display:flex;flex-direction:column;gap:12px;align-items:center;font-size:0.95rem;color:var(--gray-600)">${infoItems.join("")}</div>` : ""}
+  </div>
+</section>`;
+}
+
 // ─────────────── Main Build Function ───────────────
 
 export function buildPage(params: PageParams): string {
@@ -1468,15 +1589,29 @@ export function buildPage(params: PageParams): string {
   const accent = brandTokens?.["colors-accent"] || primary;
   const font = brandTokens?.["typography-heading"] || "";
   const isCapture = pageType === "capture";
+  const isShowcase = pageType === "showcase";
   const lang = (locale || "fr").slice(0, 2);
 
   const css = buildCSS(primary, accent, font);
   const fonts = buildFontImport(font);
-  const header = buildHeader(d);
+  const header = isShowcase ? "" : buildHeader(d);
 
   let sections = "";
 
-  if (isCapture) {
+  if (isShowcase) {
+    // Showcase / site vitrine structure
+    sections += sectionShowcaseNav(d);
+    sections += sectionShowcaseHero(d);
+    sections += sectionServices(d);
+    sections += sectionKeyNumbers(d);
+    sections += sectionBenefits(d, true);
+    sections += sectionProgram(d);
+    sections += sectionAbout(d);
+    sections += sectionTestimonials(d);
+    sections += sectionPricing(d);
+    sections += sectionFaq(d);
+    sections += sectionContact(d);
+  } else if (isCapture) {
     sections += sectionHero(d);
     // Benefits are already shown as bullet points in the hero section,
     // so skip the separate benefits section to avoid duplication.

@@ -20,7 +20,7 @@ export async function GET() {
 
   let query = supabase
     .from("hosted_pages")
-    .select("id, title, slug, page_type, status, template_id, og_image_url, views_count, leads_count, created_at, updated_at")
+    .select("id, title, slug, page_type, status, template_id, og_image_url, views_count, leads_count, clicks_count, created_at, updated_at")
     .eq("user_id", session.user.id)
     .neq("status", "archived")
     .order("created_at", { ascending: false });

@@ -204,6 +204,18 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
     fetch(`/api/pages/${page.id}/views`, { method: "POST" }).catch(() => {});
   } catch { /* ignore */ }
 
+  // Listen for CTA click tracking events from iframe
+  useEffect(() => {
+    if (!page) return;
+    const handler = (e: MessageEvent) => {
+      if (typeof e.data === "string" && e.data === "tipote:click") {
+        fetch(`/api/pages/${page.id}/clicks`, { method: "POST" }).catch(() => {});
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [page]);
+
   // Inject CTA interception script into the HTML (NO legal footer or capture form — already in html_snapshot)
   const htmlWithCapture = injectCaptureScript(page);
 
@@ -518,6 +530,30 @@ function injectCaptureScript(page: PublicPageData): string {
     } else {
       html = trackingSnippets + "\n" + html;
     }
+  }
+
+  // Click tracking script — tracks all CTA clicks (all page types)
+  const clickTrackScript = `<script>
+(function(){
+  var tracked = false;
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('a, button, [role="button"], .cta-primary, .cta-button, .tp-cta');
+    if (!el) return;
+    var href = el.getAttribute('href') || '';
+    // Skip pure anchor links (handled separately)
+    if (href === '#' || href === '#capture') return;
+    if (!tracked || true) {
+      try { parent.postMessage('tipote:click', '*'); } catch(ex) {}
+    }
+  }, true);
+})();
+</script>`;
+
+  const bodyEnd = html.lastIndexOf("</body>");
+  if (bodyEnd !== -1) {
+    html = html.slice(0, bodyEnd) + clickTrackScript + "\n" + html.slice(bodyEnd);
+  } else {
+    html += clickTrackScript;
   }
 
   if (!page.capture_enabled) {

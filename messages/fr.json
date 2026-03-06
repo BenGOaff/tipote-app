@@ -292,6 +292,7 @@
       "all": "Tous",
       "capture": "Capture",
       "sales": "Vente",
+      "showcase": "Vitrine",
       "blog": "Blog"
     }
   },
@@ -1682,7 +1683,7 @@
     "offers": "Offres",
     "offersDesc": "Créer une offre irrésistible",
     "funnels": "Funnels",
-    "funnelsDesc": "Pages de vente, de capture ...",
+    "funnelsDesc": "Pages de vente, de capture, sites vitrine ...",
     "quizLeadMagnet": "Quiz Lead Magnet",
     "quizLeadMagnetDesc": "Quiz interactif pour capturer des emails",
     "contentStrategy": "Stratégie de contenu",

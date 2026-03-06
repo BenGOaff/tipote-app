@@ -292,6 +292,7 @@
       "all": "الكل",
       "capture": "الاستقطاب",
       "sales": "المبيعات",
+      "showcase": "واجهة العرض",
       "blog": "مدونة"
     }
   },
@@ -1720,7 +1721,7 @@
     "offers": "العروض",
     "offersDesc": "إنشاء عرض لا يُقاوم",
     "funnels": "القمع التسويقي",
-    "funnelsDesc": "صفحات البيع، صفحات الالتقاط...",
+    "funnelsDesc": "صفحات البيع، صفحات الالتقاط، مواقع العرض...",
     "quizLeadMagnet": "Quiz Lead Magnet",
     "quizLeadMagnetDesc": "اختبار تفاعلي لالتقاط الإيميلات",
     "contentStrategy": "استراتيجية المحتوى",

@@ -10,7 +10,8 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Plus, FileText, ShoppingCart, Trash2, Copy,
-  ArrowLeft, ArrowRight, Loader2, Package, PenTool, Check,
+  ArrowLeft, ArrowRight, Loader2, Package, PenTool, Check, Globe,
+  Users, Download, X, Eye, MousePointerClick, BarChart3,
 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -29,6 +30,7 @@ type PageSummary = {
   og_image_url: string;
   views_count: number;
   leads_count: number;
+  clicks_count: number;
   created_at: string;
   updated_at: string;
 };
@@ -46,8 +48,12 @@ export default function PagesClient() {
   const [genSteps, setGenSteps] = useState<ProgressStep[]>([]);
   const [genError, setGenError] = useState<string | null>(null);
 
+  // Leads panel
+  const [leadsPageId, setLeadsPageId] = useState<string | null>(null);
+  const [leadsPageTitle, setLeadsPageTitle] = useState("");
+
   // Step 1: page type
-  const [createType, setCreateType] = useState<"capture" | "sales">("capture");
+  const [createType, setCreateType] = useState<"capture" | "sales" | "showcase">("capture");
 
   // Step 2: offer source
   const [offerSource, setOfferSource] = useState<"existing" | "scratch">("existing");
@@ -375,6 +381,25 @@ export default function PagesClient() {
                       <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </button>
+
+                  <button
+                    onClick={() => { setCreateType("showcase"); goToStep2(); }}
+                    className="p-6 rounded-xl border-2 text-left transition-all hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 group"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                        <Globe className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">Site vitrine</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Présente ton activité, tes services et redirige vers un RDV, formulaire ou essai gratuit.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">7 crédits</p>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
                 </div>
               </div>
             )}
@@ -387,7 +412,7 @@ export default function PagesClient() {
                 </button>
 
                 <h1 className="text-2xl font-bold mb-2">
-                  {createType === "capture" ? "Page de capture" : "Page de vente"}
+                  {createType === "capture" ? "Page de capture" : createType === "showcase" ? "Site vitrine" : "Page de vente"}
                 </h1>
                 <p className="text-muted-foreground mb-6">
                   Tipote utilise automatiquement ton branding, ton ton de voix et tes mentions légales.
@@ -677,7 +702,7 @@ export default function PagesClient() {
                       disabled={offerSource === "scratch" && !offerName.trim()}
                       className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Créer ma page ({createType === "sales" ? "7 crédits" : "5 crédits"})
+                      Créer ma page ({createType === "capture" ? "5 crédits" : "7 crédits"})
                     </button>
 
                     <p className="text-xs text-muted-foreground text-center mt-3">
@@ -731,11 +756,53 @@ export default function PagesClient() {
                         page={p}
                         onEdit={() => handleEdit(p.id)}
                         onArchive={() => handleArchive(p.id)}
+                        onLeads={() => { setLeadsPageId(p.id); setLeadsPageTitle(p.title || "Sans titre"); }}
                       />
                     ))}
                   </div>
                 )}
+
+                {/* Global stats summary */}
+                {pages.length > 0 && (
+                  <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="border rounded-xl p-4 text-center bg-card">
+                      <Eye className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                      <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.views_count || 0), 0)}</div>
+                      <div className="text-xs text-muted-foreground">Vues totales</div>
+                    </div>
+                    <div className="border rounded-xl p-4 text-center bg-card">
+                      <MousePointerClick className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                      <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.clicks_count || 0), 0)}</div>
+                      <div className="text-xs text-muted-foreground">Clics totaux</div>
+                    </div>
+                    <div className="border rounded-xl p-4 text-center bg-card">
+                      <Users className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                      <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.leads_count || 0), 0)}</div>
+                      <div className="text-xs text-muted-foreground">Leads totaux</div>
+                    </div>
+                    <div className="border rounded-xl p-4 text-center bg-card">
+                      <BarChart3 className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                      <div className="text-2xl font-bold">
+                        {(() => {
+                          const totalViews = pages.reduce((s, p) => s + (p.views_count || 0), 0);
+                          const totalLeads = pages.reduce((s, p) => s + (p.leads_count || 0), 0);
+                          return totalViews > 0 ? ((totalLeads / totalViews) * 100).toFixed(1) + "%" : "—";
+                        })()}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Conversion moy.</div>
+                    </div>
+                  </div>
+                )}
               </>
+            )}
+
+            {/* Leads panel modal */}
+            {leadsPageId && (
+              <LeadsPanel
+                pageId={leadsPageId}
+                pageTitle={leadsPageTitle}
+                onClose={() => setLeadsPageId(null)}
+              />
             )}
           </div>
         </main>
@@ -746,7 +813,7 @@ export default function PagesClient() {
 
 // ---------- Page card ----------
 
-function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () => void; onArchive: () => void }) {
+function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onEdit: () => void; onArchive: () => void; onLeads: () => void }) {
   const [copied, setCopied] = useState(false);
   const isPublished = page.status === "published";
 
@@ -762,6 +829,8 @@ function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () =
         <div className="flex items-center gap-2">
           {page.page_type === "capture" ? (
             <FileText className="w-4 h-4 text-blue-600" />
+          ) : page.page_type === "showcase" ? (
+            <Globe className="w-4 h-4 text-purple-600" />
           ) : (
             <ShoppingCart className="w-4 h-4 text-green-600" />
           )}
@@ -781,7 +850,7 @@ function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () =
       </h3>
 
       <p className="text-xs text-muted-foreground mb-3">
-        {page.views_count} vues &middot; {page.leads_count} leads
+        {page.views_count} vues &middot; {page.clicks_count || 0} clics &middot; {page.leads_count} leads
         {page.views_count > 0 && (
           <span className="ml-1 font-medium text-primary">
             &middot; {((page.leads_count / page.views_count) * 100).toFixed(1)}%
@@ -793,6 +862,11 @@ function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () =
         <button onClick={onEdit} className="flex-1 py-1.5 text-xs border rounded-md hover:bg-muted font-medium">
           Modifier
         </button>
+        {page.leads_count > 0 && (
+          <button onClick={onLeads} className="p-1.5 border rounded-md hover:bg-muted" title="Voir les leads">
+            <Users className="w-3.5 h-3.5 text-blue-600" />
+          </button>
+        )}
         {isPublished && (
           <button onClick={copyUrl} className="p-1.5 border rounded-md hover:bg-muted" title="Copier le lien">
             {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -801,6 +875,116 @@ function PageCard({ page, onEdit, onArchive }: { page: PageSummary; onEdit: () =
         <button onClick={onArchive} className="p-1.5 border rounded-md hover:bg-muted text-destructive" title="Supprimer">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Leads panel ----------
+
+type Lead = {
+  id: string;
+  email: string;
+  first_name: string;
+  phone: string;
+  sio_synced: boolean;
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  referrer: string;
+  created_at: string;
+};
+
+function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle: string; onClose: () => void }) {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/pages/${pageId}/leads`)
+      .then((r) => r.json())
+      .then((d) => { if (d.ok) setLeads(d.leads || []); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [pageId]);
+
+  const exportCsv = () => {
+    window.open(`/api/pages/${pageId}/leads?format=csv`, "_blank");
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-background rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b">
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              Leads &mdash; {pageTitle}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{leads.length} contact{leads.length !== 1 ? "s" : ""}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {leads.length > 0 && (
+              <button
+                onClick={exportCsv}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg hover:bg-muted font-medium"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Exporter CSV
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-5">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : leads.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>Aucun lead pour cette page.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs text-muted-foreground">
+                    <th className="pb-2 pr-3 font-medium">Email</th>
+                    <th className="pb-2 pr-3 font-medium">Prénom</th>
+                    <th className="pb-2 pr-3 font-medium">Téléphone</th>
+                    <th className="pb-2 pr-3 font-medium">Source</th>
+                    <th className="pb-2 font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="py-2.5 pr-3 font-medium">{lead.email}</td>
+                      <td className="py-2.5 pr-3 text-muted-foreground">{lead.first_name || "—"}</td>
+                      <td className="py-2.5 pr-3 text-muted-foreground">{lead.phone || "—"}</td>
+                      <td className="py-2.5 pr-3 text-muted-foreground text-xs">
+                        {lead.utm_source || lead.referrer ? (lead.utm_source || new URL(lead.referrer || "https://direct").hostname) : "Direct"}
+                      </td>
+                      <td className="py-2.5 text-muted-foreground text-xs">
+                        {lead.created_at ? new Date(lead.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
