@@ -16,6 +16,7 @@ import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { buildCoachSystemPrompt } from "@/lib/prompts/coach/system";
 import { searchResourceChunks, type ResourceChunkMatch } from "@/lib/resources";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -594,6 +595,211 @@ function detectTopicHints(userMessage: string) {
   return hints;
 }
 
+// ────────── NEW: Persona context block ──────────
+function formatPersonaBlock(persona: any | null): string {
+  if (!persona) return "";
+  const lines: string[] = ["PERSONA (client idéal):"];
+
+  const name = typeof persona.name === "string" ? persona.name.trim() : "";
+  if (name) lines.push(`- Nom: ${name.slice(0, 120)}`);
+
+  // Parse pains/desires (can be string or array)
+  const parseSafe = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.map((x: any) => String(x ?? "").trim()).filter(Boolean);
+    if (typeof v === "string") {
+      try { const arr = JSON.parse(v); if (Array.isArray(arr)) return arr.map(String).filter(Boolean); } catch { /* ignore */ }
+      return v.trim() ? [v.trim()] : [];
+    }
+    return [];
+  };
+
+  const pains = parseSafe(persona.pains);
+  const desires = parseSafe(persona.desires);
+
+  if (pains.length) lines.push(`- Douleurs: ${pains.slice(0, 6).join(" | ").slice(0, 400)}`);
+  if (desires.length) lines.push(`- Désirs: ${desires.slice(0, 6).join(" | ").slice(0, 400)}`);
+
+  // Channels from persona_json
+  const pj = isRecord(persona.persona_json) ? (persona.persona_json as any) : {};
+  const channels = parseSafe(pj.channels ?? pj.preferred_channels);
+  if (channels.length) lines.push(`- Canaux préférés: ${channels.slice(0, 5).join(", ")}`);
+
+  // Enriched markdown insights (condensed)
+  const detailed = typeof pj.persona_detailed_markdown === "string" ? pj.persona_detailed_markdown.trim() : "";
+  if (detailed) lines.push(`- Profil enrichi (résumé): ${detailed.slice(0, 600)}`);
+
+  const narrative = typeof pj.narrative_synthesis_markdown === "string" ? pj.narrative_synthesis_markdown.trim() : "";
+  if (narrative && !detailed) lines.push(`- Synthèse narrative: ${narrative.slice(0, 400)}`);
+
+  return lines.length > 1 ? lines.join("\n") : "";
+}
+
+// ────────── NEW: Detailed offers block ──────────
+function formatOffersBlock(offerPyramids: any[], userOffers: any[]): string {
+  const lines: string[] = ["OFFRES DÉTAILLÉES:"];
+  let hasContent = false;
+
+  const formatOffer = (o: any, source: string) => {
+    const name = typeof o.name === "string" ? o.name.trim() : "";
+    if (!name) return;
+    hasContent = true;
+
+    const level = typeof o.level === "string" ? o.level.trim() : "";
+    const promise = typeof o.promise === "string" ? o.promise.trim() : "";
+    const format = typeof o.format === "string" ? o.format.trim() : "";
+    const desc = typeof o.description === "string" ? o.description.trim() : "";
+    const delivery = typeof o.delivery === "string" ? o.delivery.trim() : "";
+    const outcome = typeof o.main_outcome === "string" ? o.main_outcome.trim() : "";
+    const priceMin = typeof o.price_min === "number" ? o.price_min : null;
+    const priceMax = typeof o.price_max === "number" ? o.price_max : null;
+
+    const pricePart = priceMin != null && priceMax != null
+      ? priceMin === priceMax ? `${priceMin}€` : `${priceMin}–${priceMax}€`
+      : priceMin != null ? `à partir de ${priceMin}€`
+      : priceMax != null ? `jusqu'à ${priceMax}€`
+      : "";
+
+    const parts = [
+      `  • ${name}`,
+      level ? `(${level})` : "",
+      pricePart ? `— ${pricePart}` : "",
+    ].filter(Boolean).join(" ");
+
+    lines.push(parts);
+    if (promise) lines.push(`    Promesse: ${promise.slice(0, 200)}`);
+    if (format) lines.push(`    Format: ${format.slice(0, 120)}`);
+    if (outcome) lines.push(`    Résultat clé: ${outcome.slice(0, 200)}`);
+    if (delivery) lines.push(`    Livraison: ${delivery.slice(0, 120)}`);
+    if (desc && !promise) lines.push(`    Description: ${desc.slice(0, 200)}`);
+  };
+
+  if (offerPyramids.length) {
+    lines.push("  [Offres générées / pyramide]");
+    for (const o of offerPyramids.slice(0, 6)) formatOffer(o, "generated");
+  }
+
+  if (userOffers.length) {
+    lines.push("  [Offres personnelles]");
+    for (const o of userOffers.slice(0, 4)) formatOffer(o, "user");
+  }
+
+  return hasContent ? lines.join("\n") : "";
+}
+
+// ────────── NEW: Niche & mission block ──────────
+function formatNicheMissionBlock(bp: any | null): string {
+  if (!bp) return "";
+  const lines: string[] = [];
+
+  const niche = typeof bp.niche === "string" ? bp.niche.trim() : "";
+  const mission = typeof bp.mission === "string" ? bp.mission.trim() : "";
+  const activity = typeof bp.activity === "string" ? bp.activity.trim() : "";
+  const sector = typeof bp.sector === "string" ? bp.sector.trim() : "";
+
+  if (niche) lines.push(`- Niche: ${niche.slice(0, 200)}`);
+  if (sector && sector !== niche) lines.push(`- Secteur: ${sector.slice(0, 120)}`);
+  if (activity) lines.push(`- Activité: ${activity.slice(0, 200)}`);
+  if (mission) lines.push(`- Mission: ${mission.slice(0, 400)}`);
+
+  return lines.length ? `NICHE & POSITIONNEMENT:\n${lines.join("\n")}` : "";
+}
+
+// ────────── NEW: Enriched competitor block ──────────
+function formatCompetitorBlock(data: any | null): string {
+  if (!data) return "";
+  const lines: string[] = ["ANALYSE CONCURRENTIELLE:"];
+  let hasContent = false;
+
+  const summary = typeof data.summary === "string" ? data.summary.trim() : "";
+  if (summary) { lines.push(`Résumé: ${summary.slice(0, 600)}`); hasContent = true; }
+
+  const strengths = Array.isArray(data.strengths) ? data.strengths.filter((s: any) => typeof s === "string" && s.trim()) : [];
+  if (strengths.length) { lines.push(`Forces: ${strengths.slice(0, 5).join(" | ").slice(0, 400)}`); hasContent = true; }
+
+  const weaknesses = Array.isArray(data.weaknesses) ? data.weaknesses.filter((s: any) => typeof s === "string" && s.trim()) : [];
+  if (weaknesses.length) { lines.push(`Faiblesses: ${weaknesses.slice(0, 5).join(" | ").slice(0, 400)}`); hasContent = true; }
+
+  const opportunities = Array.isArray(data.opportunities) ? data.opportunities.filter((s: any) => typeof s === "string" && s.trim()) : [];
+  if (opportunities.length) { lines.push(`Opportunités: ${opportunities.slice(0, 5).join(" | ").slice(0, 400)}`); hasContent = true; }
+
+  // Détails par concurrent si dispo
+  const details = isRecord(data.competitor_details) ? data.competitor_details : null;
+  if (details) {
+    const entries = Object.entries(details).slice(0, 5);
+    for (const [name, info] of entries) {
+      if (!isRecord(info)) continue;
+      const i = info as any;
+      const positioning = typeof i.positioning === "string" ? i.positioning.trim() : "";
+      const pricing = typeof i.pricing === "string" ? i.pricing.trim() : "";
+      const audience = typeof i.audience === "string" ? i.audience.trim() : "";
+      if (positioning || pricing || audience) {
+        hasContent = true;
+        const parts = [positioning, pricing ? `Prix: ${pricing}` : "", audience ? `Cible: ${audience}` : ""].filter(Boolean);
+        lines.push(`• ${name}: ${parts.join(" — ").slice(0, 300)}`);
+      }
+    }
+  }
+
+  const matrix = typeof data.positioning_matrix === "string" ? data.positioning_matrix.trim() : "";
+  if (matrix) { lines.push(`Matrice de positionnement: ${matrix.slice(0, 400)}`); hasContent = true; }
+
+  return hasContent ? lines.join("\n") : "";
+}
+
+// ────────── NEW: Smart teaser observations for Free/Basic ──────────
+function buildTeaserObservations(args: {
+  persona: any | null;
+  offerPyramids: any[];
+  bp: any | null;
+  planJson: any | null;
+  tasks: any[];
+  contents: any[];
+  competitor: any | null;
+}): string {
+  const observations: string[] = [];
+
+  // Check persona completeness
+  const pj = isRecord(args.persona?.persona_json) ? (args.persona.persona_json as any) : null;
+  const hasPains = (() => {
+    const p = args.persona?.pains;
+    if (Array.isArray(p)) return p.length > 0;
+    if (typeof p === "string") { try { const a = JSON.parse(p); return Array.isArray(a) && a.length > 0; } catch { return !!p.trim(); } }
+    return false;
+  })();
+  if (!hasPains) observations.push("Ton persona client n'a pas de douleurs définies — ça veut dire que toute ta communication risque de tomber à plat.");
+  if (!pj?.persona_detailed_markdown) observations.push("Ton persona n'a pas été enrichi — tu passes à côté d'insights clés sur ton client idéal.");
+
+  // Check offers
+  if (args.offerPyramids.length === 0) {
+    observations.push("Tu n'as pas encore d'offres structurées — sans pyramide de prix claire, tu laisses de l'argent sur la table.");
+  } else {
+    const noPrice = args.offerPyramids.filter((o: any) => o.price_min == null && o.price_max == null);
+    if (noPrice.length > 0) observations.push(`${noPrice.length} de tes offres n'ont pas de prix défini — tes prospects ne peuvent pas se projeter.`);
+    const noPromise = args.offerPyramids.filter((o: any) => !o.promise && !o.main_outcome);
+    if (noPromise.length > 0) observations.push("Certaines offres n'ont pas de promesse claire — c'est pourtant le premier truc que tes prospects lisent.");
+  }
+
+  // Check tasks
+  const openTasks = (args.tasks ?? []).filter((t: any) => String(t?.status ?? "").toLowerCase() !== "done");
+  const overdue = openTasks.filter((t: any) => {
+    if (!t.due_date) return false;
+    return new Date(t.due_date) < new Date();
+  });
+  if (overdue.length >= 3) observations.push(`Tu as ${overdue.length} tâches en retard — ça sent le planning qui dérape.`);
+
+  // Check content
+  const publishedCount = (args.contents ?? []).filter((c: any) => String(c?.status ?? "").toLowerCase() === "published").length;
+  if (publishedCount === 0 && args.contents.length > 0) observations.push("Tu as des contenus créés mais aucun publié — ton audience ne voit rien de tout ça.");
+
+  // Check competitor analysis
+  if (!args.competitor?.summary) observations.push("Tu n'as pas analysé tes concurrents — dur de se différencier quand on ne sait pas contre qui on joue.");
+
+  // Check niche
+  if (!args.bp?.niche && !args.bp?.activity) observations.push("Ta niche n'est pas définie — sans positionnement clair, tu es invisible.");
+
+  return observations.slice(0, 3).join("\n");
+}
+
 function summarizeLivingContext(args: { businessProfile: any | null; planJson: any | null; tasks: any[]; contents: any[] }) {
   const lines: string[] = [];
 
@@ -768,6 +974,8 @@ export async function POST(req: NextRequest) {
     const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
     let isTeaser = false;
 
+    const TEASER_LIMIT = 3; // 3 messages gratuits par mois pour Free/Basic
+
     if (plan !== "pro" && plan !== "elite" && plan !== "beta") {
       let usedQuery = supabase
         .from("coach_messages")
@@ -776,17 +984,17 @@ export async function POST(req: NextRequest) {
       if (projectId) usedQuery = usedQuery.eq("project_id", projectId);
       const usedRes = await usedQuery
         .contains("facts", { teaser_month: monthKey })
-        .limit(1);
+        .limit(TEASER_LIMIT + 1);
 
-      const alreadyUsed = Array.isArray(usedRes.data) && usedRes.data.length > 0;
+      const usedCount = Array.isArray(usedRes.data) ? usedRes.data.length : 0;
 
-      if (alreadyUsed) {
+      if (usedCount >= TEASER_LIMIT) {
         return NextResponse.json(
           {
             ok: false,
             code: "COACH_LOCKED",
             error:
-              "Le coach premium est dispo sur les plans Pro et Elite. (Astuce : tu as 1 message teaser / mois en Free/Basic — reviens le mois prochain ou upgrade pour un accès illimité.)",
+              `Le coach premium est dispo sur les plans Pro et Elite. (Tu as utilisé tes ${TEASER_LIMIT} conseils gratuits ce mois — upgrade pour un accès illimité.)`,
           },
           { status: 403 },
         );
@@ -840,17 +1048,43 @@ export async function POST(req: NextRequest) {
 
     const competitorQuery = supabase
       .from("competitor_analyses")
-      .select("summary, strengths, weaknesses, opportunities")
+      .select("summary, strengths, weaknesses, opportunities, competitor_details, positioning_matrix, competitors")
       .eq("user_id", user.id);
     if (projectId) competitorQuery.eq("project_id", projectId);
 
-    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes] = await Promise.all([
+    // ✅ NEW: Persona enrichi
+    const personaQuery = supabaseAdmin
+      .from("personas")
+      .select("name, pains, desires, persona_json, updated_at")
+      .eq("user_id", user.id)
+      .eq("role", "client_ideal")
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    // ✅ NEW: Offres détaillées (offer_pyramids)
+    const offerPyramidsQuery = supabase
+      .from("offer_pyramids")
+      .select("name, level, description, promise, format, delivery, price_min, price_max, main_outcome, is_flagship")
+      .eq("user_id", user.id);
+    if (projectId) offerPyramidsQuery.eq("project_id", projectId);
+
+    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes, personaRes, offerPyramidsRes] = await Promise.all([
       bpQuery.maybeSingle(),
       planQuery.maybeSingle(),
       tasksQuery.order("updated_at", { ascending: false }).limit(30),
       contentsQuery.order("created_at", { ascending: false }).limit(30),
       competitorQuery.maybeSingle(),
+      personaQuery,
+      offerPyramidsQuery.order("level", { ascending: true }).limit(10),
     ]);
+
+    const personaData = (personaRes.data as any)?.[0] ?? null;
+    const offerPyramidsData = (offerPyramidsRes.data ?? []) as any[];
+
+    // User-defined offers from business_profiles
+    const bpOffers = Array.isArray((businessProfileRes.data as any)?.offers)
+      ? ((businessProfileRes.data as any).offers as any[])
+      : [];
 
     const living = summarizeLivingContext({
       businessProfile: businessProfileRes.data ?? null,
@@ -886,20 +1120,50 @@ TIPOTE-KNOWLEDGE RULES:
     const system = isTeaser
       ? `${systemBase}${knowledgeRules}
 
-MODE: TEASER (Free/Basic).
-Rules:
-- 3–6 lines max.
-- 1 idea, 1 next step.
-- Be warm, sharp, human.
-- End with ONE short CTA to upgrade (Pro/Elite) to unlock full coach + actions.
+MODE: TEASER (Free/Basic — accès limité, ${TEASER_LIMIT} messages/mois).
+TONE & STYLE:
+- Tu es un coach qui "ne peut pas s'en empêcher" : tu vois un truc important dans les données de l'user, et tu DOIS le dire.
+- Commence par : "Normalement tu n'as pas accès au coaching complet avec ton abonnement…" ou variante naturelle.
+- Puis enchaîne avec "mais j'ai remarqué que [observation ultra-spécifique basée sur les OBSERVATIONS PROACTIVES fournies]"
+- Termine avec 1 conseil actionnable, concret, personnalisé.
+- Dernier mot : une phrase courte donnant envie d'upgrader (Pro/Elite) pour "débloquer la suite".
+- 4–8 lines max.
+- Sois sharp, direct, humain. Jamais corporate.
+- UTILISE les observations proactives fournies dans le contexte — ne les ignore PAS.
+- Si aucune observation n'est disponible, fais un conseil général basé sur le living context.
 - Do NOT output actionable DB suggestions (suggestions[] must be empty).`
       : goDeeper
         ? `${systemBase}${knowledgeRules}\n\nMODE: GO DEEPER. You can go deeper, but stay structured and avoid fluff.`
         : `${systemBase}${knowledgeRules}\n\nHARD RULE: Keep replies short (3–10 lines). One idea at a time.`;
 
+    // ✅ NEW: Build enriched context blocks
+    const personaBlock = formatPersonaBlock(personaData);
+    const offersBlock = formatOffersBlock(offerPyramidsData, bpOffers);
+    const nicheMissionBlock = formatNicheMissionBlock(businessProfileRes.data);
+    const competitorBlock = formatCompetitorBlock(competitorRes.data);
+
+    // ✅ NEW: For teaser mode, build smart observations
+    const teaserObservations = isTeaser
+      ? buildTeaserObservations({
+          persona: personaData,
+          offerPyramids: offerPyramidsData,
+          bp: businessProfileRes.data,
+          planJson: (businessPlanRes.data as any)?.plan_json ?? null,
+          tasks: tasksRes.data ?? [],
+          contents: contentsRes.data ?? [],
+          competitor: competitorRes.data,
+        })
+      : "";
+
     const userPrompt = [
       "LONG-TERM MEMORY (facts/tags + last session):",
       memoryBlock || "(none yet)",
+      "",
+      nicheMissionBlock || "NICHE & POSITIONNEMENT: (non défini)",
+      "",
+      personaBlock || "PERSONA: (non défini — à clarifier avec l'user)",
+      "",
+      offersBlock || "OFFRES DÉTAILLÉES: (aucune offre structurée)",
       "",
       "LIVING CONTEXT (short, premium):",
       living.text,
@@ -910,24 +1174,17 @@ Rules:
       "",
       knowledgeBlock ? knowledgeBlock : "TIPOTE-KNOWLEDGE: (none)",
       "",
-      competitorRes.data?.summary
-        ? `COMPETITOR ANALYSIS:\n${competitorRes.data.summary}\n${
-            competitorRes.data.strengths?.length
-              ? `Strengths: ${JSON.stringify(competitorRes.data.strengths)}`
-              : ""
-          }\n${
-            competitorRes.data.weaknesses?.length
-              ? `Weaknesses: ${JSON.stringify(competitorRes.data.weaknesses)}`
-              : ""
-          }\n${
-            competitorRes.data.opportunities?.length
-              ? `Opportunities: ${JSON.stringify(competitorRes.data.opportunities)}`
-              : ""
-          }`
-        : "COMPETITOR ANALYSIS: (none)",
+      competitorBlock || "ANALYSE CONCURRENTIELLE: (aucune)",
       "",
       checkInBlock ? checkInBlock : "CHECK-IN: (none)",
       "",
+      ...(isTeaser && teaserObservations
+        ? [
+            "OBSERVATIONS PROACTIVES (pour teaser — utilise-les pour ton message):",
+            teaserObservations,
+            "",
+          ]
+        : []),
       "CONVERSATION (recent):",
       JSON.stringify(history, null, 2),
       "",
@@ -980,7 +1237,7 @@ Rules:
     const rawMessage = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
     const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser });
 
-    const maxLines = isTeaser ? 6 : goDeeper ? 18 : 10;
+    const maxLines = isTeaser ? 8 : goDeeper ? 18 : 10;
     const message = enforceLineLimit(rawMessage, maxLines) || rawMessage;
 
     const memory = deriveMemory({
