@@ -124,6 +124,10 @@ const InputSchema = z.object({
   videoEmbedUrl: z.string().optional(),
   // Language (defaults to user's content_locale from profile)
   locale: z.string().optional(),
+  // Logo handling for from-scratch creation
+  skipBrandLogo: z.boolean().optional(),
+  customLogoUrl: z.string().optional(),
+  logoText: z.string().optional(),
 });
 
 // Template system removed — pages are now built programmatically via lib/pageBuilder.ts
@@ -393,7 +397,15 @@ export async function POST(req: NextRequest) {
 
         // Inject user-provided data (overrides AI-generated placeholders)
         if (input.offerName) contentData.offer_name = input.offerName;
-        if (brandLogoUrl && !contentData.logo_image_url) contentData.logo_image_url = brandLogoUrl;
+        // Logo handling: if user explicitly skipped logo, don't inject brand logo
+        if (input.skipBrandLogo) {
+          contentData.logo_image_url = ""; // No logo image
+          if (input.logoText) contentData.logo_text = input.logoText;
+        } else if (input.customLogoUrl) {
+          contentData.logo_image_url = input.customLogoUrl;
+        } else if (brandLogoUrl && !contentData.logo_image_url) {
+          contentData.logo_image_url = brandLogoUrl;
+        }
         // Inject author photo into ALL possible photo field names
         if (brandAuthorPhoto) {
           const photoFields = ["author_photo_url", "about_img_url", "trainer_img_url", "speaker_photo_url", "expert_photo_url", "coach_photo_url", "profile_photo_url", "hero_img_url"];

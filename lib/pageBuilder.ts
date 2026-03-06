@@ -96,6 +96,29 @@ function ensureContrastOnLight(hex: string): string {
   return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
 }
 
+/** WCAG contrast ratio between two hex colors */
+function contrastRatio(hex1: string, hex2: string): number {
+  const l1 = luminance(hex1);
+  const l2 = luminance(hex2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/** Returns a text color that guarantees readability on any background.
+ *  For dark backgrounds → white, for light backgrounds → dark gray.
+ *  For medium backgrounds → picks whichever has better contrast. */
+function readableTextColor(bgHex: string): string {
+  const bgLum = luminance(bgHex);
+  return bgLum > 0.4 ? "#1e293b" : "#ffffff";
+}
+
+/** Returns a muted/secondary text color readable on the given background */
+function readableSubtextColor(bgHex: string): string {
+  const bgLum = luminance(bgHex);
+  return bgLum > 0.4 ? "#475569" : "rgba(255,255,255,0.7)";
+}
+
 // ─────────────── CSS Generation ───────────────
 
 function buildCSS(primary: string, accent: string, font: string): string {
@@ -178,7 +201,7 @@ a { color: var(--brand); text-decoration: none; }
 /* ─── HEADER BAR ─── */
 .tp-header-bar {
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-text);
   text-align: center;
   padding: 10px 16px;
   font-size: 0.85rem;
@@ -462,7 +485,7 @@ a { color: var(--brand); text-decoration: none; }
 
 /* ─── CONTENT SECTIONS ─── */
 .tp-section {
-  padding: 80px 24px;
+  padding: 80px 40px;
   position: relative;
 }
 .tp-section.alt { background: var(--gray-50); }
@@ -472,7 +495,7 @@ a { color: var(--brand); text-decoration: none; }
 }
 .tp-section-header {
   text-align: center;
-  max-width: 700px;
+  max-width: 650px;
   margin: 0 auto 48px;
 }
 .tp-section-title {
@@ -480,17 +503,25 @@ a { color: var(--brand); text-decoration: none; }
   font-size: clamp(1.5rem, 2.5vw, 2.2rem);
   font-weight: 800;
   color: var(--gray-900);
-  margin-bottom: 12px;
-  line-height: 1.2;
+  margin-bottom: 16px;
+  line-height: 1.25;
   letter-spacing: -0.01em;
+  max-width: 580px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .tp-section.dark .tp-section-title { color: #fff; }
 .tp-section-subtitle {
   font-size: 1.05rem;
   color: var(--gray-500);
-  line-height: 1.7;
+  line-height: 1.8;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .tp-section.dark .tp-section-subtitle { color: var(--gray-300); }
+/* Left-align text blocks with more than 2 visual lines */
+.tp-text-left { text-align: left !important; }
 .tp-accent-line {
   width: 50px;
   height: 4px;
@@ -539,7 +570,8 @@ a { color: var(--brand); text-decoration: none; }
 .tp-benefit-text {
   font-size: 0.95rem;
   color: var(--gray-700);
-  line-height: 1.6;
+  line-height: 1.7;
+  text-align: left;
 }
 
 /* ─── PROGRAM / STEPS ─── */
@@ -597,7 +629,7 @@ a { color: var(--brand); text-decoration: none; }
   color: var(--gray-900);
   margin-bottom: 4px;
 }
-.tp-step-desc { font-size: 0.9rem; color: var(--gray-500); line-height: 1.5; }
+.tp-step-desc { font-size: 0.92rem; color: var(--gray-500); line-height: 1.7; text-align: left; }
 
 /* ─── ABOUT / AUTHOR ─── */
 .tp-about {
@@ -628,6 +660,7 @@ a { color: var(--brand); text-decoration: none; }
   font-size: 1rem;
   color: var(--gray-600);
   line-height: 1.8;
+  text-align: left;
 }
 .tp-section.dark .tp-about-bio { color: var(--gray-300); }
 .tp-about-proof {
@@ -817,12 +850,18 @@ a { color: var(--brand); text-decoration: none; }
 }
 @media (max-width: 520px) {
   .tp-hero h1 { font-size: 1.5rem !important; }
-  .tp-section { padding: 50px 16px; }
+  .tp-section { padding: 50px 20px; }
   .tp-mockup { max-width: 100%; }
   .tp-mock-sidebar { width: 110px; padding: 10px; }
   .tp-benefits-grid { grid-template-columns: 1fr; }
   .tp-testimonials-grid { grid-template-columns: 1fr; }
 }
+
+/* Ensure all text in colored rows is readable */
+.tp-header-bar, .tp-header-bar * { color: var(--brand-text); }
+.tp-section.brand-bg { background: var(--brand); }
+.tp-section.brand-bg, .tp-section.brand-bg * { color: var(--brand-text); }
+.tp-section.brand-bg .tp-section-subtitle { color: var(--brand-text); opacity: 0.8; }
 `;
 }
 
@@ -1051,31 +1090,39 @@ function sectionHero(d: Record<string, any>): string {
   const ctaText = esc(safe(d.cta_text || "Je m&#039;inscris !"));
   const ctaSub = esc(safe(d.cta_subtitle || ""));
   const privacyUrl = safe(d.legal_privacy_url || "");
+  const socialProof = esc(safe(d.social_proof_text || ""));
 
   const bullets = benefits.slice(0, 5).map(b =>
-    `<li><span class="tp-check">&#10003;</span><span>${esc(b)}</span></li>`
+    `<li><span class="tp-check">&#10003;</span><span data-editable="true">${esc(b)}</span></li>`
   ).join("\n");
 
   const visual = buildMockup(d);
 
   return `<section class="tp-hero">
-  <div class="tp-hero-grid">
-    <div class="tp-hero-left">
-      <h1>${title}</h1>
-      ${subtitle ? `<p class="tp-hero-subtitle">${subtitle}</p>` : ""}
-      ${bullets ? `<ul class="tp-hero-bullets">${bullets}</ul>` : ""}
-      <form id="tipote-capture-form" class="tp-form">
-        <input type="text" name="first_name" placeholder="Ton pr&#233;nom">
-        <input type="email" name="email" placeholder="Ton adresse email" required>
-        <label class="tp-form-legal">
-          <input type="checkbox" required>
-          <span>J&#039;accepte la <a href="${privacyUrl || "#"}" target="_blank" rel="noopener">politique de confidentialit&#233;</a> et de recevoir des emails.</span>
-        </label>
-        <button type="submit" class="tp-cta-btn">${ctaText}</button>
-        ${ctaSub ? `<p class="tp-cta-sub">${ctaSub}</p>` : ""}
-      </form>
+  <div style="max-width:var(--container);margin:0 auto;position:relative;z-index:1;width:100%">
+    <!-- Main promise ABOVE the two columns -->
+    <div style="text-align:center;margin-bottom:48px;animation:tp-fadeUp 0.6s ease backwards">
+      <h1 style="max-width:800px;margin:0 auto 16px;font-family:var(--heading-font);font-size:clamp(1.8rem,3.5vw,3rem);font-weight:800;line-height:1.12;color:#fff;letter-spacing:-0.02em">${title}</h1>
+      ${subtitle ? `<p class="tp-hero-subtitle" style="max-width:650px;margin:0 auto;text-align:center">${subtitle}</p>` : ""}
     </div>
-    <div class="tp-hero-right">${visual}</div>
+    <!-- Two-column layout: benefits + form | visual -->
+    <div class="tp-hero-grid">
+      <div class="tp-hero-left">
+        ${bullets ? `<ul class="tp-hero-bullets">${bullets}</ul>` : ""}
+        <form id="tipote-capture-form" class="tp-form">
+          <input type="text" name="first_name" placeholder="Ton pr&#233;nom">
+          <input type="email" name="email" placeholder="Ton adresse email" required>
+          <label class="tp-form-legal">
+            <input type="checkbox" required>
+            <span>J&#039;accepte la <a href="${privacyUrl || "#"}" target="_blank" rel="noopener">politique de confidentialit&#233;</a> et de recevoir des emails.</span>
+          </label>
+          <button type="submit" class="tp-cta-btn">${ctaText}</button>
+          ${ctaSub ? `<p class="tp-cta-sub">${ctaSub}</p>` : ""}
+        </form>
+        ${socialProof ? `<p data-editable="true" style="margin-top:20px;font-size:0.82rem;color:var(--gray-400);text-align:center">${socialProof}</p>` : ""}
+      </div>
+      <div class="tp-hero-right">${visual}</div>
+    </div>
   </div>
 </section>`;
 }
@@ -1090,13 +1137,13 @@ function sectionHeroSales(d: Record<string, any>): string {
   const payUrl = safe(d.payment_url || d.cta_url || "#");
 
   return `<section class="tp-hero">
-  <div style="max-width:var(--container);margin:0 auto;text-align:center;position:relative;z-index:1">
-    ${eyebrow ? `<div style="display:inline-block;padding:6px 16px;background:var(--brand-15);color:var(--brand);border-radius:20px;font-size:0.8rem;font-weight:600;margin-bottom:20px">${eyebrow}</div>` : ""}
-    <h1 style="max-width:800px;margin:0 auto 20px">${title}</h1>
-    ${subtitle ? `<p class="tp-hero-subtitle" style="max-width:650px;margin:0 auto 20px">${subtitle}</p>` : ""}
-    ${desc ? `<p style="font-size:1rem;color:var(--gray-400);max-width:600px;margin:0 auto 32px;line-height:1.7">${desc}</p>` : ""}
+  <div style="max-width:var(--container);margin:0 auto;text-align:center;position:relative;z-index:1;padding:0 40px">
+    ${eyebrow ? `<div data-editable="true" style="display:inline-block;padding:6px 16px;background:rgba(255,255,255,0.1);color:#fff;border-radius:20px;font-size:0.8rem;font-weight:600;margin-bottom:20px">${eyebrow}</div>` : ""}
+    <h1 style="max-width:720px;margin:0 auto 20px">${title}</h1>
+    ${subtitle ? `<p class="tp-hero-subtitle" style="max-width:580px;margin:0 auto 20px;color:var(--gray-300)">${subtitle}</p>` : ""}
+    ${desc ? `<p data-editable="true" style="font-size:1rem;color:var(--gray-400);max-width:540px;margin:0 auto 32px;line-height:1.8">${desc}</p>` : ""}
     <a href="${esc(payUrl)}" class="tp-final-btn">${ctaText}</a>
-    ${ctaSub ? `<p class="tp-cta-sub" style="margin-top:12px">${ctaSub}</p>` : ""}
+    ${ctaSub ? `<p class="tp-cta-sub" data-editable="true" style="margin-top:12px">${ctaSub}</p>` : ""}
   </div>
 </section>`;
 }
@@ -1116,7 +1163,7 @@ function sectionBenefits(d: Record<string, any>, isSales: boolean): string {
       ${items.map((b, i) => `<div class="tp-benefit-card">
         <div class="tp-benefit-icon-wrap">${svgBenefitIcon(i)}</div>
         <div class="tp-benefit-num">${i + 1}</div>
-        <p class="tp-benefit-text">${esc(b)}</p>
+        <p class="tp-benefit-text" data-editable="true">${esc(b)}</p>
       </div>`).join("\n")}
     </div>
   </div>
@@ -1136,10 +1183,10 @@ function sectionProgram(d: Record<string, any>): string {
     </div>
     <div class="tp-steps">
       ${items.map((item) => `<div class="tp-step">
-        <div class="tp-step-badge">${esc(safe(item.label || ""))}</div>
+        <div class="tp-step-badge" data-editable="true">${esc(safe(item.label || ""))}</div>
         <div class="tp-step-content">
-          <div class="tp-step-title">${esc(safe(item.title || ""))}</div>
-          <p class="tp-step-desc">${esc(safe(item.description || ""))}</p>
+          <div class="tp-step-title" data-editable="true">${esc(safe(item.title || ""))}</div>
+          <p class="tp-step-desc" data-editable="true">${esc(safe(item.description || ""))}</p>
         </div>
       </div>`).join("\n")}
     </div>
@@ -1157,15 +1204,14 @@ function sectionProblem(d: Record<string, any>): string {
   <div class="tp-container">
     <div class="tp-section-header">
       ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
-      ${desc ? `<p class="tp-section-subtitle">${desc}</p>` : ""}
+      ${desc ? `<p class="tp-section-subtitle" style="color:var(--gray-300)">${desc}</p>` : ""}
     </div>
-    ${svgProblemIllustration()}
-    ${bullets.length > 0 ? `<div style="max-width:600px;margin:0 auto">
-      ${bullets.map(b => `<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">
-        <span style="color:var(--brand);font-size:1.2rem;flex-shrink:0">&#10005;</span>
-        <span style="color:var(--gray-300);font-size:0.95rem;line-height:1.6">${esc(b)}</span>
-      </div>`).join("")}
-    </div>` : ""}
+    ${bullets.length > 0 ? `<ul style="max-width:560px;margin:0 auto;list-style:none;padding:0">
+      ${bullets.map(b => `<li data-editable="true" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+        <span style="color:var(--brand-on-dark);font-size:1.2rem;flex-shrink:0;margin-top:2px">&#10005;</span>
+        <span style="color:#fff;font-size:0.95rem;line-height:1.7">${esc(b)}</span>
+      </li>`).join("")}
+    </ul>` : ""}
   </div>
 </section>`;
 }
@@ -1173,6 +1219,7 @@ function sectionProblem(d: Record<string, any>): string {
 function sectionSolution(d: Record<string, any>): string {
   const title = esc(safe(d.solution_title || ""));
   const desc = esc(safe(d.solution_description || ""));
+  const bullets: string[] = Array.isArray(d.solution_bullets) ? d.solution_bullets.filter((b: any) => typeof b === "string" && b.trim()) : [];
   if (!title && !desc) return "";
 
   return `<section class="tp-section">
@@ -1180,9 +1227,14 @@ function sectionSolution(d: Record<string, any>): string {
     <div class="tp-section-header">
       <div class="tp-accent-line"></div>
       ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
-      ${desc ? `<p class="tp-section-subtitle">${desc}</p>` : ""}
+      ${desc ? `<p class="tp-section-subtitle" style="text-align:left;max-width:560px;margin:0 auto 24px;line-height:1.8">${desc}</p>` : ""}
     </div>
-    ${svgSolutionIllustration()}
+    ${bullets.length > 0 ? `<ul style="max-width:560px;margin:0 auto;list-style:none;padding:0">
+      ${bullets.map(b => `<li data-editable="true" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+        <span style="color:var(--brand);font-size:1.2rem;flex-shrink:0;margin-top:2px">&#10003;</span>
+        <span style="color:var(--gray-700);font-size:0.95rem;line-height:1.7">${esc(b)}</span>
+      </li>`).join("")}
+    </ul>` : ""}
     ${svgTransformationVisual()}
   </div>
 </section>`;
@@ -1205,8 +1257,8 @@ function sectionAbout(d: Record<string, any>): string {
       ${hasPhoto ? `<img src="${esc(photo)}" alt="${name}" class="tp-about-photo">` : ""}
       <div>
         ${name ? `<h3 class="tp-about-name">${name}</h3>` : ""}
-        ${bio ? `<p class="tp-about-bio">${bio}</p>` : ""}
-        ${proof ? `<div class="tp-about-proof">${proof}</div>` : ""}
+        ${bio ? `<p class="tp-about-bio" data-editable="true">${bio}</p>` : ""}
+        ${proof ? `<div class="tp-about-proof" data-editable="true">${proof}</div>` : ""}
       </div>
     </div>
   </div>
@@ -1226,9 +1278,9 @@ function sectionTestimonials(d: Record<string, any>): string {
     </div>
     <div class="tp-testimonials-grid">
       ${items.map(t => `<div class="tp-testimonial-card">
-        <p class="tp-testimonial-text">${esc(safe(t.content))}</p>
-        <div class="tp-testimonial-author">${esc(safe(t.author_name))}</div>
-        ${t.author_role ? `<div class="tp-testimonial-role">${esc(safe(t.author_role))}</div>` : ""}
+        <p class="tp-testimonial-text" data-editable="true">${esc(safe(t.content))}</p>
+        <div class="tp-testimonial-author" data-editable="true">${esc(safe(t.author_name))}</div>
+        ${t.author_role ? `<div class="tp-testimonial-role" data-editable="true">${esc(safe(t.author_role))}</div>` : ""}
       </div>`).join("\n")}
     </div>
   </div>
@@ -1251,9 +1303,9 @@ function sectionPricing(d: Record<string, any>): string {
       ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
     </div>
     <div class="tp-price-card">
-      ${old ? `<div class="tp-price-old">${old}</div>` : ""}
-      <div class="tp-price-amount">${amount}</div>
-      ${note ? `<div class="tp-price-note">${note}</div>` : ""}
+      ${old ? `<div class="tp-price-old" data-editable="true">${old}</div>` : ""}
+      <div class="tp-price-amount" data-editable="true">${amount}</div>
+      ${note ? `<div class="tp-price-note" data-editable="true">${note}</div>` : ""}
       <a href="${esc(payUrl)}" class="tp-final-btn" style="display:block;margin-top:28px">${ctaText}</a>
     </div>
   </div>
@@ -1269,8 +1321,8 @@ function sectionGuarantee(d: Record<string, any>): string {
   <div class="tp-container">
     <div class="tp-guarantee-box">
       <div class="tp-guarantee-icon">&#128170;</div>
-      ${title ? `<h3 style="font-family:var(--heading-font);font-size:1.3rem;font-weight:700;margin-bottom:12px">${title}</h3>` : ""}
-      ${text ? `<p style="color:var(--gray-600);line-height:1.7">${text}</p>` : ""}
+      ${title ? `<h3 data-editable="true" style="font-family:var(--heading-font);font-size:1.3rem;font-weight:700;margin-bottom:12px">${title}</h3>` : ""}
+      ${text ? `<p data-editable="true" style="color:var(--gray-600);line-height:1.8;text-align:left;max-width:540px;margin:0 auto">${text}</p>` : ""}
     </div>
   </div>
 </section>`;
@@ -1289,8 +1341,8 @@ function sectionFaq(d: Record<string, any>): string {
     </div>
     <div style="max-width:700px;margin:0 auto">
       ${items.map(f => `<div class="tp-faq-item">
-        <div class="tp-faq-q">${esc(safe(f.question))}</div>
-        <div class="tp-faq-a">${esc(safe(f.answer))}</div>
+        <div class="tp-faq-q" data-editable="true">${esc(safe(f.question))}</div>
+        <div class="tp-faq-a" data-editable="true">${esc(safe(f.answer))}</div>
       </div>`).join("\n")}
     </div>
   </div>
@@ -1307,16 +1359,16 @@ function sectionFinalCta(d: Record<string, any>, isCapture: boolean): string {
   const href = isCapture ? "#tipote-capture-form" : safe(d.payment_url || d.cta_url || "#");
 
   return `<section class="tp-final-cta">
-  ${title ? `<h2>${title}</h2>` : ""}
-  ${desc ? `<p>${desc}</p>` : ""}
-  <a href="${esc(href)}" class="tp-final-btn">${ctaText}</a>
+  ${title ? `<h2 data-editable="true">${title}</h2>` : ""}
+  ${desc ? `<p data-editable="true">${desc}</p>` : ""}
+  <a href="${esc(href)}" class="tp-final-btn" data-editable="true">${ctaText}</a>
 </section>`;
 }
 
 function buildHeader(d: Record<string, any>): string {
   const text = safe(d.header_bar_text || d.hero_eyebrow || "");
   if (!text) return "";
-  return `<div class="tp-header-bar">${esc(text)}</div>`;
+  return `<div class="tp-header-bar"><span data-editable="true">${esc(text)}</span></div>`;
 }
 
 function buildFooter(d: Record<string, any>): string {
@@ -1401,14 +1453,12 @@ export function buildPage(params: PageParams): string {
     sections += sectionTestimonials(d);
     sections += sectionFinalCta(d, true);
   } else {
-    // Sales page structure — with premium illustrations between sections
+    // Sales page structure
     sections += sectionHeroSales(d);
     sections += sectionProblem(d);
     sections += sectionSolution(d);
-    sections += svgSectionDivider();
     sections += sectionBenefits(d, true);
     sections += sectionProgram(d);
-    sections += svgSectionDivider();
     sections += sectionAbout(d);
     sections += sectionTestimonials(d);
     sections += sectionGuarantee(d);
