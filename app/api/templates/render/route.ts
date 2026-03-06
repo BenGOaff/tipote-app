@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Body = {
-  kind?: "capture" | "vente";
+  kind?: "capture" | "vente" | "vitrine";
   templateId?: string;
   mode?: "preview" | "preview_kit" | "kit";
   variantId?: string | null;
