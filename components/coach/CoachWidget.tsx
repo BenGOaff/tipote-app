@@ -476,7 +476,9 @@ export function CoachWidget() {
         description: t("appliedDesc"),
       });
 
-      setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+      // Compute remaining suggestions BEFORE updating state, so we can persist them
+      const remaining = suggestions.filter((x) => x.id !== s.id);
+      setSuggestions(remaining);
 
       const assistantLocalId = uid();
       const msg =
@@ -487,7 +489,10 @@ export function CoachWidget() {
             : t("okGeneric");
 
       setMessages((m) => [...m, { id: assistantLocalId, role: "assistant", content: msg, createdAt: Date.now() }]);
-      void persistOne("assistant", msg);
+      // Persist with pending_suggestions so reload doesn't restore stale suggestions
+      void persistOne("assistant", msg, {
+        facts: { pending_suggestions: remaining },
+      });
 
       try {
         router.refresh();
@@ -525,7 +530,12 @@ export function CoachWidget() {
         }),
       }).catch(() => null);
     } finally {
-      setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+      const remaining = suggestions.filter((x) => x.id !== s.id);
+      setSuggestions(remaining);
+      // Persist remaining suggestions so reload doesn't restore rejected ones
+      void persistOne("assistant", reason ? `❌ ${s.title} — ${reason}` : `❌ ${s.title}`, {
+        facts: { pending_suggestions: remaining },
+      });
       toast({
         title: t("noted"),
         description: reason ? t("notedWithReason") : t("notedGeneric"),

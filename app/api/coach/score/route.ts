@@ -33,34 +33,44 @@ export async function GET(_req: NextRequest) {
     const projectId = await getActiveProjectId(supabase, user.id);
 
     // Fetch all dimensions in parallel
-    let bpQuery = supabase.from("business_profiles").select("*").eq("user_id", user.id);
-    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    // Use or() to include rows with matching project_id OR null project_id
+    // (data created before project system was added has project_id = null)
+    const projectFilter = (q: any) =>
+      projectId ? q.or(`project_id.eq.${projectId},project_id.is.null`) : q;
 
-    let tasksQuery = supabase
-      .from("project_tasks")
-      .select("id, status, due_date, updated_at")
-      .eq("user_id", user.id)
-      .is("deleted_at", null);
-    if (projectId) tasksQuery = tasksQuery.eq("project_id", projectId);
+    const bpQuery = projectFilter(
+      supabase.from("business_profiles").select("*").eq("user_id", user.id),
+    );
 
-    let contentsQuery = supabase
-      .from("content_item")
-      .select("id, status:statut, created_at")
-      .eq("user_id", user.id);
-    if (projectId) contentsQuery = contentsQuery.eq("project_id", projectId);
+    const tasksQuery = projectFilter(
+      supabase
+        .from("project_tasks")
+        .select("id, status, due_date, updated_at")
+        .eq("user_id", user.id)
+        .is("deleted_at", null),
+    );
 
-    let offersQuery = supabase
-      .from("offer_pyramids")
-      .select("id, name, level, price_min")
-      .eq("user_id", user.id);
-    if (projectId) offersQuery = offersQuery.eq("project_id", projectId);
+    const contentsQuery = projectFilter(
+      supabase
+        .from("content_item")
+        .select("id, status:statut, created_at")
+        .eq("user_id", user.id),
+    );
 
-    let coachQuery = supabase
-      .from("coach_messages")
-      .select("id, created_at")
-      .eq("user_id", user.id)
-      .eq("role", "user");
-    if (projectId) coachQuery = coachQuery.eq("project_id", projectId);
+    const offersQuery = projectFilter(
+      supabase
+        .from("offer_pyramids")
+        .select("id, name, level, price_min")
+        .eq("user_id", user.id),
+    );
+
+    const coachQuery = projectFilter(
+      supabase
+        .from("coach_messages")
+        .select("id, created_at")
+        .eq("user_id", user.id)
+        .eq("role", "user"),
+    );
 
     const personaQuery = supabase
       .from("personas")
