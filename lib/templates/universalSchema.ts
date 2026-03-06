@@ -20,7 +20,7 @@ export type UniversalField = {
   label: string;
   description: string;
   required: boolean;
-  pageTypes: ("capture" | "sales")[]; // which page types use this field
+  pageTypes: ("capture" | "sales" | "showcase")[]; // which page types use this field
   maxLength?: number;
   minItems?: number;
   maxItems?: number;
@@ -732,10 +732,339 @@ const SALES_FIELDS: UniversalField[] = [
   },
 ];
 
+// ---------- UNIVERSAL SHOWCASE SCHEMA ----------
+
+const SHOWCASE_FIELDS: UniversalField[] = [
+  // --- Brand / Logo ---
+  {
+    key: "logo_text",
+    kind: "scalar",
+    label: "Texte du logo",
+    description: "Nom de la marque ou de l'entreprise.",
+    required: true,
+    pageTypes: ["showcase"],
+    maxLength: 25,
+  },
+  {
+    key: "nav_links",
+    kind: "array_scalar",
+    label: "Navigation",
+    description: "Ancres de navigation (noms des sections). Ex: 'Services', 'À propos', 'Tarifs', 'FAQ', 'Contact'. Chaque lien sera ancré automatiquement vers la section correspondante.",
+    required: true,
+    pageTypes: ["showcase"],
+    minItems: 3,
+    maxItems: 6,
+    itemMaxLength: 20,
+  },
+  // --- Hero ---
+  {
+    key: "hero_eyebrow",
+    kind: "scalar",
+    label: "Badge hero",
+    description: "Label court au-dessus du titre. Ex: 'Coach certifié', 'SaaS #1', 'Consultant expert'.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 50,
+  },
+  {
+    key: "hero_title",
+    kind: "scalar",
+    label: "Titre principal",
+    description: "Proposition de valeur claire en 1 phrase. Doit expliquer ce que fait l'entreprise et pour qui. Ex: 'Automatise ta prospection et génère 3x plus de leads'.",
+    required: true,
+    pageTypes: ["showcase"],
+    maxLength: 120,
+  },
+  {
+    key: "hero_subtitle",
+    kind: "scalar",
+    label: "Sous-titre hero",
+    description: "Développe la proposition de valeur : pour qui, quel résultat concret, en combien de temps.",
+    required: true,
+    pageTypes: ["showcase"],
+    maxLength: 180,
+  },
+  {
+    key: "hero_description",
+    kind: "scalar",
+    label: "Description hero",
+    description: "Paragraphe d'amplification optionnel (2-3 phrases).",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 300,
+  },
+  {
+    key: "cta_text",
+    kind: "scalar",
+    label: "CTA principal",
+    description: "Texte du bouton principal. Ex: 'Prendre rendez-vous', 'Essayer gratuitement', 'Découvrir nos services'.",
+    required: true,
+    pageTypes: ["showcase"],
+    maxLength: 40,
+  },
+  {
+    key: "secondary_cta_text",
+    kind: "scalar",
+    label: "CTA secondaire",
+    description: "Texte du bouton secondaire (optionnel). Ex: 'En savoir plus', 'Voir la démo', 'Nous contacter'.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 40,
+  },
+  // --- Services ---
+  {
+    key: "services_title",
+    kind: "scalar",
+    label: "Titre section services",
+    description: "Introduit les services/fonctionnalités. Ex: 'Nos services', 'Ce que nous proposons', 'Nos fonctionnalités'.",
+    required: true,
+    pageTypes: ["showcase"],
+    maxLength: 80,
+  },
+  {
+    key: "services_subtitle",
+    kind: "scalar",
+    label: "Sous-titre section services",
+    description: "Phrase d'accroche pour la section services.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 160,
+  },
+  {
+    key: "services",
+    kind: "array_object",
+    label: "Services / Fonctionnalités",
+    description: "Liste des services ou fonctionnalités proposés. 3-6 items.",
+    required: true,
+    pageTypes: ["showcase"],
+    minItems: 3,
+    maxItems: 6,
+    subFields: [
+      { key: "icon", label: "Emoji (1 seul)", maxLength: 5 },
+      { key: "title", label: "Nom du service", maxLength: 60 },
+      { key: "description", label: "Description courte (1-2 phrases)", maxLength: 200 },
+    ],
+  },
+  // --- Key numbers ---
+  {
+    key: "numbers_title",
+    kind: "scalar",
+    label: "Titre chiffres clés",
+    description: "Titre optionnel pour la section chiffres clés.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 60,
+  },
+  {
+    key: "key_numbers",
+    kind: "array_object",
+    label: "Chiffres clés",
+    description: "Statistiques ou chiffres qui crédibilisent (clients, projets, années). 3-4 items. NE PAS inventer de chiffres si non fournis.",
+    required: false,
+    pageTypes: ["showcase"],
+    minItems: 3,
+    maxItems: 4,
+    subFields: [
+      { key: "value", label: "Chiffre (ex: '150+', '10 ans', '98%')", maxLength: 15 },
+      { key: "label", label: "Label (ex: 'Clients accompagnés')", maxLength: 40 },
+    ],
+  },
+  // --- Benefits ---
+  {
+    key: "benefits_title",
+    kind: "scalar",
+    label: "Titre section avantages",
+    description: "Pourquoi choisir cette offre/entreprise.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 80,
+  },
+  {
+    key: "benefits",
+    kind: "array_scalar",
+    label: "Avantages clés",
+    description: "4-6 avantages concrets de travailler avec cette entreprise.",
+    required: true,
+    pageTypes: ["showcase"],
+    minItems: 4,
+    maxItems: 6,
+    itemMaxLength: 100,
+  },
+  // --- Program / Process ---
+  {
+    key: "program_title",
+    kind: "scalar",
+    label: "Titre du processus/méthode",
+    description: "Introduit la méthode de travail. Ex: 'Comment ça marche', 'Notre processus', 'En 3 étapes'.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 80,
+  },
+  {
+    key: "program_items",
+    kind: "array_object",
+    label: "Étapes du processus",
+    description: "Étapes de collaboration/méthode de travail (3-5 items).",
+    required: false,
+    pageTypes: ["showcase"],
+    minItems: 3,
+    maxItems: 5,
+    subFields: [
+      { key: "label", label: "Étiquette (ÉTAPE 1, etc.)", maxLength: 20 },
+      { key: "title", label: "Titre", maxLength: 80 },
+      { key: "description", label: "Description", maxLength: 200 },
+    ],
+  },
+  // --- About ---
+  {
+    key: "about_title",
+    kind: "scalar",
+    label: "Titre section À propos",
+    description: "Introduit le fondateur/l'équipe.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 60,
+  },
+  {
+    key: "about_name",
+    kind: "scalar",
+    label: "Nom du fondateur/expert",
+    description: "Nom complet.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 50,
+  },
+  {
+    key: "about_description",
+    kind: "scalar",
+    label: "Bio / Storytelling",
+    description: "Parcours, expertise, mission. Crédibilité + connexion humaine.",
+    required: true,
+    pageTypes: ["showcase"],
+    maxLength: 500,
+  },
+  // --- Testimonials ---
+  {
+    key: "testimonials_title",
+    kind: "scalar",
+    label: "Titre section témoignages",
+    description: "Ex: 'Ce que disent nos clients'.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 60,
+  },
+  {
+    key: "testimonials",
+    kind: "array_object",
+    label: "Témoignages",
+    description: "Témoignages réels. NE JAMAIS INVENTER.",
+    required: false,
+    pageTypes: ["showcase"],
+    minItems: 0,
+    maxItems: 6,
+    subFields: [
+      { key: "content", label: "Texte", maxLength: 300 },
+      { key: "author_name", label: "Nom", maxLength: 50 },
+      { key: "author_role", label: "Rôle/titre", maxLength: 50 },
+    ],
+  },
+  // --- Pricing (optional) ---
+  {
+    key: "price_title",
+    kind: "scalar",
+    label: "Titre section tarifs",
+    description: "Ex: 'Nos tarifs', 'Choisissez votre formule'. Laisser vide si pas de tarif public.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 80,
+  },
+  {
+    key: "price_amount",
+    kind: "scalar",
+    label: "Prix principal",
+    description: "Prix unique si applicable. Source: user input.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 20,
+  },
+  {
+    key: "price_note",
+    kind: "scalar",
+    label: "Note sous le prix",
+    description: "Précision tarifaire (ex: 'à partir de', 'sur devis', '/mois').",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 80,
+  },
+  // --- FAQ ---
+  {
+    key: "faq_title",
+    kind: "scalar",
+    label: "Titre FAQ",
+    description: "Ex: 'Questions fréquentes'.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 60,
+  },
+  {
+    key: "faqs",
+    kind: "array_object",
+    label: "FAQ",
+    description: "Questions fréquentes avec réponses complètes.",
+    required: false,
+    pageTypes: ["showcase"],
+    minItems: 3,
+    maxItems: 8,
+    subFields: [
+      { key: "question", label: "Question", maxLength: 100 },
+      { key: "answer", label: "Réponse", maxLength: 300 },
+    ],
+  },
+  // --- Contact ---
+  {
+    key: "contact_title",
+    kind: "scalar",
+    label: "Titre section contact",
+    description: "Ex: 'Contactez-nous', 'Prêt à démarrer ?'.",
+    required: true,
+    pageTypes: ["showcase"],
+    maxLength: 80,
+  },
+  {
+    key: "contact_description",
+    kind: "scalar",
+    label: "Description section contact",
+    description: "Phrase d'incitation au contact.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 200,
+  },
+  {
+    key: "contact_cta_text",
+    kind: "scalar",
+    label: "Texte CTA contact",
+    description: "Ex: 'Prendre rendez-vous', 'Demander un devis', 'Essai gratuit'.",
+    required: true,
+    pageTypes: ["showcase"],
+    maxLength: 40,
+  },
+  // --- Footer ---
+  {
+    key: "footer_text",
+    kind: "scalar",
+    label: "Texte footer",
+    description: "Copyright ou mention légale courte.",
+    required: false,
+    pageTypes: ["showcase"],
+    maxLength: 100,
+  },
+];
+
 // ---------- Public API ----------
 
-export function getUniversalSchema(pageType: "capture" | "sales"): UniversalField[] {
+export function getUniversalSchema(pageType: "capture" | "sales" | "showcase"): UniversalField[] {
   if (pageType === "capture") return CAPTURE_FIELDS;
+  if (pageType === "showcase") return SHOWCASE_FIELDS;
   return SALES_FIELDS;
 }
 
@@ -743,7 +1072,7 @@ export function getUniversalSchema(pageType: "capture" | "sales"): UniversalFiel
  * Convert the universal schema into a prompt for the AI.
  * This replaces the per-template schemaToPrompt() function.
  */
-export function universalSchemaToPrompt(pageType: "capture" | "sales"): string {
+export function universalSchemaToPrompt(pageType: "capture" | "sales" | "showcase"): string {
   const fields = getUniversalSchema(pageType);
   const lines: string[] = [];
 

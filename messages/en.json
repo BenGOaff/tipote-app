@@ -292,6 +292,7 @@
       "all": "All",
       "capture": "Capture",
       "sales": "Sales",
+      "showcase": "Showcase",
       "blog": "Blog"
     }
   },
@@ -1685,7 +1686,7 @@
     "offers": "Offers",
     "offersDesc": "Create an irresistible offer",
     "funnels": "Funnels",
-    "funnelsDesc": "Sales pages, capture pages...",
+    "funnelsDesc": "Sales pages, capture pages, showcase sites...",
     "quizLeadMagnet": "Quiz Lead Magnet",
     "quizLeadMagnetDesc": "Interactive quiz to capture emails",
     "contentStrategy": "Content Strategy",

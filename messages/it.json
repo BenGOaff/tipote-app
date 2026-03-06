@@ -292,6 +292,7 @@
       "all": "Tutti",
       "capture": "Acquisizione",
       "sales": "Vendite",
+      "showcase": "Vetrina",
       "blog": "Blog"
     }
   },
@@ -1720,7 +1721,7 @@
     "offers": "Offerte",
     "offersDesc": "Crea un'offerta irresistibile",
     "funnels": "Funnel",
-    "funnelsDesc": "Pagine di vendita, di cattura...",
+    "funnelsDesc": "Pagine di vendita, di cattura, siti vetrina...",
     "quizLeadMagnet": "Quiz Lead Magnet",
     "quizLeadMagnetDesc": "Quiz interattivo per catturare email",
     "contentStrategy": "Strategia di contenuto",
