@@ -80,9 +80,9 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       const brandTokens = updates.brand_tokens || current.brand_tokens;
 
       try {
-        const pageType = current.template_kind === "vente" ? "sales" : "capture";
+        const pageType = current.template_kind === "vente" ? "sales" : current.template_kind === "vitrine" ? "showcase" : "capture";
         const html = buildPage({
-          pageType: pageType as "capture" | "sales",
+          pageType,
           contentData,
           brandTokens: Object.keys(brandTokens || {}).length > 0 ? brandTokens : null,
         });

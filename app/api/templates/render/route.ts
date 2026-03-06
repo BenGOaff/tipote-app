@@ -19,11 +19,11 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Body;
 
-    const kind: "capture" | "vente" = body?.kind === "vente" ? "vente" : "capture";
-    const pageType = kind === "vente" ? "sales" : "capture";
+    const kind = body?.kind === "vente" ? "vente" : body?.kind === "vitrine" ? "vitrine" : "capture";
+    const pageType = kind === "vente" ? "sales" : kind === "vitrine" ? "showcase" : "capture";
 
     const html = buildPage({
-      pageType: pageType as "capture" | "sales",
+      pageType,
       contentData: body?.contentData ?? {},
       brandTokens: body?.brandTokens ?? null,
     });

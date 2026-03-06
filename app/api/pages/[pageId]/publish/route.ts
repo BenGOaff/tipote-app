@@ -39,9 +39,9 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
 
     if (current) {
       try {
-        const pageType = current.template_kind === "vente" ? "sales" : "capture";
+        const pageType = current.template_kind === "vente" ? "sales" : current.template_kind === "vitrine" ? "showcase" : "capture";
         const html = buildPage({
-          pageType: pageType as "capture" | "sales",
+          pageType,
           contentData: current.content_data || {},
           brandTokens: Object.keys(current.brand_tokens || {}).length > 0 ? current.brand_tokens : null,
         });

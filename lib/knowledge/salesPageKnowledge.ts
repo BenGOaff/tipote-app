@@ -180,7 +180,7 @@ export const CAPTURE_PAGE_BEST_PRACTICES = `
  * Build the complete knowledge block for AI system prompt.
  * Returns all knowledge concatenated, ready to inject.
  */
-export function buildCopywritingKnowledge(pageType: "capture" | "sales"): string {
+export function buildCopywritingKnowledge(pageType: "capture" | "sales" | "showcase"): string {
   const sections: string[] = [];
 
   sections.push("═══════════════════════════════════════════════════════════════");

@@ -25,10 +25,10 @@ export type RenderTemplateRequest = {
  * but are no longer used for template file loading.
  */
 export async function renderTemplateHtml(req: RenderTemplateRequest): Promise<{ html: string }> {
-  const pageType = req.kind === "vente" ? "sales" : "capture";
+  const pageType = req.kind === "vente" ? "sales" : req.kind === "vitrine" ? "showcase" : "capture";
 
   const html = buildPage({
-    pageType: pageType as "capture" | "sales",
+    pageType,
     contentData: req.contentData || {},
     brandTokens: req.brandTokens || null,
     locale: req.locale,
