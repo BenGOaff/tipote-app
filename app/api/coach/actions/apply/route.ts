@@ -224,7 +224,7 @@ async function applySingleTaskUpdate(args: { userId: string; projectId?: string 
   if (projectId) query = query.eq("project_id", projectId);
 
   const { data, error } = await query
-    .select("id, title, status, due_date, priority, timeframe, updated_at")
+    .select("id, title, status, due_date, priority, updated_at")
     .maybeSingle();
 
   if (error) return { ok: false as const, status: 400 as const, error: error.message };
@@ -245,7 +245,6 @@ function sanitizeTaskPatch(raw: AnyRecord): { taskId: string; patch: AnyRecord }
   }
 
   if ("due_date" in raw) patch.due_date = normalizeDueDate(raw.due_date);
-  if ("timeframe" in raw) patch.timeframe = cleanString(raw.timeframe, 48) || null;
   if ("priority" in raw) patch.priority = cleanString(raw.priority, 48) || null;
 
   if ("status" in raw) {

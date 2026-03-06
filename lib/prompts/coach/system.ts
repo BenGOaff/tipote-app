@@ -377,8 +377,7 @@ Payload (single):
   "title": "string (optional)",
   "status": "todo" | "in_progress" | "blocked" | "done" (optional),
   "due_date": "YYYY-MM-DD (optional, can be null)",
-  "priority": "string (optional, can be null)",
-  "timeframe": "string (optional, can be null)"
+  "priority": "string (optional, can be null)"
 }
 
 2) type = "update_offers"

@@ -108,12 +108,11 @@ function useTypewriter(text: string, speed = 18) {
     setDone(false);
 
     const interval = setInterval(() => {
-      indexRef.current += 1;
       // Reveal 1-3 chars at a time for natural feel
       const step = Math.min(3, Math.ceil(Math.random() * 2));
-      const nextIndex = Math.min(indexRef.current * step, text.length);
-      setDisplayed(text.slice(0, nextIndex));
-      if (nextIndex >= text.length) {
+      indexRef.current = Math.min(indexRef.current + step, text.length);
+      setDisplayed(text.slice(0, indexRef.current));
+      if (indexRef.current >= text.length) {
         setDone(true);
         clearInterval(interval);
       }
@@ -138,7 +137,7 @@ function StreamingMessage({ content, onDone }: { content: string; onDone?: () =>
     }
   }, [done, onDone]);
 
-  return <>{displayed}{!done ? <span className="animate-pulse">|</span> : null}</>;
+  return <>{displayed}{!done ? <span className="inline-block w-[2px] h-[1em] bg-current align-text-bottom animate-pulse" /> : null}</>;
 }
 
 /* ────────────────── Helpers ────────────────── */
@@ -330,13 +329,17 @@ export function CoachWidget() {
   }, [open, t]);
 
   /* ── Auto-scroll ── */
+  const isStreaming = messages.some((m) => m.streaming);
   useEffect(() => {
     if (!open || view !== "chat") return;
-    const timer = setTimeout(() => {
-      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [open, view, messages.length, suggestions.length, loading, bootstrapping]);
+    const el = listRef.current;
+    if (!el) return;
+    // Use instant scroll during streaming to avoid competing animations
+    const raf = requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open, view, messages.length, suggestions.length, loading, bootstrapping, isStreaming]);
 
   const canSend = useMemo(
     () => input.trim().length > 0 && !loading && !bootstrapping,

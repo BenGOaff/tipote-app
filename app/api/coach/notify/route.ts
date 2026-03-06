@@ -117,10 +117,10 @@ export async function GET(req: NextRequest) {
 
     const { data: upcomingContent } = await supabaseAdmin
       .from("content_item")
-      .select("user_id, project_id, title, scheduled_date")
-      .gte("scheduled_date", today)
-      .lte("scheduled_date", twoDaysIso)
-      .neq("status", "published")
+      .select("user_id, project_id, title:titre, scheduled_date:date_planifiee")
+      .gte("date_planifiee", today)
+      .lte("date_planifiee", twoDaysIso)
+      .neq("statut", "published")
       .limit(50);
 
     if (upcomingContent?.length) {

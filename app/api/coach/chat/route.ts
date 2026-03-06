@@ -110,11 +110,6 @@ function sanitizeSuggestions(raw: unknown, opts: { isTeaser: boolean }): CoachSu
         next.priority = typeof p === "string" ? p.trim().slice(0, 48) || null : null;
       }
 
-      if ("timeframe" in payload) {
-        const tf = (payload as any).timeframe;
-        next.timeframe = typeof tf === "string" ? tf.trim().slice(0, 48) || null : null;
-      }
-
       out.push({
         id: s.id || makeId(),
         type: "update_tasks",
@@ -1041,14 +1036,14 @@ export async function POST(req: NextRequest) {
 
     const tasksQuery = supabase
       .from("project_tasks")
-      .select("id, title, status, due_date, timeframe, updated_at")
+      .select("id, title, status, due_date, updated_at")
       .eq("user_id", user.id)
       .is("deleted_at", null);
     if (projectId) tasksQuery.eq("project_id", projectId);
 
     const contentsQuery = supabase
       .from("content_item")
-      .select("id, type, title, status, scheduled_date, created_at")
+      .select("id, type, title:titre, status:statut, scheduled_date:date_planifiee, created_at")
       .eq("user_id", user.id);
     if (projectId) contentsQuery.eq("project_id", projectId);
 
