@@ -1676,7 +1676,7 @@
     "coachSubtitle": "رفيقك في الأعمال (استراتيجية • مبيعات • اكتساب)",
     "openCoach": "فتح كوتش Tipote",
     "close": "إغلاق",
-    "thinking": "الكوتش يفكر…",
+    "thinking": "Tipote يفكر…",
     "oops": "عذرًا",
     "missingLink": "رابط التنقل مفقود من الاقتراح.",
     "openTool": "جاري فتح الأداة.",
@@ -1698,7 +1698,6 @@
     "fallbackResponse": "حسنًا. أعطني تفصيلًا واحدًا ونتقدم.",
     "errorRetry": "عذرًا — واجهت مشكلة. حاول مرة أخرى بعد 10 ثوانٍ.",
     "writePlaceholder": "اكتب كما لصديق…",
-    "shortResponses": "إجابات قصيرة، فكرة واحدة في كل مرة. إذا أردت: \"go deeper\".",
     "rejectPrompt": "لماذا ترفض؟ (اختياري)"
   },
   "analysisCard": {

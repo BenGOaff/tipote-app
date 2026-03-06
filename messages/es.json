@@ -1676,7 +1676,7 @@
     "coachSubtitle": "Tu amigo de negocios (estrategia • ventas • adquisición)",
     "openCoach": "Abrir el coach Tipote",
     "close": "Cerrar",
-    "thinking": "el coach está pensando…",
+    "thinking": "Tipote está pensando…",
     "oops": "Ups",
     "missingLink": "Enlace de navegación faltante en la sugerencia.",
     "openTool": "Abriendo la herramienta.",
@@ -1698,7 +1698,6 @@
     "fallbackResponse": "Ok. Dame 1 detalle y avanzamos.",
     "errorRetry": "Ups — tuve un problema. Inténtalo en 10 segundos.",
     "writePlaceholder": "Escribe como a un amigo…",
-    "shortResponses": "Respuestas cortas, una idea a la vez. Si quieres: \"go deeper\".",
     "rejectPrompt": "¿Por qué rechazas? (opcional)"
   },
   "analysisCard": {

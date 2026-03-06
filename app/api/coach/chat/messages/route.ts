@@ -55,10 +55,17 @@ export async function GET(req: NextRequest) {
     const limitParsed = limitRaw ? Number(limitRaw) : 20;
     const limit = Number.isFinite(limitParsed) ? Math.max(1, Math.min(50, limitParsed)) : 20;
 
+    // Daily reset: only return today's messages so the chat starts clean each day.
+    // The coach's long-term memory (facts/tags) is loaded separately in /api/coach/chat.
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayIso = todayStart.toISOString();
+
     let query = supabase
       .from("coach_messages")
       .select("id, role, content, summary_tags, facts, created_at")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .gte("created_at", todayIso);
     if (projectId) query = query.eq("project_id", projectId);
     const { data, error } = await query
       .order("created_at", { ascending: false })

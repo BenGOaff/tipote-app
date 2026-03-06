@@ -922,9 +922,7 @@ function enforceLineLimit(text: string, maxLines: number) {
   const lines = normalized.split(/\r?\n/).map((l) => l.trimEnd());
   if (lines.length <= maxLines) return normalized;
 
-  const cut = lines.slice(0, maxLines);
-  cut[maxLines - 1] = "Si tu veux, dis : go deeper.";
-  return cut.join("\n").trim();
+  return lines.slice(0, maxLines).join("\n").trim();
 }
 
 function isGoDeeperMessage(userMessage: string) {
