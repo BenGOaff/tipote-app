@@ -228,11 +228,11 @@ export const OfferMetricsForm = ({
         </div>
       </Card>
 
-      {/* ── CATEGORY: Funnels ── */}
+      {/* ── CATEGORY: Pages ── */}
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-5 h-5 text-primary" />
-          <h3 className="font-bold text-base">Funnels (par offre)</h3>
+          <h3 className="font-bold text-base">Pages (par offre)</h3>
         </div>
 
         <div className="space-y-4">
@@ -436,7 +436,7 @@ export const OfferMetricsForm = ({
           <div className="mt-4 space-y-4 text-sm">
             <div className="space-y-2">
               <h4 className="font-bold flex items-center gap-1.5">
-                Statistiques Funnels (Systeme.io)
+                Statistiques Pages (Systeme.io)
                 <ExternalLink className="w-3 h-3 text-muted-foreground" />
               </h4>
               <ul className="space-y-1.5 text-muted-foreground ml-4">

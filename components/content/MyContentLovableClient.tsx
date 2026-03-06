@@ -172,7 +172,7 @@ const CONTENT_FOLDERS: ContentFolder[] = [
   },
   {
     id: "funnels",
-    label: "Mes Funnels",
+    label: "Mes Pages",
     icon: Route,
     color: "text-white",
     bgColor: "bg-indigo-500",
@@ -805,18 +805,18 @@ export default function MyContentLovableClient({
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold flex items-center gap-2">
                       <Route className="w-5 h-5 text-indigo-600" />
-                      Mes Funnels
+                      Mes Pages
                     </h2>
                     <Button size="sm" asChild>
                       <Link href="/pages">
-                        <Plus className="w-4 h-4 mr-1" /> Créer un funnel
+                        <Plus className="w-4 h-4 mr-1" /> Créer une page
                       </Link>
                     </Button>
                   </div>
 
                   {funnels.length === 0 ? (
                     <Card className="p-6">
-                      <p className="text-sm text-muted-foreground text-center py-4">Aucun funnel créé.</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">Aucune page créée.</p>
                     </Card>
                   ) : (
                     <div className="space-y-3">
@@ -981,7 +981,7 @@ export default function MyContentLovableClient({
                     <Dialog open onOpenChange={() => setDeleteFunnelConfirm(null)}>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Supprimer ce funnel ?</DialogTitle>
+                          <DialogTitle>Supprimer cette page ?</DialogTitle>
                           <DialogDescription>
                             &laquo; {deleteFunnelConfirm.title || "Page sans titre"} &raquo; sera archivé et ne sera plus accessible.
                           </DialogDescription>
@@ -998,7 +998,7 @@ export default function MyContentLovableClient({
                               try {
                                 await fetch(`/api/pages/${id}`, { method: "DELETE" });
                                 setFunnels((prev) => prev.filter((p) => p.id !== id));
-                                toast({ title: "Funnel supprimé" });
+                                toast({ title: "Page supprimée" });
                               } catch { /* ignore */ }
                             }}
                           >

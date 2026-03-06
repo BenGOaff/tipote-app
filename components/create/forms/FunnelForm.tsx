@@ -678,7 +678,7 @@ export function FunnelForm({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Route className="w-5 h-5" />
-          Créer un Funnel
+          Créer une Page
         </h2>
         <div className="flex items-center gap-3">
           {/* Progress indicator */}
