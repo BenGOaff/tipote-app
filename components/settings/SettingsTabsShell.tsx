@@ -88,6 +88,13 @@ function normalizeTab(v: string | null): TabKey {
   return "profile";
 }
 
+type PricingTier = {
+  label: string;
+  price: string;
+  period: string;
+  description: string;
+};
+
 type OfferItem = {
   name: string;
   price: string;
@@ -96,6 +103,7 @@ type OfferItem = {
   description: string;
   target: string;
   format: string;
+  pricing?: PricingTier[];
 };
 
 type ProfileRow = {
@@ -524,16 +532,40 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         o.promise !== initialOffers[i]?.promise ||
         o.description !== initialOffers[i]?.description ||
         o.target !== initialOffers[i]?.target ||
-        o.format !== initialOffers[i]?.format,
+        o.format !== initialOffers[i]?.format ||
+        JSON.stringify(o.pricing || []) !== JSON.stringify(initialOffers[i]?.pricing || []),
     );
   }, [offers, initialOffers]);
 
-  const addOffer = () => setOffers((prev) => [...prev, { name: "", price: "", link: "", promise: "", description: "", target: "", format: "" }]);
+  const addOffer = () => setOffers((prev) => [...prev, { name: "", price: "", link: "", promise: "", description: "", target: "", format: "", pricing: [] }]);
 
   const removeOffer = (idx: number) => setOffers((prev) => prev.filter((_, i) => i !== idx));
 
   const updateOffer = (idx: number, field: keyof OfferItem, value: string) => {
     setOffers((prev) => prev.map((o, i) => (i === idx ? { ...o, [field]: value } : o)));
+  };
+
+  const addPricingTier = (offerIdx: number) => {
+    setOffers((prev) => prev.map((o, i) => {
+      if (i !== offerIdx) return o;
+      const tiers = [...(o.pricing || []), { label: "", price: "", period: "", description: "" }];
+      return { ...o, pricing: tiers };
+    }));
+  };
+
+  const removePricingTier = (offerIdx: number, tierIdx: number) => {
+    setOffers((prev) => prev.map((o, i) => {
+      if (i !== offerIdx) return o;
+      return { ...o, pricing: (o.pricing || []).filter((_, ti) => ti !== tierIdx) };
+    }));
+  };
+
+  const updatePricingTier = (offerIdx: number, tierIdx: number, field: keyof PricingTier, value: string) => {
+    setOffers((prev) => prev.map((o, i) => {
+      if (i !== offerIdx) return o;
+      const tiers = (o.pricing || []).map((t, ti) => (ti === tierIdx ? { ...t, [field]: value } : t));
+      return { ...o, pricing: tiers };
+    }));
   };
 
   const saveOffers = () => {
@@ -1408,25 +1440,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     <Trash2 className="w-4 h-4 text-muted-foreground" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">{tSP("reglages.offerName")}</Label>
-                    <Input
-                      placeholder={tSP("reglages.offerNamePlaceholder")}
-                      value={offer.name}
-                      onChange={(e) => updateOffer(idx, "name", e.target.value)}
-                      disabled={profileLoading}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">{tSP("reglages.offerPrice")}</Label>
-                    <Input
-                      placeholder={tSP("reglages.offerPricePlaceholder")}
-                      value={offer.price}
-                      onChange={(e) => updateOffer(idx, "price", e.target.value)}
-                      disabled={profileLoading}
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">{tSP("reglages.offerName")}</Label>
+                  <Input
+                    placeholder={tSP("reglages.offerNamePlaceholder")}
+                    value={offer.name}
+                    onChange={(e) => updateOffer(idx, "name", e.target.value)}
+                    disabled={profileLoading}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{tSP("reglages.offerPromise")}</Label>
@@ -1475,6 +1496,83 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       disabled={profileLoading}
                     />
                   </div>
+                </div>
+
+                {/* Pricing tiers */}
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium">{tSP("reglages.pricingTitle")}</Label>
+                  </div>
+                  {(!offer.pricing || offer.pricing.length === 0) && (
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">{tSP("reglages.offerPrice")}</Label>
+                        <Input
+                          placeholder={tSP("reglages.offerPricePlaceholder")}
+                          value={offer.price}
+                          onChange={(e) => updateOffer(idx, "price", e.target.value)}
+                          disabled={profileLoading}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">{tSP("reglages.pricingHint")}</p>
+                    </div>
+                  )}
+                  {(offer.pricing || []).map((tier, tierIdx) => (
+                    <div key={tierIdx} className="rounded border bg-background p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">{tSP("reglages.tierN", { n: tierIdx + 1 })}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removePricingTier(idx, tierIdx)} disabled={profileLoading}>
+                          <Trash2 className="w-3 h-3 text-muted-foreground" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{tSP("reglages.tierLabel")}</Label>
+                          <Input
+                            placeholder={tSP("reglages.tierLabelPlaceholder")}
+                            value={tier.label}
+                            onChange={(e) => updatePricingTier(idx, tierIdx, "label", e.target.value)}
+                            disabled={profileLoading}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{tSP("reglages.tierPrice")}</Label>
+                          <Input
+                            placeholder={tSP("reglages.tierPricePlaceholder")}
+                            value={tier.price}
+                            onChange={(e) => updatePricingTier(idx, tierIdx, "price", e.target.value)}
+                            disabled={profileLoading}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{tSP("reglages.tierPeriod")}</Label>
+                          <Input
+                            placeholder={tSP("reglages.tierPeriodPlaceholder")}
+                            value={tier.period}
+                            onChange={(e) => updatePricingTier(idx, tierIdx, "period", e.target.value)}
+                            disabled={profileLoading}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">{tSP("reglages.tierDesc")}</Label>
+                        <Input
+                          placeholder={tSP("reglages.tierDescPlaceholder")}
+                          value={tier.description}
+                          onChange={(e) => updatePricingTier(idx, tierIdx, "description", e.target.value)}
+                          disabled={profileLoading}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <Button variant="ghost" size="sm" onClick={() => addPricingTier(idx)} disabled={profileLoading} className="gap-1 text-xs h-7">
+                    <Plus className="w-3 h-3" />
+                    {tSP("reglages.addTier")}
+                  </Button>
                 </div>
               </div>
             ))}

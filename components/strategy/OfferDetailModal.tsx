@@ -29,6 +29,13 @@ import {
 
 type OfferType = "lead_magnet" | "low_ticket" | "high_ticket";
 
+interface PricingTier {
+  label: string;
+  price: string;
+  period: string;
+  description: string;
+}
+
 interface Offer {
   title: string;
   price: string;
@@ -38,6 +45,7 @@ interface Offer {
   whatToCreate?: string[];
   howToCreate?: string;
   howToPromote?: string[];
+  pricing?: PricingTier[];
 }
 
 interface OfferDetailModalProps {
@@ -285,15 +293,19 @@ export const OfferDetailModal = ({
             </div>
             <div className="flex items-center gap-2">
               {isEditing ? (
-                <Input
-                  value={editedOffer.price}
-                  onChange={(e) =>
-                    setEditedOffer({ ...editedOffer, price: e.target.value })
-                  }
-                  className="w-32 text-right font-bold"
-                />
+                (!displayOffer.pricing || displayOffer.pricing.length === 0) ? (
+                  <Input
+                    value={editedOffer.price}
+                    onChange={(e) =>
+                      setEditedOffer({ ...editedOffer, price: e.target.value })
+                    }
+                    className="w-32 text-right font-bold"
+                  />
+                ) : null
               ) : (
-                <span className="text-2xl font-bold">{displayOffer.price}</span>
+                (!displayOffer.pricing || displayOffer.pricing.length === 0) ? (
+                  <span className="text-2xl font-bold">{displayOffer.price}</span>
+                ) : null
               )}
             </div>
           </div>
@@ -356,6 +368,32 @@ export const OfferDetailModal = ({
               </p>
             )}
           </div>
+
+          {/* Pricing tiers (if any) */}
+          {displayOffer.pricing && displayOffer.pricing.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <DollarSign className={`w-5 h-5 ${config.color}`} />
+                  <h3 className="font-semibold">{t('pricingTiers')}</h3>
+                </div>
+                <div className="grid gap-3">
+                  {displayOffer.pricing.map((tier, tIdx) => (
+                    <div key={tIdx} className={`rounded-lg border p-3 ${config.bgColor}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-sm">{tier.label || `Tier ${tIdx + 1}`}</span>
+                        <span className="font-bold">{tier.price}{tier.period ? ` ${tier.period}` : ""}</span>
+                      </div>
+                      {tier.description && (
+                        <p className="text-xs text-muted-foreground">{tier.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
 

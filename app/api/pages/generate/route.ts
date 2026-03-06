@@ -108,6 +108,12 @@ const InputSchema = z.object({
   offerPromise: z.string().optional(),
   offerTarget: z.string().optional(),
   offerPrice: z.string().optional(),
+  offerPricing: z.array(z.object({
+    label: z.string(),
+    price: z.string(),
+    period: z.string().optional(),
+    description: z.string().optional(),
+  })).optional(),
   offerDescription: z.string().optional(),
   // New fields from "from scratch" flow
   offerGuarantees: z.string().optional(),
@@ -344,6 +350,7 @@ export async function POST(req: NextRequest) {
           offerPromise: input.offerPromise || "",
           offerTarget: input.offerTarget || "",
           offerPrice: input.offerPrice || "",
+          offerPricing: input.offerPricing || null,
           offerDescription: input.offerDescription || "",
           offerGuarantees: input.offerGuarantees || "",
           offerUrgency: input.offerUrgency || "",
@@ -856,6 +863,13 @@ function buildPageSystemPrompt(params: {
   lines.push("- Respecte STRICTEMENT le schéma ci-dessous.");
   lines.push("");
 
+  lines.push("TARIFICATION MULTI-PALIERS (si applicable) :");
+  lines.push("- Si le brief de l'utilisateur contient plusieurs paliers de prix, ajoute un champ \"pricing_tiers\" dans le JSON.");
+  lines.push("- Format: \"pricing_tiers\": [{\"label\": \"Nom du palier\", \"price\": \"97€\", \"period\": \"/mois\", \"description\": \"Ce qui est inclus\", \"features\": [\"Feature 1\", \"Feature 2\"]}]");
+  lines.push("- Chaque palier doit avoir au minimum: label + price. Les champs period, description et features sont optionnels.");
+  lines.push("- Si l'offre a un seul prix, n'ajoute PAS de pricing_tiers — utilise price_amount comme d'habitude.");
+  lines.push("");
+
   lines.push(params.schemaPrompt);
 
   return lines.join("\n");
@@ -867,6 +881,7 @@ function buildPageUserPrompt(params: {
   offerPromise: string;
   offerTarget: string;
   offerPrice: string;
+  offerPricing?: Array<{ label: string; price: string; period?: string; description?: string }> | null;
   offerDescription: string;
   offerGuarantees: string;
   offerUrgency: string;
@@ -890,6 +905,12 @@ function buildPageUserPrompt(params: {
   if (params.offerPromise) lines.push(`Promesse principale : ${params.offerPromise}`);
   if (params.offerTarget) lines.push(`Public cible : ${params.offerTarget}`);
   if (params.offerPrice) lines.push(`Prix : ${params.offerPrice}`);
+  if (params.offerPricing && params.offerPricing.length > 0) {
+    lines.push("Paliers de prix (IMPORTANT — utilise le champ pricing_tiers dans le JSON de sortie) :");
+    params.offerPricing.forEach((t, i) => {
+      lines.push(`  ${i + 1}. ${t.label || "Palier"} : ${t.price}${t.period ? ` (${t.period})` : ""}${t.description ? ` — ${t.description}` : ""}`);
+    });
+  }
   if (params.offerDescription) lines.push(`Description : ${params.offerDescription}`);
   if (params.offerBenefits) lines.push(`Bénéfices concrets :\n${params.offerBenefits}`);
   if (params.offerGuarantees) lines.push(`Garanties : ${params.offerGuarantees}`);
@@ -913,6 +934,11 @@ function buildPageUserPrompt(params: {
       if (o.type) parts.push(`(${o.type})`);
       if (o.price) parts.push(`${o.price}€`);
       lines.push(`- ${parts.join(" ")}`);
+      if (Array.isArray(o.pricing) && o.pricing.length > 0) {
+        o.pricing.forEach((t: any) => {
+          lines.push(`  - ${t.label || "Palier"}: ${t.price}${t.period ? ` (${t.period})` : ""}`);
+        });
+      }
     });
   }
 

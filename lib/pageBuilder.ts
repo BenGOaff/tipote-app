@@ -1294,8 +1294,41 @@ function sectionPricing(d: Record<string, any>): string {
   const note = esc(safe(d.price_note || ""));
   const ctaText = esc(safe(d.cta_text || "Je rejoins maintenant"));
   const payUrl = safe(d.payment_url || d.cta_url || "#");
-  if (!amount) return "";
 
+  // Multi-tier pricing
+  const tiers: Array<{ label?: string; price?: string; period?: string; description?: string; features?: string[] }> =
+    Array.isArray(d.pricing_tiers) ? d.pricing_tiers.filter((t: any) => t?.price) : [];
+
+  if (tiers.length > 1) {
+    const cols = tiers.length <= 3 ? tiers.length : 3;
+    return `<section class="tp-section">
+  <div class="tp-container">
+    <div class="tp-section-header">
+      <div class="tp-accent-line"></div>
+      ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:24px;max-width:${cols * 320}px;margin:0 auto">
+      ${tiers.map((t, i) => {
+        const isMiddle = tiers.length === 3 && i === 1;
+        const highlight = isMiddle ? "border:2px solid var(--brand);transform:scale(1.03)" : "border:1px solid var(--gray-200)";
+        const featuresHtml = Array.isArray(t.features) && t.features.length > 0
+          ? `<ul style="list-style:none;padding:0;margin:16px 0 0;text-align:left">${t.features.map(f => `<li style="padding:4px 0;font-size:0.9rem;color:var(--gray-600)" data-editable="true">&#10003; ${esc(safe(f))}</li>`).join("")}</ul>`
+          : (t.description ? `<p style="font-size:0.9rem;color:var(--gray-600);margin-top:12px;line-height:1.6" data-editable="true">${esc(safe(t.description))}</p>` : "");
+        return `<div style="background:var(--white);border-radius:16px;padding:32px 24px;text-align:center;box-shadow:var(--shadow-md);${highlight}">
+        ${t.label ? `<div style="font-family:var(--heading-font);font-weight:700;font-size:1.1rem;margin-bottom:8px;color:var(--gray-800)" data-editable="true">${esc(safe(t.label))}</div>` : ""}
+        <div style="font-family:var(--heading-font);font-size:2.2rem;font-weight:900;color:var(--gray-900)" data-editable="true">${esc(safe(t.price))}</div>
+        ${t.period ? `<div style="font-size:0.85rem;color:var(--gray-500);margin-top:4px" data-editable="true">${esc(safe(t.period))}</div>` : ""}
+        ${featuresHtml}
+        <a href="${esc(payUrl)}" class="tp-final-btn" style="display:block;margin-top:20px;font-size:0.95rem">${ctaText}</a>
+      </div>`;
+      }).join("\n      ")}
+    </div>
+  </div>
+</section>`;
+  }
+
+  // Single price fallback
+  if (!amount) return "";
   return `<section class="tp-section">
   <div class="tp-container">
     <div class="tp-section-header">

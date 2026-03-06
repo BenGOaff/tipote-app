@@ -9,6 +9,13 @@
 export type OfferType = "lead_magnet" | "paid_training";
 export type OfferMode = "from_existing" | "from_scratch" | "improve";
 
+export type OfferPricingTier = {
+  label: string;
+  price: string;
+  period?: string;
+  description?: string;
+};
+
 export type OfferSourceContext = {
   id?: string;
   name?: string | null;
@@ -21,6 +28,7 @@ export type OfferSourceContext = {
   price_min?: number | null;
   price_max?: number | null;
   link?: string | null;
+  pricing?: OfferPricingTier[] | null;
 };
 
 export type OfferPromptParams = {
@@ -280,8 +288,18 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
           `- Format : ${pickString(sourceOffer?.format) || "à choisir/affiner"}`,
           `- Delivery : ${pickString(sourceOffer?.delivery) || "à préciser"}`,
           `- Prix min/max : ${sourceOffer?.price_min ?? "?"} / ${sourceOffer?.price_max ?? "?"}`,
+          ...(sourceOffer?.pricing && sourceOffer.pricing.length > 0
+            ? [
+                "- Paliers de prix :",
+                ...sourceOffer.pricing.map(
+                  (t, i) =>
+                    `  ${i + 1}. ${t.label || "Palier"} : ${t.price}${t.period ? ` (${t.period})` : ""}${t.description ? ` — ${t.description}` : ""}`,
+                ),
+              ]
+            : []),
           "",
           "RÈGLE : si le prix est absent, propose une fourchette cohérente avec le marché ET avec les autres offres.",
+          "RÈGLE : si l'offre a plusieurs paliers de prix (abonnement, formules, niveaux), intègre cette structure tarifaire dans la description de l'offre de manière naturelle.",
         ].join("\n")
       : [
           "SUJET DE L'OFFRE (OBLIGATOIRE) :",
