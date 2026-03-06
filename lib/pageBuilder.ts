@@ -36,7 +36,7 @@ function safe(v: unknown): string {
   return typeof v === "string" ? v : v == null ? "" : String(v);
 }
 
-function hexToRgba(hex: string, alpha: number): string {
+function hexToRgb(hex: string): [number, number, number] {
   const c = hex.replace("#", "");
   let r: number, g: number, b: number;
   if (c.length === 3) {
@@ -51,24 +51,77 @@ function hexToRgba(hex: string, alpha: number): string {
   if (isNaN(r)) r = 37;
   if (isNaN(g)) g = 99;
   if (isNaN(b)) b = 235;
+  return [r, g, b];
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const [r, g, b] = hexToRgb(hex);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/** Relative luminance (WCAG 2.1) — returns 0 (black) to 1 (white) */
+function luminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex);
+  const [rs, gs, bs] = [r / 255, g / 255, b / 255].map(
+    (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
+  );
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+/** Ensures brand/accent colors used on dark backgrounds are lightened for visibility.
+ *  On dark sections (hero, footer, CTA), brand colors used in SVGs/illustrations
+ *  should be light enough to be visible. */
+function ensureContrastOnDark(hex: string): string {
+  const lum = luminance(hex);
+  if (lum >= 0.15) return hex; // Already bright enough for dark backgrounds
+  // Lighten: blend with white
+  const [r, g, b] = hexToRgb(hex);
+  const factor = 0.5;
+  const nr = Math.min(255, Math.round(r + (255 - r) * factor));
+  const ng = Math.min(255, Math.round(g + (255 - g) * factor));
+  const nb = Math.min(255, Math.round(b + (255 - b) * factor));
+  return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
+}
+
+/** Ensures text on light backgrounds is dark enough to be readable */
+function ensureContrastOnLight(hex: string): string {
+  const lum = luminance(hex);
+  if (lum <= 0.6) return hex; // Already dark enough for light backgrounds
+  // Darken: blend with black
+  const [r, g, b] = hexToRgb(hex);
+  const factor = 0.5;
+  const nr = Math.round(r * factor);
+  const ng = Math.round(g * factor);
+  const nb = Math.round(b * factor);
+  return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
 }
 
 // ─────────────── CSS Generation ───────────────
 
 function buildCSS(primary: string, accent: string, font: string): string {
-  const p40 = hexToRgba(primary || "#2563eb", 0.4);
-  const p25 = hexToRgba(primary || "#2563eb", 0.25);
-  const p15 = hexToRgba(primary || "#2563eb", 0.15);
-  const p10 = hexToRgba(primary || "#2563eb", 0.1);
-  const p60 = hexToRgba(primary || "#2563eb", 0.6);
+  const safePrimary = primary || "#2563eb";
+  const safeAccent = accent || safePrimary;
+  // Generate contrast-aware variants for dark backgrounds (hero, footer, CTA sections)
+  const brandOnDark = ensureContrastOnDark(safePrimary);
+  // Text color for brand-colored buttons: white on dark brand, dark on light brand
+  const brandTextColor = luminance(safePrimary) > 0.4 ? "#1e293b" : "#ffffff";
+  // Ensure accent on light backgrounds is dark enough
+  const accentOnLight = ensureContrastOnLight(safeAccent);
+  const p40 = hexToRgba(safePrimary, 0.4);
+  const p25 = hexToRgba(safePrimary, 0.25);
+  const p15 = hexToRgba(safePrimary, 0.15);
+  const p10 = hexToRgba(safePrimary, 0.1);
+  const p60 = hexToRgba(safePrimary, 0.6);
   const headingFont = font ? `'${font}', ` : "";
 
   return `
 /* ═══ TIPOTE PAGE BUILDER — Premium Design System ═══ */
 :root {
-  --brand: ${primary || "#2563eb"};
-  --brand-accent: ${accent || primary || "#2563eb"};
+  --brand: ${safePrimary};
+  --brand-accent: ${safeAccent};
+  --brand-on-dark: ${brandOnDark};
+  --brand-text: ${brandTextColor};
+  --accent-on-light: ${accentOnLight};
   --brand-40: ${p40};
   --brand-25: ${p25};
   --brand-15: ${p15};
@@ -192,7 +245,7 @@ a { color: var(--brand); text-decoration: none; }
   color: var(--gray-200);
 }
 .tp-hero-bullets .tp-check {
-  color: var(--brand);
+  color: var(--brand-on-dark);
   font-size: 1.15rem;
   flex-shrink: 0;
   margin-top: 2px;
@@ -241,7 +294,7 @@ a { color: var(--brand); text-decoration: none; }
 .tp-cta-btn {
   padding: 16px 28px;
   background: var(--brand);
-  color: #fff;
+  color: var(--brand-text);
   border: none;
   border-radius: var(--radius);
   font-size: 1.1rem;
@@ -445,6 +498,10 @@ a { color: var(--brand); text-decoration: none; }
   border-radius: 2px;
   margin: 0 auto 20px;
 }
+.tp-section.dark .tp-accent-line { background: var(--brand-on-dark); }
+/* Ensure SVG illustrations on dark sections use visible brand color */
+.tp-section.dark .tp-illust svg *[stroke] { stroke: var(--brand-on-dark); }
+.tp-section.dark .tp-illust svg *[fill]:not([fill="none"]):not([fill="white"]):not([fill="#fff"]):not([fill="#ffffff"]) { fill: var(--brand-on-dark); }
 
 /* ─── BENEFITS GRID ─── */
 .tp-benefits-grid {

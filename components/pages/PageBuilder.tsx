@@ -1,6 +1,7 @@
 // components/pages/PageBuilder.tsx
 // Main page editor: preview iframe + chat bar + publish modal.
-// Features: multi-device preview, inline text editing,
+// Features: multi-device preview, always-on inline text editing,
+// inline color picker for text/illustrations, illustration delete/replace,
 // publish modal with slug/SIO tag/OG image/meta description,
 // download HTML, download text as PDF, edit after publication.
 
@@ -10,11 +11,11 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Download, ExternalLink, Copy, Check, X,
   Upload, Smartphone, Tablet, Monitor,
-  Globe, Loader2, ArrowLeft, ImagePlus,
-  MousePointerClick, FileText, FileDown,
+  Globe, Loader2, ArrowLeft,
+  FileText, FileDown,
   Share2, Tag, Image as ImageIcon, Link2,
   EyeOff, Users, QrCode, HelpCircle,
-  RefreshCw, Shuffle,
+  Shuffle,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 
@@ -69,26 +70,96 @@ const DEVICE_CONFIG: Record<Device, { width: number; label: string; icon: typeof
   desktop: { width: 1200, label: "Desktop", icon: Monitor },
 };
 
-// ---------- Inline editing script ----------
+// ---------- Always-on inline editing script ----------
+// Text is always editable, hover shows a minimal toolbar with color picker.
+// Illustrations/SVGs/animations get hover overlay: delete, replace image, or change color.
 
 const INLINE_EDIT_SCRIPT = `
 <script>
 (function(){
-  var editing = false;
-  var editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, li, a, button, .hero-title, .hero-subtitle, .cta-text, [data-editable]';
+  var editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, li, a, button, blockquote, figcaption, td, th, label, .hero-title, .hero-subtitle, .cta-text, [data-editable]';
+  var illustSelectors = '.tp-illust, .tp-visual, .tp-mockup, [data-tipote-visual], svg:not(.tp-toolbar-icon), .tp-float, [class*="illustration"], [class*="animation"]';
 
+  /* ── Toolbar element (shared, moves to focused element) ── */
+  var toolbar = document.createElement('div');
+  toolbar.className = 'tipote-toolbar';
+  toolbar.style.cssText = 'position:fixed;z-index:99999;display:none;align-items:center;gap:6px;padding:4px 8px;background:#1e293b;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.25);pointer-events:auto;transition:opacity 0.15s;';
+  toolbar.innerHTML = '<input type="color" class="tp-color-input" title="Couleur du texte" style="width:24px;height:24px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
+  document.body.appendChild(toolbar);
+
+  var colorInput = toolbar.querySelector('.tp-color-input');
+  var activeEl = null;
+
+  colorInput.addEventListener('input', function(e) {
+    if (activeEl) {
+      activeEl.style.color = e.target.value;
+      parent.postMessage({ type: 'tipote:text-edit', tag: activeEl.tagName.toLowerCase(), text: (activeEl.innerText || '').trim(), html: activeEl.innerHTML }, '*');
+    }
+  });
+  colorInput.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  /* ── Illustration overlay element (shared) ── */
+  var illustOverlay = document.createElement('div');
+  illustOverlay.className = 'tipote-illust-overlay';
+  illustOverlay.style.cssText = 'position:fixed;z-index:99998;display:none;align-items:center;justify-content:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);border-radius:10px;pointer-events:auto;';
+  illustOverlay.innerHTML = '<button class="tp-illust-btn tp-illust-delete" title="Supprimer" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,70,70,0.2);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:system-ui;">'+
+    '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="tp-toolbar-icon"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/></svg>'+
+    '</button>'+
+    '<button class="tp-illust-btn tp-illust-replace" title="Remplacer par une image" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:system-ui;">'+
+    '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="tp-toolbar-icon"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'+
+    '</button>'+
+    '<input type="color" class="tp-illust-color" title="Couleur" style="width:28px;height:28px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
+  document.body.appendChild(illustOverlay);
+
+  var activeIllust = null;
+  var illustColorInput = illustOverlay.querySelector('.tp-illust-color');
+  var illustDeleteBtn = illustOverlay.querySelector('.tp-illust-delete');
+  var illustReplaceBtn = illustOverlay.querySelector('.tp-illust-replace');
+
+  illustColorInput.addEventListener('input', function(e) {
+    if (!activeIllust) return;
+    var color = e.target.value;
+    activeIllust.style.setProperty('--brand', color);
+    activeIllust.querySelectorAll('svg *[stroke]').forEach(function(p) {
+      var s = p.getAttribute('stroke') || '';
+      if (s.indexOf('var(') >= 0 || s.indexOf('brand') >= 0 || (s.indexOf('#') >= 0 && s !== '#fff' && s !== '#ffffff' && s !== 'none')) {
+        p.setAttribute('stroke', color);
+      }
+    });
+    activeIllust.querySelectorAll('svg *[fill]').forEach(function(p) {
+      var f = p.getAttribute('fill') || '';
+      if (f.indexOf('var(') >= 0 || f.indexOf('brand') >= 0 || (f.indexOf('#') >= 0 && f !== '#fff' && f !== '#ffffff' && f !== 'none' && f !== 'white')) {
+        p.setAttribute('fill', color);
+      }
+    });
+    parent.postMessage({ type: 'tipote:text-edit', tag: 'illust-color', text: color }, '*');
+  });
+
+  illustDeleteBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (!activeIllust) return;
+    activeIllust.style.display = 'none';
+    illustOverlay.style.display = 'none';
+    activeIllust = null;
+    parent.postMessage({ type: 'tipote:text-edit', tag: 'illust-delete', text: '' }, '*');
+  });
+
+  illustReplaceBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (!activeIllust) return;
+    var id = activeIllust.getAttribute('data-tipote-img-id');
+    if (!id) {
+      id = 'tipote-img-' + Date.now();
+      activeIllust.setAttribute('data-tipote-img-id', id);
+    }
+    parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: false }, '*');
+    illustOverlay.style.display = 'none';
+  });
+
+  illustOverlay.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  /* ── Listen for messages from parent ── */
   window.addEventListener('message', function(e) {
-    if (e.data === 'tipote:enable-edit') {
-      editing = true;
-      document.body.classList.add('tipote-edit-mode');
-      enableEditMode();
-      enableImagePlaceholders();
-    }
-    if (e.data === 'tipote:disable-edit') {
-      editing = false;
-      document.body.classList.remove('tipote-edit-mode');
-      disableEditMode();
-    }
     if (e.data && e.data.type === 'tipote:image-uploaded') {
       var sel = e.data.selector;
       var url = e.data.url;
@@ -97,10 +168,8 @@ const INLINE_EDIT_SCRIPT = `
         if (el) {
           if (el.tagName === 'IMG') { el.src = url; }
           else {
-            el.style.backgroundImage = 'url(' + url + ')';
-            el.style.backgroundSize = 'cover';
-            el.style.backgroundPosition = 'center';
-            el.textContent = '';
+            /* Replace illustration/SVG with an image */
+            el.innerHTML = '<img src="' + url + '" style="width:100%;height:auto;border-radius:12px;object-fit:cover;" />';
             el.classList.add('tipote-has-image');
           }
         }
@@ -110,103 +179,119 @@ const INLINE_EDIT_SCRIPT = `
       var sel2 = e.data.selector;
       if (sel2) {
         var el2 = document.querySelector(sel2);
-        if (el2 && el2.tagName !== 'IMG') {
-          el2.style.backgroundImage = '';
-          el2.style.display = 'none';
-          el2.classList.remove('tipote-has-image');
-        } else if (el2 && el2.tagName === 'IMG') {
-          el2.style.display = 'none';
-        }
+        if (el2) { el2.style.display = 'none'; }
       }
     }
   });
 
-  function enableEditMode() {
+  /* ── Init: make all text editable ── */
+  function init() {
+    document.body.classList.add('tipote-edit-mode');
     var els = document.querySelectorAll(editableSelectors);
     els.forEach(function(el) {
-      if (el.closest('script') || el.closest('style') || el.closest('noscript')) return;
-      if (el.children.length > 3) return;
+      if (el.closest('script') || el.closest('style') || el.closest('noscript') || el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+      if (el.children.length > 3 && !el.matches('[data-editable]')) return;
+      var text = (el.textContent || '').trim();
+      if (!text || text.length < 2) return;
       el.setAttribute('contenteditable', 'true');
       el.style.outline = 'none';
       el.style.cursor = 'text';
       el.addEventListener('focus', onFocus);
       el.addEventListener('blur', onBlur);
-      el.addEventListener('input', onInput);
+    });
+
+    /* Setup illustration hover targets */
+    document.querySelectorAll(illustSelectors).forEach(function(el) {
+      if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+      el.addEventListener('mouseenter', onIllustEnter);
+      el.addEventListener('mouseleave', onIllustLeave);
     });
   }
 
-  function enableImagePlaceholders() {
-    /* Detect image placeholders: .image-placeholder, divs with gradient bg + short text, img tags */
-    var placeholders = document.querySelectorAll('.image-placeholder, [class*="image-placeholder"], [class*="photo"], [class*="visual"], img[src=""], img[src="#"]');
-    /* Also detect divs with gradient backgrounds that look like placeholders */
-    document.querySelectorAll('div, figure, aside, section, span, p, a').forEach(function(el) {
-      var bg = getComputedStyle(el).backgroundImage || '';
-      var text = (el.textContent || '').trim();
-      var isGradientPlaceholder = bg.indexOf('gradient') >= 0 && text.length < 80 && text.length > 0 && el.children.length < 3;
-      var isTextPlaceholder = /\\[.*(?:photo|image|visuel|avatar|profil|logo|capture|illustration).*\\]/i.test(text) && text.length < 100;
-      if (isGradientPlaceholder || isTextPlaceholder) {
-        placeholders = Array.from(new Set([...placeholders, el]));
-      }
-    });
-
-    var idx = 0;
-    (Array.isArray(placeholders) ? placeholders : Array.from(placeholders)).forEach(function(el) {
-      var id = 'tipote-img-' + (idx++);
-      el.setAttribute('data-tipote-img-id', id);
-      el.style.cursor = 'pointer';
-      el.style.position = 'relative';
-
-      /* Add overlay with upload icon */
-      var overlay = document.createElement('div');
-      overlay.className = 'tipote-img-overlay';
-      overlay.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#fff"><svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span style="font-size:13px;font-weight:600">Ajouter une image</span><span style="font-size:11px;opacity:0.8">ou cliquer pour supprimer</span></div>';
-      overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);opacity:0;transition:opacity 0.2s;border-radius:inherit;z-index:10;pointer-events:none';
-      if (el.style.position === 'static' || !el.style.position) el.style.position = 'relative';
-      el.appendChild(overlay);
-
-      el.addEventListener('mouseenter', function() { overlay.style.opacity = '1'; overlay.style.pointerEvents = 'auto'; });
-      el.addEventListener('mouseleave', function() { overlay.style.opacity = '0'; overlay.style.pointerEvents = 'none'; });
-
-      el.addEventListener('click', function(ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: el.classList.contains('tipote-has-image') || el.tagName === 'IMG' }, '*');
-      });
-    });
+  function positionToolbar(el) {
+    var rect = el.getBoundingClientRect();
+    toolbar.style.display = 'flex';
+    toolbar.style.left = Math.max(4, rect.left) + 'px';
+    toolbar.style.top = Math.max(4, rect.top - 38) + 'px';
+    colorInput.value = rgbToHex(getComputedStyle(el).color);
+    activeEl = el;
   }
 
-  function disableEditMode() {
-    var els = document.querySelectorAll('[contenteditable="true"]');
-    els.forEach(function(el) {
-      el.removeAttribute('contenteditable');
-      el.style.cursor = '';
-      el.removeEventListener('focus', onFocus);
-      el.removeEventListener('blur', onBlur);
-      el.removeEventListener('input', onInput);
-    });
-    /* Remove image overlays */
-    document.querySelectorAll('.tipote-img-overlay').forEach(function(o) { o.remove(); });
+  function positionIllustOverlay(el) {
+    var rect = el.getBoundingClientRect();
+    illustOverlay.style.display = 'flex';
+    illustOverlay.style.left = (rect.left + rect.width/2 - 80) + 'px';
+    illustOverlay.style.top = (rect.top + rect.height/2 - 18) + 'px';
+    var brand = getComputedStyle(el).getPropertyValue('--brand') || getComputedStyle(document.documentElement).getPropertyValue('--brand') || '#2563eb';
+    illustColorInput.value = brand.trim().startsWith('#') ? brand.trim() : '#2563eb';
+    activeIllust = el;
   }
 
   function onFocus(e) {
-    e.target.style.outline = '2px solid #2563eb';
     e.target.style.outlineOffset = '2px';
     e.target.style.borderRadius = '4px';
+    positionToolbar(e.target);
   }
 
   function onBlur(e) {
     e.target.style.outline = 'none';
     e.target.style.outlineOffset = '';
+    setTimeout(function() {
+      if (!document.activeElement || !document.activeElement.closest('.tipote-toolbar')) {
+        toolbar.style.display = 'none';
+        activeEl = null;
+      }
+    }, 200);
     var tag = e.target.tagName.toLowerCase();
     var text = e.target.innerText || e.target.textContent || '';
     parent.postMessage({ type: 'tipote:text-edit', tag: tag, text: text.trim(), html: e.target.innerHTML }, '*');
   }
 
-  function onInput(e) {}
+  var illustLeaveTimer = null;
+  function onIllustEnter(e) {
+    clearTimeout(illustLeaveTimer);
+    positionIllustOverlay(e.currentTarget);
+  }
+  function onIllustLeave(e) {
+    illustLeaveTimer = setTimeout(function() {
+      if (!illustOverlay.matches(':hover')) {
+        illustOverlay.style.display = 'none';
+        activeIllust = null;
+      }
+    }, 300);
+  }
+  illustOverlay.addEventListener('mouseenter', function() { clearTimeout(illustLeaveTimer); });
+  illustOverlay.addEventListener('mouseleave', function() {
+    illustOverlay.style.display = 'none';
+    activeIllust = null;
+  });
 
+  function rgbToHex(rgb) {
+    if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
+    var m = rgb.match(/\\d+/g);
+    if (!m || m.length < 3) return '#000000';
+    return '#' + [m[0],m[1],m[2]].map(function(x){var h=parseInt(x).toString(16);return h.length<2?'0'+h:h;}).join('');
+  }
+
+  /* Styles */
   var style = document.createElement('style');
-  style.textContent = '.tipote-edit-mode [contenteditable]:hover { outline: 1px dashed #93c5fd !important; outline-offset: 2px; border-radius: 4px; }';
+  style.textContent = [
+    '.tipote-edit-mode [contenteditable]:hover { outline: 1px dashed rgba(37,99,235,0.4) !important; outline-offset: 2px; border-radius: 4px; cursor: text; }',
+    '.tipote-edit-mode [contenteditable]:focus { outline: 2px solid #2563eb !important; outline-offset: 2px; border-radius: 4px; }',
+    '.tp-color-input::-webkit-color-swatch-wrapper { padding: 2px; }',
+    '.tp-color-input::-webkit-color-swatch { border: none; border-radius: 4px; }',
+    '.tp-illust-color::-webkit-color-swatch-wrapper { padding: 2px; }',
+    '.tp-illust-color::-webkit-color-swatch { border: none; border-radius: 4px; }',
+    '.tp-illust-btn:hover { background: rgba(255,255,255,0.2) !important; }',
+  ].join('\\n');
   document.head.appendChild(style);
+
+  /* Init on load */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 </script>`;
 
@@ -219,11 +304,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const pendingHtmlRef = useRef<string | null>(null); // Stores pending HTML during edit mode
+  const pendingHtmlRef = useRef<string | null>(null);
 
   // Publish modal state
   const [publishSlug, setPublishSlug] = useState(initialPage.slug);
@@ -242,15 +326,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   // QR code state
   const [showQrModal, setShowQrModal] = useState(false);
 
-  // Section regeneration
-  const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
-
   // Template swap
   const [showTemplateSwap, setShowTemplateSwap] = useState(false);
   const [swapping, setSwapping] = useState(false);
-
-  // Image management panel
-  const [showImagePanel, setShowImagePanel] = useState(false);
 
   // Thank-you page
   const [showThankYouModal, setShowThankYouModal] = useState(false);
@@ -260,7 +338,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [thankYouCtaUrl, setThankYouCtaUrl] = useState(page.content_data?.thank_you_cta_url || "");
   const [savingThankYou, setSavingThankYou] = useState(false);
 
-  // Inject inline edit script into HTML
+  // Inject always-on inline edit script into HTML
   const getPreviewHtml = useCallback((html: string) => {
     const idx = html.lastIndexOf("</body>");
     if (idx === -1) return html + INLINE_EDIT_SCRIPT;
@@ -273,40 +351,17 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     setHtmlPreview(html);
   }, [page.template_kind, page.template_id]);
 
-  // Toggle inline edit mode
-  const toggleEditMode = useCallback(() => {
-    const next = !editMode;
-    if (!next && pendingHtmlRef.current) {
-      // Exiting edit mode: apply pending HTML so next render uses the saved version
+  // Apply pending HTML edits when content is refreshed
+  const applyPendingHtml = useCallback(() => {
+    if (pendingHtmlRef.current) {
       setHtmlPreview(pendingHtmlRef.current);
       pendingHtmlRef.current = null;
     }
-    setEditMode(next);
-    const iframe = iframeRef.current;
-    if (iframe?.contentWindow) {
-      iframe.contentWindow.postMessage(next ? "tipote:enable-edit" : "tipote:disable-edit", "*");
-    }
-  }, [editMode]);
+  }, []);
 
-  // Handle image click from iframe — upload or remove
-  const handleIframeImageClick = useCallback((imgId: string, hasImage: boolean) => {
-    if (hasImage) {
-      // Ask: replace or remove?
-      const action = window.confirm("Remplacer l'image ? (Annuler pour la supprimer)");
-      if (action) {
-        // Upload new image
-        triggerImageUploadForIframe(imgId);
-      } else {
-        // Remove image
-        const iframe = iframeRef.current;
-        if (iframe?.contentWindow) {
-          iframe.contentWindow.postMessage({ type: "tipote:image-removed", selector: `[data-tipote-img-id="${imgId}"]` }, "*");
-          saveIframeHtml();
-        }
-      }
-    } else {
-      triggerImageUploadForIframe(imgId);
-    }
+  // Handle image click from iframe — always upload (delete is handled by illustration overlay)
+  const handleIframeImageClick = useCallback((imgId: string, _hasImage: boolean) => {
+    triggerImageUploadForIframe(imgId);
   }, []);
 
   const triggerImageUploadForIframe = useCallback((imgId: string) => {
@@ -387,13 +442,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
   // Chat update handler
   const handleChatUpdate = useCallback(async (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, _explanation: string) => {
+    applyPendingHtml();
     setPage((prev) => ({
       ...prev,
       content_data: nextContentData,
       brand_tokens: nextBrandTokens,
     }));
     await refreshPreview(nextContentData, nextBrandTokens);
-  }, [refreshPreview]);
+  }, [refreshPreview, applyPendingHtml]);
 
   // Settings update (debounced save)
   const handleSettingUpdate = useCallback(async (field: string, value: any) => {
@@ -421,38 +477,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const downloadLeadsCsv = useCallback(() => {
     window.open(`/api/pages/${page.id}/leads?format=csv`, "_blank");
   }, [page.id]);
-
-  // Regenerate a specific section via AI
-  const regenerateSection = useCallback(async (sectionKey: string) => {
-    setRegeneratingSection(sectionKey);
-    try {
-      const res = await fetch("/api/templates/iterate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          templateId: page.template_id,
-          kind: page.template_kind,
-          contentData: page.content_data,
-          brandTokens: page.brand_tokens,
-          instruction: `Régénère uniquement la section "${sectionKey}" avec un angle d'écriture différent, plus percutant et persuasif. Garde le même ton et la même structure mais change les mots, les accroches et les arguments. Ne modifie AUCUNE autre section.`,
-        }),
-      });
-      const data = await res.json();
-      if (data.nextContentData) {
-        const nextCd = data.nextContentData;
-        setPage((prev) => ({ ...prev, content_data: nextCd }));
-        await refreshPreview(nextCd, page.brand_tokens);
-        // Persist
-        fetch(`/api/pages/${page.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content_data: nextCd }),
-        }).catch(() => {});
-      }
-    } catch { /* ignore */ } finally {
-      setRegeneratingSection(null);
-    }
-  }, [page, refreshPreview]);
 
   // Swap template while keeping content
   const swapTemplate = useCallback(async (newTemplateId: string) => {
@@ -678,42 +702,6 @@ ${textContent.split("\n").map((line) => {
     }
   }, [htmlPreview]);
 
-  // Image upload (generic)
-  const handleImageUpload = useCallback(async (fieldKey: string) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      setUploadingImage(true);
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("contentId", `page-${page.id}`);
-
-        const res = await fetch("/api/upload/image", { method: "POST", body: formData });
-        const data = await res.json();
-
-        if (data.ok && data.url) {
-          const nextContentData = { ...page.content_data, [fieldKey]: data.url };
-          setPage((prev) => ({ ...prev, content_data: nextContentData }));
-          await refreshPreview(nextContentData, page.brand_tokens);
-
-          fetch(`/api/pages/${page.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content_data: nextContentData }),
-          }).catch(() => {});
-        }
-      } catch { /* ignore */ } finally {
-        setUploadingImage(false);
-      }
-    };
-    input.click();
-  }, [page, refreshPreview]);
-
   // OG image upload (for publish modal)
   const handleOgImageUpload = useCallback(async () => {
     const input = document.createElement("input");
@@ -761,11 +749,6 @@ ${textContent.split("\n").map((line) => {
     }
   }, [page.id, thankYouHeading, thankYouMessage, thankYouCtaText, thankYouCtaUrl]);
 
-  // Detect image fields in content_data for the image panel
-  const imageFields = Object.entries(page.content_data || {}).filter(([key]) =>
-    /image|photo|logo|img|avatar|picture|visual/i.test(key) && !/color|font|class|style/i.test(key)
-  );
-
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
   const publishPreviewUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${publishSlug}` : `/p/${publishSlug}`;
   const isPublished = page.status === "published";
@@ -783,7 +766,6 @@ ${textContent.split("\n").map((line) => {
             <h1 className="text-sm font-semibold truncate max-w-[200px]">{page.title}</h1>
             <p className="text-xs text-muted-foreground">
               {page.views_count} vues · {page.leads_count} leads
-              {saving && <span className="ml-2 text-primary">Sauvegarde...</span>}
             </p>
           </div>
         </div>
@@ -808,27 +790,13 @@ ${textContent.split("\n").map((line) => {
             })}
           </div>
 
-          {/* Inline edit toggle */}
-          <button
-            onClick={toggleEditMode}
-            className={`p-2 rounded-lg border transition-colors ${
-              editMode ? "bg-blue-50 border-blue-300 text-blue-600 dark:bg-blue-950 dark:border-blue-700" : "hover:bg-muted text-muted-foreground"
-            }`}
-            title={editMode ? "Desactiver l'edition directe" : "Modifier le texte directement"}
-          >
-            <MousePointerClick className="w-4 h-4" />
-          </button>
-
-          {/* Image management panel */}
-          <button
-            onClick={() => setShowImagePanel(!showImagePanel)}
-            className={`p-2 rounded-lg border transition-colors ${
-              showImagePanel ? "bg-orange-50 border-orange-300 text-orange-600 dark:bg-orange-950 dark:border-orange-700" : "hover:bg-muted text-muted-foreground"
-            }`}
-            title="Gérer les images"
-          >
-            {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
-          </button>
+          {/* Upload indicator */}
+          {uploadingImage && (
+            <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span className="hidden sm:inline">Upload...</span>
+            </div>
+          )}
 
           {/* Thank-you page (capture only) */}
           {(page.page_type === "capture" || page.template_kind === "capture") && (
@@ -936,21 +904,13 @@ ${textContent.split("\n").map((line) => {
         </div>
       )}
 
-      {/* Edit mode banner */}
-      {editMode && (
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 dark:bg-blue-950/20 border-b text-xs text-blue-700 dark:text-blue-400">
-          <MousePointerClick className="w-3.5 h-3.5" />
-          Clique sur n&apos;importe quel texte pour le modifier directement
+      {/* Saving indicator */}
+      {saving && (
+        <div className="flex items-center gap-2 px-4 py-1 border-b text-xs text-muted-foreground bg-muted/30">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          Sauvegarde...
         </div>
       )}
-
-      {/* Section regeneration bar */}
-      <SectionRegenBar
-        contentData={page.content_data}
-        kind={page.template_kind}
-        regeneratingSection={regeneratingSection}
-        onRegenerate={regenerateSection}
-      />
 
       {/* Main content + Chat side panel */}
       <div className="flex-1 flex min-h-0">
@@ -1293,143 +1253,6 @@ ${textContent.split("\n").map((line) => {
         </div>
       )}
 
-      {/* ==================== IMAGE MANAGEMENT PANEL ==================== */}
-      {showImagePanel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowImagePanel(false)}>
-          <div
-            className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-6 pb-4 border-b">
-              <div>
-                <h2 className="text-lg font-bold">Images de ta page</h2>
-                <p className="text-sm text-muted-foreground">Ajoute ou remplace les images de ta page.</p>
-              </div>
-              <button onClick={() => setShowImagePanel(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {/* Standard image slots */}
-              {[
-                { key: "logo_image_url", label: "Logo", desc: "Logo de ta marque (PNG/SVG transparent)" },
-                { key: "author_photo_url", label: "Photo auteur", desc: "Ta photo portrait (min 300x300px)" },
-                { key: "hero_img_url", label: "Image hero", desc: "Image principale en haut de page" },
-                { key: "about_img_url", label: "Image à propos", desc: "Photo pour la section qui suis-je" },
-                { key: "og_image_url", label: "Image de partage (OG)", desc: "Image pour les réseaux sociaux (1200x630px)" },
-              ].map(({ key, label, desc }) => {
-                const currentUrl = page.content_data?.[key] || "";
-                return (
-                  <div key={key} className="flex items-start gap-4 p-3 rounded-xl border bg-card">
-                    <div className="w-20 h-20 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
-                      {currentUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={currentUrl} alt={label} className="w-full h-full object-cover" />
-                      ) : (
-                        <ImageIcon className="w-6 h-6 text-muted-foreground/40" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold">{label}</h4>
-                      <p className="text-[10px] text-muted-foreground mb-2">{desc}</p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => { handleImageUpload(key); }}
-                          disabled={uploadingImage}
-                          className="px-3 py-1 rounded-md text-xs font-medium border hover:bg-muted flex items-center gap-1"
-                        >
-                          <Upload className="w-3 h-3" />
-                          {currentUrl ? "Remplacer" : "Ajouter"}
-                        </button>
-                        {currentUrl && (
-                          <button
-                            onClick={async () => {
-                              const nextCd = { ...page.content_data, [key]: "" };
-                              setPage((prev) => ({ ...prev, content_data: nextCd }));
-                              await refreshPreview(nextCd, page.brand_tokens);
-                              fetch(`/api/pages/${page.id}`, {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ content_data: nextCd }),
-                              }).catch(() => {});
-                            }}
-                            className="px-3 py-1 rounded-md text-xs font-medium border text-destructive hover:bg-destructive/10 flex items-center gap-1"
-                          >
-                            <X className="w-3 h-3" />
-                            Supprimer
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Additional image fields from content_data */}
-              {imageFields
-                .filter(([key]) => !["logo_image_url", "author_photo_url", "hero_img_url", "about_img_url", "og_image_url"].includes(key))
-                .map(([key, val]) => (
-                  <div key={key} className="flex items-start gap-4 p-3 rounded-xl border bg-card">
-                    <div className="w-20 h-20 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
-                      {val ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={String(val)} alt={key} className="w-full h-full object-cover" />
-                      ) : (
-                        <ImageIcon className="w-6 h-6 text-muted-foreground/40" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold">{key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</h4>
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={() => handleImageUpload(key)}
-                          disabled={uploadingImage}
-                          className="px-3 py-1 rounded-md text-xs font-medium border hover:bg-muted flex items-center gap-1"
-                        >
-                          <Upload className="w-3 h-3" />
-                          {val ? "Remplacer" : "Ajouter"}
-                        </button>
-                        {val && (
-                          <button
-                            onClick={async () => {
-                              const nextCd = { ...page.content_data, [key]: "" };
-                              setPage((prev) => ({ ...prev, content_data: nextCd }));
-                              await refreshPreview(nextCd, page.brand_tokens);
-                              fetch(`/api/pages/${page.id}`, {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ content_data: nextCd }),
-                              }).catch(() => {});
-                            }}
-                            className="px-3 py-1 rounded-md text-xs font-medium border text-destructive hover:bg-destructive/10 flex items-center gap-1"
-                          >
-                            <X className="w-3 h-3" />
-                            Supprimer
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-              <div className="rounded-xl border border-dashed p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Tu peux aussi ajouter des images directement sur la page en activant le mode édition
-                </p>
-                <button
-                  onClick={() => { setShowImagePanel(false); if (!editMode) toggleEditMode(); }}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <MousePointerClick className="w-3 h-3 inline mr-1" />
-                  Activer le mode édition
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ==================== THANK-YOU PAGE MODAL ==================== */}
       {showThankYouModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowThankYouModal(false)}>
@@ -1622,72 +1445,6 @@ function TemplateSwapList({ currentId, kind, onSelect, swapping }: {
           {t.id === currentId && (
             <span className="text-[9px] text-primary font-medium mt-1 block">Actuel</span>
           )}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ---------- Section regeneration bar ----------
-
-const SECTION_LABELS: Record<string, string> = {
-  hero_title: "Titre principal",
-  hero_subtitle: "Sous-titre",
-  hero_description: "Description hero",
-  bullets: "Points clés",
-  features: "Fonctionnalités",
-  benefits: "Bénéfices",
-  testimonials: "Témoignages",
-  faq_items: "FAQ",
-  cta_text: "Bouton CTA",
-  about_story: "À propos",
-  guarantee_text: "Garantie",
-  bonuses: "Bonus",
-  steps: "Étapes",
-  pricing_tiers: "Tarifs",
-  pain_points_checklist: "Points de douleur",
-  offer_hook: "Accroche offre",
-  hero_bullets: "Puces hero",
-};
-
-function SectionRegenBar({ contentData, kind, regeneratingSection, onRegenerate }: {
-  contentData: Record<string, any>;
-  kind: string;
-  regeneratingSection: string | null;
-  onRegenerate: (key: string) => void;
-}) {
-  // Detect which sections exist in the current content
-  const sections = Object.keys(contentData || {}).filter((key) => {
-    const val = contentData[key];
-    if (!val) return false;
-    // Only show sections that have meaningful content
-    if (typeof val === "string" && val.length < 5) return false;
-    // Skip non-content keys
-    if (key.includes("url") || key.includes("image") || key.includes("color") || key.includes("font")) return false;
-    return SECTION_LABELS[key] !== undefined;
-  });
-
-  if (sections.length === 0) return null;
-
-  return (
-    <div className="flex items-center gap-1.5 px-4 py-1.5 border-b bg-muted/20 overflow-x-auto">
-      <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap mr-1">
-        <RefreshCw className="w-3 h-3 inline mr-0.5" />
-        Régénérer :
-      </span>
-      {sections.map((key) => (
-        <button
-          key={key}
-          onClick={() => onRegenerate(key)}
-          disabled={!!regeneratingSection}
-          className={`px-2.5 py-1 rounded-md text-[10px] font-medium border transition-colors whitespace-nowrap ${
-            regeneratingSection === key
-              ? "bg-primary/10 border-primary text-primary"
-              : "hover:bg-muted border-transparent hover:border-border"
-          } ${regeneratingSection && regeneratingSection !== key ? "opacity-40" : ""}`}
-        >
-          {regeneratingSection === key && <Loader2 className="w-3 h-3 inline mr-1 animate-spin" />}
-          {SECTION_LABELS[key] || key}
         </button>
       ))}
     </div>
