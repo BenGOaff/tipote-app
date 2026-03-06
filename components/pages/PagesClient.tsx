@@ -64,6 +64,9 @@ export default function PagesClient() {
   const [offerUrgency, setOfferUrgency] = useState("");
   const [offerBenefits, setOfferBenefits] = useState("");
   const [paymentUrl, setPaymentUrl] = useState("");
+  const [hasLogo, setHasLogo] = useState<"yes" | "no" | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>("");
 
   // Common fields for both existing + scratch flows
   const [offerBonuses, setOfferBonuses] = useState("");
@@ -131,6 +134,9 @@ export default function PagesClient() {
     setUrgencyType("none");
     setUrgencyDetail("");
     setSelectedOfferId(null);
+    setHasLogo(null);
+    setLogoFile(null);
+    setLogoPreviewUrl("");
   }, []);
 
   // Go to step 2
@@ -167,6 +173,14 @@ export default function PagesClient() {
       payload.offerGuarantees = offerGuarantees;
       payload.offerUrgency = offerUrgency;
       payload.offerBenefits = offerBenefits;
+      // Logo handling for from-scratch: if user has no logo, don't use branding logo
+      if (hasLogo === "no") {
+        payload.skipBrandLogo = true;
+        payload.logoText = offerName; // Use offer name as text logo
+      }
+      if (hasLogo === "yes" && logoPreviewUrl) {
+        payload.customLogoUrl = logoPreviewUrl;
+      }
     }
 
     // Common fields (both existing + scratch)
@@ -464,6 +478,65 @@ export default function PagesClient() {
                             placeholder="Ex: Formation 'Booste tes ventes'"
                             className="w-full px-3 py-2.5 border rounded-lg text-sm"
                           />
+                        </div>
+
+                        {/* Logo question */}
+                        <div>
+                          <label className="text-sm font-medium block mb-1.5">As-tu un logo pour cette offre ?</label>
+                          <div className="grid grid-cols-2 gap-2 mb-2">
+                            <button
+                              type="button"
+                              onClick={() => setHasLogo("yes")}
+                              className={`px-3 py-2 rounded-lg text-xs border transition-all ${
+                                hasLogo === "yes" ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              Oui, j&apos;ai un logo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setHasLogo("no"); setLogoFile(null); setLogoPreviewUrl(""); }}
+                              className={`px-3 py-2 rounded-lg text-xs border transition-all ${
+                                hasLogo === "no" ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              Non, pas de logo
+                            </button>
+                          </div>
+                          {hasLogo === "yes" && (
+                            <div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setLogoFile(file);
+                                  // Upload immediately
+                                  const formData = new FormData();
+                                  formData.append("file", file);
+                                  formData.append("contentId", `scratch-logo-${Date.now()}`);
+                                  try {
+                                    const res = await fetch("/api/upload/image", { method: "POST", body: formData });
+                                    const data = await res.json();
+                                    if (data.ok && data.url) setLogoPreviewUrl(data.url);
+                                  } catch { /* ignore */ }
+                                }}
+                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                              />
+                              {logoPreviewUrl && (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <img src={logoPreviewUrl} alt="Logo" className="h-8 w-auto rounded" />
+                                  <span className="text-xs text-green-600 flex items-center gap-1"><Check className="w-3 h-3" /> Logo uploadé</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {hasLogo === "no" && (
+                            <p className="text-[10px] text-muted-foreground">
+                              Le nom de l&apos;offre sera utilisé à la place du logo.
+                            </p>
+                          )}
                         </div>
 
                         <div>

@@ -15,7 +15,6 @@ import {
   FileText, FileDown,
   Share2, Tag, Image as ImageIcon, Link2,
   EyeOff, Users, QrCode, HelpCircle,
-  Shuffle,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 
@@ -147,13 +146,18 @@ const INLINE_EDIT_SCRIPT = `
   illustReplaceBtn.addEventListener('click', function(e) {
     e.stopPropagation();
     if (!activeIllust) return;
-    var id = activeIllust.getAttribute('data-tipote-img-id');
+    /* Find or set ID on outermost container */
+    var target = activeIllust;
+    var p = target.closest('.tp-visual, .tp-illust, [data-tipote-visual]');
+    if (p) target = p;
+    var id = target.getAttribute('data-tipote-img-id');
     if (!id) {
       id = 'tipote-img-' + Date.now();
-      activeIllust.setAttribute('data-tipote-img-id', id);
+      target.setAttribute('data-tipote-img-id', id);
     }
     parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: false }, '*');
     illustOverlay.style.display = 'none';
+    activeIllust = null;
   });
 
   illustOverlay.addEventListener('click', function(e) { e.stopPropagation(); });
@@ -168,9 +172,24 @@ const INLINE_EDIT_SCRIPT = `
         if (el) {
           if (el.tagName === 'IMG') { el.src = url; }
           else {
-            /* Replace illustration/SVG with an image */
-            el.innerHTML = '<img src="' + url + '" style="width:100%;height:auto;border-radius:12px;object-fit:cover;" />';
-            el.classList.add('tipote-has-image');
+            /* Fully replace the SVG/illustration container with an image */
+            /* Walk up to find the outermost illustration container */
+            var container = el;
+            while (container.parentElement && (
+              container.parentElement.classList.contains('tp-illust') ||
+              container.parentElement.classList.contains('tp-visual') ||
+              container.parentElement.classList.contains('tp-mockup') ||
+              container.parentElement.tagName === 'svg' ||
+              container.parentElement.hasAttribute('data-tipote-visual')
+            )) {
+              container = container.parentElement;
+            }
+            /* Replace with clean image element */
+            var img = document.createElement('img');
+            img.src = url;
+            img.style.cssText = 'width:100%;max-width:520px;height:auto;border-radius:16px;object-fit:cover;display:block;margin:0 auto;box-shadow:0 12px 40px rgba(0,0,0,0.12);';
+            img.setAttribute('data-tipote-img-id', el.getAttribute('data-tipote-img-id') || '');
+            container.replaceWith(img);
           }
         }
       }
@@ -326,9 +345,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   // QR code state
   const [showQrModal, setShowQrModal] = useState(false);
 
-  // Template swap
-  const [showTemplateSwap, setShowTemplateSwap] = useState(false);
-  const [swapping, setSwapping] = useState(false);
 
   // Thank-you page
   const [showThankYouModal, setShowThankYouModal] = useState(false);
@@ -478,37 +494,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     window.open(`/api/pages/${page.id}/leads?format=csv`, "_blank");
   }, [page.id]);
 
-  // Swap template while keeping content
-  const swapTemplate = useCallback(async (newTemplateId: string) => {
-    setSwapping(true);
-    try {
-      const res = await fetch("/api/templates/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind: page.template_kind,
-          templateId: newTemplateId,
-          mode: "preview",
-          contentData: page.content_data,
-          brandTokens: page.brand_tokens,
-        }),
-      });
-      const html = await res.text();
-      if (html && !html.includes('"error"')) {
-        setPage((prev) => ({ ...prev, template_id: newTemplateId, html_snapshot: html }));
-        setHtmlPreview(html);
-        // Persist
-        await fetch(`/api/pages/${page.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ template_id: newTemplateId, html_snapshot: html }),
-        });
-        setShowTemplateSwap(false);
-      }
-    } catch { /* ignore */ } finally {
-      setSwapping(false);
-    }
-  }, [page]);
 
   // Open publish modal
   const openPublishModal = useCallback(() => {
@@ -821,15 +806,6 @@ ${textContent.split("\n").map((line) => {
                 {page.leads_count > 99 ? "99+" : page.leads_count}
               </span>
             )}
-          </button>
-
-          {/* Template swap */}
-          <button
-            onClick={() => setShowTemplateSwap(true)}
-            className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
-            title="Changer de template"
-          >
-            <Shuffle className="w-4 h-4" />
           </button>
 
           {/* Full-screen preview */}
@@ -1350,103 +1326,6 @@ ${textContent.split("\n").map((line) => {
         </div>
       )}
 
-      {/* ==================== TEMPLATE SWAP MODAL ==================== */}
-      {showTemplateSwap && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowTemplateSwap(false)}>
-          <div
-            className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-6 pb-4 border-b">
-              <div>
-                <h2 className="text-lg font-bold">Changer de template</h2>
-                <p className="text-sm text-muted-foreground">Le contenu sera conservé, seul le design change.</p>
-              </div>
-              <button onClick={() => setShowTemplateSwap(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              <TemplateSwapList
-                currentId={page.template_id}
-                kind={page.template_kind}
-                onSelect={swapTemplate}
-                swapping={swapping}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- Template swap list ----------
-
-function TemplateSwapList({ currentId, kind, onSelect, swapping }: {
-  currentId: string;
-  kind: string;
-  onSelect: (id: string) => void;
-  swapping: boolean;
-}) {
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/templates/list")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok && Array.isArray(data.templates)) {
-          // Filter by same kind (capture or sales)
-          const matching = data.templates.filter((t: any) =>
-            (kind === "capture" && t.type === "capture") ||
-            (kind === "vente" && t.type === "sales") ||
-            (kind === "sales" && t.type === "sales")
-          );
-          setTemplates(matching);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [kind]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (templates.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-8">Aucun template alternatif disponible.</p>;
-  }
-
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {templates.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => t.id !== currentId && onSelect(t.id)}
-          disabled={swapping || t.id === currentId}
-          className={`p-3 rounded-xl border-2 text-left transition-all ${
-            t.id === currentId
-              ? "border-primary bg-primary/5 opacity-70"
-              : "border-border hover:border-primary/50 hover:bg-muted/30"
-          } ${swapping ? "opacity-50" : ""}`}
-        >
-          {t.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={t.imageUrl} alt={t.name} className="w-full h-24 object-cover rounded-lg mb-2" />
-          )}
-          <h4 className="text-xs font-semibold truncate">{t.name}</h4>
-          <p className="text-[10px] text-muted-foreground truncate">{t.description}</p>
-          {t.id === currentId && (
-            <span className="text-[9px] text-primary font-medium mt-1 block">Actuel</span>
-          )}
-        </button>
-      ))}
     </div>
   );
 }
