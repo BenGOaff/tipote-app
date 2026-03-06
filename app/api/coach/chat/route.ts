@@ -22,9 +22,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
 
+const ThreadSchema = z.enum(["general", "strategy", "sales", "content", "mindset"]).optional();
+
 const BodySchema = z
   .object({
     message: z.string().trim().min(1).max(4000),
+    thread: ThreadSchema,
     history: z
       .array(
         z.object({
@@ -170,9 +173,13 @@ function normalizePlan(plan: string | null | undefined): StoredPlan {
   return "free";
 }
 
-function safeLocale(v: unknown): "fr" | "en" {
+function safeLocale(v: unknown): "fr" | "en" | "es" | "ar" | "it" {
   const s = String(v ?? "").toLowerCase();
-  return s.startsWith("en") ? "en" : "fr";
+  if (s.startsWith("en")) return "en";
+  if (s.startsWith("es")) return "es";
+  if (s.startsWith("ar")) return "ar";
+  if (s.startsWith("it")) return "it";
+  return "fr";
 }
 
 async function callClaude(args: {
@@ -1003,6 +1010,7 @@ export async function POST(req: NextRequest) {
 
     const history = parsed.data.history ?? [];
     const userMessage = parsed.data.message;
+    const thread = parsed.data.thread ?? "general";
     const goDeeper = !isTeaser && isGoDeeperMessage(userMessage);
 
     let memoryQuery = supabase
@@ -1168,6 +1176,7 @@ TONE & STYLE:
       "",
       changedBlock ? changedBlock : "What changed since last time: (unknown / first session)",
       "",
+      thread !== "general" ? `ACTIVE THREAD: ${thread.toUpperCase()} — Focus your response on this topic area.` : "",
       topicHints.length ? `Topic hints:\n- ${topicHints.join("\n- ")}` : "Topic hints: (none)",
       "",
       knowledgeBlock ? knowledgeBlock : "TIPOTE-KNOWLEDGE: (none)",
