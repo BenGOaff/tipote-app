@@ -107,6 +107,9 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
     "- Interdit: markdown, titres avec #, emojis excessifs, disclaimers, meta-explications.",
     "- Structure: sauts de lignes + puces '- ' uniquement si nécessaire.",
     "- Ton: clair, pro, actionnable, précis.",
+    "- CRITIQUE: Tu DOIS terminer TOUTES tes phrases et sections. Ne coupe JAMAIS au milieu d'une phrase.",
+    "- Tu DOIS compléter chaque section de la structure attendue jusqu'au bout, y compris la dernière.",
+    "- Si tu te rapproches de la limite de longueur, condense les dernières sections plutôt que de les tronquer.",
   ].join("\n");
 
   const globalContext = [
@@ -384,6 +387,8 @@ function buildOfferImprovementPrompt(params: OfferPromptParams): string {
     "- Interdit: markdown, titres avec #, emojis excessifs.",
     "- Structure: sauts de lignes + puces '- ' uniquement si nécessaire.",
     "- Ton: clair, pro, actionnable, précis.",
+    "- CRITIQUE: Tu DOIS terminer TOUTES tes phrases et sections. Ne coupe JAMAIS au milieu d'une phrase.",
+    "- Complète TOUTES les sections de la structure, y compris les dernières. Condense plutôt que de tronquer.",
     "",
     "RÈGLE D'ISOLATION (CRITIQUE) :",
     "- Tu analyses UNIQUEMENT l'offre fournie ci-dessous. UNE SEULE offre.",
