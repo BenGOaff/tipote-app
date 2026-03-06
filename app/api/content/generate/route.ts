@@ -1598,13 +1598,51 @@ export async function POST(req: Request) {
       console.error("Error loading personas (catch):", e);
     }
 
-    const systemPrompt =
+    // Build enriched system prompt — especially for offers
+    const storytelling = (profile as any)?.storytelling || null;
+    const niche = (profile as any)?.niche || "";
+    const brandTone = (profile as any)?.brand_tone_of_voice || (profile as any)?.preferred_tone || "";
+    const positioning = (profile as any)?.positioning || "";
+    const mission = (profile as any)?.mission || "";
+
+    let systemPrompt =
       "Tu es un expert en copywriting, marketing et stratégie de contenu. " +
       "Tu dois produire des contenus très actionnables, concrets, et de haute qualité. " +
-      "Retourne uniquement le contenu final, sans explication, sans markdown." +
-      (competitorSummary
-        ? `\n\nCONTEXTE CONCURRENTIEL (à utiliser pour différencier le contenu) :\n${competitorSummary}`
-        : "");
+      "Retourne uniquement le contenu final, sans explication, sans markdown.";
+
+    if (type === "offer") {
+      systemPrompt += "\n\nIMPORTANT: Tu DOIS terminer TOUTES tes phrases. Ne coupe JAMAIS un texte au milieu d'une phrase. Chaque section doit être complète.";
+      systemPrompt += "\n\n5 CRITÈRES DE CONTENU DE VALEUR (OBLIGATOIRES) :";
+      systemPrompt += "\n✓ UTILE → Le lecteur peut en tirer un bénéfice concret.";
+      systemPrompt += "\n✓ SPÉCIFIQUE → Tu donnes une stratégie, un outil, une méthode précise.";
+      systemPrompt += "\n✓ CIBLÉ → Tu t'adresses à une seule audience, avec SES mots.";
+      systemPrompt += "\n✓ APPLICABLE → Le lecteur repart avec une action à mettre en place.";
+      systemPrompt += "\n✓ UNIQUE → Tu es la seule personne à pouvoir l'écrire comme ça.";
+    }
+
+    if (competitorSummary) {
+      systemPrompt += `\n\nCONTEXTE CONCURRENTIEL (à utiliser pour différencier le contenu) :\n${competitorSummary}`;
+    }
+
+    if (storytelling && type === "offer") {
+      systemPrompt += `\n\nSTORYTELLING DU FONDATEUR (à intégrer naturellement dans la bio/section 'à propos') :\n${typeof storytelling === "string" ? storytelling : JSON.stringify(storytelling)}`;
+    }
+
+    if (positioning && type === "offer") {
+      systemPrompt += `\n\nPOSITIONNEMENT :\n${positioning}`;
+    }
+
+    if (mission && type === "offer") {
+      systemPrompt += `\n\nMISSION :\n${mission}`;
+    }
+
+    if (niche && type === "offer") {
+      systemPrompt += `\n\nNICHE : ${niche}`;
+    }
+
+    if (brandTone && type === "offer") {
+      systemPrompt += `\n\nTON DE VOIX : ${brandTone}`;
+    }
 
     const batchCount = normalizeBatchCount(body.batchCount);
     const promoKind = normalizePromoKind(body.promoKind);
@@ -2308,7 +2346,7 @@ export async function POST(req: Request) {
                   apiKey,
                   system: systemPrompt,
                   user: baseUserPrompt,
-                  maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : (type === "funnel" && safeString((body as any).templateId).trim() ? 8000 : 4000),
+                  maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : (type === "funnel" && safeString((body as any).templateId).trim() ? 8000 : (type === "offer" ? 12000 : 4000)),
                   temperature: 0.7,
                 });
 
