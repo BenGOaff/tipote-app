@@ -95,38 +95,46 @@ export async function GET(_req: NextRequest) {
     const projectId = await getActiveProjectId(supabase, user.id);
 
     // Fetch profile + recent data in parallel
+    // Include rows with matching project_id OR null project_id (pre-project data)
+    const pf = (q: any) =>
+      projectId ? q.or(`project_id.eq.${projectId},project_id.is.null`) : q;
+
     const profileQuery = supabase
       .from("profiles")
       .select("first_name, plan, locale")
       .eq("id", user.id)
       .maybeSingle();
 
-    let tasksQuery = supabase
-      .from("project_tasks")
-      .select("title, status, due_date, updated_at")
-      .eq("user_id", user.id)
-      .is("deleted_at", null);
-    if (projectId) tasksQuery = tasksQuery.eq("project_id", projectId);
+    const tasksQuery = pf(
+      supabase
+        .from("project_tasks")
+        .select("title, status, due_date, updated_at")
+        .eq("user_id", user.id)
+        .is("deleted_at", null),
+    );
 
-    let contentsQuery = supabase
-      .from("content_item")
-      .select("title:titre, status:statut, type, scheduled_date:date_planifiee, created_at")
-      .eq("user_id", user.id);
-    if (projectId) contentsQuery = contentsQuery.eq("project_id", projectId);
+    const contentsQuery = pf(
+      supabase
+        .from("content_item")
+        .select("title:titre, status:statut, type, scheduled_date:date_planifiee, created_at")
+        .eq("user_id", user.id),
+    );
 
-    let bpQuery = supabase
-      .from("business_profiles")
-      .select("business_name, niche, target_audience")
-      .eq("user_id", user.id);
-    if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+    const bpQuery = pf(
+      supabase
+        .from("business_profiles")
+        .select("business_name, niche, target_audience")
+        .eq("user_id", user.id),
+    );
 
     // Last coach message (to know what was discussed last)
-    let lastMsgQuery = supabase
-      .from("coach_messages")
-      .select("content, summary_tags, created_at")
-      .eq("user_id", user.id)
-      .eq("role", "assistant");
-    if (projectId) lastMsgQuery = lastMsgQuery.eq("project_id", projectId);
+    const lastMsgQuery = pf(
+      supabase
+        .from("coach_messages")
+        .select("content, summary_tags, created_at")
+        .eq("user_id", user.id)
+        .eq("role", "assistant"),
+    );
 
     const [profileRes, tasksRes, contentsRes, bpRes, lastMsgRes] = await Promise.all([
       profileQuery,

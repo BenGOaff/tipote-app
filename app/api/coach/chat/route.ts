@@ -62,7 +62,10 @@ const SuggestionSchema = z
   })
   .strict();
 
-function sanitizeSuggestions(raw: unknown, opts: { isTeaser: boolean }): CoachSuggestion[] {
+function sanitizeSuggestions(
+  raw: unknown,
+  opts: { isTeaser: boolean; appliedTitles?: Set<string>; rejectedTitles?: Set<string> },
+): CoachSuggestion[] {
   if (opts.isTeaser) return [];
   if (!Array.isArray(raw)) return [];
 
@@ -77,6 +80,11 @@ function sanitizeSuggestions(raw: unknown, opts: { isTeaser: boolean }): CoachSu
     if (!parsed.success) continue;
 
     const s = parsed.data;
+
+    // Server-side dedup: skip suggestions that match already applied or rejected ones
+    const titleLow = s.title.toLowerCase().trim();
+    if (opts.appliedTitles?.has(titleLow) || opts.rejectedTitles?.has(titleLow)) continue;
+
     const payload = (s.payload ?? {}) as Record<string, unknown>;
 
     // Validate per-type payload contract (safe)
@@ -1028,30 +1036,35 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const bpQuery = supabase.from("business_profiles").select("*").eq("user_id", user.id);
-    if (projectId) bpQuery.eq("project_id", projectId);
+    // Include rows with matching project_id OR null project_id (pre-project data)
+    const pf = (q: any) =>
+      projectId ? q.or(`project_id.eq.${projectId},project_id.is.null`) : q;
 
-    const planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", user.id);
-    if (projectId) planQuery.eq("project_id", projectId);
+    const bpQuery = pf(supabase.from("business_profiles").select("*").eq("user_id", user.id));
 
-    const tasksQuery = supabase
-      .from("project_tasks")
-      .select("id, title, status, due_date, updated_at")
-      .eq("user_id", user.id)
-      .is("deleted_at", null);
-    if (projectId) tasksQuery.eq("project_id", projectId);
+    const planQuery = pf(supabase.from("business_plan").select("plan_json").eq("user_id", user.id));
 
-    const contentsQuery = supabase
-      .from("content_item")
-      .select("id, type, title:titre, status:statut, scheduled_date:date_planifiee, created_at")
-      .eq("user_id", user.id);
-    if (projectId) contentsQuery.eq("project_id", projectId);
+    const tasksQuery = pf(
+      supabase
+        .from("project_tasks")
+        .select("id, title, status, due_date, updated_at")
+        .eq("user_id", user.id)
+        .is("deleted_at", null),
+    );
 
-    const competitorQuery = supabase
-      .from("competitor_analyses")
-      .select("summary, strengths, weaknesses, opportunities, competitor_details, positioning_matrix, competitors")
-      .eq("user_id", user.id);
-    if (projectId) competitorQuery.eq("project_id", projectId);
+    const contentsQuery = pf(
+      supabase
+        .from("content_item")
+        .select("id, type, title:titre, status:statut, scheduled_date:date_planifiee, created_at")
+        .eq("user_id", user.id),
+    );
+
+    const competitorQuery = pf(
+      supabase
+        .from("competitor_analyses")
+        .select("summary, strengths, weaknesses, opportunities, competitor_details, positioning_matrix, competitors")
+        .eq("user_id", user.id),
+    );
 
     // ✅ NEW: Persona enrichi
     const personaQuery = supabaseAdmin
@@ -1063,11 +1076,12 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     // ✅ NEW: Offres détaillées (offer_pyramids)
-    const offerPyramidsQuery = supabase
-      .from("offer_pyramids")
-      .select("name, level, description, promise, format, delivery, price_min, price_max, main_outcome, is_flagship")
-      .eq("user_id", user.id);
-    if (projectId) offerPyramidsQuery.eq("project_id", projectId);
+    const offerPyramidsQuery = pf(
+      supabase
+        .from("offer_pyramids")
+        .select("name, level, description, promise, format, delivery, price_min, price_max, main_outcome, is_flagship")
+        .eq("user_id", user.id),
+    );
 
     const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes, personaRes, offerPyramidsRes] = await Promise.all([
       bpQuery.maybeSingle(),
@@ -1236,8 +1250,26 @@ TONE & STYLE:
       out = { message: String(raw || "").trim() };
     }
 
+    // Extract applied/rejected suggestion titles from memory for server-side dedup
+    const appliedTitles = new Set<string>();
+    const rejectedTitles = new Set<string>();
+    for (const r of memoryRows) {
+      if (!isRecord(r.facts)) continue;
+      const f = r.facts as any;
+      if (isRecord(f.applied_suggestion) && typeof f.applied_suggestion.title === "string") {
+        appliedTitles.add(f.applied_suggestion.title.toLowerCase().trim());
+      }
+      if (Array.isArray(f.rejected_suggestions)) {
+        for (const rs of f.rejected_suggestions) {
+          if (isRecord(rs) && typeof (rs as any).title === "string") {
+            rejectedTitles.add((rs as any).title.toLowerCase().trim());
+          }
+        }
+      }
+    }
+
     const rawMessage = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
-    const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser });
+    const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser, appliedTitles, rejectedTitles });
 
     const maxLines = isTeaser ? 8 : goDeeper ? 18 : 10;
     const message = enforceLineLimit(rawMessage, maxLines) || rawMessage;
