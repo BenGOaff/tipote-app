@@ -5,7 +5,7 @@
 
 import { buildPage } from "@/lib/pageBuilder";
 
-export type TemplateKind = "capture" | "vente";
+export type TemplateKind = "capture" | "vente" | "vitrine";
 export type RenderMode = "preview" | "kit";
 
 export type RenderTemplateRequest = {
