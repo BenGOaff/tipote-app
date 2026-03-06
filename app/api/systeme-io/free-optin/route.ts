@@ -100,13 +100,32 @@ async function upsertProfile(
   last_name: string | null,
   sio_contact_id: string | null,
 ) {
+  // ⚠️ CRITICAL: Check if user already has a paid plan BEFORE upserting.
+  // Systeme.io can fire the free-optin webhook AFTER a sale webhook,
+  // which would overwrite a paid plan (beta/basic/pro/elite) with "free".
+  const { data: existing } = await supabaseAdmin
+    .from("profiles")
+    .select("plan")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const existingPlan = (existing?.plan ?? "").toString().trim().toLowerCase();
+  const PAID_PLANS = ["beta", "basic", "pro", "elite"];
+  const shouldKeepPlan = PAID_PLANS.includes(existingPlan);
+
+  if (shouldKeepPlan) {
+    console.log(
+      `[Systeme.io free-optin] User ${email} already has plan="${existingPlan}" — NOT overwriting with "free".`,
+    );
+  }
+
   const payload: Record<string, any> = {
     id: userId,
     email,
     first_name,
     last_name,
     sio_contact_id,
-    plan: "free",
+    plan: shouldKeepPlan ? existingPlan : "free",
     updated_at: new Date().toISOString(),
   };
 
@@ -136,6 +155,28 @@ async function sendMagicLink(email: string): Promise<boolean> {
   return true;
 }
 
+// ---------- GET = diagnostic only ----------
+export async function GET(req: NextRequest) {
+  console.warn(
+    `[Systeme.io free-optin] ⚠️ GET request received (expected POST). ` +
+    `Host: ${req.headers.get("host")} — Webhook URL must point to app.tipote.com`,
+  );
+
+  return NextResponse.json(
+    {
+      error: "This endpoint only accepts POST requests from Systeme.io webhooks. " +
+        "If you are seeing this, the webhook URL may be misconfigured. " +
+        "Use https://app.tipote.com/api/systeme-io/free-optin (not tipote.com or www.tipote.com).",
+      route: "/api/systeme-io/free-optin",
+      host: req.headers.get("host"),
+      method: "GET",
+      expected_method: "POST",
+      now: new Date().toISOString(),
+    },
+    { status: 405 },
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const secret = req.nextUrl.searchParams.get("secret") ?? "";
@@ -145,6 +186,23 @@ export async function POST(req: NextRequest) {
 
     const body = await readBodyAny(req);
     if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+
+    // Log every incoming free-optin call for debugging
+    console.log(
+      `[Systeme.io free-optin] Incoming request — email=${body?.data?.customer?.email ?? body?.email ?? "?"}`,
+    );
+
+    // Best-effort: log raw payload to webhook_logs table for audit
+    try {
+      await supabaseAdmin.from("webhook_logs").insert({
+        source: "systeme_io_free_optin",
+        event_type: "free_optin",
+        payload: body,
+        received_at: new Date().toISOString(),
+      } as any);
+    } catch {
+      // table may not exist — that's fine
+    }
 
     // Systeme.io opt-in: parfois "email", parfois nested
     const emailRaw = pickString(body, ["data.customer.email", "customer.email", "email", "Email"]) ?? "";

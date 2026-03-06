@@ -84,6 +84,28 @@ async function ensureCredits(userId: string) {
   if (error) throw error;
 }
 
+// ---------- GET = diagnostic only ----------
+export async function GET(req: NextRequest) {
+  console.warn(
+    `[Systeme.io subscription-status] ⚠️ GET request received (expected POST). ` +
+    `Host: ${req.headers.get("host")} — Webhook URL must point to app.tipote.com`,
+  );
+
+  return NextResponse.json(
+    {
+      error: "This endpoint only accepts POST requests from Systeme.io webhooks. " +
+        "If you are seeing this, the webhook URL may be misconfigured. " +
+        "Use https://app.tipote.com/api/systeme-io/subscription-status (not tipote.com or www.tipote.com).",
+      route: "/api/systeme-io/subscription-status",
+      host: req.headers.get("host"),
+      method: "GET",
+      expected_method: "POST",
+      now: new Date().toISOString(),
+    },
+    { status: 405 },
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const secret = req.nextUrl.searchParams.get("secret") ?? "";
