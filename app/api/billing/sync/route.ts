@@ -62,10 +62,15 @@ const OFFER_PRICE_ID_TO_PLAN: Record<string, StoredPlan> = {
 function inferPlanFromSubscription(sub: any): IncomingPlan | StoredPlan | null {
   const offer = sub?.offer_price_plan ?? sub?.offerPricePlan ?? null;
 
-  // First try: match offer-price ID against known mapping
+  // First try: match offer-price ID against known mapping (with normalization)
   const offerId = String(offer?.id ?? sub?.offer_price?.id ?? "").trim();
-  if (offerId && offerId in OFFER_PRICE_ID_TO_PLAN) {
-    return OFFER_PRICE_ID_TO_PLAN[offerId];
+  if (offerId) {
+    // Try raw ID first, then normalized variants (strip prefixes, extract numeric part)
+    if (offerId in OFFER_PRICE_ID_TO_PLAN) return OFFER_PRICE_ID_TO_PLAN[offerId];
+    const numMatch = offerId.match(/(\d{5,})/);
+    if (numMatch && numMatch[1] in OFFER_PRICE_ID_TO_PLAN) return OFFER_PRICE_ID_TO_PLAN[numMatch[1]];
+    const withPrefix = numMatch ? `offer-price-${numMatch[1]}` : null;
+    if (withPrefix && withPrefix in OFFER_PRICE_ID_TO_PLAN) return OFFER_PRICE_ID_TO_PLAN[withPrefix];
   }
 
   // Fallback: infer from name strings

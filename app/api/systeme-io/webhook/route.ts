@@ -119,8 +119,51 @@ const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   "3103593": "elite",
 };
 
+/**
+ * Normalize an offer ID to maximize matching chances.
+ * Systeme.io can send IDs in various formats:
+ *   "offer-price-3064431", "offer_price-3064431", "offerPrice-3064431",
+ *   "offerprice-3064431", "3064431", 3064431 (number)
+ * We try: raw → stripped prefix → numeric-only extraction.
+ */
+function normalizeOfferId(raw: string): string[] {
+  const id = raw.trim();
+  if (!id) return [];
+
+  const candidates: string[] = [id];
+
+  // Try lowercase
+  const lower = id.toLowerCase();
+  if (lower !== id) candidates.push(lower);
+
+  // Strip common prefixes (offer-price-, offer_price-, offerprice-)
+  const stripped = lower
+    .replace(/^offer[-_]?price[-_]?/i, "")
+    .replace(/^offerprice[-_]?/i, "");
+  if (stripped && stripped !== lower) {
+    candidates.push(stripped);
+    // Also add with prefix (the map has both forms)
+    candidates.push(`offer-price-${stripped}`);
+  }
+
+  // Extract pure numeric part
+  const numMatch = id.match(/(\d{5,})/);
+  if (numMatch) {
+    candidates.push(numMatch[1]);
+    candidates.push(`offer-price-${numMatch[1]}`);
+  }
+
+  // De-duplicate
+  return [...new Set(candidates)];
+}
+
 function inferPlanFromOffer(offer: { id: string; name: string; inner_name?: string | null }): StoredPlan | null {
-  if (offer.id && offer.id in OFFER_PRICE_PLAN_ID_TO_PLAN) return OFFER_PRICE_PLAN_ID_TO_PLAN[offer.id];
+  // Try all normalized variants of the offer ID
+  if (offer.id) {
+    for (const candidate of normalizeOfferId(offer.id)) {
+      if (candidate in OFFER_PRICE_PLAN_ID_TO_PLAN) return OFFER_PRICE_PLAN_ID_TO_PLAN[candidate];
+    }
+  }
   return normalizePlanFromOfferName(offer);
 }
 
@@ -297,7 +340,9 @@ async function upsertProfile(params: {
     updated_at: new Date().toISOString(),
   };
 
-  if (plan) payload.plan = plan;
+  // ⚠️ ALWAYS include plan in the payload — never create a profile without a plan.
+  // The paid webhook should always resolve a plan; free-optin has its own handler.
+  payload.plan = plan ?? "free";
   if (typeof product_id !== "undefined") payload.product_id = product_id;
 
   const { error: upsertError } = await supabaseAdmin.from("profiles").upsert(payload, { onConflict: "id" });
@@ -477,9 +522,10 @@ export async function POST(req: NextRequest) {
 
       let plan = inferPlanFromOffer({ id: offerId, name: offerName, inner_name: offerInner });
 
-      // Log when plan cannot be determined — helps debug installment payment IDs
+      // ⚠️ CRITICAL: This is the PAID webhook. If we can't infer the plan,
+      // check existing profile or use "beta" as safe default (most buyers are beta).
       if (!plan) {
-        // Check if user already has a plan in the DB
+        // Check if user already has a paid plan in the DB
         const { data: existingProfile } = await supabaseAdmin
           .from("profiles")
           .select("plan")
@@ -490,14 +536,22 @@ export async function POST(req: NextRequest) {
 
         if (existingPlan && existingPlan !== "free") {
           // User already has a paid plan — keep it
+          plan = existingPlan as StoredPlan;
           console.warn(
-            `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". User ${resolvedEmail} keeps existing plan="${existingPlan}".`,
+            `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". ` +
+            `User ${resolvedEmail} keeps existing plan="${existingPlan}". ` +
+            `RAW offer data: ${JSON.stringify({ offer_price_plan: rawBody?.data?.offer_price_plan, offer_price: rawBody?.data?.offer_price })}`,
           );
         } else {
-          // Unknown offer — do NOT default to a paid plan. Keep as free.
-          // Admin can manually assign the correct plan after checking webhook_logs.
+          // ⚠️ THIS IS THE PAID WEBHOOK — the user bought something!
+          // If we can't determine the exact plan, default to "beta" (most common paid plan)
+          // rather than leaving them stuck on "free". Admin can adjust later.
+          plan = "beta";
           console.error(
-            `[Systeme.io webhook] ❌ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". User ${resolvedEmail} stays "free". Check OFFER_PRICE_PLAN_ID_TO_PLAN mapping.`,
+            `[Systeme.io webhook] ❌ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". ` +
+            `DEFAULTING to "beta" for ${resolvedEmail} (paid webhook = user bought something). ` +
+            `RAW offer data: ${JSON.stringify({ offer_price_plan: rawBody?.data?.offer_price_plan, offer_price: rawBody?.data?.offer_price })} ` +
+            `FULL PAYLOAD KEYS: ${JSON.stringify(Object.keys(rawBody?.data ?? {}))}`,
           );
         }
       } else {
