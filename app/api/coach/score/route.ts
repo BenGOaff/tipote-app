@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
@@ -42,13 +43,12 @@ export async function GET(_req: NextRequest) {
       supabase.from("business_profiles").select("*").eq("user_id", user.id),
     );
 
-    const tasksQuery = projectFilter(
-      supabase
-        .from("project_tasks")
-        .select("id, status, due_date, updated_at")
-        .eq("user_id", user.id)
-        .is("deleted_at", null),
-    );
+    // ✅ Use supabaseAdmin for tasks (RLS on project_tasks can return [] silently)
+    const tasksQueryAdmin = supabaseAdmin
+      .from("project_tasks")
+      .select("id, status, due_date, updated_at")
+      .eq("user_id", user.id)
+      .is("deleted_at", null);
 
     const contentsQuery = projectFilter(
       supabase
@@ -85,7 +85,7 @@ export async function GET(_req: NextRequest) {
 
     const [bpRes, tasksRes, contentsRes, offersRes, planRes, coachRes, personaRes] = await Promise.all([
       bpQuery.maybeSingle(),
-      tasksQuery.limit(100),
+      tasksQueryAdmin.limit(100),
       contentsQuery.limit(100),
       offersQuery.limit(10),
       planQuery.maybeSingle(),

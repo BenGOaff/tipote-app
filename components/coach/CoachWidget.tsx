@@ -1,7 +1,7 @@
 // components/coach/CoachWidget.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -17,6 +17,7 @@ import {
   MicOff,
   Trophy,
   ChevronDown,
+  GripHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -164,7 +165,50 @@ const QUICK_REPLY_KEYS = [
 
 const THREADS: CoachThread[] = ["general", "strategy", "sales", "content", "mindset"];
 
-const HIDDEN_PREFIXES = ["/auth", "/onboarding", "/strategy/pyramids", "/legal", "/q/"];
+const HIDDEN_PREFIXES = ["/auth", "/onboarding", "/strategy/pyramids", "/legal", "/q/", "/p/"];
+
+/* ────────────────── Top-Left Resize Hook ────────────────── */
+
+function useTopLeftResize(minW = 320, minH = 300) {
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const dragging = useRef(false);
+  const origin = useRef({ x: 0, y: 0, w: 0, h: 0 });
+
+  const onPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const el = (e.target as HTMLElement).closest("[data-coach-panel]") as HTMLElement | null;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      origin.current = { x: e.clientX, y: e.clientY, w: rect.width, h: rect.height };
+      dragging.current = true;
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [],
+  );
+
+  const onPointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (!dragging.current) return;
+      const dx = origin.current.x - e.clientX; // moving left = positive = wider
+      const dy = origin.current.y - e.clientY; // moving up = positive = taller
+      const maxW = typeof window !== "undefined" ? window.innerWidth - 24 : 800;
+      const maxH = typeof window !== "undefined" ? window.innerHeight - 48 : 600;
+      setSize({
+        w: Math.min(maxW, Math.max(minW, origin.current.w + dx)),
+        h: Math.min(maxH, Math.max(minH, origin.current.h + dy)),
+      });
+    },
+    [minW, minH],
+  );
+
+  const onPointerUp = useCallback(() => {
+    dragging.current = false;
+  }, []);
+
+  return { size, onPointerDown, onPointerMove, onPointerUp };
+}
 
 /* ────────────────── Speech Recognition ────────────────── */
 
@@ -248,6 +292,9 @@ export function CoachWidget() {
     setInput((prev) => (prev ? prev + " " + text : text));
   }, []);
   const { listening, supported: voiceSupported, toggle: toggleVoice } = useSpeechRecognition(handleVoiceResult);
+
+  // Top-left resize
+  const { size: resizeSize, onPointerDown: resizePointerDown, onPointerMove: resizePointerMove, onPointerUp: resizePointerUp } = useTopLeftResize();
 
   /* ── Load today's messages + proactive greeting ── */
   useEffect(() => {
@@ -745,10 +792,29 @@ export function CoachWidget() {
 
       {open ? (
         <div
-          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[400px] max-w-[calc(100vw-24px)]"
-          style={{ resize: "both", overflow: "hidden", minWidth: 320, minHeight: 300, maxWidth: "calc(100vw - 24px)", maxHeight: "calc(100vh - 48px)" }}
+          data-coach-panel
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50"
+          style={{
+            width: resizeSize?.w ?? 400,
+            height: resizeSize?.h ?? undefined,
+            minWidth: 320,
+            minHeight: 300,
+            maxWidth: "calc(100vw - 24px)",
+            maxHeight: "calc(100vh - 48px)",
+            overflow: "hidden",
+          }}
         >
           <div className="rounded-2xl border bg-background shadow-xl overflow-hidden h-full flex flex-col">
+            {/* ── Resize handle (top-left) ── */}
+            <div
+              onPointerDown={resizePointerDown}
+              onPointerMove={resizePointerMove}
+              onPointerUp={resizePointerUp}
+              className="absolute top-0 left-0 z-10 flex items-center justify-center w-7 h-7 cursor-nw-resize text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              aria-hidden
+            >
+              <GripHorizontal className="w-4 h-4 -rotate-45" />
+            </div>
             {/* ── Header ── */}
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <div className="flex items-center gap-2">
