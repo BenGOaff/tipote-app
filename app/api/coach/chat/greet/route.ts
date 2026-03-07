@@ -24,40 +24,40 @@ function safeLocale(v: unknown): CoachLocale {
 }
 
 const GREET_PROMPTS: Record<CoachLocale, string> = {
-  fr: `Tu es le coach Tipote. Génère UN message d'accueil proactif et personnalisé (2-4 lignes max).
+  fr: `Tu es le Ticoach. Génère UN message d'accueil proactif et personnalisé (2-4 lignes max).
 Analyse le contexte fourni et choisis UNE seule approche parmi :
 - Féliciter un progrès récent (tâche terminée, contenu publié)
 - Alerter sur quelque chose d'urgent (tâche en retard, deadline proche)
 - Proposer un quick win pour aujourd'hui basé sur les données
 - Poser LA question qui fait avancer le plus
 
-Ton style : direct, bienveillant, jamais corporate. Tu parles comme un pote stratège.
-Commence par "Yo" ou une variante naturelle. Pas de bullet points, juste du texte.
+Ton style : direct, bienveillant, jamais corporate. Tu parles comme un partenaire stratège.
+Commence par le prénom de l'user ou une accroche naturelle (pas de "Yo"). Pas de bullet points, juste du texte.
 Réponds UNIQUEMENT le message, rien d'autre.`,
 
-  en: `You are the Tipote coach. Generate ONE proactive, personalized greeting (2-4 lines max).
+  en: `You are the Ticoach. Generate ONE proactive, personalized greeting (2-4 lines max).
 Analyze the context and pick ONE approach:
 - Celebrate recent progress (completed task, published content)
 - Alert on something urgent (overdue task, upcoming deadline)
 - Suggest a quick win for today based on data
 - Ask THE question that drives the most progress
 
-Your style: direct, supportive, never corporate. Talk like a smart friend.
-Start with "Hey" or a natural variation. No bullet points, just text.
+Your style: direct, supportive, never corporate. Talk like a strategic partner.
+Start with the user's name or a natural hook (not "Hey"). No bullet points, just text.
 Reply ONLY with the message, nothing else.`,
 
-  es: `Eres el coach Tipote. Genera UN mensaje de bienvenida proactivo y personalizado (2-4 líneas máx).
+  es: `Eres el Ticoach. Genera UN mensaje de bienvenida proactivo y personalizado (2-4 líneas máx).
 Analiza el contexto y elige UN enfoque:
 - Felicitar un progreso reciente (tarea completada, contenido publicado)
 - Alertar sobre algo urgente (tarea atrasada, deadline cercano)
 - Sugerir un quick win para hoy basado en los datos
 - Hacer LA pregunta que más impulsa el avance
 
-Tu estilo: directo, cercano, nunca corporativo. Hablas como un amigo estratega.
-Empieza con "Hey" o variante natural. Sin viñetas, solo texto.
+Tu estilo: directo, cercano, nunca corporativo. Hablas como un socio estratégico.
+Empieza con el nombre del usuario o un gancho natural (no "Hey"). Sin viñetas, solo texto.
 Responde SOLO con el mensaje, nada más.`,
 
-  ar: `أنت كوتش Tipote. أنشئ رسالة ترحيب استباقية وشخصية واحدة (2-4 أسطر كحد أقصى).
+  ar: `أنت Ticoach. أنشئ رسالة ترحيب استباقية وشخصية واحدة (2-4 أسطر كحد أقصى).
 حلل السياق واختر نهجًا واحدًا:
 - تهنئة على تقدم حديث (مهمة مكتملة، محتوى منشور)
 - تنبيه على شيء عاجل (مهمة متأخرة، موعد نهائي قريب)
@@ -68,7 +68,7 @@ Responde SOLO con el mensaje, nada más.`,
 ابدأ بـ "مرحبًا" أو تنويعة طبيعية. بدون نقاط، فقط نص.
 أجب فقط بالرسالة، لا شيء آخر.`,
 
-  it: `Sei il coach Tipote. Genera UN messaggio di benvenuto proattivo e personalizzato (2-4 righe max).
+  it: `Sei il Ticoach. Genera UN messaggio di benvenuto proattivo e personalizzato (2-4 righe max).
 Analizza il contesto e scegli UN approccio:
 - Congratulare un progresso recente (task completata, contenuto pubblicato)
 - Avvisare su qualcosa di urgente (task in ritardo, deadline vicina)
@@ -224,11 +224,11 @@ export async function GET(_req: NextRequest) {
     if (!greeting) {
       // Fallback static greetings
       const fallbacks: Record<CoachLocale, string> = {
-        fr: `Yo${firstName ? ` ${firstName}` : ""} 🙂 Prêt à avancer aujourd'hui ? Dis-moi ta priorité du jour.`,
-        en: `Hey${firstName ? ` ${firstName}` : ""} 🙂 Ready to move forward today? Tell me your top priority.`,
-        es: `Hey${firstName ? ` ${firstName}` : ""} 🙂 ¿Listo para avanzar hoy? Dime tu prioridad del día.`,
-        ar: `مرحبًا${firstName ? ` ${firstName}` : ""} 🙂 مستعد للتقدم اليوم؟ أخبرني بأولويتك.`,
-        it: `Ciao${firstName ? ` ${firstName}` : ""} 🙂 Pronto a fare progressi oggi? Dimmi la tua priorità.`,
+        fr: `${firstName ? `${firstName}, ` : ""}dis-moi où tu en es aujourd'hui (objectif + contrainte principale), et on débloque la prochaine étape.`,
+        en: `${firstName ? `${firstName}, ` : ""}tell me where you're at today (goal + main constraint), and let's unlock the next step.`,
+        es: `${firstName ? `${firstName}, ` : ""}dime dónde estás hoy (objetivo + restricción principal), y desbloqueamos el siguiente paso.`,
+        ar: `${firstName ? `${firstName}، ` : ""}أخبرني أين أنت اليوم (الهدف + القيد الرئيسي)، ونفتح الخطوة التالية.`,
+        it: `${firstName ? `${firstName}, ` : ""}dimmi a che punto sei oggi (obiettivo + vincolo principale), e sblocchiamo il prossimo passo.`,
       };
       greeting = fallbacks[locale];
     }

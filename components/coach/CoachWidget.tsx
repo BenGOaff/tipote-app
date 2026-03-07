@@ -9,7 +9,6 @@ import {
   Send,
   X,
   Lock,
-  Sparkles,
   Copy,
   Check,
   History,
@@ -745,17 +744,21 @@ export function CoachWidget() {
       ) : null}
 
       {open ? (
-        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[400px] max-w-[calc(100vw-24px)]">
-          <div className="rounded-2xl border bg-background shadow-xl overflow-hidden">
+        <div
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[400px] max-w-[calc(100vw-24px)]"
+          style={{ resize: "both", overflow: "hidden", minWidth: 320, minHeight: 300, maxWidth: "calc(100vw - 24px)", maxHeight: "calc(100vh - 48px)" }}
+        >
+          <div className="rounded-2xl border bg-background shadow-xl overflow-hidden h-full flex flex-col">
             {/* ── Header ── */}
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10">
-                  <Sparkles className="w-5 h-5" />
-                </div>
+                <img
+                  src="/ticoach.png"
+                  alt={t("coachTipote")}
+                  className="w-9 h-9 rounded-full object-cover"
+                />
                 <div className="leading-tight">
                   <div className="font-semibold">{t("coachTipote")}</div>
-                  <div className="text-xs text-muted-foreground">{t("coachSubtitle")}</div>
                 </div>
               </div>
 
@@ -836,7 +839,7 @@ export function CoachWidget() {
             {/* ── Chat View ── */}
             {view === "chat" ? (
               <>
-                <div ref={listRef} className="h-[min(420px,60vh)] overflow-auto px-3 py-3 space-y-3">
+                <div ref={listRef} className="flex-1 min-h-0 overflow-auto px-3 py-3 space-y-3">
                   {messages.map((m) => {
                     const isUser = m.role === "user";
                     return (
@@ -991,7 +994,7 @@ export function CoachWidget() {
 
             {/* ── History View ── */}
             {view === "history" ? (
-              <div className="h-[min(420px,60vh)] overflow-auto px-3 py-3">
+              <div className="flex-1 min-h-0 overflow-auto px-3 py-3">
                 <h3 className="font-semibold text-sm mb-3">{t("historyTitle")}</h3>
                 {historyLoading ? (
                   <div className="text-sm text-muted-foreground">{t("thinking")}</div>
@@ -1036,7 +1039,7 @@ export function CoachWidget() {
 
             {/* ── Score View ── */}
             {view === "score" ? (
-              <div className="h-[min(420px,60vh)] overflow-auto px-4 py-4">
+              <div className="flex-1 min-h-0 overflow-auto px-4 py-4">
                 <h3 className="font-semibold text-sm mb-3">{t("scoreTitle")}</h3>
                 {scoreLoading ? (
                   <div className="text-sm text-muted-foreground">{t("thinking")}</div>

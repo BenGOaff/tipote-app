@@ -64,6 +64,10 @@ export async function GET(_req: NextRequest) {
         .eq("user_id", user.id),
     );
 
+    const planQuery = projectFilter(
+      supabase.from("business_plan").select("plan_json").eq("user_id", user.id),
+    );
+
     const coachQuery = projectFilter(
       supabase
         .from("coach_messages")
@@ -79,11 +83,12 @@ export async function GET(_req: NextRequest) {
       .eq("role", "client_ideal")
       .limit(1);
 
-    const [bpRes, tasksRes, contentsRes, offersRes, coachRes, personaRes] = await Promise.all([
+    const [bpRes, tasksRes, contentsRes, offersRes, planRes, coachRes, personaRes] = await Promise.all([
       bpQuery.maybeSingle(),
       tasksQuery.limit(100),
       contentsQuery.limit(100),
       offersQuery.limit(10),
+      planQuery.maybeSingle(),
       coachQuery.order("created_at", { ascending: false }).limit(50),
       personaQuery,
     ]);
@@ -91,9 +96,55 @@ export async function GET(_req: NextRequest) {
     const bp = bpRes.data as any;
     const tasks = tasksRes.data ?? [];
     const contents = contentsRes.data ?? [];
-    const offers = offersRes.data ?? [];
+    let offers = offersRes.data ?? [];
     const coachMsgs = coachRes.data ?? [];
     const persona = (personaRes.data ?? [])[0] as any;
+
+    // Fallback: extract offers from business_plan.plan_json if offer_pyramids is empty
+    if (offers.length === 0) {
+      const planJson = (planRes.data as any)?.plan_json;
+      if (planJson) {
+        const selected =
+          planJson?.selected_pyramid ??
+          planJson?.pyramid?.selected_pyramid ??
+          planJson?.pyramid ??
+          planJson?.offer_pyramid ??
+          null;
+        if (selected && typeof selected === "object") {
+          const levels: Array<[string, string]> = [
+            ["lead_magnet", "lead_magnet"], ["free", "lead_magnet"],
+            ["low_ticket", "low_ticket"],
+            ["middle_ticket", "middle_ticket"],
+            ["high_ticket", "high_ticket"], ["premium", "high_ticket"],
+          ];
+          const planOffers: any[] = [];
+          for (const [key, level] of levels) {
+            const o = (selected as any)[key];
+            if (o && typeof o === "object") {
+              planOffers.push({
+                id: key,
+                name: o.name ?? o.title ?? key,
+                level,
+                price_min: typeof o.price === "number" ? o.price : (typeof o.price_min === "number" ? o.price_min : null),
+              });
+            }
+          }
+          if (planOffers.length > 0) offers = planOffers;
+        }
+      }
+    }
+
+    // Also check business_profiles.offers as additional source
+    if (offers.length === 0 && Array.isArray(bp?.offers)) {
+      offers = (bp.offers as any[])
+        .filter((o: any) => o && typeof o === "object" && (o.name || o.title))
+        .map((o: any, i: number) => ({
+          id: `bp-${i}`,
+          name: o.name ?? o.title ?? "Offre",
+          level: o.level ?? "user_offer",
+          price_min: typeof o.price === "number" ? o.price : null,
+        }));
+    }
 
     const dimensions: ScoreDimension[] = [];
 
