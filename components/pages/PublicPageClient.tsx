@@ -174,6 +174,25 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
     }
   }, [captureEmail, captureFirstName, capturing, page]);
 
+  // Listen for CTA click tracking events from iframe
+  // (must be before any conditional return to respect Rules of Hooks)
+  useEffect(() => {
+    if (!page) return;
+    const handler = (e: MessageEvent) => {
+      if (typeof e.data === "string" && e.data === "tipote:click") {
+        fetch(`/api/pages/${page.id}/clicks`, { method: "POST" }).catch(() => {});
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [page]);
+
+  // Non-blocking: increment views once page is loaded
+  useEffect(() => {
+    if (!page) return;
+    fetch(`/api/pages/${page.id}/views`, { method: "POST" }).catch(() => {});
+  }, [page]);
+
   const txt = pageTexts(page?.address_form);
 
   if (loading) {
@@ -198,23 +217,6 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
       </div>
     );
   }
-
-  // Non-blocking: increment views
-  try {
-    fetch(`/api/pages/${page.id}/views`, { method: "POST" }).catch(() => {});
-  } catch { /* ignore */ }
-
-  // Listen for CTA click tracking events from iframe
-  useEffect(() => {
-    if (!page) return;
-    const handler = (e: MessageEvent) => {
-      if (typeof e.data === "string" && e.data === "tipote:click") {
-        fetch(`/api/pages/${page.id}/clicks`, { method: "POST" }).catch(() => {});
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [page]);
 
   // Inject CTA interception script into the HTML (NO legal footer or capture form — already in html_snapshot)
   const htmlWithCapture = injectCaptureScript(page);
