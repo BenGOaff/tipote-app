@@ -1042,7 +1042,7 @@ export async function POST(req: NextRequest) {
 
     const bpQuery = pf(supabase.from("business_profiles").select("*").eq("user_id", user.id));
 
-    const planQuery = pf(supabase.from("business_plan").select("plan_json").eq("user_id", user.id));
+    const planQuery = pf(supabase.from("business_plan").select("plan_json, updated_at").eq("user_id", user.id));
 
     const tasksQuery = pf(
       supabase
@@ -1083,7 +1083,17 @@ export async function POST(req: NextRequest) {
         .eq("user_id", user.id),
     );
 
-    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes, personaRes, offerPyramidsRes] = await Promise.all([
+    // Revenue metrics (current month)
+    const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
+    const revenueQuery = pf(
+      supabase
+        .from("offer_metrics")
+        .select("offer_name, revenue, sales_count, visitors, signups, month")
+        .eq("user_id", user.id)
+        .gte("month", currentMonth),
+    );
+
+    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes, personaRes, offerPyramidsRes, revenueRes] = await Promise.all([
       bpQuery.maybeSingle(),
       planQuery.maybeSingle(),
       tasksQuery.order("updated_at", { ascending: false }).limit(30),
@@ -1091,15 +1101,80 @@ export async function POST(req: NextRequest) {
       competitorQuery.maybeSingle(),
       personaQuery,
       offerPyramidsQuery.order("level", { ascending: true }).limit(10),
+      revenueQuery.order("month", { ascending: false }).limit(20),
     ]);
 
     const personaData = (personaRes.data as any)?.[0] ?? null;
-    const offerPyramidsData = (offerPyramidsRes.data ?? []) as any[];
+    let offerPyramidsData = (offerPyramidsRes.data ?? []) as any[];
+
+    // Fallback: extract offers from business_plan.plan_json if offer_pyramids is empty
+    if (offerPyramidsData.length === 0) {
+      const planJson = (businessPlanRes.data as any)?.plan_json;
+      if (planJson) {
+        const selected =
+          planJson?.selected_pyramid ??
+          planJson?.pyramid?.selected_pyramid ??
+          planJson?.pyramid ??
+          planJson?.offer_pyramid ??
+          null;
+        if (selected && typeof selected === "object") {
+          const levels: Array<[string, string]> = [
+            ["lead_magnet", "lead_magnet"], ["free", "lead_magnet"], ["gratuit", "lead_magnet"],
+            ["low_ticket", "low_ticket"],
+            ["middle_ticket", "middle_ticket"], ["mid_ticket", "middle_ticket"],
+            ["high_ticket", "high_ticket"], ["premium", "high_ticket"],
+          ];
+          for (const [key, level] of levels) {
+            const o = (selected as any)[key];
+            if (o && typeof o === "object") {
+              offerPyramidsData.push({
+                name: o.name ?? o.title ?? o.offer_name ?? key,
+                level,
+                description: o.description ?? null,
+                promise: o.promise ?? o.promesse ?? null,
+                format: o.format ?? null,
+                delivery: o.delivery ?? null,
+                price_min: typeof o.price === "number" ? o.price : (typeof o.price_min === "number" ? o.price_min : null),
+                price_max: typeof o.price_max === "number" ? o.price_max : null,
+                main_outcome: o.main_outcome ?? o.outcome ?? null,
+                is_flagship: o.is_flagship ?? null,
+              });
+            }
+          }
+          // Also check for offers array shape
+          const offersArr = (selected as any).offers ?? (selected as any).pyramid;
+          if (Array.isArray(offersArr) && offerPyramidsData.length === 0) {
+            for (const o of offersArr.slice(0, 6)) {
+              if (!o || typeof o !== "object") continue;
+              offerPyramidsData.push({
+                name: o.name ?? o.title ?? o.offer_name ?? "Offre",
+                level: o.level ?? o.offer_level ?? "",
+                description: o.description ?? null,
+                promise: o.promise ?? null,
+                format: o.format ?? null,
+                price_min: typeof o.price === "number" ? o.price : (typeof o.price_min === "number" ? o.price_min : null),
+                price_max: typeof o.price_max === "number" ? o.price_max : null,
+                main_outcome: o.main_outcome ?? null,
+              });
+            }
+          }
+        }
+      }
+    }
 
     // User-defined offers from business_profiles
     const bpOffers = Array.isArray((businessProfileRes.data as any)?.offers)
       ? ((businessProfileRes.data as any).offers as any[])
       : [];
+
+    // Revenue data
+    const revenueData = (revenueRes.data ?? []) as any[];
+    const revenueGoalMonthly =
+      (businessProfileRes.data as any)?.revenue_goal_monthly ??
+      (businessProfileRes.data as any)?.revenueGoalMonthly ??
+      (businessProfileRes.data as any)?.target_monthly_revenue ??
+      (businessProfileRes.data as any)?.revenue_goal ??
+      null;
 
     const living = summarizeLivingContext({
       businessProfile: businessProfileRes.data ?? null,
@@ -1191,6 +1266,31 @@ TONE & STYLE:
       knowledgeBlock ? knowledgeBlock : "TIPOTE-KNOWLEDGE: (none)",
       "",
       competitorBlock || "ANALYSE CONCURRENTIELLE: (aucune)",
+      "",
+      // Revenue block
+      (() => {
+        const lines: string[] = ["REVENUS & OBJECTIF:"];
+        const goalStr = typeof revenueGoalMonthly === "string" ? revenueGoalMonthly.trim() : typeof revenueGoalMonthly === "number" ? `${revenueGoalMonthly}€` : "";
+        if (goalStr) lines.push(`- Objectif mensuel: ${goalStr}`);
+        if (revenueData.length > 0) {
+          const totalRevenue = revenueData.reduce((s: number, r: any) => s + (parseFloat(r.revenue) || 0), 0);
+          const totalSales = revenueData.reduce((s: number, r: any) => s + (parseInt(r.sales_count) || 0), 0);
+          const totalVisitors = revenueData.reduce((s: number, r: any) => s + (parseInt(r.visitors) || 0), 0);
+          lines.push(`- CA ce mois: ${totalRevenue.toFixed(0)}€`);
+          lines.push(`- Ventes ce mois: ${totalSales}`);
+          if (totalVisitors > 0) lines.push(`- Visiteurs ce mois: ${totalVisitors}`);
+          if (goalStr) {
+            const goalNum = parseFloat(goalStr.replace(/[^0-9.,]/g, "").replace(",", "."));
+            if (goalNum > 0) {
+              const pct = Math.round((totalRevenue / goalNum) * 100);
+              lines.push(`- Progression vers objectif: ${pct}%`);
+            }
+          }
+        } else if (goalStr) {
+          lines.push("- Pas encore de données de revenus ce mois.");
+        }
+        return lines.length > 1 ? lines.join("\n") : "REVENUS: (pas de données)";
+      })(),
       "",
       checkInBlock ? checkInBlock : "CHECK-IN: (none)",
       "",
