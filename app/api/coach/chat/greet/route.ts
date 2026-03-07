@@ -224,11 +224,11 @@ export async function GET(_req: NextRequest) {
     if (!greeting) {
       // Fallback static greetings
       const fallbacks: Record<CoachLocale, string> = {
-        fr: `${firstName ? `${firstName}, ` : ""}dis-moi où tu en es aujourd'hui (objectif + contrainte principale), et on débloque la prochaine étape.`,
-        en: `${firstName ? `${firstName}, ` : ""}tell me where you're at today (goal + main constraint), and let's unlock the next step.`,
-        es: `${firstName ? `${firstName}, ` : ""}dime dónde estás hoy (objetivo + restricción principal), y desbloqueamos el siguiente paso.`,
-        ar: `${firstName ? `${firstName}، ` : ""}أخبرني أين أنت اليوم (الهدف + القيد الرئيسي)، ونفتح الخطوة التالية.`,
-        it: `${firstName ? `${firstName}, ` : ""}dimmi a che punto sei oggi (obiettivo + vincolo principale), e sblocchiamo il prossimo passo.`,
+        fr: `Salut${firstName ? ` ${firstName}` : ""} ! Je suis là pour t'aider, dis-moi ce que je peux faire pour toi aujourd'hui 👇`,
+        en: `Hey${firstName ? ` ${firstName}` : ""}! I'm here to help, tell me what I can do for you today 👇`,
+        es: `¡Hola${firstName ? ` ${firstName}` : ""}! Estoy aquí para ayudarte, dime qué puedo hacer por ti hoy 👇`,
+        ar: `أهلاً${firstName ? ` ${firstName}` : ""}! أنا هنا لمساعدتك، أخبرني كيف يمكنني مساعدتك اليوم 👇`,
+        it: `Ciao${firstName ? ` ${firstName}` : ""}! Sono qui per aiutarti, dimmi cosa posso fare per te oggi 👇`,
       };
       greeting = fallbacks[locale];
     }

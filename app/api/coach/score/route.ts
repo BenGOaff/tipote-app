@@ -17,6 +17,7 @@ type ScoreDimension = {
   score: number; // 0-100
   weight: number;
   detail: string;
+  meta?: Record<string, number>;
 };
 
 export async function GET(_req: NextRequest) {
@@ -149,7 +150,8 @@ export async function GET(_req: NextRequest) {
     const dimensions: ScoreDimension[] = [];
 
     // 1. Business Profile completeness (20%)
-    const bpFields = ["business_name", "niche", "target_audience", "mission", "vision"];
+    // Check fields that actually exist in the business_profiles table
+    const bpFields = ["first_name", "niche", "mission", "main_goal", "business_maturity"];
     const bpFilled = bpFields.filter((f) => bp?.[f] && String(bp[f]).trim().length > 2).length;
     const bpScore = Math.round((bpFilled / bpFields.length) * 100);
     dimensions.push({
@@ -158,6 +160,7 @@ export async function GET(_req: NextRequest) {
       score: bpScore,
       weight: 20,
       detail: `${bpFilled}/${bpFields.length} fields completed`,
+      meta: { filled: bpFilled, total: bpFields.length },
     });
 
     // 2. Persona clarity (15%)
@@ -174,6 +177,7 @@ export async function GET(_req: NextRequest) {
       score: Math.min(100, personaScore),
       weight: 15,
       detail: persona ? "Persona defined" : "No persona yet",
+      meta: { defined: persona ? 1 : 0 },
     });
 
     // 3. Offer structure (20%)
@@ -192,6 +196,7 @@ export async function GET(_req: NextRequest) {
       score: Math.min(100, offerScore),
       weight: 20,
       detail: `${offers.length} offer(s) defined`,
+      meta: { count: offers.length },
     });
 
     // 4. Task execution (20%)
@@ -206,6 +211,7 @@ export async function GET(_req: NextRequest) {
       score: Math.min(100, taskScore),
       weight: 20,
       detail: `${doneTasks}/${totalTasks} tasks completed`,
+      meta: { done: doneTasks, total: totalTasks },
     });
 
     // 5. Content production (15%)
@@ -217,6 +223,7 @@ export async function GET(_req: NextRequest) {
       score: contentScore,
       weight: 15,
       detail: `${contents.length} items, ${publishedContents} published/scheduled`,
+      meta: { items: contents.length, published: publishedContents },
     });
 
     // 6. Coaching engagement (10%)
@@ -232,6 +239,7 @@ export async function GET(_req: NextRequest) {
       score: coachScore,
       weight: 10,
       detail: `${recentCoach} messages this week`,
+      meta: { count: recentCoach },
     });
 
     // Weighted total

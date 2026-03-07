@@ -80,6 +80,7 @@ type ScoreDimension = {
   score: number;
   weight: number;
   detail: string;
+  meta?: Record<string, number>;
 };
 
 type ScoreData = {
@@ -1162,7 +1163,17 @@ export function CoachWidget() {
                             <span className="text-xs text-muted-foreground">{d.score}/100</span>
                           </div>
                           <Progress value={d.score} className="h-2" />
-                          <div className="text-[10px] text-muted-foreground mt-0.5">{d.detail}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">{
+                            d.meta
+                              ? d.key === "profile" ? t("scoreDetailProfile", { filled: d.meta.filled, total: d.meta.total })
+                              : d.key === "persona" ? (d.meta.defined ? t("scoreDetailPersonaDefined") : t("scoreDetailPersonaNone"))
+                              : d.key === "offers" ? t("scoreDetailOffers", { count: d.meta.count })
+                              : d.key === "execution" ? t("scoreDetailExecution", { done: d.meta.done, total: d.meta.total })
+                              : d.key === "content" ? t("scoreDetailContent", { items: d.meta.items, published: d.meta.published })
+                              : d.key === "coaching" ? t("scoreDetailCoaching", { count: d.meta.count })
+                              : d.detail
+                              : d.detail
+                          }</div>
                         </div>
                       ))}
                     </div>
