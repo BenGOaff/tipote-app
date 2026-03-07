@@ -156,6 +156,7 @@ export default function LoginForm() {
         email: cleanEmail,
         options: {
           emailRedirectTo: `${SITE_URL}/auth/callback`,
+          shouldCreateUser: false, // ⚠️ CRITICAL: users are created ONLY via Systeme.io webhooks, never via the login form
         },
       });
 
