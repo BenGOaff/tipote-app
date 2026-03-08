@@ -5,12 +5,31 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const SALES_SECRET = (process.env.SYSTEME_IO_WEBHOOK_SECRET ?? "").trim();
 
-const payloadSchema = z
+// ✅ Legacy schema (si le payload a email/event à la racine)
+const legacyPayloadSchema = z
   .object({
     email: z.string().email().optional(),
     contact_id: z.union([z.string(), z.number()]).optional(),
     event: z.enum(["canceled", "payment_failed", "refunded"]).optional(),
-    // on accepte tout le reste (payload Systeme.io variable)
+  })
+  .passthrough();
+
+// ✅ Vrai schema Systeme.io "sale canceled" (identique au "new sale")
+const systemePayloadSchema = z
+  .object({
+    customer: z.object({
+      id: z.union([z.string(), z.number()]),
+      contactId: z.union([z.string(), z.number()]),
+      email: z.string().email(),
+    }).passthrough(),
+    pricePlan: z.object({
+      id: z.union([z.string(), z.number()]),
+      name: z.string().optional(),
+      type: z.string().optional(),
+    }).passthrough().optional(),
+    order: z.object({
+      id: z.union([z.string(), z.number()]),
+    }).passthrough().optional(),
   })
   .passthrough();
 
@@ -115,23 +134,52 @@ export async function POST(req: NextRequest) {
 
     const bodyAny = (await readBodyAny(req)) ?? {};
 
-    // 1) validation soft
-    const parsed = payloadSchema.safeParse(bodyAny);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid body", details: parsed.error.flatten() }, { status: 400 });
+    // Log every incoming subscription-status call for debugging
+    console.log(
+      `[Systeme.io subscription-status] Incoming request — raw keys: ${JSON.stringify(Object.keys(bodyAny))}`,
+    );
+
+    // Best-effort: log raw payload to webhook_logs table for audit
+    try {
+      await supabaseAdmin.from("webhook_logs").insert({
+        source: "systeme_io_subscription_status",
+        event_type: "subscription_status",
+        payload: bodyAny,
+        received_at: new Date().toISOString(),
+      } as any);
+    } catch {
+      // table may not exist — that's fine
     }
 
-    // 2) extraction robuste (racine + nested Systeme.io)
-    const email =
-      (parsed.data.email?.toLowerCase() ??
-        pickString(bodyAny, ["data.customer.email", "customer.email", "email"]))?.toLowerCase() ?? null;
+    // ✅ Try both schemas: real Systeme.io format (customer at root) and legacy (email at root)
+    const parsedSysteme = systemePayloadSchema.safeParse(bodyAny);
+    const parsedLegacy = !parsedSysteme.success ? legacyPayloadSchema.safeParse(bodyAny) : null;
 
-    const contactId =
-      (parsed.data.contact_id !== undefined && parsed.data.contact_id !== null
-        ? String(parsed.data.contact_id).trim()
-        : pickString(bodyAny, ["data.customer.contact_id", "customer.contact_id", "contact_id", "contactId"])) ?? null;
+    // ✅ Extraction robuste : Systeme.io "sale canceled" a le même format que "new sale"
+    const email = (
+      (parsedSysteme.success ? parsedSysteme.data.customer.email : null) ??
+      (parsedLegacy?.success ? parsedLegacy.data.email : null) ??
+      pickString(bodyAny, ["customer.email", "data.customer.email", "email"])
+    )?.toLowerCase() ?? null;
 
-    const event = parsed.data.event ?? "canceled";
+    const contactId = (
+      (parsedSysteme.success ? String(parsedSysteme.data.customer.contactId).trim() : null) ??
+      (parsedLegacy?.success && parsedLegacy.data.contact_id != null
+        ? String(parsedLegacy.data.contact_id).trim()
+        : null) ??
+      pickString(bodyAny, [
+        "customer.contactId",
+        "customer.contact_id",
+        "data.customer.contactId",
+        "data.customer.contact_id",
+        "contactId",
+        "contact_id",
+      ])
+    ) ?? null;
+
+    const event = (parsedLegacy?.success ? parsedLegacy.data.event : null) ??
+      pickString(bodyAny, ["event"]) ??
+      "canceled";
 
     let profile = null;
     if (email) profile = await findProfileByEmail(email);

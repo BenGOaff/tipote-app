@@ -60,7 +60,8 @@ const OFFER_PRICE_ID_TO_PLAN: Record<string, StoredPlan> = {
 };
 
 function inferPlanFromSubscription(sub: any): IncomingPlan | StoredPlan | null {
-  const offer = sub?.offer_price_plan ?? sub?.offerPricePlan ?? null;
+  // ✅ Systeme.io API uses "pricePlan" (or legacy "offer_price_plan" / "offerPricePlan")
+  const offer = sub?.pricePlan ?? sub?.offer_price_plan ?? sub?.offerPricePlan ?? null;
 
   // First try: match offer-price ID against known mapping (with normalization)
   const offerId = String(offer?.id ?? sub?.offer_price?.id ?? "").trim();
@@ -73,9 +74,9 @@ function inferPlanFromSubscription(sub: any): IncomingPlan | StoredPlan | null {
     if (withPrefix && withPrefix in OFFER_PRICE_ID_TO_PLAN) return OFFER_PRICE_ID_TO_PLAN[withPrefix];
   }
 
-  // Fallback: infer from name strings
+  // Fallback: infer from name strings (handle both camelCase and snake_case)
   const name =
-    `${offer?.inner_name ?? ""} ${offer?.name ?? ""} ${sub?.product_name ?? ""} ${sub?.product?.name ?? ""} ${sub?.name ?? ""}`
+    `${offer?.innerName ?? ""} ${offer?.inner_name ?? ""} ${offer?.name ?? ""} ${sub?.product_name ?? ""} ${sub?.product?.name ?? ""} ${sub?.name ?? ""}`
       .toLowerCase()
       .trim();
 
