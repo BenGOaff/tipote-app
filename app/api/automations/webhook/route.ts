@@ -308,7 +308,14 @@ async function processComment(params: {
   const { platform, page_id, sender_id, sender_name, comment_text, comment_id, post_id, page_access_token, user_id } = params;
   const commentUpper = comment_text.toUpperCase();
 
-  console.log("[webhook] 📝 processComment:", { platform, page_id, sender_name, comment_text, post_id, user_id });
+  console.log("[webhook] 📝 processComment:", { platform, page_id, sender_id, sender_name, comment_text, post_id, user_id });
+
+  // ── GUARD: ignore comments posted by the Page itself (prevents infinite loop) ──
+  if (sender_id === page_id) {
+    console.log(`[webhook] SKIP — comment from the page itself (${sender_id})`);
+    await logWebhook("skip_self_comment", { pageId: page_id, payload: { sender_id, comment_text: comment_text.slice(0, 50) } });
+    return NextResponse.json({ ok: true, matched: 0, skipped: true, reason: "self_comment" });
+  }
 
   try {
     // NOTE: .contains("platforms", [platform]) on TEXT[] columns is unreliable
@@ -360,8 +367,8 @@ async function processComment(params: {
     await logWebhook("matched", { pageId: page_id, userId: user_id, payload: { platform, automationId: matched.id, automationName: matched.name, commentText: comment_text.slice(0, 80) } });
     const firstName = extractFirstName(sender_name);
 
-    // ── DEDUP: check if this comment was already processed ──
-    if (comment_id) {
+    // ── DEDUP: check if this comment OR this user+post was already processed ──
+    {
       const { data: freshAuto } = await supabaseAdmin
         .from("social_automations")
         .select("meta")
@@ -373,21 +380,36 @@ async function processComment(params: {
         ? (freshMeta.ig_processed_ids as string[])
         : [];
 
-      if (alreadyProcessed.includes(comment_id)) {
+      // Dedup by comment_id (existing)
+      if (comment_id && alreadyProcessed.includes(comment_id)) {
         console.log(`[webhook] SKIP ${comment_id} — already processed`);
         return NextResponse.json({ ok: true, matched: 1, skipped: true, reason: "already_processed" });
       }
 
+      // Dedup by sender+post: only 1 reply + 1 DM per user per post per automation
+      const userPostKey = `user:${sender_id}:post:${post_id ?? "all"}`;
+      const processedUserPosts: string[] = Array.isArray(freshMeta.processed_user_posts)
+        ? (freshMeta.processed_user_posts as string[])
+        : [];
+
+      if (processedUserPosts.includes(userPostKey)) {
+        console.log(`[webhook] SKIP — user ${sender_id} already got a reply on post ${post_id}`);
+        await logWebhook("skip_user_post_dedup", { pageId: page_id, payload: { sender_id, post_id, userPostKey } });
+        return NextResponse.json({ ok: true, matched: 1, skipped: true, reason: "user_post_already_processed" });
+      }
+
       // ── MARK AS PROCESSED IMMEDIATELY (before sending DM) ──
-      const updatedIds = [...alreadyProcessed, comment_id].slice(-200);
+      const updatedIds = [...alreadyProcessed, ...(comment_id ? [comment_id] : [])].slice(-200);
+      const updatedUserPosts = [...processedUserPosts, userPostKey].slice(-500);
       await supabaseAdmin
         .from("social_automations")
         .update({
           meta: {
             ...freshMeta,
-            ig_last_comment_id: comment_id,
+            ig_last_comment_id: comment_id ?? freshMeta.ig_last_comment_id,
             ig_last_processed: Math.floor(Date.now() / 1000),
             ig_processed_ids: updatedIds,
+            processed_user_posts: updatedUserPosts,
           },
           updated_at: new Date().toISOString(),
         })
