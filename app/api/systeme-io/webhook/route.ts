@@ -90,9 +90,9 @@ const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
 
   // Offres Basic
   "offer-price-2963851": "basic",
-  "offer-price-3103584": "basic",
+  "offer-price-3134002": "basic",
   "2963851": "basic",
-  "3103584": "basic",
+  "3134002": "basic",
 
   // Offres Pro
   "offer-price-3103586": "pro",
