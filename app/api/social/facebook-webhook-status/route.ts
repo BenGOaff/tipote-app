@@ -71,6 +71,62 @@ export async function GET(req: NextRequest) {
     usingMessengerTokenForPageSub: !!messengerPageToken,
   };
 
+  // 0. Check MESSENGER_PAGE_ACCESS_TOKEN type (Page vs User)
+  if (messengerPageToken) {
+    try {
+      const tokenCheckRes = await fetch(
+        `${GRAPH}/me?fields=id,name,category,access_type&access_token=${messengerPageToken}`,
+        { cache: "no-store" }
+      );
+      const tokenCheckData = await tokenCheckRes.json();
+      if (tokenCheckData.error) {
+        result.messengerTokenCheck = {
+          status: "ERROR",
+          error: tokenCheckData.error.message,
+          code: tokenCheckData.error.code,
+        };
+      } else if (tokenCheckData.category) {
+        result.messengerTokenCheck = {
+          status: "OK - PAGE TOKEN ✅",
+          resolvedId: tokenCheckData.id,
+          resolvedName: tokenCheckData.name,
+          category: tokenCheckData.category,
+          matchesPageId: tokenCheckData.id === pageId,
+        };
+      } else {
+        result.messengerTokenCheck = {
+          status: "⚠️ USER TOKEN (WRONG!) - Needs to be a PAGE token",
+          resolvedId: tokenCheckData.id,
+          resolvedName: tokenCheckData.name,
+          fix: "In Graph API Explorer, select the PAGE (not User) from the token dropdown, then copy that token as MESSENGER_PAGE_ACCESS_TOKEN",
+        };
+      }
+    } catch (err) {
+      result.messengerTokenCheck = { status: "CHECK_FAILED", error: String(err) };
+    }
+
+    // Also check permissions on the token
+    try {
+      const permRes = await fetch(
+        `${GRAPH}/me/permissions?access_token=${messengerPageToken}`,
+        { cache: "no-store" }
+      );
+      const permData = await permRes.json();
+      if (permData.data) {
+        const perms = permData.data as Array<{ permission: string; status: string }>;
+        const hasMessaging = perms.some(p => p.permission === "pages_messaging" && p.status === "granted");
+        result.messengerTokenPermissions = {
+          pages_messaging: hasMessaging ? "✅ granted" : "❌ MISSING - required for DMs",
+          all: perms.filter(p => p.status === "granted").map(p => p.permission),
+        };
+      } else {
+        result.messengerTokenPermissions = permData;
+      }
+    } catch (err) {
+      result.messengerTokenPermissionsError = String(err);
+    }
+  }
+
   // 1. Check app-level subscriptions (Tipote ter)
   if (webhookAppId && webhookAppSecret) {
     try {

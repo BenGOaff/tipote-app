@@ -446,10 +446,32 @@ async function processComment(params: {
       // Si ça échoue, essayer aussi avec le token OAuth (Tipote) au cas où.
       const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
 
+      // Vérifier le type du MESSENGER token (Page vs User) pour diagnostic
+      let messengerTokenType = "unknown";
+      if (messengerToken) {
+        try {
+          const checkRes = await fetch(
+            `https://graph.facebook.com/v21.0/me?fields=id,name,category&access_token=${messengerToken}`
+          );
+          const checkData = await checkRes.json();
+          if (checkData.error) {
+            messengerTokenType = `error: ${checkData.error.message?.slice(0, 80)}`;
+          } else if (checkData.category) {
+            // Les Pages ont un champ "category", les Users non
+            messengerTokenType = `page_token (page: ${checkData.name}, id: ${checkData.id})`;
+          } else {
+            messengerTokenType = `user_token (user: ${checkData.name}, id: ${checkData.id}) ⚠️ WRONG TOKEN TYPE`;
+          }
+        } catch (e) {
+          messengerTokenType = `check_failed: ${String(e).slice(0, 80)}`;
+        }
+      }
+
       await logWebhook("dm_attempt_start", { pageId: page_id, payload: {
         commentId: comment_id, senderId: sender_id,
         hasMessengerToken: !!messengerToken,
         messengerTokenPrefix: messengerToken?.slice(0, 10),
+        messengerTokenType,
         oauthTokenPrefix: page_access_token.slice(0, 10),
       }});
 
@@ -466,18 +488,18 @@ async function processComment(params: {
             await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
 
             // Tentative 3 : recipient.id (ne marche que si conversation déjà ouverte)
-            dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+            dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
           }
         }
       } else {
         // Pas de MESSENGER token — essayer avec OAuth + fallback recipient.id
         dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
         if (!dmResult.ok) {
-          dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+          dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
         }
       }
     } else {
-      dmResult = await sendMetaDM(page_access_token, sender_id, dmText);
+      dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
     }
 
     if (!dmResult.ok) {
@@ -714,8 +736,8 @@ async function sendInstagramPrivateReply(
     const errBody = await res.text();
     console.warn(`[webhook] IG Private Reply failed (${res.status}):`, errBody.slice(0, 200));
 
-    // Tentative 2 : Messenger Platform
-    const fbRes = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+    // Tentative 2 : Messenger Platform (utiliser /{igAccountId}/messages au lieu de /me/messages)
+    const fbRes = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/messages`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -771,8 +793,12 @@ async function sendInstagramDMById(
  * Facebook Private Reply : envoie un DM lié au commentaire.
  * Le webhook envoie comment_id au format "{post_id}_{comment_id}".
  * Certaines API Meta attendent le format complet, d'autres la partie commentaire seule.
- * On essaie les deux formats avec 2 endpoints différents.
+ * On essaie les deux formats avec 3 endpoints différents.
  * Le token doit avoir la permission pages_messaging.
+ *
+ * IMPORTANT: On utilise /{pageId}/messages au lieu de /me/messages.
+ * /me/messages échoue avec "Object with ID 'me' does not exist" si le token
+ * n'est pas un Page Token pur. /{pageId}/messages est plus robuste.
  */
 async function sendFacebookPrivateReply(
   accessToken: string,
@@ -794,12 +820,21 @@ async function sendFacebookPrivateReply(
     ? [commentIdFull, commentIdStripped]
     : [commentIdFull];
 
-  console.log("[webhook] DM Private Reply - formats à essayer:", { commentIdFull, commentIdStripped, tokenPrefix: accessToken.slice(0, 10) });
+  // Déterminer l'endpoint messages. Utiliser /{pageId}/messages si possible
+  // car /me/messages échoue quand le token est un User Token.
+  const messagesEndpoint = pageId
+    ? `https://graph.facebook.com/v21.0/${pageId}/messages`
+    : "https://graph.facebook.com/v21.0/me/messages";
+
+  console.log("[webhook] DM Private Reply - formats à essayer:", {
+    commentIdFull, commentIdStripped, tokenPrefix: accessToken.slice(0, 10),
+    endpoint: pageId ? `/${pageId}/messages` : "/me/messages",
+  });
 
   for (const cId of idsToTry) {
     const idLabel = cId === commentIdFull ? "full" : "stripped";
 
-    // ── Méthode A : POST /{comment_id}/private_replies (ancien endpoint Graph API) ──
+    // ── Méthode A : POST /{comment_id}/private_replies (endpoint dédié Graph API) ──
     try {
       const url = `https://graph.facebook.com/v21.0/${cId}/private_replies`;
       console.log(`[webhook] DM tentative A(${idLabel}): POST /${cId}/private_replies`);
@@ -824,10 +859,10 @@ async function sendFacebookPrivateReply(
       errors.push(`A(${idLabel}): ${String(err).slice(0, 80)}`);
     }
 
-    // ── Méthode B : POST /me/messages avec recipient.comment_id (Send API) ──
+    // ── Méthode B : POST /{pageId}/messages avec recipient.comment_id (Send API) ──
     try {
-      console.log(`[webhook] DM tentative B(${idLabel}): POST /me/messages + comment_id=${cId}`);
-      const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+      console.log(`[webhook] DM tentative B(${idLabel}): POST ${messagesEndpoint} + comment_id=${cId}`);
+      const res = await fetch(messagesEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -860,13 +895,22 @@ async function sendMetaDM(
   pageAccessToken: string,
   recipientId: string,
   text: string,
+  pageId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   // Préférer le token Messenger (Tipote ter, qui a pages_messaging)
   // au token OAuth Facebook (Tipote, qui n'a pas Messenger)
   const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN ?? pageAccessToken;
 
+  // Utiliser /{pageId}/messages au lieu de /me/messages.
+  // /me/messages échoue si le token est un User Token ("Object with ID 'me' does not exist").
+  // /{pageId}/messages est plus robuste.
+  const targetPageId = pageId ?? process.env.FACEBOOK_PAGE_ID;
+  const messagesEndpoint = targetPageId
+    ? `https://graph.facebook.com/v21.0/${targetPageId}/messages`
+    : "https://graph.facebook.com/v21.0/me/messages";
+
   try {
-    const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+    const res = await fetch(messagesEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

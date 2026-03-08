@@ -342,7 +342,14 @@ async function upsertProfile(params: {
 
   // ⚠️ ALWAYS include plan in the payload — never create a profile without a plan.
   // The paid webhook should always resolve a plan; free-optin has its own handler.
-  payload.plan = plan ?? "free";
+  // SAFETY: If plan is null/undefined and this is the PAID webhook, default to "beta"
+  // (not "free") because the user bought something.
+  if (!plan) {
+    console.error(`[Systeme.io webhook] ⚠️ upsertProfile called with null plan for ${email}. Defaulting to "beta" (paid webhook safety net).`);
+    payload.plan = "beta";
+  } else {
+    payload.plan = plan;
+  }
   if (typeof product_id !== "undefined") payload.product_id = product_id;
 
   const { error: upsertError } = await supabaseAdmin.from("profiles").upsert(payload, { onConflict: "id" });
