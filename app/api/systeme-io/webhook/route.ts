@@ -340,16 +340,15 @@ async function upsertProfile(params: {
     updated_at: new Date().toISOString(),
   };
 
-  // ⚠️ ALWAYS include plan in the payload — never create a profile without a plan.
-  // The paid webhook should always resolve a plan; free-optin has its own handler.
-  // SAFETY: If plan is null/undefined and this is the PAID webhook, default to "beta"
-  // (not "free") because the user bought something.
+  // ⚠️ NEVER upsert a profile without an explicitly resolved plan.
+  // If plan is null, the caller MUST handle it (skip upsert, flag for manual review).
   if (!plan) {
-    console.error(`[Systeme.io webhook] ⚠️ upsertProfile called with null plan for ${email}. Defaulting to "beta" (paid webhook safety net).`);
-    payload.plan = "beta";
-  } else {
-    payload.plan = plan;
+    throw new Error(
+      `[Systeme.io webhook] ❌ REFUSED to upsert profile for ${email}: plan is null. ` +
+      `This webhook will NOT assign a plan without explicit resolution. Requires manual review.`,
+    );
   }
+  payload.plan = plan;
   if (typeof product_id !== "undefined") payload.product_id = product_id;
 
   const { error: upsertError } = await supabaseAdmin.from("profiles").upsert(payload, { onConflict: "id" });
@@ -529,10 +528,10 @@ export async function POST(req: NextRequest) {
 
       let plan = inferPlanFromOffer({ id: offerId, name: offerName, inner_name: offerInner });
 
-      // ⚠️ CRITICAL: This is the PAID webhook. If we can't infer the plan,
-      // check existing profile or use "beta" as safe default (most buyers are beta).
+      // ⚠️ CRITICAL: If we can't infer the plan, we REFUSE to assign one.
+      // No guessing, no defaults. The profile is NOT updated until an admin resolves it.
       if (!plan) {
-        // Check if user already has a paid plan in the DB
+        // Check if user already has a paid plan in the DB — keep it if so
         const { data: existingProfile } = await supabaseAdmin
           .from("profiles")
           .select("plan")
@@ -542,7 +541,7 @@ export async function POST(req: NextRequest) {
         const existingPlan = (existingProfile?.plan ?? "").toString().trim();
 
         if (existingPlan && existingPlan !== "free") {
-          // User already has a paid plan — keep it
+          // User already has a paid plan — keep it (don't downgrade or change)
           plan = existingPlan as StoredPlan;
           console.warn(
             `[Systeme.io webhook] ⚠️ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". ` +
@@ -550,16 +549,51 @@ export async function POST(req: NextRequest) {
             `RAW offer data: ${JSON.stringify({ offer_price_plan: rawBody?.data?.offer_price_plan, offer_price: rawBody?.data?.offer_price })}`,
           );
         } else {
-          // ⚠️ THIS IS THE PAID WEBHOOK — the user bought something!
-          // If we can't determine the exact plan, default to "beta" (most common paid plan)
-          // rather than leaving them stuck on "free". Admin can adjust later.
-          plan = "beta";
+          // ❌ CANNOT determine plan AND user has no existing paid plan.
+          // ABORT: Do NOT assign any plan. Log for manual review.
           console.error(
-            `[Systeme.io webhook] ❌ Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". ` +
-            `DEFAULTING to "beta" for ${resolvedEmail} (paid webhook = user bought something). ` +
+            `[Systeme.io webhook] ❌ ABORT: Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". ` +
+            `User ${resolvedEmail} will NOT receive any plan until manual review. ` +
             `RAW offer data: ${JSON.stringify({ offer_price_plan: rawBody?.data?.offer_price_plan, offer_price: rawBody?.data?.offer_price })} ` +
             `FULL PAYLOAD KEYS: ${JSON.stringify(Object.keys(rawBody?.data ?? {}))}`,
           );
+
+          // Log to webhook_logs with a clear flag for manual review
+          try {
+            await supabaseAdmin.from("webhook_logs").insert({
+              source: "systeme_io",
+              event_type: "PLAN_RESOLUTION_FAILED",
+              payload: {
+                email: resolvedEmail,
+                user_id: userId,
+                offer_id: offerId,
+                offer_name: offerName,
+                offer_inner: offerInner,
+                order_id: orderId,
+                raw_offer_data: {
+                  offer_price_plan: rawBody?.data?.offer_price_plan,
+                  offer_price: rawBody?.data?.offer_price,
+                },
+                requires_manual_review: true,
+              },
+              received_at: new Date().toISOString(),
+            } as any);
+          } catch {
+            // table may not exist
+          }
+
+          // Return 200 so Systeme.io does NOT retry, but flag the issue
+          return NextResponse.json({
+            status: "warning",
+            action: "plan_not_resolved",
+            requires_manual_review: true,
+            email: resolvedEmail,
+            user_id: userId,
+            offer_id: offerId || null,
+            offer_name: offerName,
+            order_id: orderId,
+            message: "Could not determine plan from offer. Profile NOT updated. Manual review required.",
+          });
         }
       } else {
         console.log(
@@ -610,6 +644,23 @@ export async function POST(req: NextRequest) {
               : product_id === "prod_elite_1"
                 ? "elite"
                 : null;
+
+      // ❌ Simple test payload must also have an explicit plan
+      if (!plan) {
+        console.error(
+          `[Systeme.io webhook] ❌ Simple test payload for ${email} has unrecognized product_id="${product_id}". ` +
+          `Profile NOT updated. Add this product_id to the mapping.`,
+        );
+        return NextResponse.json({
+          status: "warning",
+          action: "plan_not_resolved",
+          requires_manual_review: true,
+          mode: "simple_test",
+          email: email.toLowerCase(),
+          product_id: product_id ?? null,
+          message: "Unrecognized product_id — cannot determine plan. Profile NOT updated.",
+        });
+      }
 
       const userId = await getOrCreateSupabaseUser({
         email: email.toLowerCase(),
