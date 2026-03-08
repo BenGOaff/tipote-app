@@ -702,14 +702,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
           {resultProfile?.insight && (
             <div className="p-4 rounded-lg bg-muted/50 border">
-              <p className="text-sm font-medium mb-1">{t.insight}</p>
               <p className="text-sm text-muted-foreground">{resultProfile.insight}</p>
             </div>
           )}
 
           {resultProfile?.projection && (
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <p className="text-sm font-medium mb-1">{t.projection}</p>
               <p className="text-sm text-muted-foreground">
                 {resultProfile.projection}
               </p>

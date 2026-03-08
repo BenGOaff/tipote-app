@@ -123,6 +123,67 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
     }
   }
 
+  // Offer audit: quick_wins → tasks
+  const offerAudit = isRecord((planJson as any).offer_audit)
+    ? ((planJson as any).offer_audit as AnyRecord)
+    : null;
+
+  if (offerAudit) {
+    // quick_wins are simple strings
+    const quickWins = toArray((offerAudit as any).quick_wins);
+    for (const qw of quickWins) {
+      if (typeof qw !== "string" || !qw.trim()) continue;
+      out.push({
+        title: clampLen(qw, 180),
+        priority: "high",
+        source: "offer_audit",
+      });
+    }
+
+    // improvements have recommendation + test
+    const improvements = toArray((offerAudit as any).improvements);
+    for (const imp of improvements) {
+      if (!isRecord(imp)) continue;
+      const recommendation = toStr((imp as any).recommendation);
+      const test = toStr((imp as any).test);
+      // Use recommendation as task title, or test if no recommendation
+      const title = recommendation || test;
+      if (!title) continue;
+      out.push({
+        title: clampLen(title, 180),
+        priority: "medium",
+        source: "offer_audit",
+      });
+    }
+  }
+
+  // Offer alternatives: suggested_changes + first_test → tasks
+  const offerAlternatives = toArray((planJson as any).offer_alternatives);
+  for (const alt of offerAlternatives) {
+    if (!isRecord(alt)) continue;
+
+    // Each suggested change becomes a task
+    const suggestedChanges = toArray((alt as any).suggested_changes ?? (alt as any).suggestedChanges);
+    for (const sc of suggestedChanges) {
+      if (typeof sc !== "string" || !sc.trim()) continue;
+      out.push({
+        title: clampLen(sc, 180),
+        priority: "medium",
+        source: "offer_alternatives",
+      });
+    }
+
+    // first_test becomes a task
+    const firstTest = toStr((alt as any).first_test ?? (alt as any).firstTest);
+    if (firstTest) {
+      out.push({
+        title: clampLen(firstTest, 180),
+        priority: "high",
+        source: "offer_alternatives",
+      });
+    }
+  }
+
   // Legacy: tasks[]
   const legacyTasks = toArray((planJson as any).tasks);
   if (legacyTasks.length > 0) {
