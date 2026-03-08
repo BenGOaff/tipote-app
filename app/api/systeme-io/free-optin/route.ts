@@ -100,37 +100,73 @@ async function upsertProfile(
   last_name: string | null,
   sio_contact_id: string | null,
 ) {
-  // ⚠️ CRITICAL: Check if user already has a paid plan BEFORE upserting.
-  // Systeme.io can fire the free-optin webhook AFTER a sale webhook,
-  // which would overwrite a paid plan (beta/basic/pro/elite) with "free".
+  // ⚠️ CRITICAL: Protect paid plans from being overwritten by free-optin.
+  // Race condition fix: instead of check-then-upsert (non-atomic), we:
+  // 1. Try INSERT (new users only) with plan="free"
+  // 2. If user exists (conflict), UPDATE only non-plan fields
+  //    AND only set plan="free" if current plan is NOT a paid plan.
+  // This eliminates the race window where a sale webhook could set a paid
+  // plan between our check and our upsert.
+
+  const PAID_PLANS = ["beta", "basic", "pro", "elite"];
+
+  // First, try to get existing profile
   const { data: existing } = await supabaseAdmin
     .from("profiles")
-    .select("plan")
+    .select("id, plan")
     .eq("id", userId)
     .maybeSingle();
 
-  const existingPlan = (existing?.plan ?? "").toString().trim().toLowerCase();
-  const PAID_PLANS = ["beta", "basic", "pro", "elite"];
-  const shouldKeepPlan = PAID_PLANS.includes(existingPlan);
+  if (!existing) {
+    // New user — safe to insert with "free"
+    const { error } = await supabaseAdmin.from("profiles").upsert({
+      id: userId,
+      email,
+      first_name,
+      last_name,
+      sio_contact_id,
+      plan: "free",
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "id" });
 
-  if (shouldKeepPlan) {
+    if (error) throw error;
+    return;
+  }
+
+  const existingPlan = (existing.plan ?? "").toString().trim().toLowerCase();
+  const hasPaidPlan = PAID_PLANS.includes(existingPlan);
+
+  if (hasPaidPlan) {
+    // ✅ User has a paid plan — update contact info but NEVER touch the plan
     console.log(
       `[Systeme.io free-optin] User ${email} already has plan="${existingPlan}" — NOT overwriting with "free".`,
     );
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        email,
+        first_name: first_name || undefined,
+        last_name: last_name || undefined,
+        sio_contact_id: sio_contact_id || undefined,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+    if (error) throw error;
+  } else {
+    // User exists but has no paid plan — safe to set "free"
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        email,
+        first_name,
+        last_name,
+        sio_contact_id,
+        plan: "free",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+    if (error) throw error;
   }
-
-  const payload: Record<string, any> = {
-    id: userId,
-    email,
-    first_name,
-    last_name,
-    sio_contact_id,
-    plan: shouldKeepPlan ? existingPlan : "free",
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabaseAdmin.from("profiles").upsert(payload, { onConflict: "id" });
-  if (error) throw error;
 }
 
 async function ensureCredits(userId: string) {
@@ -204,34 +240,73 @@ export async function POST(req: NextRequest) {
       // table may not exist — that's fine
     }
 
-    // Systeme.io opt-in: parfois "email", parfois nested
-    const emailRaw = pickString(body, ["data.customer.email", "customer.email", "email", "Email"]) ?? "";
+    // ✅ Systeme.io optin: payload uses "contact" (not "customer"), and "fields" is an ARRAY
+    // of { fieldName, slug, value } objects — NOT an object with direct keys.
+    // Fallback to old paths for backward compat.
+
+    const emailRaw = pickString(body, [
+      "contact.email",
+      "data.contact.email",
+      "customer.email",
+      "data.customer.email",
+      "email",
+      "Email",
+    ]) ?? "";
     const email = emailRaw.trim().toLowerCase();
     if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
 
+    // Helper: extract a field value from Systeme.io optin "fields" array
+    // where fields = [{ fieldName: "first_name", slug: "first_name", value: "John" }, ...]
+    function pickFieldFromArray(fieldName: string): string | null {
+      const fields = deepGet(body, "contact.fields") ?? deepGet(body, "data.contact.fields");
+      if (Array.isArray(fields)) {
+        const entry = fields.find(
+          (f: any) => f?.fieldName === fieldName || f?.slug === fieldName,
+        );
+        if (entry?.value) return String(entry.value).trim() || null;
+      }
+      return null;
+    }
+
     const firstName =
+      pickFieldFromArray("first_name") ??
       pickString(body, [
-        "data.customer.fields.first_name",
+        "contact.fields.first_name",
         "customer.fields.first_name",
+        "data.customer.fields.first_name",
         "first_name",
         "firstname",
         "Prenom",
       ]) ?? null;
 
-    // ✅ Ajout last_name (Systeme.io le met souvent dans "surname")
+    // ✅ Systeme.io optin sends "last_name" or "surname" in the fields array
     const lastName =
+      pickFieldFromArray("last_name") ??
+      pickFieldFromArray("surname") ??
       pickString(body, [
-        "data.customer.fields.last_name",
-        "data.customer.fields.surname",
-        "customer.fields.last_name",
+        "contact.fields.surname",
+        "contact.fields.last_name",
         "customer.fields.surname",
-        "last_name",
+        "customer.fields.last_name",
+        "data.customer.fields.surname",
+        "data.customer.fields.last_name",
         "surname",
+        "last_name",
         "Nom",
       ]) ?? null;
 
+    // ✅ Contact ID: Systeme.io optin sends "contact.id" (not contactId)
     const sioContactId =
-      pickString(body, ["data.customer.contact_id", "customer.contact_id", "contact_id", "contactId"]) ?? null;
+      pickString(body, [
+        "contact.id",
+        "data.contact.id",
+        "customer.contactId",
+        "customer.contact_id",
+        "data.customer.contactId",
+        "data.customer.contact_id",
+        "contactId",
+        "contact_id",
+      ]) ?? null;
 
     const userId = await getOrCreateUser(email, firstName, lastName, sioContactId);
 

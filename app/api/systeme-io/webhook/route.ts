@@ -18,26 +18,59 @@ const supabaseAnon = createClient(
 
 const zNumOrStr = z.union([z.number(), z.string()]);
 
-// Payload "sale completed" (le type varie selon le trigger => on ne bloque pas dessus)
+// ✅ Schema conforme au vrai payload Systeme.io (doc officielle)
+// Les champs sont à la RACINE (pas de wrapper "data"), et les noms sont en camelCase.
 const systemeNewSaleSchema = z.object({
+  customer: z.object({
+    id: zNumOrStr,
+    contactId: zNumOrStr,
+    email: z.string().email(),
+    fields: z
+      .object({
+        first_name: z.string().optional().nullable(),
+        surname: z.string().optional().nullable(),
+        company_name: z.string().optional().nullable(),
+      })
+      .catchall(z.any())
+      .optional(),
+  }),
+
+  pricePlan: z
+    .object({
+      id: zNumOrStr,
+      name: z.string().optional(),
+      innerName: z.string().optional().nullable(),
+      type: z.string().optional(),
+    })
+    .optional(),
+
+  order: z
+    .object({
+      id: zNumOrStr,
+      createdAt: z.string().optional(),
+    })
+    .partial()
+    .optional(),
+}).passthrough();
+
+// Legacy schema : ancien format avec wrapper "data" (rétro-compat)
+const legacyNewSaleSchema = z.object({
   type: z.string().optional(),
   data: z.object({
     customer: z.object({
       id: zNumOrStr,
-      contact_id: zNumOrStr,
+      contact_id: zNumOrStr.optional(),
+      contactId: zNumOrStr.optional(),
       email: z.string().email(),
       fields: z
         .object({
-          first_name: z.string().optional(),
-          surname: z.string().optional(),
-          // ✅ certains setups peuvent déjà envoyer last_name
-          last_name: z.string().optional(),
+          first_name: z.string().optional().nullable(),
+          surname: z.string().optional().nullable(),
         })
         .catchall(z.any())
         .optional(),
     }),
 
-    // Certains envois ont offer_price_plan OU offer_price
     offer_price_plan: z
       .object({
         id: zNumOrStr,
@@ -54,10 +87,20 @@ const systemeNewSaleSchema = z.object({
       })
       .optional(),
 
+    pricePlan: z
+      .object({
+        id: zNumOrStr,
+        name: z.string().optional(),
+        innerName: z.string().optional().nullable(),
+        type: z.string().optional(),
+      })
+      .optional(),
+
     order: z
       .object({
         id: zNumOrStr,
         created_at: z.string().optional(),
+        createdAt: z.string().optional(),
       })
       .partial()
       .optional(),
@@ -80,7 +123,8 @@ export type StoredPlan = "free" | "basic" | "pro" | "elite" | "beta";
 
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   // Offres Beta lifetime => plan "beta" en DB
-  // Systeme.io peut envoyer l'ID avec préfixe "offer-price-" ou en numérique pur
+  // Systeme.io envoie pricePlan.id en numérique (ex: 3064431)
+  // On mappe toutes les variantes possibles (avec/sans préfixe)
   "offerprice-efbd353f": "beta",
   "offerprice-3066719": "beta",
   "offer-price-3066719": "beta",
@@ -91,8 +135,10 @@ const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   // Offres Basic
   "offer-price-2963851": "basic",
   "offer-price-3134002": "basic",
+  "offer-price-3103584": "basic",
   "2963851": "basic",
   "3134002": "basic",
+  "3103584": "basic",
 
   // Offres Pro
   "offer-price-3103586": "pro",
@@ -408,7 +454,7 @@ export async function POST(req: NextRequest) {
 
     // Log every incoming webhook call for debugging (helps trace missed buyers)
     console.log(
-      `[Systeme.io webhook] Incoming request — type=${rawBody?.type ?? "unknown"} email=${rawBody?.data?.customer?.email ?? rawBody?.email ?? "?"}`,
+      `[Systeme.io webhook] Incoming request — email=${rawBody?.customer?.email ?? rawBody?.data?.customer?.email ?? rawBody?.email ?? "?"} pricePlan.id=${rawBody?.pricePlan?.id ?? rawBody?.data?.pricePlan?.id ?? rawBody?.data?.offer_price_plan?.id ?? "?"}`,
     );
 
     if (!rawBody) {
@@ -430,40 +476,81 @@ export async function POST(req: NextRequest) {
       // table may not exist — that's fine
     }
 
+    // ✅ Try both formats: real Systeme.io (root-level) and legacy (data-wrapped)
     const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
-    const systemeData = parsedSysteme.success ? parsedSysteme.data.data : null;
+    const parsedLegacy = !parsedSysteme.success ? legacyNewSaleSchema.safeParse(rawBody) : null;
 
-    const emailMaybe = systemeData?.customer?.email ?? extractString(rawBody, ["data.customer.email", "customer.email", "email"]);
+    // Données structurées (nouveau format = racine, ancien = sous data)
+    const saleCustomer = parsedSysteme.success
+      ? parsedSysteme.data.customer
+      : parsedLegacy?.success
+        ? parsedLegacy.data.data.customer
+        : null;
+
+    const salePricePlan = parsedSysteme.success
+      ? parsedSysteme.data.pricePlan
+      : parsedLegacy?.success
+        ? (parsedLegacy.data.data.pricePlan ?? parsedLegacy.data.data.offer_price_plan)
+        : null;
+
+    const saleOrder = parsedSysteme.success
+      ? parsedSysteme.data.order
+      : parsedLegacy?.success
+        ? parsedLegacy.data.data.order
+        : null;
+
+    // ✅ Email : Zod parsé → fallback deep extraction (tous formats possibles)
+    const emailMaybe = saleCustomer?.email ?? extractString(rawBody, [
+      "customer.email",
+      "data.customer.email",
+      "email",
+    ]);
     const email = emailMaybe ? String(emailMaybe).toLowerCase() : null;
 
     let firstName =
-      systemeData?.customer?.fields?.first_name ??
-      extractString(rawBody, ["data.customer.fields.first_name", "customer.fields.first_name", "first_name", "firstname"]) ??
+      saleCustomer?.fields?.first_name ??
+      extractString(rawBody, [
+        "customer.fields.first_name",
+        "data.customer.fields.first_name",
+        "first_name",
+        "firstname",
+      ]) ??
       null;
 
     // ✅ last_name (Systeme.io => souvent surname)
     let lastName =
-      systemeData?.customer?.fields?.last_name ??
-      systemeData?.customer?.fields?.surname ??
+      saleCustomer?.fields?.surname ??
       extractString(rawBody, [
-        "data.customer.fields.last_name",
-        "data.customer.fields.surname",
-        "customer.fields.last_name",
         "customer.fields.surname",
-        "last_name",
+        "customer.fields.last_name",
+        "data.customer.fields.surname",
+        "data.customer.fields.last_name",
         "surname",
+        "last_name",
       ]) ??
       null;
 
-    const sioContactId =
-      (systemeData?.customer?.contact_id !== undefined && systemeData?.customer?.contact_id !== null
-        ? toStringId(systemeData.customer.contact_id)
-        : extractString(rawBody, ["data.customer.contact_id", "data.customer.contactId", "customer.contact_id", "contact_id", "contactId"])) ?? null;
+    // ✅ contactId : Systeme.io envoie "contactId" (camelCase) à la racine de customer
+    const sioContactId = toStringId(
+      saleCustomer?.contactId ??
+      (saleCustomer as any)?.contact_id ??
+      extractString(rawBody, [
+        "customer.contactId",
+        "customer.contact_id",
+        "data.customer.contactId",
+        "data.customer.contact_id",
+        "contactId",
+        "contact_id",
+      ]) ??
+      "",
+    ) || null;
 
+    // ✅ CRITICAL FIX: Systeme.io envoie le plan dans "pricePlan.id" (pas "offer_price_plan.id")
     const offerId = toStringId(
-      systemeData?.offer_price_plan?.id ??
-        systemeData?.offer_price?.id ??
+      salePricePlan?.id ??
         extractString(rawBody, [
+          "pricePlan.id",
+          "data.pricePlan.id",
           "data.offer_price_plan.id",
           "data.offer_price.id",
           "offer_price_plan.id",
@@ -476,18 +563,30 @@ export async function POST(req: NextRequest) {
     );
 
     const offerName =
-      systemeData?.offer_price_plan?.name ??
-      systemeData?.offer_price?.name ??
-      extractString(rawBody, ["data.offer_price_plan.name", "data.offer_price.name", "offer_price_plan.name", "offer_price.name"]) ??
+      salePricePlan?.name ??
+      extractString(rawBody, [
+        "pricePlan.name",
+        "data.pricePlan.name",
+        "data.offer_price_plan.name",
+        "data.offer_price.name",
+        "offer_price_plan.name",
+        "offer_price.name",
+      ]) ??
       "Unknown";
 
     const offerInner =
-      systemeData?.offer_price_plan?.inner_name ??
-      extractString(rawBody, ["data.offer_price_plan.inner_name", "offer_price_plan.inner_name"]) ??
+      salePricePlan?.innerName ??
+      (salePricePlan as any)?.inner_name ??
+      extractString(rawBody, [
+        "pricePlan.innerName",
+        "data.pricePlan.innerName",
+        "data.offer_price_plan.inner_name",
+        "offer_price_plan.inner_name",
+      ]) ??
       null;
 
     const orderId = toBigIntNumber(
-      systemeData?.order?.id ?? extractNumber(rawBody, ["data.order.id", "order.id", "order_id", "orderId"]) ?? null,
+      saleOrder?.id ?? extractNumber(rawBody, ["order.id", "data.order.id", "order_id", "orderId"]) ?? null,
     );
 
     // Fallback: si email absent, on tente via sio_contact_id -> profiles
