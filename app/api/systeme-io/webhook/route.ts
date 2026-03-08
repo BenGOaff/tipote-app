@@ -575,7 +575,7 @@ export async function POST(req: NextRequest) {
       "Unknown";
 
     const offerInner =
-      salePricePlan?.innerName ??
+      (salePricePlan as any)?.innerName ??
       (salePricePlan as any)?.inner_name ??
       extractString(rawBody, [
         "pricePlan.innerName",
