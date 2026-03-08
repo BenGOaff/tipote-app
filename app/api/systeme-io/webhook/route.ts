@@ -78,25 +78,6 @@ const simpleTestSchema = z.object({
 // "beta" est stocké comme plan (beta = pro en accès)
 export type StoredPlan = "free" | "basic" | "pro" | "elite" | "beta";
 
-function normalizePlanFromOfferName(offer: { name: string; inner_name?: string | null }): StoredPlan | null {
-  const name = `${offer.inner_name ?? ""} ${offer.name}`.toLowerCase();
-
-  if (name.includes("beta")) return "beta";
-  if (name.includes("elite")) return "elite";
-  if (name.includes("essential")) return "pro"; // alias legacy
-  if (name.includes("pro")) return "pro";
-  if (name.includes("basic")) return "basic";
-  if (name.includes("free") || name.includes("gratuit")) return "free";
-
-  // Fallback: noms d'offres courants Systeme.io qui indiquent un achat payant
-  if (name.includes("tipote") || name.includes("accès") || name.includes("acces") ||
-      name.includes("lifetime") || name.includes("à vie") || name.includes("a vie")) {
-    return "beta";
-  }
-
-  return null;
-}
-
 const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   // Offres Beta lifetime => plan "beta" en DB
   // Systeme.io peut envoyer l'ID avec préfixe "offer-price-" ou en numérique pur
@@ -164,14 +145,14 @@ function normalizeOfferId(raw: string): string[] {
   return [...new Set(candidates)];
 }
 
-function inferPlanFromOffer(offer: { id: string; name: string; inner_name?: string | null }): StoredPlan | null {
-  // Try all normalized variants of the offer ID
-  if (offer.id) {
-    for (const candidate of normalizeOfferId(offer.id)) {
-      if (candidate in OFFER_PRICE_PLAN_ID_TO_PLAN) return OFFER_PRICE_PLAN_ID_TO_PLAN[candidate];
-    }
+function inferPlanFromOffer(offerId: string): StoredPlan | null {
+  // Matching uniquement par ID — on a toutes les offres Systeme.io mappées.
+  // Pas de fallback par nom : c'est fragile et inutile.
+  if (!offerId) return null;
+  for (const candidate of normalizeOfferId(offerId)) {
+    if (candidate in OFFER_PRICE_PLAN_ID_TO_PLAN) return OFFER_PRICE_PLAN_ID_TO_PLAN[candidate];
   }
-  return normalizePlanFromOfferName(offer);
+  return null;
 }
 
 // ---------- Utils ----------
@@ -533,7 +514,7 @@ export async function POST(req: NextRequest) {
           sio_contact_id: sioContactId,
         }));
 
-      let plan = inferPlanFromOffer({ id: offerId, name: offerName, inner_name: offerInner });
+      let plan = inferPlanFromOffer(offerId);
 
       // ⚠️ CRITICAL: If we can't infer the plan, we REFUSE to assign one.
       // No guessing, no defaults. The profile is NOT updated until an admin resolves it.
