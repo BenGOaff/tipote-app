@@ -87,6 +87,13 @@ function normalizePlanFromOfferName(offer: { name: string; inner_name?: string |
   if (name.includes("pro")) return "pro";
   if (name.includes("basic")) return "basic";
   if (name.includes("free") || name.includes("gratuit")) return "free";
+
+  // Fallback: noms d'offres courants Systeme.io qui indiquent un achat payant
+  if (name.includes("tipote") || name.includes("accès") || name.includes("acces") ||
+      name.includes("lifetime") || name.includes("à vie") || name.includes("a vie")) {
+    return "beta";
+  }
+
   return null;
 }
 
@@ -549,11 +556,13 @@ export async function POST(req: NextRequest) {
             `RAW offer data: ${JSON.stringify({ offer_price_plan: rawBody?.data?.offer_price_plan, offer_price: rawBody?.data?.offer_price })}`,
           );
         } else {
-          // ❌ CANNOT determine plan AND user has no existing paid plan.
-          // ABORT: Do NOT assign any plan. Log for manual review.
-          console.error(
-            `[Systeme.io webhook] ❌ ABORT: Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". ` +
-            `User ${resolvedEmail} will NOT receive any plan until manual review. ` +
+          // ⚠️ CANNOT determine plan AND user has no existing paid plan.
+          // SAFETY NET: Default to "beta" (the minimum paid plan) so paying customers
+          // are NEVER left without access. Log for admin review to adjust if needed.
+          plan = "beta";
+          console.warn(
+            `[Systeme.io webhook] ⚠️ SAFETY NET: Could not infer plan from offer_id="${offerId}" name="${offerName}" inner="${offerInner}". ` +
+            `User ${resolvedEmail} defaulted to "beta" (minimum paid plan). Admin should review & add offer mapping. ` +
             `RAW offer data: ${JSON.stringify({ offer_price_plan: rawBody?.data?.offer_price_plan, offer_price: rawBody?.data?.offer_price })} ` +
             `FULL PAYLOAD KEYS: ${JSON.stringify(Object.keys(rawBody?.data ?? {}))}`,
           );
@@ -562,7 +571,7 @@ export async function POST(req: NextRequest) {
           try {
             await supabaseAdmin.from("webhook_logs").insert({
               source: "systeme_io",
-              event_type: "PLAN_RESOLUTION_FAILED",
+              event_type: "PLAN_DEFAULTED_TO_BETA",
               payload: {
                 email: resolvedEmail,
                 user_id: userId,
@@ -574,32 +583,31 @@ export async function POST(req: NextRequest) {
                   offer_price_plan: rawBody?.data?.offer_price_plan,
                   offer_price: rawBody?.data?.offer_price,
                 },
-                requires_manual_review: true,
+                defaulted_plan: "beta",
+                requires_review: true,
               },
               received_at: new Date().toISOString(),
             } as any);
           } catch {
             // table may not exist
           }
-
-          // Return 200 so Systeme.io does NOT retry, but flag the issue
-          return NextResponse.json({
-            status: "warning",
-            action: "plan_not_resolved",
-            requires_manual_review: true,
-            email: resolvedEmail,
-            user_id: userId,
-            offer_id: offerId || null,
-            offer_name: offerName,
-            order_id: orderId,
-            message: "Could not determine plan from offer. Profile NOT updated. Manual review required.",
-          });
         }
       } else {
         console.log(
           `[Systeme.io webhook] ✅ Plan inferred: ${plan} from offer_id="${offerId}" name="${offerName}"`,
         );
       }
+
+      // Lire l'ancien plan AVANT upsert (pour le log d'audit)
+      let oldPlan: string | null = null;
+      try {
+        const { data: existingBefore } = await supabaseAdmin
+          .from("profiles")
+          .select("plan")
+          .eq("id", userId)
+          .maybeSingle();
+        oldPlan = existingBefore?.plan ?? null;
+      } catch { /* best effort */ }
 
       await upsertProfile({
         userId,
@@ -610,6 +618,19 @@ export async function POST(req: NextRequest) {
         plan,
         product_id: offerId || null,
       });
+
+      // ✅ Audit: log le changement de plan (comme le dashboard admin)
+      if (plan !== oldPlan) {
+        try {
+          await supabaseAdmin.from("plan_change_log").insert({
+            target_user_id: userId,
+            target_email: resolvedEmail,
+            old_plan: oldPlan,
+            new_plan: plan,
+            reason: "systeme_io webhook",
+          } as any);
+        } catch { /* best effort */ }
+      }
 
       // ✅ Pas de bonus via webhook. Les crédits sont gérés par ensure_user_credits (DB).
       await ensureUserCredits(userId);
