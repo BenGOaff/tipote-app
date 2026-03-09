@@ -13,6 +13,29 @@ export const dynamic = "force-dynamic";
 const ALLOWED_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "image/gif"]);
 const BUCKET = "content-videos";
 
+/**
+ * Normalize non-standard video MIME types to standard ones.
+ * Mobile devices sometimes send incorrect types (e.g. video/3gpp, video/x-m4v).
+ */
+function normalizeContentType(contentType: string, filename: string): string {
+  const type = contentType.toLowerCase();
+  if (ALLOWED_TYPES.has(type)) return type;
+
+  // Non-standard but MP4-compatible
+  const MP4_COMPAT = ["video/x-m4v", "video/mpeg", "video/3gpp", "video/3gpp2", "video/x-mp4"];
+  if (MP4_COMPAT.includes(type)) return "video/mp4";
+
+  // Fallback: infer from extension
+  const ext = filename.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "mp4": case "m4v": case "3gp": case "3gpp": return "video/mp4";
+    case "mov": return "video/quicktime";
+    case "webm": return "video/webm";
+    case "gif": return "image/gif";
+    default: return type;
+  }
+}
+
 function sanitizeFilename(name: string): string {
   return name
     .replace(/[^a-zA-Z0-9._-]/g, "_")
@@ -42,7 +65,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!ALLOWED_TYPES.has(contentType)) {
+  // Normalize MIME type (mobile devices may send non-standard types)
+  const resolvedType = normalizeContentType(contentType, filename);
+
+  if (!ALLOWED_TYPES.has(resolvedType)) {
     return NextResponse.json(
       { error: `Format non supporté (${contentType}). Formats acceptés : MP4, WebM, MOV, GIF.` },
       { status: 400 }

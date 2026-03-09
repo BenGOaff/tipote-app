@@ -28,10 +28,44 @@ type Props = {
 };
 
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
-const VIDEO_EXTENSIONS = ".mp4,.webm,.mov";
+// Use both video/* (for mobile pickers) and explicit extensions (for desktop)
+const VIDEO_EXTENSIONS = "video/*,.mp4,.webm,.mov";
 const GIF_TYPE = "image/gif";
 const GIF_EXTENSION = ".gif";
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+
+/**
+ * Normalize MIME type: mobile devices sometimes report empty or non-standard types.
+ * Falls back to extension-based detection.
+ */
+function normalizeVideoMimeType(file: File): string {
+  const type = file.type?.toLowerCase() ?? "";
+
+  // Standard types → pass through
+  if (VIDEO_TYPES.includes(type) || type === GIF_TYPE) return type;
+
+  // Non-standard but compatible types → normalize to mp4
+  const MP4_COMPAT = ["video/x-m4v", "video/mpeg", "video/3gpp", "video/3gpp2", "video/x-mp4"];
+  if (MP4_COMPAT.includes(type)) return "video/mp4";
+
+  // Empty or unrecognized type → infer from extension
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "mp4":
+    case "m4v":
+    case "3gp":
+    case "3gpp":
+      return "video/mp4";
+    case "mov":
+      return "video/quicktime";
+    case "webm":
+      return "video/webm";
+    case "gif":
+      return "image/gif";
+    default:
+      return type; // return original, will be rejected downstream
+  }
+}
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -67,7 +101,10 @@ export function VideoUploader({
 
   const uploadFile = useCallback(
     async (file: File): Promise<UploadedVideo | null> => {
-      if (!ACCEPTED_TYPES.includes(file.type)) {
+      // Normalize MIME type (mobile devices often report empty or non-standard types)
+      const resolvedType = normalizeVideoMimeType(file);
+
+      if (!ACCEPTED_TYPES.includes(resolvedType)) {
         toast({
           title: t('unsupportedFormat'),
           description: t('unsupportedFormatDesc', { name: file.name, formats: formatLabel }),
@@ -94,7 +131,7 @@ export function VideoUploader({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             filename: file.name,
-            contentType: file.type,
+            contentType: resolvedType,
             contentId: contentId || undefined,
           }),
         });
@@ -123,7 +160,7 @@ export function VideoUploader({
         const uploaded = await new Promise<boolean>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open("PUT", signedData.signedUrl, true);
-          xhr.setRequestHeader("Content-Type", file.type);
+          xhr.setRequestHeader("Content-Type", resolvedType);
 
           xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
@@ -153,7 +190,7 @@ export function VideoUploader({
           path: signedData.path,
           filename: signedData.filename,
           size: file.size,
-          type: file.type,
+          type: resolvedType,
         };
       } catch (err) {
         toast({
