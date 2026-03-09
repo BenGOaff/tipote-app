@@ -34,7 +34,26 @@
   },
   "notifications": {
     "title": "Notifiche",
-    "empty": "Nessuna notifica al momento."
+    "loading": "Caricamento...",
+    "empty": "Nessuna notifica",
+    "emptyUnread": "Nessuna notifica non letta",
+    "emptyArchived": "Nessuna notifica archiviata",
+    "tabs": {
+      "unread": "Non lette",
+      "all": "Tutte",
+      "archived": "Archiviate"
+    },
+    "markRead": "Segna come letto",
+    "markUnread": "Segna come non letto",
+    "markAllRead": "Segna tutto come letto",
+    "archive": "Archivia",
+    "auto": {
+      "postPublished": "Il tuo post \"{title}\" è stato pubblicato!",
+      "contentReminder": "Non dimenticare di pubblicare {type} \"{title}\" oggi!",
+      "strategyProgress": "Complimenti! Hai completato la fase {phase}, puoi passare al prossimo passo!",
+      "statsReminder": "Non hai compilato le tue statistiche questo mese, ricordati di farlo!",
+      "statsReminderBody": "Le tue statistiche aiutano l'IA a guidarti meglio. Compilale prima della fine del mese."
+    }
   },
   "languageSwitcher": {
     "label": "Lingua dell'interfaccia",
@@ -280,7 +299,10 @@
     "seeAnalysis": "Vedi analisi",
     "emptyTitle": "Nessun dato ancora",
     "emptyBody": "Inserisci i tuoi primi dati per iniziare a visualizzare i tuoi progressi.",
-    "enterData": "Inserisci i miei dati"
+    "enterData": "Inserisci i miei dati",
+    "lastUpdated": "Aggiornato il",
+    "inProgress": "Mese in corso",
+    "edit": "Modifica"
   },
   "pepites": {
     "title": "La mia collezione di gemme",

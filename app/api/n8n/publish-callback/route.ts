@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,31 @@ export async function POST(req: NextRequest) {
     }
 
     await updatePublishedStatus(contentId, meta);
+
+    // Send "post published" notification to the user
+    try {
+      const { data: contentItem } = await supabaseAdmin
+        .from("content_item")
+        .select("user_id, project_id, titre, title")
+        .eq("id", contentId)
+        .single();
+
+      if (contentItem?.user_id) {
+        const postTitle = contentItem.titre || contentItem.title || platform || "contenu";
+        const postUrl = meta.linkedin_post_url || meta.twitter_post_url || meta.threads_post_url || meta.facebook_post_url || null;
+        void createNotification({
+          user_id: contentItem.user_id,
+          project_id: contentItem.project_id ?? null,
+          type: "post_published",
+          title: `Ton post "${postTitle}" a été publié !`,
+          icon: "🎉",
+          action_url: postUrl ?? "/contents",
+          action_label: postUrl ? "Voir le post" : "Mes contenus",
+        });
+      }
+    } catch {
+      // Non-blocking: don't fail publish callback if notification fails
+    }
 
     // Advance auto_comments_status: before_done → after_pending
     // Also triggers the "after" execution directly

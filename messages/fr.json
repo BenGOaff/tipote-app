@@ -34,7 +34,26 @@
   },
   "notifications": {
     "title": "Notifications",
-    "empty": "Aucune notification pour le moment."
+    "loading": "Chargement...",
+    "empty": "Aucune notification",
+    "emptyUnread": "Aucune notification non lue",
+    "emptyArchived": "Aucune notification archivée",
+    "tabs": {
+      "unread": "Non lues",
+      "all": "Toutes",
+      "archived": "Archivées"
+    },
+    "markRead": "Marquer comme lu",
+    "markUnread": "Marquer comme non lu",
+    "markAllRead": "Tout marquer lu",
+    "archive": "Archiver",
+    "auto": {
+      "postPublished": "Ton post \"{title}\" a été publié !",
+      "contentReminder": "N'oublie pas de poster {type} \"{title}\" aujourd'hui !",
+      "strategyProgress": "Bravo ! Tu as terminé ta phase {phase}, tu peux passer à la suite de ta stratégie !",
+      "statsReminder": "Tu n'as pas rempli tes statistiques ce mois-ci, pense à le faire !",
+      "statsReminderBody": "Tes stats aident l'IA à mieux te coacher. Remplis-les avant la fin du mois."
+    }
   },
   "languageSwitcher": {
     "label": "Langue de l'interface",
@@ -280,7 +299,10 @@
     "seeAnalysis": "Voir l'analyse",
     "emptyTitle": "Aucune donnée enregistrée",
     "emptyBody": "Commence par saisir tes métriques du mois en cours",
-    "enterData": "Saisir mes données"
+    "enterData": "Saisir mes données",
+    "lastUpdated": "Mis à jour le",
+    "inProgress": "Mois en cours",
+    "edit": "Modifier"
   },
   "pepites": {
     "title": "Ta collection de pépites",

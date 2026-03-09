@@ -118,6 +118,15 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
   const [createLastName, setCreateLastName] = useState("");
   const [creating, setCreating] = useState(false);
 
+  // Notification broadcast state
+  const [showNotifForm, setShowNotifForm] = useState(false);
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifBody, setNotifBody] = useState("");
+  const [notifIcon, setNotifIcon] = useState("🆕");
+  const [notifActionUrl, setNotifActionUrl] = useState("");
+  const [notifActionLabel, setNotifActionLabel] = useState("");
+  const [sendingNotif, setSendingNotif] = useState(false);
+
   // Plan counts for filter badges
   const planCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -433,8 +442,110 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
     }
   }
 
+  async function sendBroadcastNotification() {
+    if (!notifTitle.trim()) return;
+    setSendingNotif(true);
+    try {
+      const selectedArr = Array.from(selectedIds);
+      const payload: Record<string, unknown> = {
+        title: notifTitle.trim(),
+        body: notifBody.trim() || undefined,
+        icon: notifIcon.trim() || undefined,
+        action_url: notifActionUrl.trim() || undefined,
+        action_label: notifActionLabel.trim() || undefined,
+      };
+      // If users are selected, send only to them; otherwise broadcast to all
+      if (selectedArr.length > 0) {
+        payload.user_ids = selectedArr;
+      }
+      const res = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error ?? "Erreur");
+      toast({
+        title: "Notification envoyée",
+        description: `${json.inserted} utilisateur(s) notifié(s).`,
+      });
+      setNotifTitle("");
+      setNotifBody("");
+      setNotifActionUrl("");
+      setNotifActionLabel("");
+      setShowNotifForm(false);
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible d'envoyer",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingNotif(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
+      {/* ─── Notification broadcast card ─── */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="text-base font-semibold">Notifications</div>
+            <div className="text-sm text-muted-foreground">
+              Envoyer une notification {selectedIds.size > 0 ? `aux ${selectedIds.size} user(s) sélectionnés` : "à tous les utilisateurs"}.
+            </div>
+          </div>
+          <Button variant="outline" onClick={() => setShowNotifForm((v) => !v)}>
+            {showNotifForm ? "Fermer" : "Envoyer une notification"}
+          </Button>
+        </div>
+
+        {showNotifForm && (
+          <div className="mt-4 space-y-3">
+            <div className="flex gap-2">
+              <Input
+                value={notifIcon}
+                onChange={(e) => setNotifIcon(e.target.value)}
+                placeholder="Icône (emoji)"
+                className="w-20"
+              />
+              <Input
+                value={notifTitle}
+                onChange={(e) => setNotifTitle(e.target.value)}
+                placeholder="Titre de la notification *"
+                className="flex-1"
+              />
+            </div>
+            <Input
+              value={notifBody}
+              onChange={(e) => setNotifBody(e.target.value)}
+              placeholder="Description (optionnel)"
+            />
+            <div className="flex gap-2">
+              <Input
+                value={notifActionUrl}
+                onChange={(e) => setNotifActionUrl(e.target.value)}
+                placeholder="URL du bouton (optionnel)"
+                className="flex-1"
+              />
+              <Input
+                value={notifActionLabel}
+                onChange={(e) => setNotifActionLabel(e.target.value)}
+                placeholder="Texte du bouton"
+                className="w-48"
+              />
+            </div>
+            <Button onClick={sendBroadcastNotification} disabled={sendingNotif || !notifTitle.trim()}>
+              {sendingNotif
+                ? "Envoi en cours..."
+                : selectedIds.size > 0
+                ? `Envoyer à ${selectedIds.size} user(s)`
+                : "Envoyer à tous"}
+            </Button>
+          </div>
+        )}
+      </Card>
       <Card className="p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">

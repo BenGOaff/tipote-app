@@ -34,7 +34,26 @@
   },
   "notifications": {
     "title": "الإشعارات",
-    "empty": "لا توجد إشعارات حالياً."
+    "loading": "جاري التحميل...",
+    "empty": "لا توجد إشعارات",
+    "emptyUnread": "لا توجد إشعارات غير مقروءة",
+    "emptyArchived": "لا توجد إشعارات مؤرشفة",
+    "tabs": {
+      "unread": "غير مقروءة",
+      "all": "الكل",
+      "archived": "مؤرشفة"
+    },
+    "markRead": "تعيين كمقروء",
+    "markUnread": "تعيين كغير مقروء",
+    "markAllRead": "تعيين الكل كمقروء",
+    "archive": "أرشفة",
+    "auto": {
+      "postPublished": "تم نشر منشورك \"{title}\"!",
+      "contentReminder": "لا تنس نشر {type} \"{title}\" اليوم!",
+      "strategyProgress": "تهانينا! أكملت مرحلة {phase}، يمكنك الانتقال إلى الخطوة التالية!",
+      "statsReminder": "لم تملأ إحصائياتك هذا الشهر، تذكر أن تفعل ذلك!",
+      "statsReminderBody": "إحصائياتك تساعد الذكاء الاصطناعي في تدريبك بشكل أفضل."
+    }
   },
   "languageSwitcher": {
     "label": "لغة الواجهة",
@@ -280,7 +299,10 @@
     "seeAnalysis": "عرض التحليل",
     "emptyTitle": "لا توجد بيانات بعد",
     "emptyBody": "أدخل بياناتك الأولى لتبدأ في تتبع تقدمك.",
-    "enterData": "إدخال بياناتي"
+    "enterData": "إدخال بياناتي",
+    "lastUpdated": "آخر تحديث",
+    "inProgress": "الشهر الحالي",
+    "edit": "تعديل"
   },
   "pepites": {
     "title": "مجموعة جواهري",
