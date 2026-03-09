@@ -100,12 +100,31 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       // ignore
     }
 
+    // Look up user's enabled toast widget (non-blocking fetch, but we await it for the response)
+    let toastWidgetId: string | null = null;
+    try {
+      if (data.user_id) {
+        const { data: tw } = await supabaseAdmin
+          .from("toast_widgets")
+          .select("id")
+          .eq("user_id", data.user_id)
+          .eq("enabled", true)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        toastWidgetId = tw?.id || null;
+      }
+    } catch {
+      // fail-open: no toast widget
+    }
+
     // Strip user_id from public response, inject address_form
     const { user_id: _uid, ...pagePublic } = data;
 
     // Ensure defaults for optional fields that client expects
     return NextResponse.json({
       ok: true,
+      toast_widget_id: toastWidgetId,
       page: {
         capture_enabled: true,
         capture_heading: "",

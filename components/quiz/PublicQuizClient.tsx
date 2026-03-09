@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 
 type QuizOption = { text: string; result_index: number };
 type QuizQuestion = {
@@ -62,6 +63,8 @@ interface PublicQuizClientProps {
   quizId: string;
   /** If provided, skip the API fetch and use this data directly (preview mode). */
   previewData?: PublicQuizData | null;
+  /** Toast widget ID for social proof overlay */
+  toastWidgetId?: string | null;
 }
 
 export type { PublicQuizData };
@@ -337,10 +340,11 @@ function getT(locale: string | null | undefined, addressForm?: string | null): Q
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function PublicQuizClient({ quizId, previewData }: PublicQuizClientProps) {
+export default function PublicQuizClient({ quizId, previewData, toastWidgetId: serverToastId }: PublicQuizClientProps) {
   const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
   const [loading, setLoading] = useState(!previewData);
   const [error, setError] = useState<string | null>(null);
+  const [toastWidgetId, setToastWidgetId] = useState<string | null>(serverToastId || null);
 
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
@@ -380,6 +384,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           results: json.results ?? [],
         };
         setQuiz(quizData);
+        if (json.toast_widget_id) setToastWidgetId(json.toast_widget_id);
       } catch {
         setError(getT(null).loadError);
       } finally {
@@ -514,6 +519,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     trackShare();
   };
 
+  // Toast notification overlay (renders as fixed position, works across all steps)
+  const toastOverlay = toastWidgetId ? <ToastNotificationOverlay widgetId={toastWidgetId} /> : null;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30">
@@ -538,6 +546,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   if (step === "intro") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+        {toastOverlay}
         <Card className="p-8 max-w-lg w-full text-center space-y-6">
           <h1 className="text-2xl font-bold">{quiz.title}</h1>
           {quiz.introduction && (
@@ -563,6 +572,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+        {toastOverlay}
         <Card className="p-8 max-w-lg w-full space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -610,6 +620,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   if (step === "email") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+        {toastOverlay}
         <Card className="p-8 max-w-lg w-full space-y-6 text-center">
           <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
             <Mail className="w-8 h-8 text-primary" />
@@ -685,6 +696,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   if (step === "result") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+        {toastOverlay}
         <Card className="p-8 max-w-lg w-full space-y-6">
           <div className="text-center space-y-3">
             <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
