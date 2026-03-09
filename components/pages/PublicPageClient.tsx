@@ -12,6 +12,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 
 type PublicPageData = {
   id: string;
@@ -71,7 +72,7 @@ function pageTexts(addressForm?: string) {
   };
 }
 
-export default function PublicPageClient({ page: serverPage, slug }: { page: PublicPageData | null; slug: string }) {
+export default function PublicPageClient({ page: serverPage, slug, toastWidgetId: serverToastId }: { page: PublicPageData | null; slug: string; toastWidgetId?: string | null }) {
   const [page, setPage] = useState<PublicPageData | null>(serverPage);
   const [loading, setLoading] = useState(!serverPage);
   const [notFound, setNotFound] = useState(false);
@@ -80,6 +81,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
   const [captureFirstName, setCaptureFirstName] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [captureSuccess, setCaptureSuccess] = useState(false);
+  const [toastWidgetId, setToastWidgetId] = useState<string | null>(serverToastId || null);
 
   // Client-side fetch via dedicated public API endpoint (uses supabaseAdmin, bypasses RLS)
   useEffect(() => {
@@ -90,6 +92,7 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
       .then((data) => {
         if (data.ok && data.page) {
           setPage(data.page);
+          if (data.toast_widget_id) setToastWidgetId(data.toast_widget_id);
         } else {
           setNotFound(true);
         }
@@ -335,6 +338,9 @@ export default function PublicPageClient({ page: serverPage, slug }: { page: Pub
           </div>
         </div>
       )}
+
+      {/* Toast notification overlay (social proof) */}
+      {toastWidgetId && <ToastNotificationOverlay widgetId={toastWidgetId} />}
 
       {/* Thank-you / confirmation page after successful capture */}
       {captureSuccess && (() => {

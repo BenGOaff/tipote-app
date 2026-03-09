@@ -13,6 +13,7 @@ import {
   Layout,
   Zap,
   Users,
+  Bell,
   PanelLeftClose,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
@@ -79,6 +80,7 @@ const MAIN_ITEM_CONFIG = [
   { key: "templates" as const, url: "/templates", icon: Layout, spotlightId: "templates" },
   { key: "automations" as const, url: "/automations", icon: Zap, spotlightId: "automations" },
   { key: "leads" as const, url: "/leads", icon: Users, spotlightId: "leads" },
+  { key: "widgets" as const, url: "/widgets", icon: Bell, spotlightId: "widgets" },
 ];
 
 function PepitesSidebarItem() {
