@@ -15,7 +15,26 @@
     "tagline": "Il tuo compagno intelligente",
     "credits": "Crediti",
     "seeCredits": "Vedi i miei crediti IA",
-    "newPepite": "Nuova gemma"
+    "newPepite": "Nuova gemma",
+    "collapse": "Comprimi barra laterale"
+  },
+  "header": {
+    "credits": "crediti",
+    "viewCredits": "Vedi i miei crediti IA",
+    "account": "Il mio account",
+    "logout": "Esci",
+    "menu": {
+      "profile": "Profilo",
+      "connections": "Connessioni",
+      "settings": "Impostazioni",
+      "positioning": "Posizionamento",
+      "branding": "Branding",
+      "subscription": "Abbonamento"
+    }
+  },
+  "notifications": {
+    "title": "Notifiche",
+    "empty": "Nessuna notifica al momento."
   },
   "languageSwitcher": {
     "label": "Lingua dell'interfaccia",

@@ -15,7 +15,26 @@
     "tagline": "Ton compagnon malin",
     "credits": "Crédits",
     "seeCredits": "Voir mes crédits IA",
-    "newPepite": "Nouvelle pépite"
+    "newPepite": "Nouvelle pépite",
+    "collapse": "Replier la sidebar"
+  },
+  "header": {
+    "credits": "crédits",
+    "viewCredits": "Voir mes crédits IA",
+    "account": "Mon compte",
+    "logout": "Déconnexion",
+    "menu": {
+      "profile": "Profil",
+      "connections": "Connexions",
+      "settings": "Réglages",
+      "positioning": "Positionnement",
+      "branding": "Branding",
+      "subscription": "Abonnement"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Aucune notification pour le moment."
   },
   "languageSwitcher": {
     "label": "Langue de l'interface",
