@@ -803,54 +803,81 @@
       "consumed": " • Consommés : "
     },
     "refreshAria": "Rafraîchir",
-    "plan": {
+    "annualPromo": "Deux mois offerts",
+    "toggle": {
+      "monthly": "Mensuel",
+      "annual": "Annuel"
+    },
+    "periodMonthly": "Par mois, sans engagement",
+    "periodAnnual": "Par an : deux mois offerts",
+    "popular": "Le préféré de tous",
+    "featuresIncluded": "Fonctionnalités incluses :",
+    "planCards": {
       "free": {
-        "desc": "Accès limité"
-      },
-      "beta": {
-        "desc": "Accès Pro lifetime (beta)"
+        "subtitle": "Pour découvrir et tester sans risque (pas besoin de CB)",
+        "creditsLabel": "25 CRÉDITS IA (une fois)",
+        "period": "Sans limite de durée"
       },
       "basic": {
-        "desc": "1 module • Content Hub"
+        "subtitle": "Pour démarrer avec des petits besoins",
+        "creditsLabel": "40 CRÉDITS IA par mois"
       },
       "pro": {
-        "desc": "3 modules • Coach IA • Content Hub"
+        "subtitle": "Pour passer vraiment à la vitesse supérieure",
+        "creditsLabel": "150 CRÉDITS IA par mois"
       },
       "elite": {
-        "desc": "Modules illimités • Support prioritaire"
+        "subtitle": "Pour les pros qui gèrent plusieurs projets ou clients",
+        "creditsLabel": "350 CRÉDITS IA par mois"
       }
+    },
+    "features": {
+      "credits25": "25 crédits offerts (one-shot)",
+      "credits40": "40 crédits par mois",
+      "credits150": "150 crédits par mois",
+      "credits500": "500 crédits par mois",
+      "strategy": "Plan stratégique personnalisé",
+      "contentGen": "Génération de contenu (tous types)",
+      "stats": "Suivi statistiques",
+      "calendar": "Calendrier éditorial",
+      "quiz": "Création de quiz",
+      "connect1": "Connexion 1 réseau social",
+      "connect2": "Connexion 2 réseaux sociaux",
+      "connect4": "Connexion 4 réseaux sociaux",
+      "connectAll": "Connexion tous réseaux sociaux",
+      "multiprofiles": "Multiprofils",
+      "analytics": "Analyse des statistiques",
+      "persona": "Enrichissement du persona",
+      "competition": "Analyse de la concurrence",
+      "buyCredits": "Ajout de crédits IA",
+      "coach": "Coach IA personnel"
     },
     "current": "Actuel",
     "currentLabel": "Plan actuel",
     "downgrade": "Downgrader",
     "upgrade": "Upgrader",
-    "plans": {
-      "basic": {
-        "f1": "Plan stratégique IA",
-        "f2": "1 module activable",
-        "f3": "Contenus illimités",
-        "f4": "Content Hub + Calendrier",
-        "f5": "Pas de coach IA"
-      },
-      "pro": {
-        "f1": "Plan stratégique IA",
-        "f2": "3 modules activables",
-        "f3": "Contenus illimités",
-        "f4": "Content Hub + Calendrier",
-        "f5": "Coach IA"
-      },
-      "elite": {
-        "f1": "Tout Pro +",
-        "f2": "Modules illimités",
-        "f3": "Accès nouveautés en avant-première",
-        "f4": "Automatisations n8n (V2)",
-        "f5": "Support prioritaire"
-      }
+    "cta": {
+      "free": "Débuter gratos"
+    },
+    "beta": {
+      "title": "Accès Beta à vie",
+      "desc": "Tu fais partie des premiers utilisateurs de Tipote. Ton accès PRO est garanti à vie, avec 150 crédits IA par mois et l'accès au coach. Pas d'abonnement, pas d'annulation."
     },
     "manage": {
       "title": "Gérer votre abonnement",
       "desc": "Modifier, upgrader ou annuler via Systeme.io",
       "cta": "Gérer sur Systeme.io"
+    },
+    "cancelBtn": "Annuler mon abonnement",
+    "cancelError": "Échec de l'annulation",
+    "cancelSuccess": "Abonnement annulé",
+    "cancelSuccessDesc": "Ton abonnement a été annulé. Ton plan est maintenant Free.",
+    "cancelConfirm": {
+      "title": "Confirmer l'annulation",
+      "desc": "Ton abonnement sera annulé immédiatement. Tu passeras en plan Free avec 25 crédits IA. Tu pourras te réabonner à tout moment.",
+      "canceling": "Annulation en cours…",
+      "yes": "Oui, annuler",
+      "no": "Non, garder mon abonnement"
     },
     "errorTitle": "Impossible de charger l'abonnement",
     "errorDesc": "Une erreur est survenue."
