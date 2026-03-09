@@ -34,7 +34,26 @@
   },
   "notifications": {
     "title": "Notificaciones",
-    "empty": "Aún no hay notificaciones."
+    "loading": "Cargando...",
+    "empty": "Sin notificaciones",
+    "emptyUnread": "Sin notificaciones no leídas",
+    "emptyArchived": "Sin notificaciones archivadas",
+    "tabs": {
+      "unread": "No leídas",
+      "all": "Todas",
+      "archived": "Archivadas"
+    },
+    "markRead": "Marcar como leído",
+    "markUnread": "Marcar como no leído",
+    "markAllRead": "Marcar todo leído",
+    "archive": "Archivar",
+    "auto": {
+      "postPublished": "¡Tu publicación \"{title}\" ha sido publicada!",
+      "contentReminder": "¡No olvides publicar {type} \"{title}\" hoy!",
+      "strategyProgress": "¡Felicidades! Has completado la fase {phase}, ¡puedes pasar al siguiente paso!",
+      "statsReminder": "No has completado tus estadísticas este mes, ¡recuerda hacerlo!",
+      "statsReminderBody": "Tus estadísticas ayudan a la IA a entrenarte mejor. Complételas antes de fin de mes."
+    }
   },
   "languageSwitcher": {
     "label": "Idioma de la interfaz",
@@ -280,7 +299,10 @@
     "seeAnalysis": "Ver análisis",
     "emptyTitle": "Aún no hay datos",
     "emptyBody": "Introduce tus primeros datos para empezar a visualizar tu progreso.",
-    "enterData": "Introducir mis datos"
+    "enterData": "Introducir mis datos",
+    "lastUpdated": "Actualizado el",
+    "inProgress": "Mes en curso",
+    "edit": "Editar"
   },
   "pepites": {
     "title": "Mi colección de joyas",

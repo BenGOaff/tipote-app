@@ -157,6 +157,12 @@ export async function POST(req: Request) {
     const objectives = (businessPlan as any)?.objectives || "";
     const tasksCompleted = (businessPlan as any)?.tasks_completed || [];
 
+    // Detect if we're analyzing the current (in-progress) month
+    const analyzeMonth = body.month ?? null; // yyyy-mm-01
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const isCurrentMonth = analyzeMonth === currentMonthStr;
+
     let analysis: string;
 
     if (openai) {
@@ -211,7 +217,13 @@ Chaque action doit être faisable en 1-2 jours max.
 Adapte au niveau "${level}" de l'utilisateur.
 
 ### 5. KPIs à suivre
-Les 3-4 chiffres clés à surveiller le mois prochain.`;
+Les 3-4 chiffres clés à surveiller le mois prochain.${isCurrentMonth ? `
+
+⚠️ IMPORTANT : Le mois analysé est le mois EN COURS (pas encore terminé).
+- Ne tire PAS de conclusions définitives sur le mois.
+- Donne uniquement des TENDANCES : "ton mois de X démarre mieux/moins bien que le mois précédent".
+- Formule tes recommandations comme "d'ici la fin du mois, tu pourrais..." plutôt que "ce mois-ci tu as fait...".
+- Ne compare PAS les totaux bruts avec le mois précédent complet (c'est biaisé car le mois n'est pas fini).` : ""}`;
 
       try {
         const completion = await openai.chat.completions.create({

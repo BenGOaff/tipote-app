@@ -34,7 +34,26 @@
   },
   "notifications": {
     "title": "Notifications",
-    "empty": "No notifications yet."
+    "loading": "Loading...",
+    "empty": "No notifications",
+    "emptyUnread": "No unread notifications",
+    "emptyArchived": "No archived notifications",
+    "tabs": {
+      "unread": "Unread",
+      "all": "All",
+      "archived": "Archived"
+    },
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "markAllRead": "Mark all read",
+    "archive": "Archive",
+    "auto": {
+      "postPublished": "Your post \"{title}\" has been published!",
+      "contentReminder": "Don't forget to post {type} \"{title}\" today!",
+      "strategyProgress": "Congrats! You completed the {phase} phase, you can move on to the next step!",
+      "statsReminder": "You haven't filled in your stats this month, remember to do it!",
+      "statsReminderBody": "Your stats help the AI coach you better. Fill them in before the end of the month."
+    }
   },
   "languageSwitcher": {
     "label": "Interface language",
@@ -280,7 +299,10 @@
     "seeAnalysis": "View analysis",
     "emptyTitle": "No data recorded",
     "emptyBody": "Start by entering your metrics for the current month",
-    "enterData": "Enter my data"
+    "enterData": "Enter my data",
+    "lastUpdated": "Last updated",
+    "inProgress": "In progress",
+    "edit": "Edit"
   },
   "pepites": {
     "title": "Your gem collection",

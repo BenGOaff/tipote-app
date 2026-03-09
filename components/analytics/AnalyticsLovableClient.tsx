@@ -50,7 +50,7 @@ export default function AnalyticsLovableClient() {
     <DashboardLayout
       title={t("title")}
       showAnalyticsLink={false}
-      contentClassName="p-6 space-y-6 max-w-5xl mx-auto"
+      contentClassName="p-4 sm:p-6 lg:p-8 space-y-6"
     >
       {/* Header */}
       <div>
@@ -147,9 +147,35 @@ export default function AnalyticsLovableClient() {
                 return (
                   <Card key={month} className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-bold capitalize">
-                        {format(new Date(month), "MMMM yyyy", { locale: dateFnsLocale })}
-                      </h4>
+                      <div>
+                        <h4 className="font-bold capitalize">
+                          {format(new Date(month), "MMMM yyyy", { locale: dateFnsLocale })}
+                        </h4>
+                        {/* Show when data was last filled */}
+                        {(() => {
+                          const latestEntry = offerState.getMonthMetrics(month).reduce(
+                            (latest, m) => {
+                              const d = (m as any).updated_at || (m as any).created_at;
+                              return d && d > (latest || "") ? d : latest;
+                            },
+                            "" as string,
+                          );
+                          if (latestEntry) {
+                            return (
+                              <p className="text-xs text-muted-foreground">
+                                {t("lastUpdated")} {format(new Date(latestEntry), "d MMM yyyy", { locale: dateFnsLocale })}
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                        {/* Current month badge */}
+                        {month === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01` && (
+                          <span className="inline-block mt-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                            {t("inProgress")}
+                          </span>
+                        )}
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -157,7 +183,7 @@ export default function AnalyticsLovableClient() {
                         onClick={() => handleEditMonth(month)}
                       >
                         <Pencil className="w-3 h-3" />
-                        Modifier
+                        {t("edit")}
                       </Button>
                     </div>
 
