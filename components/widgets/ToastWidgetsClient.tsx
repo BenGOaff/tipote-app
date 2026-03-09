@@ -250,7 +250,7 @@ export default function ToastWidgetsClient() {
           {/* Display settings */}
           <Card className="p-5 space-y-4">
             <h3 className="font-semibold">{t("display")}</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">{t("position")}</label>
                 <select className="w-full mt-1 border rounded-md px-3 py-2 text-sm" value={editingToast.position} onChange={(e) => setEditingToast({ ...editingToast, position: e.target.value })}>
@@ -289,21 +289,21 @@ export default function ToastWidgetsClient() {
                 <span className="text-sm">{t("showVisitorCount")}</span>
               </label>
               {editingToast.show_visitor_count && (
-                <Input value={editingToast.visitor_count_label} onChange={(e) => setEditingToast({ ...editingToast, visitor_count_label: e.target.value })} placeholder="{count} personnes consultent cette page" />
+                <Input value={editingToast.visitor_count_label} onChange={(e) => setEditingToast({ ...editingToast, visitor_count_label: e.target.value })} placeholder={t("visitorCountPlaceholder")} />
               )}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={editingToast.show_recent_signups} onChange={(e) => setEditingToast({ ...editingToast, show_recent_signups: e.target.checked })} />
                 <span className="text-sm">{t("showSignups")}</span>
               </label>
               {editingToast.show_recent_signups && (
-                <Input value={editingToast.signup_label} onChange={(e) => setEditingToast({ ...editingToast, signup_label: e.target.value })} placeholder="{name} vient de s'inscrire" />
+                <Input value={editingToast.signup_label} onChange={(e) => setEditingToast({ ...editingToast, signup_label: e.target.value })} placeholder={t("signupPlaceholder")} />
               )}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={editingToast.show_recent_purchases} onChange={(e) => setEditingToast({ ...editingToast, show_recent_purchases: e.target.checked })} />
                 <span className="text-sm">{t("showPurchases")}</span>
               </label>
               {editingToast.show_recent_purchases && (
-                <Input value={editingToast.purchase_label} onChange={(e) => setEditingToast({ ...editingToast, purchase_label: e.target.value })} placeholder="{name} vient d'acheter" />
+                <Input value={editingToast.purchase_label} onChange={(e) => setEditingToast({ ...editingToast, purchase_label: e.target.value })} placeholder={t("purchasePlaceholder")} />
               )}
             </div>
           </Card>
@@ -452,7 +452,7 @@ export default function ToastWidgetsClient() {
           {/* Display options */}
           <Card className="p-5 space-y-4">
             <h3 className="font-semibold">{t("display")}</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">{t("share.displayMode")}</label>
                 <select className="w-full mt-1 border rounded-md px-3 py-2 text-sm" value={editingShare.display_mode} onChange={(e) => setEditingShare({ ...editingShare, display_mode: e.target.value })}>
