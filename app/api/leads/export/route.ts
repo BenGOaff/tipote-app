@@ -1,9 +1,11 @@
 // app/api/leads/export/route.ts
-// GET — export leads as CSV
+// GET — export leads as CSV (decrypts PII before export)
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { getUserDEK } from "@/lib/piiKeys";
+import { decryptLeadPII } from "@/lib/piiCrypto";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +30,8 @@ export async function GET(req: NextRequest) {
     }
 
     const projectId = await getActiveProjectId(supabase, user.id);
+    const dek = await getUserDEK(supabase, user.id);
 
-    // Optional: only export selected IDs
     const ids = req.nextUrl.searchParams.get("ids");
     const idList = ids ? ids.split(",").filter(Boolean) : null;
 
@@ -47,9 +49,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
-    const leads = data ?? [];
+    const leads = (data ?? []).map((row: any) => {
+      const pii = decryptLeadPII(row, dek);
+      return { ...row, ...pii };
+    });
 
-    // Build CSV
     const headers = [
       "Email",
       "Prénom",
@@ -62,7 +66,7 @@ export async function GET(req: NextRequest) {
       "Date de capture",
     ];
 
-    const rows = leads.map((lead) => [
+    const rows = leads.map((lead: any) => [
       escapeCsv(lead.email),
       escapeCsv(lead.first_name),
       escapeCsv(lead.last_name),
@@ -76,10 +80,9 @@ export async function GET(req: NextRequest) {
 
     const csv = [
       headers.join(","),
-      ...rows.map((row) => row.join(",")),
+      ...rows.map((row: string[]) => row.join(",")),
     ].join("\n");
 
-    // Add BOM for Excel compatibility
     const bom = "\uFEFF";
 
     return new NextResponse(bom + csv, {

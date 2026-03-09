@@ -1913,6 +1913,7 @@
     "saveSuccess": "Lead aggiornato",
     "saveError": "Errore nel salvataggio",
     "deleteSuccess": "Lead eliminato",
-    "deleteError": "Errore nell'eliminazione"
+    "deleteError": "Errore nell'eliminazione",
+    "encryptionBadge": "I tuoi dati sono crittografati end-to-end (AES-256). Né Tipote né terze parti possono leggere le informazioni dei tuoi lead."
   }
 }

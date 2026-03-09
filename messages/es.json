@@ -1913,6 +1913,7 @@
     "saveSuccess": "Lead actualizado",
     "saveError": "Error al guardar",
     "deleteSuccess": "Lead eliminado",
-    "deleteError": "Error al eliminar"
+    "deleteError": "Error al eliminar",
+    "encryptionBadge": "Tus datos están cifrados de extremo a extremo (AES-256). Ni Tipote ni terceros pueden leer la información de tus leads."
   }
 }
