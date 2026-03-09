@@ -2,10 +2,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import {
   listSubscriptionsForContact,
   cancelSubscriptionOnSystemeIo,
 } from '@/lib/systemeIoClient';
+import { ensureUserCredits } from '@/lib/credits';
 
 type ProfileRow = {
   id: string;
@@ -59,6 +61,14 @@ function normalizeCancelMode(
 
 export async function POST(req: NextRequest) {
   try {
+    // ✅ Auth: l'utilisateur doit être connecté pour annuler son propre abonnement
+    const supabase = await getSupabaseServerClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = (await req.json().catch(() => ({}))) as {
       subscriptionId?: string;
       id?: string;
@@ -83,7 +93,8 @@ export async function POST(req: NextRequest) {
       body.subscriptionId || body.id || body.subscription_id || null;
 
     // 3) Déterminer le contact Systeme.io et le profil Supabase
-    const email = body.email?.trim() || null;
+    // ✅ Priorité : utilise l'email de la session auth (plus fiable que le body)
+    const email = session.user.email?.trim().toLowerCase() || body.email?.trim() || null;
 
     let contactId: number | null =
       parseContactId(body.sio_contact_id) ??
@@ -91,6 +102,19 @@ export async function POST(req: NextRequest) {
       parseContactId(body.contact);
 
     let profile: ProfileRow | null = null;
+
+    // ✅ First try: find profile by auth user ID (most reliable)
+    if (!profile) {
+      const { data } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      profile = (data as ProfileRow | null) ?? null;
+      if (profile?.sio_contact_id && !contactId) {
+        contactId = parseContactId(profile.sio_contact_id);
+      }
+    }
 
     if (!contactId && email) {
       const { data, error } = await supabaseAdmin
@@ -127,13 +151,13 @@ export async function POST(req: NextRequest) {
           '[Billing/cancel] Error fetching profile by contactId',
           error,
         );
-        // on continue quand même, l’annulation reste possible
+        // on continue quand même, l"annulation reste possible
       } else {
         profile = (data as ProfileRow | null) ?? null;
       }
     }
 
-    // 4) Si pas de subscriptionId, on essaye de trouver l’abo actif via Systeme.io
+    // 4) Si pas de subscriptionId, on essaye de trouver l"abo actif via Systeme.io
     if (!subscriptionId) {
       if (!contactId) {
         return NextResponse.json(
@@ -178,26 +202,43 @@ export async function POST(req: NextRequest) {
       cancel: cancelValue,
     });
 
-    // 6) Mise à jour éventuelle du profil dans Supabase
-    // -> par défaut on repasse sur un plan "basic", sauf si newPlan fourni.
-    if (profile?.id) {
-      const newPlan = body.newPlan || 'basic';
+    // 6) Mise à jour du profil dans Supabase
+    // ✅ FIX: Annulation => plan "free" (pas "basic"). Recalcul crédits.
+    const targetUserId = profile?.id ?? session.user.id;
+    const newPlan = body.newPlan || "free";
 
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          plan: newPlan,
-          product_id: null,
-        })
-        .eq('id', profile.id);
+    // Log l"annulation
+    try {
+      await supabaseAdmin.from("plan_change_log").insert({
+        target_user_id: targetUserId,
+        target_email: email,
+        old_plan: profile?.plan ?? null,
+        new_plan: newPlan,
+        reason: `billing_cancel (${cancelValue})`,
+      } as any);
+    } catch { /* best effort */ }
 
-      if (updateError) {
-        console.error(
-          '[Billing/cancel] Failed to update profile after cancel',
-          updateError,
-        );
-        // on ne remonte pas en erreur HTTP, l’annulation Systeme.io a déjà eu lieu
-      }
+    const { error: updateError } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        plan: newPlan,
+        product_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", targetUserId);
+
+    if (updateError) {
+      console.error(
+        "[Billing/cancel] Failed to update profile after cancel",
+        updateError,
+      );
+    }
+
+    // ✅ Recalculer les crédits pour le nouveau plan
+    try {
+      await ensureUserCredits(targetUserId);
+    } catch (e) {
+      console.error("[Billing/cancel] Failed to recalculate credits", e);
     }
 
     return NextResponse.json(
@@ -206,7 +247,8 @@ export async function POST(req: NextRequest) {
         subscriptionId: String(subscriptionId),
         cancel: cancelValue,
         contactId,
-        profileId: profile?.id ?? null,
+        profileId: targetUserId,
+        newPlan,
       },
       { status: 200 },
     );

@@ -75,6 +75,8 @@ export default function ProfileSection() {
 
   // ✅ NEW (reset)
   const [resetting, setResetting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const dirty = useMemo(() => {
     const p = profile ?? {};
@@ -204,6 +206,35 @@ export default function ProfileSection() {
   };
 
   // ✅ NEW: reset handler (appelle une route API à créer: /api/account/reset)
+  const onDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+      if (!res.ok || !json?.ok) {
+        toast({
+          title: "Suppression impossible",
+          description: json?.error || "Erreur inconnue",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Redirect to homepage after successful deletion
+      window.location.href = "/?account_deleted=true";
+    } catch (e) {
+      toast({
+        title: "Suppression impossible",
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   const onReset = async () => {
     const ok1 = window.confirm(
       "⚠️ Réinitialiser mon Tipote ?\n\nTous les contenus, tâches et personnalisations seront supprimés. C'est définitif.",
@@ -392,15 +423,69 @@ export default function ProfileSection() {
             </p>
           </div>
 
-          <div className="flex items-center justify-end">
+          <div className="flex flex-col items-end gap-2">
             <Button
               variant="destructive"
               onClick={onReset}
-              disabled={loading || pending || resetting}
+              disabled={loading || pending || resetting || deleting}
               className="rounded-xl"
             >
               {resetting ? "Réinitialisation…" : "Réinitialiser mon Tipote"}
             </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Supprimer mon compte */}
+      <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-red-600">🗑️</span>
+              <h3 className="text-sm font-semibold text-red-700">Supprimer mon compte</h3>
+            </div>
+
+            <p className="text-xs leading-relaxed text-slate-600">
+              Supprime définitivement ton compte Tipote, toutes tes données, et annule ton abonnement s&apos;il y en a un.
+              Cette action est irréversible. Tu ne pourras pas récupérer ton compte ni tes données.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end">
+            {!showDeleteConfirm ? (
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={loading || pending || resetting || deleting}
+                className="rounded-xl"
+              >
+                Supprimer mon compte
+              </Button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-medium text-red-700">Es-tu vraiment sûr(e) ?</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={onDeleteAccount}
+                    disabled={deleting}
+                    className="rounded-xl"
+                  >
+                    {deleting ? "Suppression…" : "Oui, supprimer définitivement"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={deleting}
+                    className="rounded-xl"
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

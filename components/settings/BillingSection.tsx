@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, ExternalLink, Lock, Coins, RefreshCcw } from "lucide-react";
+import { CheckCircle2, ExternalLink, Lock, Coins, RefreshCcw, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Card } from "@/components/ui/card";
@@ -72,6 +72,12 @@ function isAnnualSubscription(sub: any): boolean {
     safeString(sub?.interval) ||
     safeString(sub?.billing_interval) ||
     safeString(sub?.billingInterval) ||
+    // ✅ Vrai format Systeme.io: pricePlan.recurringOptions.interval
+    safeString(sub?.pricePlan?.recurringOptions?.interval) ||
+    safeString(sub?.pricePlan?.interval) ||
+    safeString(sub?.pricePlan?.name) ||
+    safeString(sub?.pricePlan?.innerName) ||
+    // Legacy formats
     safeString(sub?.offer_price_plan?.interval) ||
     safeString(sub?.offerPricePlan?.interval) ||
     safeString(sub?.offer_price_plan?.name) ||
@@ -164,6 +170,8 @@ export default function BillingSection({ email }: Props) {
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<SubscriptionPayload | null>(null);
+  const [canceling, setCanceling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const { loading: creditsLoading, balance: credits, error: creditsError, refresh: refreshCredits } = useCreditsBalance();
 
@@ -280,7 +288,44 @@ export default function BillingSection({ email }: Props) {
     window.location.href = url;
   };
 
+  const handleCancelSubscription = async () => {
+    setCanceling(true);
+    try {
+      const res = await fetch("/api/billing/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || json?.error) {
+        throw new Error(json?.error ?? "Échec de l'annulation");
+      }
+
+      toast({
+        title: "Abonnement annulé",
+        description: "Ton abonnement a été annulé. Ton plan est maintenant Free.",
+      });
+
+      setShowCancelConfirm(false);
+
+      // Refresh billing data
+      window.location.reload();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible d'annuler l'abonnement",
+        variant: "destructive",
+      });
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   const isBeta = currentPlan === "beta";
+  const isFree = currentPlan === "free";
+  const hasPaidPlan = !isBeta && !isFree;
   const basicIsCurrent = currentPlan === "basic";
   const proIsCurrent = currentPlan === "pro" || isBeta;
   const eliteIsCurrent = currentPlan === "elite";
@@ -471,7 +516,7 @@ export default function BillingSection({ email }: Props) {
             </div>
           </div>
         </Card>
-      ) : (
+      ) : hasPaidPlan ? (
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -479,15 +524,60 @@ export default function BillingSection({ email }: Props) {
               <p className="text-sm text-muted-foreground">{t("manage.desc")}</p>
             </div>
 
-            <Button variant="outline" asChild>
-              <a href="https://systeme.io/dashboard/profile/manage-subscriptions" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                {t("manage.cta")}
-              </a>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" asChild>
+                <a href="https://systeme.io/dashboard/profile/manage-subscriptions" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  {t("manage.cta")}
+                </a>
+              </Button>
+
+              <Button
+                variant="destructive"
+                onClick={() => setShowCancelConfirm(true)}
+                disabled={canceling}
+              >
+                Annuler mon abonnement
+              </Button>
+            </div>
           </div>
+
+          {showCancelConfirm && (
+            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-medium text-destructive">Confirmer l&apos;annulation</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Ton abonnement sera annulé immédiatement. Tu passeras en plan Free avec 25 crédits IA.
+                      Tu pourras te réabonner à tout moment.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleCancelSubscription}
+                      disabled={canceling}
+                    >
+                      {canceling ? "Annulation en cours…" : "Oui, annuler"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCancelConfirm(false)}
+                      disabled={canceling}
+                    >
+                      Non, garder mon abonnement
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
-      )}
+      ) : null}
     </>
   );
 }
