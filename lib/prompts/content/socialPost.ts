@@ -281,6 +281,48 @@ export function buildSocialPostPrompt(params: SocialPostPromptParams) {
   const themeBlock = themeGuidelines(theme);
   const toneBlock = toneGuidelines(tone);
 
+  const hookInstruction = platform !== "pinterest" && batchCount === 1
+    ? [
+        "",
+        "ACCROCHE (HOOK) — CRUCIAL:",
+        "- La toute première ligne du post EST l'accroche. C'est elle qui apparaît dans le fil d'actualité quand on scrolle.",
+        "- Elle doit être percutante, intrigante, choquante ou contre-intuitive. Elle doit donner envie de cliquer sur \"voir plus\".",
+        "- Cette première ligne sera aussi utilisée comme titre du contenu. Soigne-la particulièrement.",
+        "",
+        "TYPES D'ACCROCHES (choisis celle qui convient le mieux au sujet) :",
+        "1. Question ouverte — Pose une question qui pousse à réfléchir. Ex: « Quel est le plus grand défi que vous avez surmonté dans votre carrière ? »",
+        "2. Statistique surprenante — Un chiffre inattendu qui capte l'attention. Ex: « 85% des employés ne se sentent pas engagés au travail. »",
+        "3. Citation inspirante — Une citation forte qui résonne. Ex: « "Le succès, c'est tomber sept fois et se relever huit." – Proverbe japonais »",
+        "4. Anecdote personnelle — Une histoire courte et percutante. Ex: « Il y a 5 ans, j'ai tout quitté pour lancer mon entreprise depuis mon salon. »",
+        "5. Appel à l'aide — Demander conseil crée de l'engagement. Ex: « J'ai besoin de vos conseils : comment gérez-vous le stress au travail ? »",
+        "6. Conseil utile — Un tip actionnable et direct. Ex: « Voici une astuce simple pour doubler votre productivité : la règle des 2 minutes. »",
+        "7. Tendances — Surfe sur un sujet d'actualité. Ex: « L'IA va transformer 40% des emplois d'ici 2030. Êtes-vous prêts ? »",
+        "8. Humour — Un trait d'esprit ou une blague liée au sujet. Ex: « Si les réunions étaient des films, la plupart seraient des suites inutiles. »",
+        "9. Controverse / opinion tranchée — Affirme une position forte. Ex: « Le télétravail est l'avenir. Les bureaux traditionnels sont morts. »",
+        "10. Défi du secteur — Parle d'un problème que tout le monde connaît. Ex: « Le plus grand obstacle à l'innovation ? La peur de l'échec. »",
+        "11. Invitation à collaborer — Propose un échange. Ex: « Je cherche des partenaires pour un projet ambitieux. Qui est partant ? »",
+        "12. Perspective unique — Un angle que personne n'a pris. Ex: « Pourquoi les échecs sont les meilleurs professeurs. »",
+        "13. Résultats impressionnants — Montre des chiffres concrets. Ex: « En 6 mois, notre équipe a augmenté le chiffre d'affaires de 200%. Voici comment. »",
+        "14. Prédiction — Annonce ce qui va changer. Ex: « D'ici 2030, 50% des compétences actuelles seront obsolètes. »",
+        "15. Expérience client — Un témoignage parlant. Ex: « Un client m'a dit : "Votre produit a changé notre façon de travailler." »",
+        "16. Question rhétorique — Provoque sans attendre de réponse. Ex: « Est-ce que le succès est vraiment une question de talent ? »",
+        "17. Innovation — Présente une nouveauté excitante. Ex: « Nous venons de lancer une fonctionnalité qui va changer la donne. »",
+        "18. Échecs et apprentissages — Vulnérabilité authentique. Ex: « Mon plus grand échec professionnel m'a appris la leçon la plus précieuse. »",
+        "19. Promesse de productivité — Un hack concret. Ex: « Cette méthode m'a fait gagner 10 heures par semaine. »",
+        "20. Développement personnel — Introspection et croissance. Ex: « La meilleure décision de ma carrière ? Apprendre à dire non. »",
+        "21. Appel à l'action — Pousse à agir maintenant. Ex: « Si vous n'avez pas encore commencé à investir dans votre développement personnel, c'est le moment. »",
+        "22. Offre spéciale / exclusivité — Crée l'urgence. Ex: « Pour les 48 prochaines heures, accédez gratuitement à notre ebook exclusif. »",
+        "23. Demande de feedback — Engage la communauté. Ex: « Quel est le meilleur conseil professionnel que vous ayez jamais reçu ? »",
+        "24. Accroche minimaliste — Ultra-court, maximal impact. Ex: « J'ai démissionné. » / « 3 mots. » / « Personne n'en parle. »",
+        "25. Valorisation personnelle — Fierté humble. Ex: « Fier d'annoncer que notre startup a été sélectionnée parmi les 10 meilleures innovations. »",
+        "26. Challenge — Lance un défi. Ex: « Défi 30 jours : publiez une idée par jour. Qui relève le challenge ? »",
+        "27. Invitation à réfléchir — Philosophique et profonde. Ex: « Et si le vrai succès n'avait rien à voir avec l'argent ? »",
+        "28. Pour ou contre — Polarise et engage. Ex: « Le hustle culture : moteur de succès ou recette du burn-out ? »",
+        "29. Choc émotionnel — Frappe fort dès le premier mot. Ex: « J'ai perdu 80% de mes clients en 3 mois. » / « Ce conseil m'a coûté 50 000€. »",
+        "30. Contre-intuition — Va à l'encontre des idées reçues. Ex: « Arrêtez de poster sur LinkedIn. » / « Mon comptable m'a dit que j'étais fou. »",
+      ].join("\n")
+    : "";
+
   const outputBlock = [
     "SORTIE ATTENDUE:",
     platform === "pinterest"
@@ -288,7 +330,8 @@ export function buildSocialPostPrompt(params: SocialPostPromptParams) {
       : batchCount === 1
       ? "- Retourne uniquement le post final."
       : "- Retourne 5 posts différents séparés par une ligne contenant uniquement: -----",
-  ].join("\n");
+    hookInstruction,
+  ].filter(Boolean).join("\n");
 
   return [
     roleBlock,

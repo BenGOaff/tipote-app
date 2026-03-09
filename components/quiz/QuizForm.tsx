@@ -85,6 +85,10 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const [ctaPerResult, setCtaPerResult] = useState(false);
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  const [captureFirstName, setCaptureFirstName] = useState(true);
+  const [captureLastName, setCaptureLastName] = useState(false);
+  const [capturePhone, setCapturePhone] = useState(false);
+  const [captureCountry, setCaptureCountry] = useState(false);
 
   // Systeme.io tags
   const [sioTags, setSioTags] = useState<{ id: number; name: string }[]>([]);
@@ -339,6 +343,10 @@ export function QuizForm({ onClose }: QuizFormProps) {
           sio_share_tag_name: sioShareTagName || null,
           capture_heading: captureHeading || null,
           capture_subtitle: captureSubtitle || null,
+          capture_first_name: captureFirstName,
+          capture_last_name: captureLastName,
+          capture_phone: capturePhone,
+          capture_country: captureCountry,
           status,
           config_objective: objective,
           config_target: target,
@@ -718,8 +726,19 @@ export function QuizForm({ onClose }: QuizFormProps) {
                   value={r.title}
                   onChange={(e) => updateResult(ri, "title", e.target.value)}
                   placeholder="Nom du profil"
-                  className="font-bold"
+                  className="font-bold flex-1"
                 />
+                {results.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => setResults((prev) => prev.filter((_, i) => i !== ri))}
+                    title="Supprimer ce profil"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Description</Label>
@@ -776,6 +795,28 @@ export function QuizForm({ onClose }: QuizFormProps) {
               </div>
             </Card>
           ))}
+
+          <Button
+            variant="outline"
+            onClick={() =>
+              setResults((prev) => [
+                ...prev,
+                {
+                  title: "",
+                  description: null,
+                  insight: null,
+                  projection: null,
+                  cta_text: null,
+                  cta_url: null,
+                  sio_tag_name: null,
+                  sort_order: prev.length,
+                },
+              ])
+            }
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Ajouter un profil résultat
+          </Button>
 
           {/* Systeme.io explanation */}
           <Card className="p-4 space-y-3 border-primary/20 bg-primary/[0.02]">
@@ -871,6 +912,30 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 placeholder="Entre ton email pour découvrir ton profil.&#10;&#10;Tu peux ajouter plusieurs lignes ici pour donner envie."
               />
               <p className="text-xs text-muted-foreground">Les sauts de ligne seront préservés.</p>
+            </div>
+
+            <div className="space-y-3 pt-3 border-t">
+              <p className="text-sm font-medium">Champs à capturer</p>
+              <p className="text-xs text-muted-foreground">L&apos;email est toujours requis. Active les champs supplémentaires que tu veux collecter.</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Prénom</span>
+                  <Switch checked={captureFirstName} onCheckedChange={setCaptureFirstName} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Nom de famille</span>
+                  <Switch checked={captureLastName} onCheckedChange={setCaptureLastName} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Téléphone</span>
+                  <Switch checked={capturePhone} onCheckedChange={setCapturePhone} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Pays</span>
+                  <Switch checked={captureCountry} onCheckedChange={setCaptureCountry} />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Ces informations seront envoyées automatiquement dans Systeme.io.</p>
             </div>
           </div>
 

@@ -109,6 +109,9 @@ type QuizData = {
   capture_heading: string | null;
   capture_subtitle: string | null;
   capture_first_name?: boolean | null;
+  capture_last_name?: boolean | null;
+  capture_phone?: boolean | null;
+  capture_country?: boolean | null;
   virality_enabled: boolean;
   bonus_description: string | null;
   share_message: string | null;
@@ -217,6 +220,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
   const [captureFirstName, setCaptureFirstName] = useState(false);
+  const [captureLastName, setCaptureLastName] = useState(false);
+  const [capturePhone, setCapturePhone] = useState(false);
+  const [captureCountry, setCaptureCountry] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
   const [shareMessage, setShareMessage] = useState("");
@@ -258,6 +264,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setCaptureHeading(q.capture_heading ?? "");
         setCaptureSubtitle(q.capture_subtitle ?? "");
         setCaptureFirstName(q.capture_first_name ?? false);
+        setCaptureLastName(q.capture_last_name ?? false);
+        setCapturePhone(q.capture_phone ?? false);
+        setCaptureCountry(q.capture_country ?? false);
         setViralityEnabled(q.virality_enabled);
         setBonusDescription(q.bonus_description ?? "");
         setShareMessage(q.share_message ?? "");
@@ -291,6 +300,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           capture_heading: captureHeading || null,
           capture_subtitle: captureSubtitle || null,
           capture_first_name: captureFirstName,
+          capture_last_name: captureLastName,
+          capture_phone: capturePhone,
+          capture_country: captureCountry,
           virality_enabled: viralityEnabled,
           bonus_description: bonusDescription,
           share_message: shareMessage,
@@ -330,6 +342,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               capture_heading: captureHeading || null,
               capture_subtitle: captureSubtitle || null,
               capture_first_name: captureFirstName,
+              capture_last_name: captureLastName,
+              capture_phone: capturePhone,
+              capture_country: captureCountry,
               virality_enabled: viralityEnabled,
               bonus_description: bonusDescription,
               share_message: shareMessage,
@@ -872,6 +887,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           className="flex-1 font-medium"
                           placeholder="Titre du profil"
                         />
+                        {editResults.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setEditResults(editResults.filter((_, i) => i !== ri))}
+                            title="Supprimer ce profil"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <div className="space-y-1">
@@ -959,6 +985,29 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       </div>
                     </Card>
                   ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() =>
+                      setEditResults([
+                        ...editResults,
+                        {
+                          id: `new-${Date.now()}`,
+                          title: "",
+                          description: null,
+                          insight: null,
+                          projection: null,
+                          cta_text: null,
+                          cta_url: null,
+                          sio_tag_name: null,
+                          sort_order: editResults.length,
+                        },
+                      ])
+                    }
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Ajouter un profil résultat
+                  </Button>
                 </div>
 
                 {/* ── Systeme.io automation config ── */}
@@ -1087,6 +1136,36 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         <Switch
                           checked={captureFirstName}
                           onCheckedChange={setCaptureFirstName}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium">Demander le nom de famille</p>
+                          <p className="text-xs text-muted-foreground">Affiche un champ nom de famille</p>
+                        </div>
+                        <Switch
+                          checked={captureLastName}
+                          onCheckedChange={setCaptureLastName}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium">Demander le téléphone</p>
+                          <p className="text-xs text-muted-foreground">Affiche un champ numéro de téléphone</p>
+                        </div>
+                        <Switch
+                          checked={capturePhone}
+                          onCheckedChange={setCapturePhone}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium">Demander le pays</p>
+                          <p className="text-xs text-muted-foreground">Affiche un champ pays</p>
+                        </div>
+                        <Switch
+                          checked={captureCountry}
+                          onCheckedChange={setCaptureCountry}
                         />
                       </div>
                     </div>
