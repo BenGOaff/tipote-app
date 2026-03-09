@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { getUserTweets } from "@/lib/twitterScraper";
 
@@ -27,12 +28,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: connection, error } = await supabase
+  const projectId = await getActiveProjectId(supabase, user.id);
+
+  let connQuery = supabase
     .from("social_connections")
     .select("platform_user_id, platform_username, access_token_encrypted")
     .eq("user_id", user.id)
-    .eq("platform", "twitter")
-    .maybeSingle();
+    .eq("platform", "twitter");
+
+  if (projectId) connQuery = connQuery.eq("project_id", projectId);
+
+  const { data: connection, error } = await connQuery.maybeSingle();
 
   if (error || !connection) {
     return NextResponse.json({ error: "Twitter not connected" }, { status: 404 });

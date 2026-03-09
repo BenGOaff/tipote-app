@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
@@ -26,19 +27,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get project_id from query params (optional)
-  const { searchParams } = req.nextUrl;
-  const projectId = searchParams.get("project_id");
+  const projectId = await getActiveProjectId(supabase, user.id);
 
-  // Look up user's Facebook connection
-  let query = supabase
+  // Look up user's Facebook connection (filter by project)
+  let connQuery = supabase
     .from("social_connections")
     .select("platform_user_id, access_token_encrypted")
     .eq("user_id", user.id)
-    .eq("platform", "facebook")
-    .maybeSingle();
+    .eq("platform", "facebook");
 
-  const { data: connection, error } = await query;
+  if (projectId) connQuery = connQuery.eq("project_id", projectId);
+
+  const { data: connection, error } = await connQuery.maybeSingle();
 
   if (error || !connection) {
     return NextResponse.json({ error: "Facebook not connected" }, { status: 404 });
