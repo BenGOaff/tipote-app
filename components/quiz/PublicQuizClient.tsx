@@ -53,6 +53,9 @@ type PublicQuizData = {
   capture_heading: string | null;
   capture_subtitle: string | null;
   capture_first_name?: boolean | null;
+  capture_last_name?: boolean | null;
+  capture_phone?: boolean | null;
+  capture_country?: boolean | null;
   questions: QuizQuestion[];
   results: QuizResult[];
 };
@@ -352,6 +355,9 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -449,6 +455,9 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
           body: JSON.stringify({
             email: email.trim(),
             first_name: firstName.trim() || undefined,
+            last_name: lastName.trim() || undefined,
+            phone: phone.trim() || undefined,
+            country: country.trim() || undefined,
             result_id: profile?.id ?? null,
             consent_given: consent,
             answers: answersPayload,
@@ -641,6 +650,14 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
                 onChange={(e) => setFirstName(e.target.value)}
               />
             )}
+            {quiz.capture_last_name && (
+              <Input
+                type="text"
+                placeholder={quiz.locale === "en" ? "Your last name" : quiz.locale === "es" ? "Tu apellido" : "Ton nom de famille"}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            )}
             <Input
               type="email"
               placeholder={t.emailPlaceholder}
@@ -648,6 +665,22 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmitEmail()}
             />
+            {quiz.capture_phone && (
+              <Input
+                type="tel"
+                placeholder={quiz.locale === "en" ? "Your phone number" : quiz.locale === "es" ? "Tu teléfono" : "Ton numéro de téléphone"}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            )}
+            {quiz.capture_country && (
+              <Input
+                type="text"
+                placeholder={quiz.locale === "en" ? "Your country" : quiz.locale === "es" ? "Tu país" : "Ton pays"}
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+              />
+            )}
 
             <label className="flex items-start gap-2 text-sm text-muted-foreground cursor-pointer">
               <input

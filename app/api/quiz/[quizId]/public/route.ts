@@ -69,13 +69,25 @@ async function ensureSioTag(apiKey: string, tagName: string): Promise<number | n
 /**
  * Find-or-create a contact in Systeme.io, returns contactId or null.
  */
-async function ensureSioContact(apiKey: string, email: string, firstName?: string): Promise<number | null> {
+async function ensureSioContact(
+  apiKey: string,
+  email: string,
+  fields?: { firstName?: string; surname?: string; phoneNumber?: string; country?: string },
+): Promise<number | null> {
   const search = await sioFetch(apiKey, `/contacts?email=${encodeURIComponent(email)}&limit=10`);
   if (search.ok && Array.isArray(search.data?.items) && search.data.items.length > 0) {
     return Number(search.data.items[0].id);
   }
-  const contactBody: Record<string, string> = { email, locale: "fr" };
-  if (firstName) contactBody.firstName = firstName;
+  const contactBody: Record<string, unknown> = { email, locale: "fr" };
+  if (fields?.firstName) contactBody.firstName = fields.firstName;
+  // Systeme.io uses "fields" object for surname, phone_number, country
+  const extraFields: Record<string, string> = {};
+  if (fields?.surname) extraFields.surname = fields.surname;
+  if (fields?.phoneNumber) extraFields.phone_number = fields.phoneNumber;
+  if (fields?.country) extraFields.country = fields.country;
+  if (Object.keys(extraFields).length > 0) contactBody.fields = [
+    ...Object.entries(extraFields).map(([slug, value]) => ({ slug, value })),
+  ];
   const create = await sioFetch(apiKey, "/contacts", { method: "POST", body: contactBody });
   if (create.ok && create.data?.id) return Number(create.data.id);
   // 422 = contact already exists
@@ -91,11 +103,16 @@ async function ensureSioContact(apiKey: string, email: string, firstName?: strin
 /**
  * Apply a tag to a contact in Systeme.io (fire & forget style).
  */
-async function applyTagToContact(apiKey: string, email: string, tagName: string, firstName?: string) {
+async function applyTagToContact(
+  apiKey: string,
+  email: string,
+  tagName: string,
+  fields?: { firstName?: string; surname?: string; phoneNumber?: string; country?: string },
+) {
   try {
     const tagId = await ensureSioTag(apiKey, tagName);
     if (!tagId) return;
-    const contactId = await ensureSioContact(apiKey, email, firstName);
+    const contactId = await ensureSioContact(apiKey, email, fields);
     if (!contactId) return;
     await sioFetch(apiKey, `/contacts/${contactId}/tags`, { method: "POST", body: { tagId } });
   } catch (e) {
@@ -111,7 +128,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const admin = supabaseAdmin;
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle,capture_first_name").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country").eq("id", quizId).eq("status", "active").maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -210,6 +227,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const resultId = body.result_id ?? null;
     const firstName = String(body.first_name ?? "").trim().slice(0, 100);
+    const lastName = String(body.last_name ?? "").trim().slice(0, 100);
+    const phone = String(body.phone ?? "").trim().slice(0, 30);
+    const country = String(body.country ?? "").trim().slice(0, 50);
     const answers = Array.isArray(body.answers) ? body.answers : null;
 
     // Upsert lead (unique on quiz_id + email)
@@ -220,6 +240,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
           quiz_id: quizId,
           email,
           first_name: firstName || null,
+          last_name: lastName || null,
+          phone: phone || null,
+          country: country || null,
           result_id: resultId,
           consent_given: Boolean(body.consent_given),
           ...(answers ? { answers } : {}),
@@ -259,7 +282,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const apiKey = String(profile?.sio_user_api_key ?? "").trim();
           if (!apiKey) return;
 
-          await applyTagToContact(apiKey, email, tagName, firstName || undefined);
+          await applyTagToContact(apiKey, email, tagName, {
+            firstName: firstName || undefined,
+            surname: lastName || undefined,
+            phoneNumber: phone || undefined,
+            country: country || undefined,
+          });
           console.log(`[Systeme.io] Tagged ${email} with "${tagName}" for quiz ${quizId}`);
         } catch (e) {
           console.error("[Systeme.io auto-tag POST] Error:", e);

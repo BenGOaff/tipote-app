@@ -2448,7 +2448,17 @@ export async function POST(req: Request) {
             const keepBold = type === "article";
             const txt = keepBold ? toPlainTextKeepBold(raw) : toPlainText(raw);
             finalContent = txt;
-            title = null;
+
+            // For social posts: extract the first line as the title/hook
+            // The first line IS the hook (accroche) — it's what appears in scroll feeds
+            if (type === "post" && txt.trim()) {
+              const firstLine = txt.trim().split(/\n/)[0]?.trim();
+              if (firstLine && firstLine.length > 3) {
+                title = firstLine;
+              }
+            } else {
+              title = null;
+            }
           }
 
           // ✅ Consommer les crédits seulement après succès IA
