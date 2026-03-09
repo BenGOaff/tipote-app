@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { getMyPosts } from "@/lib/linkedin";
@@ -22,14 +23,30 @@ export async function GET() {
   }
 
   const userId = session.user.id;
+  const projectId = await getActiveProjectId(supabase, userId);
 
-  // Récupérer la connexion LinkedIn
-  const { data: conn } = await supabaseAdmin
+  // Récupérer la connexion LinkedIn (filtre par projet, fallback sans projet)
+  let connQuery = supabaseAdmin
     .from("social_connections")
     .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
     .eq("user_id", userId)
-    .eq("platform", "linkedin")
-    .maybeSingle();
+    .eq("platform", "linkedin");
+
+  if (projectId) connQuery = connQuery.eq("project_id", projectId);
+
+  let { data: conn } = await connQuery.maybeSingle();
+
+  // Fallback: try without project_id filter (legacy connections with project_id=NULL)
+  if (!conn?.access_token_encrypted && projectId) {
+    const { data: connFallback } = await supabaseAdmin
+      .from("social_connections")
+      .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+      .eq("user_id", userId)
+      .eq("platform", "linkedin")
+      .is("project_id", null)
+      .maybeSingle();
+    conn = connFallback;
+  }
 
   if (!conn?.access_token_encrypted) {
     return NextResponse.json(

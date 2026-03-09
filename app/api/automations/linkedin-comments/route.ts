@@ -65,13 +65,29 @@ export async function GET(req: NextRequest) {
 
     // 3. Pour chaque user
     for (const [userId, userAutos] of autosByUser) {
-      // Récupérer la connexion LinkedIn
-      const { data: conn } = await supabaseAdmin
+      // Récupérer la connexion LinkedIn (filtre par project_id de l'automation)
+      const autoProjectId = userAutos[0]?.project_id as string | null;
+      let connQuery = supabaseAdmin
         .from("social_connections")
         .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
         .eq("user_id", userId)
-        .eq("platform", "linkedin")
-        .maybeSingle();
+        .eq("platform", "linkedin");
+
+      if (autoProjectId) connQuery = connQuery.eq("project_id", autoProjectId);
+
+      let { data: conn } = await connQuery.maybeSingle();
+
+      // Fallback: try without project_id (legacy connections)
+      if (!conn?.access_token_encrypted && autoProjectId) {
+        const { data: connFallback } = await supabaseAdmin
+          .from("social_connections")
+          .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+          .eq("user_id", userId)
+          .eq("platform", "linkedin")
+          .is("project_id", null)
+          .maybeSingle();
+        conn = connFallback;
+      }
 
       if (!conn?.access_token_encrypted) {
         debug.push(`User ${userId.slice(0, 8)}…: no LinkedIn connection`);

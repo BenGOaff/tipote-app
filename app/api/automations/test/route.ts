@@ -44,14 +44,31 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Étape 2 : récupérer le token de la plateforme
+  // Étape 2 : récupérer le token de la plateforme (filtre par project_id de l'automation)
   const platform = (auto.platforms as string[])[0];
-  const { data: conn } = await supabaseAdmin
+  const autoProjectId = auto.project_id as string | null;
+
+  let connQuery = supabaseAdmin
     .from("social_connections")
     .select("platform_user_id, access_token_encrypted")
     .eq("user_id", user.id)
-    .eq("platform", platform)
-    .maybeSingle();
+    .eq("platform", platform);
+
+  if (autoProjectId) connQuery = connQuery.eq("project_id", autoProjectId);
+
+  let { data: conn } = await connQuery.maybeSingle();
+
+  // Fallback: try without project_id (legacy connections)
+  if (!conn && autoProjectId) {
+    const { data: connFallback } = await supabaseAdmin
+      .from("social_connections")
+      .select("platform_user_id, access_token_encrypted")
+      .eq("user_id", user.id)
+      .eq("platform", platform)
+      .is("project_id", null)
+      .maybeSingle();
+    conn = connFallback;
+  }
 
   if (!conn) {
     return NextResponse.json({
