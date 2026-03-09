@@ -16,6 +16,26 @@ const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const ALLOWED_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 const BUCKET = "content-videos";
 
+/**
+ * Normalize non-standard video MIME types to standard ones.
+ * Mobile devices sometimes send incorrect types.
+ */
+function normalizeContentType(contentType: string, filename: string): string {
+  const type = contentType.toLowerCase();
+  if (ALLOWED_TYPES.has(type)) return type;
+
+  const MP4_COMPAT = ["video/x-m4v", "video/mpeg", "video/3gpp", "video/3gpp2", "video/x-mp4"];
+  if (MP4_COMPAT.includes(type)) return "video/mp4";
+
+  const ext = filename.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "mp4": case "m4v": case "3gp": case "3gpp": return "video/mp4";
+    case "mov": return "video/quicktime";
+    case "webm": return "video/webm";
+    default: return type;
+  }
+}
+
 function sanitizeFilename(name: string): string {
   return name
     .replace(/[^a-zA-Z0-9._-]/g, "_")
@@ -51,8 +71,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Normalize MIME type (mobile devices may send non-standard types)
+  const resolvedType = normalizeContentType(file.type, file.name);
+
   // Validate file type
-  if (!ALLOWED_TYPES.has(file.type)) {
+  if (!ALLOWED_TYPES.has(resolvedType)) {
     return NextResponse.json(
       { error: `Format non supporté (${file.type}). Formats acceptés : MP4, WebM, MOV.` },
       { status: 400 }
@@ -79,7 +102,7 @@ export async function POST(req: NextRequest) {
   const { error: uploadError } = await supabaseAdmin.storage
     .from(BUCKET)
     .upload(storagePath, buffer, {
-      contentType: file.type,
+      contentType: resolvedType,
       upsert: false,
     });
 
@@ -102,7 +125,7 @@ export async function POST(req: NextRequest) {
     path: storagePath,
     filename: safeName,
     size: file.size,
-    type: file.type,
+    type: resolvedType,
   });
 }
 
