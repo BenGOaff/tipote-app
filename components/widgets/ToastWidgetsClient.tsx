@@ -3,6 +3,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -128,16 +131,26 @@ export default function ToastWidgetsClient() {
   // ─── Editing view ────────────────────────────────────────────────────
   if (editing) {
     return (
-      <div className="max-w-3xl mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => { setEditing(null); setEvents([]); }}>
-            <ChevronLeft className="w-4 h-4 mr-1" /> {t("back")}
-          </Button>
-          <h1 className="text-xl font-bold flex-1">{editing.name}</h1>
-          <Badge variant={editing.enabled ? "default" : "secondary"}>
-            {editing.enabled ? t("active") : t("inactive")}
-          </Badge>
-        </div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+            <PageHeader
+              left={
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="sm" onClick={() => { setEditing(null); setEvents([]); }}>
+                    <ChevronLeft className="w-4 h-4 mr-1" /> {t("back")}
+                  </Button>
+                  <h1 className="text-lg font-display font-bold truncate">{editing.name}</h1>
+                  <Badge variant={editing.enabled ? "default" : "secondary"}>
+                    {editing.enabled ? t("active") : t("inactive")}
+                  </Badge>
+                </div>
+              }
+            />
+
+            <div className="flex-1 p-4 sm:p-6 lg:p-8">
+              <div className="max-w-3xl mx-auto space-y-6">
 
         {/* Name & Toggle */}
         <Card className="p-5 space-y-4">
@@ -420,22 +433,32 @@ export default function ToastWidgetsClient() {
             {saving ? "..." : t("save")}
           </Button>
         </div>
-      </div>
+
+              </div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
     );
   }
 
   // ─── List view ───────────────────────────────────────────────────────
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
-        </div>
-        <Button onClick={createWidget}>
-          <Plus className="w-4 h-4 mr-2" /> {t("createWidget")}
-        </Button>
-      </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader
+            left={<h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>}
+            actions={
+              <Button onClick={createWidget}>
+                <Plus className="w-4 h-4 mr-2" /> {t("createWidget")}
+              </Button>
+            }
+          />
+
+          <div className="flex-1 p-4 sm:p-6 lg:p-8">
+            <div className="max-w-3xl mx-auto space-y-6">
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">{t("loading")}</div>
@@ -478,6 +501,11 @@ export default function ToastWidgetsClient() {
           ))}
         </div>
       )}
-    </div>
+
+            </div>
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
