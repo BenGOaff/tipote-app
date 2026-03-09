@@ -1,0 +1,956 @@
+# CAHIER DES CHARGES Tipote — Version Mars 2026 (État actuel du produit)
+
+Application Web SaaS multilingue (FR/EN/ES/IT/AR) pour analyse business, planification stratégique, génération de contenus IA et publication automatisée sur les réseaux sociaux.
+
+---
+
+## 1\. PRÉSENTATION DU PRODUIT
+
+### 1.1. Vision
+
+Tipote® est le « pote de business » des entrepreneurs. Contrairement aux outils IA génériques qui repartent de zéro à chaque conversation, Tipote® mémorise le profil business de l'utilisateur, son audience cible et ses objectifs pour générer une stratégie solide et des contenus véritablement personnalisés.
+
+La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storytelling \+ plan \+ pyramides \+ tâches) et sert de source de vérité pour tous les prompts de génération.
+
+### 1.2. Problèmes résolus
+
+- 51% des entrepreneurs n'ont pas fait leur première vente → Plan stratégique guidé  
+- 46% passent trop de temps sur la création de contenu → Génération IA automatisée \+ publication directe  
+- 52% trouvent l'IA trop générique → Personnalisation basée sur le profil mémorisé
+
+### 1.3. Fonctionnalités clés (état actuel)
+
+- Onboarding intelligent qui capture le profil business complet  
+- Plan stratégique personnalisé avec pyramide d'offres  
+- Génération de contenus (posts, emails, articles, scripts, offres, funnels, quiz, stratégie éditoriale)  
+- **Publication directe sur 8 réseaux sociaux** (LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest, Reddit)  
+- **Automatisations** (auto-commentaires, comment-to-DM, comment-to-email)  
+- Calendrier éditorial centralisé  
+- Constructeur de pages (capture, vente, vitrine)  
+- Système de quiz avec capture de leads  
+- Gestion des leads avec chiffrement AES-256  
+- Templates Systeme.io  
+- Suivi des tâches et progression  
+- Analytics avec diagnostic IA  
+- Coach IA contextuel (plans Pro/Elite)  
+- Système de pépites (insights)  
+- Didacticiel interactif pas-à-pas  
+- Notifications en temps réel  
+- Multi-projets  
+- 5 langues (FR, EN, ES, IT, AR)
+
+---
+
+## 2\. PRINCIPES FONDATEURS
+
+### 2.1. Publication directe (évolution majeure vs V1)
+
+**Contrairement à la V1 qui ne proposait que le copier-coller**, Tipote publie désormais directement sur les réseaux sociaux via OAuth 2.0. L'utilisateur connecte ses comptes dans Paramètres \> Connexions, et les posts sont publiés en un clic (ou programmés).
+
+Plateformes supportées avec publication directe :
+
+- LinkedIn (Posts \+ images)  
+- Facebook Pages (Posts \+ images \+ carrousels \+ vidéos)  
+- Instagram (Photos \+ vidéos \+ Reels)  
+- Threads (Posts)  
+- Twitter/X (Tweets \+ images)  
+- TikTok (Photos \+ vidéos)  
+- Pinterest (Pins avec images \+ liens)  
+- Reddit (Posts texte \+ liens)
+
+### 2.2. Deux niveaux d'IA
+
+**Niveau 1 — Cerveau stratégique (OpenAI GPT)**
+
+- Onboarding et diagnostic business  
+- Génération du plan stratégique  
+- Pyramide d'offres  
+- Création des tâches  
+- Coach IA  
+- Analyse analytics  
+- Recherche de ressources (embeddings) → Clé propriétaire, appels backend uniquement
+
+**Niveau 2 — Génération de contenu (Claude Anthropic)**
+
+- Posts réseaux sociaux  
+- Emails (newsletters, séquences)  
+- Articles de blog  
+- Scripts vidéo  
+- Copywriting funnels et pages  
+- Quiz  
+- Stratégie éditoriale  
+- Auto-commentaires → Claude Sonnet comme provider principal, clé propriétaire
+
+### 2.3. Monétisation par crédits
+
+- Crédits inclus mensuellement selon le plan (Free/Basic/Pro/Elite)  
+- Packs de crédits supplémentaires via Systeme.io  
+- Chaque génération de contenu consomme des crédits  
+- Webhook Systeme.io pour délivrer les crédits achetés  
+- L'utilisateur n'a besoin de configurer aucune clé IA
+
+---
+
+## 3\. ARCHITECTURE UX
+
+### 3.1. Navigation principale (Sidebar — 8 entrées \+ sections)
+
+**Section principale :**
+
+| Menu | URL | Icône | Description |
+| :---- | :---- | :---- | :---- |
+| Aujourd'hui | /app | Sun | Dashboard : prochaine tâche \+ stats clés |
+| Ma Stratégie | /strategy | Target | Pyramide \+ plan 30/90j \+ persona |
+| Créer | /create | Sparkles | Hub de création (8 types de contenu) |
+| Mes Contenus | /contents | FolderOpen | Liste \+ calendrier éditorial |
+| Templates | /templates | Layout | Templates Systeme.io |
+| Automatisations | /automations | Zap | Auto-commentaires et webhooks |
+| Mes Leads | /leads | Users | Gestion des leads capturés |
+
+**Section secondaire :**
+
+| Menu | URL | Icône | Description |
+| :---- | :---- | :---- | :---- |
+| Analytics | /analytics | BarChart3 | KPIs \+ diagnostic IA |
+| Pépites | /pepites | — | Insights et pépites |
+| Paramètres | /settings | — | 7 onglets de configuration |
+
+### 3.2. Workflow utilisateur
+
+ONBOARDING (une fois)
+
+    → AUJOURD'HUI (chaque connexion)
+
+        → CRÉER (production)
+
+            → PUBLIER (réseaux sociaux)
+
+                → MES CONTENUS (organisation)
+
+                    → ANALYTICS (suivi)
+
+---
+
+## 4\. PAGES DE L'APPLICATION
+
+### 4.1. Authentification
+
+- Login : email \+ mot de passe (Supabase Auth)  
+- Reset password  
+- Set password  
+- Détection automatique de la langue (user.locale)  
+- Callback OAuth pour réseaux sociaux
+
+### 4.2. Onboarding intelligent
+
+**Déclenchement :** Première connexion. Obligatoire avant les fonctionnalités stratégiques.
+
+**Format :** Questionnaire interactif de type Typeform (V3), étapes progressives.
+
+**Données collectées :**
+
+- Profil business complet  
+- Offres existantes / absence d'offres / profil affilié  
+- Situation réelle, freins, contraintes  
+- Différenciation, preuves, positionnement  
+- Persona client cible  
+- Objectifs 90 jours  
+- Style et tonalité  
+- Non-négociables
+
+**Stockage (Supabase) :**
+
+- `business_profiles.diagnostic_answers` (JSONB) : transcript structuré  
+- `business_profiles.diagnostic_profile` (JSONB) : normalisation exploitable  
+- `business_profiles.diagnostic_summary` (TEXT) : résumé coach  
+- `business_profiles.diagnostic_completed` (BOOLEAN)
+
+**Traitement backend (IA Niveau 1\) :**
+
+1. Génération persona détaillé (basé sur diagnostic\_profile)  
+2. Diagnostic business (forces/faiblesses/leviers)  
+3. Création de 3-5 propositions de pyramide d'offres  
+4. L'utilisateur en choisit une (modifiable)  
+5. Génération du plan 30/90/180 jours  
+6. Création automatique des tâches
+
+### 4.3. Page « Aujourd'hui » (/app)
+
+Page d'accueil après login.
+
+**Composants :**
+
+- Banner prochaine action avec titre, tags (type \+ canal \+ horaire), boutons "Créer en 1 clic" et "Voir la stratégie"  
+- 4 stats cards : Contenus publiés, Tâches complétées, Engagement, Prochaine échéance  
+- Progression de la semaine (barres de progression)  
+- Actions rapides : Créer du contenu, Voir mes contenus, Ma stratégie  
+- À venir cette semaine : liste des contenus planifiés
+
+### 4.4. Page « Ma Stratégie » (/strategy)
+
+Vue unifiée stratégie \+ suivi, organisée en onglets.
+
+**Header :**
+
+- Banner « Votre Vision Stratégique »  
+- 3 badges : Objectif Revenue, Horizon (90 jours), Progression (%)
+
+**3 onglets :**
+
+**Onglet Plan d'action (défaut) :**
+
+- 3 stats : Tâches complétées, Jours restants, Phase actuelle  
+- Phase 1 Fondations (J1-30) : barre progression \+ tâches cochables  
+- Phase 2 Croissance (J31-60) : barre progression \+ tâches cochables  
+- Phase 3 Scale (J61-90) : barre progression \+ tâches cochables  
+- Encart « Prochaine étape recommandée »
+
+**Onglet Pyramide d'offres :**
+
+- 3 niveaux visuels : Lead Magnet → Low/Middle Ticket → High Ticket  
+- Chaque offre : nom, prix, statut  
+- Possibilité de modifier la pyramide
+
+**Onglet Persona cible :**
+
+- Profil principal  
+- Problèmes principaux \+ Objectifs  
+- Source : `personas.persona_json` (role \= client\_ideal)
+
+**Sous-page Pyramides (/strategy/pyramids) :**
+
+- Vue détaillée des propositions de pyramides
+
+**Interconnexion :** Toute modification de la pyramide déclenche une mise à jour automatique des tâches du plan d'action via IA Niveau 1\.
+
+### 4.5. Page « Créer » (/create)
+
+Hub unique de création pour 8 types de contenu.
+
+**8 types de contenu :**
+
+| Type | Description | Icône | Formulaire |
+| :---- | :---- | :---- | :---- |
+| Post | Réseaux sociaux (LinkedIn, Instagram, Twitter...) | MessageSquare | PostForm |
+| Email | Newsletters, séquences, campaigns | Mail | EmailForm |
+| Article | Articles de blog, guides, tutoriels | FileText | ArticleForm |
+| Vidéo | Scripts YouTube, Reels, TikTok | Video | VideoForm |
+| Offre | Pages de vente, descriptions produit | Package | OfferForm |
+| Funnel | Tunnels de vente complets | Route | FunnelForm |
+| Quiz | Quiz lead magnets | ClipboardList | QuizForm |
+| Stratégie | Stratégie de contenu éditoriale | CalendarDays | ContentStrategyForm |
+
+**Workflow après sélection :**
+
+1. Formulaire contextuel (pré-rempli depuis onboarding/persona)  
+2. Bouton « Générer » → appel IA Niveau 2 (Claude)  
+3. Prévisualisation du résultat  
+4. Actions : Régénérer / Modifier / Sauvegarder / Planifier / **Publier directement**
+
+**Posts réseaux sociaux — Fonctionnalités avancées :**
+
+- Sélection de la plateforme cible  
+- Upload d'images (stockage Supabase Storage `content-images`)  
+- Upload de vidéos (stockage Supabase Storage `content-videos`)  
+- Configuration auto-commentaire à la publication  
+- Sélection du board Pinterest (si Pinterest)  
+- Lien Pinterest optionnel  
+- **Mode édition** : accès via `?edit=<id>` pour modifier un post programmé existant
+
+**Contexte IA :** Tous les prompts réinjectent `persona_json` \+ éléments du diagnostic (objections, vocabulaire, différenciation).
+
+### 4.6. Page « Mes Contenus » (/contents)
+
+Vue centralisée de tous les contenus générés.
+
+**Deux vues :**
+
+- **Vue Liste** : Onglets filtres (Tous / Posts / Emails / Articles / Vidéos / Quiz / Pages) \+ recherche \+ filtres avancés (statut, canal)  
+- **Vue Calendrier** : Vue mois avec codes couleur par type, clic pour éditer
+
+**Éléments affichés :**
+
+- Badge statut (Publié, Planifié, Brouillon)  
+- Type \+ Canal  
+- Titre \+ aperçu  
+- Date/délai  
+- Menu actions (voir, éditer, copier, supprimer, dupliquer)
+
+**Fonctionnalité clé :** Les posts programmés sont éditables. Clic sur un post → ouvre l'éditeur complet (`/create?edit=<id>`) avec images, vidéos, auto-commentaires pré-remplis.
+
+**Sous-sections intégrées :**
+
+- Mes Quiz (liste des quiz créés avec stats vues/partages/leads)  
+- Mes Pages (pages hébergées avec stats vues/leads/clics)
+
+### 4.7. Page « Templates » (/templates)
+
+Bibliothèque de templates Systeme.io téléchargeables.
+
+**Fonctionnalités :**
+
+- Prévisualisation des templates  
+- Téléchargement direct dans Systeme.io  
+- Itération IA sur les templates  
+- Reformulation du contenu  
+- Rendu avec données personnalisées
+
+### 4.8. Page « Automatisations » (/automations)
+
+Gestion des automatisations sociales.
+
+**Types d'automatisations :**
+
+- **Auto-commentaires** : Commentaires automatiques sur les posts publiés (LinkedIn, Instagram, Twitter, TikTok, Facebook)  
+  - Coût : 0.25 crédit par commentaire  
+  - Contenu généré par Claude (contextuel au post)  
+- **Comment-to-DM** : Répondre automatiquement en DM aux commentaires contenant certains mots-clés  
+- **Comment-to-Email** : Capturer l'email des commentateurs via DM automatique
+
+**Triggers :**
+
+- Mots-clés configurables  
+- Variantes de réponses  
+- Logs d'exécution avec statut (success/fail)
+
+**Intégration n8n :**
+
+- Webhooks pour publication asynchrone  
+- Callback pour posts programmés  
+- Health check endpoint
+
+### 4.9. Page « Mes Leads » (/leads)
+
+Gestion centralisée des leads capturés.
+
+**Tableau principal :**
+
+- Colonnes : checkbox, email, nom, source, date de capture, exporté Systeme.io (oui/non)  
+- Recherche par email/nom  
+- Filtre par source (quiz, page de capture, site vitrine, manuel)  
+- Pagination (20 par page)  
+- Sélection multiple \+ export CSV
+
+**4 stats :**
+
+- Total leads  
+- Leads quiz  
+- Exportés Systeme.io  
+- Ce mois-ci
+
+**Panel détail (Sheet latéral) :**
+
+- Avatar \+ nom \+ email  
+- Téléphone, date de capture  
+- Source et origine  
+- Résultat quiz (si applicable)  
+- Réponses aux questions du quiz  
+- Statut d'export Systeme.io  
+- Actions : éditer / supprimer
+
+**Sécurité :**
+
+- Chiffrement AES-256-GCM par champ (email, prénom, nom, téléphone, réponses quiz)  
+- Clé de chiffrement par utilisateur (DEK), wrappée par clé maître  
+- Index aveugle HMAC pour recherche sur email chiffré  
+- Badge de sécurité visible : « Vos données sont chiffrées de bout en bout (AES-256) »
+
+### 4.10. Page « Analytics » (/analytics)
+
+Suivi des performances business.
+
+**3 blocs :**
+
+**1\) Header KPIs :**
+
+- 4 cards : métriques clés du mois en cours
+
+**2\) Saisie des données du mois :**
+
+- Sélecteur de période (mois \+ année)  
+- 8 métriques manuelles :  
+  - Acquisition : Visiteurs, Nouveaux inscrits, Taux d'ouverture, Taux de clic  
+  - Conversion : Vues page de vente, Nombre de ventes, Chiffre d'affaires  
+- Calculs automatiques dérivés  
+- Boutons : Enregistrer / Enregistrer & Analyser
+
+**3\) Diagnostic IA :**
+
+- Diagnostic rapide (résumé business)  
+- Priorité \#1 (recommandation actionable)  
+- Points forts (2-3 éléments)  
+- Points d'attention (2-3 éléments \+ conseils)  
+- Déclenché après "Enregistrer & Analyser"
+
+**Métriques d'offres :**
+
+- Suivi par offre (visiteurs, inscrits, ventes, CA, taux de conversion)  
+- Agrégation \+ analyse IA par offre
+
+### 4.11. Page « Pépites » (/pepites)
+
+Repository d'insights et de pépites business. Notifications de nouvelles pépites avec badge compteur dans la sidebar.
+
+### 4.12. Page « Paramètres » (/settings)
+
+7 onglets de configuration :
+
+**Onglet Profil :**
+
+- Prénom, mission, formule de niche  
+- Storytelling fondateur en 6 étapes :  
+  1. Situation Initiale  
+  2. Élément Déclencheur  
+  3. Péripéties  
+  4. Moment Critique  
+  5. Résolution  
+  6. Situation Finale  
+- Gestion des offres (avec liens)  
+- URLs réseaux sociaux (LinkedIn, Instagram, YouTube, TikTok, Pinterest, Threads, Facebook)  
+- Liens personnalisés  
+- Langue du contenu généré
+
+**Onglet Connexions :**
+
+- Connexion OAuth des réseaux sociaux (8 plateformes)  
+- Configuration API Systeme.io  
+- Configuration auto-commentaires  
+- Gestion des tokens et rafraîchissement
+
+**Onglet Réglages :**
+
+- Email et mot de passe  
+- Paramètres du compte  
+- Langue par défaut
+
+**Onglet Positionnement :**
+
+- Analyse des concurrents  
+- Positionnement marché  
+- Définition de niche
+
+**Onglet Branding :**
+
+- Police de marque  
+- Couleurs (base \+ accent)  
+- Logo (upload)  
+- Photo auteur (upload)  
+- Ton de voix
+
+**Onglet IA :**
+
+- Panel crédits IA  
+- Gestion des clés API  
+- Paramètres du modèle
+
+**Onglet Abonnement (Pricing) :**
+
+- Plan actuel avec badge  
+- Crédits disponibles / total  
+- Tableau comparatif des plans  
+- Consommation par type de contenu  
+- Actions : Acheter crédits, Upgrade/Downgrade, Gérer abonnement
+
+### 4.13. Constructeur de Pages (/pages)
+
+Constructeur complet de landing pages hébergées.
+
+**Types de pages :**
+
+- Page de capture (lead generation)  
+- Page de vente (conversion)  
+- Site vitrine (showcase)
+
+**Fonctionnalités de l'éditeur :**
+
+- Prévisualisation multi-device (mobile, tablette, desktop)  
+- Édition de texte inline  
+- Sélecteur de couleurs inline  
+- Gestion des illustrations (upload/remplacement)  
+- Chat IA pour modifier la page par conversation  
+- Publication avec slug personnalisé  
+- Configuration Systeme.io (tags de capture)  
+- OG Image uploader  
+- Meta description  
+- Téléchargement HTML / PDF  
+- Analytics intégrés (vues, leads, clics)  
+- Tracking pixels (Facebook Pixel, Google Tag Manager)  
+- URL de paiement configurable  
+- Mentions légales auto-générées
+
+**Pages publiques :** Accessibles via `/p/[slug]`
+
+### 4.14. Système de Quiz (/quiz)
+
+Constructeur de quiz interactifs pour capture de leads.
+
+**Fonctionnalités :**
+
+- Génération de quiz par IA  
+- Éditeur de questions/réponses  
+- Page publique de quiz (`/q/[quizId]`)  
+- Capture d'email \+ prénom  
+- Résultats personnalisés avec CTA  
+- Sync leads vers Systeme.io  
+- Stats : vues, partages, leads capturés
+
+### 4.15. Coach IA
+
+Bulle flottante de conversation avec coach IA.
+
+**Disponibilité :**
+
+- Free/Basic : verrouillé (CTA upgrade)  
+- Pro/Elite : inclus (illimité, pas de consommation de crédits)
+
+**Fonctionnalités :**
+
+- Accès à toutes les données du profil business  
+- Réponses personnalisées contextuelles  
+- Suggestions basées sur la progression  
+- Historique des conversations  
+- Panneau latéral avec header "Coach IA"
+
+### 4.16. Didacticiel interactif
+
+Système de tutorial guidé pas-à-pas pour les nouveaux utilisateurs.
+
+**19 phases séquentielles :**
+
+1. Welcome (modal de bienvenue avec 4 étapes prévisualisées)  
+2. Tour Aujourd'hui  
+3. Tour Stratégie  
+4. Tour Créer  
+5. Tour Contenus  
+6. Tour Templates  
+7. Tour Crédits  
+8. Tour Analytics  
+9. Tour Pépites  
+10. Tour Paramètres (profil)  
+11. Tour Paramètres (connexions)  
+12. Tour Paramètres (réglages)  
+13. Tour Paramètres (positionnement)  
+14. Tour Paramètres (branding)  
+15. Tour Paramètres (IA)  
+16. Tour Paramètres (abonnement)  
+17. Tour Coach  
+18. Completion (modal de fin avec CTA vers paramètres)
+
+**UX :**
+
+- Tooltips avec compteur d'étapes ("3 / 17")  
+- Spotlight sur les éléments ciblés (portal-based)  
+- Opt-out visible (lien souligné, pas checkbox)  
+- Fenêtre : 7 premiers jours seulement  
+- Peut être relancé ou réactivé via le bouton d'aide flottant
+
+### 4.17. Système de Notifications
+
+**Types :**
+
+- Auto (déclenchées par le système)  
+- Admin broadcast (envoyées par l'admin à tous)  
+- Personnelles
+
+**Interface :**
+
+- Cloche dans le header avec compteur d'unread  
+- Panel de notifications avec deep-linking  
+- Marquage lu/archivé
+
+### 4.18. Pages légales
+
+Pages dynamiques via `/legal/[slug]` :
+
+- Conditions d'utilisation  
+- Politique de confidentialité  
+- Mentions légales  
+- CGV
+
+### 4.19. Backoffice Admin (/admin)
+
+Accès restreint aux emails admin.
+
+**Fonctionnalités :**
+
+- Vue utilisateurs (search, filtres par plan)  
+- Modifier plan, reset password, désactiver  
+- Broadcast de notifications  
+- Attribution de crédits bonus  
+- Opérations en masse  
+- Logs de changements de plan (audit trail)
+
+---
+
+## 5\. INTERCONNEXIONS DES DONNÉES
+
+### 5.1. Matrice des déclencheurs
+
+| Événement | Déclenche | Mécanisme |
+| :---- | :---- | :---- |
+| Modification pyramide d'offres | Mise à jour tâches plan d'action | IA Niveau 1 recalcule |
+| Création d'offre (hub Créer) | Ajout à la pyramide \+ nouvelles tâches | Insertion auto |
+| Tâche cochée | MAJ progression \+ stats dashboard | Recalcul temps réel |
+| Contenu généré | Ajout content\_item \+ consommation crédits | Insert DB \+ décrément |
+| Post publié sur réseau social | MAJ statut \+ stockage post\_id/post\_url | Callback API |
+| Modification persona | MAJ contexte génération contenu | personas.persona\_json update |
+| Lead capturé (quiz/page) | Insert leads (chiffré) \+ notification | Insert \+ trigger |
+| Commentaire détecté (automation) | Auto-reply \+ log \+ consommation crédit | Webhook \+ Claude |
+| Analytics renseignés | Diagnostic IA | Trigger analyse |
+
+### 5.2. Flux de données
+
+Onboarding → business\_profiles → personas
+
+    → business\_plan (pyramide \+ tâches)
+
+        → Créer (contexte pré-rempli)
+
+            → content\_item → social/publish (réseaux sociaux)
+
+                → analytics
+
+Quiz/Pages → leads (chiffré) → export CSV / Systeme.io
+
+Automatisations → auto\_comment\_logs → webhook\_logs
+
+---
+
+## 6\. ARCHITECTURE TECHNIQUE
+
+### 6.1. Stack
+
+| Composant | Technologie |
+| :---- | :---- |
+| Frontend | Next.js (App Router), TypeScript, Tailwind CSS |
+| UI Components | shadcn/ui |
+| Internationalisation | next-intl (5 langues) |
+| Backend | API Routes Next.js |
+| Base de données | Supabase (PostgreSQL) |
+| Auth | Supabase Auth (email/password) |
+| Stockage fichiers | Supabase Storage (images \+ vidéos) |
+| IA Stratégique | OpenAI GPT (clé propriétaire) |
+| IA Contenu | Claude Anthropic (clé propriétaire) |
+| Social OAuth | LinkedIn, Meta, Twitter, TikTok, Pinterest, Reddit |
+| Automatisations | n8n (webhooks) |
+| CRM / Paiement | Systeme.io (API \+ webhooks) |
+| Chiffrement | AES-256-GCM (tokens \+ PII) |
+| Hosting | Hostinger VPS |
+| Process Manager | PM2 |
+
+### 6.2. Tables Supabase principales
+
+**Profil & Auth :**
+
+- `users` — id, email, locale, timezone, plan, is\_owner, onboarding\_completed, sio\_contact\_id  
+- `business_profiles` — profil business, diagnostic, storytelling (JSONB), offres  
+- `personas` — persona\_json (role \= client\_ideal)
+
+**Stratégie :**
+
+- `business_plan` — plan\_json (pyramide \+ phases)  
+- `project_tasks` — tâches avec statut, soft delete
+
+**Contenu :**
+
+- `content_item` — type, title, content, status, scheduled\_date, channel, tags, meta (JSONB), ai\_provider\_used, credits\_consumed
+
+**Social :**
+
+- `social_connections` — tokens OAuth chiffrés (AES-256-GCM) pour 8 plateformes  
+- `social_automations` — comment-to-DM/email, trigger keywords  
+- `auto_comment_logs` — logs d'exécution des auto-commentaires  
+- `automation_credits` — crédits d'automatisation
+
+**Pages & Quiz :**
+
+- `hosted_pages` — pages hébergées (capture, vente, vitrine) avec slug, analytics, pixels  
+- `page_leads` — leads capturés par les pages  
+- `page_clicks` — tracking des clics  
+- `quizzes` — quiz avec questions, résultats, CTA  
+- `quiz_leads` — leads capturés par les quiz
+
+**Leads :**
+
+- `leads` — leads unifiés (toutes sources), champs chiffrés (email\_encrypted, first\_name\_encrypted, etc.), blind index HMAC  
+- `user_encryption_keys` — DEK wrappées par clé maître (par utilisateur)
+
+**Billing :**
+
+- `user_credits` — balance, monthly\_allotment, total\_purchased, total\_consumed  
+- `user_credits_transactions` — historique audité des mouvements
+
+**Analytics :**
+
+- `offer_metrics` — métriques par offre par mois  
+- `analytics_entries` — données analytics manuelles
+
+**Notifications :**
+
+- `notifications` — auto, admin broadcast, personnelles
+
+**Admin :**
+
+- `plan_change_log` — audit des changements de plan  
+- `plan_assignments` — attributions de crédits bonus  
+- `webhook_logs` — logs de debugging des webhooks
+
+**Toutes les tables utilisent Row Level Security (RLS).**
+
+### 6.3. Routes API (150+ endpoints)
+
+**Auth & Compte :**
+
+- POST /api/account/delete, /ensure-profile, /reset  
+- GET/POST /api/auth/{linkedin,twitter,tiktok,pinterest,reddit,instagram,meta}/callback
+
+**Social :**
+
+- POST /api/social/publish — Publication directe (8 plateformes, images, vidéos, carrousels)  
+- GET /api/social/connections  
+- GET /api/social/{linkedin-posts, facebook-posts, instagram-posts, twitter-tweets, tiktok-videos, pinterest-boards}
+
+**Contenu :**
+
+- POST /api/content/generate — Génération IA  
+- POST /api/content/refine — Raffinement  
+- POST /api/content/strategy/generate-all — Génération en masse  
+- PATCH /api/content/\[id\] — Mise à jour  
+- POST /api/content/\[id\]/duplicate
+
+**Pages :**
+
+- POST /api/pages/generate — Génération IA de page  
+- GET/PATCH /api/pages/\[pageId\]  
+- POST /api/pages/\[pageId\]/publish  
+- GET /api/pages/public/\[slug\] — Rendu public
+
+**Quiz :**
+
+- POST /api/quiz/generate  
+- GET/POST /api/quiz/\[quizId\]  
+- GET /api/quiz/\[quizId\]/public  
+- POST /api/quiz/\[quizId\]/sync-systeme
+
+**Leads :**
+
+- GET/POST /api/leads — Liste \+ création (avec chiffrement)  
+- GET/PATCH/DELETE /api/leads/\[id\]  
+- GET /api/leads/export — Export CSV (avec déchiffrement)
+
+**Analytics :**
+
+- POST /api/analytics/analyze-metrics — Analyse IA  
+- GET/POST /api/analytics/offer-metrics
+
+**Automatisations :**
+
+- POST /api/automations/{linkedin,instagram,twitter,tiktok}-comments  
+- POST /api/automations/webhook — Webhook Meta  
+- POST /api/n8n/{linkedin, publish-callback, scheduled-posts}
+
+**Billing :**
+
+- POST /api/billing/subscription — Webhook Systeme.io  
+- GET /api/credits/balance
+
+**Admin :**
+
+- POST /api/admin/{users, notifications, bulk}
+
+### 6.4. Variables d'environnement
+
+**Supabase :**
+
+- NEXT\_PUBLIC\_SUPABASE\_URL, NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY, SUPABASE\_SERVICE\_ROLE\_KEY
+
+**Application :**
+
+- NEXT\_PUBLIC\_APP\_URL, NODE\_ENV
+
+**IA :**
+
+- CLAUDE\_API\_KEY\_OWNER / ANTHROPIC\_API\_KEY — Claude Anthropic  
+- OPENAI\_API\_KEY\_OWNER / OPENAI\_API\_KEY — OpenAI  
+- TIPOTE\_CLAUDE\_MODEL, TIPOTE\_OPENAI\_MODEL, TIPOTE\_ARTICLE\_MAX\_TOKENS
+
+**Chiffrement :**
+
+- SOCIAL\_TOKENS\_ENCRYPTION\_KEY — AES-256 pour tokens OAuth  
+- PII\_MASTER\_KEY — Clé maître chiffrement PII (64 hex)  
+- PII\_HMAC\_SECRET — Secret HMAC pour blind indexes (64 hex)
+
+**OAuth Réseaux Sociaux :**
+
+- LINKEDIN\_CLIENT\_ID, LINKEDIN\_CLIENT\_SECRET  
+- META\_APP\_ID, META\_APP\_SECRET, META\_WEBHOOK\_VERIFY\_TOKEN  
+- INSTAGRAM\_APP\_ID, INSTAGRAM\_APP\_SECRET  
+- THREADS\_APP\_ID, THREADS\_APP\_SECRET  
+- TWITTER\_CLIENT\_ID, TWITTER\_CLIENT\_SECRET  
+- TIKTOK\_CLIENT\_KEY, TIKTOK\_CLIENT\_SECRET  
+- PINTEREST\_APP\_ID, PINTEREST\_APP\_SECRET  
+- REDDIT\_CLIENT\_ID, REDDIT\_CLIENT\_SECRET
+
+**Intégrations :**
+
+- SYSTEME\_IO\_API\_KEY  
+- N8N\_WEBHOOK\_BASE\_URL, N8N\_SHARED\_SECRET  
+- MESSENGER\_PAGE\_ACCESS\_TOKEN
+
+---
+
+## 7\. SÉCURITÉ
+
+### 7.1. Authentification
+
+- JWT tokens avec expiration (Supabase Auth)  
+- Refresh tokens  
+- OAuth 2.0 avec PKCE (Twitter/X)  
+- CSRF tokens pour tous les flux OAuth
+
+### 7.2. Chiffrement des données
+
+- **Tokens OAuth** : AES-256-GCM (env SOCIAL\_TOKENS\_ENCRYPTION\_KEY)  
+- **PII des leads** : AES-256-GCM par utilisateur avec DEK individuelle  
+  - Clé par utilisateur wrappée par clé maître  
+  - Index aveugle HMAC-SHA256 pour recherche sur champs chiffrés  
+  - Ni l'admin ni un pirate ayant accès à la DB ne peut lire les données
+
+### 7.3. Row Level Security
+
+- RLS activé sur toutes les tables utilisateur  
+- Chaque utilisateur ne voit que ses propres données  
+- Service role pour les opérations admin
+
+### 7.4. Webhooks
+
+- Validation signature HMAC (Meta X-Hub-Signature-256)  
+- Secret partagé pour n8n  
+- Logs de debugging
+
+---
+
+## 8\. MONÉTISATION
+
+### 8.1. Plans et tarification
+
+|  | Free | Basic | Pro | Elite |
+| :---- | :---- | :---- | :---- | :---- |
+| **Prix mensuel** | 0€ | 19€ | 49€ | 99€ |
+| **Prix annuel** | — | 190€ | 490€ | 990€ |
+| **Crédits IA/mois** | 25 (one-shot) | 40 | 150 | 500 |
+| **Tous les modules** | Oui | Oui | Oui | Oui |
+| **Publication directe** | Oui | Oui | Oui | Oui |
+| **Auto-commentaires** | Non | Oui | Oui | Oui |
+| **Coach IA** | Non | Non | Oui | Oui |
+| **Multi-projets** | Non | Non | Non | Oui |
+
+*Note : Plan "beta" (150 crédits/mois) existe pour les early adopters lifetime.*
+
+### 8.2. Système de crédits
+
+- 1 crédit ≈ 0.01€ de coûts IA réels  
+- Renouvellement mensuel (sauf Free \= one-shot)  
+- Crédits non cumulables d'un mois à l'autre  
+- Auto-commentaires : 0.25 crédit par commentaire
+
+### 8.3. Packs supplémentaires (Systeme.io)
+
+| Pack | Crédits | Prix |
+| :---- | :---- | :---- |
+| Starter | 25 | 3€ |
+| Standard | 100 | 10€ |
+| Pro | 250 | 22€ |
+
+- Pas d'expiration  
+- S'ajoutent au solde existant  
+- Consommés après les crédits mensuels (FIFO)
+
+---
+
+## 9\. INTÉGRATION SYSTEME.IO
+
+### 9.1. Webhook achat/abonnement
+
+- Réception du payload (email, plan, product\_id, sio\_contact\_id)  
+- Création de compte si inexistant  
+- Upgrade plan \+ attribution crédits  
+- Email de bienvenue
+
+### 9.2. Webhook annulation
+
+- Rétrogradation vers plan Free  
+- Conservation des données 90 jours
+
+### 9.3. Sync leads
+
+- Export leads de quiz vers Systeme.io  
+- Tags de capture configurables par page
+
+---
+
+## 10\. LANGUES SUPPORTÉES
+
+| Code | Langue | Statut |
+| :---- | :---- | :---- |
+| fr | Français | Complet |
+| en | English | Complet |
+| es | Español | Complet |
+| it | Italiano | Complet |
+| ar | العربية | Complet |
+
+Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
+
+---
+
+## 11\. DESIGN SYSTEM
+
+### Règle de parité Lovable (Pixel-perfect)
+
+- La maquette Lovable est la source de vérité UI/UX  
+- 1 client component par page : `components/<domaine>/<PageName>LovableClient.tsx`  
+- Page server : `app/<route>/page.tsx` \= wrapper auth \+ fetch \+ return client component  
+- Composants UI : shadcn/ui (Card, Button, Badge, Input, Select, Sheet, Dialog, Table, etc.)  
+- Framework CSS : Tailwind CSS
+
+---
+
+## 12\. ROADMAP
+
+### V1 (État actuel — Mars 2026\) ✅
+
+- Architecture complète (8+ pages principales)  
+- Onboarding intelligent  
+- Plan stratégique IA avec pyramide d'offres  
+- Hub création unifié (8 types de contenu)  
+- **Publication directe sur 8 réseaux sociaux**  
+- **Automatisations** (auto-commentaires, comment-to-DM/email)  
+- **Constructeur de pages** (capture, vente, vitrine)  
+- **Système de quiz** avec capture de leads  
+- **Gestion des leads** avec chiffrement AES-256  
+- Calendrier éditorial (édition des posts programmés)  
+- Système de crédits (achat \+ consommation)  
+- Templates Systeme.io  
+- Analytics avec diagnostic IA  
+- Coach IA (Pro/Elite)  
+- Pépites (insights)  
+- Didacticiel interactif complet  
+- Notifications  
+- Multi-projets (Elite)  
+- Storytelling fondateur  
+- Branding personnalisé  
+- 5 langues (FR/EN/ES/IT/AR)  
+- Intégration Systeme.io (webhooks \+ sync leads)  
+- Intégration n8n  
+- Backoffice admin
+
+### V2 (Prochaines étapes)
+
+- Génération images IA  
+- Blog auto-publishing  
+- Ads Engine (création de publicités)  
+- App mobile
+
+---
+
+*— Fin du cahier des charges — Mars 2026*  
