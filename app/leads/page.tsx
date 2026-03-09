@@ -34,6 +34,7 @@ export default async function LeadsPage() {
     return {
       id: String(l.id),
       ...pii,
+      quiz_answers: (pii.quiz_answers ?? null) as Array<{ question_text: string; answer_text: string }> | null,
       source: l.source ?? "quiz",
       source_name: l.source_name ?? null,
       quiz_result_title: l.quiz_result_title ?? null,
