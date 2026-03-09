@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -17,7 +17,7 @@ import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, Clipboa
 
 import { ContentTypeCard } from "@/components/create/ContentTypeCard";
 
-import { PostForm } from "@/components/create/forms/PostForm";
+import { PostForm, type PostEditData } from "@/components/create/forms/PostForm";
 import { EmailForm } from "@/components/create/forms/EmailForm";
 import { ArticleForm } from "@/components/create/forms/ArticleForm";
 import { VideoForm } from "@/components/create/forms/VideoForm";
@@ -327,12 +327,68 @@ async function pollGeneratedContent(
 
 export default function CreateLovableClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const t = useTranslations('createClient');
 
-  const [selectedType, setSelectedType] = useState<ContentType>(null);
+  const editId = searchParams.get("edit");
+
+  const [selectedType, setSelectedType] = useState<ContentType>(editId ? "post" : null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Edit mode: fetch existing content data
+  const [editData, setEditData] = useState<PostEditData | null>(null);
+  const [editLoading, setEditLoading] = useState(Boolean(editId));
+
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+
+    const fetchContent = async () => {
+      setEditLoading(true);
+      try {
+        const res = await fetch(`/api/content/${encodeURIComponent(editId)}`);
+        const json = await res.json().catch(() => null);
+
+        if (cancelled) return;
+
+        if (res.ok && json?.ok && json?.item) {
+          const item = json.item;
+          setEditData({
+            id: item.id,
+            content: item.content ?? null,
+            channel: item.channel ?? null,
+            title: item.title ?? null,
+            status: item.status ?? null,
+            scheduled_date: item.scheduled_date ?? null,
+            meta: item.meta ?? null,
+          });
+          setSelectedType("post");
+        } else {
+          toast({
+            title: "Contenu introuvable",
+            description: "Impossible de charger ce contenu pour l'éditer.",
+            variant: "destructive",
+          });
+          setEditData(null);
+        }
+      } catch {
+        if (!cancelled) {
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger le contenu.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!cancelled) setEditLoading(false);
+      }
+    };
+
+    fetchContent();
+    return () => { cancelled = true; };
+  }, [editId]);
 
   const [existingOffers, setPyramidOffers] = useState<SourceOfferLite[]>([]);
   const [sourceLeadMagnet, setPyramidLeadMagnet] = useState<SourceOfferLite | null>(null);
@@ -579,9 +635,17 @@ export default function CreateLovableClient() {
       isSaving,
     };
 
+    const onCloseEdit = () => {
+      if (editId) {
+        router.push("/contents");
+      } else {
+        onClose();
+      }
+    };
+
     switch (selectedType) {
       case "post":
-        return <PostForm onGenerate={handleGenerate} onSave={handleSave} onClose={onClose} isGenerating={isGenerating} isSaving={isSaving} />;
+        return <PostForm onGenerate={handleGenerate} onSave={handleSave} onClose={onCloseEdit} isGenerating={isGenerating} isSaving={isSaving} editData={editData} />;
       case "email":
         return <EmailForm {...common} />;
       case "article":
@@ -600,7 +664,7 @@ export default function CreateLovableClient() {
       default:
         return null;
     }
-  }, [selectedType, isGenerating, isSaving, existingOffers, sourceLeadMagnet, sourcePaidOffer]);
+  }, [selectedType, isGenerating, isSaving, existingOffers, sourceLeadMagnet, sourcePaidOffer, editData, editId]);
 
   return (
     <SidebarProvider>
@@ -608,10 +672,14 @@ export default function CreateLovableClient() {
         <AppSidebar />
 
         <main className="flex-1 flex flex-col">
-          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t('create')}</h1>} />
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{editId ? "Modifier le post" : t('create')}</h1>} />
 
           <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 w-full">
-            {!selectedType ? (
+            {editLoading ? (
+              <Card className="p-12 flex items-center justify-center">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              </Card>
+            ) : !selectedType ? (
               <>
                 <Card className="p-6 gradient-primary text-primary-foreground relative overflow-hidden">
                   <Badge className="absolute top-4 right-4 bg-white/20 text-white hover:bg-white/30">

@@ -31,12 +31,25 @@ import { toast } from "sonner";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
+/** Initial data for editing an existing post */
+export interface PostEditData {
+  id: string;
+  content: string | null;
+  channel: string | null;
+  title: string | null;
+  status: string | null;
+  scheduled_date: string | null;
+  meta?: Record<string, any> | null;
+}
+
 interface PostFormProps {
   onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
   onSave: (data: any) => Promise<string | null>;
   onClose: () => void;
   isGenerating: boolean;
   isSaving: boolean;
+  /** When provided, the form starts in edit mode with pre-filled data */
+  editData?: PostEditData | null;
 }
 
 const platforms = [
@@ -86,10 +99,12 @@ const PLATFORM_LABELS: Record<string, string> = {
   tiktok: "TikTok",
 };
 
-export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: PostFormProps) {
-  const [platform, setPlatform] = useState("linkedin");
+export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, editData }: PostFormProps) {
+  const isEditMode = Boolean(editData?.id);
+
+  const [platform, setPlatform] = useState(editData?.channel ?? "linkedin");
   const [theme, setTheme] = useState("educate");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(editData?.title ?? "");
   const [tone, setTone] = useState("professional");
 
   // Branchement offre existante
@@ -102,18 +117,24 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const [promoKind, setPromoKind] = useState<"paid" | "free">("paid");
   const [offerLink, setOfferLink] = useState("");
 
-  const [generatedContent, setGeneratedContent] = useState("");
+  const [generatedContent, setGeneratedContent] = useState(editData?.content ?? "");
   const [copied, setCopied] = useState(false);
 
   // Title auto-derived from subject (editable in content detail page later)
   const title = subject.trim() || `Post ${platform}`;
 
-  // Images
-  const [images, setImages] = useState<UploadedImage[]>([]);
+  // Images — pre-fill from editData meta
+  const [images, setImages] = useState<UploadedImage[]>(
+    () => (editData?.meta?.images as UploadedImage[] | undefined) ?? [],
+  );
 
   // Pinterest-specific fields
-  const [pinterestBoardId, setPinterestBoardId] = useState("");
-  const [pinterestLink, setPinterestLink] = useState("");
+  const [pinterestBoardId, setPinterestBoardId] = useState(
+    () => (editData?.meta?.pinterest_board_id as string) ?? "",
+  );
+  const [pinterestLink, setPinterestLink] = useState(
+    () => (editData?.meta?.pinterest_link as string) ?? "",
+  );
   const [pinterestTitle, setPinterestTitle] = useState("");
   const isPinterest = platform === "pinterest";
   const isTikTok = platform === "tiktok";
@@ -122,14 +143,20 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   const supportsVideo = isTikTok || isInstagram || isFacebook;
 
   // Video upload (TikTok, etc.)
-  const [uploadedVideo, setUploadedVideo] = useState<UploadedVideo | null>(null);
+  const [uploadedVideo, setUploadedVideo] = useState<UploadedVideo | null>(() => {
+    if (editData?.meta?.video_url) {
+      return { url: editData.meta.video_url, path: editData.meta.video_path ?? "" } as UploadedVideo;
+    }
+    return null;
+  });
 
   // Auto-comment state
+  const editAutoComments = editData?.meta?.auto_comments;
   const [autoCommentConfig, setAutoCommentConfig] = useState<AutoCommentConfig>({
-    enabled: false,
-    nbBefore: 0,
-    nbAfter: 0,
-    creditsNeeded: 0,
+    enabled: editAutoComments?.enabled ?? false,
+    nbBefore: editAutoComments?.nb_before ?? 0,
+    nbAfter: editAutoComments?.nb_after ?? 0,
+    creditsNeeded: editAutoComments?.credits_needed ?? 0,
   });
   const [userPlan, setUserPlan] = useState<string | null>(null);
 
@@ -142,8 +169,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   // Publish modal state
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   // Use ref for synchronous access (avoids stale closure creating duplicate entries)
-  const savedContentIdRef = useRef<string | null>(null);
-  const [savedContentId, setSavedContentId] = useState<string | null>(null);
+  const savedContentIdRef = useRef<string | null>(editData?.id ?? null);
+  const [savedContentId, setSavedContentId] = useState<string | null>(editData?.id ?? null);
 
   // Schedule modal state
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -392,7 +419,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving }
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Post Réseaux Sociaux</h2>
+        <h2 className="text-xl font-bold">
+          {isEditMode ? "Modifier le post" : "Post Réseaux Sociaux"}
+        </h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5" />
         </Button>

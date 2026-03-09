@@ -1521,7 +1521,8 @@
     "failed": "Error",
     "noContent": "Sin contenido para esta fecha",
     "untitled": "Sin título",
-    "reschedule": "Reprogramar"
+    "reschedule": "Reprogramar",
+    "edit": "Editar"
   },
   "imageUploader": {
     "label": "Imágenes",
