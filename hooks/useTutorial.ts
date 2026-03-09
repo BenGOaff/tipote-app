@@ -78,6 +78,10 @@ interface TutorialContextType {
   firstSeenAt: string | null;
   daysSinceFirstSeen: number;
 
+  // Step counter for spotlight UI
+  currentStep: number;
+  totalSteps: number;
+
   // ✅ Récupération “tuto disparu”
   resetTutorial: () => void;
 }
@@ -485,6 +489,16 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     return PHASE_TO_URL[next] ?? null;
   }, [phase]);
 
+  // Step counter: only count tour_* phases (not welcome/completed)
+  const TOUR_PHASES = PHASE_ORDER.filter(
+    (p) => p.startsWith("tour_") && p !== "tour_complete",
+  );
+  const totalSteps = TOUR_PHASES.length;
+  const currentStep = useMemo(() => {
+    const idx = TOUR_PHASES.indexOf(phase as any);
+    return idx >= 0 ? idx + 1 : 0;
+  }, [phase]);
+
   const value = useMemo<TutorialContextType>(
     () => ({
       phase,
@@ -503,6 +517,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       setTutorialOptOut,
       firstSeenAt,
       daysSinceFirstSeen,
+      currentStep,
+      totalSteps,
       resetTutorial,
     }),
     [
@@ -521,6 +537,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       setTutorialOptOut,
       firstSeenAt,
       daysSinceFirstSeen,
+      currentStep,
+      totalSteps,
       resetTutorial,
     ],
   );
