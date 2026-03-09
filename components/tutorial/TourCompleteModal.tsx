@@ -5,26 +5,34 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { PartyPopper, Sparkles } from "lucide-react";
+import { PartyPopper, Sparkles, Settings, ChevronRight } from "lucide-react";
 import { useTutorial } from "@/hooks/useTutorial";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
 export function TourCompleteModal() {
-  const { phase, setPhase, tutorialOptOut, setTutorialOptOut } = useTutorial();
+  const { phase, setPhase, setTutorialOptOut } = useTutorial();
+  const t = useTranslations("tutorial");
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [disableGuide, setDisableGuide] = useState<boolean>(tutorialOptOut);
-
-  useEffect(() => {
-    setDisableGuide(tutorialOptOut);
-  }, [tutorialOptOut]);
 
   useEffect(() => {
     if (phase === "tour_complete") setOpen(true);
   }, [phase]);
 
-  const handleClose = () => {
-    if (disableGuide) setTutorialOptOut(true);
+  const handleDone = () => {
+    setOpen(false);
+    setPhase("completed");
+  };
+
+  const handleGoSettings = () => {
+    setOpen(false);
+    setPhase("completed");
+    router.push("/settings?tab=positioning");
+  };
+
+  const handleOptOut = () => {
+    setTutorialOptOut(true);
     setOpen(false);
     setPhase("completed");
   };
@@ -35,48 +43,69 @@ export function TourCompleteModal() {
       onOpenChange={(o) => {
         setOpen(o);
         if (!o && phase === "tour_complete") {
-          handleClose();
+          handleDone();
         }
       }}
     >
       <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none">
-        {/* ✅ A11y Radix: Title/Description obligatoires */}
         <VisuallyHidden>
-          <DialogTitle>Tour guidé terminé</DialogTitle>
-          <DialogDescription>Confirmation de fin du guide</DialogDescription>
+          <DialogTitle>{t("completeTitle")}</DialogTitle>
+          <DialogDescription>{t("completeA11y")}</DialogDescription>
         </VisuallyHidden>
 
-        <div className="gradient-primary p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6">
+        {/* Celebration header */}
+        <div className="gradient-primary px-8 pt-8 pb-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4">
             <PartyPopper className="w-8 h-8 text-primary-foreground" />
           </div>
 
-          <h2 className="text-2xl font-bold text-primary-foreground mb-2">Tour terminé ! 🎉</h2>
+          <h2 className="text-2xl font-bold text-primary-foreground mb-2">
+            {t("completeHeading")}
+          </h2>
 
-          <p className="text-primary-foreground/90 text-lg mb-6">
-            Tu peux maintenant explorer Tipote. Je suis là si tu as besoin.
+          <p className="text-primary-foreground/90 text-base leading-relaxed">
+            {t("completeBody")}
           </p>
+        </div>
 
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-6">
-            <div className="flex items-start gap-3 text-left">
-              <Checkbox
-                id="disable-guide-complete"
-                checked={disableGuide}
-                onCheckedChange={(v) => setDisableGuide(Boolean(v))}
-              />
-              <Label
-                htmlFor="disable-guide-complete"
-                className="text-primary-foreground/90 leading-snug cursor-pointer"
-              >
-                J&apos;ai mon Tipote en main, ne me montre plus ce guide
-              </Label>
+        {/* Actions */}
+        <div className="px-8 py-6 space-y-4">
+          {/* Primary: go to settings to complete profile */}
+          <div className="bg-primary/5 border border-primary/15 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Settings className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">{t("completeTip")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("completeTipDesc")}</p>
+              </div>
             </div>
           </div>
 
-          <Button onClick={handleClose} variant="secondary" size="lg" className="w-full text-lg">
-            <Sparkles className="w-5 h-5 mr-2" />
-            C&apos;est parti !
+          <Button onClick={handleGoSettings} size="lg" className="w-full text-base gap-2">
+            <Settings className="w-4 h-4" />
+            {t("completeGoSettings")}
           </Button>
+
+          <Button
+            onClick={handleDone}
+            variant="ghost"
+            className="w-full text-muted-foreground"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            {t("completeExplore")}
+          </Button>
+
+          {/* Clear opt-out — bright, visible, underlined */}
+          <div className="border-t pt-4">
+            <button
+              onClick={handleOptOut}
+              className="w-full text-center text-xs text-muted-foreground/70 hover:text-primary underline underline-offset-2 transition-colors"
+            >
+              {t("completeOptOut")}
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
