@@ -12,8 +12,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -534,22 +535,20 @@ export default function MyContentLovableClient({
         <div className="min-h-screen flex w-full">
           <AppSidebar />
 
-          <main className="flex-1 overflow-auto bg-muted/30">
-            <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
-              <SidebarTrigger />
-              <div className="ml-4 flex-1">
-                <h1 className="text-xl font-display font-bold">Mes Contenus</h1>
-              </div>
+          <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+            <PageHeader
+              left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
+              actions={
+                <Button asChild>
+                  <Link href="/create">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Créer
+                  </Link>
+                </Button>
+              }
+            />
 
-              <Button asChild>
-                <Link href="/create">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Créer
-                </Link>
-              </Button>
-            </header>
-
-            <div className="p-6 max-w-6xl mx-auto space-y-6">
+            <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
               <Card className="p-6">
                 <p className="text-sm text-muted-foreground">Impossible de charger tes contenus pour le moment.</p>
                 <p className="mt-2 text-sm text-rose-600">{error}</p>
@@ -566,24 +565,21 @@ export default function MyContentLovableClient({
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto bg-muted/30">
-          {/* ✅ Header EXACT Lovable */}
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
-            <SidebarTrigger />
-            <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">Mes Contenus</h1>
-            </div>
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader
+            left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
+            actions={
+              <Button asChild>
+                <Link href="/create">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer
+                </Link>
+              </Button>
+            }
+          />
 
-            <Button asChild>
-              <Link href="/create">
-                <Plus className="w-4 h-4 mr-2" />
-                Créer
-              </Link>
-            </Button>
-          </header>
-
-          {/* ✅ Container EXACT Lovable */}
-          <div className="p-6 max-w-6xl mx-auto space-y-6">
+          {/* Container */}
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
             {/* Filters & Toggle (structure Lovable) */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="relative flex-1 max-w-md w-full">

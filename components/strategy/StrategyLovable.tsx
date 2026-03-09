@@ -5,8 +5,9 @@ import { useCallback, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -658,33 +659,31 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto bg-muted/30">
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
-            <SidebarTrigger />
-            <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">{t("title")}</h1>
-            </div>
-
-            {isEditing ? (
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={handleCancelEditing}>
-                  <X className="w-4 h-4 mr-2" />
-                  {t("cancel")}
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader
+            left={<h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>}
+            actions={
+              isEditing ? (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" onClick={handleCancelEditing}>
+                    <X className="w-4 h-4 mr-2" />
+                    {t("cancel")}
+                  </Button>
+                  <Button onClick={handleSaveChanges}>
+                    <Save className="w-4 h-4 mr-2" />
+                    {t("save")}
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" onClick={handleStartEditing}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  {t("customize")}
                 </Button>
-                <Button onClick={handleSaveChanges}>
-                  <Save className="w-4 h-4 mr-2" />
-                  {t("save")}
-                </Button>
-              </div>
-            ) : (
-              <Button variant="outline" onClick={handleStartEditing}>
-                <Pencil className="w-4 h-4 mr-2" />
-                {t("customize")}
-              </Button>
-            )}
-          </header>
+              )
+            }
+          />
 
-          <div className="p-6 space-y-6 max-w-7xl mx-auto">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
             {/* ✅ NEW : Bandeau “plan en cours” (sans casser le reste) */}
             {(props.mode === "generating" ||
               (!props.planTasksCount &&

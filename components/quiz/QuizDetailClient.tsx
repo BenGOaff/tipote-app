@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -620,47 +621,48 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         <AppSidebar />
 
         <main className="flex-1 flex flex-col">
-          <header className="h-16 flex items-center px-6 border-b bg-background sticky top-0 z-10">
-            <SidebarTrigger />
-            <div className="ml-4 flex items-center gap-3 flex-1">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/contents">
-                  <ArrowLeft className="w-5 h-5" />
-                </Link>
-              </Button>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl font-display font-bold truncate">{quiz.title}</h1>
+          <PageHeader
+            left={
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/contents">
+                    <ArrowLeft className="w-5 h-5" />
+                  </Link>
+                </Button>
+                <h1 className="text-lg font-display font-bold truncate">{quiz.title}</h1>
+                <Badge
+                  className={
+                    status === "active"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                      : "bg-muted text-muted-foreground"
+                  }
+                >
+                  {status === "active" ? "Actif" : "Brouillon"}
+                </Badge>
               </div>
-              <Badge
-                className={
-                  status === "active"
-                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                    : "bg-muted text-muted-foreground"
-                }
-              >
-                {status === "active" ? "Actif" : "Brouillon"}
-              </Badge>
-            </div>
-            <div className="flex gap-2 ml-4">
-              <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
-                <Eye className="w-4 h-4 mr-1" />
-                Apercu
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleToggleStatus}>
-                {status === "active" ? "Dépublier" : "Publier"}
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-1" />
-                )}
-                Sauvegarder
-              </Button>
-            </div>
-          </header>
+            }
+            actions={
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
+                  <Eye className="w-4 h-4 mr-1" />
+                  Apercu
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleToggleStatus}>
+                  {status === "active" ? "Dépublier" : "Publier"}
+                </Button>
+                <Button size="sm" onClick={handleSave} disabled={saving}>
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-1" />
+                  )}
+                  Sauvegarder
+                </Button>
+              </div>
+            }
+          />
 
-          <div className="p-6 max-w-5xl mx-auto space-y-6 w-full">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 w-full">
             {/* Stats row */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card className="p-4">

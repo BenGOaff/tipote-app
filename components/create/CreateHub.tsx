@@ -5,8 +5,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -256,23 +257,19 @@ export default function CreateHub({ profile, plan }: Props) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto bg-muted/30">
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
-            <SidebarTrigger />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.back()}
-              className="ml-2"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">{t('title')}</h1>
-            </div>
-          </header>
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader
+            left={
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <h1 className="text-lg font-display font-bold truncate">{t('title')}</h1>
+              </div>
+            }
+          />
 
-          <div className="p-6 max-w-4xl mx-auto space-y-6">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
             {/* Type Selection */}
             <Card className="p-6">
               <h3 className="text-lg font-bold mb-4">{t('contentType')}</h3>
