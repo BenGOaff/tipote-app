@@ -81,14 +81,16 @@ async function backfillOrphanData(userId: string, projectId: string) {
   ];
 
   await Promise.all(
-    tables.map((table) =>
-      supabaseAdmin
-        .from(table)
-        .update({ project_id: projectId })
-        .eq("user_id", userId)
-        .is("project_id", null)
-        .then(() => {}) // ignore individual errors (table might not exist for this user)
-        .catch(() => {}),
-    ),
+    tables.map(async (table) => {
+      try {
+        await supabaseAdmin
+          .from(table)
+          .update({ project_id: projectId })
+          .eq("user_id", userId)
+          .is("project_id", null);
+      } catch {
+        // ignore — table might not have data for this user
+      }
+    }),
   );
 }
