@@ -6,8 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 
 import Link from "next/link";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -820,15 +821,10 @@ export default function TodayLovable() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <main className="flex-1 overflow-auto bg-muted/30">
-          <header className="h-16 border-b border-border flex items-center px-6 bg-background sticky top-0 z-10">
-            <SidebarTrigger />
-            <div className="ml-4 flex-1">
-              <h1 className="text-xl font-display font-bold">{t("title")}</h1>
-            </div>
-          </header>
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>} />
 
-          <div className="p-6 space-y-6 max-w-6xl mx-auto">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
             {loading ? (
               <div className="py-20 text-center text-muted-foreground text-sm">
                 {t("loading")}

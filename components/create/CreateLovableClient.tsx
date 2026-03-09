@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -607,14 +608,9 @@ export default function CreateLovableClient() {
         <AppSidebar />
 
         <main className="flex-1 flex flex-col">
-          <header className="h-16 flex items-center px-6 border-b bg-background">
-            <SidebarTrigger />
-            <div className="ml-4 flex items-center gap-2">
-              <h1 className="text-xl font-display font-bold">{t('create')}</h1>
-            </div>
-          </header>
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t('create')}</h1>} />
 
-          <div className="p-6 max-w-6xl mx-auto space-y-8 w-full">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 w-full">
             {!selectedType ? (
               <>
                 <Card className="p-6 gradient-primary text-primary-foreground relative overflow-hidden">

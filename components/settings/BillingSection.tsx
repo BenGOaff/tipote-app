@@ -404,11 +404,13 @@ export default function BillingSection({ email }: Props) {
         ) : null}
       </Card>
 
-      {/* ─── Annual promo banner + toggle ─── */}
+      {/* ─── Billing cycle toggle ─── */}
       <div className="flex flex-col items-center gap-3">
-        <p className="text-sm italic text-primary font-medium">
-          {t("annualPromo")}
-        </p>
+        {billingCycle === "annual" && (
+          <p className="text-sm italic text-primary font-medium">
+            {t("annualPromo")}
+          </p>
+        )}
 
         <div className="inline-flex rounded-full border border-border bg-muted p-1">
           <button

@@ -1,7 +1,8 @@
 // app/pepites/page.tsx
 import { redirect } from "next/navigation";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import PepitesPageClient from "@/components/pepites/PepitesPageClient";
 
@@ -17,18 +18,17 @@ export default async function PepitesPage() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-        <main className="flex-1">
-          <div className="flex items-center gap-2 border-b border-border px-6 py-4">
-            <SidebarTrigger />
-            <div className="flex flex-col">
-              <h1 className="text-lg font-semibold">Pépites</h1>
-              <p className="text-sm text-muted-foreground">
-                Des idées et tips à tester (ou pas) ! ✨
-              </p>
-            </div>
-          </div>
+        <main className="flex-1 flex flex-col">
+          <PageHeader
+            left={
+              <div className="flex flex-col">
+                <h1 className="text-lg font-semibold">Pepites</h1>
+              </div>
+            }
+            userEmail={user.email ?? ""}
+          />
 
-          <div className="px-6 py-6">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8">
             <PepitesPageClient />
           </div>
         </main>
