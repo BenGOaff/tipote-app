@@ -304,7 +304,7 @@ export function buildSocialPostPrompt(params: SocialPostPromptParams) {
         "12. Perspective unique — Un angle que personne n'a pris. Ex: « Pourquoi les échecs sont les meilleurs professeurs. »",
         "13. Résultats impressionnants — Montre des chiffres concrets. Ex: « En 6 mois, notre équipe a augmenté le chiffre d'affaires de 200%. Voici comment. »",
         "14. Prédiction — Annonce ce qui va changer. Ex: « D'ici 2030, 50% des compétences actuelles seront obsolètes. »",
-        "15. Expérience client — Un témoignage parlant. Ex: « Un client m'a dit : "Votre produit a changé notre façon de travailler." »",
+        "15. Expérience client — Un témoignage parlant. Ex: « Un client m'a dit : 'Votre produit a changé notre façon de travailler.' »",
         "16. Question rhétorique — Provoque sans attendre de réponse. Ex: « Est-ce que le succès est vraiment une question de talent ? »",
         "17. Innovation — Présente une nouveauté excitante. Ex: « Nous venons de lancer une fonctionnalité qui va changer la donne. »",
         "18. Échecs et apprentissages — Vulnérabilité authentique. Ex: « Mon plus grand échec professionnel m'a appris la leçon la plus précieuse. »",
