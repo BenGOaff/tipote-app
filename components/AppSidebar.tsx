@@ -3,19 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Sun,
   Target,
   Sparkles,
   FolderOpen,
-  Settings,
   BarChart3,
-  Coins,
   Layout,
   Zap,
-  Globe,
+  PanelLeftClose,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -30,17 +27,18 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { useCreditsBalance } from "@/lib/credits/useCreditsBalance";
 import { usePepitesUnread } from "@/lib/pepites/usePepitesUnread";
+import { Button } from "@/components/ui/button";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-// Equivalent Lovable de <NavLink />
+// NavLink with active detection
 function NavLink(props: {
   to: string;
   end?: boolean;
@@ -67,7 +65,11 @@ function NavLink(props: {
   );
 }
 
-// mainItems titles are translated inside AppSidebar (see useTranslations("nav"))
+// Menu item style: semibold 600, color #5a5a7a
+const MENU_ITEM_CLASS =
+  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-sidebar-accent relative z-40 font-semibold text-[#5a5a7a]";
+const MENU_ITEM_ACTIVE_CLASS = "bg-sidebar-accent !text-primary font-semibold";
+
 const MAIN_ITEM_CONFIG = [
   { key: "today" as const, url: "/app", icon: Sun, spotlightId: "today" },
   { key: "strategy" as const, url: "/strategy", icon: Target, spotlightId: "strategy" },
@@ -76,74 +78,6 @@ const MAIN_ITEM_CONFIG = [
   { key: "templates" as const, url: "/templates", icon: Layout, spotlightId: "templates" },
   { key: "automations" as const, url: "/automations", icon: Zap, spotlightId: "automations" },
 ];
-
-function useAnimatedNumber(value: number, durationMs = 900) {
-  const [display, setDisplay] = useState<number>(value);
-  const rafRef = useRef<number | null>(null);
-  const fromRef = useRef<number>(value);
-  const toRef = useRef<number>(value);
-  const startRef = useRef<number>(0);
-
-  useEffect(() => {
-    toRef.current = value;
-
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    fromRef.current = display;
-    startRef.current = performance.now();
-
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - startRef.current) / durationMs);
-      // easing : smooth
-      const eased = 1 - Math.pow(1 - t, 3);
-      const next = Math.round(fromRef.current + (toRef.current - fromRef.current) * eased);
-      setDisplay(next);
-
-      if (t < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, durationMs]);
-
-  return display;
-}
-
-function CreditsSidebarBadge() {
-  const t = useTranslations("sidebar");
-  const { loading, balance, error } = useCreditsBalance();
-
-  const remaining = useMemo(() => balance?.total_remaining ?? 0, [balance]);
-  const animatedRemaining = useAnimatedNumber(remaining, 900);
-
-  return (
-    <Link
-      href="/settings?tab=billing"
-      className="mx-3 mb-3 block rounded-lg border border-primary/15 bg-primary/10 hover:bg-primary/15 transition-colors"
-      aria-label={t("seeCredits")}
-      title={t("seeCredits")}
-    >
-      <div className="flex items-center justify-between px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-            <Coins className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-xs text-muted-foreground">{t("credits")}</p>
-            <p className="text-sm font-medium text-foreground">
-              {loading ? "…" : error ? "—" : `${animatedRemaining}`}
-              <span className="text-xs font-normal text-muted-foreground"> {t("credits").toLowerCase()}</span>
-            </p>
-          </div>
-        </div>
-        <div className="text-xs text-muted-foreground">{loading ? "" : error ? "" : ">"}</div>
-      </div>
-    </Link>
-  );
-}
 
 function PepitesSidebarItem() {
   const t = useTranslations("nav");
@@ -155,8 +89,8 @@ function PepitesSidebarItem() {
       <SidebarMenuButton asChild>
         <NavLink
           to="/pepites"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent"
-          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+          className={MENU_ITEM_CLASS}
+          activeClassName={MENU_ITEM_ACTIVE_CLASS}
         >
           <div className="relative">
             <Sparkles className="w-5 h-5" />
@@ -164,7 +98,7 @@ function PepitesSidebarItem() {
               <span
                 className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-sidebar"
                 aria-label={ts("newPepite")}
-                title={ts("newPepite") + " ✨"}
+                title={ts("newPepite")}
               />
             ) : null}
           </div>
@@ -175,9 +109,27 @@ function PepitesSidebarItem() {
   );
 }
 
+/** Small button to collapse sidebar */
+function SidebarCollapseButton() {
+  const { toggleSidebar } = useSidebar();
+  const t = useTranslations("sidebar");
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+      onClick={toggleSidebar}
+      aria-label={t("collapse")}
+      title={t("collapse")}
+    >
+      <PanelLeftClose className="h-4 w-4" />
+    </Button>
+  );
+}
+
 export function AppSidebar() {
   const t = useTranslations("nav");
-  const ts = useTranslations("sidebar");
   const { phase, nextPhase } = useTutorial();
 
   const mainItems = MAIN_ITEM_CONFIG.map((cfg) => ({
@@ -188,7 +140,6 @@ export function AppSidebar() {
   }));
 
   const handleItemClick = (spotlightId: string | null) => {
-    // Si on clique sur l'élément actuellement en spotlight, passer au suivant
     const phaseMap: Record<string, string> = {
       today: "tour_today",
       strategy: "tour_strategy",
@@ -196,10 +147,8 @@ export function AppSidebar() {
       contents: "tour_contents",
       templates: "tour_templates",
       automations: "tour_automations",
-      credits: "tour_credits",
       analytics: "tour_analytics",
       pepites: "tour_pepites",
-      settings: "tour_settings",
     };
     if (spotlightId && phaseMap[spotlightId] === phase) {
       nextPhase();
@@ -207,13 +156,9 @@ export function AppSidebar() {
   };
 
   return (
-    // IMPORTANT (fix layout global) :
-    // - En "collapsible=offcanvas", la sidebar desktop est en fixed + spacer.
-    // - Si le spacer/vars se fait casser par un autre endroit, tout le main passe dessous.
-    // -> On force "collapsible=none" pour une sidebar desktop en flow normal (width réservée),
-    //    ce qui empêche TOUT chevauchement avec le contenu.
-    <Sidebar collapsible="none">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
+    <Sidebar collapsible="offcanvas">
+      {/* Header: logo + collapse toggle — no separator border */}
+      <SidebarHeader className="p-4 flex flex-row items-center justify-between">
         <Link href="/app" className="block">
           <Image
             src="/logo-normal.png"
@@ -224,10 +169,10 @@ export function AppSidebar() {
             priority
           />
         </Link>
+        <SidebarCollapseButton />
       </SidebarHeader>
 
-      {/* IMPORTANT: Tipote UI sidebar.tsx met overflow-auto par défaut => ça CLIP l'infobulle.
-          On force overflow-x-visible pour matcher Lovable (overflow-y-auto). */}
+      {/* Main nav — no overflow clip for tooltips */}
       <SidebarContent className="overflow-y-auto overflow-x-visible px-3 py-4">
         <SidebarGroup>
           <SidebarGroupContent>
@@ -239,8 +184,8 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/app"}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-sidebar-accent relative z-40"
-                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                        className={MENU_ITEM_CLASS}
+                        activeClassName={MENU_ITEM_ACTIVE_CLASS}
                         onClick={() => handleItemClick(item.spotlightId)}
                       >
                         <item.icon className="w-5 h-5" />
@@ -270,15 +215,9 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4 space-y-1">
-        {/* ✅ Tant que l'user n'a pas opt-out, on propose le tour ici (au-dessus des crédits).
-            ✅ Dès qu'il coche "ne me montre plus", ce bloc disparaît définitivement. */}
+      {/* Footer: analytics + pepites + language switch — no separator border */}
+      <SidebarFooter className="p-4 space-y-1">
         <TutorialNudge />
-
-        {/* Crédits IA — spotlight tour */}
-        <TutorialSpotlight elementId="credits" tooltipPosition="right" showNextButton>
-          <CreditsSidebarBadge />
-        </TutorialSpotlight>
 
         <SidebarMenu>
           <TutorialSpotlight elementId="analytics" tooltipPosition="right" showNextButton>
@@ -286,8 +225,8 @@ export function AppSidebar() {
               <SidebarMenuButton asChild>
                 <NavLink
                   to="/analytics"
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent"
-                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  className={MENU_ITEM_CLASS}
+                  activeClassName={MENU_ITEM_ACTIVE_CLASS}
                   onClick={() => handleItemClick("analytics")}
                 >
                   <BarChart3 className="w-5 h-5" />
@@ -297,29 +236,11 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </TutorialSpotlight>
 
-          {/* Pépites juste au-dessus de Paramètres */}
           <TutorialSpotlight elementId="pepites" tooltipPosition="right" showNextButton>
             <PepitesSidebarItem />
           </TutorialSpotlight>
-
-          <TutorialSpotlight elementId="settings" tooltipPosition="right" showNextButton>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <NavLink
-                  to="/settings"
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-accent relative z-40"
-                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  onClick={() => handleItemClick("settings")}
-                >
-                  <Settings className="w-5 h-5" />
-                  <span>{t("settings")}</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </TutorialSpotlight>
         </SidebarMenu>
 
-        {/* Language switcher — compact in sidebar footer */}
         <div className="px-1 pt-1">
           <LanguageSwitcher variant="sidebar" />
         </div>

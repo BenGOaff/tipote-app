@@ -15,7 +15,26 @@
     "tagline": "Your smart companion",
     "credits": "Credits",
     "seeCredits": "View my AI credits",
-    "newPepite": "New gem"
+    "newPepite": "New gem",
+    "collapse": "Collapse sidebar"
+  },
+  "header": {
+    "credits": "credits",
+    "viewCredits": "View my AI credits",
+    "account": "My account",
+    "logout": "Log out",
+    "menu": {
+      "profile": "Profile",
+      "connections": "Connections",
+      "settings": "Preferences",
+      "positioning": "Positioning",
+      "branding": "Branding",
+      "subscription": "Subscription"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet."
   },
   "languageSwitcher": {
     "label": "Interface language",

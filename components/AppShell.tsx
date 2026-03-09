@@ -2,11 +2,15 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { PanelLeftOpen } from "lucide-react";
 
-import LogoutButton from "@/components/LogoutButton";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { HeaderCredits } from "@/components/HeaderCredits";
+import { NotificationBell } from "@/components/NotificationBell";
+import { UserAvatarMenu } from "@/components/UserAvatarMenu";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   userEmail: string;
@@ -15,6 +19,26 @@ type Props = {
   headerRight?: ReactNode;
   contentClassName?: string;
 };
+
+/** Small button to reopen sidebar when collapsed (desktop) or open sheet (mobile) */
+function SidebarOpenButton() {
+  const { open, toggleSidebar, isMobile } = useSidebar();
+
+  // On desktop, only show when sidebar is collapsed
+  if (!isMobile && open) return null;
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 shrink-0"
+      onClick={toggleSidebar}
+      aria-label="Open sidebar"
+    >
+      <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
+    </Button>
+  );
+}
 
 export default function AppShell({
   userEmail,
@@ -29,31 +53,24 @@ export default function AppShell({
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger />
-              <ProjectSwitcher />
-            </div>
-
-            <div className="flex-1 px-4">
+          {/* Header — no border-b (removed per design) */}
+          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
+            {/* Left: sidebar reopen button (when collapsed) + page title */}
+            <div className="flex items-center gap-2 min-w-0">
+              <SidebarOpenButton />
               {headerTitle ? (
-                <div className="text-xl font-display font-bold">{headerTitle}</div>
-              ) : (
-                <div className="text-sm text-muted-foreground hidden sm:block">
-                  Tipote™
-                </div>
-              )}
+                <h1 className="text-lg font-display font-bold truncate">{headerTitle}</h1>
+              ) : null}
             </div>
 
-            <div className="flex items-center gap-3">
-              {headerRight ? (
-                headerRight
-              ) : (
+            {/* Right: credits, project switch, bell, avatar */}
+            <div className="flex items-center gap-2 shrink-0">
+              {headerRight ?? (
                 <>
-                  <div className="text-xs text-muted-foreground hidden md:block">
-                    {userEmail}
-                  </div>
-                  <LogoutButton />
+                  <HeaderCredits />
+                  <ProjectSwitcher />
+                  <NotificationBell />
+                  <UserAvatarMenu userEmail={userEmail} />
                 </>
               )}
             </div>

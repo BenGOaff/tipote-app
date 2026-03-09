@@ -15,7 +15,26 @@
     "tagline": "رفيقك الذكي",
     "credits": "رصيد",
     "seeCredits": "عرض رصيدي من الذكاء الاصطناعي",
-    "newPepite": "جوهرة جديدة"
+    "newPepite": "جوهرة جديدة",
+    "collapse": "طي الشريط الجانبي"
+  },
+  "header": {
+    "credits": "رصيد",
+    "viewCredits": "عرض رصيدي من الذكاء الاصطناعي",
+    "account": "حسابي",
+    "logout": "تسجيل الخروج",
+    "menu": {
+      "profile": "الملف الشخصي",
+      "connections": "الاتصالات",
+      "settings": "الإعدادات",
+      "positioning": "التموضع",
+      "branding": "الهوية البصرية",
+      "subscription": "الاشتراك"
+    }
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "empty": "لا توجد إشعارات حالياً."
   },
   "languageSwitcher": {
     "label": "لغة الواجهة",
