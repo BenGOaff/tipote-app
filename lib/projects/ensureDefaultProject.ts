@@ -17,7 +17,11 @@ export async function ensureDefaultProject(userId: string): Promise<string | nul
       .limit(1)
       .maybeSingle();
 
-    if (existing?.id) return existing.id;
+    if (existing?.id) {
+      // Project exists — still backfill any orphan data (legacy rows with project_id=NULL)
+      await backfillOrphanData(userId, existing.id);
+      return existing.id;
+    }
 
     // No project found: create a default one
     const { data: created, error } = await supabaseAdmin
@@ -36,12 +40,8 @@ export async function ensureDefaultProject(userId: string): Promise<string | nul
 
     const projectId = created.id;
 
-    // Link existing business_profiles that have no project_id
-    await supabaseAdmin
-      .from("business_profiles")
-      .update({ project_id: projectId })
-      .eq("user_id", userId)
-      .is("project_id", null);
+    // Backfill ALL orphan data for this user
+    await backfillOrphanData(userId, projectId);
 
     // Set the active project cookie (best-effort in server context)
     try {
@@ -59,4 +59,36 @@ export async function ensureDefaultProject(userId: string): Promise<string | nul
   } catch {
     return null;
   }
+}
+
+/**
+ * Backfill all legacy rows (project_id=NULL) for a user into their default project.
+ * This ensures beta users who onboarded before multi-project have all their data
+ * properly scoped, so creating a second project won't cause data to "disappear".
+ */
+async function backfillOrphanData(userId: string, projectId: string) {
+  const tables = [
+    "business_profiles",
+    "social_connections",
+    "social_automations",
+    "content_item",
+    "project_tasks",
+    "hosted_pages",
+    "auto_comment_logs",
+    "offer_metrics",
+    "toast_widgets",
+    "notifications",
+  ];
+
+  await Promise.all(
+    tables.map((table) =>
+      supabaseAdmin
+        .from(table)
+        .update({ project_id: projectId })
+        .eq("user_id", userId)
+        .is("project_id", null)
+        .then(() => {}) // ignore individual errors (table might not exist for this user)
+        .catch(() => {}),
+    ),
+  );
 }
