@@ -13,6 +13,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
+import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
 
 type PublicPageData = {
   id: string;
@@ -72,7 +73,7 @@ function pageTexts(addressForm?: string) {
   };
 }
 
-export default function PublicPageClient({ page: serverPage, slug, toastWidgetId: serverToastId }: { page: PublicPageData | null; slug: string; toastWidgetId?: string | null }) {
+export default function PublicPageClient({ page: serverPage, slug, toastWidgetId: serverToastId, shareWidgetId: serverShareId }: { page: PublicPageData | null; slug: string; toastWidgetId?: string | null; shareWidgetId?: string | null }) {
   const [page, setPage] = useState<PublicPageData | null>(serverPage);
   const [loading, setLoading] = useState(!serverPage);
   const [notFound, setNotFound] = useState(false);
@@ -82,6 +83,7 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
   const [capturing, setCapturing] = useState(false);
   const [captureSuccess, setCaptureSuccess] = useState(false);
   const [toastWidgetId, setToastWidgetId] = useState<string | null>(serverToastId || null);
+  const [shareWidgetId, setShareWidgetId] = useState<string | null>(serverShareId || null);
 
   // Client-side fetch via dedicated public API endpoint (uses supabaseAdmin, bypasses RLS)
   useEffect(() => {
@@ -93,6 +95,7 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
         if (data.ok && data.page) {
           setPage(data.page);
           if (data.toast_widget_id) setToastWidgetId(data.toast_widget_id);
+          if (data.share_widget_id) setShareWidgetId(data.share_widget_id);
         } else {
           setNotFound(true);
         }
@@ -341,6 +344,7 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
 
       {/* Toast notification overlay (social proof) */}
       {toastWidgetId && <ToastNotificationOverlay widgetId={toastWidgetId} />}
+      {shareWidgetId && <SocialShareOverlay widgetId={shareWidgetId} />}
 
       {/* Thank-you / confirmation page after successful capture */}
       {captureSuccess && (() => {

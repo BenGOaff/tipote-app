@@ -100,22 +100,34 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       // ignore
     }
 
-    // Look up user's enabled toast widget (non-blocking fetch, but we await it for the response)
+    // Look up user's enabled widgets (toast + share)
     let toastWidgetId: string | null = null;
+    let shareWidgetId: string | null = null;
     try {
       if (data.user_id) {
-        const { data: tw } = await supabaseAdmin
-          .from("toast_widgets")
-          .select("id")
-          .eq("user_id", data.user_id)
-          .eq("enabled", true)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        toastWidgetId = tw?.id || null;
+        const [twRes, swRes] = await Promise.all([
+          supabaseAdmin
+            .from("toast_widgets")
+            .select("id")
+            .eq("user_id", data.user_id)
+            .eq("enabled", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+          supabaseAdmin
+            .from("social_share_widgets")
+            .select("id")
+            .eq("user_id", data.user_id)
+            .eq("enabled", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        toastWidgetId = twRes.data?.id || null;
+        shareWidgetId = swRes.data?.id || null;
       }
     } catch {
-      // fail-open: no toast widget
+      // fail-open: no widgets
     }
 
     // Strip user_id from public response, inject address_form
@@ -125,6 +137,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({
       ok: true,
       toast_widget_id: toastWidgetId,
+      share_widget_id: shareWidgetId,
       page: {
         capture_enabled: true,
         capture_heading: "",

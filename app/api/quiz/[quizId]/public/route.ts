@@ -154,19 +154,31 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     // Increment view count (non-blocking)
     admin.from("quizzes").update({ views_count: (quizRes.data.views_count ?? 0) + 1 }).eq("id", quizId).then(() => {});
 
-    // Look up user's enabled toast widget
+    // Look up user's enabled widgets (toast + share)
     let toastWidgetId: string | null = null;
+    let shareWidgetId: string | null = null;
     if (quizUserId) {
       try {
-        const { data: tw } = await admin
-          .from("toast_widgets")
-          .select("id")
-          .eq("user_id", quizUserId)
-          .eq("enabled", true)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        toastWidgetId = tw?.id || null;
+        const [twRes, swRes] = await Promise.all([
+          admin
+            .from("toast_widgets")
+            .select("id")
+            .eq("user_id", quizUserId)
+            .eq("enabled", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+          admin
+            .from("social_share_widgets")
+            .select("id")
+            .eq("user_id", quizUserId)
+            .eq("enabled", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        toastWidgetId = twRes.data?.id || null;
+        shareWidgetId = swRes.data?.id || null;
       } catch {
         // fail-open
       }
@@ -179,6 +191,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     return NextResponse.json({
       ok: true,
       toast_widget_id: toastWidgetId,
+      share_widget_id: shareWidgetId,
       quiz: { ...quizPublic, address_form: addressForm, privacy_url: effectivePrivacyUrl || null },
       questions: (questionsRes.data ?? []).map((q: any) => ({
         ...q,
