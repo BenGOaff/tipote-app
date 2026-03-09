@@ -619,12 +619,11 @@ export default function MyContentLovableClient({
                 <ContentCalendarView
                   contents={filtered}
                   onSelectContent={(content) => {
-                    const st = normalizeKeyStatus(content.status);
-                    if (st === "scheduled") {
-                      // Pour les posts planifiés, ouvrir le dialog de reprogrammation
-                      openPlan(content);
+                    const ct = normalizeKeyType(content.type);
+                    // For posts (draft or scheduled): open in full editor
+                    if (ct === "post") {
+                      router.push(`/create?edit=${content.id}`);
                     } else {
-                      // Pour les autres, naviguer vers la page de détail
                       router.push(`/contents/${content.id}`);
                     }
                   }}

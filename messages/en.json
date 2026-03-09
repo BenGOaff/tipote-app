@@ -1486,7 +1486,8 @@
     "failed": "Failed",
     "noContent": "No content for this date",
     "untitled": "Untitled",
-    "reschedule": "Reschedule"
+    "reschedule": "Reschedule",
+    "edit": "Edit"
   },
   "imageUploader": {
     "label": "Images",

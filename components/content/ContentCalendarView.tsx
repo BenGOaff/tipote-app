@@ -15,7 +15,7 @@ import type { Locale } from "date-fns";
 
 const dateFnsLocales: Record<string, Locale> = { fr, en: enUS, es, it, ar };
 
-import { FileText, Mail, Video, MessageSquare, Clock, CalendarDays } from "lucide-react";
+import { FileText, Mail, Video, MessageSquare, Clock, Pencil } from "lucide-react";
 import type { ContentListItem } from "@/lib/types/content";
 
 const typeIcons: Record<string, any> = {
@@ -218,10 +218,10 @@ export function ContentCalendarView({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {stKey === "scheduled" && (
+                          {(stKey === "scheduled" || stKey === "draft") && (
                             <span className="hidden group-hover:inline-flex items-center gap-1 text-xs text-primary">
-                              <CalendarDays className="w-3 h-3" />
-                              {t('reschedule')}
+                              <Pencil className="w-3 h-3" />
+                              {t('edit')}
                             </span>
                           )}
                           <Badge className={badgeClass}>{badgeLabel}</Badge>

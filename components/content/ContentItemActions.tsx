@@ -359,7 +359,10 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
 
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link href={`/contents/${id}`} className="flex items-center gap-2">
+              <Link
+                href={isSocialType(type) ? `/create?edit=${id}` : `/contents/${id}`}
+                className="flex items-center gap-2"
+              >
                 <Pencil className="w-4 h-4" />
                 {t('viewEdit')}
               </Link>
