@@ -835,61 +835,88 @@
     "perMonth": "/mese",
     "credits": {
       "title": "Crediti IA",
-      "desc": "Saldo disponibile per generare contenuto. 1 generazione = 1 credito.",
+      "desc": "Saldo disponibile per generare contenuti. 1 generazione = 1 credito.",
       "unit": "crediti",
       "recharge": "Ricarica",
       "purchased": "Acquistati: ",
       "consumed": " • Consumati: "
     },
     "refreshAria": "Aggiorna",
-    "plan": {
+    "annualPromo": "Due mesi gratis",
+    "toggle": {
+      "monthly": "Mensile",
+      "annual": "Annuale"
+    },
+    "periodMonthly": "Al mese, senza impegno",
+    "periodAnnual": "All'anno: due mesi gratis",
+    "popular": "Il più scelto",
+    "featuresIncluded": "Funzionalità incluse:",
+    "planCards": {
       "free": {
-        "desc": "Accesso limitato"
-      },
-      "beta": {
-        "desc": "Accesso Pro a vita (beta)"
+        "subtitle": "Scopri e testa senza rischi (senza carta)",
+        "creditsLabel": "25 CREDITI IA (una volta)",
+        "period": "Senza limite di durata"
       },
       "basic": {
-        "desc": "1 modulo • Content Hub"
+        "subtitle": "Per iniziare con piccole esigenze",
+        "creditsLabel": "40 CREDITI IA al mese"
       },
       "pro": {
-        "desc": "3 moduli • Coach IA • Content Hub"
+        "subtitle": "Per passare davvero alla marcia superiore",
+        "creditsLabel": "150 CREDITI IA al mese"
       },
       "elite": {
-        "desc": "Moduli illimitati • Supporto prioritario"
+        "subtitle": "Per i professionisti che gestiscono più progetti o clienti",
+        "creditsLabel": "350 CREDITI IA al mese"
       }
+    },
+    "features": {
+      "credits25": "25 crediti gratuiti (una tantum)",
+      "credits40": "40 crediti al mese",
+      "credits150": "150 crediti al mese",
+      "credits500": "500 crediti al mese",
+      "strategy": "Piano strategico personalizzato",
+      "contentGen": "Generazione di contenuti (tutti i tipi)",
+      "stats": "Monitoraggio statistiche",
+      "calendar": "Calendario editoriale",
+      "quiz": "Creazione di quiz",
+      "connect1": "Connessione 1 social network",
+      "connect2": "Connessione 2 social network",
+      "connect4": "Connessione 4 social network",
+      "connectAll": "Connessione tutti i social network",
+      "multiprofiles": "Multiprofili",
+      "analytics": "Analisi delle statistiche",
+      "persona": "Arricchimento del persona",
+      "competition": "Analisi della concorrenza",
+      "buyCredits": "Acquisto crediti IA",
+      "coach": "Coach IA personale"
     },
     "current": "Attuale",
     "currentLabel": "Piano attuale",
-    "downgrade": "Declassa",
-    "upgrade": "Aggiorna",
-    "plans": {
-      "basic": {
-        "f1": "Piano strategico IA",
-        "f2": "1 modulo attivabile",
-        "f3": "Contenuto illimitato",
-        "f4": "Content Hub + Calendario",
-        "f5": "Nessun coach IA"
-      },
-      "pro": {
-        "f1": "Piano strategico IA",
-        "f2": "3 moduli attivabili",
-        "f3": "Contenuto illimitato",
-        "f4": "Content Hub + Calendario",
-        "f5": "Coach IA"
-      },
-      "elite": {
-        "f1": "Tutto il piano Pro +",
-        "f2": "Moduli illimitati",
-        "f3": "Accesso anticipato alle nuove funzioni",
-        "f4": "Automazioni n8n (V2)",
-        "f5": "Supporto prioritario"
-      }
+    "downgrade": "Downgrade",
+    "upgrade": "Upgrade",
+    "cta": {
+      "free": "Inizia gratis"
+    },
+    "beta": {
+      "title": "Accesso Beta a vita",
+      "desc": "Sei uno dei primi utenti di Tipote. Il tuo accesso PRO è garantito a vita, con 150 crediti IA al mese e accesso al coach."
     },
     "manage": {
       "title": "Gestisci il tuo abbonamento",
-      "desc": "Modifica, aggiorna o annulla tramite Systeme.io",
+      "desc": "Modifica, migliora o annulla tramite Systeme.io",
       "cta": "Gestisci su Systeme.io"
+    },
+    "cancelBtn": "Annulla il mio abbonamento",
+    "cancelError": "Annullamento fallito",
+    "cancelSuccess": "Abbonamento annullato",
+    "cancelSuccessDesc": "Il tuo abbonamento è stato annullato. Il tuo piano ora è Free.",
+    "cancelConfirm": {
+      "title": "Conferma annullamento",
+      "desc": "Il tuo abbonamento sarà annullato immediatamente. Passerai al piano Free con 25 crediti IA. Puoi riabbonarti in qualsiasi momento.",
+      "canceling": "Annullamento in corso…",
+      "yes": "Sì, annulla",
+      "no": "No, mantieni il mio abbonamento"
     },
     "errorTitle": "Impossibile caricare l'abbonamento",
     "errorDesc": "Si è verificato un errore."

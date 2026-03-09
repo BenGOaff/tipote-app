@@ -793,64 +793,91 @@
   "billing": {
     "loading": "Loading…",
     "currentPlanBadge": "Current plan",
-    "perMonth": "/month",
+    "perMonth": "/mo",
     "credits": {
       "title": "AI Credits",
-      "desc": "Available balance to generate content. 1 generation = 1 credit.",
+      "desc": "Available balance for generating content. 1 generation = 1 credit.",
       "unit": "credits",
       "recharge": "Top up",
       "purchased": "Purchased: ",
-      "consumed": " • Consumed: "
+      "consumed": " • Used: "
     },
     "refreshAria": "Refresh",
-    "plan": {
+    "annualPromo": "Two months free",
+    "toggle": {
+      "monthly": "Monthly",
+      "annual": "Annual"
+    },
+    "periodMonthly": "Per month, no commitment",
+    "periodAnnual": "Per year: two months free",
+    "popular": "Most popular",
+    "featuresIncluded": "Features included:",
+    "planCards": {
       "free": {
-        "desc": "Limited access"
-      },
-      "beta": {
-        "desc": "Lifetime Pro access (beta)"
+        "subtitle": "Discover and test risk-free (no credit card needed)",
+        "creditsLabel": "25 AI CREDITS (one-time)",
+        "period": "Unlimited duration"
       },
       "basic": {
-        "desc": "1 module • Content Hub"
+        "subtitle": "Get started with small needs",
+        "creditsLabel": "40 AI CREDITS per month"
       },
       "pro": {
-        "desc": "3 modules • AI coach • Content Hub"
+        "subtitle": "To really kick things up a notch",
+        "creditsLabel": "150 AI CREDITS per month"
       },
       "elite": {
-        "desc": "Unlimited modules • Priority support"
+        "subtitle": "For pros managing multiple projects or clients",
+        "creditsLabel": "350 AI CREDITS per month"
       }
+    },
+    "features": {
+      "credits25": "25 free credits (one-shot)",
+      "credits40": "40 credits per month",
+      "credits150": "150 credits per month",
+      "credits500": "500 credits per month",
+      "strategy": "Personalized strategic plan",
+      "contentGen": "Content generation (all types)",
+      "stats": "Statistics tracking",
+      "calendar": "Editorial calendar",
+      "quiz": "Quiz creation",
+      "connect1": "1 social network connection",
+      "connect2": "2 social network connections",
+      "connect4": "4 social network connections",
+      "connectAll": "All social networks",
+      "multiprofiles": "Multi-profiles",
+      "analytics": "Statistics analysis",
+      "persona": "Persona enrichment",
+      "competition": "Competition analysis",
+      "buyCredits": "AI credits purchase",
+      "coach": "Personal AI coach"
     },
     "current": "Current",
     "currentLabel": "Current plan",
     "downgrade": "Downgrade",
     "upgrade": "Upgrade",
-    "plans": {
-      "basic": {
-        "f1": "AI strategic plan",
-        "f2": "1 activatable module",
-        "f3": "Unlimited content",
-        "f4": "Content Hub + Calendar",
-        "f5": "No AI coach"
-      },
-      "pro": {
-        "f1": "AI strategic plan",
-        "f2": "3 activatable modules",
-        "f3": "Unlimited content",
-        "f4": "Content Hub + Calendar",
-        "f5": "AI coach"
-      },
-      "elite": {
-        "f1": "Everything in Pro +",
-        "f2": "Unlimited modules",
-        "f3": "Early access to new features",
-        "f4": "n8n automations (V2)",
-        "f5": "Priority support"
-      }
+    "cta": {
+      "free": "Start for free"
+    },
+    "beta": {
+      "title": "Lifetime Beta access",
+      "desc": "You are one of the first Tipote users. Your PRO access is guaranteed for life, with 150 AI credits per month and coach access. No subscription, no cancellation."
     },
     "manage": {
       "title": "Manage your subscription",
-      "desc": "Modify, upgrade or cancel via Systeme.io",
+      "desc": "Edit, upgrade or cancel via Systeme.io",
       "cta": "Manage on Systeme.io"
+    },
+    "cancelBtn": "Cancel my subscription",
+    "cancelError": "Cancellation failed",
+    "cancelSuccess": "Subscription cancelled",
+    "cancelSuccessDesc": "Your subscription has been cancelled. Your plan is now Free.",
+    "cancelConfirm": {
+      "title": "Confirm cancellation",
+      "desc": "Your subscription will be cancelled immediately. You will switch to the Free plan with 25 AI credits. You can resubscribe at any time.",
+      "canceling": "Cancelling…",
+      "yes": "Yes, cancel",
+      "no": "No, keep my subscription"
     },
     "errorTitle": "Unable to load subscription",
     "errorDesc": "An error occurred."

@@ -838,61 +838,88 @@
       "desc": "Saldo disponible para generar contenido. 1 generación = 1 crédito.",
       "unit": "créditos",
       "recharge": "Recargar",
-      "purchased": "Adquiridos: ",
+      "purchased": "Comprados: ",
       "consumed": " • Consumidos: "
     },
     "refreshAria": "Actualizar",
-    "plan": {
+    "annualPromo": "Dos meses gratis",
+    "toggle": {
+      "monthly": "Mensual",
+      "annual": "Anual"
+    },
+    "periodMonthly": "Por mes, sin compromiso",
+    "periodAnnual": "Por año: dos meses gratis",
+    "popular": "El favorito de todos",
+    "featuresIncluded": "Funcionalidades incluidas:",
+    "planCards": {
       "free": {
-        "desc": "Acceso limitado"
-      },
-      "beta": {
-        "desc": "Acceso Pro de por vida (beta)"
+        "subtitle": "Descubre y prueba sin riesgo (sin tarjeta)",
+        "creditsLabel": "25 CRÉDITOS IA (una vez)",
+        "period": "Sin límite de duración"
       },
       "basic": {
-        "desc": "1 módulo • Content Hub"
+        "subtitle": "Para empezar con pequeñas necesidades",
+        "creditsLabel": "40 CRÉDITOS IA por mes"
       },
       "pro": {
-        "desc": "3 módulos • Coach IA • Content Hub"
+        "subtitle": "Para pasar realmente a la velocidad superior",
+        "creditsLabel": "150 CRÉDITOS IA por mes"
       },
       "elite": {
-        "desc": "Módulos ilimitados • Soporte prioritario"
+        "subtitle": "Para los pros que gestionan varios proyectos o clientes",
+        "creditsLabel": "350 CRÉDITOS IA por mes"
       }
+    },
+    "features": {
+      "credits25": "25 créditos gratis (una vez)",
+      "credits40": "40 créditos por mes",
+      "credits150": "150 créditos por mes",
+      "credits500": "500 créditos por mes",
+      "strategy": "Plan estratégico personalizado",
+      "contentGen": "Generación de contenido (todos los tipos)",
+      "stats": "Seguimiento estadístico",
+      "calendar": "Calendario editorial",
+      "quiz": "Creación de quiz",
+      "connect1": "Conexión 1 red social",
+      "connect2": "Conexión 2 redes sociales",
+      "connect4": "Conexión 4 redes sociales",
+      "connectAll": "Conexión todas las redes sociales",
+      "multiprofiles": "Multiperfiles",
+      "analytics": "Análisis de estadísticas",
+      "persona": "Enriquecimiento del persona",
+      "competition": "Análisis de la competencia",
+      "buyCredits": "Compra de créditos IA",
+      "coach": "Coach IA personal"
     },
     "current": "Actual",
     "currentLabel": "Plan actual",
-    "downgrade": "Reducir plan",
-    "upgrade": "Mejorar plan",
-    "plans": {
-      "basic": {
-        "f1": "Plan estratégico IA",
-        "f2": "1 módulo activable",
-        "f3": "Contenido ilimitado",
-        "f4": "Content Hub + Calendario",
-        "f5": "Sin coach IA"
-      },
-      "pro": {
-        "f1": "Plan estratégico IA",
-        "f2": "3 módulos activables",
-        "f3": "Contenido ilimitado",
-        "f4": "Content Hub + Calendario",
-        "f5": "Coach IA"
-      },
-      "elite": {
-        "f1": "Todo lo de Pro +",
-        "f2": "Módulos ilimitados",
-        "f3": "Acceso anticipado a nuevas funciones",
-        "f4": "Automatizaciones n8n (V2)",
-        "f5": "Soporte prioritario"
-      }
+    "downgrade": "Downgrade",
+    "upgrade": "Upgrade",
+    "cta": {
+      "free": "Empezar gratis"
+    },
+    "beta": {
+      "title": "Acceso Beta de por vida",
+      "desc": "Eres uno de los primeros usuarios de Tipote. Tu acceso PRO está garantizado de por vida, con 150 créditos IA al mes y acceso al coach."
     },
     "manage": {
       "title": "Gestionar tu suscripción",
-      "desc": "Modificar, mejorar o cancelar a través de Systeme.io",
+      "desc": "Modificar, mejorar o cancelar vía Systeme.io",
       "cta": "Gestionar en Systeme.io"
     },
-    "errorTitle": "No se puede cargar la suscripción",
-    "errorDesc": "Se ha producido un error."
+    "cancelBtn": "Cancelar mi suscripción",
+    "cancelError": "Error al cancelar",
+    "cancelSuccess": "Suscripción cancelada",
+    "cancelSuccessDesc": "Tu suscripción ha sido cancelada. Tu plan ahora es Free.",
+    "cancelConfirm": {
+      "title": "Confirmar cancelación",
+      "desc": "Tu suscripción se cancelará inmediatamente. Pasarás al plan Free con 25 créditos IA. Puedes volver a suscribirte en cualquier momento.",
+      "canceling": "Cancelando…",
+      "yes": "Sí, cancelar",
+      "no": "No, mantener mi suscripción"
+    },
+    "errorTitle": "No se pudo cargar la suscripción",
+    "errorDesc": "Ocurrió un error."
   },
   "strategy": {
     "title": "Mi Estrategia",
