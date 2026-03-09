@@ -558,7 +558,86 @@ Système de tutorial guidé pas-à-pas pour les nouveaux utilisateurs.
 - Panel de notifications avec deep-linking  
 - Marquage lu/archivé
 
-### 4.18. Pages légales
+### 4.18. Page « Widgets » (/widgets)
+
+Gestion des widgets embarquables à intégrer sur les pages externes (sites, landing pages, pages Systeme.io, etc.).
+
+#### 4.18.1. Notifications de preuve sociale (Toast)
+
+Pop-ups de type « social proof » affichés sur les pages de l'utilisateur pour renforcer la confiance et l'urgence.
+
+**Sources d'événements :**
+
+- Nombre de visiteurs en temps réel (`{count} personnes consultent cette page`)
+- Inscriptions récentes (`{name} vient de s'inscrire`)
+- Achats récents (`{name} vient d'acheter`)
+- Messages personnalisés (promo, urgence, rareté — ex : « Plus que 3 places disponibles »)
+
+**Paramètres de configuration :**
+
+- **Position** : bottom-left, bottom-right, top-left, top-right
+- **Thème** : light, dark, minimal
+- **Couleur d'accent** : sélecteur de couleur personnalisé
+- **Coins** : arrondis ou carrés
+- **Durée d'affichage** : 3 à 15 secondes (configurable)
+- **Délai entre les toasts** : 5 à 60 secondes (configurable)
+- **Max par session** : 1 à 50 notifications
+- **Anonymisation** : délai configurable en heures (protection RGPD)
+- **Labels personnalisables** : texte avec variables `{count}`, `{name}` (traduits dans les 5 langues)
+
+**Intégration :**
+
+- Snippet `<script>` à copier/coller sur le site cible
+- Script JS autonome (`/widgets/toast-widget.js`) hébergé sur Tipote
+- Communication via API Supabase (événements + config)
+- Activation/désactivation par widget (toggle ON/OFF)
+
+**Interface dashboard :**
+
+- Liste des widgets toast avec badge actif/inactif
+- Vue création/édition avec aperçu en temps réel
+- Grille responsive : 1 colonne mobile, 2 colonnes tablette, 3 colonnes desktop
+- Historique des événements récents (avec badge type d'événement)
+
+#### 4.18.2. Boutons de partage social (Share)
+
+Widget de boutons de partage social embarquable, permettant aux visiteurs de partager le contenu sur leurs réseaux.
+
+**Plateformes supportées (8) :**
+
+- Facebook, X (Twitter), LinkedIn, WhatsApp, Telegram, Reddit, Pinterest, Email
+
+**Modes d'affichage :**
+
+- **Inline** : intégré dans le flux de la page
+- **Floating left** : barre flottante à gauche (masquée sur mobile < 640px)
+- **Floating right** : barre flottante à droite (masquée sur mobile < 640px)
+- **Bottom bar** : barre fixe en bas de page (labels masqués sur mobile, icônes seules)
+
+**Options de personnalisation :**
+
+- **Style de bouton** : rounded, square, circle, pill
+- **Taille** : small (32px), medium (40px), large (48px)
+- **Mode couleur** : couleurs de marque officielles, mono clair, mono sombre, couleur personnalisée (hex)
+- **Afficher/masquer les labels** (noms des plateformes)
+- **Texte de partage** : message pré-rempli pour les partages (optionnel)
+- **Hashtags** : hashtags séparés par des virgules, ajoutés automatiquement (Twitter, LinkedIn)
+
+**Intégration :**
+
+- Snippet `<script>` avec `data-tipote-share` à copier/coller
+- Script JS autonome (`/widgets/social-share.js`) hébergé sur Tipote
+- Utilise les API de partage natives de chaque plateforme (URLs d'intent)
+- `flex-wrap` + media queries pour adaptation mobile automatique
+
+**Interface dashboard :**
+
+- Liste des widgets share avec badge actif/inactif
+- Vue création/édition avec aperçu live de l'overlay
+- Sélection des plateformes via grille de checkboxes (2 col mobile, 4 col desktop)
+- Code d'intégration copiable avec bouton Copy
+
+### 4.19. Pages légales
 
 Pages dynamiques via `/legal/[slug]` :
 
@@ -567,7 +646,7 @@ Pages dynamiques via `/legal/[slug]` :
 - Mentions légales  
 - CGV
 
-### 4.19. Backoffice Admin (/admin)
+### 4.20. Backoffice Admin (/admin)
 
 Accès restreint aux emails admin.
 
@@ -689,6 +768,12 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 - `notifications` — auto, admin broadcast, personnelles
 
+**Widgets :**
+
+- `toast_widgets` — configuration des widgets toast (position, thème, durée, sources d'événements, messages personnalisés)
+- `toast_events` — événements enregistrés (signup, purchase, visitor_count) avec anonymisation configurable
+- `share_widgets` — configuration des widgets de partage social (plateformes, style, taille, mode d'affichage, couleurs)
+
 **Admin :**
 
 - `plan_change_log` — audit des changements de plan  
@@ -753,6 +838,12 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 - POST /api/billing/subscription — Webhook Systeme.io  
 - GET /api/credits/balance
+
+**Widgets :**
+
+- GET/POST /api/widgets/toast — CRUD widgets toast
+- GET/POST /api/widgets/toast/events — événements de preuve sociale
+- GET/POST /api/widgets/share — CRUD widgets partage social
 
 **Admin :**
 
@@ -935,7 +1026,8 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 - Coach IA (Pro/Elite)  
 - Pépites (insights)  
 - Didacticiel interactif complet  
-- Notifications  
+- Notifications
+- **Widgets embarquables** (notifications preuve sociale + boutons de partage social)
 - Multi-projets (Elite)  
 - Storytelling fondateur  
 - Branding personnalisé  
