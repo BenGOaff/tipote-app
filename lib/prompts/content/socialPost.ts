@@ -292,7 +292,7 @@ export function buildSocialPostPrompt(params: SocialPostPromptParams) {
         "TYPES D'ACCROCHES (choisis celle qui convient le mieux au sujet) :",
         "1. Question ouverte — Pose une question qui pousse à réfléchir. Ex: « Quel est le plus grand défi que vous avez surmonté dans votre carrière ? »",
         "2. Statistique surprenante — Un chiffre inattendu qui capte l'attention. Ex: « 85% des employés ne se sentent pas engagés au travail. »",
-        "3. Citation inspirante — Une citation forte qui résonne. Ex: « "Le succès, c'est tomber sept fois et se relever huit." – Proverbe japonais »",
+        "3. Citation inspirante — Une citation forte qui résonne. Ex: « 'Le succès, c'est tomber sept fois et se relever huit.' – Proverbe japonais »",
         "4. Anecdote personnelle — Une histoire courte et percutante. Ex: « Il y a 5 ans, j'ai tout quitté pour lancer mon entreprise depuis mon salon. »",
         "5. Appel à l'aide — Demander conseil crée de l'engagement. Ex: « J'ai besoin de vos conseils : comment gérez-vous le stress au travail ? »",
         "6. Conseil utile — Un tip actionnable et direct. Ex: « Voici une astuce simple pour doubler votre productivité : la règle des 2 minutes. »",
