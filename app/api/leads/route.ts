@@ -1,10 +1,16 @@
 // app/api/leads/route.ts
-// GET — list leads with pagination, search, filter
-// POST — create a new lead manually
+// GET — list leads with pagination, search, filter (decrypts PII)
+// POST — create a new lead (encrypts PII)
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { getUserDEK } from "@/lib/piiKeys";
+import {
+  encryptLeadPII,
+  decryptLeadPII,
+  blindIndex,
+} from "@/lib/piiCrypto";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +27,7 @@ export async function GET(req: NextRequest) {
     }
 
     const projectId = await getActiveProjectId(supabase, user.id);
+    const dek = await getUserDEK(supabase, user.id);
 
     const url = req.nextUrl;
     const page = Math.max(1, Number(url.searchParams.get("page") ?? "1"));
@@ -29,7 +36,6 @@ export async function GET(req: NextRequest) {
     const source = (url.searchParams.get("source") ?? "").trim();
     const offset = (page - 1) * limit;
 
-    // Build query
     let query = supabase
       .from("leads")
       .select("*", { count: "exact" })
@@ -37,8 +43,13 @@ export async function GET(req: NextRequest) {
 
     if (projectId) query = query.eq("project_id", projectId);
     if (source) query = query.eq("source", source);
+
+    // Search uses blind index for email, or falls back to plaintext cols for name
     if (search) {
-      query = query.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
+      const emailIdx = blindIndex(user.id, search);
+      query = query.or(
+        `email_blind_idx.eq.${emailIdx},email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`
+      );
     }
 
     const { data, error, count } = await query
@@ -49,9 +60,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
+    // Decrypt PII fields for each lead
+    const leads = (data ?? []).map((row: any) => {
+      const pii = decryptLeadPII(row, dek);
+      return {
+        id: row.id,
+        ...pii,
+        source: row.source,
+        source_id: row.source_id,
+        source_name: row.source_name,
+        quiz_result_title: row.quiz_result_title,
+        exported_sio: row.exported_sio,
+        meta: row.meta,
+        created_at: row.created_at,
+      };
+    });
+
     return NextResponse.json({
       ok: true,
-      leads: data ?? [],
+      leads,
       total: count ?? 0,
       page,
       limit,
@@ -75,6 +102,7 @@ export async function POST(req: NextRequest) {
     }
 
     const projectId = await getActiveProjectId(supabase, user.id);
+    const dek = await getUserDEK(supabase, user.id);
     const body = await req.json();
 
     const email = (body.email ?? "").trim().toLowerCase();
@@ -82,15 +110,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Email is required" }, { status: 400 });
     }
 
+    // Encrypt PII
+    const encrypted = encryptLeadPII(
+      {
+        email,
+        first_name: body.first_name?.trim() || null,
+        last_name: body.last_name?.trim() || null,
+        phone: body.phone?.trim() || null,
+        quiz_answers: body.quiz_answers ?? null,
+      },
+      dek,
+      user.id
+    );
+
     const { data, error } = await supabase
       .from("leads")
       .insert({
         user_id: user.id,
         project_id: projectId ?? null,
+        // Keep plaintext email for backward compat during migration
         email,
         first_name: body.first_name?.trim() || null,
         last_name: body.last_name?.trim() || null,
         phone: body.phone?.trim() || null,
+        // Encrypted fields
+        ...encrypted,
         source: body.source ?? "manual",
         source_id: body.source_id ?? null,
         source_name: body.source_name ?? null,

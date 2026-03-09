@@ -1,9 +1,11 @@
 // app/leads/page.tsx
-// Server component: auth + fetch leads + pass to client
+// Server component: auth + fetch leads + decrypt PII + pass to client
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { getUserDEK } from "@/lib/piiKeys";
+import { decryptLeadPII } from "@/lib/piiCrypto";
 import LeadsPageClient from "@/components/leads/LeadsPageClient";
 
 export default async function LeadsPage() {
@@ -15,6 +17,7 @@ export default async function LeadsPage() {
   if (!session) redirect("/");
 
   const projectId = await getActiveProjectId(supabase, session.user.id);
+  const dek = await getUserDEK(supabase, session.user.id);
 
   let query = supabase
     .from("leads")
@@ -26,20 +29,19 @@ export default async function LeadsPage() {
 
   const { data, error } = await query;
 
-  const leads = (data ?? []).map((l: any) => ({
-    id: String(l.id),
-    email: l.email ?? "",
-    first_name: l.first_name ?? null,
-    last_name: l.last_name ?? null,
-    phone: l.phone ?? null,
-    source: l.source ?? "quiz",
-    source_name: l.source_name ?? null,
-    quiz_answers: l.quiz_answers ?? null,
-    quiz_result_title: l.quiz_result_title ?? null,
-    exported_sio: l.exported_sio ?? false,
-    meta: l.meta ?? null,
-    created_at: String(l.created_at),
-  }));
+  const leads = (data ?? []).map((l: any) => {
+    const pii = decryptLeadPII(l, dek);
+    return {
+      id: String(l.id),
+      ...pii,
+      source: l.source ?? "quiz",
+      source_name: l.source_name ?? null,
+      quiz_result_title: l.quiz_result_title ?? null,
+      exported_sio: l.exported_sio ?? false,
+      meta: l.meta ?? null,
+      created_at: String(l.created_at),
+    };
+  });
 
   return (
     <LeadsPageClient

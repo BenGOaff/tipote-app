@@ -45,6 +45,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
 
 export type Lead = {
@@ -278,6 +279,12 @@ export default function LeadsPageClient({ leads: initialLeads, error }: Props) {
                 </p>
                 <p className="text-xs text-muted-foreground">{t("thisMonth")}</p>
               </Card>
+            </div>
+
+            {/* Security badge */}
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800">
+              <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+              <p className="text-xs text-green-700 dark:text-green-300">{t("encryptionBadge")}</p>
             </div>
 
             {/* Toolbar */}

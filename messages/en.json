@@ -1878,6 +1878,7 @@
     "saveSuccess": "Lead updated",
     "saveError": "Error saving lead",
     "deleteSuccess": "Lead deleted",
-    "deleteError": "Error deleting lead"
+    "deleteError": "Error deleting lead",
+    "encryptionBadge": "Your data is end-to-end encrypted (AES-256). Neither Tipote nor any third party can read your leads' information."
   }
 }

@@ -1875,6 +1875,7 @@
     "saveSuccess": "Lead mis à jour",
     "saveError": "Erreur lors de la sauvegarde",
     "deleteSuccess": "Lead supprimé",
-    "deleteError": "Erreur lors de la suppression"
+    "deleteError": "Erreur lors de la suppression",
+    "encryptionBadge": "Vos données sont chiffrées de bout en bout (AES-256). Ni Tipote, ni un tiers ne peut lire les informations de vos leads."
   }
 }

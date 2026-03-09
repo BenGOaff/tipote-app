@@ -1913,6 +1913,7 @@
     "saveSuccess": "تم تحديث العميل",
     "saveError": "خطأ في الحفظ",
     "deleteSuccess": "تم حذف العميل",
-    "deleteError": "خطأ في الحذف"
+    "deleteError": "خطأ في الحذف",
+    "encryptionBadge": "بياناتك مشفرة من طرف إلى طرف (AES-256). لا يمكن لـ Tipote أو أي طرف ثالث قراءة معلومات عملائك."
   }
 }
