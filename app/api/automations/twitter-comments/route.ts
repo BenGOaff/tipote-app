@@ -71,15 +71,31 @@ export async function GET(req: NextRequest) {
 
     // 3. Pour chaque user
     for (const [userId, userAutos] of autosByUser) {
-      // Récupérer la connexion Twitter
-      const { data: conn } = await supabaseAdmin
+      // Récupérer la connexion Twitter (filtre par project_id de l'automation)
+      const autoProjectId = userAutos[0]?.project_id as string | null;
+      let connQuery = supabaseAdmin
         .from("social_connections")
         .select(
           "id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at",
         )
         .eq("user_id", userId)
-        .eq("platform", "twitter")
-        .maybeSingle();
+        .eq("platform", "twitter");
+
+      if (autoProjectId) connQuery = connQuery.eq("project_id", autoProjectId);
+
+      let { data: conn } = await connQuery.maybeSingle();
+
+      // Fallback: legacy connections without project_id
+      if (!conn?.access_token_encrypted && autoProjectId) {
+        const { data: connFallback } = await supabaseAdmin
+          .from("social_connections")
+          .select("id, platform_user_id, platform_username, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+          .eq("user_id", userId)
+          .eq("platform", "twitter")
+          .is("project_id", null)
+          .maybeSingle();
+        conn = connFallback;
+      }
 
       if (!conn?.access_token_encrypted) {
         debug.push(

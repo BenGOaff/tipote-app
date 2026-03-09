@@ -48,13 +48,29 @@ export async function GET(req: NextRequest) {
     for (const [userId, userAutos] of autosByUser) {
       let accessToken: string;
 
-      // Récupérer la connexion TikTok
-      const { data: conn } = await supabaseAdmin
+      // Récupérer la connexion TikTok (filtre par project_id de l'automation)
+      const autoProjectId = userAutos[0]?.project_id as string | null;
+      let connQuery = supabaseAdmin
         .from("social_connections")
         .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
         .eq("user_id", userId)
-        .eq("platform", "tiktok")
-        .maybeSingle();
+        .eq("platform", "tiktok");
+
+      if (autoProjectId) connQuery = connQuery.eq("project_id", autoProjectId);
+
+      let { data: conn } = await connQuery.maybeSingle();
+
+      // Fallback: legacy connections without project_id
+      if (!conn?.access_token_encrypted && autoProjectId) {
+        const { data: connFallback } = await supabaseAdmin
+          .from("social_connections")
+          .select("id, platform_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at")
+          .eq("user_id", userId)
+          .eq("platform", "tiktok")
+          .is("project_id", null)
+          .maybeSingle();
+        conn = connFallback;
+      }
 
       if (!conn?.access_token_encrypted) {
         console.warn(`[tiktok-comments] No TikTok connection for user ${userId}`);
