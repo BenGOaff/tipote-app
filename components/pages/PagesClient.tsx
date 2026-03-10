@@ -11,7 +11,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Plus, FileText, ShoppingCart, Trash2, Copy,
   ArrowLeft, ArrowRight, Loader2, Package, PenTool, Check, Globe,
-  Users, Download, X, Eye, MousePointerClick, BarChart3,
+  Users, Download, X, Eye, MousePointerClick, BarChart3, Link2,
 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -19,6 +19,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { loadAllOffers, type OfferOption, levelLabel, formatPriceRange } from "@/lib/offers";
 import PageGenerateProgress, { type ProgressStep } from "./PageGenerateProgress";
 import PageBuilder from "./PageBuilder";
+import LinkinbioEditor from "./LinkinbioEditor";
 
 type PageSummary = {
   id: string;
@@ -35,7 +36,7 @@ type PageSummary = {
   updated_at: string;
 };
 
-type View = "list" | "step1" | "step2" | "generating" | "edit";
+type View = "list" | "step1" | "step2" | "generating" | "edit" | "linkinbio-edit";
 
 export default function PagesClient() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -284,8 +285,31 @@ export default function PagesClient() {
     try {
       const res = await fetch(`/api/pages/${pageId}`);
       const data = await res.json();
-      if (data.ok) { setEditPage(data.page); setView("edit"); }
+      if (data.ok) {
+        setEditPage(data.page);
+        setView(data.page.page_type === "linkinbio" ? "linkinbio-edit" : "edit");
+      }
     } catch { /* ignore */ }
+  }, []);
+
+  // Create linkinbio page and open editor
+  const [creatingLinkinbio, setCreatingLinkinbio] = useState(false);
+  const handleCreateLinkinbio = useCallback(async () => {
+    setCreatingLinkinbio(true);
+    try {
+      const res = await fetch("/api/pages/linkinbio", { method: "POST" });
+      const data = await res.json();
+      if (data.ok && data.pageId) {
+        // Fetch the created page and open editor
+        const pageRes = await fetch(`/api/pages/${data.pageId}`);
+        const pageData = await pageRes.json();
+        if (pageData.ok) {
+          setEditPage(pageData.page);
+          setView("linkinbio-edit");
+        }
+      }
+    } catch { /* ignore */ }
+    setCreatingLinkinbio(false);
   }, []);
 
   // Archive page (with confirmation)
@@ -302,6 +326,30 @@ export default function PagesClient() {
   }, []);
 
   // ==================== RENDER ====================
+
+  // Linkinbio editor
+  if (view === "linkinbio-edit" && editPage) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background">
+          <AppSidebar />
+          <main className="flex-1 min-w-0 overflow-hidden">
+            <LinkinbioEditor
+              initialPage={editPage}
+              onBack={() => {
+                if (typeof window !== "undefined") {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("edit");
+                  window.history.replaceState({}, "", url.pathname);
+                }
+                setView("list"); setEditPage(null); fetchPages();
+              }}
+            />
+          </main>
+        </div>
+      </SidebarProvider>
+    );
+  }
 
   if (view === "edit" && editPage) {
     return (
@@ -404,6 +452,26 @@ export default function PagesClient() {
                           Présente ton activité, tes services et redirige vers un RDV, formulaire ou essai gratuit.
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">7 crédits</p>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleCreateLinkinbio}
+                    disabled={creatingLinkinbio}
+                    className="p-6 rounded-xl border-2 text-left transition-all hover:border-orange-400 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 group"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
+                        {creatingLinkinbio ? <Loader2 className="w-6 h-6 text-orange-600 animate-spin" /> : <Link2 className="w-6 h-6 text-orange-600" />}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">Page multiliens</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Regroupe tous tes liens en une seule page. Idéal pour ta bio Instagram, TikTok, LinkedIn...
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">Gratuit</p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -839,6 +907,8 @@ function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onE
             <FileText className="w-4 h-4 text-blue-600" />
           ) : page.page_type === "showcase" ? (
             <Globe className="w-4 h-4 text-purple-600" />
+          ) : page.page_type === "linkinbio" ? (
+            <Link2 className="w-4 h-4 text-orange-600" />
           ) : (
             <ShoppingCart className="w-4 h-4 text-green-600" />
           )}

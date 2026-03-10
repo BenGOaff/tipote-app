@@ -82,6 +82,18 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // 2a) Security headers for public-facing pages (/p/, /q/)
+  //     Prevents domain flagging by antivirus/social networks.
+  if (pathname.startsWith("/p/") || pathname.startsWith("/q/")) {
+    const res = NextResponse.next();
+    res.headers.set("X-Content-Type-Options", "nosniff");
+    res.headers.set("X-Frame-Options", "SAMEORIGIN");
+    res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.headers.set("Permissions-Policy", "interest-cohort=()");
+    res.headers.set("X-DNS-Prefetch-Control", "off");
+    return res;
+  }
+
   // 2) Ne traiter que les routes protégées (le reste passe)
   if (!startsWithAny(pathname, PROTECTED_PREFIXES)) {
     return NextResponse.next();
