@@ -38,6 +38,11 @@ import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
 import BrandingSettings from "@/components/settings/BrandingSettings";
 import type { BrandingData } from "@/components/settings/BrandingSettings";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
+import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import SocialConnections from "@/components/settings/SocialConnections";
 import LegalDocGenerator from "@/components/settings/legal/LegalDocGenerator";
 import type { DocType } from "@/components/settings/legal/types";
@@ -1980,6 +1985,13 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               {enriching ? tSP("positioningTab.enriching") : tSP("positioningTab.enrich")}
             </Button>
           </div>
+
+          {/* AI generating overlay dialog */}
+          <Dialog open={enriching}>
+            <DialogContent className="sm:max-w-md [&>button]:hidden" onInteractOutside={(e) => e.preventDefault()}>
+              <AIGeneratingOverlay />
+            </DialogContent>
+          </Dialog>
           <p className="text-xs text-muted-foreground mt-2">
             {tSP("positioningTab.enrichDesc")}
           </p>

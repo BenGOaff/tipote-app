@@ -109,7 +109,9 @@
     "required": "مطلوب",
     "optional": "اختياري",
     "copied": "تم النسخ!",
-    "copy": "نسخ"
+    "copy": "نسخ",
+    "aiGeneratingTitle": "تيبوت يكتب لك الآن…",
+    "aiGeneratingSubtitle": "لن يستغرق الأمر سوى بضع ثوانٍ (لكنه يستحق الانتظار 😉)"
   },
   "auth": {
     "login": "تسجيل الدخول",

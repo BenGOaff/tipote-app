@@ -109,7 +109,9 @@
     "required": "Requerido",
     "optional": "Opcional",
     "copied": "¡Copiado!",
-    "copy": "Copiar"
+    "copy": "Copiar",
+    "aiGeneratingTitle": "Tipote está redactando…",
+    "aiGeneratingSubtitle": "Solo tardará unos segundos (pero vale la pena esperar 😉)"
   },
   "auth": {
     "login": "Iniciar sesión",
