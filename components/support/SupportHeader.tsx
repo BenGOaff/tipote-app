@@ -46,7 +46,7 @@ export default function SupportHeader({ locale }: { locale: string }) {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => {
-                  document.cookie = `NEXT_LOCALE=${l};path=/;max-age=31536000`;
+                  document.cookie = `ui_locale=${l};path=/;max-age=31536000`;
                   window.location.reload();
                 }}
               >
