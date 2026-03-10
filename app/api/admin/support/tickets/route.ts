@@ -123,7 +123,7 @@ async function sendReplyEmail(
     return;
   }
 
-  const fromEmail = process.env.SUPPORT_FROM_EMAIL || "support@tipote.com";
+  const fromEmail = process.env.SUPPORT_FROM_EMAIL || "hello@tipote.com";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
 
   const greeting = name ? name : (locale === "fr" ? "Bonjour" : locale === "es" ? "Hola" : locale === "it" ? "Ciao" : locale === "ar" ? "مرحبًا" : "Hello");
