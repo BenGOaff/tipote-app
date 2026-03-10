@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getActiveProjectId } from "@/lib/projects/activeProject";
+
 
 export const dynamic = "force-dynamic";
 
@@ -161,13 +161,10 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id;
-  const projectId = await getActiveProjectId(supabase, userId);
 
-  // Helper: build a content_item select query scoped by user + project
+  // NB: pas de filtre project_id — id + user_id suffit pour la sécurité.
   const ciSelect = (sel: string) => {
-    let q = supabase.from("content_item").select(sel).eq("id", id).eq("user_id", userId);
-    if (projectId) q = q.eq("project_id", projectId);
-    return q;
+    return supabase.from("content_item").select(sel).eq("id", id).eq("user_id", userId);
   };
 
   // 1) try V2 select variants
@@ -217,8 +214,6 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id;
-  const projectId = await getActiveProjectId(supabase, userId);
-
   let body: PatchBody = {};
   try {
     body = (await req.json()) as PatchBody;
@@ -254,9 +249,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   if (metaObj) {
     try {
       const selectStr = "meta";
-      let q = supabase.from("content_item").select(selectStr).eq("id", id).eq("user_id", userId);
-      if (projectId) q = q.eq("project_id", projectId);
-      const { data: existing } = await q.maybeSingle();
+      const { data: existing } = await supabase.from("content_item").select(selectStr).eq("id", id).eq("user_id", userId).maybeSingle();
       if (existing?.meta && typeof existing.meta === "object") {
         mergedMeta = { ...existing.meta, ...metaObj };
       }
@@ -266,14 +259,14 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   }
 
   // Helper to attempt update with select + retry on missing columns
+  // NB: pas de filtre project_id — id + user_id suffit, et le filtre project_id
+  // causait des modifications silencieusement ignorées (0 rows matched).
   const tryUpdate = async (payload: Record<string, any>, selectStr: string) => {
-    let q = supabase
+    return await supabase
       .from("content_item")
       .update(payload)
       .eq("id", id)
-      .eq("user_id", userId);
-    if (projectId) q = q.eq("project_id", projectId);
-    return await q
+      .eq("user_id", userId)
       .select(selectStr)
       .maybeSingle();
   };
@@ -370,11 +363,10 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id;
-  const projectId = await getActiveProjectId(supabase, userId);
 
-  let delQuery = supabase.from("content_item").delete().eq("id", id).eq("user_id", userId);
-  if (projectId) delQuery = delQuery.eq("project_id", projectId);
-  const del = await delQuery;
+  // NB: on ne filtre PAS par project_id ici — id + user_id suffit pour la sécurité,
+  // et le filtre project_id causait des suppressions silencieuses (0 rows matched, pas d'erreur).
+  const del = await supabase.from("content_item").delete().eq("id", id).eq("user_id", userId);
 
   if (del.error) {
     return NextResponse.json({ error: del.error.message || "Delete failed" }, { status: 500 });

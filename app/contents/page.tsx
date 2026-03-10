@@ -7,6 +7,7 @@
 import { redirect } from "next/navigation";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 import MyContentLovableClient from "@/components/content/MyContentLovableClient";
 import type { ContentListItem } from "@/lib/types/content";
 
@@ -41,7 +42,8 @@ async function fetchContentsForUser(
   q: string,
   status: string,
   type: string,
-  channel: string
+  channel: string,
+  projectId: string | null
 ): Promise<{ data: ContentListItem[]; error?: string }> {
   const supabase = await getSupabaseServerClient();
 
@@ -51,6 +53,7 @@ async function fetchContentsForUser(
     .select("id, type, title, content, status, scheduled_date, channel, tags, created_at, meta")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
+  if (projectId) v2 = v2.eq("project_id", projectId);
 
   if (q) {
     v2 = v2.or(`title.ilike.%${q}%,type.ilike.%${q}%,channel.ilike.%${q}%`);
@@ -89,6 +92,7 @@ async function fetchContentsForUser(
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
+  if (projectId) fb = fb.eq("project_id", projectId);
 
   if (q) {
     fb = fb.or(`titre.ilike.%${q}%,type.ilike.%${q}%,canal.ilike.%${q}%`);
@@ -130,6 +134,8 @@ export default async function ContentsPage({
 
   if (!session) redirect("/");
 
+  const projectId = await getActiveProjectId(supabase, session.user.id);
+
   const sp = await searchParams;
 
   const qRaw = sp.q;
@@ -146,19 +152,27 @@ export default async function ContentsPage({
   const initialView =
     safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
 
+  // Build quizzes query scoped to project
+  let quizzesQuery = supabase
+    .from("quizzes")
+    .select("id, title, status, views_count, shares_count, created_at")
+    .eq("user_id", session.user.id)
+    .order("created_at", { ascending: false });
+  if (projectId) quizzesQuery = quizzesQuery.eq("project_id", projectId);
+
+  // Build pages query scoped to project
+  let pagesQuery = supabase
+    .from("hosted_pages")
+    .select("id, title, slug, page_type, status, template_id, views_count, leads_count, created_at, updated_at, payment_url")
+    .eq("user_id", session.user.id)
+    .neq("status", "archived")
+    .order("created_at", { ascending: false });
+  if (projectId) pagesQuery = pagesQuery.eq("project_id", projectId);
+
   const [{ data: items, error }, quizzesResult, pagesResult] = await Promise.all([
-    fetchContentsForUser(session.user.id, q, status, type, channel),
-    supabase
-      .from("quizzes")
-      .select("id, title, status, views_count, shares_count, created_at")
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("hosted_pages")
-      .select("id, title, slug, page_type, status, template_id, views_count, leads_count, created_at, updated_at, payment_url")
-      .eq("user_id", session.user.id)
-      .neq("status", "archived")
-      .order("created_at", { ascending: false }),
+    fetchContentsForUser(session.user.id, q, status, type, channel, projectId),
+    quizzesQuery,
+    pagesQuery,
   ]);
 
   // Count leads per quiz
