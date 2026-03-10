@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { getPlanLimits } from "@/lib/planLimits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { getOwnerOpenAI, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 
@@ -54,6 +55,15 @@ export async function POST(req: NextRequest) {
     }
 
     const projectId = await getActiveProjectId(supabase, user.id);
+
+    // Plan gating: analyse concurrence requires Basic+
+    const { data: profileRow } = await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle();
+    if (!getPlanLimits(profileRow?.plan).analyseConcurrence) {
+      return NextResponse.json(
+        { ok: false, error: "L'analyse de la concurrence est disponible à partir du plan Basic.", code: "PLAN_REQUIRED" },
+        { status: 403 },
+      );
+    }
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

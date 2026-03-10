@@ -978,43 +978,22 @@ export async function POST(req: NextRequest) {
     const plan = normalizePlan((profileRow as any)?.plan);
     const locale = safeLocale((profileRow as any)?.locale);
 
-    // ✅ Gating + teaser (Free/Basic)
-    const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
-    let isTeaser = false;
-
-    const TEASER_LIMIT = 3; // 3 messages gratuits par mois pour Free/Basic
-
+    // ✅ Gating : coach réservé aux plans Pro, Elite et Beta
     if (plan !== "pro" && plan !== "elite" && plan !== "beta") {
-      let usedQuery = supabase
-        .from("coach_messages")
-        .select("id")
-        .eq("user_id", user.id);
-      if (projectId) usedQuery = usedQuery.eq("project_id", projectId);
-      const usedRes = await usedQuery
-        .contains("facts", { teaser_month: monthKey })
-        .limit(TEASER_LIMIT + 1);
-
-      const usedCount = Array.isArray(usedRes.data) ? usedRes.data.length : 0;
-
-      if (usedCount >= TEASER_LIMIT) {
-        return NextResponse.json(
-          {
-            ok: false,
-            code: "COACH_LOCKED",
-            error:
-              `Le coach premium est dispo sur les plans Pro et Elite. (Tu as utilisé tes ${TEASER_LIMIT} conseils gratuits ce mois — upgrade pour un accès illimité.)`,
-          },
-          { status: 403 },
-        );
-      }
-
-      isTeaser = true;
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "COACH_LOCKED",
+          error: "Le coach IA personnel est disponible à partir du plan Pro. Upgrade pour y accéder.",
+        },
+        { status: 403 },
+      );
     }
 
     const history = parsed.data.history ?? [];
     const userMessage = parsed.data.message;
     const thread = parsed.data.thread ?? "general";
-    const goDeeper = !isTeaser && isGoDeeperMessage(userMessage);
+    const goDeeper = isGoDeeperMessage(userMessage);
 
     let memoryQuery = supabase
       .from("coach_messages")
@@ -1191,7 +1170,7 @@ export async function POST(req: NextRequest) {
 
     const activeExperiment = pickActiveExperiment(memoryRows);
     const checkInBlock =
-      !isTeaser && activeExperiment && activeExperiment.status === "active" && isExperimentDue(activeExperiment)
+      activeExperiment && activeExperiment.status === "active" && isExperimentDue(activeExperiment)
         ? [
             "CHECK-IN REQUIRED:",
             `La dernière fois, on avait décidé de tester: "${activeExperiment.title}" pendant ${activeExperiment.duration_days} jours.`,
@@ -1207,22 +1186,7 @@ TIPOTE-KNOWLEDGE RULES:
 - Use it to make the answer sharper (1 insight + 1 next step).
 - Never paste large excerpts; synthesize.`;
 
-    const system = isTeaser
-      ? `${systemBase}${knowledgeRules}
-
-MODE: TEASER (Free/Basic — accès limité, ${TEASER_LIMIT} messages/mois).
-TONE & STYLE:
-- Tu es un coach qui "ne peut pas s'en empêcher" : tu vois un truc important dans les données de l'user, et tu DOIS le dire.
-- Commence par : "Normalement tu n'as pas accès au coaching complet avec ton abonnement…" ou variante naturelle.
-- Puis enchaîne avec "mais j'ai remarqué que [observation ultra-spécifique basée sur les OBSERVATIONS PROACTIVES fournies]"
-- Termine avec 1 conseil actionnable, concret, personnalisé.
-- Dernier mot : une phrase courte donnant envie d'upgrader (Pro/Elite) pour "débloquer la suite".
-- 4–8 lines max.
-- Sois sharp, direct, humain. Jamais corporate.
-- UTILISE les observations proactives fournies dans le contexte — ne les ignore PAS.
-- Si aucune observation n'est disponible, fais un conseil général basé sur le living context.
-- Do NOT output actionable DB suggestions (suggestions[] must be empty).`
-      : goDeeper
+    const system = goDeeper
         ? `${systemBase}${knowledgeRules}\n\nMODE: GO DEEPER. You can go deeper, but stay structured and avoid fluff.`
         : `${systemBase}${knowledgeRules}\n\nHARD RULE: Keep replies short (3–10 lines). One idea at a time.`;
 
@@ -1232,18 +1196,7 @@ TONE & STYLE:
     const nicheMissionBlock = formatNicheMissionBlock(businessProfileRes.data);
     const competitorBlock = formatCompetitorBlock(competitorRes.data);
 
-    // ✅ NEW: For teaser mode, build smart observations
-    const teaserObservations = isTeaser
-      ? buildTeaserObservations({
-          persona: personaData,
-          offerPyramids: offerPyramidsData,
-          bp: businessProfileRes.data,
-          planJson: (businessPlanRes.data as any)?.plan_json ?? null,
-          tasks: tasksRes.data ?? [],
-          contents: contentsRes.data ?? [],
-          competitor: competitorRes.data,
-        })
-      : "";
+    // Teaser mode removed — coach is now fully gated (Pro/Elite/Beta only)
 
     const userPrompt = [
       "LONG-TERM MEMORY (facts/tags + last session):",
@@ -1294,13 +1247,6 @@ TONE & STYLE:
       "",
       checkInBlock ? checkInBlock : "CHECK-IN: (none)",
       "",
-      ...(isTeaser && teaserObservations
-        ? [
-            "OBSERVATIONS PROACTIVES (pour teaser — utilise-les pour ton message):",
-            teaserObservations,
-            "",
-          ]
-        : []),
       "CONVERSATION (recent):",
       JSON.stringify(history, null, 2),
       "",
@@ -1369,9 +1315,9 @@ TONE & STYLE:
     }
 
     const rawMessage = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
-    const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser, appliedTitles, rejectedTitles });
+    const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser: false, appliedTitles, rejectedTitles });
 
-    const maxLines = isTeaser ? 8 : goDeeper ? 18 : 10;
+    const maxLines = goDeeper ? 18 : 10;
     const message = enforceLineLimit(rawMessage, maxLines) || rawMessage;
 
     const memory = deriveMemory({
@@ -1380,16 +1326,6 @@ TONE & STYLE:
       history,
       contextSnapshot: living.snapshot,
     });
-
-    if (isTeaser) {
-      memory.facts = {
-        ...(isRecord(memory.facts) ? (memory.facts as Record<string, unknown>) : {}),
-        teaser_used: true,
-        teaser_month: monthKey,
-        teaser_plan: plan,
-      } as any;
-      memory.summary_tags = Array.from(new Set([...(memory.summary_tags || []), "teaser"]));
-    }
 
     return NextResponse.json({ ok: true, message, suggestions, memory }, { status: 200 });
   } catch (e) {

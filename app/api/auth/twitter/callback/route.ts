@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { exchangeCodeForTokens, getUserInfo } from "@/lib/twitter";
 import { encrypt } from "@/lib/crypto";
+import { checkSocialConnectionLimit } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,14 @@ export async function GET(req: NextRequest) {
 
     // 7. Upsert dans social_connections
     const projectId = await getActiveProjectId(supabase, user.id);
+
+    const { data: profileRow } = await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle();
+    const limitCheck = await checkSocialConnectionLimit(supabase, user.id, "twitter", projectId, profileRow?.plan);
+    if (!limitCheck.allowed) {
+      return NextResponse.redirect(
+        `${settingsUrl}&twitter_error=${encodeURIComponent(`Limite atteinte : ton plan autorise ${limitCheck.max} réseau(x) social(aux). Upgrade pour en connecter plus.`)}`
+      );
+    }
 
     const { error: dbError } = await supabase
       .from("social_connections")

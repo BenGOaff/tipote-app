@@ -9,6 +9,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { getPlanLimits } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -112,6 +113,16 @@ export async function POST(req: Request) {
   }
 
   const projectId = await getActiveProjectId(supabase, user.id);
+
+  // Plan gating: analyse des statistiques requires Basic+
+  const { data: profileRow } = await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle();
+  const limits = getPlanLimits(profileRow?.plan);
+  if (!limits.analyseStatistiques) {
+    return NextResponse.json(
+      { ok: false, error: "L'analyse des statistiques est disponible à partir du plan Basic.", code: "PLAN_REQUIRED" },
+      { status: 403 },
+    );
+  }
 
   try {
     const body = await req.json();

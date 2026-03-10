@@ -13,6 +13,7 @@ import {
   subscribePageToWebhooks,
 } from "@/lib/meta";
 import { encrypt } from "@/lib/crypto";
+import { checkSocialConnectionLimit } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -194,6 +195,14 @@ export async function GET(req: NextRequest) {
     ).toISOString();
 
     // 7. Stocker la connexion Facebook (Page)
+    const { data: profileRow } = await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle();
+    const limitCheck = await checkSocialConnectionLimit(supabase, user.id, "facebook", projectId, profileRow?.plan);
+    if (!limitCheck.allowed) {
+      return NextResponse.redirect(
+        `${settingsUrl}&facebook_error=${encodeURIComponent(`Limite atteinte : ton plan autorise ${limitCheck.max} réseau(x) social(aux). Upgrade pour en connecter plus.`)}`
+      );
+    }
+
     const pageTokenEncrypted = encrypt(page.access_token);
 
     const connectionData = {
