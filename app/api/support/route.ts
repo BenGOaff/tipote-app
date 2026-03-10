@@ -1,7 +1,12 @@
 // app/api/support/route.ts
 // Public API — list categories with article counts, or search articles
+// Falls back to static seed data when DB tables are empty or missing
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  getStaticCategories,
+  searchStaticArticles,
+} from "@/lib/support/staticFallback";
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -18,6 +23,11 @@ export async function GET(req: NextRequest) {
         .order("sort_order");
 
       if (error) throw error;
+
+      // Fallback to static data if DB is empty
+      if (!articles || articles.length === 0) {
+        return NextResponse.json({ ok: true, articles: searchStaticArticles(q, locale) });
+      }
 
       const lower = q.toLowerCase();
       const filtered = (articles ?? []).filter((a: any) => {
@@ -38,6 +48,11 @@ export async function GET(req: NextRequest) {
 
     if (catErr) throw catErr;
 
+    // Fallback to static data if DB is empty
+    if (!categories || categories.length === 0) {
+      return NextResponse.json({ ok: true, categories: getStaticCategories() });
+    }
+
     const { data: articles, error: artErr } = await supabaseAdmin
       .from("support_articles")
       .select("id, slug, title, category_id, sort_order, tags")
@@ -54,6 +69,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ ok: true, categories: result });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    // If tables don't exist at all, serve static data
+    return NextResponse.json({ ok: true, categories: getStaticCategories() });
   }
 }
