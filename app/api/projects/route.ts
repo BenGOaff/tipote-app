@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
     if (plan !== "elite") {
       return NextResponse.json(
-        { ok: false, error: "ELITE_REQUIRED", message: "Multi-projets est réservé au plan Elite." },
+        { ok: false, error: "ELITE_REQUIRED", message: "Multi-projets est réservé au plan Elite. Upgrade ton abonnement pour gérer plusieurs projets.", upgrade_url: "/settings?tab=billing" },
         { status: 403 },
       );
     }

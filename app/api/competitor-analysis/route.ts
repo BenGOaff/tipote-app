@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     const { data: profileRow } = await supabase.from("profiles").select("plan").eq("id", userId).maybeSingle();
     if (!getPlanLimits(profileRow?.plan).analyseConcurrence) {
       return NextResponse.json(
-        { ok: false, error: "L'analyse de la concurrence est disponible à partir du plan Basic.", code: "PLAN_REQUIRED" },
+        { ok: false, error: "L'analyse de la concurrence est réservée aux plans Basic, Pro et Elite. Upgrade ton abonnement pour débloquer cette fonctionnalité.", code: "PLAN_REQUIRED", upgrade_url: "/settings?tab=billing" },
         { status: 403 },
       );
     }

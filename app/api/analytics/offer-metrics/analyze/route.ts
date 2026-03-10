@@ -119,7 +119,7 @@ export async function POST(req: Request) {
   const limits = getPlanLimits(profileRow?.plan);
   if (!limits.analyseStatistiques) {
     return NextResponse.json(
-      { ok: false, error: "L'analyse des statistiques est disponible à partir du plan Basic.", code: "PLAN_REQUIRED" },
+      { ok: false, error: "L'analyse des statistiques est réservée aux plans Basic, Pro et Elite. Upgrade ton abonnement pour débloquer cette fonctionnalité.", code: "PLAN_REQUIRED", upgrade_url: "/settings?tab=billing" },
       { status: 403 },
     );
   }

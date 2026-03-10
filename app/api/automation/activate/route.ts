@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   if (!planHasAutoComments(plan)) {
     return NextResponse.json(
-      { ok: false, error: "PLAN_REQUIRED", message: "L'auto-commentaire nécessite un abonnement Pro ou Elite." },
+      { ok: false, error: "PLAN_REQUIRED", message: "L'auto-commentaire est réservé aux plans Pro et Elite. Upgrade ton abonnement pour débloquer cette fonctionnalité.", upgrade_url: "/settings?tab=billing" },
       { status: 403 },
     );
   }

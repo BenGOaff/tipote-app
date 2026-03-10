@@ -47,7 +47,7 @@ export async function POST() {
     const limits = getPlanLimits(profileRow?.plan);
     if (!limits.enrichissementPersona) {
       return NextResponse.json(
-        { ok: false, error: "L'enrichissement du persona est disponible à partir du plan Basic.", code: "PLAN_REQUIRED" },
+        { ok: false, error: "L'enrichissement du persona est réservé aux plans Basic, Pro et Elite. Upgrade ton abonnement pour débloquer cette fonctionnalité.", code: "PLAN_REQUIRED", upgrade_url: "/settings?tab=billing" },
         { status: 403 },
       );
     }
