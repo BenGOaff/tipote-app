@@ -787,7 +787,7 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 **Auth & Compte :**
 
 - POST /api/account/delete, /ensure-profile, /reset  
-- GET/POST /api/auth/{linkedin,twitter,tiktok,pinterest,reddit,instagram,meta}/callback
+- GET/POST /api/auth/{linkedin,twitter,tiktok,pinterest,instagram,meta}/callback
 
 **Social :**
 
