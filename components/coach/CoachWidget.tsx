@@ -166,7 +166,7 @@ const QUICK_REPLY_KEYS = [
 
 const THREADS: CoachThread[] = ["general", "strategy", "sales", "content", "mindset"];
 
-const HIDDEN_PREFIXES = ["/auth", "/onboarding", "/strategy/pyramids", "/legal", "/q/", "/p/"];
+const HIDDEN_PREFIXES = ["/auth", "/onboarding", "/strategy/pyramids", "/legal", "/q/", "/p/", "/support"];
 
 /* ────────────────── Top-Left Resize Hook ────────────────── */
 

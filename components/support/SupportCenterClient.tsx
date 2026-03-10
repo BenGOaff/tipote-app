@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import SupportHeader from "./SupportHeader";
 import SupportFooter from "./SupportFooter";
+import SupportChatWidget from "./SupportChatWidget";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Rocket, Settings, Target, Sparkles, Share2, Zap,
@@ -257,6 +258,7 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
       </div>
 
       <SupportFooter locale={locale} />
+      <SupportChatWidget locale={locale} />
     </div>
   );
 }
