@@ -39,10 +39,6 @@ import BrandingSettings from "@/components/settings/BrandingSettings";
 import type { BrandingData } from "@/components/settings/BrandingSettings";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
 import SocialConnections from "@/components/settings/SocialConnections";
 import LegalDocGenerator from "@/components/settings/legal/LegalDocGenerator";
 import type { DocType } from "@/components/settings/legal/types";
