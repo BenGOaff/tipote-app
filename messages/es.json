@@ -483,7 +483,7 @@
   },
   "pinterestConsent": {
     "title": "Conectar Pinterest a Tipote",
-    "description": "Conecta tu cuenta de Pinterest Business a Tipote para crear y programar pines automáticamente desde tu espacio de trabajo.",
+    "description": "Conecta tu cuenta de Pinterest Business a Tipote para crear y programar pines directamente desde tu espacio de trabajo. Cada pin se publica únicamente con tu aprobación.",
     "accessTitle": "Tipote tendrá acceso a:",
     "accessProfile": "Tu perfil de Pinterest (nombre, foto de perfil)",
     "accessBoards": "Tus tableros (para elegir dónde publicar tus pines)",

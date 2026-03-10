@@ -483,7 +483,7 @@
   },
   "pinterestConsent": {
     "title": "ربط Pinterest بـ Tipote",
-    "description": "اربط حساب Pinterest Business الخاص بك بـ Tipote لإنشاء وجدولة الدبابيس تلقائيًا من مساحة العمل الخاصة بك.",
+    "description": "اربط حساب Pinterest Business الخاص بك بـ Tipote لإنشاء وجدولة الدبابيس مباشرة من مساحة العمل الخاصة بك. يتم نشر كل دبوس فقط بموافقتك الصريحة.",
     "accessTitle": "سيتمكن Tipote من الوصول إلى:",
     "accessProfile": "ملفك الشخصي على Pinterest (الاسم، صورة الملف الشخصي)",
     "accessBoards": "لوحاتك (لاختيار مكان نشر دبابيسك)",
