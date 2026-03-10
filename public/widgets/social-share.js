@@ -147,7 +147,7 @@
   function render(cfg) {
     injectCSS(cfg);
 
-    var pageUrl = window.location.href;
+    var pageUrl = cfg.share_url || window.location.href;
     var pageTitle = cfg.share_text || document.title;
     var hashtags = cfg.share_hashtags || "";
     var platforms = cfg.platforms || ["facebook", "twitter", "linkedin", "whatsapp", "email"];

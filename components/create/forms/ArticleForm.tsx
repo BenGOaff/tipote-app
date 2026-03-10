@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +74,8 @@ export function ArticleForm({
 
   // Track saved content to avoid duplicates
   const [savedContentId, setSavedContentId] = useState<string | null>(null);
+
+  const t = useTranslations("articleForm");
 
   const objectives = useMemo(
     () => [
@@ -274,12 +277,12 @@ export function ArticleForm({
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Génération...
+                  {t("generating")}
                 </>
               ) : (
                 <>
                   <Wand2 className="w-4 h-4 mr-2" />
-                  Générer le plan
+                  {t("generateOutline")}
                 </>
               )}
             </Button>
@@ -295,12 +298,12 @@ export function ArticleForm({
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Rédaction...
+                  {t("writing")}
                 </>
               ) : (
                 <>
                   <Wand2 className="w-4 h-4 mr-2" />
-                  Valider le plan et rédiger l’article
+                  {t("validateAndWrite")}
                 </>
               )}
             </Button>
@@ -320,7 +323,7 @@ export function ArticleForm({
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label>
-                {articleStep === "plan" ? "Plan généré" : "Contenu généré"}
+                {articleStep === "plan" ? t("outlineGenerated") : t("contentGenerated")}
               </Label>
 
               <div className="flex items-center gap-2">
@@ -331,7 +334,7 @@ export function ArticleForm({
                   onClick={() => setShowRawEditor((v) => !v)}
                   disabled={!generatedContent?.trim()}
                 >
-                  {showRawEditor ? "Aperçu" : "Texte brut"}
+                  {showRawEditor ? t("preview") : t("plainText")}
                 </Button>
 
                 <Button
@@ -342,7 +345,7 @@ export function ArticleForm({
                   disabled={!generatedContent?.trim()}
                 >
                   <Pencil className="w-4 h-4 mr-2" />
-                  Modifier & copier
+                  {t("copy")}
                 </Button>
               </div>
             </div>
@@ -359,7 +362,7 @@ export function ArticleForm({
                 />
                 {!generatedContent?.trim() ? (
                   <div className="text-sm text-muted-foreground">
-                    Le contenu apparaîtra ici...
+                    {t("contentPlaceholder")}
                   </div>
                 ) : null}
               </div>
@@ -368,7 +371,7 @@ export function ArticleForm({
                 value={generatedContent}
                 onChange={(e) => setGeneratedContent(e.target.value)}
                 rows={12}
-                placeholder="Le contenu apparaîtra ici..."
+                placeholder={t("contentPlaceholder")}
                 className="resize-none"
               />
             )}
@@ -388,7 +391,7 @@ export function ArticleForm({
                 ) : (
                   <Save className="w-4 h-4 mr-1" />
                 )}
-                Brouillon
+                {t("draft")}
               </Button>
 
               <Button
@@ -407,7 +410,7 @@ export function ArticleForm({
                 disabled={isGenerating}
               >
                 <RefreshCw className="w-4 h-4 mr-1" />
-                Regénérer
+                {t("regenerate")}
               </Button>
 
               <Button
@@ -420,7 +423,7 @@ export function ArticleForm({
                 disabled={!generatedContent}
               >
                 {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-                {copied ? "Copié" : "Copier"}
+                {copied ? t("copied") : t("copy")}
               </Button>
 
               <Button
@@ -445,7 +448,7 @@ export function ArticleForm({
                 disabled={isGenerating}
               >
                 <RefreshCw className="w-4 h-4 mr-1" />
-                Regénérer l’article (à partir du plan)
+                {t("regenerateArticle")}
               </Button>
               <Button
                 variant="outline"

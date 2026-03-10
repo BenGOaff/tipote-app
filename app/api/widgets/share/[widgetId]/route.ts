@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   const allowed = [
     "name", "enabled", "platforms", "display_mode", "button_style",
-    "button_size", "show_labels", "show_counts", "share_text",
+    "button_size", "show_labels", "show_counts", "share_url", "share_text",
     "share_hashtags", "color_mode", "custom_color",
   ];
   const updates: Record<string, unknown> = {};

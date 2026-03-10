@@ -56,6 +56,7 @@ type ShareWidget = {
   button_size: string;
   show_labels: boolean;
   show_counts: boolean;
+  share_url: string | null;
   share_text: string | null;
   share_hashtags: string | null;
   color_mode: string;
@@ -512,6 +513,11 @@ export default function ToastWidgetsClient() {
           <Card className="p-5 space-y-4">
             <h3 className="font-semibold">{t("share.content")}</h3>
             <div className="grid gap-3">
+              <div>
+                <label className="text-sm font-medium">{t("share.shareUrl")}</label>
+                <Input value={editingShare.share_url || ""} onChange={(e) => setEditingShare({ ...editingShare, share_url: e.target.value || null })} placeholder={t("share.shareUrlPlaceholder")} />
+                <span className="text-xs text-muted-foreground">{t("share.shareUrlHelp")}</span>
+              </div>
               <div>
                 <label className="text-sm font-medium">{t("share.shareText")}</label>
                 <Input value={editingShare.share_text || ""} onChange={(e) => setEditingShare({ ...editingShare, share_text: e.target.value || null })} placeholder={t("share.shareTextPlaceholder")} />

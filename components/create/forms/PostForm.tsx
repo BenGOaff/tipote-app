@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,21 +74,23 @@ const PLATFORM_CHAR_LIMITS: Record<string, number> = {
   tiktok: 2200, // TikTok Content Posting API: titre limité à 2200 car.
 };
 
-const themes = [
-  { id: "educate", label: "Éduquer" },
-  { id: "sell", label: "Vendre" },
-  { id: "entertain", label: "Divertir" },
-  { id: "storytelling", label: "Storytelling" },
-  { id: "social_proof", label: "Preuve sociale" },
-];
+const themeIds = ["educate", "sell", "entertain", "storytelling", "social_proof"] as const;
+const themeKeys: Record<string, string> = {
+  educate: "themeEducate",
+  sell: "themeSell",
+  entertain: "themeEntertain",
+  storytelling: "themeStorytelling",
+  social_proof: "themeSocialProof",
+};
 
-const tones = [
-  { id: "professional", label: "Professionnel" },
-  { id: "casual", label: "Décontracté" },
-  { id: "inspirational", label: "Inspirant" },
-  { id: "educational", label: "Éducatif" },
-  { id: "humorous", label: "Humoristique" },
-];
+const toneIds = ["professional", "casual", "inspirational", "educational", "humorous"] as const;
+const toneKeys: Record<string, string> = {
+  professional: "toneProfessional",
+  casual: "toneCasual",
+  inspirational: "toneInspirational",
+  educational: "toneEducational",
+  humorous: "toneHumorous",
+};
 
 const PLATFORM_LABELS: Record<string, string> = {
   linkedin: "LinkedIn",
@@ -100,6 +103,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 
 export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, editData }: PostFormProps) {
+  const t = useTranslations("postForm");
   const isEditMode = Boolean(editData?.id);
 
   const [platform, setPlatform] = useState(editData?.channel ?? "linkedin");
@@ -420,7 +424,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">
-          {isEditMode ? "Modifier le post" : "Post Réseaux Sociaux"}
+          {isEditMode ? t("editPost") : t("socialPost")}
         </h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5" />
@@ -430,7 +434,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Plateforme</Label>
+            <Label>{t("platform")}</Label>
             <Select value={platform} onValueChange={setPlatform}>
               <SelectTrigger>
                 <SelectValue />
@@ -446,7 +450,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
           </div>
 
           <div className="space-y-2">
-            <Label>Objectif du post</Label>
+            <Label>{t("postObjective")}</Label>
             <Select
               value={theme}
               onValueChange={(v) => {
@@ -461,9 +465,9 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {themes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
+                {themeIds.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {t(themeKeys[id])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -471,7 +475,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
           </div>
 
           <div className="space-y-2">
-            <Label>Mode de création</Label>
+            <Label>{t("creationMode")}</Label>
             <RadioGroup
               value={creationMode}
               onValueChange={(v) => {
@@ -483,22 +487,22 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="existing" id="existing" />
-                <Label htmlFor="existing">À partir d'une offre existante</Label>
+                <Label htmlFor="existing">{t("fromExisting")}</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="manual" id="manual" />
-                <Label htmlFor="manual">À partir de zéro</Label>
+                <Label htmlFor="manual">{t("fromScratch")}</Label>
               </div>
             </RadioGroup>
           </div>
 
           {creationMode === "existing" && (
             <div className="space-y-2">
-              <Label>Offre existante</Label>
+              <Label>{t("existingOffer")}</Label>
               <Select value={offerId} onValueChange={setOfferId} disabled={offersLoading || offers.length === 0}>
                 <SelectTrigger>
                   <SelectValue
-                    placeholder={offersLoading ? "Chargement..." : offers.length ? "Choisir une offre" : "Aucune offre trouvée"}
+                    placeholder={offersLoading ? t("loading") : offers.length ? t("chooseOffer") : t("noOfferFound")}
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -514,8 +518,8 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
               {selectedOffer && (
                 <div className="rounded-lg border p-3 text-sm space-y-1">
                   <div className="font-medium">{selectedOffer.name}</div>
-                  {!!selectedOffer.promise && <div className="text-muted-foreground">Promesse : {selectedOffer.promise}</div>}
-                  {!!selectedOffer.target && <div className="text-muted-foreground">Cible : {selectedOffer.target}</div>}
+                  {!!selectedOffer.promise && <div className="text-muted-foreground">{t("promise")} : {selectedOffer.promise}</div>}
+                  {!!selectedOffer.target && <div className="text-muted-foreground">{t("target")} : {selectedOffer.target}</div>}
                 </div>
               )}
             </div>
@@ -524,48 +528,48 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
           {theme === "sell" && (
             <div className="space-y-4 rounded-lg border p-4">
               <div className="space-y-2">
-                <Label>Type de promo</Label>
+                <Label>{t("promoType")}</Label>
                 <Select value={promoKind} onValueChange={(v) => setPromoKind(v as "paid" | "free")}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="paid">Offre payante</SelectItem>
-                    <SelectItem value="free">Offre gratuite</SelectItem>
+                    <SelectItem value="paid">{t("paidOffer")}</SelectItem>
+                    <SelectItem value="free">{t("freeOffer")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label>{needsOfferLink ? "Lien de la page à étudier *" : "Lien (optionnel)"}</Label>
+                <Label>{needsOfferLink ? t("pageLinkRequired") : t("linkOptional")}</Label>
                 <Input
-                  placeholder={promoKind === "free" ? "Lien de l'offre gratuite" : "Lien de la page de vente"}
+                  placeholder={promoKind === "free" ? t("freeLinkPlaceholder") : t("salesLinkPlaceholder")}
                   value={offerLink}
                   onChange={(e) => setOfferLink(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Tipote peut étudier ce lien avant de rédiger le post (bénéfices, promesse, objections).{" "}
-                  {offerContextIsActive ? "Le contexte de l'offre est déjà pré-rempli." : ""}
+                  {t("linkStudyHelp")}{" "}
+                  {offerContextIsActive ? t("offerContextPrefilled") : ""}
                 </p>
               </div>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label>Sujet / angle *</Label>
-            <Input placeholder="Ex: Les 5 erreurs à éviter..." value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <Label>{t("subjectAngle")}</Label>
+            <Input placeholder={t("subjectPlaceholder")} value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
           <div className="space-y-2">
-            <Label>Ton</Label>
+            <Label>{t("tone")}</Label>
             <Select value={tone} onValueChange={setTone}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {tones.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
+                {toneIds.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {t(toneKeys[id])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -576,12 +580,12 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Génération...
+                {t("generating")}
               </>
             ) : (
               <>
                 <Wand2 className="w-4 h-4 mr-2" />
-                Générer
+                {t("generate")}
               </>
             )}
           </Button>
@@ -593,11 +597,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
           {isPinterest && (
             <div className="space-y-2">
               <Label>
-                Titre de l&apos;épingle <span className="text-rose-500">*</span>
-                <span className="ml-1 text-xs text-muted-foreground font-normal">(max 100 car.)</span>
+                {t("pinTitle")} <span className="text-rose-500">*</span>
+                <span className="ml-1 text-xs text-muted-foreground font-normal">({t("maxChars", { count: 100 })})</span>
               </Label>
               <Input
-                placeholder="Ex: Comment doubler ton CA en 90 jours"
+                placeholder={t("pinTitlePlaceholder")}
                 value={pinterestTitle}
                 onChange={(e) => setPinterestTitle(e.target.value.slice(0, 100))}
               />
@@ -608,22 +612,22 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
           )}
 
           <div className="space-y-2">
-            <Label>{isPinterest ? "Description de l'épingle" : "Contenu"}</Label>
+            <Label>{isPinterest ? t("pinDescription") : t("content")}</Label>
 
             {/* Toujours éditable */}
             <Textarea
               value={generatedContent}
               onChange={(e) => setGeneratedContent(e.target.value)}
               rows={10}
-              placeholder="Le contenu généré apparaîtra ici... Tu peux aussi l'éditer directement."
+              placeholder={t("contentPlaceholder")}
               className="resize-none"
             />
 
             {/* Compteur de caractères */}
             {generatedContent && charLimit !== null && (
               <div className={`text-xs text-right ${isOverLimit ? "text-rose-600 font-medium" : "text-muted-foreground"}`}>
-                {charCount} / {charLimit} caractères
-                {isOverLimit && ` (${charCount - charLimit} en trop)`}
+                {charCount} / {charLimit} {t("characters")}
+                {isOverLimit && ` (${t("overLimit", { count: charCount - charLimit })})`}
               </div>
             )}
           </div>
@@ -650,17 +654,17 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
               />
               {isPinterest && (
                 <p className="text-xs text-muted-foreground -mt-1">
-                  Pinterest : image requise, recommandée 1000×1500 px (ratio 2:3), max 32 Mo.
+                  {t("pinterestImageHelp")}
                 </p>
               )}
               {isTikTok && !uploadedVideo && images.length === 0 && (
                 <p className="text-xs text-amber-600 -mt-1">
-                  TikTok nécessite au moins une image ou une vidéo pour publier.
+                  {t("tiktokMediaRequired")}
                 </p>
               )}
               {isInstagram && !uploadedVideo && images.length === 0 && (
                 <p className="text-xs text-amber-600 -mt-1">
-                  Instagram nécessite une image ou une vidéo (Reel) pour publier.
+                  {t("instagramMediaRequired")}
                 </p>
               )}
             </>
@@ -669,7 +673,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
           {/* Sélecteur de tableau Pinterest */}
           {generatedContent && isPinterest && (
             <div className="rounded-lg border border-border p-4 space-y-3">
-              <p className="font-semibold text-sm">Paramètres Pinterest</p>
+              <p className="font-semibold text-sm">{t("pinterestSettings")}</p>
               <PinterestBoardSelector
                 boardId={pinterestBoardId}
                 link={pinterestLink}
@@ -697,11 +701,11 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                   <Zap className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">Automatiser les réponses</p>
+                  <p className="font-semibold text-sm">{t("automateResponses")}</p>
                   <p className="text-xs text-muted-foreground">
                     {platform === "tiktok"
-                      ? "Répond automatiquement aux commentaires contenant un mot-clé sur ce post"
-                      : "Envoie un DM auto quand quelqu'un commente un mot-clé sur ce post"}
+                      ? t("automateResponsesReplyDesc")
+                      : t("automateResponsesDmDesc")}
                   </p>
                 </div>
               </div>
@@ -714,7 +718,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                   onClick={() => setCreateAutomationOpen(true)}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  Créer une automatisation
+                  {t("createAutomation")}
                 </Button>
               ) : (
                 <div className="flex gap-2 min-w-0">
@@ -723,10 +727,10 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                     onValueChange={(v) => setSelectedAutomationId(v === "__none__" ? "" : v)}
                   >
                     <SelectTrigger className="h-9 text-sm flex-1 min-w-0">
-                      <SelectValue placeholder="Choisir une automatisation (optionnel)" />
+                      <SelectValue placeholder={t("chooseAutomation")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Aucune</SelectItem>
+                      <SelectItem value="__none__">{t("none")}</SelectItem>
                       {fbAutomations.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
                           {a.name}
@@ -739,7 +743,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                     size="sm"
                     className="h-9 shrink-0"
                     onClick={() => setCreateAutomationOpen(true)}
-                    title="Créer une nouvelle automatisation"
+                    title={t("createNewAutomation")}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -760,20 +764,20 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                       disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !uploadedVideo && images.length === 0) || (isInstagram && !uploadedVideo && images.length === 0)}
                       title={
                         isOverLimit
-                          ? `Le texte dépasse la limite de ${charLimit} caractères pour ${platformLabel}`
+                          ? t("textExceedsLimit", { limit: charLimit, platform: platformLabel })
                           : isPinterest && !pinterestBoardId
-                          ? "Sélectionne un tableau Pinterest"
+                          ? t("selectPinterestBoard")
                           : isPinterest && images.length === 0
-                          ? "Ajoute une image (obligatoire pour Pinterest)"
+                          ? t("addImagePinterest")
                           : isTikTok && !uploadedVideo && images.length === 0
-                          ? "Uploade une vidéo ou ajoute une image (obligatoire pour TikTok)"
+                          ? t("uploadMediaTiktok")
                           : isInstagram && !uploadedVideo && images.length === 0
-                          ? "Uploade une vidéo ou ajoute une image (obligatoire pour Instagram)"
+                          ? t("uploadMediaInstagram")
                           : undefined
                       }
                     >
                       <Send className="w-4 h-4 mr-1" />
-                      Publier sur {platformLabel}
+                      {t("publishOn", { platform: platformLabel })}
                     </Button>
 
                     <Button
@@ -782,7 +786,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                       disabled={!generatedContent || isOverLimit || isSaving || (isPinterest && (!pinterestBoardId || images.length === 0)) || (isTikTok && !uploadedVideo && images.length === 0) || (isInstagram && !uploadedVideo && images.length === 0)}
                     >
                       <CalendarDays className="w-4 h-4 mr-1" />
-                      Programmer sur {platformLabel}
+                      {t("scheduleOn", { platform: platformLabel })}
                     </Button>
                   </>
                 )}
@@ -800,7 +804,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                   disabled={!generatedContent}
                 >
                   {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-                  {copied ? "Copié" : "Copier"}
+                  {copied ? t("copied") : t("copy")}
                 </Button>
 
                 <Button
@@ -878,6 +882,7 @@ function QuickCreateAutomationModal({
   platform: "facebook" | "instagram" | "tiktok";
   onCreated: (auto: QuickAuto) => void;
 }) {
+  const t = useTranslations("postForm");
   const [keyword, setKeyword] = useState("");
   const [dmMessage, setDmMessage] = useState(
     "Voici ton lien 👉 [lien à compléter]\n\nÀ très vite ! 🙌"
@@ -928,56 +933,56 @@ function QuickCreateAutomationModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            Nouvelle automatisation {platform === "instagram" ? "Instagram" : platform === "tiktok" ? "TikTok" : "Facebook"}
+            {t("newAutomation", { platform: platform === "instagram" ? "Instagram" : platform === "tiktok" ? "TikTok" : "Facebook" })}
           </DialogTitle>
           <DialogDescription>
             {platform === "tiktok"
-              ? "Quand quelqu'un commente le mot-clé sur votre post TikTok, Tipote répond automatiquement au commentaire."
-              : "Quand quelqu'un commente le mot-clé sur votre post, Tipote lui envoie automatiquement un DM."}
+              ? t("automationReplyDesc")
+              : t("automationDmDesc")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <Label htmlFor="qa-keyword">
-              Mot-clé déclencheur <span className="text-rose-500">*</span>
+              {t("triggerKeyword")} <span className="text-rose-500">*</span>
             </Label>
             <Input
               id="qa-keyword"
-              placeholder="Ex : GUIDE, LINK, OUI…"
+              placeholder={t("triggerKeywordPlaceholder")}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               className="uppercase placeholder:normal-case"
             />
             <p className="text-xs text-muted-foreground">
-              Le commentaire doit contenir ce mot pour déclencher le DM.
+              {t("triggerKeywordHelp")}
             </p>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="qa-dm">
-              Message DM <span className="text-rose-500">*</span>
+              {t("dmMessage")} <span className="text-rose-500">*</span>
             </Label>
             <Textarea
               id="qa-dm"
               rows={4}
               value={dmMessage}
               onChange={(e) => setDmMessage(e.target.value)}
-              placeholder="Voici ton lien 👉 ..."
+              placeholder={t("dmMessagePlaceholder")}
             />
             <p className="text-xs text-muted-foreground">
-              Utilisez <span className="font-mono bg-muted px-1 rounded">{"{{prenom}}"}</span> pour personnaliser avec le prénom.
+              {t("dmPersonalizeHelp", { firstName: "{{prenom}}" })}
             </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Annuler
+            {t("cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!canSave || saving}>
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Créer l&apos;automatisation
+            {t("createTheAutomation")}
           </Button>
         </DialogFooter>
       </DialogContent>

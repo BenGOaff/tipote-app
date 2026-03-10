@@ -91,6 +91,10 @@ type QuizTranslations = {
   captureHeadingDefault: string;
   captureSubtitleDefault: string;
   firstNamePlaceholder: string;
+  lastNamePlaceholder: string;
+  phonePlaceholder: string;
+  countryPlaceholder: string;
+  optional: string;
   viewResult: string;
   privacyPolicy: string;
   defaultConsent: string;
@@ -114,14 +118,18 @@ const translations: Record<string, QuizTranslations> = {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
     loadError: "Impossible de charger le quiz.",
     quizNotFound: "Quiz introuvable",
-    start: "Commencer",
+    start: "Commencer le test",
     previous: "Pr\u00e9c\u00e9dent",
     questions: "questions",
     min: "min",
     captureHeadingDefault: "Ton r\u00e9sultat est pr\u00eat !",
     captureSubtitleDefault: "Entre ton email pour d\u00e9couvrir ton profil.",
-    firstNamePlaceholder: "Ton pr\u00e9nom",
-    viewResult: "Voir mon r\u00e9sultat",
+    firstNamePlaceholder: "Pr\u00e9nom",
+    lastNamePlaceholder: "Nom",
+    phonePlaceholder: "T\u00e9l\u00e9phone",
+    countryPlaceholder: "Pays",
+    optional: "optionnel",
+    viewResult: "Acc\u00e9der aux r\u00e9sultats",
     privacyPolicy: "Politique de confidentialit\u00e9",
     defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
     consentNeedle: "politique de confidentialit\u00e9",
@@ -142,14 +150,18 @@ const translations: Record<string, QuizTranslations> = {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
     loadError: "Impossible de charger le quiz.",
     quizNotFound: "Quiz introuvable",
-    start: "Commencer",
+    start: "Commencer le test",
     previous: "Pr\u00e9c\u00e9dent",
     questions: "questions",
     min: "min",
     captureHeadingDefault: "Votre r\u00e9sultat est pr\u00eat !",
     captureSubtitleDefault: "Entrez votre email pour d\u00e9couvrir votre profil.",
-    firstNamePlaceholder: "Votre pr\u00e9nom",
-    viewResult: "Voir mon r\u00e9sultat",
+    firstNamePlaceholder: "Pr\u00e9nom",
+    lastNamePlaceholder: "Nom",
+    phonePlaceholder: "T\u00e9l\u00e9phone",
+    countryPlaceholder: "Pays",
+    optional: "optionnel",
+    viewResult: "Acc\u00e9der aux r\u00e9sultats",
     privacyPolicy: "Politique de confidentialit\u00e9",
     defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
     consentNeedle: "politique de confidentialit\u00e9",
@@ -170,14 +182,18 @@ const translations: Record<string, QuizTranslations> = {
     quizUnavailable: "This quiz is not available.",
     loadError: "Unable to load the quiz.",
     quizNotFound: "Quiz not found",
-    start: "Start",
+    start: "Start the quiz",
     previous: "Previous",
     questions: "questions",
     min: "min",
-    captureHeadingDefault: "Your result is ready!",
+    captureHeadingDefault: "Your results are ready!",
     captureSubtitleDefault: "Enter your email to discover your profile.",
-    firstNamePlaceholder: "Your first name",
-    viewResult: "See my result",
+    firstNamePlaceholder: "First name",
+    lastNamePlaceholder: "Last name",
+    phonePlaceholder: "Phone",
+    countryPlaceholder: "Country",
+    optional: "optional",
+    viewResult: "See my results",
     privacyPolicy: "Privacy policy",
     defaultConsent: "I accept the privacy policy.",
     consentNeedle: "privacy policy",
@@ -198,14 +214,18 @@ const translations: Record<string, QuizTranslations> = {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
     loadError: "No se pudo cargar el quiz.",
     quizNotFound: "Quiz no encontrado",
-    start: "Empezar",
+    start: "Empezar el test",
     previous: "Anterior",
     questions: "preguntas",
     min: "min",
-    captureHeadingDefault: "\u00a1Tu resultado est\u00e1 listo!",
+    captureHeadingDefault: "\u00a1Tus resultados est\u00e1n listos!",
     captureSubtitleDefault: "Ingresa tu email para descubrir tu perfil.",
-    firstNamePlaceholder: "Tu nombre",
-    viewResult: "Ver mi resultado",
+    firstNamePlaceholder: "Nombre",
+    lastNamePlaceholder: "Apellido",
+    phonePlaceholder: "Tel\u00e9fono",
+    countryPlaceholder: "Pa\u00eds",
+    optional: "opcional",
+    viewResult: "Ver mis resultados",
     privacyPolicy: "Pol\u00edtica de privacidad",
     defaultConsent: "Acepto la pol\u00edtica de privacidad.",
     consentNeedle: "pol\u00edtica de privacidad",
@@ -226,13 +246,17 @@ const translations: Record<string, QuizTranslations> = {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
     loadError: "Quiz konnte nicht geladen werden.",
     quizNotFound: "Quiz nicht gefunden",
-    start: "Starten",
+    start: "Quiz starten",
     previous: "Zur\u00fcck",
     questions: "Fragen",
     min: "Min",
     captureHeadingDefault: "Dein Ergebnis ist bereit!",
     captureSubtitleDefault: "Gib deine E-Mail ein, um dein Profil zu entdecken.",
-    firstNamePlaceholder: "Dein Vorname",
+    firstNamePlaceholder: "Vorname",
+    lastNamePlaceholder: "Nachname",
+    phonePlaceholder: "Telefon",
+    countryPlaceholder: "Land",
+    optional: "optional",
     viewResult: "Mein Ergebnis sehen",
     privacyPolicy: "Datenschutzerkl\u00e4rung",
     defaultConsent: "Ich akzeptiere die Datenschutzerkl\u00e4rung.",
@@ -254,13 +278,17 @@ const translations: Record<string, QuizTranslations> = {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
     loadError: "N\u00e3o foi poss\u00edvel carregar o quiz.",
     quizNotFound: "Quiz n\u00e3o encontrado",
-    start: "Come\u00e7ar",
+    start: "Come\u00e7ar o teste",
     previous: "Anterior",
     questions: "perguntas",
     min: "min",
     captureHeadingDefault: "Seu resultado est\u00e1 pronto!",
     captureSubtitleDefault: "Digite seu email para descobrir seu perfil.",
-    firstNamePlaceholder: "Seu nome",
+    firstNamePlaceholder: "Nome",
+    lastNamePlaceholder: "Sobrenome",
+    phonePlaceholder: "Telefone",
+    countryPlaceholder: "Pa\u00eds",
+    optional: "opcional",
     viewResult: "Ver meu resultado",
     privacyPolicy: "Pol\u00edtica de privacidade",
     defaultConsent: "Aceito a pol\u00edtica de privacidade.",
@@ -282,13 +310,17 @@ const translations: Record<string, QuizTranslations> = {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
     loadError: "Impossibile caricare il quiz.",
     quizNotFound: "Quiz non trovato",
-    start: "Inizia",
+    start: "Inizia il test",
     previous: "Precedente",
     questions: "domande",
     min: "min",
     captureHeadingDefault: "Il tuo risultato \u00e8 pronto!",
     captureSubtitleDefault: "Inserisci la tua email per scoprire il tuo profilo.",
-    firstNamePlaceholder: "Il tuo nome",
+    firstNamePlaceholder: "Nome",
+    lastNamePlaceholder: "Cognome",
+    phonePlaceholder: "Telefono",
+    countryPlaceholder: "Paese",
+    optional: "opzionale",
     viewResult: "Vedi il mio risultato",
     privacyPolicy: "Informativa sulla privacy",
     defaultConsent: "Accetto l\u2019informativa sulla privacy.",
@@ -310,14 +342,18 @@ const translations: Record<string, QuizTranslations> = {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
     loadError: "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631.",
     quizNotFound: "\u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f",
-    start: "\u0627\u0628\u062f\u0623",
+    start: "\u0627\u0628\u062f\u0623 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631",
     previous: "\u0627\u0644\u0633\u0627\u0628\u0642",
     questions: "\u0623\u0633\u0626\u0644\u0629",
     min: "\u062f\u0642\u064a\u0642\u0629",
-    captureHeadingDefault: "\u0646\u062a\u064a\u062c\u062a\u0643 \u062c\u0627\u0647\u0632\u0629!",
+    captureHeadingDefault: "\u0646\u062a\u0627\u0626\u062c\u0643 \u062c\u0627\u0647\u0632\u0629!",
     captureSubtitleDefault: "\u0623\u062f\u062e\u0644 \u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0644\u0627\u0643\u062a\u0634\u0627\u0641 \u0645\u0644\u0641\u0643 \u0627\u0644\u0634\u062e\u0635\u064a.",
-    firstNamePlaceholder: "\u0627\u0633\u0645\u0643 \u0627\u0644\u0623\u0648\u0644",
-    viewResult: "\u0639\u0631\u0636 \u0646\u062a\u064a\u062c\u062a\u064a",
+    firstNamePlaceholder: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644",
+    lastNamePlaceholder: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0626\u0644\u0629",
+    phonePlaceholder: "\u0627\u0644\u0647\u0627\u062a\u0641",
+    countryPlaceholder: "\u0627\u0644\u0628\u0644\u062f",
+    optional: "\u0627\u062e\u062a\u064a\u0627\u0631\u064a",
+    viewResult: "\u0639\u0631\u0636 \u0627\u0644\u0646\u062a\u0627\u0626\u062c",
     privacyPolicy: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
     defaultConsent: "\u0623\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629.",
     consentNeedle: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
@@ -559,21 +595,52 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
 
   // STEP: Intro
   if (step === "intro") {
+    // Split introduction into lines — lines starting with ✓/✔/- become checkmarks
+    const introLines = (quiz.introduction ?? "").split("\n").filter((l) => l.trim());
+    const bulletLines: string[] = [];
+    const descLines: string[] = [];
+    introLines.forEach((line) => {
+      const trimmed = line.trim();
+      if (/^[\u2713\u2714\u2022\-\*]\s*/.test(trimmed)) {
+        bulletLines.push(trimmed.replace(/^[\u2713\u2714\u2022\-\*]\s*/, ""));
+      } else {
+        descLines.push(trimmed);
+      }
+    });
+
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
         {toastOverlay}
         {shareOverlay}
-        <Card className="p-8 max-w-lg w-full text-center space-y-6">
-          <h1 className="text-2xl font-bold">{quiz.title}</h1>
-          {quiz.introduction && (
-            <p className="text-muted-foreground whitespace-pre-line">{quiz.introduction}</p>
-          )}
-          <p className="text-sm text-muted-foreground">
-            {totalQ} {t.questions} — ~{Math.max(1, Math.ceil(totalQ * 0.5))} {t.min}
-          </p>
-          <Button size="lg" onClick={() => setStep("quiz")}>
-            {t.start} <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+        <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
+          <div className="p-6 sm:p-10 space-y-6">
+            <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{quiz.title}</h1>
+
+            {descLines.length > 0 && (
+              <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
+                {descLines.join("\n")}
+              </p>
+            )}
+
+            {bulletLines.length > 0 && (
+              <ul className="space-y-2.5">
+                {bulletLines.map((line, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                    <span className="text-muted-foreground">{line}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <p className="text-sm text-muted-foreground">
+              {totalQ} {t.questions} — ~{Math.max(1, Math.ceil(totalQ * 0.5))} {t.min}
+            </p>
+
+            <Button size="lg" className="w-full h-12 text-base rounded-full" onClick={() => setStep("quiz")}>
+              {t.start}
+            </Button>
+          </div>
         </Card>
         <TipoteFooter locale={quiz.locale} />
       </div>
@@ -585,49 +652,57 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
     const q = quiz.questions[currentQ];
     if (!q) return null;
     const progress = ((currentQ + 1) / totalQ) * 100;
+    const hasMultipleOptions = q.options.length >= 3;
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
         {toastOverlay}
         {shareOverlay}
-        <Card className="p-8 max-w-lg w-full space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                Question {currentQ + 1}/{totalQ}
-              </span>
-              <span>{Math.round(progress)}%</span>
+        <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
+          {/* Progress bar at top */}
+          <Progress value={progress} className="h-1.5 rounded-none" />
+
+          <div className="p-6 sm:p-10 space-y-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">
+              {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
+            </p>
+
+            <h2 className="text-xl sm:text-2xl font-bold leading-tight">{q.question_text}</h2>
+
+            <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+              {q.options.map((opt, oi) => {
+                const isSelected = answers[currentQ] === oi;
+                return (
+                  <button
+                    key={oi}
+                    onClick={() => handleAnswer(oi)}
+                    className={`text-left p-4 rounded-xl border-2 transition-all duration-150 ${
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border hover:border-primary/40 hover:bg-muted/30"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">{opt.text}</span>
+                  </button>
+                );
+              })}
             </div>
-            <Progress value={progress} className="h-2" />
+
+            <div className="flex items-center justify-between pt-2">
+              {currentQ > 0 ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentQ(currentQ - 1)}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
+                </Button>
+              ) : (
+                <div />
+              )}
+              <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
+            </div>
           </div>
-
-          <h2 className="text-lg font-bold">{q.question_text}</h2>
-
-          <div className="grid gap-3">
-            {q.options.map((opt, oi) => (
-              <Button
-                key={oi}
-                variant={answers[currentQ] === oi ? "default" : "outline"}
-                className="justify-start text-left h-auto py-3 px-4 whitespace-normal"
-                onClick={() => handleAnswer(oi)}
-              >
-                <span className="mr-2 font-bold text-muted-foreground">
-                  {String.fromCharCode(65 + oi)}.
-                </span>
-                {opt.text}
-              </Button>
-            ))}
-          </div>
-
-          {currentQ > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentQ(currentQ - 1)}
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
-            </Button>
-          )}
         </Card>
       </div>
     );
@@ -636,98 +711,118 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
   // STEP: Email capture
   if (step === "email") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
         {toastOverlay}
         {shareOverlay}
-        <Card className="p-8 max-w-lg w-full space-y-6 text-center">
-          <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-            <Mail className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-xl font-bold">
-            {quiz.capture_heading || t.captureHeadingDefault}
-          </h2>
-          <p className="text-muted-foreground whitespace-pre-line">
-            {quiz.capture_subtitle || t.captureSubtitleDefault}
-          </p>
-
-          <div className="space-y-3 text-left">
-            {quiz.capture_first_name && (
-              <Input
-                type="text"
-                placeholder={t.firstNamePlaceholder}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-            )}
-            {quiz.capture_last_name && (
-              <Input
-                type="text"
-                placeholder={quiz.locale === "en" ? "Your last name" : quiz.locale === "es" ? "Tu apellido" : "Ton nom de famille"}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-            )}
-            <Input
-              type="email"
-              placeholder={t.emailPlaceholder}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmitEmail()}
-            />
-            {quiz.capture_phone && (
-              <Input
-                type="tel"
-                placeholder={quiz.locale === "en" ? "Your phone number" : quiz.locale === "es" ? "Tu teléfono" : "Ton numéro de téléphone"}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            )}
-            {quiz.capture_country && (
-              <Input
-                type="text"
-                placeholder={quiz.locale === "en" ? "Your country" : quiz.locale === "es" ? "Tu país" : "Ton pays"}
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-              />
-            )}
-
-            <label className="flex items-start gap-2 text-sm text-muted-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5"
-              />
-              <ConsentText text={quiz.consent_text} privacyUrl={quiz.privacy_url} locale={quiz.locale} />
-            </label>
-          </div>
-
-          <Button
-            size="lg"
-            className="w-full"
-            onClick={handleSubmitEmail}
-            disabled={submitting || !email.trim() || !consent}
-          >
-            {submitting ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <ArrowRight className="w-4 h-4 mr-2" />
-            )}
-            {t.viewResult}
-          </Button>
-
-          {quiz.privacy_url && (
-            <p className="text-xs text-muted-foreground">
-              <a
-                href={quiz.privacy_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                {t.privacyPolicy}
-              </a>
+        <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
+          <div className="p-6 sm:p-10 space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold">
+              {quiz.capture_heading || t.captureHeadingDefault}
+            </h2>
+            <p className="text-muted-foreground">
+              {quiz.capture_subtitle || t.captureSubtitleDefault}
             </p>
-          )}
+
+            <div className="space-y-4">
+              {(quiz.capture_first_name || quiz.capture_last_name) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {quiz.capture_first_name && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">{t.firstNamePlaceholder}</label>
+                      <Input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className="h-11"
+                      />
+                    </div>
+                  )}
+                  {quiz.capture_last_name && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">{t.lastNamePlaceholder}</label>
+                      <Input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className="h-11"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Email</label>
+                <Input
+                  type="email"
+                  placeholder={t.emailPlaceholder}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmitEmail()}
+                  className="h-11"
+                />
+              </div>
+
+              {quiz.capture_phone && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t.phonePlaceholder} <span className="text-muted-foreground font-normal">({t.optional})</span></label>
+                  <Input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+              )}
+
+              {quiz.capture_country && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t.countryPlaceholder}</label>
+                  <Input
+                    type="text"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+              )}
+
+              <label className="flex items-start gap-2.5 text-sm text-muted-foreground cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 w-4 h-4"
+                />
+                <ConsentText text={quiz.consent_text} privacyUrl={quiz.privacy_url} locale={quiz.locale} />
+              </label>
+            </div>
+
+            <Button
+              size="lg"
+              className="w-full h-12 text-base rounded-full"
+              onClick={handleSubmitEmail}
+              disabled={submitting || !email.trim() || !consent}
+            >
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              {t.viewResult}
+            </Button>
+
+            {quiz.privacy_url && (
+              <p className="text-xs text-center text-muted-foreground">
+                <a
+                  href={quiz.privacy_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {t.privacyPolicy}
+                </a>
+              </p>
+            )}
+          </div>
         </Card>
         <TipoteFooter locale={quiz.locale} />
       </div>
@@ -737,44 +832,41 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
   // STEP: Result
   if (step === "result") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
         {toastOverlay}
         {shareOverlay}
-        <Card className="p-8 max-w-lg w-full space-y-6">
-          <div className="text-center space-y-3">
-            <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-primary" />
+        <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
+          <div className="p-6 sm:p-10 space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-bold leading-tight text-primary">
+                {resultProfile?.title ?? t.resultFallback}
+              </h2>
             </div>
-            <Badge className="text-sm">{t.yourProfile}</Badge>
-            <h2 className="text-2xl font-bold">
-              {resultProfile?.title ?? t.resultFallback}
-            </h2>
-          </div>
 
-          {resultProfile?.description && (
-            <p className="text-muted-foreground">{resultProfile.description}</p>
-          )}
+            {resultProfile?.description && (
+              <p className="text-muted-foreground text-base leading-relaxed">{resultProfile.description}</p>
+            )}
 
-          {resultProfile?.insight && (
-            <div className="p-4 rounded-lg bg-muted/50 border">
-              <p className="text-sm text-muted-foreground">{resultProfile.insight}</p>
-            </div>
-          )}
+            {resultProfile?.insight && (
+              <div className="p-4 rounded-xl bg-muted/50 border">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{t.insight}</p>
+                <p className="text-sm leading-relaxed">{resultProfile.insight}</p>
+              </div>
+            )}
 
-          {resultProfile?.projection && (
-            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <p className="text-sm text-muted-foreground">
-                {resultProfile.projection}
-              </p>
-            </div>
-          )}
+            {resultProfile?.projection && (
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{t.projection}</p>
+                <p className="text-sm leading-relaxed">{resultProfile.projection}</p>
+              </div>
+            )}
 
           {/* CTA — per-result URL takes priority over global */}
           {(() => {
             const ctaUrl = resultProfile?.cta_url || quiz.cta_url;
             const ctaText = resultProfile?.cta_text || quiz.cta_text;
             return ctaText && ctaUrl ? (
-              <Button size="lg" className="w-full h-auto py-3 whitespace-normal" asChild>
+              <Button size="lg" className="w-full h-12 text-base rounded-full whitespace-normal" asChild>
                 <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
                   {ctaText}
                 </a>
@@ -872,6 +964,7 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
               </a>
             </p>
           )}
+          </div>
         </Card>
         <TipoteFooter locale={quiz.locale} />
       </div>
