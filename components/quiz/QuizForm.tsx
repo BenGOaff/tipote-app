@@ -28,6 +28,7 @@ import {
   Info,
   Upload,
 } from "lucide-react";
+import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 
 type QuizQuestion = {
   question_text: string;
@@ -417,9 +418,13 @@ export function QuizForm({ onClose }: QuizFormProps) {
   };
 
   // STEP 1: Config
+  if (step === "config" && isGenerating) {
+    return <AIGeneratingOverlay />;
+  }
+
   if (step === "config") {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-xl mx-auto">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="w-5 h-5" />
@@ -432,7 +437,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           </div>
         </div>
 
-        <div className="grid gap-4 max-w-xl">
+        <div className="grid gap-4">
           <div className="space-y-2">
             <Label>Objectif du quiz *</Label>
             <Textarea

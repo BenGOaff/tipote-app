@@ -25,6 +25,7 @@ import { OfferForm } from "@/components/create/forms/OfferForm";
 import { FunnelForm } from "@/components/create/forms/FunnelForm";
 import { QuizForm } from "@/components/quiz/QuizForm";
 import { ContentStrategyForm } from "@/components/create/forms/ContentStrategyForm";
+import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 
 const contentTypes = [
   { id: "post", labelKey: "socialMedia", descriptionKey: "socialMediaDesc", icon: MessageSquare, color: "bg-blue-500" },
@@ -642,6 +643,11 @@ export default function CreateLovableClient() {
         onClose();
       }
     };
+
+    // Show generating overlay for content forms that use the shared isGenerating state
+    if (isGenerating && ["post", "email", "article", "video"].includes(selectedType)) {
+      return <AIGeneratingOverlay />;
+    }
 
     switch (selectedType) {
       case "post":

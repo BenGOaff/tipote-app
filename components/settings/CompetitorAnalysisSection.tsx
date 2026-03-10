@@ -33,6 +33,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -662,6 +664,13 @@ export default function CompetitorAnalysisSection() {
             </div>
           </div>
         )}
+
+        {/* AI generating overlay dialog */}
+        <Dialog open={researching}>
+          <DialogContent className="sm:max-w-md [&>button]:hidden" onInteractOutside={(e) => e.preventDefault()}>
+            <AIGeneratingOverlay />
+          </DialogContent>
+        </Dialog>
 
         <div className="flex flex-wrap gap-3 mt-6">
           <Button onClick={launchResearch} disabled={!canResearch || researching} className="gap-2">

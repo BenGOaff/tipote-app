@@ -41,10 +41,10 @@ export default function PageGenerateProgress({ steps, error }: Props) {
             )}
           </div>
           <h2 className="text-xl font-semibold mb-1">
-            {error ? "Erreur" : overallProgress >= 100 ? "Ta page est prête !" : "Tipote crée ta page..."}
+            {error ? "Erreur" : overallProgress >= 100 ? "Ta page est prête !" : "Tipote crée ta page…"}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {error || (overallProgress >= 100 ? "Redirection vers l'éditeur..." : "Quelques secondes...")}
+            {error || (overallProgress >= 100 ? "Redirection vers l'éditeur..." : "Ça ne devrait prendre que quelques secondes (mais ça vaut le coup d'attendre 😉)")}
           </p>
         </div>
 
