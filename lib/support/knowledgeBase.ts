@@ -19,8 +19,7 @@ Tipote® est une application web SaaS tout-en-un pour les entrepreneurs. Elle pe
 Contrairement aux outils IA génériques, Tipote mémorise le profil business complet de l'utilisateur (diagnostic, persona, offres, objectifs, storytelling) pour générer du contenu véritablement personnalisé.
 
 Disponible en 5 langues : Français, English, Español, Italiano, العربية.
-URL : https://app.tipote.com
-Contact : hello@tipote.com`);
+URL : https://app.tipote.com`);
 
   // ── 2. Features ──
   sections.push(`### Fonctionnalités principales

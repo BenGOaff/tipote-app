@@ -50,11 +50,11 @@ const T: Record<string, Record<string, string>> = {
     ar: "مرحبًا! أنا مساعد مركز مساعدة Tipote. اسألني أي شيء عن الميزات أو الاشتراكات أو كيفية عمل Tipote.",
   },
   error: {
-    fr: "Désolé, une erreur est survenue. Réessayez ou contactez hello@tipote.com.",
-    en: "Sorry, an error occurred. Try again or contact hello@tipote.com.",
-    es: "Lo siento, ocurrió un error. Inténtalo de nuevo o contacta hello@tipote.com.",
-    it: "Mi dispiace, si è verificato un errore. Riprova o contatta hello@tipote.com.",
-    ar: "عذرًا، حدث خطأ. حاول مرة أخرى أو تواصل مع hello@tipote.com.",
+    fr: "Désolé, une erreur est survenue. Réessayez dans quelques instants.",
+    en: "Sorry, an error occurred. Please try again in a moment.",
+    es: "Lo siento, ocurrió un error. Inténtalo de nuevo en unos momentos.",
+    it: "Mi dispiace, si è verificato un errore. Riprova tra qualche istante.",
+    ar: "عذرًا، حدث خطأ. حاول مرة أخرى بعد لحظات.",
   },
   powered: {
     fr: "Propulsé par Tipote IA",
@@ -113,11 +113,11 @@ const T: Record<string, Record<string, string>> = {
     ar: "تم إرسال طلبك! سيرد عليك فريقنا عبر البريد الإلكتروني قريبًا. شكرًا لصبرك.",
   },
   ticket_error: {
-    fr: "Erreur lors de l'envoi. Veuillez réessayer ou écrire directement à hello@tipote.com.",
-    en: "Error sending request. Please try again or email hello@tipote.com directly.",
-    es: "Error al enviar. Inténtalo de nuevo o escribe directamente a hello@tipote.com.",
-    it: "Errore nell'invio. Riprova o scrivi direttamente a hello@tipote.com.",
-    ar: "خطأ في الإرسال. حاول مرة أخرى أو أرسل بريدًا إلكترونيًا إلى hello@tipote.com.",
+    fr: "Erreur lors de l'envoi. Veuillez réessayer dans quelques instants.",
+    en: "Error sending request. Please try again in a moment.",
+    es: "Error al enviar. Inténtalo de nuevo en unos momentos.",
+    it: "Errore nell'invio. Riprova tra qualche istante.",
+    ar: "خطأ في الإرسال. حاول مرة أخرى بعد لحظات.",
   },
   back_to_chat: {
     fr: "Revenir au chat",
