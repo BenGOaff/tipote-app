@@ -1496,6 +1496,13 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       onChange={(e) => updateOffer(idx, "link", e.target.value)}
                       disabled={profileLoading}
                     />
+                    <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-md p-2.5 mt-1.5 space-y-1">
+                      <p className="font-medium text-foreground/80">{tSP("reglages.offerLinkHintTitle")}</p>
+                      <ul className="list-disc ml-3.5 space-y-0.5">
+                        <li>{tSP("reglages.offerLinkHintSio")}</li>
+                        <li>{tSP("reglages.offerLinkHintStripe")}</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
 

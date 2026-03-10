@@ -27,6 +27,8 @@ import {
   X,
   Info,
   Upload,
+  FileUp,
+  PenLine,
 } from "lucide-react";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 
@@ -55,8 +57,9 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [step, setStep] = useState<"config" | "edit">("config");
+  const [step, setStep] = useState<"choose" | "config" | "import" | "edit">("choose");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Config step
@@ -417,12 +420,90 @@ export function QuizForm({ onClose }: QuizFormProps) {
     setResults((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
   };
 
-  // STEP 1: Config
-  if (step === "config" && isGenerating) {
-    return <AIGeneratingOverlay />;
-  }
+  const initEmptyQuiz = (numQuestions = 5, numResults = 3) => {
+    setTitle("");
+    setIntroduction("");
+    setCtaText("");
+    setCtaUrl("");
+    setQuestions(
+      Array.from({ length: numQuestions }, (_, i) => ({
+        question_text: "",
+        options: Array.from({ length: numResults }, (_, ri) => ({
+          text: "",
+          result_index: ri,
+        })),
+        sort_order: i,
+      })),
+    );
+    setResults(
+      Array.from({ length: numResults }, (_, i) => ({
+        title: "",
+        description: null,
+        insight: null,
+        projection: null,
+        cta_text: null,
+        cta_url: null,
+        sio_tag_name: null,
+        sort_order: i,
+      })),
+    );
+  };
 
-  if (step === "config") {
+  const handleStartFromScratch = () => {
+    initEmptyQuiz();
+    setStep("edit");
+  };
+
+  const handleImportFile = async (file: File) => {
+    setIsImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/quiz/import", {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (!json?.ok) throw new Error(json?.error || "Erreur d'import");
+
+      const quiz = json.quiz;
+      setTitle(quiz.title ?? "");
+      setIntroduction(quiz.introduction ?? "");
+      setCtaText(quiz.cta_text ?? "");
+      setQuestions(
+        (quiz.questions ?? []).map((q: any, i: number) => ({
+          question_text: q.question_text ?? "",
+          options: Array.isArray(q.options) ? q.options : [],
+          sort_order: i,
+        })),
+      );
+      setResults(
+        (quiz.results ?? []).map((r: any, i: number) => ({
+          title: r.title ?? "",
+          description: r.description ?? null,
+          insight: r.insight ?? null,
+          projection: r.projection ?? null,
+          cta_text: null,
+          cta_url: null,
+          sio_tag_name: null,
+          sort_order: i,
+        })),
+      );
+      setStep("edit");
+      toast({ title: "Quiz importé !", description: `${quiz.questions?.length ?? 0} questions et ${quiz.results?.length ?? 0} profils détectés.` });
+    } catch (err: any) {
+      toast({
+        title: "Erreur d'import",
+        description: err.message || "Impossible de lire le fichier.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // STEP 0: Choose creation mode
+  if (step === "choose") {
     return (
       <div className="space-y-6 max-w-xl mx-auto">
         <div className="flex items-center gap-3">
@@ -431,6 +512,155 @@ export function QuizForm({ onClose }: QuizFormProps) {
           </Button>
           <div>
             <h2 className="text-xl font-bold">Créer un Quiz Lead Magnet</h2>
+            <p className="text-sm text-muted-foreground">
+              Choisis comment tu veux créer ton quiz
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <Card
+            className="p-5 cursor-pointer hover:border-primary/50 hover:bg-primary/[0.02] transition-colors"
+            onClick={() => setStep("config")}
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-2.5 rounded-lg bg-primary/10 shrink-0">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-bold">Créer avec l&apos;IA</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Décris ton objectif et ta cible, l&apos;IA génère un quiz complet (questions, réponses, profils résultat). Tu n&apos;as plus qu&apos;à ajuster.
+                </p>
+                <Badge variant="secondary" className="mt-2 text-xs">4 crédits</Badge>
+              </div>
+            </div>
+          </Card>
+
+          <Card
+            className="p-5 cursor-pointer hover:border-primary/50 hover:bg-primary/[0.02] transition-colors"
+            onClick={() => setStep("import")}
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-2.5 rounded-lg bg-blue-500/10 shrink-0">
+                <FileUp className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="font-bold">Importer un quiz existant</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Tu as déjà un quiz ? Importe-le depuis un fichier (PDF, Word, Excel ou texte) et Tipote le transforme automatiquement.
+                </p>
+                <Badge variant="secondary" className="mt-2 text-xs">4 crédits</Badge>
+              </div>
+            </div>
+          </Card>
+
+          <Card
+            className="p-5 cursor-pointer hover:border-primary/50 hover:bg-primary/[0.02] transition-colors"
+            onClick={handleStartFromScratch}
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 shrink-0">
+                <PenLine className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div>
+                <h3 className="font-bold">Créer de zéro</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Tu sais exactement ce que tu veux ? Rédige tes questions, réponses et profils résultat manuellement.
+                </p>
+                <Badge variant="secondary" className="mt-2 text-xs">Gratuit</Badge>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // STEP: Import file
+  if (step === "import") {
+    return (
+      <div className="space-y-6 max-w-xl mx-auto">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => setStep("choose")}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h2 className="text-xl font-bold">Importer un quiz</h2>
+            <p className="text-sm text-muted-foreground">
+              L&apos;IA analyse ton fichier et en extrait les questions, réponses et profils
+            </p>
+          </div>
+        </div>
+
+        <Card className="p-8 border-dashed border-2 text-center space-y-4">
+          {isImporting ? (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Analyse du fichier en cours...</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-center">
+                <div className="p-3 rounded-full bg-muted">
+                  <FileUp className="w-6 h-6 text-muted-foreground" />
+                </div>
+              </div>
+              <div>
+                <p className="font-medium">Glisse ton fichier ici ou clique pour sélectionner</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Formats acceptés : PDF, Word (.docx), Excel (.xlsx), Texte (.txt)
+                </p>
+              </div>
+              <input
+                type="file"
+                id="quiz-import-file"
+                className="hidden"
+                accept=".pdf,.docx,.xlsx,.txt,.doc,.xls,.csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportFile(file);
+                }}
+              />
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById("quiz-import-file")?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" /> Choisir un fichier
+              </Button>
+            </>
+          )}
+        </Card>
+
+        <div className="p-4 rounded-lg bg-muted/50 border space-y-2">
+          <p className="text-sm font-medium flex items-center gap-1.5">
+            <Info className="w-4 h-4 text-primary" /> Comment formater ton fichier ?
+          </p>
+          <ul className="text-xs text-muted-foreground space-y-1 ml-5 list-disc">
+            <li>Écris tes questions numérotées (1. Question, 2. Question...)</li>
+            <li>Sous chaque question, liste les réponses possibles (A. Réponse, B. Réponse...)</li>
+            <li>Ajoute une section &quot;Résultats&quot; ou &quot;Profils&quot; avec un titre et une description pour chaque profil</li>
+            <li>L&apos;IA s&apos;adapte à la plupart des formats — fais au plus simple !</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  // STEP 1: Config (AI generation)
+  if (step === "config" && isGenerating) {
+    return <AIGeneratingOverlay />;
+  }
+
+  if (step === "config") {
+    return (
+      <div className="space-y-6 max-w-xl mx-auto">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => setStep("choose")}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h2 className="text-xl font-bold">Créer avec l&apos;IA</h2>
             <p className="text-sm text-muted-foreground">
               L&apos;IA va générer un quiz complet à partir de tes paramètres
             </p>
@@ -577,7 +807,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setStep("config")}>
+          <Button variant="ghost" size="icon" onClick={() => setStep("choose")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
