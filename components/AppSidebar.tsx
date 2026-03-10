@@ -15,6 +15,7 @@ import {
   Users,
   Bell,
   PanelLeftClose,
+  HelpCircle,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -243,6 +244,22 @@ export function AppSidebar() {
           <TutorialSpotlight elementId="pepites" tooltipPosition="right" showNextButton>
             <PepitesSidebarItem />
           </TutorialSpotlight>
+        </SidebarMenu>
+
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a
+                href="/support"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={MENU_ITEM_CLASS}
+              >
+                <HelpCircle className="w-5 h-5" />
+                <span>{t("support") ?? "Aide"}</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
 
         <div className="px-1 pt-1">
