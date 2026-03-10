@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { getPlanLimits } from "@/lib/planLimits";
 import { buildEnhancedPersonaPrompt } from "@/lib/prompts/persona/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
@@ -40,6 +41,16 @@ export async function POST() {
     }
     userId = user.id;
     projectId = await getActiveProjectId(supabase, userId);
+
+    // Plan gating: enrichissement persona requires Basic+
+    const { data: profileRow } = await supabase.from("profiles").select("plan").eq("id", userId).maybeSingle();
+    const limits = getPlanLimits(profileRow?.plan);
+    if (!limits.enrichissementPersona) {
+      return NextResponse.json(
+        { ok: false, error: "L'enrichissement du persona est réservé aux plans Basic, Pro et Elite. Upgrade ton abonnement pour débloquer cette fonctionnalité.", code: "PLAN_REQUIRED", upgrade_url: "/settings?tab=billing" },
+        { status: 403 },
+      );
+    }
 
     if (!openai) {
       return NextResponse.json(

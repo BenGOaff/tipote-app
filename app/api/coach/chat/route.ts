@@ -978,11 +978,11 @@ export async function POST(req: NextRequest) {
     const plan = normalizePlan((profileRow as any)?.plan);
     const locale = safeLocale((profileRow as any)?.locale);
 
-    // ✅ Gating + teaser (Free/Basic)
+    // ✅ Gating + teaser (Free/Basic : 3 messages gratuits par mois)
     const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
     let isTeaser = false;
 
-    const TEASER_LIMIT = 3; // 3 messages gratuits par mois pour Free/Basic
+    const TEASER_LIMIT = 3;
 
     if (plan !== "pro" && plan !== "elite" && plan !== "beta") {
       let usedQuery = supabase
@@ -1191,7 +1191,7 @@ export async function POST(req: NextRequest) {
 
     const activeExperiment = pickActiveExperiment(memoryRows);
     const checkInBlock =
-      !isTeaser && activeExperiment && activeExperiment.status === "active" && isExperimentDue(activeExperiment)
+      activeExperiment && activeExperiment.status === "active" && isExperimentDue(activeExperiment)
         ? [
             "CHECK-IN REQUIRED:",
             `La dernière fois, on avait décidé de tester: "${activeExperiment.title}" pendant ${activeExperiment.duration_days} jours.`,
@@ -1232,7 +1232,7 @@ TONE & STYLE:
     const nicheMissionBlock = formatNicheMissionBlock(businessProfileRes.data);
     const competitorBlock = formatCompetitorBlock(competitorRes.data);
 
-    // ✅ NEW: For teaser mode, build smart observations
+    // For teaser mode, build smart observations
     const teaserObservations = isTeaser
       ? buildTeaserObservations({
           persona: personaData,

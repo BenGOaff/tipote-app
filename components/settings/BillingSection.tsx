@@ -117,12 +117,12 @@ const FREE_FEATURES: Feature[] = [
   { key: "calendar", included: true },
   { key: "quiz", included: true },
   { key: "connect1", included: true, bold: true },
-  { key: "multiprofiles", included: true },
-  { key: "analytics", included: true },
-  { key: "persona", included: true },
-  { key: "competition", included: true },
-  { key: "buyCredits", included: true },
-  { key: "coach", included: true },
+  { key: "multiprofiles", included: false },
+  { key: "analytics", included: false },
+  { key: "persona", included: false },
+  { key: "competition", included: false },
+  { key: "buyCredits", included: false },
+  { key: "coach", included: false },
 ];
 
 const BASIC_FEATURES: Feature[] = [
@@ -137,8 +137,8 @@ const BASIC_FEATURES: Feature[] = [
   { key: "persona", included: true },
   { key: "competition", included: true },
   { key: "buyCredits", included: true },
-  { key: "multiprofiles", included: true },
-  { key: "coach", included: true },
+  { key: "multiprofiles", included: false },
+  { key: "coach", included: false },
 ];
 
 const PRO_FEATURES: Feature[] = [
@@ -153,7 +153,7 @@ const PRO_FEATURES: Feature[] = [
   { key: "persona", included: true },
   { key: "competition", included: true },
   { key: "buyCredits", included: true },
-  { key: "coach", included: false },
+  { key: "coach", included: true, bold: true },
   { key: "multiprofiles", included: false },
 ];
 

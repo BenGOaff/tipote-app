@@ -13,6 +13,7 @@ import {
   getThreadsUser,
 } from "@/lib/meta";
 import { encrypt } from "@/lib/crypto";
+import { checkSocialConnectionLimit } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,14 @@ export async function GET(req: NextRequest) {
     ).toISOString();
 
     const tokenEncrypted = encrypt(longLived.access_token);
+
+    const { data: profileRow } = await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle();
+    const limitCheck = await checkSocialConnectionLimit(supabase, user.id, "threads", projectId, profileRow?.plan);
+    if (!limitCheck.allowed) {
+      return NextResponse.redirect(
+        `${settingsUrl}&threads_error=${encodeURIComponent(`Limite atteinte : ton plan autorise ${limitCheck.max} réseau(x) social(aux). Upgrade pour en connecter plus.`)}`
+      );
+    }
 
     const connectionData = {
       user_id: user.id,
