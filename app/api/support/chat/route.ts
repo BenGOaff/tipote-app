@@ -85,10 +85,9 @@ export async function POST(req: NextRequest) {
     const completion = await openai.chat.completions.create({
       model: OPENAI_MODEL,
       messages,
-      temperature: 0.3,
-      max_tokens: 800,
+      max_completion_tokens: 800,
       ...cachingParams("support-chat"),
-    });
+    } as any);
 
     const reply = completion.choices?.[0]?.message?.content?.trim() || "";
 
