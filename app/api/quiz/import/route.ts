@@ -1,6 +1,6 @@
 // app/api/quiz/import/route.ts
 // Parse an uploaded file (txt, pdf, docx, xlsx) and extract quiz structure using Claude.
-// Costs 4 credits.
+// Costs 6 credits.
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
   // Check & consume credits
   try {
     await ensureUserCredits(userId);
-    const creditsResult = await consumeCredits(userId, 4, { feature: "quiz_import" });
+    const creditsResult = await consumeCredits(userId, 6, { feature: "quiz_import" });
     if (creditsResult && typeof creditsResult === "object") {
       const ok = (creditsResult as any).success;
       const err = String((creditsResult as any).error ?? "").toUpperCase();

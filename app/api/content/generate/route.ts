@@ -1504,13 +1504,23 @@ export async function POST(req: Request) {
 
     if (!type) return NextResponse.json({ ok: false, error: "Missing type" }, { status: 400 });
 
+    // Credit costs per content type (aligned with pricing grid)
+    const CREDIT_COSTS: Record<string, number> = {
+      post: 1,        // Post LinkedIn ou newsletter
+      email: 1,       // Email de vente, newsletter ou accueil
+      article: 4,     // Article de blog
+      offer: 5,       // Amélioration ou création d'offre
+      video: 1,       // Vidéo script
+    };
+    const creditCost = CREDIT_COSTS[type] ?? 1;
+
     const balance = await ensureUserCredits(userId);
-    if (balance.total_remaining <= 0) {
+    if (balance.total_remaining < creditCost) {
       return NextResponse.json(
         {
           ok: false,
           code: "NO_CREDITS",
-          error: "Crédits insuffisants. Recharge tes crédits ou upgrade ton abonnement pour continuer.",
+          error: `Crédits insuffisants (${creditCost} crédits requis). Recharge tes crédits ou upgrade ton abonnement pour continuer.`,
           balance,
           upgrade_url: "/settings?tab=billing",
         },
@@ -2463,7 +2473,7 @@ export async function POST(req: Request) {
 
           // ✅ Consommer les crédits seulement après succès IA
           try {
-            await consumeCredits(userId, 1, {
+            await consumeCredits(userId, creditCost, {
               kind: "content_generate",
               type,
               job_id: jobId,

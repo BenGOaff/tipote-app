@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     // Check credits
     await ensureUserCredits(userId);
-    const creditsResult = await consumeCredits(userId, 4, { feature: "quiz_generate" });
+    const creditsResult = await consumeCredits(userId, 6, { feature: "quiz_generate" });
     if (creditsResult && typeof creditsResult === "object") {
       const ok = (creditsResult as any).success;
       const err = String((creditsResult as any).error ?? "").toUpperCase();

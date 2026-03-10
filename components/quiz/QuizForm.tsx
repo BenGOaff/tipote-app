@@ -226,7 +226,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
         if (json?.error === "NO_CREDITS") {
           toast({
             title: "Crédits insuffisants",
-            description: "La génération de quiz coûte 4 crédits.",
+            description: "La génération de quiz coûte 6 crédits.",
             variant: "destructive",
           });
           return;
@@ -264,7 +264,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 if (data.error === "NO_CREDITS") {
                   toast({
                     title: "Crédits insuffisants",
-                    description: "La génération de quiz coûte 4 crédits.",
+                    description: "La génération de quiz coûte 6 crédits.",
                     variant: "destructive",
                   });
                   return;
@@ -532,7 +532,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 <p className="text-sm text-muted-foreground mt-1">
                   Décris ton objectif et ta cible, l&apos;IA génère un quiz complet (questions, réponses, profils résultat). Tu n&apos;as plus qu&apos;à ajuster.
                 </p>
-                <Badge variant="secondary" className="mt-2 text-xs">4 crédits</Badge>
+                <Badge variant="secondary" className="mt-2 text-xs">6 crédits</Badge>
               </div>
             </div>
           </Card>
@@ -550,7 +550,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 <p className="text-sm text-muted-foreground mt-1">
                   Tu as déjà un quiz ? Importe-le depuis un fichier (PDF, Word, Excel ou texte) et Tipote le transforme automatiquement.
                 </p>
-                <Badge variant="secondary" className="mt-2 text-xs">0 crédit</Badge>
+                <Badge variant="secondary" className="mt-2 text-xs">6 crédits</Badge>
               </div>
             </div>
           </Card>
