@@ -221,8 +221,8 @@ export async function POST(req: NextRequest) {
 
   const input = parsed.data;
 
-  // Check credits: 5 for capture, 7 for sales/showcase
-  const creditCost = input.pageType === "capture" ? 5 : 7;
+  // Check credits: 5 for capture, 6 for sales/showcase
+  const creditCost = input.pageType === "capture" ? 5 : 6;
   const balance = await ensureUserCredits(userId);
   if (balance.total_remaining < creditCost) {
     return new Response(JSON.stringify({ error: `Crédits insuffisants (${creditCost} crédits requis).`, code: "NO_CREDITS", upgrade_url: "/settings?tab=billing" }), { status: 402, headers: { "content-type": "application/json" } });
@@ -586,7 +586,7 @@ export async function POST(req: NextRequest) {
           throw new Error(insertError?.message || "Erreur lors de la sauvegarde.");
         }
 
-        // Consume credits: 5 for capture, 7 for sales
+        // Consume credits: 5 for capture, 6 for sales
         try {
           await consumeCredits(userId, creditCost, {
             kind: "page_generate",

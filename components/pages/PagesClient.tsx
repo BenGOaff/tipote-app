@@ -432,7 +432,7 @@ export default function PagesClient() {
                         <p className="text-sm text-muted-foreground">
                           Vends ton offre avec une page de vente optimisée pour la conversion.
                         </p>
-                        <p className="text-xs text-muted-foreground mt-2">7 crédits</p>
+                        <p className="text-xs text-muted-foreground mt-2">6 crédits</p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -451,7 +451,7 @@ export default function PagesClient() {
                         <p className="text-sm text-muted-foreground">
                           Présente ton activité, tes services et redirige vers un RDV, formulaire ou essai gratuit.
                         </p>
-                        <p className="text-xs text-muted-foreground mt-2">7 crédits</p>
+                        <p className="text-xs text-muted-foreground mt-2">6 crédits</p>
                       </div>
                       <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -778,7 +778,7 @@ export default function PagesClient() {
                       disabled={offerSource === "scratch" && !offerName.trim()}
                       className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Créer ma page ({createType === "capture" ? "5 crédits" : "7 crédits"})
+                      Créer ma page ({createType === "capture" ? "5 crédits" : "6 crédits"})
                     </button>
 
                     <p className="text-xs text-muted-foreground text-center mt-3">
