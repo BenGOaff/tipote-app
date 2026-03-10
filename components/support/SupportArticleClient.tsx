@@ -83,57 +83,57 @@ function MarkdownContent({ content }: { content: string }) {
       remarkPlugins={[remarkGfm]}
       components={{
         h2: ({ children }) => (
-          <h2 className="text-xl font-bold text-gray-900 mt-8 mb-3 first:mt-0">{children}</h2>
+          <h2 className="text-xl font-bold text-foreground mt-8 mb-3 first:mt-0">{children}</h2>
         ),
         h3: ({ children }) => (
-          <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-2">{children}</h3>
+          <h3 className="text-lg font-semibold text-foreground/90 mt-6 mb-2">{children}</h3>
         ),
         h4: ({ children }) => (
-          <h4 className="text-base font-semibold text-gray-700 mt-5 mb-2">{children}</h4>
+          <h4 className="text-base font-semibold text-foreground/80 mt-5 mb-2">{children}</h4>
         ),
-        p: ({ children }) => <p className="text-gray-600 leading-relaxed mb-4">{children}</p>,
-        ul: ({ children }) => <ul className="list-disc pl-5 space-y-1.5 text-gray-600 mb-4">{children}</ul>,
-        ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1.5 text-gray-600 mb-4">{children}</ol>,
+        p: ({ children }) => <p className="text-muted-foreground leading-relaxed mb-4">{children}</p>,
+        ul: ({ children }) => <ul className="list-disc pl-5 space-y-1.5 text-muted-foreground mb-4">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1.5 text-muted-foreground mb-4">{children}</ol>,
         li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-        strong: ({ children }) => <strong className="font-semibold text-gray-800">{children}</strong>,
+        strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
         a: ({ href, children }) => {
           if (href?.startsWith("/")) {
             return (
-              <Link href={href} className="text-violet-600 hover:text-violet-700 underline decoration-violet-200 hover:decoration-violet-400 transition-colors">
+              <Link href={href} className="text-primary hover:text-primary/80 underline decoration-primary/20 hover:decoration-primary/50 transition-colors">
                 {children}
               </Link>
             );
           }
           return (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-700 underline">
+            <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 underline">
               {children}
             </a>
           );
         },
         blockquote: ({ children }) => (
-          <blockquote className="border-l-4 border-violet-200 bg-violet-50/50 pl-4 pr-3 py-3 my-4 rounded-r-lg text-sm [&>p]:mb-0">
+          <blockquote className="border-l-4 border-primary/20 bg-accent/50 pl-4 pr-3 py-3 my-4 rounded-r-lg text-sm [&>p]:mb-0">
             {children}
           </blockquote>
         ),
         table: ({ children }) => (
           <div className="overflow-x-auto mb-4">
-            <table className="min-w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+            <table className="min-w-full text-sm border border-border rounded-lg overflow-hidden">
               {children}
             </table>
           </div>
         ),
-        thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
+        thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
         th: ({ children }) => (
-          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-200">{children}</th>
+          <th className="px-3 py-2 text-left font-semibold text-foreground/80 border-b border-border">{children}</th>
         ),
-        td: ({ children }) => <td className="px-3 py-2 border-b border-gray-100 text-gray-600">{children}</td>,
+        td: ({ children }) => <td className="px-3 py-2 border-b border-border/50 text-muted-foreground">{children}</td>,
         code: ({ children, className }) => {
           if (className) {
             return <code className="block bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto my-4">{children}</code>;
           }
-          return <code className="bg-gray-100 text-violet-600 px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>;
+          return <code className="bg-muted text-primary px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>;
         },
-        hr: () => <hr className="my-6 border-gray-200" />,
+        hr: () => <hr className="my-6 border-border/50" />,
       }}
     >
       {processed}
@@ -176,17 +176,17 @@ export default function SupportArticleClient({
   const CatIconComp = catIcon ? ICON_MAP[catIcon] ?? HelpCircle : HelpCircle;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <SupportHeader locale={locale} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {loading ? (
           <div className="max-w-3xl mx-auto">
-            <div className="h-5 w-48 bg-gray-100 rounded animate-pulse mb-6" />
-            <div className="h-8 w-96 bg-gray-100 rounded animate-pulse mb-8" />
+            <div className="h-5 w-48 bg-muted rounded animate-pulse mb-6" />
+            <div className="h-8 w-96 bg-muted rounded animate-pulse mb-8" />
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-5 bg-gray-100 rounded animate-pulse" style={{ width: `${85 - i * 10}%` }} />
+                <div key={i} className="h-5 bg-muted rounded animate-pulse" style={{ width: `${85 - i * 10}%` }} />
               ))}
             </div>
           </div>
@@ -195,25 +195,25 @@ export default function SupportArticleClient({
             {/* Main content */}
             <article className="flex-1 min-w-0 max-w-3xl">
               {/* Breadcrumb */}
-              <nav className="flex items-center gap-1.5 text-sm text-gray-400 mb-6 flex-wrap">
-                <Link href="/support" className="text-violet-600 hover:text-violet-700">
+              <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6 flex-wrap">
+                <Link href="/support" className="text-primary hover:text-primary/80">
                   {T.back[locale] ?? T.back.fr}
                 </Link>
                 <ChevronRight className="w-3.5 h-3.5" />
                 <Link
                   href={`/support/${article.support_categories.slug}`}
-                  className="text-violet-600 hover:text-violet-700"
+                  className="text-primary hover:text-primary/80"
                 >
                   {article.support_categories.title?.[locale] ?? article.support_categories.title?.fr}
                 </Link>
                 <ChevronRight className="w-3.5 h-3.5" />
-                <span className="text-gray-600 truncate">
+                <span className="text-foreground/70 truncate">
                   {article.title?.[locale] ?? article.title?.fr}
                 </span>
               </nav>
 
               {/* Title */}
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-8">
                 {article.title?.[locale] ?? article.title?.fr}
               </h1>
 
@@ -224,10 +224,10 @@ export default function SupportArticleClient({
 
               {/* Tags */}
               {article.tags?.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mt-8 pt-6 border-t border-gray-100">
-                  <Tag className="w-4 h-4 text-gray-300" />
+                <div className="flex flex-wrap items-center gap-2 mt-8 pt-6 border-t border-border/50">
+                  <Tag className="w-4 h-4 text-muted-foreground/40" />
                   {article.tags.map((tag) => (
-                    <span key={tag} className="px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                    <span key={tag} className="px-2.5 py-1 bg-muted text-muted-foreground rounded-full text-xs">
                       {tag}
                     </span>
                   ))}
@@ -236,16 +236,16 @@ export default function SupportArticleClient({
 
               {/* Prev / Next navigation */}
               {(prevArticle || nextArticle) && (
-                <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-gray-100">
+                <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-border/50">
                   {prevArticle ? (
                     <Link
                       href={`/support/article/${prevArticle.slug}`}
-                      className="flex-1 p-4 bg-white rounded-xl border border-gray-100 hover:border-violet-200 hover:shadow-sm transition-all group"
+                      className="flex-1 p-4 bg-card rounded-xl border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all group"
                     >
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <ArrowLeft className="w-3 h-3" /> {T.prev[locale] ?? T.prev.fr}
                       </span>
-                      <p className="font-medium text-gray-800 group-hover:text-violet-600 mt-1 text-sm">
+                      <p className="font-medium text-foreground group-hover:text-primary mt-1 text-sm">
                         {prevArticle.title?.[locale] ?? prevArticle.title?.fr}
                       </p>
                     </Link>
@@ -255,12 +255,12 @@ export default function SupportArticleClient({
                   {nextArticle ? (
                     <Link
                       href={`/support/article/${nextArticle.slug}`}
-                      className="flex-1 p-4 bg-white rounded-xl border border-gray-100 hover:border-violet-200 hover:shadow-sm transition-all group text-right"
+                      className="flex-1 p-4 bg-card rounded-xl border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all group text-right"
                     >
-                      <span className="text-xs text-gray-400 flex items-center gap-1 justify-end">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                         {T.next[locale] ?? T.next.fr} <ArrowRight className="w-3 h-3" />
                       </span>
-                      <p className="font-medium text-gray-800 group-hover:text-violet-600 mt-1 text-sm">
+                      <p className="font-medium text-foreground group-hover:text-primary mt-1 text-sm">
                         {nextArticle.title?.[locale] ?? nextArticle.title?.fr}
                       </p>
                     </Link>
@@ -272,9 +272,9 @@ export default function SupportArticleClient({
 
               {/* Related articles */}
               {related.length > 0 && (
-                <div className="mt-8 pt-6 border-t border-gray-100">
-                  <h3 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-violet-400" />
+                <div className="mt-8 pt-6 border-t border-border/50">
+                  <h3 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-primary/60" />
                     {T.related[locale] ?? T.related.fr}
                   </h3>
                   <div className="space-y-2">
@@ -282,10 +282,10 @@ export default function SupportArticleClient({
                       <Link
                         key={r.id}
                         href={`/support/article/${r.slug}`}
-                        className="flex items-center gap-2.5 p-3 bg-white rounded-lg border border-gray-100 hover:border-violet-200 transition-all group"
+                        className="flex items-center gap-2.5 p-3 bg-card rounded-lg border border-border/50 hover:border-primary/30 transition-all group"
                       >
-                        <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                        <span className="text-sm text-gray-700 group-hover:text-violet-600 transition-colors">
+                        <ArrowRight className="w-3.5 h-3.5 text-primary/60 shrink-0" />
+                        <span className="text-sm text-foreground/80 group-hover:text-primary transition-colors">
                           {r.title?.[locale] ?? r.title?.fr}
                         </span>
                       </Link>
@@ -299,8 +299,8 @@ export default function SupportArticleClient({
             <aside className="w-64 shrink-0 hidden lg:block">
               <div className="sticky top-20">
                 <div className="flex items-center gap-2 mb-3">
-                  <CatIconComp className="w-4 h-4 text-violet-400" />
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <CatIconComp className="w-4 h-4 text-primary/60" />
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {T.in_category[locale] ?? T.in_category.fr}
                   </h4>
                 </div>
@@ -311,8 +311,8 @@ export default function SupportArticleClient({
                       href={`/support/article/${s.slug}`}
                       className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
                         s.slug === slug
-                          ? "bg-violet-50 text-violet-700 font-medium"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                          ? "bg-accent text-primary font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
                     >
                       {s.title?.[locale] ?? s.title?.fr}
@@ -323,7 +323,7 @@ export default function SupportArticleClient({
             </aside>
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-20">Article not found</p>
+          <p className="text-muted-foreground text-center py-20">Article not found</p>
         )}
       </div>
 

@@ -71,14 +71,14 @@ export default function SupportCategoryClient({
   const IconComp = category ? ICON_MAP[category.icon] ?? HelpCircle : HelpCircle;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <SupportHeader locale={locale} />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         {/* Breadcrumb */}
         <Link
           href="/support"
-          className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 mb-6"
+          className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           {T.back[locale] ?? T.back.fr}
@@ -86,11 +86,11 @@ export default function SupportCategoryClient({
 
         {loading ? (
           <div className="space-y-4">
-            <div className="h-10 w-64 bg-gray-100 rounded-lg animate-pulse" />
-            <div className="h-6 w-96 bg-gray-100 rounded animate-pulse" />
+            <div className="h-10 w-64 bg-muted rounded-lg animate-pulse" />
+            <div className="h-6 w-96 bg-muted rounded animate-pulse" />
             <div className="space-y-3 mt-8">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+                <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
               ))}
             </div>
           </div>
@@ -98,17 +98,17 @@ export default function SupportCategoryClient({
           <>
             {/* Category header */}
             <div className="flex items-start gap-4 mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 flex items-center justify-center shrink-0">
-                <IconComp className="w-7 h-7 text-violet-500" />
+              <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center shrink-0">
+                <IconComp className="w-7 h-7 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-foreground">
                   {category.title?.[locale] ?? category.title?.fr}
                 </h1>
-                <p className="text-gray-500 mt-1">
+                <p className="text-muted-foreground mt-1">
                   {category.description?.[locale] ?? category.description?.fr}
                 </p>
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-muted-foreground/70 mt-2">
                   {category.articles.length}{" "}
                   {T.articles_in[locale] ?? T.articles_in.fr}{" "}
                   {(category.title?.[locale] ?? category.title?.fr).toLowerCase()}
@@ -122,21 +122,21 @@ export default function SupportCategoryClient({
                 <Link
                   key={article.id}
                   href={`/support/article/${article.slug}`}
-                  className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 hover:border-violet-200 hover:shadow-sm transition-all group"
+                  className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all group"
                 >
-                  <span className="w-7 h-7 rounded-full bg-violet-50 flex items-center justify-center text-xs font-medium text-violet-500 shrink-0">
+                  <span className="w-7 h-7 rounded-full bg-primary/5 flex items-center justify-center text-xs font-medium text-primary shrink-0">
                     {idx + 1}
                   </span>
-                  <span className="font-medium text-gray-800 group-hover:text-violet-600 transition-colors flex-1 truncate">
+                  <span className="font-medium text-foreground group-hover:text-primary transition-colors flex-1 truncate">
                     {article.title?.[locale] ?? article.title?.fr}
                   </span>
-                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-violet-400 transition-colors shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors shrink-0" />
                 </Link>
               ))}
             </div>
           </>
         ) : (
-          <p className="text-gray-500 text-center py-20">Category not found</p>
+          <p className="text-muted-foreground text-center py-20">Category not found</p>
         )}
       </div>
 

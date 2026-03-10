@@ -28,25 +28,25 @@ const T: Record<string, Record<string, string>> = {
 
 export default function SupportFooter({ locale }: { locale: string }) {
   return (
-    <footer className="bg-white border-t border-gray-100 mt-16">
+    <footer className="bg-card border-t border-border/50 mt-16">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 text-center">
-        <p className="text-gray-600 font-medium mb-1">
+        <p className="text-foreground/70 font-medium mb-1">
           {T.contact[locale] ?? T.contact.fr}
         </p>
         <a
           href="mailto:hello@tipote.com"
-          className="text-violet-600 hover:text-violet-700 font-medium text-sm"
+          className="text-primary hover:text-primary/80 font-medium text-sm"
         >
           {T.contact_cta[locale] ?? T.contact_cta.fr}
         </a>
 
-        <div className="mt-8 pt-6 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
+        <div className="mt-8 pt-6 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} Tipote. {T.rights[locale] ?? T.rights.fr}.</span>
           <div className="flex items-center gap-4">
-            <Link href="/legal/conditions-utilisation" className="hover:text-gray-600">
+            <Link href="/legal/conditions-utilisation" className="hover:text-foreground">
               {locale === "fr" ? "CGU" : locale === "es" ? "Términos" : locale === "it" ? "Termini" : locale === "ar" ? "الشروط" : "Terms"}
             </Link>
-            <Link href="/legal/politique-confidentialite" className="hover:text-gray-600">
+            <Link href="/legal/politique-confidentialite" className="hover:text-foreground">
               {locale === "fr" ? "Confidentialité" : locale === "es" ? "Privacidad" : locale === "it" ? "Privacy" : locale === "ar" ? "الخصوصية" : "Privacy"}
             </Link>
           </div>

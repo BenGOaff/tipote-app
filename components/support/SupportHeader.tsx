@@ -22,28 +22,28 @@ const TITLES: Record<string, string> = {
 
 export default function SupportHeader({ locale }: { locale: string }) {
   return (
-    <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
+    <header className="bg-card border-b border-border/50 sticky top-0 z-30">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link href="/support" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-[image:var(--gradient-primary)] flex items-center justify-center">
             <span className="text-white text-sm font-bold">T</span>
           </div>
-          <span className="font-semibold text-gray-900">
-            Tipote <span className="text-gray-400 font-normal">|</span>{" "}
-            <span className="text-gray-600 font-normal">{TITLES[locale] ?? TITLES.fr}</span>
+          <span className="font-semibold text-foreground">
+            Tipote <span className="text-muted-foreground font-normal">|</span>{" "}
+            <span className="text-foreground/70 font-normal">{TITLES[locale] ?? TITLES.fr}</span>
           </span>
         </Link>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-sm text-gray-500">
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Globe className="w-4 h-4" />
             {SUPPORTED_LOCALES.map((l) => (
               <button
                 key={l}
                 className={`px-1.5 py-0.5 rounded text-xs ${
                   l === locale
-                    ? "bg-violet-100 text-violet-700 font-medium"
-                    : "text-gray-400 hover:text-gray-600"
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => {
                   document.cookie = `NEXT_LOCALE=${l};path=/;max-age=31536000`;
@@ -57,7 +57,7 @@ export default function SupportHeader({ locale }: { locale: string }) {
 
           <Link
             href="/"
-            className="text-sm text-violet-600 hover:text-violet-700 font-medium hidden sm:block"
+            className="text-sm text-primary hover:text-primary/80 font-medium hidden sm:block"
           >
             {locale === "fr" ? "Aller sur Tipote" :
              locale === "es" ? "Ir a Tipote" :

@@ -128,24 +128,24 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
   }, [categories]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <SupportHeader locale={locale} />
 
       {/* Hero */}
-      <div className="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white">
+      <div className="bg-[image:var(--gradient-hero)] text-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-14 sm:py-20 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">{t("hero_title", locale)}</h1>
-          <p className="text-violet-200 mb-8 text-base sm:text-lg">{t("hero_subtitle", locale)}</p>
+          <p className="text-white/70 mb-8 text-base sm:text-lg">{t("hero_subtitle", locale)}</p>
 
           {/* Search */}
           <div className="relative max-w-xl mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("search_placeholder", locale)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl text-gray-900 bg-white shadow-lg border-0 text-base focus:outline-none focus:ring-2 focus:ring-violet-300 placeholder:text-gray-400"
+              className="w-full pl-12 pr-4 py-3.5 rounded-xl text-foreground bg-white shadow-lg border-0 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
             />
           </div>
         </div>
@@ -155,17 +155,17 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
         {/* Search results */}
         {searchQuery.trim() ? (
           <div className="mb-10">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">
+            <h2 className="text-lg font-semibold text-foreground/80 mb-4">
               {t("search_results", locale)} &quot;{searchQuery}&quot;
             </h2>
             {searching ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />
+                  <div key={i} className="h-14 bg-muted rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : searchResults.length === 0 ? (
-              <p className="text-gray-500 text-center py-10">{t("no_results", locale)}</p>
+              <p className="text-muted-foreground text-center py-10">{t("no_results", locale)}</p>
             ) : (
               <div className="space-y-2">
                 {searchResults.map((a: any) => {
@@ -175,20 +175,20 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
                     <Link
                       key={a.id}
                       href={`/support/article/${a.slug}`}
-                      className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 hover:border-violet-200 hover:shadow-sm transition-all group"
+                      className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all group"
                     >
-                      <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
-                        <IconComp className="w-4.5 h-4.5 text-violet-500" />
+                      <div className="w-9 h-9 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
+                        <IconComp className="w-4.5 h-4.5 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 truncate group-hover:text-violet-600 transition-colors">
+                        <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
                           {a.title?.[locale] ?? a.title?.fr}
                         </p>
                         {cat && (
-                          <p className="text-xs text-gray-400 mt-0.5">{cat.title?.[locale] ?? cat.title?.fr}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{cat.title?.[locale] ?? cat.title?.fr}</p>
                         )}
                       </div>
-                      <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-violet-400 transition-colors shrink-0" />
+                      <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors shrink-0" />
                     </Link>
                   );
                 })}
@@ -200,16 +200,16 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
             {/* Popular questions */}
             {popularArticles.length > 0 && (
               <div className="mb-12">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">{t("popular", locale)}</h2>
+                <h2 className="text-lg font-semibold text-foreground mb-4">{t("popular", locale)}</h2>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {popularArticles.map((a: any) => (
                     <Link
                       key={a.id}
                       href={`/support/article/${a.slug}`}
-                      className="flex items-center gap-2.5 p-3.5 bg-white rounded-xl border border-gray-100 hover:border-violet-200 hover:shadow-sm transition-all group"
+                      className="flex items-center gap-2.5 p-3.5 bg-card rounded-xl border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all group"
                     >
-                      <BookOpen className="w-4 h-4 text-violet-400 shrink-0" />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-violet-600 transition-colors truncate">
+                      <BookOpen className="w-4 h-4 text-primary/60 shrink-0" />
+                      <span className="text-sm font-medium text-foreground/80 group-hover:text-primary transition-colors truncate">
                         {a.title?.[locale] ?? a.title?.fr}
                       </span>
                     </Link>
@@ -222,7 +222,7 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
             {loading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="h-44 bg-gray-100 rounded-2xl animate-pulse" />
+                  <div key={i} className="h-44 bg-muted rounded-2xl animate-pulse" />
                 ))}
               </div>
             ) : (
@@ -233,18 +233,18 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
                     <Link
                       key={cat.id}
                       href={`/support/${cat.slug}`}
-                      className="group p-6 bg-white rounded-2xl border border-gray-100 hover:border-violet-200 hover:shadow-md transition-all"
+                      className="group p-6 bg-card rounded-2xl border border-border/50 hover:border-primary/30 hover:shadow-md transition-all"
                     >
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 flex items-center justify-center mb-4 group-hover:from-violet-100 group-hover:to-purple-100 transition-colors">
-                        <IconComp className="w-5.5 h-5.5 text-violet-500" />
+                      <div className="w-11 h-11 rounded-xl bg-accent flex items-center justify-center mb-4 group-hover:bg-primary/10 transition-colors">
+                        <IconComp className="w-5.5 h-5.5 text-primary" />
                       </div>
-                      <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-violet-600 transition-colors">
+                      <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
                         {cat.title?.[locale] ?? cat.title?.fr}
                       </h3>
-                      <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {cat.description?.[locale] ?? cat.description?.fr}
                       </p>
-                      <span className="text-xs text-violet-500 font-medium">
+                      <span className="text-xs text-primary font-medium">
                         {cat.articles.length} {t("articles", locale)} →
                       </span>
                     </Link>

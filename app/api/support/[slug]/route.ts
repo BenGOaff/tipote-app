@@ -1,7 +1,9 @@
 // app/api/support/[slug]/route.ts
 // Public API — get a single article by slug, with related articles
+// Falls back to static seed data when DB tables are empty or missing
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStaticArticle } from "@/lib/support/staticFallback";
 
 export async function GET(
   req: NextRequest,
@@ -18,8 +20,14 @@ export async function GET(
       .maybeSingle();
 
     if (error) throw error;
+
+    // Fallback to static seed data
     if (!article) {
-      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+      const staticResult = getStaticArticle(slug);
+      if (!staticResult) {
+        return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true, ...staticResult });
     }
 
     // Fetch related articles
@@ -43,6 +51,11 @@ export async function GET(
 
     return NextResponse.json({ ok: true, article, related, siblings: siblings ?? [] });
   } catch (err: any) {
+    // If tables don't exist, try static fallback
+    const staticResult = getStaticArticle(slug);
+    if (staticResult) {
+      return NextResponse.json({ ok: true, ...staticResult });
+    }
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
 }

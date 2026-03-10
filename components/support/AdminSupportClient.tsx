@@ -196,7 +196,7 @@ export default function AdminSupportClient() {
                           ) : (
                             <ChevronRight className="w-4 h-4 text-muted-foreground" />
                           )}
-                          <FolderOpen className="w-4 h-4 text-violet-500" />
+                          <FolderOpen className="w-4 h-4 text-primary" />
                           <span className="font-semibold text-sm">
                             {cat.title?.fr ?? cat.slug}
                           </span>
@@ -301,7 +301,7 @@ export default function AdminSupportClient() {
                   key={l}
                   className={`px-3 py-1.5 text-sm font-medium border-b-2 transition-colors ${
                     l === editLang
-                      ? "border-violet-500 text-violet-600"
+                      ? "border-primary text-primary"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                   onClick={() => setEditLang(l)}
