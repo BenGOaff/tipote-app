@@ -550,7 +550,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 <p className="text-sm text-muted-foreground mt-1">
                   Tu as déjà un quiz ? Importe-le depuis un fichier (PDF, Word, Excel ou texte) et Tipote le transforme automatiquement.
                 </p>
-                <Badge variant="secondary" className="mt-2 text-xs">4 crédits</Badge>
+                <Badge variant="secondary" className="mt-2 text-xs">0 crédit</Badge>
               </div>
             </div>
           </Card>
@@ -568,7 +568,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 <p className="text-sm text-muted-foreground mt-1">
                   Tu sais exactement ce que tu veux ? Rédige tes questions, réponses et profils résultat manuellement.
                 </p>
-                <Badge variant="secondary" className="mt-2 text-xs">Gratuit</Badge>
+                <Badge variant="secondary" className="mt-2 text-xs">0 crédit</Badge>
               </div>
             </div>
           </Card>
