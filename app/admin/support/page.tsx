@@ -1,10 +1,12 @@
 // app/admin/support/page.tsx
-// Admin support center management
+// Admin support center management + ticket inbox
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isAdminEmail } from "@/lib/adminEmails";
 import AppShell from "@/components/AppShell";
 import AdminSupportClient from "@/components/support/AdminSupportClient";
+import AdminTicketsClient from "@/components/support/AdminTicketsClient";
+import AdminSupportTabs from "@/components/support/AdminSupportTabs";
 
 export default async function AdminSupportPage() {
   const supabase = await getSupabaseServerClient();
@@ -22,7 +24,10 @@ export default async function AdminSupportPage() {
       headerTitle={<div>Support — Administration</div>}
       contentClassName="flex-1 p-4 lg:p-6 space-y-6"
     >
-      <AdminSupportClient />
+      <AdminSupportTabs
+        ticketsTab={<AdminTicketsClient />}
+        articlesTab={<AdminSupportClient />}
+      />
     </AppShell>
   );
 }
