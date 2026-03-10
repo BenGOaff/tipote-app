@@ -479,7 +479,7 @@
   },
   "pinterestConsent": {
     "title": "Connecter Pinterest à Tipote",
-    "description": "Connecte ton compte Pinterest Business à Tipote pour créer et programmer des épingles automatiquement depuis ton espace de travail.",
+    "description": "Connecte ton compte Pinterest Business à Tipote pour créer et programmer des épingles directement depuis ton espace de travail. Chaque épingle est publiée uniquement avec ta validation.",
     "accessTitle": "Tipote aura accès à :",
     "accessProfile": "Ton profil Pinterest (nom, photo de profil)",
     "accessBoards": "Tes tableaux (pour choisir où publier tes épingles)",

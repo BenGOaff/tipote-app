@@ -479,7 +479,7 @@
   },
   "pinterestConsent": {
     "title": "Connect Pinterest to Tipote",
-    "description": "Connect your Pinterest Business account to Tipote to create and schedule pins automatically from your workspace.",
+    "description": "Connect your Pinterest Business account to Tipote to create and schedule pins directly from your workspace. Each pin is only published with your explicit approval.",
     "accessTitle": "Tipote will have access to:",
     "accessProfile": "Your Pinterest profile (name, profile picture)",
     "accessBoards": "Your boards (to choose where to publish your pins)",
