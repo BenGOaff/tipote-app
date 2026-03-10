@@ -1086,6 +1086,29 @@ ${textContent.split("\n").map((line) => {
                   Suivi Google Analytics / Google Ads.
                 </p>
               </div>
+
+              {/* Widgets */}
+              <div className="pt-2 border-t">
+                <p className="text-sm font-medium mb-3 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  Widgets
+                </p>
+                <p className="text-[10px] text-muted-foreground mb-3">
+                  Affiche des widgets sur ta page publique (preuve sociale, partage).
+                  Les widgets activés dans ta section Widgets apparaîtront automatiquement.
+                </p>
+                <div className="flex gap-2">
+                  <a
+                    href="/widgets"
+                    target="_blank"
+                    rel="noopener"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium hover:bg-muted/50 transition-colors"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    Gérer les widgets
+                  </a>
+                </div>
+              </div>
             </div>
 
             {/* Footer */}

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS social_share_widgets (
   show_counts BOOLEAN NOT NULL DEFAULT false,
 
   -- Custom share content (overrides page meta)
+  share_url TEXT,        -- URL to share (if set, overrides current page URL)
   share_text TEXT,       -- default share text (if set, overrides page title)
   share_hashtags TEXT,   -- comma-separated hashtags (for Twitter/X)
 

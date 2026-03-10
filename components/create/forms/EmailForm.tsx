@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +53,7 @@ function joinEmails(parts: string[]): string {
 
 
 export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: EmailFormProps) {
+  const t = useTranslations("emailForm");
   const [emailType, setEmailType] = useState("newsletter");
 
   // Newsletter
@@ -662,12 +664,12 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Génération...
+                {t("generating")}
               </>
             ) : (
               <>
                 <Wand2 className="w-4 h-4 mr-2" />
-                Générer
+                {t("generate")}
               </>
             )}
           </Button>
@@ -694,7 +696,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
       onClick={() => setShowRawEditor((v) => !v)}
       disabled={!generatedContent?.trim()}
     >
-      {showRawEditor ? "Aperçu" : "Texte brut"}
+      {showRawEditor ? t("preview") : t("plainText")}
     </Button>
   </div>
 
@@ -747,7 +749,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 ) : (
                   <Save className="w-4 h-4 mr-1" />
                 )}
-                Brouillon
+                {t("draft")}
               </Button>
 
               <Button
@@ -756,7 +758,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 disabled={!title || isSaving}
               >
                 <CalendarDays className="w-4 h-4 mr-1" />
-                Programmer
+                {t("schedule")}
               </Button>
 
               <Button
@@ -766,7 +768,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 disabled={regenerateDisabled}
               >
                 <RefreshCw className="w-4 h-4 mr-1" />
-                Regénérer
+                {t("regenerate")}
               </Button>
 
               <Button
@@ -779,7 +781,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 disabled={!generatedContent}
               >
                 {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-                {copied ? "Copié" : "Copier"}
+                {copied ? t("copied") : t("copy")}
               </Button>
 
               <Button

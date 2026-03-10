@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -133,6 +134,7 @@ export function PostActionButtons({
   hasVideo,
   busy = false,
 }: Props) {
+  const t = useTranslations("postActions");
   const [publishModalOpen, setPublishModalOpen] = React.useState(false);
   const [publishPlatform, setPublishPlatform] = React.useState("linkedin");
   const [scheduleModalOpen, setScheduleModalOpen] = React.useState(false);
@@ -226,7 +228,7 @@ export function PostActionButtons({
                     size="sm"
                   >
                     {icon}
-                    <span className="ml-1.5">Publier sur {label}</span>
+                    <span className="ml-1.5">{t("publishOn", { label })}</span>
                   </Button>
 
                   <Button
@@ -236,7 +238,7 @@ export function PostActionButtons({
                     variant="outline"
                   >
                     <CalendarDays className="h-4 w-4" />
-                    <span className="ml-1.5">Programmer sur {label}</span>
+                    <span className="ml-1.5">{t("scheduleOn", { label })}</span>
                   </Button>
                 </React.Fragment>
               );
@@ -256,7 +258,7 @@ export function PostActionButtons({
               className="text-slate-500 hover:text-slate-700"
             >
               <Copy className="h-4 w-4 mr-1" />
-              Copier
+              {t("copy")}
               {onDownloadPdf && (
                 <>
                   <span className="mx-1 text-slate-300">|</span>
@@ -282,23 +284,23 @@ export function PostActionButtons({
                   ) : (
                     <Trash2 className="h-4 w-4 mr-1" />
                   )}
-                  Supprimer
+                  {t("delete")}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Supprimer ce brouillon ?</AlertDialogTitle>
+                  <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Cette action est irréversible. Le contenu sera définitivement supprimé.
+                    {t("deleteDescription")}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
                     className="bg-rose-600 text-white hover:bg-rose-700"
                   >
-                    Supprimer
+                    {t("delete")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -309,23 +311,9 @@ export function PostActionButtons({
         {/* Message si aucun réseau connecté */}
         {relevantPlatforms.length === 0 && (
           <p className="text-xs text-slate-500">
-            {detectedPlatform ? (
-              <>
-                Connecte {PLATFORM_LABELS[detectedPlatform] ?? detectedPlatform} dans les{" "}
-                <a href="/settings?tab=connections" className="font-semibold text-primary hover:underline">
-                  paramètres
-                </a>{" "}
-                pour publier ou programmer.
-              </>
-            ) : (
-              <>
-                Connecte un réseau social dans les{" "}
-                <a href="/settings?tab=connections" className="font-semibold text-primary hover:underline">
-                  paramètres
-                </a>{" "}
-                pour publier ou programmer directement.
-              </>
-            )}
+            {detectedPlatform
+              ? t("connectPlatform", { platform: PLATFORM_LABELS[detectedPlatform] ?? detectedPlatform })
+              : t("connectSocial")}
           </p>
         )}
       </div>

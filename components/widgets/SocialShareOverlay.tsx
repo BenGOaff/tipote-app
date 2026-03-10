@@ -9,6 +9,7 @@ type ShareConfig = {
   button_style: string;
   button_size: string;
   show_labels: boolean;
+  share_url: string | null;
   share_text: string | null;
   share_hashtags: string | null;
   color_mode: string;
@@ -38,7 +39,7 @@ export default function SocialShareOverlay({ widgetId }: { widgetId: string }) {
 
   if (!cfg) return null;
 
-  const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+  const pageUrl = cfg.share_url || (typeof window !== "undefined" ? window.location.href : "");
   const text = cfg.share_text || "";
   const hashtags = cfg.share_hashtags || "";
 

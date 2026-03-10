@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +51,7 @@ const durations = [
 ];
 
 export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving }: VideoFormProps) {
+  const t = useTranslations("videoForm");
   const [platform, setPlatform] = useState("youtube_long");
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState("5min");
@@ -209,12 +211,12 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Génération...
+                {t("generating")}
               </>
             ) : (
               <>
                 <Wand2 className="w-4 h-4 mr-2" />
-                Générer
+                {t("generate")}
               </>
             )}
           </Button>
@@ -222,8 +224,8 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Titre (pour sauvegarde)</Label>
-            <Input placeholder="Titre interne" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Label>{t("titleLabel")}</Label>
+            <Input placeholder={t("titlePlaceholder")} value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="space-y-2">
@@ -237,7 +239,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 onClick={() => setShowRawEditor((v) => !v)}
                 disabled={!generatedContent?.trim()}
               >
-                {showRawEditor ? "Aperçu" : "Texte brut"}
+                {showRawEditor ? t("preview") : t("plainText")}
               </Button>
             </div>
 
@@ -261,22 +263,22 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => handleSave("draft")} disabled={!title || isSaving}>
                 {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
-                Brouillon
+                {t("draft")}
               </Button>
 
               <Button size="sm" onClick={() => setScheduleModalOpen(true)} disabled={!title || isSaving}>
                 <CalendarDays className="w-4 h-4 mr-1" />
-                Programmer
+                {t("schedule")}
               </Button>
 
               <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
                 <RefreshCw className="w-4 h-4 mr-1" />
-                Regénérer
+                {t("regenerate")}
               </Button>
 
               <Button variant="outline" size="sm" onClick={handleCopy} disabled={!generatedContent}>
                 {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
-                {copied ? "Copié" : "Copier"}
+                {copied ? t("copied") : t("copy")}
               </Button>
 
               <Button

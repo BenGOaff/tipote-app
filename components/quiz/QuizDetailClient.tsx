@@ -55,6 +55,7 @@ import {
   ChevronRight,
   Pencil,
   X,
+  Bell,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -241,6 +242,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // OG image for social sharing
   const [ogImageUrl, setOgImageUrl] = useState("");
 
+  // Widgets
+  const [toastWidgets, setToastWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([]);
+  const [shareWidgets, setShareWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([]);
+  const [selectedToastWidget, setSelectedToastWidget] = useState<string>("");
+  const [selectedShareWidget, setSelectedShareWidget] = useState<string>("");
+  const [widgetsLoaded, setWidgetsLoaded] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -284,6 +292,27 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     };
     load();
   }, [quizId]);
+
+  // Fetch available widgets
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/widgets/toast").then((r) => r.json()),
+      fetch("/api/widgets/share").then((r) => r.json()),
+    ]).then(([toastRes, shareRes]) => {
+      if (toastRes.ok) setToastWidgets(toastRes.widgets || []);
+      if (shareRes.ok) setShareWidgets(shareRes.widgets || []);
+      // Auto-select first enabled widget if none selected
+      if (toastRes.ok && toastRes.widgets?.length) {
+        const first = toastRes.widgets.find((w: any) => w.enabled);
+        if (first) setSelectedToastWidget(first.id);
+      }
+      if (shareRes.ok && shareRes.widgets?.length) {
+        const first = shareRes.widgets.find((w: any) => w.enabled);
+        if (first) setSelectedShareWidget(first.id);
+      }
+      setWidgetsLoaded(true);
+    }).catch(() => setWidgetsLoaded(true));
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -1213,6 +1242,70 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         </div>
                       </>
                     )}
+                  </div>
+                </div>
+
+                {/* Widgets */}
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="font-bold">Widgets</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ajoute des widgets sur la page publique de ton quiz (page de résultat, remerciement).
+                  </p>
+                  <div className="grid gap-4 max-w-md">
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-amber-500" />
+                        <div>
+                          <p className="font-medium text-sm">Notifications (social proof)</p>
+                          <p className="text-xs text-muted-foreground">Affiche des toasts de preuve sociale</p>
+                        </div>
+                      </div>
+                      {toastWidgets.length > 0 ? (
+                        <select
+                          className="text-sm border rounded-md px-2 py-1.5"
+                          value={selectedToastWidget}
+                          onChange={(e) => setSelectedToastWidget(e.target.value)}
+                        >
+                          <option value="">Désactivé</option>
+                          {toastWidgets.map((w) => (
+                            <option key={w.id} value={w.id}>
+                              {w.name} {!w.enabled && "(inactif)"}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href="/widgets">Créer</a>
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
+                      <div className="flex items-center gap-2">
+                        <Share2 className="w-4 h-4 text-blue-500" />
+                        <div>
+                          <p className="font-medium text-sm">Boutons de partage</p>
+                          <p className="text-xs text-muted-foreground">Ajoute des boutons de partage social</p>
+                        </div>
+                      </div>
+                      {shareWidgets.length > 0 ? (
+                        <select
+                          className="text-sm border rounded-md px-2 py-1.5"
+                          value={selectedShareWidget}
+                          onChange={(e) => setSelectedShareWidget(e.target.value)}
+                        >
+                          <option value="">Désactivé</option>
+                          {shareWidgets.map((w) => (
+                            <option key={w.id} value={w.id}>
+                              {w.name} {!w.enabled && "(inactif)"}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href="/widgets">Créer</a>
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
