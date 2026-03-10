@@ -177,7 +177,7 @@ function renderMarkdownLite(text: string): string {
 /* ────────────────── Component ────────────────── */
 
 // Show "talk to human" after this many user messages
-const ESCALATION_THRESHOLD = 2;
+const ESCALATION_THRESHOLD = 5;
 
 export default function SupportChatWidget({ locale }: { locale: string }) {
   const [open, setOpen] = useState(false);
