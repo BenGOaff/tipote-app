@@ -237,8 +237,9 @@
         textColor = "#374151";
       } else if (cfg.color_mode === "mono-dark") {
         bgColor = "#374151";
-      } else if (cfg.color_mode === "custom" && cfg.custom_color) {
-        bgColor = cfg.custom_color;
+      } else if (cfg.color_mode === "custom") {
+        // Use user's custom color, or same default as the settings form (#2563eb)
+        bgColor = cfg.custom_color || "#2563eb";
       }
       // "brand", null, undefined, or any other value → keep p.color
 
