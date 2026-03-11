@@ -326,24 +326,6 @@ export const PhaseDetailModal = ({
 
               <Separator />
 
-              {/* Points clés */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <ListChecks className="w-5 h-5 text-primary shrink-0" />
-                  <h4 className="font-semibold">{t("keyPoints")}</h4>
-                </div>
-                <ul className="space-y-2">
-                  {objectives.map((obj, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                      <span className="text-sm">{obj}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Separator />
-
               {/* Tâches */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

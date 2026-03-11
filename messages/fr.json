@@ -2311,7 +2311,7 @@
     "titlePlaceholder": "Titre de la tâche",
     "statusDone": "Terminée",
     "statusTodo": "A faire",
-    "priorityHigh": "Priorité haute",
+    "priorityHigh": "Urgent",
     "priorityMedium": "Priorité moyenne",
     "priorityLow": "Priorité basse",
     "subtasksCount": "{done}/{total} sous-objectifs",
@@ -2326,6 +2326,13 @@
     "delete": "Supprimer",
     "save": "Enregistrer",
     "saving": "Sauvegarde…"
+  },
+  "phasePage": {
+    "noPriority": "Aucune",
+    "addTaskPlaceholder": "Ajouter une tâche…",
+    "emptyPhase": "Aucune tâche dans cette phase.",
+    "completedTasks": "{count} tâche(s) terminée(s)",
+    "saved": "Modifications enregistrées"
   },
   "phaseDetail": {
     "objective": "Objectif de cette phase",
