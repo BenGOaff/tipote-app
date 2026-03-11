@@ -366,9 +366,9 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
   // ─── RENDER ───
 
   return (
-    <div className="flex h-screen">
+    <div className="flex flex-1 min-h-0">
       {/* Left panel: editor */}
-      <div className="w-[420px] shrink-0 border-r bg-background flex flex-col overflow-hidden">
+      <div className="w-[420px] shrink-0 bg-background flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b">
           <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">

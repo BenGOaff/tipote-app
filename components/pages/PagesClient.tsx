@@ -8,13 +8,20 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Plus, FileText, ShoppingCart, Trash2, Copy,
   ArrowLeft, ArrowRight, Loader2, Package, PenTool, Check, Globe,
   Users, Download, X, Eye, MousePointerClick, BarChart3, Link2,
+  PanelLeftOpen,
 } from "lucide-react";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { HeaderCredits } from "@/components/HeaderCredits";
+import { ProjectSwitcher } from "@/components/ProjectSwitcher";
+import { NotificationBell } from "@/components/NotificationBell";
+import { UserAvatarMenu } from "@/components/UserAvatarMenu";
+import { Button } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { loadAllOffers, type OfferOption, levelLabel, formatPriceRange } from "@/lib/offers";
 import PageGenerateProgress, { type ProgressStep } from "./PageGenerateProgress";
@@ -38,8 +45,20 @@ type PageSummary = {
 
 type View = "list" | "step1" | "step2" | "generating" | "edit" | "linkinbio-edit";
 
-export default function PagesClient() {
+/** Small button to reopen sidebar when collapsed (desktop) or open sheet (mobile) */
+function SidebarOpenButton() {
+  const { open, toggleSidebar, isMobile } = useSidebar();
+  if (!isMobile && open) return null;
+  return (
+    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={toggleSidebar} aria-label="Open sidebar">
+      <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
+    </Button>
+  );
+}
+
+export default function PagesClient({ userEmail }: { userEmail: string }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const t = useTranslations("pages");
   const [view, setView] = useState<View>("list");
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -314,7 +333,7 @@ export default function PagesClient() {
 
   // Archive page (with confirmation)
   const handleArchive = useCallback(async (pageId: string) => {
-    const confirmed = window.confirm("Supprimer cette page ? Cette action est irréversible.");
+    const confirmed = window.confirm(t("confirmDelete"));
     if (!confirmed) return;
     try {
       const res = await fetch(`/api/pages/${pageId}`, { method: "DELETE" });
@@ -327,560 +346,536 @@ export default function PagesClient() {
 
   // ==================== RENDER ====================
 
-  // Linkinbio editor
-  if (view === "linkinbio-edit" && editPage) {
-    return (
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background">
-          <AppSidebar />
-          <main className="flex-1 min-w-0 overflow-hidden">
-            <LinkinbioEditor
-              initialPage={editPage}
-              onBack={() => {
-                if (typeof window !== "undefined") {
-                  const url = new URL(window.location.href);
-                  url.searchParams.delete("edit");
-                  window.history.replaceState({}, "", url.pathname);
-                }
-                setView("list"); setEditPage(null); fetchPages();
-              }}
-            />
-          </main>
-        </div>
-      </SidebarProvider>
-    );
-  }
+  const isEditorView = (view === "linkinbio-edit" || view === "edit") && editPage;
 
-  if (view === "edit" && editPage) {
-    return (
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background">
-          <AppSidebar />
-          <main className="flex-1 min-w-0 overflow-hidden">
-            <PageBuilder
-              initialPage={editPage}
-              onBack={() => {
-                // Clear ?edit= from URL so the useEffect doesn't reopen the editor
-                if (typeof window !== "undefined") {
-                  const url = new URL(window.location.href);
-                  url.searchParams.delete("edit");
-                  window.history.replaceState({}, "", url.pathname);
-                }
-                setView("list"); setEditPage(null); fetchPages();
-              }}
-            />
-          </main>
-        </div>
-      </SidebarProvider>
-    );
-  }
+  const handleEditorBack = () => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("edit");
+      window.history.replaceState({}, "", url.pathname);
+    }
+    setView("list"); setEditPage(null); fetchPages();
+  };
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <main className="flex-1 overflow-auto">
-          <div className="p-6 md:p-8 max-w-6xl mx-auto">
 
-            {/* ==================== GENERATING ==================== */}
-            {view === "generating" && (
-              <PageGenerateProgress steps={genSteps} error={genError} />
-            )}
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          {/* Standard header */}
+          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
+            <div className="flex items-center gap-2 min-w-0">
+              <SidebarOpenButton />
+              {!isEditorView && (
+                <h1 className="text-lg font-display font-bold truncate">{t("headerTitle")}</h1>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <HeaderCredits />
+              <ProjectSwitcher />
+              <NotificationBell />
+              <UserAvatarMenu userEmail={userEmail} />
+            </div>
+          </header>
 
-            {/* ==================== STEP 1: Type choice ==================== */}
-            {view === "step1" && (
-              <div className="max-w-lg mx-auto py-8">
-                <button onClick={() => setView("list")} className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1">
-                  <ArrowLeft className="w-3.5 h-3.5" /> Retour
-                </button>
+          {/* ==================== LINKINBIO EDITOR ==================== */}
+          {view === "linkinbio-edit" && editPage && (
+            <LinkinbioEditor initialPage={editPage} onBack={handleEditorBack} />
+          )}
 
-                <h1 className="text-2xl font-bold mb-2">Quel type de page ?</h1>
-                <p className="text-muted-foreground mb-8">
-                  Tipote crée tout : copywriting + design + hébergement.
-                </p>
+          {/* ==================== PAGE BUILDER EDITOR ==================== */}
+          {view === "edit" && editPage && (
+            <PageBuilder initialPage={editPage} onBack={handleEditorBack} />
+          )}
 
-                <div className="grid grid-cols-1 gap-4">
-                  <button
-                    onClick={() => { setCreateType("capture"); goToStep2(); }}
-                    className="p-6 rounded-xl border-2 text-left transition-all hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 group"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                        <FileText className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold mb-1">Page de capture</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Récupère des emails avec un lead magnet ou une promesse de contenu gratuit.
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">5 crédits</p>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+          {/* ==================== NON-EDITOR VIEWS ==================== */}
+          {!isEditorView && (
+            <div className="flex-1 p-4 lg:p-6">
+              <div className="max-w-6xl mx-auto">
+
+                {/* ==================== GENERATING ==================== */}
+                {view === "generating" && (
+                  <PageGenerateProgress steps={genSteps} error={genError} />
+                )}
+
+                {/* ==================== STEP 1: Type choice ==================== */}
+                {view === "step1" && (
+                  <div className="max-w-lg mx-auto py-8">
+                    <button onClick={() => setView("list")} className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1">
+                      <ArrowLeft className="w-3.5 h-3.5" /> {t("back")}
+                    </button>
+
+                    <h1 className="text-2xl font-bold mb-2">{t("step1Title")}</h1>
+                    <p className="text-muted-foreground mb-8">{t("step1Desc")}</p>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <button
+                        onClick={() => { setCreateType("capture"); goToStep2(); }}
+                        className="p-6 rounded-xl border-2 text-left transition-all hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 group"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                            <FileText className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold mb-1">{t("typeCapture")}</h3>
+                            <p className="text-sm text-muted-foreground">{t("typeCaptureDesc")}</p>
+                            <p className="text-xs text-muted-foreground mt-2">{t("credits5")}</p>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => { setCreateType("sales"); goToStep2(); }}
+                        className="p-6 rounded-xl border-2 text-left transition-all hover:border-green-400 hover:bg-green-50/50 dark:hover:bg-green-950/20 group"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                            <ShoppingCart className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold mb-1">{t("typeSales")}</h3>
+                            <p className="text-sm text-muted-foreground">{t("typeSalesDesc")}</p>
+                            <p className="text-xs text-muted-foreground mt-2">{t("credits6")}</p>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => { setCreateType("showcase"); goToStep2(); }}
+                        className="p-6 rounded-xl border-2 text-left transition-all hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 group"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                            <Globe className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold mb-1">{t("typeShowcase")}</h3>
+                            <p className="text-sm text-muted-foreground">{t("typeShowcaseDesc")}</p>
+                            <p className="text-xs text-muted-foreground mt-2">{t("credits6")}</p>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={handleCreateLinkinbio}
+                        disabled={creatingLinkinbio}
+                        className="p-6 rounded-xl border-2 text-left transition-all hover:border-orange-400 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 group"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
+                            {creatingLinkinbio ? <Loader2 className="w-6 h-6 text-orange-600 animate-spin" /> : <Link2 className="w-6 h-6 text-orange-600" />}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold mb-1">{t("typeLinkinbio")}</h3>
+                            <p className="text-sm text-muted-foreground">{t("typeLinkinbioDesc")}</p>
+                            <p className="text-xs text-muted-foreground mt-2">{t("free")}</p>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </button>
                     </div>
-                  </button>
-
-                  <button
-                    onClick={() => { setCreateType("sales"); goToStep2(); }}
-                    className="p-6 rounded-xl border-2 text-left transition-all hover:border-green-400 hover:bg-green-50/50 dark:hover:bg-green-950/20 group"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                        <ShoppingCart className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold mb-1">Page de vente</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Vends ton offre avec une page de vente optimisée pour la conversion.
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">6 crédits</p>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => { setCreateType("showcase"); goToStep2(); }}
-                    className="p-6 rounded-xl border-2 text-left transition-all hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 group"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
-                        <Globe className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold mb-1">Site vitrine</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Présente ton activité, tes services et redirige vers un RDV, formulaire ou essai gratuit.
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">6 crédits</p>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={handleCreateLinkinbio}
-                    disabled={creatingLinkinbio}
-                    className="p-6 rounded-xl border-2 text-left transition-all hover:border-orange-400 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 group"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
-                        {creatingLinkinbio ? <Loader2 className="w-6 h-6 text-orange-600 animate-spin" /> : <Link2 className="w-6 h-6 text-orange-600" />}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold mb-1">Page multiliens</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Regroupe tous tes liens en une seule page. Idéal pour ta bio Instagram, TikTok, LinkedIn...
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">Gratuit</p>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-muted-foreground ml-auto self-center opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ==================== STEP 2: Offer source ==================== */}
-            {view === "step2" && (
-              <div className="max-w-xl mx-auto py-8">
-                <button onClick={() => setView("step1")} className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1">
-                  <ArrowLeft className="w-3.5 h-3.5" /> Retour
-                </button>
-
-                <h1 className="text-2xl font-bold mb-2">
-                  {createType === "capture" ? "Page de capture" : createType === "showcase" ? "Site vitrine" : "Page de vente"}
-                </h1>
-                <p className="text-muted-foreground mb-6">
-                  Tipote utilise automatiquement ton branding, ton ton de voix et tes mentions légales.
-                </p>
-
-                {offersLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : (
-                  <>
-                    {/* Source toggle */}
-                    {offers.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                        <button
-                          onClick={() => setOfferSource("existing")}
-                          className={`p-4 rounded-xl border-2 text-left transition-all ${
-                            offerSource === "existing" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <Package className="w-5 h-5 mb-1.5 text-primary" />
-                          <h3 className="font-semibold text-sm">Offre existante</h3>
-                          <p className="text-xs text-muted-foreground mt-0.5">Les infos sont déjà prêtes</p>
-                        </button>
-                        <button
-                          onClick={() => setOfferSource("scratch")}
-                          className={`p-4 rounded-xl border-2 text-left transition-all ${
-                            offerSource === "scratch" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <PenTool className="w-5 h-5 mb-1.5 text-primary" />
-                          <h3 className="font-semibold text-sm">De zéro</h3>
-                          <p className="text-xs text-muted-foreground mt-0.5">Je donne les infos moi-même</p>
-                        </button>
+                )}
+
+                {/* ==================== STEP 2: Offer source ==================== */}
+                {view === "step2" && (
+                  <div className="max-w-xl mx-auto py-8">
+                    <button onClick={() => setView("step1")} className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1">
+                      <ArrowLeft className="w-3.5 h-3.5" /> {t("back")}
+                    </button>
+
+                    <h1 className="text-2xl font-bold mb-2">
+                      {createType === "capture" ? t("typeCapture") : createType === "showcase" ? t("typeShowcase") : t("typeSales")}
+                    </h1>
+                    <p className="text-muted-foreground mb-6">{t("step2Desc")}</p>
+
+                    {offersLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                       </div>
-                    )}
-
-                    {/* Existing offer selector */}
-                    {offerSource === "existing" && offers.length > 0 && (
-                      <div className="space-y-3 mb-6">
-                        {offers.map((offer) => (
-                          <button
-                            key={offer.id}
-                            onClick={() => setSelectedOfferId(offer.id)}
-                            className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                              selectedOfferId === offer.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h4 className="font-medium text-sm">{offer.name}</h4>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {levelLabel(offer.level)}
-                                  {formatPriceRange(offer) && ` \u00B7 ${formatPriceRange(offer)}`}
-                                </p>
-                              </div>
-                              {selectedOfferId === offer.id && (
-                                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                  <Check className="w-3 h-3 text-primary-foreground" />
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        ))}
-
-                        {/* Payment URL for sales */}
-                        {createType === "sales" && (
-                          <div className="pt-2">
-                            <label className="text-sm font-medium block mb-1">Lien de paiement (optionnel)</label>
-                            <input
-                              type="url"
-                              value={paymentUrl}
-                              onChange={(e) => setPaymentUrl(e.target.value)}
-                              placeholder="https://checkout.stripe.com/..."
-                              className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                            />
+                    ) : (
+                      <>
+                        {/* Source toggle */}
+                        {offers.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                            <button
+                              onClick={() => setOfferSource("existing")}
+                              className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                offerSource === "existing" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              <Package className="w-5 h-5 mb-1.5 text-primary" />
+                              <h3 className="font-semibold text-sm">{t("existingOffer")}</h3>
+                              <p className="text-xs text-muted-foreground mt-0.5">{t("existingOfferDesc")}</p>
+                            </button>
+                            <button
+                              onClick={() => setOfferSource("scratch")}
+                              className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                offerSource === "scratch" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              <PenTool className="w-5 h-5 mb-1.5 text-primary" />
+                              <h3 className="font-semibold text-sm">{t("fromScratch")}</h3>
+                              <p className="text-xs text-muted-foreground mt-0.5">{t("fromScratchDesc")}</p>
+                            </button>
                           </div>
                         )}
-                      </div>
-                    )}
 
-                    {/* Scratch form */}
-                    {offerSource === "scratch" && (
-                      <div className="space-y-4 mb-6">
-                        <div>
-                          <label className="text-sm font-medium block mb-1">Nom de l&apos;offre *</label>
-                          <input
-                            type="text"
-                            value={offerName}
-                            onChange={(e) => setOfferName(e.target.value)}
-                            placeholder="Ex: Formation 'Booste tes ventes'"
-                            className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                          />
-                        </div>
+                        {/* Existing offer selector */}
+                        {offerSource === "existing" && offers.length > 0 && (
+                          <div className="space-y-3 mb-6">
+                            {offers.map((offer) => (
+                              <button
+                                key={offer.id}
+                                onClick={() => setSelectedOfferId(offer.id)}
+                                className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                                  selectedOfferId === offer.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h4 className="font-medium text-sm">{offer.name}</h4>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {levelLabel(offer.level)}
+                                      {formatPriceRange(offer) && ` \u00B7 ${formatPriceRange(offer)}`}
+                                    </p>
+                                  </div>
+                                  {selectedOfferId === offer.id && (
+                                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                      <Check className="w-3 h-3 text-primary-foreground" />
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
 
-                        {/* Logo question */}
-                        <div>
-                          <label className="text-sm font-medium block mb-1.5">As-tu un logo pour cette offre ?</label>
-                          <div className="grid grid-cols-2 gap-2 mb-2">
-                            <button
-                              type="button"
-                              onClick={() => setHasLogo("yes")}
-                              className={`px-3 py-2 rounded-lg text-xs border transition-all ${
-                                hasLogo === "yes" ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
-                              }`}
-                            >
-                              Oui, j&apos;ai un logo
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setHasLogo("no"); setLogoFile(null); setLogoPreviewUrl(""); }}
-                              className={`px-3 py-2 rounded-lg text-xs border transition-all ${
-                                hasLogo === "no" ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
-                              }`}
-                            >
-                              Non, pas de logo
-                            </button>
+                            {/* Payment URL for sales */}
+                            {createType === "sales" && (
+                              <div className="pt-2">
+                                <label className="text-sm font-medium block mb-1">{t("paymentLinkOptional")}</label>
+                                <input
+                                  type="url"
+                                  value={paymentUrl}
+                                  onChange={(e) => setPaymentUrl(e.target.value)}
+                                  placeholder="https://checkout.stripe.com/..."
+                                  className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                                />
+                              </div>
+                            )}
                           </div>
-                          {hasLogo === "yes" && (
+                        )}
+
+                        {/* Scratch form */}
+                        {offerSource === "scratch" && (
+                          <div className="space-y-4 mb-6">
                             <div>
+                              <label className="text-sm font-medium block mb-1">{t("offerName")} *</label>
                               <input
-                                type="file"
-                                accept="image/*"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  setLogoFile(file);
-                                  // Upload immediately
-                                  const formData = new FormData();
-                                  formData.append("file", file);
-                                  formData.append("contentId", `scratch-logo-${Date.now()}`);
-                                  try {
-                                    const res = await fetch("/api/upload/image", { method: "POST", body: formData });
-                                    const data = await res.json();
-                                    if (data.ok && data.url) setLogoPreviewUrl(data.url);
-                                  } catch { /* ignore */ }
-                                }}
+                                type="text"
+                                value={offerName}
+                                onChange={(e) => setOfferName(e.target.value)}
+                                placeholder={t("offerNamePlaceholder")}
+                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                              />
+                            </div>
+
+                            {/* Logo question */}
+                            <div>
+                              <label className="text-sm font-medium block mb-1.5">{t("hasLogo")}</label>
+                              <div className="grid grid-cols-2 gap-2 mb-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setHasLogo("yes")}
+                                  className={`px-3 py-2 rounded-lg text-xs border transition-all ${
+                                    hasLogo === "yes" ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
+                                  }`}
+                                >
+                                  {t("hasLogoYes")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setHasLogo("no"); setLogoFile(null); setLogoPreviewUrl(""); }}
+                                  className={`px-3 py-2 rounded-lg text-xs border transition-all ${
+                                    hasLogo === "no" ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
+                                  }`}
+                                >
+                                  {t("hasLogoNo")}
+                                </button>
+                              </div>
+                              {hasLogo === "yes" && (
+                                <div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      setLogoFile(file);
+                                      const formData = new FormData();
+                                      formData.append("file", file);
+                                      formData.append("contentId", `scratch-logo-${Date.now()}`);
+                                      try {
+                                        const res = await fetch("/api/upload/image", { method: "POST", body: formData });
+                                        const data = await res.json();
+                                        if (data.ok && data.url) setLogoPreviewUrl(data.url);
+                                      } catch { /* ignore */ }
+                                    }}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                  {logoPreviewUrl && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <img src={logoPreviewUrl} alt="Logo" className="h-8 w-auto rounded" />
+                                      <span className="text-xs text-green-600 flex items-center gap-1"><Check className="w-3 h-3" /> {t("logoUploaded")}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {hasLogo === "no" && (
+                                <p className="text-[10px] text-muted-foreground">{t("noLogoHint")}</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium block mb-1">{t("mainPromise")} *</label>
+                              <input
+                                type="text"
+                                value={offerPromise}
+                                onChange={(e) => setOfferPromise(e.target.value)}
+                                placeholder={t("mainPromisePlaceholder")}
+                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium block mb-1">{t("targetAudience")} *</label>
+                              <input
+                                type="text"
+                                value={offerTarget}
+                                onChange={(e) => setOfferTarget(e.target.value)}
+                                placeholder={t("targetAudiencePlaceholder")}
+                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium block mb-1">{t("benefits")}</label>
+                              <textarea
+                                value={offerBenefits}
+                                onChange={(e) => setOfferBenefits(e.target.value)}
+                                placeholder={t("benefitsPlaceholder")}
+                                rows={4}
+                                className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
+                              />
+                            </div>
+
+                            {createType === "sales" && (
+                              <>
+                                <div>
+                                  <label className="text-sm font-medium block mb-1">{t("price")}</label>
+                                  <input
+                                    type="text"
+                                    value={offerPrice}
+                                    onChange={(e) => setOfferPrice(e.target.value)}
+                                    placeholder={t("pricePlaceholder")}
+                                    className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-sm font-medium block mb-1">{t("guarantees")}</label>
+                                  <input
+                                    type="text"
+                                    value={offerGuarantees}
+                                    onChange={(e) => setOfferGuarantees(e.target.value)}
+                                    placeholder={t("guaranteesPlaceholder")}
+                                    className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-sm font-medium block mb-1">{t("paymentLink")}</label>
+                                  <input
+                                    type="url"
+                                    value={paymentUrl}
+                                    onChange={(e) => setPaymentUrl(e.target.value)}
+                                    placeholder="https://checkout.stripe.com/..."
+                                    className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Common options: urgency + bonuses */}
+                        <div className="space-y-4 mb-6 p-4 border rounded-xl bg-muted/30">
+                          <h3 className="text-sm font-semibold">{t("advancedOptions")}</h3>
+
+                          {/* Urgency */}
+                          <div>
+                            <label className="text-sm font-medium block mb-1.5">{t("urgency")}</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                              {([
+                                { v: "none" as const, l: t("urgencyNone") },
+                                { v: "places" as const, l: t("urgencyPlaces") },
+                                { v: "date" as const, l: t("urgencyDate") },
+                                { v: "custom" as const, l: t("urgencyOther") },
+                              ]).map(({ v, l }) => (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  onClick={() => setUrgencyType(v)}
+                                  className={`px-3 py-2 rounded-lg text-xs border transition-all ${
+                                    urgencyType === v ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
+                                  }`}
+                                >
+                                  {l}
+                                </button>
+                              ))}
+                            </div>
+                            {urgencyType !== "none" && (
+                              <input
+                                type="text"
+                                value={urgencyDetail}
+                                onChange={(e) => setUrgencyDetail(e.target.value)}
+                                placeholder={
+                                  urgencyType === "places" ? t("urgencyPlacesPlaceholder") :
+                                  urgencyType === "date" ? t("urgencyDatePlaceholder") :
+                                  t("urgencyOtherPlaceholder")
+                                }
                                 className="w-full px-3 py-2 border rounded-lg text-sm"
                               />
-                              {logoPreviewUrl && (
-                                <div className="mt-2 flex items-center gap-2">
-                                  <img src={logoPreviewUrl} alt="Logo" className="h-8 w-auto rounded" />
-                                  <span className="text-xs text-green-600 flex items-center gap-1"><Check className="w-3 h-3" /> Logo uploadé</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          {hasLogo === "no" && (
-                            <p className="text-[10px] text-muted-foreground">
-                              Le nom de l&apos;offre sera utilisé à la place du logo.
-                            </p>
-                          )}
+                            )}
+                          </div>
+
+                          {/* Bonuses */}
+                          <div>
+                            <label className="text-sm font-medium block mb-1">{t("bonuses")}</label>
+                            <textarea
+                              value={offerBonuses}
+                              onChange={(e) => setOfferBonuses(e.target.value)}
+                              placeholder={t("bonusesPlaceholder")}
+                              rows={3}
+                              className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-1">{t("bonusesHint")}</p>
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="text-sm font-medium block mb-1">Promesse principale *</label>
-                          <input
-                            type="text"
-                            value={offerPromise}
-                            onChange={(e) => setOfferPromise(e.target.value)}
-                            placeholder="Ex: Double tes revenus en 90 jours"
-                            className="w-full px-3 py-2.5 border rounded-lg text-sm"
+                        {/* Generate button */}
+                        <button
+                          onClick={handleGenerate}
+                          disabled={offerSource === "scratch" && !offerName.trim()}
+                          className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {t("createPage")} ({createType === "capture" ? t("credits5") : t("credits6")})
+                        </button>
+
+                        <p className="text-xs text-muted-foreground text-center mt-3">{t("canEditLater")}</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* ==================== LIST ==================== */}
+                {view === "list" && (
+                  <>
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h1 className="text-3xl font-display font-bold mb-1">{t("listTitle")}</h1>
+                        <p className="text-muted-foreground">{t("listDesc")}</p>
+                      </div>
+                      <button
+                        onClick={() => setView("step1")}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        {t("newPage")}
+                      </button>
+                    </div>
+
+                    {loading ? (
+                      <div className="flex items-center justify-center py-20">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : pages.length === 0 ? (
+                      <div className="text-center py-20">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                          <FileText className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <h2 className="text-lg font-semibold mb-2">{t("emptyTitle")}</h2>
+                        <p className="text-muted-foreground mb-6">{t("emptyDesc")}</p>
+                        <button
+                          onClick={() => setView("step1")}
+                          className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium"
+                        >
+                          {t("createFirst")}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pages.map((p) => (
+                          <PageCard
+                            key={p.id}
+                            page={p}
+                            onEdit={() => handleEdit(p.id)}
+                            onArchive={() => handleArchive(p.id)}
+                            onLeads={() => { setLeadsPageId(p.id); setLeadsPageTitle(p.title || t("untitled")); }}
                           />
-                        </div>
-
-                        <div>
-                          <label className="text-sm font-medium block mb-1">Public cible *</label>
-                          <input
-                            type="text"
-                            value={offerTarget}
-                            onChange={(e) => setOfferTarget(e.target.value)}
-                            placeholder="Ex: Coachs et consultants qui veulent scaler"
-                            className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-sm font-medium block mb-1">5 bénéfices concrets</label>
-                          <textarea
-                            value={offerBenefits}
-                            onChange={(e) => setOfferBenefits(e.target.value)}
-                            placeholder={"1. Génère tes premiers clients en 7 jours\n2. Automatise ton tunnel de vente\n3. ..."}
-                            rows={4}
-                            className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
-                          />
-                        </div>
-
-                        {createType === "sales" && (
-                          <>
-                            <div>
-                              <label className="text-sm font-medium block mb-1">Prix</label>
-                              <input
-                                type="text"
-                                value={offerPrice}
-                                onChange={(e) => setOfferPrice(e.target.value)}
-                                placeholder="Ex: 497\u20AC"
-                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="text-sm font-medium block mb-1">Garanties</label>
-                              <input
-                                type="text"
-                                value={offerGuarantees}
-                                onChange={(e) => setOfferGuarantees(e.target.value)}
-                                placeholder="Ex: Satisfait ou remboursé 30 jours"
-                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="text-sm font-medium block mb-1">Lien de paiement</label>
-                              <input
-                                type="url"
-                                value={paymentUrl}
-                                onChange={(e) => setPaymentUrl(e.target.value)}
-                                placeholder="https://checkout.stripe.com/..."
-                                className="w-full px-3 py-2.5 border rounded-lg text-sm"
-                              />
-                            </div>
-                          </>
-                        )}
+                        ))}
                       </div>
                     )}
 
-                    {/* Common options: urgency + bonuses */}
-                    <div className="space-y-4 mb-6 p-4 border rounded-xl bg-muted/30">
-                      <h3 className="text-sm font-semibold">Options avancées</h3>
-
-                      {/* Urgency */}
-                      <div>
-                        <label className="text-sm font-medium block mb-1.5">Urgence</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                          {([
-                            { v: "none" as const, l: "Aucune" },
-                            { v: "places" as const, l: "Places limitées" },
-                            { v: "date" as const, l: "Date limite" },
-                            { v: "custom" as const, l: "Autre" },
-                          ]).map(({ v, l }) => (
-                            <button
-                              key={v}
-                              type="button"
-                              onClick={() => setUrgencyType(v)}
-                              className={`px-3 py-2 rounded-lg text-xs border transition-all ${
-                                urgencyType === v ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/50"
-                              }`}
-                            >
-                              {l}
-                            </button>
-                          ))}
+                    {/* Global stats summary */}
+                    {pages.length > 0 && (
+                      <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="border rounded-xl p-4 text-center bg-card">
+                          <Eye className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                          <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.views_count || 0), 0)}</div>
+                          <div className="text-xs text-muted-foreground">{t("totalViews")}</div>
                         </div>
-                        {urgencyType !== "none" && (
-                          <input
-                            type="text"
-                            value={urgencyDetail}
-                            onChange={(e) => setUrgencyDetail(e.target.value)}
-                            placeholder={
-                              urgencyType === "places" ? "Ex: 50 places" :
-                              urgencyType === "date" ? "Ex: 15 mars 2026" :
-                              "Ex: Offre flash 48h"
-                            }
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                          />
-                        )}
+                        <div className="border rounded-xl p-4 text-center bg-card">
+                          <MousePointerClick className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                          <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.clicks_count || 0), 0)}</div>
+                          <div className="text-xs text-muted-foreground">{t("totalClicks")}</div>
+                        </div>
+                        <div className="border rounded-xl p-4 text-center bg-card">
+                          <Users className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                          <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.leads_count || 0), 0)}</div>
+                          <div className="text-xs text-muted-foreground">{t("totalLeads")}</div>
+                        </div>
+                        <div className="border rounded-xl p-4 text-center bg-card">
+                          <BarChart3 className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                          <div className="text-2xl font-bold">
+                            {(() => {
+                              const totalViews = pages.reduce((s, p) => s + (p.views_count || 0), 0);
+                              const totalLeads = pages.reduce((s, p) => s + (p.leads_count || 0), 0);
+                              return totalViews > 0 ? ((totalLeads / totalViews) * 100).toFixed(1) + "%" : "—";
+                            })()}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{t("avgConversion")}</div>
+                        </div>
                       </div>
-
-                      {/* Bonuses */}
-                      <div>
-                        <label className="text-sm font-medium block mb-1">Bonus inclus (optionnel)</label>
-                        <textarea
-                          value={offerBonuses}
-                          onChange={(e) => setOfferBonuses(e.target.value)}
-                          placeholder={"Si tu as des bonus, liste-les ici :\n1. Accès communauté privée\n2. Templates offerts\n\nSi pas de bonus, laisse vide."}
-                          rows={3}
-                          className="w-full px-3 py-2.5 border rounded-lg text-sm resize-none"
-                        />
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          Pas de bonus ? Laisse vide et la section bonus ne sera pas générée.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Generate button */}
-                    <button
-                      onClick={handleGenerate}
-                      disabled={offerSource === "scratch" && !offerName.trim()}
-                      className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Créer ma page ({createType === "capture" ? "5 crédits" : "6 crédits"})
-                    </button>
-
-                    <p className="text-xs text-muted-foreground text-center mt-3">
-                      Tu pourras modifier chaque détail ensuite.
-                    </p>
+                    )}
                   </>
                 )}
+
+                {/* Leads panel modal */}
+                {leadsPageId && (
+                  <LeadsPanel
+                    pageId={leadsPageId}
+                    pageTitle={leadsPageTitle}
+                    onClose={() => setLeadsPageId(null)}
+                  />
+                )}
               </div>
-            )}
-
-            {/* ==================== LIST ==================== */}
-            {view === "list" && (
-              <>
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h1 className="text-3xl font-display font-bold mb-1">Mes pages</h1>
-                    <p className="text-muted-foreground">Crée et héberge tes pages de capture et de vente.</p>
-                  </div>
-                  <button
-                    onClick={() => setView("step1")}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Nouvelle page
-                  </button>
-                </div>
-
-                {loading ? (
-                  <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : pages.length === 0 ? (
-                  <div className="text-center py-20">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                      <FileText className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h2 className="text-lg font-semibold mb-2">Aucune page</h2>
-                    <p className="text-muted-foreground mb-6">Crée ta première page de capture ou de vente en un clic.</p>
-                    <button
-                      onClick={() => setView("step1")}
-                      className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium"
-                    >
-                      Créer ma première page
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {pages.map((p) => (
-                      <PageCard
-                        key={p.id}
-                        page={p}
-                        onEdit={() => handleEdit(p.id)}
-                        onArchive={() => handleArchive(p.id)}
-                        onLeads={() => { setLeadsPageId(p.id); setLeadsPageTitle(p.title || "Sans titre"); }}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Global stats summary */}
-                {pages.length > 0 && (
-                  <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="border rounded-xl p-4 text-center bg-card">
-                      <Eye className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                      <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.views_count || 0), 0)}</div>
-                      <div className="text-xs text-muted-foreground">Vues totales</div>
-                    </div>
-                    <div className="border rounded-xl p-4 text-center bg-card">
-                      <MousePointerClick className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                      <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.clicks_count || 0), 0)}</div>
-                      <div className="text-xs text-muted-foreground">Clics totaux</div>
-                    </div>
-                    <div className="border rounded-xl p-4 text-center bg-card">
-                      <Users className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                      <div className="text-2xl font-bold">{pages.reduce((s, p) => s + (p.leads_count || 0), 0)}</div>
-                      <div className="text-xs text-muted-foreground">Leads totaux</div>
-                    </div>
-                    <div className="border rounded-xl p-4 text-center bg-card">
-                      <BarChart3 className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                      <div className="text-2xl font-bold">
-                        {(() => {
-                          const totalViews = pages.reduce((s, p) => s + (p.views_count || 0), 0);
-                          const totalLeads = pages.reduce((s, p) => s + (p.leads_count || 0), 0);
-                          return totalViews > 0 ? ((totalLeads / totalViews) * 100).toFixed(1) + "%" : "—";
-                        })()}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Conversion moy.</div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Leads panel modal */}
-            {leadsPageId && (
-              <LeadsPanel
-                pageId={leadsPageId}
-                pageTitle={leadsPageTitle}
-                onClose={() => setLeadsPageId(null)}
-              />
-            )}
-          </div>
+            </div>
+          )}
         </main>
       </div>
     </SidebarProvider>
@@ -890,6 +885,7 @@ export default function PagesClient() {
 // ---------- Page card ----------
 
 function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onEdit: () => void; onArchive: () => void; onLeads: () => void }) {
+  const t = useTranslations("pages");
   const [copied, setCopied] = useState(false);
   const isPublished = page.status === "published";
 
@@ -915,7 +911,7 @@ function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onE
           <span className={`text-xs px-2 py-0.5 rounded-full ${
             isPublished ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
           }`}>
-            {isPublished ? "En ligne" : "Brouillon"}
+            {isPublished ? t("statusOnline") : t("statusDraft")}
           </span>
         </div>
       </div>
@@ -924,11 +920,11 @@ function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onE
         className="font-semibold text-sm mb-1 truncate cursor-pointer hover:text-primary"
         onClick={onEdit}
       >
-        {page.title || "Sans titre"}
+        {page.title || t("untitled")}
       </h3>
 
       <p className="text-xs text-muted-foreground mb-3">
-        {page.views_count} vues &middot; {page.clicks_count || 0} clics &middot; {page.leads_count} leads
+        {page.views_count} {t("views")} &middot; {page.clicks_count || 0} {t("clicks")} &middot; {page.leads_count} leads
         {page.views_count > 0 && (
           <span className="ml-1 font-medium text-primary">
             &middot; {((page.leads_count / page.views_count) * 100).toFixed(1)}%
@@ -938,19 +934,19 @@ function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onE
 
       <div className="flex items-center gap-2">
         <button onClick={onEdit} className="flex-1 py-1.5 text-xs border rounded-md hover:bg-muted font-medium">
-          Modifier
+          {t("edit")}
         </button>
         {page.leads_count > 0 && (
-          <button onClick={onLeads} className="p-1.5 border rounded-md hover:bg-muted" title="Voir les leads">
+          <button onClick={onLeads} className="p-1.5 border rounded-md hover:bg-muted" title={t("viewLeads")}>
             <Users className="w-3.5 h-3.5 text-blue-600" />
           </button>
         )}
         {isPublished && (
-          <button onClick={copyUrl} className="p-1.5 border rounded-md hover:bg-muted" title="Copier le lien">
+          <button onClick={copyUrl} className="p-1.5 border rounded-md hover:bg-muted" title={t("copyLink")}>
             {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         )}
-        <button onClick={onArchive} className="p-1.5 border rounded-md hover:bg-muted text-destructive" title="Supprimer">
+        <button onClick={onArchive} className="p-1.5 border rounded-md hover:bg-muted text-destructive" title={t("delete")}>
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -974,6 +970,7 @@ type Lead = {
 };
 
 function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle: string; onClose: () => void }) {
+  const t = useTranslations("pages");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -1003,7 +1000,7 @@ function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle:
               <Users className="w-5 h-5 text-blue-600" />
               Leads &mdash; {pageTitle}
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{leads.length} contact{leads.length !== 1 ? "s" : ""}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{leads.length} {t("contacts")}</p>
           </div>
           <div className="flex items-center gap-2">
             {leads.length > 0 && (
@@ -1012,7 +1009,7 @@ function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle:
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg hover:bg-muted font-medium"
               >
                 <Download className="w-3.5 h-3.5" />
-                Exporter CSV
+                {t("exportCsv")}
               </button>
             )}
             <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg">
@@ -1030,7 +1027,7 @@ function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle:
           ) : leads.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>Aucun lead pour cette page.</p>
+              <p>{t("noLeads")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1038,8 +1035,8 @@ function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle:
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
                     <th className="pb-2 pr-3 font-medium">Email</th>
-                    <th className="pb-2 pr-3 font-medium">Prénom</th>
-                    <th className="pb-2 pr-3 font-medium">Téléphone</th>
+                    <th className="pb-2 pr-3 font-medium">{t("firstName")}</th>
+                    <th className="pb-2 pr-3 font-medium">{t("phone")}</th>
                     <th className="pb-2 pr-3 font-medium">Source</th>
                     <th className="pb-2 font-medium">Date</th>
                   </tr>

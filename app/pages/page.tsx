@@ -13,5 +13,5 @@ export default async function PagesPage() {
     redirect("/auth/login");
   }
 
-  return <PagesClient />;
+  return <PagesClient userEmail={session.user.email ?? ""} />;
 }
