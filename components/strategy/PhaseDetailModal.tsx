@@ -9,12 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
-  GripVertical,
-  Trash2,
   Plus,
   Target,
   Calendar,
@@ -38,15 +35,10 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   arrayMove,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableTask, type SortableTaskModel } from "@/components/strategy/SortableTask";
 
-interface Task {
-  id: string;
-  task: string;
-  done: boolean;
-}
+interface Task extends SortableTaskModel {}
 
 interface Phase {
   title: string;
@@ -66,80 +58,8 @@ interface PhaseDetailModalProps {
   onToggleTask?: (taskId: string, nextChecked: boolean) => void;
   onAddTask?: (taskName: string, phaseIndex: number) => Promise<Task | undefined>;
   onDeleteTask?: (taskId: string) => Promise<void>;
+  onOpenDetail?: (taskId: string) => void;
 }
-
-const SortableTaskItem = ({
-  task,
-  isEditing,
-  onToggle,
-  onDelete,
-}: {
-  task: Task;
-  isEditing: boolean;
-  onToggle: (id: string) => void;
-  onDelete: (id: string) => void;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.6 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={[
-        "flex items-center gap-3 rounded-xl border bg-muted/20 px-4 py-3",
-        "transition-colors hover:bg-muted/30",
-        isDragging ? "shadow-lg ring-2 ring-primary/20" : "",
-      ].join(" ")}
-    >
-      {isEditing && (
-        <button
-          {...attributes}
-          {...listeners}
-          type="button"
-          className="cursor-grab active:cursor-grabbing p-1 rounded-md hover:bg-muted"
-          aria-label="Déplacer la tâche"
-        >
-          <GripVertical className="w-4 h-4 text-muted-foreground" />
-        </button>
-      )}
-
-      <Checkbox
-        checked={task.done}
-        onCheckedChange={() => onToggle(task.id)}
-        disabled={isEditing}
-      />
-
-      <span
-        className={[
-          "flex-1 text-sm",
-          task.done ? "line-through text-muted-foreground" : "",
-        ].join(" ")}
-      >
-        {task.task}
-      </span>
-
-      {isEditing && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={() => onDelete(task.id)}
-          aria-label="Supprimer la tâche"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      )}
-    </div>
-  );
-};
 
 const phaseDescriptions: Record<string, { description: string }> =
   {
@@ -178,6 +98,7 @@ export const PhaseDetailModal = ({
   onToggleTask,
   onAddTask,
   onDeleteTask,
+  onOpenDetail,
 }: PhaseDetailModalProps) => {
   const [localPhase, setLocalPhase] = useState<Phase>(phase);
   const [isEditing, setIsEditing] = useState(false);
@@ -482,66 +403,27 @@ export const PhaseDetailModal = ({
 
                 <div className="space-y-2">
                   {localPhase.tasks?.length ? (
-                    isEditing ? (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={(localPhase.tasks || []).map((t) => t.id)}
+                        strategy={verticalListSortingStrategy}
                       >
-                        <SortableContext
-                          items={(localPhase.tasks || []).map((t) => t.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {(localPhase.tasks || []).map((task) => (
-                            <SortableTaskItem
-                              key={task.id}
-                              task={task}
-                              isEditing
-                              onToggle={handleToggleTask}
-                              onDelete={handleDeleteTask}
-                            />
-                          ))}
-                        </SortableContext>
-                      </DndContext>
-                    ) : (
-                      (localPhase.tasks || []).map((task) => (
-                        <div
-                          key={task.id}
-                          className={[
-                            "group w-full text-left flex items-center gap-3 rounded-xl border",
-                            "bg-muted/20 px-4 py-3 transition-colors hover:bg-muted/30 cursor-pointer",
-                          ].join(" ")}
-                          onClick={() => handleToggleTask(task.id)}
-                        >
-                          <Checkbox
-                            checked={task.done}
-                            onClick={(e) => e.stopPropagation()}
-                            onCheckedChange={() => handleToggleTask(task.id)}
+                        {(localPhase.tasks || []).map((task) => (
+                          <SortableTask
+                            key={task.id}
+                            task={task}
+                            isEditing={isEditing}
+                            onToggle={handleToggleTask}
+                            onDelete={handleDeleteTask}
+                            onOpenDetail={onOpenDetail}
                           />
-                          <span
-                            className={[
-                              "flex-1 text-sm",
-                              task.done
-                                ? "line-through text-muted-foreground"
-                                : "",
-                            ].join(" ")}
-                          >
-                            {task.task}
-                          </span>
-                          <button
-                            type="button"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 flex items-center justify-center rounded text-destructive hover:bg-destructive/10 shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteTask(task.id);
-                            }}
-                            aria-label="Supprimer la tâche"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))
-                    )
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                   ) : (
                     <div className="text-sm text-muted-foreground">
                       Aucune tâche pour l&apos;instant.

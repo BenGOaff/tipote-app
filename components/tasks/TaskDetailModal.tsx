@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { TagBadge } from "./TagBadge";
 import { TagSelector, type Tag } from "./TagSelector";
 import { SubtaskList, type Subtask } from "./SubtaskList";
-import { Calendar, Clock, Save, Trash2, Tags, ListChecks, FileText } from "lucide-react";
+import { Calendar, Clock, Save, Trash2, Tags, ListChecks, FileText, LayoutTemplate } from "lucide-react";
+import { CHECKLIST_TEMPLATES, type ChecklistTemplate } from "@/lib/checklistTemplates";
 
 export type TaskDetail = {
   id: string;
@@ -120,6 +121,14 @@ export function TaskDetailModal({
     setSubtasks((prev) => prev.filter((st) => st.id !== subtaskId));
   }, [task, onDeleteSubtask]);
 
+  const handleApplyTemplate = useCallback(async (template: ChecklistTemplate) => {
+    if (!task) return;
+    for (const item of template.items) {
+      const newSt = await onAddSubtask(task.id, item);
+      setSubtasks((prev) => [...prev, newSt]);
+    }
+  }, [task, onAddSubtask]);
+
   if (!task) return null;
 
   const done = subtasks.filter((s) => s.is_done).length;
@@ -220,6 +229,27 @@ export function TaskDetailModal({
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
               <ListChecks className="h-3.5 w-3.5" /> Checklist
             </div>
+
+            {subtasks.length === 0 && CHECKLIST_TEMPLATES.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-400">Appliquer un template :</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {CHECKLIST_TEMPLATES.map((tpl) => (
+                    <Button
+                      key={tpl.id}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => handleApplyTemplate(tpl)}
+                    >
+                      <LayoutTemplate className="h-3 w-3" />
+                      {tpl.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <SubtaskList
               subtasks={subtasks}
               onToggle={handleToggleSubtask}
