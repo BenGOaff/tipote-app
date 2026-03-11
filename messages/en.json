@@ -2240,5 +2240,109 @@
     "noLeads": "No leads for this page.",
     "firstName": "First name",
     "phone": "Phone"
+  },
+  "checklistTemplates": {
+    "applyTemplate": "Apply a template:",
+    "lead-magnet": {
+      "label": "Lead Magnet",
+      "description": "Create a lead magnet from A to Z",
+      "item_0": "Create the content (ebook, course, quiz…)",
+      "item_1": "Create the page (landing page, quiz…)",
+      "item_2": "Create tags in Systeme.io",
+      "item_3": "Automate sending bonuses and promised content",
+      "item_4": "Create a Know Like Trust email sequence (onboarding) to welcome the new lead",
+      "item_5": "Add tag to automations (signup → tag → email sequence → access)",
+      "item_6": "Prepare social media posts and schedule promotion"
+    },
+    "offre": {
+      "label": "Offer",
+      "description": "Create and launch a complete offer",
+      "item_0": "Create the offer (course, coaching, tool…)",
+      "item_1": "Create the sales page (page + order form + thank you +/- upsell, downsell and order bump)",
+      "item_2": "Set the pricing",
+      "item_3": "Create the tags",
+      "item_4": "Create automations (tag added, email sequence, access…)",
+      "item_5": "Create sales email campaign",
+      "item_6": "Create social media posts",
+      "item_7": "Create video / blog post if needed",
+      "item_8": "Prepare materials and notify potential partners (affiliates, influencers…)"
+    },
+    "tunnel-de-vente": {
+      "label": "Sales Funnel",
+      "description": "Set up a complete sales funnel",
+      "item_0": "Define funnel steps (capture → nurturing → sale → thank you)",
+      "item_1": "Create the landing page",
+      "item_2": "Set up the nurturing email sequence",
+      "item_3": "Create the sales page",
+      "item_4": "Set up payment",
+      "item_5": "Configure the confirmation page",
+      "item_6": "Test the entire flow end to end"
+    },
+    "affiliation": {
+      "label": "Affiliate Program",
+      "description": "Set up an affiliate program",
+      "item_0": "Create landing page with promised bonuses for affiliates",
+      "item_1": "Create bonuses",
+      "item_2": "Automate bonus delivery",
+      "item_3": "Add a Systeme.io tag",
+      "item_4": "Prepare promo content (emails, posts, articles, videos)"
+    },
+    "challenge-webinaire": {
+      "label": "Challenge / Webinar",
+      "description": "Organize a live challenge or webinar",
+      "item_0": "Set dates and times",
+      "item_1": "Create landing page + thank you page",
+      "item_2": "Prepare challenge slides",
+      "item_3": "Test equipment and tools",
+      "item_4": "Prepare live recording for replay",
+      "item_5": "Prepare communication (emails, posts, videos)",
+      "item_6": "Prepare materials and notify potential partners (affiliates, influencers…)"
+    },
+    "contenu-recurrent": {
+      "label": "Recurring Content",
+      "description": "Set up a regular content publishing schedule",
+      "item_0": "Define publishing frequency (1x/week, 3x/week…)",
+      "item_1": "Create a 1-month editorial calendar",
+      "item_2": "Prepare a content batch (3 to 5 posts ahead)",
+      "item_3": "Define formats (carousel, short video, story…)",
+      "item_4": "Schedule publications (tool or manually)",
+      "item_5": "Recycle top-performing content into new formats"
+    }
+  },
+  "taskDetail": {
+    "title": "Task details",
+    "titlePlaceholder": "Task title",
+    "statusDone": "Done",
+    "statusTodo": "To do",
+    "priorityHigh": "High priority",
+    "priorityMedium": "Medium priority",
+    "priorityLow": "Low priority",
+    "subtasksCount": "{done}/{total} sub-goals",
+    "tags": "Tags",
+    "dueDate": "Due date",
+    "estimatedDuration": "Estimated duration",
+    "durationPlaceholder": "e.g. 2h, 1 day…",
+    "notes": "Notes / description",
+    "notesPlaceholder": "Add details, links, notes…",
+    "checklist": "Checklist",
+    "addSubtask": "Add a sub-goal…",
+    "delete": "Delete",
+    "save": "Save",
+    "saving": "Saving…"
+  },
+  "phaseDetail": {
+    "objective": "Phase objective",
+    "progression": "Progress",
+    "keyPoints": "Key goals to accomplish",
+    "tasks": "Tasks",
+    "newTask": "New task…",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "done": "Done",
+    "noTasks": "No tasks yet.",
+    "dragHint": "Tip: you can reorder tasks by dragging them.",
+    "phase1Desc": "Build the foundations of your business: create your lead magnet, prepare your first offer and optimize your social media presence.",
+    "phase2Desc": "Accelerate your growth: improve your offer with client feedback, collect testimonials and develop partnerships.",
+    "phase3Desc": "Scale up: automate your processes, launch paid ads and start delegating."
   }
 }

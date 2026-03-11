@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TagBadge } from "./TagBadge";
 import { TagSelector, type Tag } from "./TagSelector";
 import { SubtaskList, type Subtask } from "./SubtaskList";
 import { Calendar, Clock, Save, Trash2, Tags, ListChecks, FileText, LayoutTemplate } from "lucide-react";
@@ -54,6 +54,8 @@ export function TaskDetailModal({
   onToggleSubtask,
   onDeleteSubtask,
 }: TaskDetailModalProps) {
+  const t = useTranslations("taskDetail");
+  const tc = useTranslations("checklistTemplates");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -69,7 +71,7 @@ export function TaskDetailModal({
       setDescription(task.description || "");
       setDueDate(task.due_date || "");
       setEstimatedDuration(task.estimated_duration || "");
-      setSelectedTagIds(task.tags.map((t) => t.id));
+      setSelectedTagIds(task.tags.map((tg) => tg.id));
       setSubtasks(task.subtasks);
     }
   }, [task]);
@@ -123,11 +125,15 @@ export function TaskDetailModal({
 
   const handleApplyTemplate = useCallback(async (template: ChecklistTemplate) => {
     if (!task) return;
-    for (const item of template.items) {
+    // Resolve items from i18n
+    const items = Array.from({ length: template.itemCount }, (_, i) =>
+      tc(`${template.id}.item_${i}`),
+    );
+    for (const item of items) {
       const newSt = await onAddSubtask(task.id, item);
       setSubtasks((prev) => [...prev, newSt]);
     }
-  }, [task, onAddSubtask]);
+  }, [task, onAddSubtask, tc]);
 
   if (!task) return null;
 
@@ -138,7 +144,7 @@ export function TaskDetailModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="sr-only">Détail de la tâche</DialogTitle>
+          <DialogTitle className="sr-only">{t("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -146,27 +152,27 @@ export function TaskDetailModal({
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full text-lg font-bold text-slate-900 border-none bg-transparent outline-none placeholder:text-slate-400"
-            placeholder="Titre de la tâche"
+            className="w-full text-lg font-bold text-slate-900 dark:text-slate-100 border-none bg-transparent outline-none placeholder:text-slate-400"
+            placeholder={t("titlePlaceholder")}
           />
 
           {/* Status badge */}
           <div className="flex items-center gap-2 flex-wrap">
             {task.status === "done" ? (
-              <Badge variant="default">Terminée</Badge>
+              <Badge variant="default">{t("statusDone")}</Badge>
             ) : (
-              <Badge variant="outline">A faire</Badge>
+              <Badge variant="outline">{t("statusTodo")}</Badge>
             )}
             {task.priority && (
               <Badge
                 variant={task.priority === "high" ? "destructive" : "secondary"}
               >
-                {task.priority === "high" ? "Priorité haute" : task.priority === "medium" ? "Priorité moyenne" : "Priorité basse"}
+                {task.priority === "high" ? t("priorityHigh") : task.priority === "medium" ? t("priorityMedium") : t("priorityLow")}
               </Badge>
             )}
             {total > 0 && (
               <Badge variant="secondary">
-                {done}/{total} sous-objectifs
+                {t("subtasksCount", { done, total })}
               </Badge>
             )}
           </div>
@@ -174,7 +180,7 @@ export function TaskDetailModal({
           {/* Tags */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-              <Tags className="h-3.5 w-3.5" /> Tags
+              <Tags className="h-3.5 w-3.5" /> {t("tags")}
             </div>
             <TagSelector
               allTags={allTags}
@@ -185,10 +191,10 @@ export function TaskDetailModal({
           </div>
 
           {/* Due date + duration */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                <Calendar className="h-3.5 w-3.5" /> Echéance
+                <Calendar className="h-3.5 w-3.5" /> {t("dueDate")}
               </label>
               <input
                 type="date"
@@ -199,12 +205,12 @@ export function TaskDetailModal({
             </div>
             <div className="space-y-1">
               <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                <Clock className="h-3.5 w-3.5" /> Durée estimée
+                <Clock className="h-3.5 w-3.5" /> {t("estimatedDuration")}
               </label>
               <input
                 value={estimatedDuration}
                 onChange={(e) => setEstimatedDuration(e.target.value)}
-                placeholder="ex: 2h, 1 jour..."
+                placeholder={t("durationPlaceholder")}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
               />
             </div>
@@ -213,13 +219,13 @@ export function TaskDetailModal({
           {/* Description */}
           <div className="space-y-1">
             <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-              <FileText className="h-3.5 w-3.5" /> Notes / description
+              <FileText className="h-3.5 w-3.5" /> {t("notes")}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              placeholder="Ajouter des détails, des liens, des notes..."
+              placeholder={t("notesPlaceholder")}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 resize-y min-h-[60px]"
             />
           </div>
@@ -227,12 +233,12 @@ export function TaskDetailModal({
           {/* Subtasks / Checklist */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-              <ListChecks className="h-3.5 w-3.5" /> Checklist
+              <ListChecks className="h-3.5 w-3.5" /> {t("checklist")}
             </div>
 
             {subtasks.length === 0 && CHECKLIST_TEMPLATES.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-slate-400">Appliquer un template :</p>
+                <p className="text-xs text-slate-400">{tc("applyTemplate")}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {CHECKLIST_TEMPLATES.map((tpl) => (
                     <Button
@@ -243,7 +249,7 @@ export function TaskDetailModal({
                       onClick={() => handleApplyTemplate(tpl)}
                     >
                       <LayoutTemplate className="h-3 w-3" />
-                      {tpl.label}
+                      {tc(`${tpl.id}.label`)}
                     </Button>
                   ))}
                 </div>
@@ -266,7 +272,7 @@ export function TaskDetailModal({
               className="text-red-500 hover:text-red-600 hover:bg-red-50"
               onClick={() => { onDelete(task.id); onOpenChange(false); }}
             >
-              <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+              <Trash2 className="h-4 w-4 mr-1" /> {t("delete")}
             </Button>
 
             <Button
@@ -275,7 +281,7 @@ export function TaskDetailModal({
               disabled={saving || !title.trim()}
             >
               <Save className="h-4 w-4 mr-1" />
-              {saving ? "Sauvegarde..." : "Enregistrer"}
+              {saving ? t("saving") : t("save")}
             </Button>
           </div>
         </div>

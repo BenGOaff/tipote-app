@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -20,6 +21,7 @@ interface SubtaskListProps {
 }
 
 export function SubtaskList({ subtasks, onToggle, onAdd, onDelete }: SubtaskListProps) {
+  const t = useTranslations("taskDetail");
   const [newTitle, setNewTitle] = useState("");
 
   const total = subtasks.length;
@@ -76,7 +78,7 @@ export function SubtaskList({ subtasks, onToggle, onAdd, onDelete }: SubtaskList
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-          placeholder="Ajouter un sous-objectif..."
+          placeholder={t("addSubtask")}
           className="flex-1 border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
           maxLength={500}
         />

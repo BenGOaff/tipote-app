@@ -1,62 +1,27 @@
 // lib/checklistTemplates.ts
 // Templates de checklist prédéfinis pour les tâches stratégiques.
-// Chaque template contient un titre et une liste de sous-tâches à pré-remplir.
+// Les textes sont résolus via i18n (namespace "checklistTemplates").
 
 export interface ChecklistTemplate {
   id: string;
-  label: string;
-  description: string;
-  items: string[];
+  /** Nombre de sous-tâches dans le template */
+  itemCount: number;
+  /** Phase suggérée : "fondations" | "croissance" | "scale" */
+  phase?: string;
 }
 
 /**
  * Templates disponibles.
- * Pour ajouter un template, il suffit d'ajouter une entrée ici.
+ * Les labels, descriptions et items sont dans les fichiers de traduction
+ * sous la clé "checklistTemplates.<id>.label", ".description", ".item_0" … ".item_N"
  */
 export const CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
-  // TODO: remplacer par les vrais templates
-  {
-    id: "lead-magnet",
-    label: "Lead Magnet",
-    description: "Créer un lead magnet de A à Z",
-    items: [
-      "Définir le problème précis résolu",
-      "Choisir le format (PDF, vidéo, quiz…)",
-      "Rédiger le contenu",
-      "Créer le design / mise en page",
-      "Mettre en place la page de capture",
-      "Configurer l'email de livraison",
-      "Tester le tunnel complet",
-    ],
-  },
-  {
-    id: "page-de-vente",
-    label: "Page de vente",
-    description: "Construire une page de vente qui convertit",
-    items: [
-      "Rédiger l'accroche / headline",
-      "Lister les bénéfices clés",
-      "Ajouter les preuves sociales",
-      "Rédiger l'offre et le pricing",
-      "Créer le CTA principal",
-      "Ajouter la section FAQ",
-      "Tester sur mobile",
-    ],
-  },
-  {
-    id: "tunnel-de-vente",
-    label: "Tunnel de vente",
-    description: "Mettre en place un tunnel complet",
-    items: [
-      "Définir les étapes du tunnel",
-      "Créer la page de capture",
-      "Configurer la séquence email",
-      "Créer la page de vente",
-      "Mettre en place le paiement",
-      "Configurer la page de confirmation",
-      "Tester le parcours de bout en bout",
-    ],
-  },
+  { id: "lead-magnet", itemCount: 7, phase: "fondations" },
+  { id: "offre", itemCount: 9, phase: "fondations" },
+  { id: "tunnel-de-vente", itemCount: 7, phase: "fondations" },
+  { id: "affiliation", itemCount: 5, phase: "croissance" },
+  { id: "challenge-webinaire", itemCount: 7, phase: "croissance" },
+  { id: "contenu-recurrent", itemCount: 6, phase: "croissance" },
 ];
 
 /** Retrouver un template par son id */

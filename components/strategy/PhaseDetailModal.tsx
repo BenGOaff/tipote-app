@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -61,31 +62,12 @@ interface PhaseDetailModalProps {
   onOpenDetail?: (taskId: string) => void;
 }
 
-const phaseDescriptions: Record<string, { description: string }> =
-  {
-    "Phase 1 : Fondations": {
-      description:
-        "Cette phase vise à poser les bases solides de ton business. Tu vas créer les éléments essentiels qui vont attirer et capturer tes premiers prospects.",
-    },
-    "Phase 2 : Croissance": {
-      description:
-        "Maintenant que les fondations sont en place, il est temps d'accélérer. Tu vas optimiser tes tunnels de vente et développer ta visibilité.",
-    },
-    "Phase 3 : Scale": {
-      description:
-        "C'est le moment de passer à l'échelle supérieure. Tu vas automatiser tes processus et créer des systèmes de revenus prévisibles.",
-    },
-  };
-
 /** Compute key objectives dynamically from the phase's actual tasks (not yet done) */
 function computeObjectivesFromTasks(tasks: Task[]): string[] {
-  // Show up to 4 non-completed tasks as key objectives
   const pending = tasks.filter((t) => !t.done);
   if (pending.length === 0) {
-    // All done — show completed tasks as accomplished objectives
     return tasks.slice(0, 4).map((t) => t.task);
   }
-  // Prioritize high-priority tasks first, then show in order
   return pending.slice(0, 4).map((t) => t.task);
 }
 
@@ -100,6 +82,7 @@ export const PhaseDetailModal = ({
   onDeleteTask,
   onOpenDetail,
 }: PhaseDetailModalProps) => {
+  const t = useTranslations("phaseDetail");
   const [localPhase, setLocalPhase] = useState<Phase>(phase);
   const [isEditing, setIsEditing] = useState(false);
   const [newTaskName, setNewTaskName] = useState("");
@@ -123,9 +106,16 @@ export const PhaseDetailModal = ({
     }
   }, [phase, isEditing, isOpen]);
 
-  const descriptionData = useMemo(() => {
-    return phaseDescriptions[localPhase.title] || phaseDescriptions[phase.title];
-  }, [localPhase.title, phase.title]);
+  // Resolve phase description from i18n based on phase index
+  const phaseDescription = useMemo(() => {
+    if (localPhase.description) return localPhase.description;
+    const key = `phase${phaseIndex + 1}Desc` as const;
+    try {
+      return t(key);
+    } catch {
+      return "—";
+    }
+  }, [localPhase.description, phaseIndex, t]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -137,7 +127,7 @@ export const PhaseDetailModal = ({
   );
 
   const calculateProgress = useCallback((tasks: Task[]) => {
-    const completedTasks = tasks.filter((t) => t.done).length;
+    const completedTasks = tasks.filter((tk) => tk.done).length;
     return tasks.length > 0
       ? Math.round((completedTasks / tasks.length) * 100)
       : 0;
@@ -147,11 +137,11 @@ export const PhaseDetailModal = ({
     (taskId: string) => {
       if (isEditing) return;
       setLocalPhase((prev) => {
-        const tasks = (prev.tasks || []).map((t) =>
-          t.id === taskId ? { ...t, done: !t.done } : t,
+        const tasks = (prev.tasks || []).map((tk) =>
+          tk.id === taskId ? { ...tk, done: !tk.done } : tk,
         );
         const progress = calculateProgress(tasks);
-        const toggled = tasks.find((t) => t.id === taskId);
+        const toggled = tasks.find((tk) => tk.id === taskId);
         if (toggled && onToggleTask) {
           onToggleTask(taskId, toggled.done);
         }
@@ -163,19 +153,17 @@ export const PhaseDetailModal = ({
 
   const handleDeleteTask = useCallback(
     async (taskId: string) => {
-      // Immediately update local UI
       setLocalPhase((prev) => {
-        const tasks = (prev.tasks || []).filter((t) => t.id !== taskId);
+        const tasks = (prev.tasks || []).filter((tk) => tk.id !== taskId);
         const progress = calculateProgress(tasks);
         return { ...prev, tasks, progress };
       });
 
-      // Persist via API if callback provided
       if (onDeleteTask) {
         try {
           await onDeleteTask(taskId);
         } catch {
-          // Task already removed from UI - acceptable
+          // Task already removed from UI
         }
       }
     },
@@ -189,11 +177,9 @@ export const PhaseDetailModal = ({
     setNewTaskName("");
 
     if (onAddTask) {
-      // Persist via API — parent handles DB + phases state
       setIsSaving(true);
       try {
         const newTask = await onAddTask(name, phaseIndex);
-        // Update localPhase immediately so the task appears without closing the modal
         if (newTask) {
           setLocalPhase((prev) => {
             const tasks = [...(prev.tasks || []), newTask];
@@ -207,7 +193,6 @@ export const PhaseDetailModal = ({
         setIsSaving(false);
       }
     } else {
-      // Fallback: local-only add (legacy behavior)
       setLocalPhase((prev) => {
         const tasks = [
           ...(prev.tasks || []),
@@ -224,21 +209,18 @@ export const PhaseDetailModal = ({
     if (!over || active.id === over.id) return;
 
     setLocalPhase((prev) => {
-      const oldIndex = (prev.tasks || []).findIndex((t) => t.id === active.id);
-      const newIndex = (prev.tasks || []).findIndex((t) => t.id === over.id);
+      const oldIndex = (prev.tasks || []).findIndex((tk) => tk.id === active.id);
+      const newIndex = (prev.tasks || []).findIndex((tk) => tk.id === over.id);
       if (oldIndex < 0 || newIndex < 0) return prev;
 
       const tasks = arrayMove(prev.tasks || [], oldIndex, newIndex);
 
-      // Persist new order to database
-      const orderedIds = tasks.map((t) => t.id);
+      const orderedIds = tasks.map((tk) => tk.id);
       fetch("/api/tasks/reorder", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderedIds }),
-      }).catch(() => {
-        // Non-blocking: order is still visible locally
-      });
+      }).catch(() => {});
 
       return { ...prev, tasks };
     });
@@ -256,8 +238,6 @@ export const PhaseDetailModal = ({
   }, [savedPhase]);
 
   const saveEditing = useCallback(() => {
-    // Tasks are already persisted via onAddTask/onDeleteTask during editing
-    // Just exit editing mode and notify parent
     const progress = calculateProgress(localPhase.tasks || []);
     const updated = { ...localPhase, progress };
     onUpdatePhase(phaseIndex, updated);
@@ -265,16 +245,12 @@ export const PhaseDetailModal = ({
     setNewTaskName("");
   }, [calculateProgress, localPhase, onUpdatePhase, phaseIndex]);
 
-  const objectiveText =
-    localPhase.description || descriptionData?.description || "—";
-  // ✅ FIX: Compute key objectives dynamically from actual tasks
-  // instead of hardcoded generic objectives
   const objectives =
     localPhase.objectives && localPhase.objectives.length > 0
       ? localPhase.objectives
       : (localPhase.tasks && localPhase.tasks.length > 0)
         ? computeObjectivesFromTasks(localPhase.tasks)
-        : ["Aucune tâche pour l'instant"];
+        : [t("noTasks")];
 
   return (
     <Dialog
@@ -285,48 +261,48 @@ export const PhaseDetailModal = ({
     >
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0">
         <div className="flex flex-col max-h-[90vh]">
-          <DialogHeader className="px-6 pt-6 pb-4">
+          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <DialogTitle className="text-2xl font-display font-bold">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-xl sm:text-2xl font-display font-bold truncate">
                   {localPhase.title}
                 </DialogTitle>
                 <DialogDescription className="flex items-center gap-2 mt-1">
-                  <Calendar className="w-4 h-4" />
+                  <Calendar className="w-4 h-4 shrink-0" />
                   {localPhase.period}
                 </DialogDescription>
               </div>
 
               {isEditing ? (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" onClick={cancelEditing}>
-                    <X className="w-4 h-4 mr-2" />
-                    Annuler
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="ghost" size="sm" onClick={cancelEditing}>
+                    <X className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{t("cancel")}</span>
                   </Button>
-                  <Button onClick={saveEditing}>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Terminé
+                  <Button size="sm" onClick={saveEditing}>
+                    <CheckCircle2 className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{t("done")}</span>
                   </Button>
                 </div>
               ) : (
-                <Button variant="outline" onClick={startEditing}>
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Modifier
+                <Button variant="outline" size="sm" onClick={startEditing} className="shrink-0">
+                  <Pencil className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t("edit")}</span>
                 </Button>
               )}
             </div>
           </DialogHeader>
 
-          <div className="px-6 pb-6 overflow-auto">
+          <div className="px-4 sm:px-6 pb-6 overflow-auto">
             <div className="space-y-6">
               {/* Objectif */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <Target className="w-5 h-5 text-primary" />
-                  <h4 className="font-semibold">Objectif de cette phase</h4>
+                  <Target className="w-5 h-5 text-primary shrink-0" />
+                  <h4 className="font-semibold">{t("objective")}</h4>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {objectiveText}
+                  {phaseDescription}
                 </p>
               </div>
 
@@ -336,8 +312,8 @@ export const PhaseDetailModal = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-success" />
-                    <span className="font-semibold">Progression</span>
+                    <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+                    <span className="font-semibold">{t("progression")}</span>
                   </div>
                   <Badge
                     variant={localPhase.progress === 100 ? "default" : "secondary"}
@@ -353,8 +329,8 @@ export const PhaseDetailModal = ({
               {/* Points clés */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <ListChecks className="w-5 h-5 text-primary" />
-                  <h4 className="font-semibold">Points clés à accomplir</h4>
+                  <ListChecks className="w-5 h-5 text-primary shrink-0" />
+                  <h4 className="font-semibold">{t("keyPoints")}</h4>
                 </div>
                 <ul className="space-y-2">
                   {objectives.map((obj, i) => (
@@ -372,7 +348,7 @@ export const PhaseDetailModal = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-semibold">
-                    Tâches ({localPhase.tasks?.length || 0})
+                    {t("tasks")} ({localPhase.tasks?.length || 0})
                   </h4>
                 </div>
 
@@ -381,7 +357,7 @@ export const PhaseDetailModal = ({
                     <Input
                       value={newTaskName}
                       onChange={(e) => setNewTaskName(e.target.value)}
-                      placeholder="Nouvelle tâche..."
+                      placeholder={t("newTask")}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleAddTask();
                       }}
@@ -409,7 +385,7 @@ export const PhaseDetailModal = ({
                       onDragEnd={handleDragEnd}
                     >
                       <SortableContext
-                        items={(localPhase.tasks || []).map((t) => t.id)}
+                        items={(localPhase.tasks || []).map((tk) => tk.id)}
                         strategy={verticalListSortingStrategy}
                       >
                         {(localPhase.tasks || []).map((task) => (
@@ -426,14 +402,14 @@ export const PhaseDetailModal = ({
                     </DndContext>
                   ) : (
                     <div className="text-sm text-muted-foreground">
-                      Aucune tâche pour l&apos;instant.
+                      {t("noTasks")}
                     </div>
                   )}
                 </div>
 
                 {isEditing && localPhase.tasks?.length ? (
                   <p className="text-xs text-muted-foreground">
-                    Astuce : tu peux réordonner les tâches en les glissant.
+                    {t("dragHint")}
                   </p>
                 ) : null}
               </div>

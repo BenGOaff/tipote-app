@@ -2189,5 +2189,109 @@
     "unpublished": "Página despublicada",
     "publish": "Publicar",
     "unpublish": "Despublicar"
+  },
+  "checklistTemplates": {
+    "applyTemplate": "Aplicar una plantilla:",
+    "lead-magnet": {
+      "label": "Lead Magnet",
+      "description": "Crear un lead magnet de principio a fin",
+      "item_0": "Crear el contenido (ebook, formación, quiz…)",
+      "item_1": "Crear la página (página de captura, quiz…)",
+      "item_2": "Crear las etiquetas en Systeme.io",
+      "item_3": "Automatizar el envío de bonus y contenidos prometidos",
+      "item_4": "Crear una secuencia de emails Know Like Trust (onboarding) para recibir al nuevo lead",
+      "item_5": "Añadir la etiqueta a las automatizaciones (registro → etiqueta → secuencia emails → acceso)",
+      "item_6": "Preparar publicaciones para redes sociales y planificar la comunicación"
+    },
+    "offre": {
+      "label": "Oferta",
+      "description": "Crear y lanzar una oferta completa",
+      "item_0": "Crear la oferta (formación, coaching, herramienta…)",
+      "item_1": "Crear la página de venta (página + formulario + gracias +/- upsell, downsell y order bump)",
+      "item_2": "Crear la tarifa",
+      "item_3": "Crear las etiquetas",
+      "item_4": "Crear las automatizaciones (etiqueta añadida, secuencia emails, apertura accesos…)",
+      "item_5": "Crear campaña de emails de venta",
+      "item_6": "Crear publicaciones en redes sociales",
+      "item_7": "Crear vídeo / artículo de blog si es necesario",
+      "item_8": "Preparar material y avisar a posibles partners (afiliación, influencers…)"
+    },
+    "tunnel-de-vente": {
+      "label": "Embudo de venta",
+      "description": "Configurar un embudo de venta completo",
+      "item_0": "Definir las etapas del embudo (captura → nurturing → venta → gracias)",
+      "item_1": "Crear la página de captura",
+      "item_2": "Configurar la secuencia de email de nurturing",
+      "item_3": "Crear la página de venta",
+      "item_4": "Configurar el pago",
+      "item_5": "Configurar la página de confirmación",
+      "item_6": "Testear todo el recorrido de principio a fin"
+    },
+    "affiliation": {
+      "label": "Afiliación",
+      "description": "Crear un programa de afiliación",
+      "item_0": "Crear página de captura con bonus para afiliados",
+      "item_1": "Crear bonus",
+      "item_2": "Automatizar el envío de bonus",
+      "item_3": "Añadir una etiqueta en Systeme.io",
+      "item_4": "Preparar contenido promo (emails, posts, artículos, vídeos)"
+    },
+    "challenge-webinaire": {
+      "label": "Challenge / Webinar",
+      "description": "Organizar un challenge o webinar en vivo",
+      "item_0": "Fijar fechas y horarios",
+      "item_1": "Crear página de captura + gracias",
+      "item_2": "Preparar las diapositivas del challenge",
+      "item_3": "Testear el equipo y las herramientas",
+      "item_4": "Preparar grabación de los lives para replay",
+      "item_5": "Preparar comunicación (emails, posts, vídeos)",
+      "item_6": "Preparar material y avisar a posibles partners (afiliación, influencers…)"
+    },
+    "contenu-recurrent": {
+      "label": "Contenido recurrente",
+      "description": "Establecer un calendario de publicación regular",
+      "item_0": "Definir la frecuencia de publicación (1x/sem, 3x/sem…)",
+      "item_1": "Crear un calendario editorial de 1 mes",
+      "item_2": "Preparar un lote de contenidos (3 a 5 posts de adelanto)",
+      "item_3": "Definir los formatos (carrusel, vídeo corto, story…)",
+      "item_4": "Planificar las publicaciones (herramienta o manualmente)",
+      "item_5": "Reciclar los mejores contenidos en nuevos formatos"
+    }
+  },
+  "taskDetail": {
+    "title": "Detalle de la tarea",
+    "titlePlaceholder": "Título de la tarea",
+    "statusDone": "Completada",
+    "statusTodo": "Por hacer",
+    "priorityHigh": "Prioridad alta",
+    "priorityMedium": "Prioridad media",
+    "priorityLow": "Prioridad baja",
+    "subtasksCount": "{done}/{total} sub-objetivos",
+    "tags": "Etiquetas",
+    "dueDate": "Fecha límite",
+    "estimatedDuration": "Duración estimada",
+    "durationPlaceholder": "ej: 2h, 1 día…",
+    "notes": "Notas / descripción",
+    "notesPlaceholder": "Añadir detalles, enlaces, notas…",
+    "checklist": "Checklist",
+    "addSubtask": "Añadir un sub-objetivo…",
+    "delete": "Eliminar",
+    "save": "Guardar",
+    "saving": "Guardando…"
+  },
+  "phaseDetail": {
+    "objective": "Objetivo de esta fase",
+    "progression": "Progreso",
+    "keyPoints": "Puntos clave a cumplir",
+    "tasks": "Tareas",
+    "newTask": "Nueva tarea…",
+    "edit": "Editar",
+    "cancel": "Cancelar",
+    "done": "Terminado",
+    "noTasks": "Ninguna tarea por ahora.",
+    "dragHint": "Consejo: puedes reordenar las tareas arrastrándolas.",
+    "phase1Desc": "Construye las bases de tu negocio: crea tu lead magnet, prepara tu primera oferta y optimiza tu presencia en redes sociales.",
+    "phase2Desc": "Acelera tu crecimiento: mejora tu oferta con feedback de clientes, recoge testimonios y desarrolla alianzas.",
+    "phase3Desc": "Escala: automatiza tus procesos, lanza publicidad pagada y empieza a delegar."
   }
 }
