@@ -198,10 +198,12 @@ export default function ToastWidgetsClient() {
   const copyToastCode = (widgetId: string, mode: "display" | "signup" | "purchase") => {
     const base = typeof window !== "undefined" ? window.location.origin : "https://app.tipote.com";
     let code: string;
-    if (mode === "display") {
+    if (mode === "display" || mode === "signup") {
+      // Display and signup both use the same simple script tag.
+      // The script auto-captures the first name from the form on capture pages.
       code = `<script src="${base}/widgets/social-proof.js" data-widget-id="${widgetId}"></script>`;
     } else {
-      code = `<script src="${base}/widgets/social-proof.js" data-widget-id="${widgetId}" data-event="${mode}" data-name="{{ contact.first_name }}"></script>`;
+      code = `<script src="${base}/widgets/social-proof.js" data-widget-id="${widgetId}" data-event="purchase" data-name="{{ contact.first_name }}"></script>`;
     }
     navigator.clipboard.writeText(code);
     setCopied("toast-" + mode + "-" + widgetId);
@@ -339,24 +341,26 @@ export default function ToastWidgetsClient() {
             <h3 className="font-semibold">{t("embedCodes")}</h3>
             <p className="text-sm text-muted-foreground">{t("embedCodesHelp")}</p>
             <div className="space-y-3">
-              {(["display", "signup", "purchase"] as const).map((mode) => (
-                <div key={mode} className="p-3 bg-muted rounded-lg">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">{t(mode === "display" ? "displayCode" : mode === "signup" ? "signupPixel" : "purchasePixel")}</span>
-                    <Button variant="ghost" size="sm" onClick={() => copyToastCode(editingToast.id, mode)}>
-                      {copied === `toast-${mode}-${editingToast.id}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                    </Button>
+              {(["display", "signup", "purchase"] as const).map((mode) => {
+                const isSimple = mode === "display" || mode === "signup";
+                const codeSnippet = isSimple
+                  ? `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/widgets/social-proof.js" data-widget-id="${editingToast.id}"></script>`
+                  : `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/widgets/social-proof.js" data-widget-id="${editingToast.id}" data-event="purchase" data-name="{{ contact.first_name }}"></script>`;
+                return (
+                  <div key={mode} className={`p-3 rounded-lg ${mode === "display" ? "bg-primary/5 border border-primary/20" : "bg-muted"}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">{t(mode === "display" ? "displayCode" : mode === "signup" ? "signupPixel" : "purchasePixel")}</span>
+                      <Button variant="ghost" size="sm" onClick={() => copyToastCode(editingToast.id, mode)}>
+                        {copied === `toast-${mode}-${editingToast.id}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <code className="text-xs text-muted-foreground break-all">{codeSnippet}</code>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t(mode === "display" ? "displayCodeHelp" : mode === "signup" ? "signupPixelHelp" : "purchasePixelHelp")}
+                    </p>
                   </div>
-                  <code className="text-xs text-muted-foreground break-all">
-                    {mode === "display"
-                      ? `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/widgets/social-proof.js" data-widget-id="${editingToast.id}"></script>`
-                      : `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/widgets/social-proof.js" data-widget-id="${editingToast.id}" data-event="${mode}" data-name="{{ contact.first_name }}"></script>`}
-                  </code>
-                  {mode !== "display" && (
-                    <p className="text-xs text-muted-foreground mt-1">{t(mode === "signup" ? "signupPixelHelp" : "purchasePixelHelp")}</p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
 
