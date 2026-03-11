@@ -43,12 +43,6 @@ function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
 }
 
-function parseDateOnly(raw: string): Date | null {
-  if (!raw) return null;
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
 function countPlanTasks(planJson: AnyRecord): number {
   const plan90 = (planJson.plan_90_days as AnyRecord) || (planJson.plan90 as AnyRecord);
   const grouped = (plan90?.tasks_by_timeframe as AnyRecord) || (planJson.tasks_by_timeframe as AnyRecord);
@@ -253,17 +247,15 @@ export default async function StrategyPage() {
         mode="generating"
         firstName={firstName}
         revenueGoal={revenueGoal}
-        horizon="90 jours"
         progressionPercent={0}
         totalDone={0}
         totalAll={0}
-        daysRemaining={90}
         currentPhase={1}
         currentPhaseLabel="Fondations"
         phases={[
-          { title: "Phase 1 : Fondations", period: "Jours 1-30", tasks: [] },
-          { title: "Phase 2 : Croissance", period: "Jours 31-60", tasks: [] },
-          { title: "Phase 3 : Scale", period: "Jours 61-90", tasks: [] },
+          { title: "Phase 1 : Fondations", period: "Poser les bases", tasks: [] },
+          { title: "Phase 2 : Croissance", period: "Développer son audience", tasks: [] },
+          { title: "Phase 3 : Scale", period: "Automatiser et scaler", tasks: [] },
         ]}
         persona={{
           title: "",
@@ -389,8 +381,6 @@ export default async function StrategyPage() {
   const doneTasks = tasks.filter((t) => (t.status ?? "").toLowerCase() === "done").length;
   const progressAll = totalTasks ? clamp01(doneTasks / totalTasks) : 0;
 
-  const today = new Date();
-
   // Build phase assignment from plan_json structure (d30/d60/d90)
   const plan90ForPhases =
     (isRecord((planJson as AnyRecord)?.plan_90_days) ? (planJson as AnyRecord).plan_90_days as AnyRecord : null) ||
@@ -455,24 +445,16 @@ export default async function StrategyPage() {
           ? `${picked.value} € / mois`
           : "—";
 
-  const horizon = "90 jours";
   const progressionPercent = Math.round(progressAll * 100);
 
   const planTasksCount = countPlanTasks(planJson);
   const totalPlanTasks = totalTasks || planTasksCount || 0;
 
-  const currentPhase = byPhase.p1.length ? 1 : byPhase.p2.length ? 2 : byPhase.p3.length ? 3 : 1;
+  // Phase courante : basée sur l'avancement des tâches (pas sur le temps)
+  const p1Done = byPhase.p1.every((t) => (t.status ?? "").toLowerCase() === "done");
+  const p2Done = byPhase.p2.every((t) => (t.status ?? "").toLowerCase() === "done");
+  const currentPhase = !p1Done || byPhase.p1.length === 0 ? 1 : !p2Done || byPhase.p2.length === 0 ? 2 : 3;
   const currentPhaseLabel = currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
-
-  // ✅ Jours restants : basé sur created_at du business_plan
-  const createdAt = asString(planRow?.created_at);
-  const createdDate = createdAt ? parseDateOnly(createdAt) : null;
-
-  const daysElapsed = createdDate
-    ? Math.max(0, Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)))
-    : 0;
-
-  const daysRemaining = Math.max(0, 90 - daysElapsed);
 
   // ✅ Auto-sync côté CLIENT (safe)
   const shouldAutoSync = totalTasks === 0 && planTasksCount > 0;
@@ -484,17 +466,15 @@ export default async function StrategyPage() {
       <StrategyLovable
         firstName={firstName}
         revenueGoal={revenueGoal}
-        horizon={horizon}
         progressionPercent={progressionPercent}
         totalDone={doneTasks}
         totalAll={totalPlanTasks}
-        daysRemaining={daysRemaining}
         currentPhase={currentPhase}
         currentPhaseLabel={currentPhaseLabel}
         phases={[
-          { title: "Phase 1 : Fondations", period: "Jours 1-30", tasks: byPhase.p1 },
-          { title: "Phase 2 : Croissance", period: "Jours 31-60", tasks: byPhase.p2 },
-          { title: "Phase 3 : Scale", period: "Jours 61-90", tasks: byPhase.p3 },
+          { title: "Phase 1 : Fondations", period: "Poser les bases", tasks: byPhase.p1 },
+          { title: "Phase 2 : Croissance", period: "Développer son audience", tasks: byPhase.p2 },
+          { title: "Phase 3 : Scale", period: "Automatiser et scaler", tasks: byPhase.p3 },
         ]}
         persona={persona}
         offerSets={offerSets}

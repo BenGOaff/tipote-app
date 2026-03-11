@@ -38,7 +38,6 @@ import { AddTaskDialog } from "@/components/strategy/AddTaskDialog";
 import {
   Target,
   CheckCircle2,
-  Clock,
   Plus,
   Pencil,
   X,
@@ -52,6 +51,9 @@ import {
 import { PhaseDetailModal } from "@/components/strategy/PhaseDetailModal";
 import { OfferDetailModal } from "@/components/strategy/OfferDetailModal";
 import { PersonaEditModal } from "@/components/strategy/PersonaEditModal";
+import { TaskDetailModal, type TaskDetail } from "@/components/tasks/TaskDetailModal";
+import type { Tag } from "@/components/tasks/TagSelector";
+import type { Subtask } from "@/components/tasks/SubtaskList";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -74,11 +76,9 @@ type Phase = {
 type StrategyLovableProps = {
   firstName: string;
   revenueGoal: string;
-  horizon: string;
   progressionPercent: number;
   totalDone: number;
   totalAll: number;
-  daysRemaining: number;
   currentPhase: number;
   currentPhaseLabel: string;
   phases: Phase[];
@@ -261,6 +261,11 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const [isPersonaEditOpen, setIsPersonaEditOpen] = useState(false);
   const [localPersona, setLocalPersona] = useState(props.persona);
 
+  // Task detail modal state
+  const [taskDetailOpen, setTaskDetailOpen] = useState(false);
+  const [taskDetail, setTaskDetail] = useState<TaskDetail | null>(null);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+
   // Revenue goal inline edit
   const [revenueGoalLocal, setRevenueGoalLocal] = useState(props.revenueGoal);
   const [isEditingRevGoal, setIsEditingRevGoal] = useState(false);
@@ -303,6 +308,77 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       setSavingRevGoal(false);
     }
   }, [revGoalInput, toast, t, router]);
+
+  // --- Task detail modal handlers ---
+  const openTaskDetail = useCallback(async (taskId: string) => {
+    try {
+      const [taskRes, tagsRes] = await Promise.all([
+        fetch(`/api/tasks/${taskId}`).then((r) => r.json()),
+        allTags.length === 0
+          ? fetch("/api/tags").then((r) => r.json())
+          : Promise.resolve({ tags: allTags }),
+      ]);
+
+      if (taskRes.ok && taskRes.task) {
+        setTaskDetail(taskRes.task as TaskDetail);
+        setTaskDetailOpen(true);
+      }
+      if (tagsRes.tags) setAllTags(tagsRes.tags);
+    } catch {
+      // fail silently
+    }
+  }, [allTags]);
+
+  const handleTaskSave = useCallback(async (taskId: string, data: Record<string, unknown>) => {
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!json.ok) {
+      toast({ title: t("toast.error"), description: json.error || "Erreur", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Sauvegardé" });
+    router.refresh();
+  }, [toast, t, router]);
+
+  const handleCreateTag = useCallback(async (name: string, color: string): Promise<Tag> => {
+    const res = await fetch("/api/tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, color }),
+    });
+    const json = await res.json();
+    const tag = json.tag as Tag;
+    setAllTags((prev) => [...prev, tag]);
+    return tag;
+  }, []);
+
+  const handleAddSubtask = useCallback(async (taskId: string, stTitle: string): Promise<Subtask> => {
+    const res = await fetch(`/api/tasks/${taskId}/subtasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: stTitle }),
+    });
+    const json = await res.json();
+    return json.subtask as Subtask;
+  }, []);
+
+  const handleToggleSubtask = useCallback(async (taskId: string, subtaskId: string, isDone: boolean) => {
+    await fetch(`/api/tasks/${taskId}/subtasks/${subtaskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_done: isDone }),
+    });
+  }, []);
+
+  const handleDeleteSubtask = useCallback(async (taskId: string, subtaskId: string) => {
+    await fetch(`/api/tasks/${taskId}/subtasks/${subtaskId}`, {
+      method: "DELETE",
+    });
+  }, []);
 
   // --- Persona derived values ---
   const personaTitle = localPersona?.title || "—";
@@ -784,10 +860,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                 </div>
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
                   <p className="text-sm text-primary-foreground/70 mb-1">
-                    {t("overview.horizon")}
+                    {t("progress.currentPhase")}
                   </p>
                   <p className="text-2xl font-bold text-primary-foreground">
-                    {props.horizon}
+                    Phase {props.currentPhase} — {props.currentPhaseLabel}
                   </p>
                 </div>
                 <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
@@ -852,13 +928,13 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   <Card className="p-5">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="p-2 rounded-lg bg-primary/10">
-                        <Clock className="w-5 h-5 text-primary" />
+                        <Target className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-semibold">{t("progress.daysRemaining")}</span>
+                      <span className="font-semibold">{t("progress.currentPhase")}</span>
                     </div>
-                    <p className="text-3xl font-bold">{props.daysRemaining}</p>
+                    <p className="text-3xl font-bold">{props.currentPhaseLabel}</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {t("progress.outOf90")}
+                      Phase {props.currentPhase}/3
                     </p>
                   </Card>
 
@@ -867,12 +943,9 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       <div className="p-2 rounded-lg bg-primary/10">
                         <Target className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-semibold">{t("progress.currentPhase")}</span>
+                      <span className="font-semibold">{t("progress.revenueGoal")}</span>
                     </div>
-                    <p className="text-3xl font-bold">{props.currentPhase}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {props.currentPhaseLabel}
-                    </p>
+                    <p className="text-xl font-bold">{props.revenueGoal}</p>
                   </Card>
                 </div>
 
@@ -972,6 +1045,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                       isEditing
                                       onToggle={() => {}}
                                       onDelete={(id) => deleteTask(id)}
+                                      onOpenDetail={openTaskDetail}
                                     />
                                   ))}
                                 </SortableContext>
@@ -996,13 +1070,16 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                       <div
                                         key={item.id}
                                         data-task-row
-                                        className="group flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                                        onClick={(e) => e.stopPropagation()}
+                                        className="group flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openTaskDetail(String(item.id));
+                                        }}
                                         onPointerDown={(e) => e.stopPropagation()}
                                       >
                                         <Checkbox
                                           checked={checked}
-                                          onClick={(e) => e.stopPropagation()}
+                                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
                                           onCheckedChange={(v) =>
                                             toggleTask(
                                               String(item.id),
@@ -1229,7 +1306,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               profileData={{
                 firstName: props.firstName,
                 revenueGoal: revenueGoalLocal,
-                horizon: props.horizon,
+                phase: `Phase ${props.currentPhase} — ${props.currentPhaseLabel}`,
               }}
             />
           )}
@@ -1247,6 +1324,20 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               // Delay refresh to ensure local state is committed first
               setTimeout(() => router.refresh(), 500);
             }}
+          />
+
+          {/* Task Detail Modal (Trello-style) */}
+          <TaskDetailModal
+            task={taskDetail}
+            open={taskDetailOpen}
+            onOpenChange={setTaskDetailOpen}
+            allTags={allTags}
+            onSave={handleTaskSave}
+            onDelete={(id) => { deleteTask(id); setTaskDetailOpen(false); }}
+            onCreateTag={handleCreateTag}
+            onAddSubtask={handleAddSubtask}
+            onToggleSubtask={handleToggleSubtask}
+            onDeleteSubtask={handleDeleteSubtask}
           />
         </main>
       </div>

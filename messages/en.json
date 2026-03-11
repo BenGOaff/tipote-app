@@ -975,9 +975,8 @@
     },
     "progress": {
       "tasksCompleted": "Completed tasks",
-      "daysRemaining": "Days remaining",
-      "outOf90": "Out of 90 days",
-      "currentPhase": "Current phase"
+      "currentPhase": "Current phase",
+      "revenueGoal": "Revenue goal"
     },
     "noTasks": "No tasks in this phase yet.",
     "moreTasks": "See {count} more tasks",
@@ -1708,11 +1707,11 @@
     "toDo": "To do",
     "lastStep": "Last step to unlock your full strategy",
     "chooseOffers": "Choose your offers",
-    "chooseOffersDesc": "Tipote generated 3 options. Select the one that best fits you to finalize the 90-day plan.",
+    "chooseOffersDesc": "Tipote generated 3 options. Select the one that best fits you to finalize your strategic plan.",
     "toFinalize": "To finalize",
     "finishStrategy": "Let's finish the strategy + action plan",
     "generateFullStrategy": "Generate the full strategy",
-    "generateFullStrategyDesc": "Your offers come to life: mission, positioning, persona and dated tasks (90 days).",
+    "generateFullStrategyDesc": "Your offers come to life: mission, positioning, persona and 3-phase action plan.",
     "generating": "Generating...",
     "generateNow": "Generate now",
     "viewAdjust": "View / adjust",

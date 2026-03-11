@@ -154,7 +154,7 @@ ONBOARDING (une fois)
 - Situation réelle, freins, contraintes  
 - Différenciation, preuves, positionnement  
 - Persona client cible  
-- Objectifs 90 jours  
+- Objectifs prioritaires
 - Style et tonalité  
 - Non-négociables
 
@@ -193,7 +193,7 @@ Vue unifiée stratégie \+ suivi, organisée en onglets.
 **Header :**
 
 - Banner « Votre Vision Stratégique »  
-- 3 badges : Objectif Revenue, Horizon (90 jours), Progression (%)
+- 3 badges : Objectif Revenue, Phase actuelle, Progression (%)
 
 **3 onglets :**
 

@@ -368,19 +368,16 @@ function buildStrategicObjective(
     };
   }
 
-  // Determine current phase
-  let daysElapsed = 0;
-  if (planCreatedAt) {
-    const created = parseDate(planCreatedAt);
-    if (created) {
-      daysElapsed = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86400000));
-    }
-  }
+  // Determine current phase based on task completion (not time elapsed)
+  // Phase progression: foundations → growth → scale
+  const totalDone = categories.reduce((s, c) => s + c.done, 0);
+  const totalAll = categories.reduce((s, c) => s + c.total, 0);
+  const completionRatio = totalAll > 0 ? totalDone / totalAll : 0;
 
   let phaseNumber = 1;
   let phaseKey = "foundations";
-  if (daysElapsed > 60) { phaseNumber = 3; phaseKey = "scale"; }
-  else if (daysElapsed > 30) { phaseNumber = 2; phaseKey = "growth"; }
+  if (completionRatio > 0.66) { phaseNumber = 3; phaseKey = "scale"; }
+  else if (completionRatio > 0.33) { phaseNumber = 2; phaseKey = "growth"; }
 
   // Get focus from plan
   const plan90 = (planJson.plan_90_days ?? planJson.plan90 ?? planJson.plan_90) as AnyRecord | null;

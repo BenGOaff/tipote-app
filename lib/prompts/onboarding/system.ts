@@ -107,7 +107,7 @@ OPTIONNELS (extrais-les si l'user les donne spontanément, ne les demande PAS ac
 - root_fear : la peur ou le frein profond (ex: "peur de me montrer", "syndrome de l'imposteur", "peur de déranger")
 - differentiation : ce qui le rend unique (preuves, méthodes, angle, expérience, style)
 - real_persona_detail : qui achète vraiment, pourquoi, quelles objections, quels déclencheurs d'achat
-- objective_90_days : objectif à 90 jours avec métrique concrète + motivation profonde
+- objective_short_term : objectif prioritaire avec métrique concrète + motivation profonde
 - constraints : contraintes spécifiques (budget, entourage, compétences techniques, etc.)
 
 ═══════════════════════════════════

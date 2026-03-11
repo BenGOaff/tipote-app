@@ -120,7 +120,7 @@ const CAPTURE_FIELDS: UniversalField[] = [
     key: "hero_visual_title",
     kind: "scalar",
     label: "Titre affiché dans le visuel",
-    description: "Texte court affiché dans le mockup/illustration du hero. Doit refléter le contenu de l'offre. Ex: 'Plan stratégique 90 jours', 'Guide complet du SEO', 'Coaching personnalisé'.",
+    description: "Texte court affiché dans le mockup/illustration du hero. Doit refléter le contenu de l'offre. Ex: 'Plan stratégique', 'Guide complet du SEO', 'Coaching personnalisé'.",
     required: true,
     pageTypes: ["capture"],
     maxLength: 60,

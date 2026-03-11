@@ -1561,7 +1561,7 @@ MISSION
 À partir du business_profile, des onboarding_facts (source de vérité), et des ressources internes, tu produis :
 1) une stratégie claire (mission, promesse, positionnement, résumé),
 2) un persona “terrain” du CLIENT IDEAL (pains, désirs, objections, déclencheurs, phrases exactes),
-3) un plan 90 jours exécutable (focus unique + milestones + tâches datées).
+3) un plan stratégique en 3 phases exécutable (focus unique + milestones + tâches concrètes).
 
 ⚠️ DISTINCTION PROPRIETAIRE vs CLIENT IDEAL :
 - Le “persona” décrit le CLIENT IDEAL (la cible, l'acheteur), PAS le propriétaire du business.
@@ -1580,7 +1580,7 @@ RÈGLES CRITIQUES (NON NÉGOCIABLES)
 - Si l'utilisateur a DÉJÀ des offres (surtout middle/high ticket, >1000€) : NE PAS proposer de “créer un lead magnet”, “définir sa niche”, ou “faire ses premiers contenus”. C'est insultant pour un business avancé.
 - Pour un business avancé (offres existantes, CA > 2000€/mois) : concentre-toi sur l'OPTIMISATION et le SCALE (augmenter le taux de conversion, automatiser, upseller, créer des systèmes de vente prévisibles, développer l'audience qualifiée, structurer le closing, créer des assets marketing à haut levier).
 - Pour un business intermédiaire (offres existantes, CA < 2000€/mois) : concentre-toi sur l'ACCÉLÉRATION (systématiser l'acquisition, optimiser le funnel existant, tester de nouveaux canaux, améliorer le packaging/positionnement).
-- Les tâches du plan 90j doivent correspondre au NIVEAU RÉEL du business. Analyse les offres, prix, volume de ventes pour calibrer les actions.
+- Les tâches du plan doivent correspondre au NIVEAU RÉEL du business. Analyse les offres, prix, volume de ventes pour calibrer les actions.
 ${buildRefusalsPromptSection(businessProfile as AnyRecord)}
 FORMAT JSON STRICT UNIQUEMENT :
 {
@@ -1874,7 +1874,7 @@ MISSION :
 À partir du business_profile (onboarding), du diagnostic_profile (si présent) et de l'offre choisie, tu produis :
 1) stratégie claire (mission, promesse, positionnement, résumé),
 2) persona "terrain" du CLIENT IDEAL (pains, désirs, objections, déclencheurs, phrases exactes),
-3) plan 90 jours exécutable (focus unique + milestones + tâches datées).
+3) plan stratégique en 3 phases exécutable (focus unique + milestones + tâches concrètes).
 
 ⚠️ DISTINCTION PROPRIETAIRE vs CLIENT IDEAL :
 - Le "persona" décrit le CLIENT IDEAL (la cible, l'acheteur), PAS le propriétaire du business.
@@ -1883,7 +1883,7 @@ MISSION :
 
 RÈGLES COACH-LEVEL :
 - ZÉRO généralités.
-- Respect strict des contraintes/non_negotiables si présentes (ce sont les contraintes du propriétaire pour le plan 90j, pas du persona).
+- Respect strict des contraintes/non_negotiables si présentes (ce sont les contraintes du propriétaire pour le plan, pas du persona).
 - Cohérence totale avec l'offre choisie.
 - 1 levier principal (focus).
 - Min 6 tâches par timeframe, due_date valides.
@@ -1895,9 +1895,9 @@ RÈGLES COACH-LEVEL :
 ${buildRefusalsPromptSection(businessProfile as AnyRecord)}${isBeginnerPath ? `
 CONTEXTE DÉBUTANT (IMPORTANT) :
 L'utilisateur part de ZÉRO. Il n'a pas encore de clients ni de preuve sociale.
-- Phase 1 (d30) : tâches de validation et construction des bases (niche, persona, présence, premiers contenus). PAS encore de vente forcée.
-- Phase 2 (d60) : premières actions de monétisation simples (offre test, premiers clients).
-- Phase 3 (d90) : structuration et mise à l'échelle à partir des premières preuves.
+- Phase 1 (Fondations / d30) : tâches de validation et construction des bases (niche, persona, présence, premiers contenus). PAS encore de vente forcée.
+- Phase 2 (Croissance / d60) : premières actions de monétisation simples (offre test, premiers clients).
+- Phase 3 (Scale / d90) : structuration et mise à l'échelle à partir des premières preuves.
 - Chaque tâche doit être faisable par quelqu'un qui débute, sans équipe ni budget.
 - Commence par "Comment valider rapidement que des gens veulent payer pour ça ?"` : ""}
 
@@ -1985,7 +1985,7 @@ ${JSON.stringify(selectedOffers, null, 2)}
 
 ⚠️ OFFRES EXISTANTES DE L'UTILISATEUR (si applicable) :
 ${JSON.stringify((businessProfile as any).offers ?? [], null, 2)}
-→ Adapte le plan 90j au niveau réel du business.
+→ Adapte le plan au niveau réel du business.
 
 ${competitorContext ? competitorContext + "\n" : ""}RESSOURCES INTERNES (résumé)
 ${JSON.stringify(resourcesForPrompt ?? [], null, 2)}
