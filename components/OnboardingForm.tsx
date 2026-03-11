@@ -274,7 +274,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
             {step === 1 && 'Ton identité'}
             {step === 2 && 'Ta niche et ta mission'}
             {step === 3 && 'Maturité, offres et audience'}
-            {step === 4 && 'Temps disponible et objectif 90 jours'}
+            {step === 4 && 'Temps disponible et objectif'}
           </h2>
         </div>
         <div className="flex h-2 w-32 overflow-hidden rounded-full bg-slate-100">
@@ -667,7 +667,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
           </div>
 
           <p className="text-xs text-slate-500">
-            Ton plan d&apos;action 30/90 jours sera entièrement basé sur cette
+            Ton plan d&apos;action sera entièrement basé sur cette
             réponse, ta maturité business et ton temps disponible.
           </p>
         </div>

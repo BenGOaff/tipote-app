@@ -24,9 +24,9 @@ URL : https://app.tipote.com`);
   // ── 2. Features ──
   sections.push(`### Fonctionnalités principales
 
-1. **Onboarding intelligent** — Questionnaire interactif qui capture le profil business complet (offres, persona, objectifs 90 jours, style, tonalité). Obligatoire à la première connexion.
+1. **Onboarding intelligent** — Questionnaire interactif qui capture le profil business complet (offres, persona, objectifs, style, tonalité). Obligatoire à la première connexion.
 
-2. **Plan stratégique IA** — Plan d'action 30/60/90 jours généré par IA avec pyramide d'offres (Lead Magnet → Low/Middle Ticket → High Ticket). 3 phases : Fondations, Croissance, Scale.
+2. **Plan stratégique IA** — Plan d'action en 3 phases généré par IA avec pyramide d'offres (Lead Magnet → Low/Middle Ticket → High Ticket). 3 phases : Fondations, Croissance, Scale.
 
 3. **Création de contenu IA** — 8 types de contenu :
    - Posts réseaux sociaux (LinkedIn, Instagram, Twitter, etc.)

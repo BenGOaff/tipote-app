@@ -975,9 +975,8 @@
     },
     "progress": {
       "tasksCompleted": "Tâches complétées",
-      "daysRemaining": "Jours restants",
-      "outOf90": "Sur 90 jours",
-      "currentPhase": "Phase actuelle"
+      "currentPhase": "Phase actuelle",
+      "revenueGoal": "Objectif revenu"
     },
     "noTasks": "Aucune tâche dans cette phase pour l'instant.",
     "moreTasks": "Voir les {count} autres tâches",
@@ -1705,11 +1704,11 @@
     "toDo": "À faire",
     "lastStep": "Dernière étape pour débloquer ta stratégie complète",
     "chooseOffers": "Choisis tes offres",
-    "chooseOffersDesc": "Tipote a généré 3 options. Sélectionne celle qui te ressemble le plus pour finaliser le plan 90 jours.",
+    "chooseOffersDesc": "Tipote a généré 3 options. Sélectionne celle qui te ressemble le plus pour finaliser ton plan stratégique.",
     "toFinalize": "À finaliser",
     "finishStrategy": "On termine la stratégie + le plan d'action",
     "generateFullStrategy": "Générer la stratégie complète",
-    "generateFullStrategyDesc": "Tes offres prennent vie : mission, positionnement, persona et tâches datées (90 jours).",
+    "generateFullStrategyDesc": "Tes offres prennent vie : mission, positionnement, persona et plan d'action en 3 phases.",
     "generating": "Génération...",
     "generateNow": "Générer maintenant",
     "viewAdjust": "Voir / ajuster",

@@ -968,7 +968,22 @@ export function QuizForm({ onClose }: QuizFormProps) {
                     variant="ghost"
                     size="icon"
                     className="shrink-0 text-destructive hover:text-destructive"
-                    onClick={() => setResults((prev) => prev.filter((_, i) => i !== ri))}
+                    onClick={() => {
+                      const removedIdx = ri;
+                      setResults((prev) => prev.filter((_, i) => i !== removedIdx));
+                      // Remap result_index in all question options
+                      setQuestions((prev) =>
+                        prev.map((q) => ({
+                          ...q,
+                          options: q.options
+                            .filter((o) => o.result_index !== removedIdx)
+                            .map((o) => ({
+                              ...o,
+                              result_index: o.result_index > removedIdx ? o.result_index - 1 : o.result_index,
+                            })),
+                        })),
+                      );
+                    }}
                     title="Supprimer ce profil"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1033,21 +1048,31 @@ export function QuizForm({ onClose }: QuizFormProps) {
 
           <Button
             variant="outline"
-            onClick={() =>
-              setResults((prev) => [
-                ...prev,
-                {
-                  title: "",
-                  description: null,
-                  insight: null,
-                  projection: null,
-                  cta_text: null,
-                  cta_url: null,
-                  sio_tag_name: null,
-                  sort_order: prev.length,
-                },
-              ])
-            }
+            onClick={() => {
+              setResults((prev) => {
+                const newIdx = prev.length;
+                // Auto-add option for new profile in each question
+                setQuestions((qPrev) =>
+                  qPrev.map((q) => ({
+                    ...q,
+                    options: [...q.options, { text: "", result_index: newIdx }],
+                  })),
+                );
+                return [
+                  ...prev,
+                  {
+                    title: "",
+                    description: null,
+                    insight: null,
+                    projection: null,
+                    cta_text: null,
+                    cta_url: null,
+                    sio_tag_name: null,
+                    sort_order: newIdx,
+                  },
+                ];
+              });
+            }}
             className="w-full"
           >
             <Plus className="w-4 h-4 mr-2" /> Ajouter un profil résultat
