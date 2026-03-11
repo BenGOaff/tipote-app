@@ -30,24 +30,21 @@ function SidebarOpenButton() {
 type Props = {
   /** Left side: rendered after sidebar-open button */
   left?: ReactNode;
-  /** Extra actions rendered BEFORE the default right-side elements */
-  actions?: ReactNode;
   /** User email for the avatar menu (optional — omit on server-rendered pages) */
   userEmail?: string;
 };
 
-export function PageHeader({ left, actions, userEmail = "" }: Props) {
+export function PageHeader({ left, userEmail = "" }: Props) {
   return (
-    <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
-      {/* Left: sidebar reopen + page title / breadcrumb */}
+    <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10 border-b border-border/40">
+      {/* Left: sidebar reopen + page title */}
       <div className="flex items-center gap-2 min-w-0">
         <SidebarOpenButton />
         {left}
       </div>
 
-      {/* Right: optional actions + credits, project, bell, avatar */}
+      {/* Right: global elements only */}
       <div className="flex items-center gap-2 shrink-0">
-        {actions}
         <HeaderCredits />
         <ProjectSwitcher />
         <NotificationBell />

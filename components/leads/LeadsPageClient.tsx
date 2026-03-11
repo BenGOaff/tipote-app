@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
+import { PageBanner } from "@/components/PageBanner";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -241,14 +242,14 @@ export default function LeadsPageClient({ leads: initialLeads, error }: Props) {
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
           <PageHeader
             left={
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
-                <h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>
-              </div>
+              <h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>
             }
           />
 
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4">
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+          <div className="max-w-[1200px] mx-auto w-full space-y-5">
+            <PageBanner icon={<Users className="w-5 h-5" />} title={t("title")} subtitle="Gère tes contacts et leads depuis un seul endroit." />
+
             {error && (
               <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800">
                 <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -437,6 +438,7 @@ export default function LeadsPageClient({ leads: initialLeads, error }: Props) {
                 </div>
               )}
             </Card>
+          </div>
           </div>
         </main>
       </div>

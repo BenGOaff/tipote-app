@@ -9,6 +9,7 @@ import Link from "next/link";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
+import { PageBanner } from "@/components/PageBanner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -821,7 +822,7 @@ export default function TodayLovable() {
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
           <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>} />
 
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
+          <div className="flex-1 p-4 sm:p-5 lg:p-6"><div className="max-w-[1200px] mx-auto w-full space-y-5">
             {loading ? (
               <div className="py-20 text-center text-muted-foreground text-sm">
                 {t("loading")}
@@ -832,40 +833,17 @@ export default function TodayLovable() {
                 {/* BLOC 1 — Ton objectif en ce moment                 */}
                 {/* ================================================= */}
                 {objective && (
-                  <Card className="gradient-primary text-primary-foreground overflow-hidden">
-                    <div className="flex flex-col md:flex-row md:items-center gap-5 p-6 md:py-8 md:px-8">
-                      <div className="flex items-center gap-4 shrink-0">
-                        <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
-                          <Target className="w-6 h-6" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <p className="text-xs font-medium text-primary-foreground/60 uppercase tracking-wide">
-                            {t("objectiveLabel")}
-                          </p>
-                          {objective.phaseNumber > 0 && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-primary-foreground/15 text-primary-foreground border-0 text-[10px]"
-                            >
-                              {t(`objective.label${ucFirst(objective.phaseKey)}`)}
-                            </Badge>
-                          )}
-                        </div>
-                        <h2 className="text-lg md:text-xl font-bold leading-snug">
-                          {objective.focus || t("objective.strategyFocus")}
-                        </h2>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <Button asChild variant="secondary" className="gap-2 shrink-0">
-                          <Link href={objective.ctaHref}>
-                            {t(`ctas.${objective.ctaLabelKey}`)} <ArrowRight className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
+                  <PageBanner
+                    icon={<Target className="w-5 h-5" />}
+                    title={t("objectiveLabel")}
+                    subtitle={objective.focus || t("objective.strategyFocus")}
+                  >
+                    <Button asChild variant="secondary" className="gap-2 shrink-0">
+                      <Link href={objective.ctaHref}>
+                        {t(`ctas.${objective.ctaLabelKey}`)} <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </Button>
+                  </PageBanner>
                 )}
 
                 {/* ================================================= */}
@@ -1035,7 +1013,7 @@ export default function TodayLovable() {
                 </div>
               </>
             )}
-          </div>
+          </div></div>
         </main>
       </div>
     </SidebarProvider>

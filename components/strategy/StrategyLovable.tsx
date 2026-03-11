@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
+import { PageBanner } from "@/components/PageBanner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -634,28 +635,10 @@ export default function StrategyLovable(props: StrategyLovableProps) {
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
           <PageHeader
             left={<h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>}
-            actions={
-              isEditing ? (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" onClick={handleCancelEditing}>
-                    <X className="w-4 h-4 mr-2" />
-                    {t("cancel")}
-                  </Button>
-                  <Button onClick={handleSaveChanges}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {t("save")}
-                  </Button>
-                </div>
-              ) : (
-                <Button variant="outline" onClick={handleStartEditing}>
-                  <Pencil className="w-4 h-4 mr-2" />
-                  {t("customize")}
-                </Button>
-              )
-            }
           />
 
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+            <div className="max-w-[1200px] mx-auto w-full space-y-5">
             {/* ✅ NEW : Bandeau “plan en cours” (sans casser le reste) */}
             {(props.mode === "generating" ||
               (!props.planTasksCount &&
@@ -690,88 +673,74 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               </Card>
             )}
 
-            {/* Strategic Overview */}
-            <Card className="p-8 gradient-hero border-border/50">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-3xl font-display font-bold text-primary-foreground mb-3">
-                    {t("overview.title")}
-                  </h2>
-                  <p className="text-primary-foreground/90 text-lg max-w-2xl">
-                    {t("overview.subtitle")}
-                  </p>
+            {/* Strategic Overview — consistent banner */}
+            <PageBanner
+              icon={<Target className="w-5 h-5" />}
+              title={t("overview.title")}
+              subtitle={t("overview.subtitle")}
+            >
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleCancelEditing}>
+                    <X className="w-4 h-4 mr-1" />
+                    {t("cancel")}
+                  </Button>
+                  <Button size="sm" className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground" onClick={handleSaveChanges}>
+                    <Save className="w-4 h-4 mr-1" />
+                    {t("save")}
+                  </Button>
                 </div>
-                <Target className="w-16 h-16 text-primary-foreground/80 hidden lg:block" />
-              </div>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">
-                    {t("overview.revenueGoal")}
-                  </p>
-                  {isEditingRevGoal ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <Input
-                        autoFocus
-                        value={revGoalInput}
-                        onChange={(e) => setRevGoalInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveRevGoal();
-                          if (e.key === "Escape") setIsEditingRevGoal(false);
-                        }}
-                        placeholder="ex: 3000 €/mois"
-                        className="h-8 text-sm bg-white/10 border-white/30 text-primary-foreground placeholder:text-primary-foreground/40 focus-visible:ring-white/50"
-                        disabled={savingRevGoal}
-                      />
-                      <button
-                        onClick={handleSaveRevGoal}
-                        disabled={savingRevGoal || !revGoalInput.trim()}
-                        className="text-primary-foreground/80 hover:text-primary-foreground disabled:opacity-40 shrink-0"
-                        aria-label="Enregistrer"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setIsEditingRevGoal(false)}
-                        className="text-primary-foreground/60 hover:text-primary-foreground shrink-0"
-                        aria-label="Annuler"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p className="text-2xl font-bold text-primary-foreground">
-                        {revenueGoalLocal}
-                      </p>
-                      <button
-                        onClick={() => { setRevGoalInput(revenueGoalLocal === "—" ? "" : revenueGoalLocal); setIsEditingRevGoal(true); }}
-                        className="text-primary-foreground/40 hover:text-primary-foreground/80 transition-colors"
-                        aria-label="Modifier l'objectif de revenu"
-                        title="Modifier"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">
-                    {t("progress.currentPhase")}
-                  </p>
-                  <p className="text-2xl font-bold text-primary-foreground">
-                    Phase {props.currentPhase} — {props.currentPhaseLabel}
-                  </p>
-                </div>
-                <div className="bg-background/20 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10">
-                  <p className="text-sm text-primary-foreground/70 mb-1">
-                    {t("overview.progression")}
-                  </p>
-                  <p className="text-2xl font-bold text-primary-foreground">
-                    {props.progressionPercent}%
-                  </p>
-                </div>
-              </div>
-            </Card>
+              ) : (
+                <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleStartEditing}>
+                  <Pencil className="w-4 h-4 mr-1" />
+                  {t("customize")}
+                </Button>
+              )}
+            </PageBanner>
+
+            {/* Key metrics */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card className="p-4">
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t("overview.revenueGoal")}</p>
+                {isEditingRevGoal ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      autoFocus
+                      value={revGoalInput}
+                      onChange={(e) => setRevGoalInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveRevGoal();
+                        if (e.key === "Escape") setIsEditingRevGoal(false);
+                      }}
+                      placeholder="ex: 3000 €/mois"
+                      className="h-8 text-sm"
+                      disabled={savingRevGoal}
+                    />
+                    <button onClick={handleSaveRevGoal} disabled={savingRevGoal || !revGoalInput.trim()} className="text-primary hover:text-primary/80 disabled:opacity-40 shrink-0" aria-label="Enregistrer">
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setIsEditingRevGoal(false)} className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Annuler">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-xl font-bold">{revenueGoalLocal}</p>
+                    <button onClick={() => { setRevGoalInput(revenueGoalLocal === "—" ? "" : revenueGoalLocal); setIsEditingRevGoal(true); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors" aria-label="Modifier l'objectif de revenu" title="Modifier">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </Card>
+              <Card className="p-4">
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t("progress.currentPhase")}</p>
+                <p className="text-xl font-bold">Phase {props.currentPhase} — {props.currentPhaseLabel}</p>
+              </Card>
+              <Card className="p-4">
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t("overview.progression")}</p>
+                <p className="text-xl font-bold">{props.progressionPercent}%</p>
+              </Card>
+            </div>
 
             {/* Plan d'action */}
             <div className="space-y-6">
@@ -1087,6 +1056,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   );
                 })()}
             </div>
+          </div>
           </div>
 
           {selectedOfferType && (

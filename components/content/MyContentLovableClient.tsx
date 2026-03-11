@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
+import { PageBanner } from "@/components/PageBanner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -538,21 +539,15 @@ export default function MyContentLovableClient({
           <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
             <PageHeader
               left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
-              actions={
-                <Button asChild>
-                  <Link href="/create">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Créer
-                  </Link>
-                </Button>
-              }
             />
 
-            <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
-              <Card className="p-6">
-                <p className="text-sm text-muted-foreground">Impossible de charger tes contenus pour le moment.</p>
-                <p className="mt-2 text-sm text-rose-600">{error}</p>
-              </Card>
+            <div className="flex-1 p-4 sm:p-5 lg:p-6">
+              <div className="max-w-[1200px] mx-auto w-full space-y-5">
+                <Card className="p-6">
+                  <p className="text-sm text-muted-foreground">Impossible de charger tes contenus pour le moment.</p>
+                  <p className="mt-2 text-sm text-rose-600">{error}</p>
+                </Card>
+              </div>
             </div>
           </main>
         </div>
@@ -568,19 +563,25 @@ export default function MyContentLovableClient({
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
           <PageHeader
             left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
-            actions={
-              <Button asChild>
-                <Link href="/create">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Créer
-                </Link>
-              </Button>
-            }
           />
 
           {/* Container */}
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
-            {/* Filters & Toggle (structure Lovable) */}
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+            <div className="max-w-[1200px] mx-auto w-full space-y-5">
+            <PageBanner
+              icon={<ClipboardList className="w-5 h-5" />}
+              title="Tous tes contenus"
+              subtitle="Posts, emails, articles, scripts et pages — tout au même endroit."
+            >
+              <Button asChild size="sm" className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground">
+                <Link href="/create">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Créer
+                </Link>
+              </Button>
+            </PageBanner>
+
+            {/* Filters & Toggle */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="relative flex-1 max-w-md w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1303,6 +1304,7 @@ export default function MyContentLovableClient({
             <div className="text-xs text-muted-foreground">
               Connecté en tant que <span className="font-medium">{userEmail}</span>
             </div>
+          </div>
           </div>
         </main>
       </div>

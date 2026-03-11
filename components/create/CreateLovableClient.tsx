@@ -6,8 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
+import { PageBanner } from "@/components/PageBanner";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 import { useToast } from "@/hooks/use-toast";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -677,26 +677,17 @@ export default function CreateLovableClient() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
           <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{editId ? "Modifier le post" : t('create')}</h1>} />
 
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 w-full">
+          <div className="flex-1 p-4 sm:p-5 lg:p-6"><div className="max-w-[1200px] mx-auto w-full space-y-5">
             {editLoading ? (
               <Card className="p-12 flex items-center justify-center">
                 <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
               </Card>
             ) : !selectedType ? (
               <>
-                <Card className="p-6 gradient-primary text-primary-foreground relative overflow-hidden">
-                  <Badge className="absolute top-4 right-4 bg-white/20 text-white hover:bg-white/30">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    {t('poweredByAI')}
-                  </Badge>
-                  <h2 className="text-2xl font-bold mb-2">{t('whatContent')}</h2>
-                  <p className="text-primary-foreground/80">
-                    {t('aiAligned')}
-                  </p>
-                </Card>
+                <PageBanner icon={<Sparkles className="w-5 h-5" />} title={t('whatContent')} subtitle={t('aiAligned')} />
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {contentTypes.map((type) => (
@@ -721,7 +712,7 @@ export default function CreateLovableClient() {
             ) : (
               <Card className="p-6">{ActiveForm}</Card>
             )}
-          </div>
+          </div></div>
         </main>
       </div>
     </SidebarProvider>

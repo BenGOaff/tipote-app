@@ -13,14 +13,11 @@ import {
   Plus, FileText, ShoppingCart, Trash2, Copy,
   ArrowLeft, ArrowRight, Loader2, Package, PenTool, Check, Globe,
   Users, Download, X, Eye, MousePointerClick, BarChart3, Link2,
-  PanelLeftOpen,
 } from "lucide-react";
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { HeaderCredits } from "@/components/HeaderCredits";
-import { ProjectSwitcher } from "@/components/ProjectSwitcher";
-import { NotificationBell } from "@/components/NotificationBell";
-import { UserAvatarMenu } from "@/components/UserAvatarMenu";
+import { PageHeader } from "@/components/PageHeader";
+import { PageBanner } from "@/components/PageBanner";
 import { Button } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { loadAllOffers, type OfferOption, levelLabel, formatPriceRange } from "@/lib/offers";
@@ -44,17 +41,6 @@ type PageSummary = {
 };
 
 type View = "list" | "step1" | "step2" | "generating" | "edit" | "linkinbio-edit";
-
-/** Small button to reopen sidebar when collapsed (desktop) or open sheet (mobile) */
-function SidebarOpenButton() {
-  const { open, toggleSidebar, isMobile } = useSidebar();
-  if (!isMobile && open) return null;
-  return (
-    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={toggleSidebar} aria-label="Open sidebar">
-      <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
-    </Button>
-  );
-}
 
 export default function PagesClient({ userEmail }: { userEmail: string }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -363,21 +349,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          {/* Standard header */}
-          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
-            <div className="flex items-center gap-2 min-w-0">
-              <SidebarOpenButton />
-              {!isEditorView && (
-                <h1 className="text-lg font-display font-bold truncate">{t("headerTitle")}</h1>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <HeaderCredits />
-              <ProjectSwitcher />
-              <NotificationBell />
-              <UserAvatarMenu userEmail={userEmail} />
-            </div>
-          </header>
+          <PageHeader left={!isEditorView ? <h1 className="text-lg font-display font-bold truncate">{t("headerTitle")}</h1> : undefined} userEmail={userEmail} />
 
           {/* ==================== LINKINBIO EDITOR ==================== */}
           {view === "linkinbio-edit" && editPage && (
@@ -391,8 +363,10 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
 
           {/* ==================== NON-EDITOR VIEWS ==================== */}
           {!isEditorView && (
-            <div className="flex-1 p-4 lg:p-6">
-              <div className="max-w-6xl mx-auto">
+            <div className="flex-1 p-4 sm:p-5 lg:p-6">
+              <div className="max-w-[1200px] mx-auto w-full space-y-5">
+
+                <PageBanner icon={<Globe className="w-5 h-5" />} title={t("headerTitle")} subtitle="Crée et gère tes pages de capture, de vente et ton Link in Bio." />
 
                 {/* ==================== GENERATING ==================== */}
                 {view === "generating" && (

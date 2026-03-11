@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
+import { PageBanner } from "@/components/PageBanner";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,14 +50,8 @@ export default function AnalyticsLovableClient() {
   return (
     <DashboardLayout
       title={t("title")}
-      showAnalyticsLink={false}
-      contentClassName="p-4 sm:p-6 lg:p-8 space-y-6"
     >
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-display font-bold">{t("subtitle")}</h2>
-        <p className="text-muted-foreground">{t("description")}</p>
-      </div>
+      <PageBanner icon={<BarChart3 className="w-5 h-5" />} title={t("subtitle")} subtitle={t("description")} />
 
       {/* 3 Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
