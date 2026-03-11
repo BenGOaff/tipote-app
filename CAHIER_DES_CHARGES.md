@@ -22,7 +22,7 @@ La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storyte
 
 - Onboarding intelligent qui capture le profil business complet  
 - Plan stratégique personnalisé avec pyramide d'offres  
-- Génération de contenus (posts, emails, articles, scripts, offres, quiz, stratégie éditoriale)
+- Génération de contenus (posts, emails, articles, scripts, offres, pages, quiz, stratégie éditoriale)
 - **Publication directe sur 8 réseaux sociaux** (LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest, Reddit)  
 - **Automatisations** (auto-commentaires, comment-to-DM, comment-to-email)  
 - Calendrier éditorial centralisé  
@@ -101,10 +101,9 @@ Plateformes supportées avec publication directe :
 | :---- | :---- | :---- | :---- |
 | Aujourd'hui | /app | Sun | Dashboard : prochaine tâche \+ stats clés |
 | Ma Stratégie | /strategy | Target | Pyramide \+ plan en 3 phases \+ persona |
-| Créer | /create | Sparkles | Hub de création (7 types de contenu) |
+| Créer | /create | Sparkles | Hub de création (8 types de contenu) |
 | Mes Contenus | /contents | FolderOpen | Liste \+ calendrier éditorial |
 | Templates | /templates | Layout | Templates Systeme.io |
-| Pages | /pages | FileCode | Constructeur de pages (capture, vente, vitrine, link-in-bio) |
 | Automatisations | /automations | Zap | Auto-commentaires et webhooks |
 | Mes Leads | /leads | Users | Gestion des leads capturés |
 
@@ -226,9 +225,9 @@ Vue unifiée stratégie \+ suivi, organisée en onglets.
 
 ### 4.5. Page « Créer » (/create)
 
-Hub unique de création pour 7 types de contenu.
+Hub unique de création pour 8 types de contenu.
 
-**7 types de contenu :**
+**8 types de contenu :**
 
 | Type | Description | Icône | Formulaire |
 | :---- | :---- | :---- | :---- |
@@ -237,6 +236,7 @@ Hub unique de création pour 7 types de contenu.
 | Article | Articles de blog, guides, tutoriels | FileText | ArticleForm |
 | Vidéo | Scripts YouTube, Reels, TikTok | Video | VideoForm |
 | Offre | Pages de vente, descriptions produit | Package | OfferForm |
+| Pages | Pages de vente, de capture, sites vitrine, link-in-bio | Route | PagesForm |
 | Quiz | Quiz lead magnets | ClipboardList | QuizForm |
 | Stratégie | Stratégie de contenu éditoriale | CalendarDays | ContentStrategyForm |
 
