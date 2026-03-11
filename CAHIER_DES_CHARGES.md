@@ -92,7 +92,7 @@ Plateformes supportées avec publication directe :
 
 ## 3\. ARCHITECTURE UX
 
-### 3.1. Navigation principale (Sidebar — 8 entrées \+ sections)
+### 3.1. Navigation principale (Sidebar)
 
 **Section principale :**
 
@@ -103,16 +103,24 @@ Plateformes supportées avec publication directe :
 | Créer | /create | Sparkles | Hub de création (8 types de contenu) |
 | Mes Contenus | /contents | FolderOpen | Liste \+ calendrier éditorial |
 | Templates | /templates | Layout | Templates Systeme.io |
-| Automatisations | /automations | Zap | Auto-commentaires et webhooks |
+| Automatisations | /automations | Zap | Automatisations sociales (comment-to-DM/email) |
 | Mes Leads | /leads | Users | Gestion des leads capturés |
+| Widgets | /widgets | Bell | Widgets embarquables (toast \+ partage social) |
 
 **Section secondaire :**
 
 | Menu | URL | Icône | Description |
 | :---- | :---- | :---- | :---- |
 | Analytics | /analytics | BarChart3 | KPIs \+ diagnostic IA |
-| Pépites | /pepites | — | Insights et pépites |
-| Paramètres | /settings | — | 7 onglets de configuration |
+| Pépites | /pepites | Sparkles | Insights et pépites business |
+
+**Footer sidebar :**
+
+| Menu | URL | Icône | Description |
+| :---- | :---- | :---- | :---- |
+| Support | /support | HelpCircle | Lien vers le support (nouvel onglet) |
+
+**Note :** Les Paramètres ne sont plus dans la sidebar. Ils sont accessibles via la photo de profil (avatar) en haut à droite du header.
 
 ### 3.2. Workflow utilisateur
 
@@ -175,15 +183,15 @@ ONBOARDING (une fois)
 
 ### 4.3. Page « Aujourd'hui » (/app)
 
-Page d'accueil après login.
+Page d'accueil après login. Dashboard "Mode Pilote" — coaching automatique basé sur les données du profil.
 
 **Composants :**
 
-- Banner prochaine action avec titre, tags (type \+ canal \+ horaire), boutons "Créer en 1 clic" et "Voir la stratégie"  
-- 4 stats cards : Contenus publiés, Tâches complétées, Engagement, Prochaine échéance  
-- Progression de la semaine (barres de progression)  
-- Actions rapides : Créer du contenu, Voir mes contenus, Ma stratégie  
-- À venir cette semaine : liste des contenus planifiés
+- **Bloc 1 — Ton objectif** : Card gradient avec objectif stratégique de la phase en cours, badge phase, bouton CTA contextuel
+- **Bloc 1b — Contenus programmés aujourd'hui** : Liste des contenus planifiés pour la journée (canal, titre, horaire), lien vers le calendrier
+- **Bloc 2 — Cette semaine : coaching** : Résumé positif des actions accomplies, dernière tâche réalisée, prochaine étape recommandée, CTA contextuel
+- **Bloc 3 — Ta progression** : Analyse intelligente des stats analytics (revenus, ventes, inscrits, taux de conversion) ou invitation à remplir les stats
+- **Bloc 4 — Lien stratégie** : Lien discret vers la page stratégie complète
 
 ### 4.4. Page « Ma Stratégie » (/strategy)
 
@@ -262,7 +270,7 @@ Vue centralisée de tous les contenus générés.
 - Type \+ Canal  
 - Titre \+ aperçu  
 - Date/délai  
-- Menu actions (voir, éditer, copier, supprimer, dupliquer)
+- Menu actions (éditer, marquer comme publié, planifier/modifier date, déplanifier, supprimer)
 
 **Fonctionnalité clé :** Les posts programmés sont éditables. Clic sur un post → ouvre l'éditeur complet (`/create?edit=<id>`) avec images, vidéos, auto-commentaires pré-remplis.
 
@@ -284,24 +292,23 @@ Bibliothèque de templates Systeme.io téléchargeables.
 
 Gestion des automatisations sociales.
 
-**Types d'automatisations :**
+**Types d'automatisations (page /automations) :**
 
-- **Auto-commentaires** : Commentaires automatiques sur les posts publiés (LinkedIn, Instagram, Twitter, TikTok, Facebook)  
-  - Coût : 0.25 crédit par commentaire  
-  - Contenu généré par Claude (contextuel au post)  
-- **Comment-to-DM** : Répondre automatiquement en DM aux commentaires contenant certains mots-clés  
+- **Comment-to-DM** : Répondre automatiquement en DM aux commentaires contenant certains mots-clés
 - **Comment-to-Email** : Capturer l'email des commentateurs via DM automatique
+
+**Note :** Les auto-commentaires (commentaires automatiques sur les posts publiés) sont configurés dans Paramètres \> Connexions et activés lors de la création d'un post. Coût : 0.25 crédit par commentaire, contenu généré par Claude.
 
 **Triggers :**
 
-- Mots-clés configurables  
-- Variantes de réponses  
+- Mots-clés configurables
+- Variantes de réponses
 - Logs d'exécution avec statut (success/fail)
 
 **Intégration n8n :**
 
-- Webhooks pour publication asynchrone  
-- Callback pour posts programmés  
+- Webhooks pour publication asynchrone
+- Callback pour posts programmés
 - Health check endpoint
 
 ### 4.9. Page « Mes Leads » (/leads)
@@ -344,32 +351,31 @@ Gestion centralisée des leads capturés.
 
 Suivi des performances business.
 
-**3 blocs :**
+**3 onglets :**
 
-**1\) Header KPIs :**
+**Onglet Résultats (défaut) :**
 
-- 4 cards : métriques clés du mois en cours
+- KPIs clés du mois en cours (revenus, ventes, inscrits, conversion)
+- Résumé des performances avec tendances
+- Lien vers les métriques par offre
 
-**2\) Saisie des données du mois :**
+**Onglet Saisir mes données :**
 
-- Sélecteur de période (mois \+ année)  
-- 8 métriques manuelles :  
-  - Acquisition : Visiteurs, Nouveaux inscrits, Taux d'ouverture, Taux de clic  
-  - Conversion : Vues page de vente, Nombre de ventes, Chiffre d'affaires  
-- Calculs automatiques dérivés  
+- Sélecteur de période (mois \+ année)
+- Métriques manuelles :
+  - Acquisition : Visiteurs, Nouveaux inscrits, Taux d'ouverture, Taux de clic
+  - Conversion : Vues page de vente, Nombre de ventes, Chiffre d'affaires
+- Calculs automatiques dérivés
 - Boutons : Enregistrer / Enregistrer & Analyser
+- Diagnostic IA déclenché après "Enregistrer & Analyser" (résumé, priorité, points forts, points d'attention)
 
-**3\) Diagnostic IA :**
+**Onglet Historique :**
 
-- Diagnostic rapide (résumé business)  
-- Priorité \#1 (recommandation actionable)  
-- Points forts (2-3 éléments)  
-- Points d'attention (2-3 éléments \+ conseils)  
-- Déclenché après "Enregistrer & Analyser"
+- Historique des données analytics par mois
 
 **Métriques d'offres :**
 
-- Suivi par offre (visiteurs, inscrits, ventes, CA, taux de conversion)  
+- Suivi par offre (visiteurs, inscrits, ventes, CA, taux de conversion)
 - Agrégation \+ analyse IA par offre
 
 ### 4.11. Page « Pépites » (/pepites)
@@ -426,9 +432,8 @@ Repository d'insights et de pépites business. Notifications de nouvelles pépit
 
 **Onglet IA :**
 
-- Panel crédits IA  
-- Gestion des clés API  
-- Paramètres du modèle
+- Panel crédits IA (consommation, solde, historique)
+- Style des auto-commentaires
 
 **Onglet Abonnement (Pricing) :**
 
