@@ -41,12 +41,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ ok: false, error: "invalid_event_type" }, { status: 400, headers: CORS_HEADERS });
   }
 
+  // Clean up name: strip unresolved template variables (e.g. "{{ contact.first_name }}")
+  let rawName = (body.name || body.first_name || "").slice(0, 50).trim();
+  if (/\{\{.*\}\}/.test(rawName) || /\{%.*%\}/.test(rawName) || /^\{.*\}$/.test(rawName)) {
+    rawName = "";
+  }
+
   const { error } = await supabaseAdmin
     .from("toast_events")
     .insert({
       widget_id: widgetId,
       event_type: eventType,
-      visitor_name: (body.name || body.first_name || "").slice(0, 50) || null,
+      visitor_name: rawName || null,
       page_url: (body.page_url || body.url || "").slice(0, 500) || null,
       metadata: body.metadata || {},
     });

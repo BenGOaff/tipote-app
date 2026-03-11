@@ -30,6 +30,17 @@
   var EVENT_TYPE = script.getAttribute("data-event");
   var EVENT_NAME = script.getAttribute("data-name") || "";
 
+  // Clean up unresolved template variables (e.g. "{{ contact.first_name }}")
+  if (EVENT_NAME && /^\{\{.*\}\}$/.test(EVENT_NAME.trim())) EVENT_NAME = "";
+
+  // Auto-detect name from URL query params (Systeme.io, etc.)
+  if (!EVENT_NAME) {
+    try {
+      var params = new URLSearchParams(location.search);
+      EVENT_NAME = params.get("first_name") || params.get("firstname") || params.get("prenom") || params.get("name") || params.get("contact_first_name") || params.get("fname") || "";
+    } catch(e) {}
+  }
+
   // ─── Pixel mode ──────────────────────────────────────────────────────
   if (EVENT_TYPE && (EVENT_TYPE === "signup" || EVENT_TYPE === "purchase")) {
     fetch(API_BASE + "/api/widgets/toast/" + WIDGET_ID + "/events", {
@@ -85,7 +96,15 @@
     return Math.floor(s / 86400) + "d ago";
   }
 
+  function cleanName(name) {
+    if (!name) return name;
+    // Strip unresolved template variables
+    if (/\{\{.*\}\}/.test(name) || /\{%.*%\}/.test(name)) return "";
+    return name;
+  }
+
   function anon(name, n) {
+    name = cleanName(name);
     if (!name || !n || n <= 0) return name;
     return name.length <= n ? name : name.charAt(0).toUpperCase() + ".";
   }
@@ -295,10 +314,31 @@
     }).catch(function () {});
   }
 
+  // ─── Auto-capture: intercept form submissions to record signup with real name ─
+  function setupFormCapture() {
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      if (!form || form.tagName !== "FORM") return;
+      // Look for first_name field (Systeme.io, Tipote, etc.)
+      var nameInput = form.querySelector('input[name="first_name"]') || form.querySelector('input[name="firstname"]') || form.querySelector('input[name="prenom"]') || form.querySelector('input[name="fname"]');
+      var emailInput = form.querySelector('input[type="email"]') || form.querySelector('input[name="email"]');
+      // Only fire if this looks like a signup form (has email)
+      if (!emailInput || !emailInput.value) return;
+      var capturedName = nameInput ? (nameInput.value || "").trim() : "";
+      // Fire signup event with the real name (non-blocking)
+      fetch(API_BASE + "/api/widgets/toast/" + WIDGET_ID + "/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_type: "signup", name: capturedName, page_url: location.href }),
+      }).catch(function () {});
+    }, true);
+  }
+
   function init() {
     injectStyles();
     sendPing();
     setInterval(sendPing, 30000);
+    setupFormCapture();
 
     fetch(API_BASE + "/api/widgets/toast/" + WIDGET_ID + "/public?page_url=" + encodeURIComponent(location.href))
       .then(function (r) { return r.json(); })
