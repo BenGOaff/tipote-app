@@ -318,29 +318,28 @@
   // Finds name input by name attribute, placeholder, or nearby label
   function findNameInput(container) {
     if (!container) return null;
-    // 1. By name attribute
-    var byName = container.querySelector('input[name="first_name"]') || container.querySelector('input[name="firstname"]') || container.querySelector('input[name="prenom"]') || container.querySelector('input[name="fname"]') || container.querySelector('input[name="name"]');
+    // Only match fields that are explicitly "first name" — never grab
+    // last name, phone, or other sensitive data.
+    var firstNameOnly = /^(pr[eé]nom|first.?name|fname|vorname)$/i;
+    // 1. By name attribute (strict first-name fields only)
+    var byName = container.querySelector('input[name="first_name"]') || container.querySelector('input[name="firstname"]') || container.querySelector('input[name="prenom"]') || container.querySelector('input[name="fname"]');
     if (byName) return byName;
     // 2. By placeholder text (common on Systeme.io and landing page builders)
     var inputs = container.querySelectorAll('input[type="text"], input:not([type])');
-    var namePatterns = /pr[eé]nom|first.?name|your.?name|votre.?nom|nom/i;
     for (var i = 0; i < inputs.length; i++) {
-      var ph = (inputs[i].getAttribute("placeholder") || "").toLowerCase();
-      if (namePatterns.test(ph)) return inputs[i];
+      var ph = (inputs[i].getAttribute("placeholder") || "").trim();
+      if (firstNameOnly.test(ph)) return inputs[i];
     }
     // 3. By associated label text
     for (var j = 0; j < inputs.length; j++) {
       var id = inputs[j].id;
       if (id) {
         var label = container.querySelector('label[for="' + id + '"]');
-        if (label && namePatterns.test(label.textContent)) return inputs[j];
+        if (label && firstNameOnly.test((label.textContent || "").trim())) return inputs[j];
       }
     }
-    // 4. Fallback: first text input that is NOT the email field
-    var emailInput = container.querySelector('input[type="email"]') || container.querySelector('input[name="email"]');
-    for (var k = 0; k < inputs.length; k++) {
-      if (inputs[k] !== emailInput && inputs[k].value.trim()) return inputs[k];
-    }
+    // No fallback — if we can't identify the first name field with certainty,
+    // we don't capture anything (privacy > convenience)
     return null;
   }
 
