@@ -674,18 +674,23 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </Link>
                 </Button>
                 <h1 className="text-lg font-display font-bold truncate">{quiz.title}</h1>
-                <Badge
-                  className={
-                    status === "active"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                      : "bg-muted text-muted-foreground"
-                  }
-                >
-                  {status === "active" ? "Actif" : "Brouillon"}
-                </Badge>
               </div>
             }
-            actions={
+          />
+
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+            <div className="max-w-[1200px] mx-auto w-full space-y-5">
+            {/* Action bar */}
+            <div className="flex items-center justify-between">
+              <Badge
+                className={
+                  status === "active"
+                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                    : "bg-muted text-muted-foreground"
+                }
+              >
+                {status === "active" ? "Actif" : "Brouillon"}
+              </Badge>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
                   <Eye className="w-4 h-4 mr-1" />
@@ -703,10 +708,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   Sauvegarder
                 </Button>
               </div>
-            }
-          />
-
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 w-full">
+            </div>
             {/* Stats row */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card className="p-4">
@@ -1452,6 +1454,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
               </TabsContent>
             </Tabs>
+          </div>
           </div>
         </main>
       </div>

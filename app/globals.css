@@ -2,21 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
-   All colors MUST be HSL.
-*/
+/* ═══════════════════════════════════════════════════════════════════════════
+   TIPOTE DESIGN SYSTEM — Source of truth for all UI components
+   ═══════════════════════════════════════════════════════════════════════════
+
+   BRAND COLORS (hex reference):
+   ┌────────────────────────────────────────────────────────────────────────┐
+   │  Text / foreground  : #2E386E  (dark navy — used for all body text)  │
+   │  Primary / accents  : #5D6CDB  (vibrant blue — buttons, links, CTA)  │
+   │  Primary dark       : #2E3A6E  (deep navy — gradient endpoints)      │
+   │  Accent green       : #C1FF6F  (lime — ONLY on dark bg, small pops)  │
+   │  Background         : #F6F7FB  (soft off-white)                      │
+   └────────────────────────────────────────────────────────────────────────┘
+
+   TYPOGRAPHY:
+   - Font: Inter everywhere (font-display utility = Inter)
+   - Weights: 400 (body), 500 (medium labels), 600 (semibold), 700 (bold titles)
+   - Sizes: text-xs (labels/captions), text-sm (body), text-base (emphasis),
+            text-lg (page title in header), text-xl/2xl (section titles)
+   - Color hierarchy:
+       • foreground       — titles, primary text
+       • muted-foreground — descriptions, secondary text, captions
+
+   LAYOUT RULES (enforced by DashboardLayout):
+   - Header: h-14, sticky, border-b, title left + global elements right
+   - Content: p-4 sm:p-5 lg:p-6 → max-w-[1200px] mx-auto
+   - Every page starts with a <PageBanner> (gradient-primary, rounded-xl)
+   - Page-specific actions go IN the page content, NEVER in the header
+   - Spacing between sections: space-y-5
+
+   COMPONENTS:
+   - PageBanner  : gradient-primary banner at top of every page (icon + title + subtitle)
+   - DashboardLayout : canonical layout wrapper (sidebar + header + centered content)
+   - PageHeader  : header bar (used by pages with their own SidebarProvider)
+   - Cards       : bg-card, rounded-xl (--radius: 0.75rem), border
+
+   All colors below are HSL (without hsl() wrapper — Tailwind adds it).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @layer base {
   :root {
-    --background: 225 33% 98%;
-    --foreground: 0 0% 8%;
+    /* ── Core palette ── */
+    --background: 225 33% 98%;        /* #F6F7FB */
+    --foreground: 231 41% 31%;        /* #2E386E — default text color */
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 8%;
+    --card-foreground: 231 41% 31%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
+    --popover-foreground: 231 41% 31%;
 
-    --primary: 233 66% 62%;
+    /* ── Primary: #5D6CDB ── */
+    --primary: 233 64% 61%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 33% 96%;
@@ -28,6 +65,9 @@
     --accent: 236 79% 96%;
     --accent-foreground: 230 41% 28%;
 
+    /* ── Accent green: #C1FF6F — only on dark backgrounds, small touches ── */
+    --accent-green: 86 100% 72%;
+
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
@@ -36,30 +76,34 @@
 
     --border: 0 0% 76%;
     --input: 0 0% 76%;
-    --ring: 233 66% 62%;
+    --ring: 233 64% 61%;
 
     --radius: 0.75rem;
 
-    --primary-light: 233 66% 62%;
-    --primary-dark: 230 41% 28%;
+    /* ── Gradient endpoints ── */
+    --primary-light: 233 64% 61%;     /* #5D6CDB */
+    --primary-dark: 230 41% 28%;      /* #2E3A6E */
 
-    --gradient-primary: linear-gradient(135deg, hsl(233 66% 62%) 0%, hsl(230 41% 28%) 100%);
+    /* ── Gradients (used via .gradient-primary etc.) ── */
+    --gradient-primary: linear-gradient(135deg, hsl(233 64% 61%) 0%, hsl(230 41% 28%) 100%);
     --gradient-secondary: linear-gradient(135deg, hsl(220 33% 96%) 0%, hsl(220 33% 94%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(233 66% 62% / 0.95) 0%, hsl(230 41% 28% / 0.9) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(233 64% 61% / 0.95) 0%, hsl(230 41% 28% / 0.9) 100%);
 
+    /* ── Shadows ── */
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 10px 25px -5px hsl(233 66% 62% / 0.15);
-    --shadow-glow: 0 0 20px hsl(233 66% 62% / 0.3);
+    --shadow-lg: 0 10px 25px -5px hsl(233 64% 61% / 0.15);
+    --shadow-glow: 0 0 20px hsl(233 64% 61% / 0.3);
 
+    /* ── Sidebar ── */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 8%;
-    --sidebar-primary: 233 66% 62%;
+    --sidebar-foreground: 231 41% 31%;
+    --sidebar-primary: 233 64% 61%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 236 79% 96%;
     --sidebar-accent-foreground: 230 41% 28%;
     --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 233 66% 62%;
+    --sidebar-ring: 233 64% 61%;
   }
 
   .dark {
@@ -72,7 +116,7 @@
     --popover: 230 41% 18%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 233 66% 62%;
+    --primary: 233 64% 65%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 230 41% 22%;
@@ -81,8 +125,10 @@
     --muted: 230 41% 22%;
     --muted-foreground: 0 0% 65%;
 
-    --accent: 233 66% 62%;
+    --accent: 233 64% 61%;
     --accent-foreground: 0 0% 100%;
+
+    --accent-green: 86 100% 72%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -92,28 +138,28 @@
 
     --border: 230 30% 30%;
     --input: 230 30% 30%;
-    --ring: 233 66% 62%;
+    --ring: 233 64% 65%;
 
-    --primary-light: 233 66% 68%;
+    --primary-light: 233 64% 68%;
     --primary-dark: 230 41% 35%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(233 66% 68%) 0%, hsl(230 41% 35%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(233 64% 68%) 0%, hsl(230 41% 35%) 100%);
     --gradient-secondary: linear-gradient(135deg, hsl(230 41% 22%) 0%, hsl(230 41% 18%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(233 66% 68% / 0.95) 0%, hsl(230 41% 35% / 0.9) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(233 64% 68% / 0.95) 0%, hsl(230 41% 35% / 0.9) 100%);
 
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.1);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.15);
-    --shadow-lg: 0 10px 25px -5px hsl(233 66% 62% / 0.25);
-    --shadow-glow: 0 0 20px hsl(233 66% 62% / 0.4);
+    --shadow-lg: 0 10px 25px -5px hsl(233 64% 61% / 0.25);
+    --shadow-glow: 0 0 20px hsl(233 64% 61% / 0.4);
 
     --sidebar-background: 230 41% 14%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 233 66% 62%;
+    --sidebar-primary: 233 64% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 230 41% 20%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 230 30% 25%;
-    --sidebar-ring: 233 66% 62%;
+    --sidebar-ring: 233 64% 65%;
   }
 }
 

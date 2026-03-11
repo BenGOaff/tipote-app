@@ -21,6 +21,7 @@ import {
   Bell,
   Share2,
 } from "lucide-react";
+import { PageBanner } from "@/components/PageBanner";
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -224,19 +225,17 @@ export default function ToastWidgetsClient() {
     return (
       <DashboardLayout
         title={editingToast.name}
-        headerActions={
-          <div className="flex items-center gap-2">
-            <Badge variant={editingToast.enabled ? "default" : "secondary"}>
-              {editingToast.enabled ? t("active") : t("inactive")}
-            </Badge>
-          </div>
-        }
       >
-        <Button variant="ghost" size="sm" onClick={() => { setEditingToast(null); setEvents([]); }} className="mb-4">
-          <ChevronLeft className="w-4 h-4 mr-1" /> {t("back")}
-        </Button>
+        <div className="flex items-center gap-3 mb-4">
+          <Button variant="ghost" size="sm" onClick={() => { setEditingToast(null); setEvents([]); }}>
+            <ChevronLeft className="w-4 h-4 mr-1" /> {t("back")}
+          </Button>
+          <Badge variant={editingToast.enabled ? "default" : "secondary"}>
+            {editingToast.enabled ? t("active") : t("inactive")}
+          </Badge>
+        </div>
 
-        <div className="max-w-3xl space-y-6">
+        <div className="max-w-3xl mx-auto space-y-6">
           {/* Name & Toggle */}
           <Card className="p-5 space-y-4">
             <h3 className="font-semibold">{t("general")}</h3>
@@ -402,19 +401,17 @@ export default function ToastWidgetsClient() {
     return (
       <DashboardLayout
         title={editingShare.name}
-        headerActions={
-          <div className="flex items-center gap-2">
-            <Badge variant={editingShare.enabled ? "default" : "secondary"}>
-              {editingShare.enabled ? t("active") : t("inactive")}
-            </Badge>
-          </div>
-        }
       >
-        <Button variant="ghost" size="sm" onClick={() => setEditingShare(null)} className="mb-4">
-          <ChevronLeft className="w-4 h-4 mr-1" /> {t("back")}
-        </Button>
+        <div className="flex items-center gap-3 mb-4">
+          <Button variant="ghost" size="sm" onClick={() => setEditingShare(null)}>
+            <ChevronLeft className="w-4 h-4 mr-1" /> {t("back")}
+          </Button>
+          <Badge variant={editingShare.enabled ? "default" : "secondary"}>
+            {editingShare.enabled ? t("active") : t("inactive")}
+          </Badge>
+        </div>
 
-        <div className="max-w-3xl space-y-6">
+        <div className="max-w-3xl mx-auto space-y-6">
           {/* Name & Toggle */}
           <Card className="p-5 space-y-4">
             <h3 className="font-semibold">{t("general")}</h3>
@@ -568,6 +565,7 @@ export default function ToastWidgetsClient() {
 
   return (
     <DashboardLayout title={t("title")}>
+      <PageBanner icon={<Bell className="w-5 h-5" />} title={t("title")} subtitle={t("toastSectionDesc")} />
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">{t("loading")}</div>
       ) : !hasAny ? (

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
+import { PageBanner } from "@/components/PageBanner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -455,20 +456,8 @@ export default function AutomationsLovableClient() {
   return (
     <DashboardLayout
       title={t("title")}
-      showAnalyticsLink={false}
     >
-      {/* ── Hero header card ── */}
-      <Card className="gradient-primary text-primary-foreground overflow-hidden">
-        <CardContent className="flex flex-col md:flex-row md:items-center gap-5 p-6 md:py-8 md:px-8">
-          <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center shrink-0">
-            <Zap className="w-6 h-6" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-display font-bold">{t("hero.title")}</h2>
-            <p className="mt-1 text-primary-foreground/80 text-sm">{t("hero.description")}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <PageBanner icon={<Zap className="w-5 h-5" />} title={t("hero.title")} subtitle={t("hero.description")} />
 
       {/* ── Automatiser par plateforme ── */}
       <div>

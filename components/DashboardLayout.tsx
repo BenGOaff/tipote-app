@@ -14,8 +14,6 @@ interface DashboardLayoutProps {
   children: ReactNode;
   title: string;
   userEmail?: string;
-  showAnalyticsLink?: boolean;
-  headerActions?: ReactNode;
   contentClassName?: string;
 }
 
@@ -40,8 +38,7 @@ export default function DashboardLayout({
   children,
   title,
   userEmail = "",
-  headerActions,
-  contentClassName = "p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6",
+  contentClassName = "space-y-5",
 }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
@@ -49,28 +46,27 @@ export default function DashboardLayout({
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          {/* Header — no border-b */}
-          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
-            {/* Left: sidebar reopen button + page title */}
+          {/* Header — consistent: title left, global elements right */}
+          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10 border-b border-border/40">
             <div className="flex items-center gap-2 min-w-0">
               <SidebarOpenButton />
               <h1 className="text-lg font-display font-bold truncate">{title}</h1>
             </div>
 
-            {/* Right: custom actions or default header elements */}
             <div className="flex items-center gap-2 shrink-0">
-              {headerActions ?? (
-                <>
-                  <HeaderCredits />
-                  <ProjectSwitcher />
-                  <NotificationBell />
-                  <UserAvatarMenu userEmail={userEmail} />
-                </>
-              )}
+              <HeaderCredits />
+              <ProjectSwitcher />
+              <NotificationBell />
+              <UserAvatarMenu userEmail={userEmail} />
             </div>
           </header>
 
-          <div className={contentClassName}>{children}</div>
+          {/* Content — centered with max-width */}
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+            <div className={`max-w-[1200px] mx-auto w-full ${contentClassName}`}>
+              {children}
+            </div>
+          </div>
         </main>
       </div>
     </SidebarProvider>
