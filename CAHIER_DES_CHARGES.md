@@ -22,12 +22,12 @@ La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storyte
 
 - Onboarding intelligent qui capture le profil business complet  
 - Plan stratégique personnalisé avec pyramide d'offres  
-- Génération de contenus (posts, emails, articles, scripts, offres, funnels, quiz, stratégie éditoriale)  
+- Génération de contenus (posts, emails, articles, scripts, offres, pages, quiz, stratégie éditoriale)
 - **Publication directe sur 8 réseaux sociaux** (LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest, Reddit)  
 - **Automatisations** (auto-commentaires, comment-to-DM, comment-to-email)  
 - Calendrier éditorial centralisé  
-- Constructeur de pages (capture, vente, vitrine)  
-- Système de quiz avec capture de leads  
+- Constructeur de pages (capture, vente, vitrine, link-in-bio)
+- Système de quiz avec capture de leads
 - Gestion des leads avec chiffrement AES-256  
 - Templates Systeme.io  
 - Suivi des tâches et progression  
@@ -76,7 +76,7 @@ Plateformes supportées avec publication directe :
 - Emails (newsletters, séquences)  
 - Articles de blog  
 - Scripts vidéo  
-- Copywriting funnels et pages  
+- Copywriting pages
 - Quiz  
 - Stratégie éditoriale  
 - Auto-commentaires → Claude Sonnet comme provider principal, clé propriétaire
@@ -100,7 +100,7 @@ Plateformes supportées avec publication directe :
 | Menu | URL | Icône | Description |
 | :---- | :---- | :---- | :---- |
 | Aujourd'hui | /app | Sun | Dashboard : prochaine tâche \+ stats clés |
-| Ma Stratégie | /strategy | Target | Pyramide \+ plan 30/90j \+ persona |
+| Ma Stratégie | /strategy | Target | Pyramide \+ plan en 3 phases \+ persona |
 | Créer | /create | Sparkles | Hub de création (8 types de contenu) |
 | Mes Contenus | /contents | FolderOpen | Liste \+ calendrier éditorial |
 | Templates | /templates | Layout | Templates Systeme.io |
@@ -171,7 +171,7 @@ ONBOARDING (une fois)
 2. Diagnostic business (forces/faiblesses/leviers)  
 3. Création de 3-5 propositions de pyramide d'offres  
 4. L'utilisateur en choisit une (modifiable)  
-5. Génération du plan 30/90/180 jours  
+5. Génération du plan stratégique en 3 phases
 6. Création automatique des tâches
 
 ### 4.3. Page « Aujourd'hui » (/app)
@@ -199,10 +199,10 @@ Vue unifiée stratégie \+ suivi, organisée en onglets.
 
 **Onglet Plan d'action (défaut) :**
 
-- 3 stats : Tâches complétées, Jours restants, Phase actuelle  
-- Phase 1 Fondations (J1-30) : barre progression \+ tâches cochables  
-- Phase 2 Croissance (J31-60) : barre progression \+ tâches cochables  
-- Phase 3 Scale (J61-90) : barre progression \+ tâches cochables  
+- 3 stats : Tâches complétées, Progression globale, Phase actuelle
+- Phase 1 Fondations : barre progression \+ tâches cochables
+- Phase 2 Croissance : barre progression \+ tâches cochables
+- Phase 3 Scale : barre progression \+ tâches cochables
 - Encart « Prochaine étape recommandée »
 
 **Onglet Pyramide d'offres :**
@@ -236,7 +236,7 @@ Hub unique de création pour 8 types de contenu.
 | Article | Articles de blog, guides, tutoriels | FileText | ArticleForm |
 | Vidéo | Scripts YouTube, Reels, TikTok | Video | VideoForm |
 | Offre | Pages de vente, descriptions produit | Package | OfferForm |
-| Funnel | Tunnels de vente complets | Route | FunnelForm |
+| Pages | Pages de vente, de capture, sites vitrine, link-in-bio | Route | PagesForm |
 | Quiz | Quiz lead magnets | ClipboardList | QuizForm |
 | Stratégie | Stratégie de contenu éditoriale | CalendarDays | ContentStrategyForm |
 
@@ -289,11 +289,8 @@ Bibliothèque de templates Systeme.io téléchargeables.
 
 **Fonctionnalités :**
 
-- Prévisualisation des templates  
-- Téléchargement direct dans Systeme.io  
-- Itération IA sur les templates  
-- Reformulation du contenu  
-- Rendu avec données personnalisées
+- Prévisualisation des templates
+- Téléchargement direct dans Systeme.io
 
 ### 4.8. Page « Automatisations » (/automations)
 
@@ -457,9 +454,10 @@ Constructeur complet de landing pages hébergées.
 
 **Types de pages :**
 
-- Page de capture (lead generation)  
-- Page de vente (conversion)  
+- Page de capture (lead generation)
+- Page de vente (conversion)
 - Site vitrine (showcase)
+- Link-in-bio (page de liens personnalisée)
 
 **Fonctionnalités de l'éditeur :**
 
@@ -484,14 +482,19 @@ Constructeur complet de landing pages hébergées.
 
 Constructeur de quiz interactifs pour capture de leads.
 
+**Modes de création :**
+
+- Génération de quiz par IA
+- Création manuelle de zéro
+- Import d'un quiz existant
+
 **Fonctionnalités :**
 
-- Génération de quiz par IA  
-- Éditeur de questions/réponses  
-- Page publique de quiz (`/q/[quizId]`)  
-- Capture d'email \+ prénom  
-- Résultats personnalisés avec CTA  
-- Sync leads vers Systeme.io  
+- Éditeur de questions/réponses
+- Page publique de quiz (`/q/[quizId]`)
+- Capture d'email \+ prénom
+- Résultats personnalisés avec CTA
+- Sync leads vers Systeme.io
 - Stats : vues, partages, leads capturés
 
 ### 4.15. Coach IA
@@ -743,7 +746,7 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Pages & Quiz :**
 
-- `hosted_pages` — pages hébergées (capture, vente, vitrine) avec slug, analytics, pixels  
+- `hosted_pages` — pages hébergées (capture, vente, vitrine, link-in-bio) avec slug, analytics, pixels
 - `page_leads` — leads capturés par les pages  
 - `page_clicks` — tracking des clics  
 - `quizzes` — quiz avec questions, résultats, CTA  
@@ -1016,7 +1019,7 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 - Hub création unifié (8 types de contenu)  
 - **Publication directe sur 8 réseaux sociaux**  
 - **Automatisations** (auto-commentaires, comment-to-DM/email)  
-- **Constructeur de pages** (capture, vente, vitrine)  
+- **Constructeur de pages** (capture, vente, vitrine, link-in-bio)  
 - **Système de quiz** avec capture de leads  
 - **Gestion des leads** avec chiffrement AES-256  
 - Calendrier éditorial (édition des posts programmés)  
