@@ -41,6 +41,7 @@ const PUBLIC_PREFIXES = [
   "/favicon.ico",
   "/icon.png",
   "/tipote-logo.png",
+  "/widgets/social-share.js", // ✅ widget JS embarquable (chargé cross-origin depuis blogs)
 ];
 
 const PROTECTED_PREFIXES = [
