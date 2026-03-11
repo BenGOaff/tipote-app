@@ -844,20 +844,20 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
             </div>
 
             {resultProfile?.description && (
-              <p className="text-muted-foreground text-base leading-relaxed">{resultProfile.description}</p>
+              <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{resultProfile.description}</p>
             )}
 
             {resultProfile?.insight && (
               <div className="p-4 rounded-xl bg-muted/50 border">
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{t.insight}</p>
-                <p className="text-sm leading-relaxed">{resultProfile.insight}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-line">{resultProfile.insight}</p>
               </div>
             )}
 
             {resultProfile?.projection && (
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                 <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{t.projection}</p>
-                <p className="text-sm leading-relaxed">{resultProfile.projection}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-line">{resultProfile.projection}</p>
               </div>
             )}
 

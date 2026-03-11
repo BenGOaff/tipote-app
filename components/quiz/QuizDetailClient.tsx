@@ -921,7 +921,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setEditResults(editResults.filter((_, i) => i !== ri))}
+                            onClick={() => {
+                              const removedIdx = ri;
+                              setEditResults(editResults.filter((_, i) => i !== removedIdx));
+                              // Remap result_index in all question options:
+                              // - remove options pointing to the deleted profile
+                              // - decrement indexes above the deleted one
+                              setEditQuestions((prev) =>
+                                prev.map((q) => ({
+                                  ...q,
+                                  options: q.options
+                                    .filter((o) => o.result_index !== removedIdx)
+                                    .map((o) => ({
+                                      ...o,
+                                      result_index: o.result_index > removedIdx ? o.result_index - 1 : o.result_index,
+                                    })),
+                                })),
+                              );
+                            }}
                             title="Supprimer ce profil"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1018,7 +1035,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     variant="outline"
                     size="sm"
                     className="w-full"
-                    onClick={() =>
+                    onClick={() => {
+                      const newProfileIndex = editResults.length;
                       setEditResults([
                         ...editResults,
                         {
@@ -1030,10 +1048,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           cta_text: null,
                           cta_url: null,
                           sio_tag_name: null,
-                          sort_order: editResults.length,
+                          sort_order: newProfileIndex,
                         },
-                      ])
-                    }
+                      ]);
+                      // Auto-add an option pointing to the new profile in each question
+                      setEditQuestions((prev) =>
+                        prev.map((q) => ({
+                          ...q,
+                          options: [
+                            ...q.options,
+                            { text: "", result_index: newProfileIndex },
+                          ],
+                        })),
+                      );
+                    }}
                   >
                     <Plus className="w-4 h-4 mr-1" /> Ajouter un profil résultat
                   </Button>
