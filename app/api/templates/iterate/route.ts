@@ -83,30 +83,7 @@ async function callClaude(args: {
     .trim();
 }
 
-type Kind = "capture" | "vente";
-
-type CaptureTemplateId =
-  | "capture-01"
-  | "capture-02"
-  | "capture-03"
-  | "capture-04"
-  | "capture-05";
-
-type SaleTemplateId =
-  | "sale-01"
-  | "sale-02"
-  | "sale-03"
-  | "sale-04"
-  | "sale-05"
-  | "sale-06"
-  | "sale-07"
-  | "sale-08"
-  | "sale-09"
-  | "sale-10"
-  | "sale-11"
-  | "sale-12";
-
-type TemplateId = CaptureTemplateId | SaleTemplateId;
+type Kind = "capture" | "vente" | "vitrine";
 
 const PatchSchema = z.object({
   op: z.enum(["set", "unset"]),
@@ -122,27 +99,9 @@ const PatchSchema = z.object({
 
 const InputSchema = z.object({
   instruction: z.string().min(3),
-  templateId: z.enum([
-    "capture-01",
-    "capture-02",
-    "capture-03",
-    "capture-04",
-    "capture-05",
-    "sale-01",
-    "sale-02",
-    "sale-03",
-    "sale-04",
-    "sale-05",
-    "sale-06",
-    "sale-07",
-    "sale-08",
-    "sale-09",
-    "sale-10",
-    "sale-11",
-    "sale-12",
-  ]),
+  templateId: z.string().min(1),
   variantId: z.string().optional().nullable(),
-  kind: z.enum(["capture", "vente"]),
+  kind: z.enum(["capture", "vente", "vitrine"]),
   contentData: z.record(z.any()),
   brandTokens: z.record(z.any()).optional().nullable(),
 });
@@ -244,6 +203,46 @@ const CONTENT_WHITELIST: Record<Kind, string[]> = {
     "proof_intro_text",
     "proof_evidence_text",
     "proof_transformation_text",
+  ],
+  vitrine: [
+    // Showcase / vitrine page fields (matching pageBuilder.ts sections)
+    "logo_text",
+    "logo_image_url",
+    "nav_links",
+    "hero_eyebrow",
+    "hero_title",
+    "hero_subtitle",
+    "hero_description",
+    "cta_text",
+    "cta_url",
+    "secondary_cta_text",
+    "secondary_cta_url",
+    "services_title",
+    "services_subtitle",
+    "services",
+    "numbers_title",
+    "key_numbers",
+    "benefits_title",
+    "benefits",
+    "program_title",
+    "program_items",
+    "about_label",
+    "about_name",
+    "about_story",
+    "testimonials_title",
+    "testimonials",
+    "pricing_title",
+    "pricing_plans",
+    "faq_title",
+    "faq_items",
+    "contact_title",
+    "contact_description",
+    "contact_cta_text",
+    "contact_cta_url",
+    "contact_email",
+    "contact_phone",
+    "contact_address",
+    "footer_text",
   ],
 };
 
@@ -372,18 +371,6 @@ export async function POST(req: Request) {
 
   const { instruction, templateId, variantId, kind, contentData } = parsed.data;
 
-  // ✅ Template whitelist coherence: templateId must match kind
-  const isCaptureTemplate = String(templateId).startsWith("capture-");
-  if (
-    (kind === "capture" && !isCaptureTemplate) ||
-    (kind === "vente" && isCaptureTemplate)
-  ) {
-    return NextResponse.json(
-      { error: "Template/kind mismatch" },
-      { status: 400 }
-    );
-  }
-
   // ✅ Credits gating (each iteration costs 0.5)
   const creditCost = 0.5;
   const balance = await ensureUserCredits(session.user.id);
@@ -404,7 +391,7 @@ export async function POST(req: Request) {
   const brandTokens = parsed.data.brandTokens ?? {};
 
   const system = [
-    "Tu es un assistant d’édition de templates Systeme.io.",
+    "Tu es un assistant d’édition de pages web (capture, vente, vitrine).",
     "Tu ne modifies jamais le HTML.",
     "Tu produis UNIQUEMENT un JSON qui respecte ce schéma :",
     JSON.stringify(

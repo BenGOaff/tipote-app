@@ -915,7 +915,7 @@ ${textContent.split("\n").map((line) => {
         <PageChatBar
           pageId={page.id}
           templateId={page.template_id}
-          kind={page.template_kind as "capture" | "vente"}
+          kind={page.template_kind as "capture" | "vente" | "vitrine"}
           contentData={page.content_data}
           brandTokens={page.brand_tokens}
           onUpdate={handleChatUpdate}
