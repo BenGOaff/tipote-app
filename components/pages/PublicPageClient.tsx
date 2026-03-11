@@ -586,7 +586,7 @@ function injectCaptureScript(page: PublicPageData): string {
       e.stopPropagation();
       parent.postMessage('tipote:capture:' + JSON.stringify({
         email: email.value.trim(),
-        first_name: (form.querySelector('input[type="text"]') || {}).value || ''
+        first_name: (form.querySelector('input[name="first_name"]') || form.querySelector('input[type="text"]') || {}).value || ''
       }), '*');
       return false;
     }

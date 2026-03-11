@@ -63,7 +63,14 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function cleanName(name: string): string {
+  if (!name) return name;
+  if (/\{\{.*\}\}/.test(name) || /\{%.*%\}/.test(name)) return "";
+  return name;
+}
+
 function anonymize(name: string, after: number): string {
+  name = cleanName(name);
   if (!name || !after || after <= 0) return name;
   return name.length <= after ? name : name.charAt(0).toUpperCase() + ".";
 }
