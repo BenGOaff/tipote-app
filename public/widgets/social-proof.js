@@ -315,22 +315,80 @@
   }
 
   // ─── Auto-capture: intercept form submissions to record signup with real name ─
+  // Finds name input by name attribute, placeholder, or nearby label
+  function findNameInput(container) {
+    if (!container) return null;
+    // 1. By name attribute
+    var byName = container.querySelector('input[name="first_name"]') || container.querySelector('input[name="firstname"]') || container.querySelector('input[name="prenom"]') || container.querySelector('input[name="fname"]') || container.querySelector('input[name="name"]');
+    if (byName) return byName;
+    // 2. By placeholder text (common on Systeme.io and landing page builders)
+    var inputs = container.querySelectorAll('input[type="text"], input:not([type])');
+    var namePatterns = /pr[eé]nom|first.?name|your.?name|votre.?nom|nom/i;
+    for (var i = 0; i < inputs.length; i++) {
+      var ph = (inputs[i].getAttribute("placeholder") || "").toLowerCase();
+      if (namePatterns.test(ph)) return inputs[i];
+    }
+    // 3. By associated label text
+    for (var j = 0; j < inputs.length; j++) {
+      var id = inputs[j].id;
+      if (id) {
+        var label = container.querySelector('label[for="' + id + '"]');
+        if (label && namePatterns.test(label.textContent)) return inputs[j];
+      }
+    }
+    // 4. Fallback: first text input that is NOT the email field
+    var emailInput = container.querySelector('input[type="email"]') || container.querySelector('input[name="email"]');
+    for (var k = 0; k < inputs.length; k++) {
+      if (inputs[k] !== emailInput && inputs[k].value.trim()) return inputs[k];
+    }
+    return null;
+  }
+
+  function findEmailInput(container) {
+    return container.querySelector('input[type="email"]') || container.querySelector('input[name="email"]');
+  }
+
+  function fireSignupEvent(name) {
+    if (window.__tipote_sp_fired) return;
+    window.__tipote_sp_fired = true;
+    fetch(API_BASE + "/api/widgets/toast/" + WIDGET_ID + "/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_type: "signup", name: name, page_url: location.href }),
+    }).catch(function () {});
+    // Reset after 5s to allow multiple submissions on the same page
+    setTimeout(function () { window.__tipote_sp_fired = false; }, 5000);
+  }
+
   function setupFormCapture() {
+    // Strategy 1: Listen to native form submit events
     document.addEventListener("submit", function (e) {
       var form = e.target;
       if (!form || form.tagName !== "FORM") return;
-      // Look for first_name field (Systeme.io, Tipote, etc.)
-      var nameInput = form.querySelector('input[name="first_name"]') || form.querySelector('input[name="firstname"]') || form.querySelector('input[name="prenom"]') || form.querySelector('input[name="fname"]');
-      var emailInput = form.querySelector('input[type="email"]') || form.querySelector('input[name="email"]');
-      // Only fire if this looks like a signup form (has email)
+      var emailInput = findEmailInput(form);
       if (!emailInput || !emailInput.value) return;
+      var nameInput = findNameInput(form);
       var capturedName = nameInput ? (nameInput.value || "").trim() : "";
-      // Fire signup event with the real name (non-blocking)
-      fetch(API_BASE + "/api/widgets/toast/" + WIDGET_ID + "/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event_type: "signup", name: capturedName, page_url: location.href }),
-      }).catch(function () {});
+      fireSignupEvent(capturedName);
+    }, true);
+
+    // Strategy 2: Listen for click on buttons/links (catches Systeme.io
+    // and other builders that use JS handlers instead of native form submit)
+    document.addEventListener("click", function (e) {
+      var target = e.target;
+      if (!target) return;
+      // Walk up to find button/a/input[type=submit]
+      var btn = target.closest ? target.closest('button, a, input[type="submit"], [role="button"]') : null;
+      if (!btn) return;
+      // Find the closest form or section containing both email + name fields
+      var container = btn.closest("form") || btn.closest("section") || btn.closest("div[class]") || btn.parentElement;
+      if (!container) return;
+      var emailInput = findEmailInput(container);
+      if (!emailInput || !emailInput.value) return;
+      var nameInput = findNameInput(container);
+      var capturedName = nameInput ? (nameInput.value || "").trim() : "";
+      // Small delay to let the form process first
+      setTimeout(function () { fireSignupEvent(capturedName); }, 200);
     }, true);
   }
 
