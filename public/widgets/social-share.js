@@ -228,19 +228,20 @@
         };
       }
 
-      // Determine background color
-      var bgColor = "transparent";
-      if (cfg.color_mode === "brand" || !cfg.color_mode) {
-        bgColor = p.color;
-      } else if (cfg.color_mode === "custom" && cfg.custom_color) {
-        bgColor = cfg.custom_color;
-      } else if (cfg.color_mode === "mono-light") {
+      // Determine background color — default is ALWAYS the platform brand color
+      // so the button is never invisible, regardless of DB value for color_mode.
+      var bgColor = p.color;
+      var textColor = "#fff";
+      if (cfg.color_mode === "mono-light") {
         bgColor = "#f3f4f6";
+        textColor = "#374151";
       } else if (cfg.color_mode === "mono-dark") {
         bgColor = "#374151";
+      } else if (cfg.color_mode === "custom") {
+        // Use user's custom color, or same default as the settings form (#2563eb)
+        bgColor = cfg.custom_color || "#2563eb";
       }
-
-      var textColor = (cfg.color_mode === "mono-light") ? "#374151" : "#fff";
+      // "brand", null, undefined, or any other value → keep p.color
 
       // ALL critical styles inline
       setStyles(btn, {
