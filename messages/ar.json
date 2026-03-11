@@ -2263,7 +2263,7 @@
     "titlePlaceholder": "عنوان المهمة",
     "statusDone": "مكتملة",
     "statusTodo": "للقيام بها",
-    "priorityHigh": "أولوية عالية",
+    "priorityHigh": "عاجل",
     "priorityMedium": "أولوية متوسطة",
     "priorityLow": "أولوية منخفضة",
     "subtasksCount": "{done}/{total} أهداف فرعية",
@@ -2278,6 +2278,13 @@
     "delete": "حذف",
     "save": "حفظ",
     "saving": "جاري الحفظ…"
+  },
+  "phasePage": {
+    "noPriority": "بدون",
+    "addTaskPlaceholder": "أضف مهمة…",
+    "emptyPhase": "لا توجد مهام في هذه المرحلة.",
+    "completedTasks": "{count} مهمة مكتملة",
+    "saved": "تم حفظ التعديلات"
   },
   "phaseDetail": {
     "objective": "هدف هذه المرحلة",

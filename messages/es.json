@@ -2263,7 +2263,7 @@
     "titlePlaceholder": "Título de la tarea",
     "statusDone": "Completada",
     "statusTodo": "Por hacer",
-    "priorityHigh": "Prioridad alta",
+    "priorityHigh": "Urgente",
     "priorityMedium": "Prioridad media",
     "priorityLow": "Prioridad baja",
     "subtasksCount": "{done}/{total} sub-objetivos",
@@ -2278,6 +2278,13 @@
     "delete": "Eliminar",
     "save": "Guardar",
     "saving": "Guardando…"
+  },
+  "phasePage": {
+    "noPriority": "Ninguna",
+    "addTaskPlaceholder": "Añadir una tarea…",
+    "emptyPhase": "No hay tareas en esta fase.",
+    "completedTasks": "{count} tarea(s) completada(s)",
+    "saved": "Cambios guardados"
   },
   "phaseDetail": {
     "objective": "Objetivo de esta fase",

@@ -48,7 +48,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { PhaseDetailModal } from "@/components/strategy/PhaseDetailModal";
 import { OfferDetailModal } from "@/components/strategy/OfferDetailModal";
 import { PersonaEditModal } from "@/components/strategy/PersonaEditModal";
 import { TaskDetailModal, type TaskDetail } from "@/components/tasks/TaskDetailModal";
@@ -251,10 +250,6 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [showDoneTasks, setShowDoneTasks] = useState(false);
 
-  // ✅ NEW (Lovable): modales détails
-  const [selectedPhaseIndex, setSelectedPhaseIndex] = useState<number | null>(
-    null,
-  );
   const [selectedOfferType, setSelectedOfferType] = useState<
     "lead_magnet" | "low_ticket" | "high_ticket" | null
   >(null);
@@ -620,116 +615,15 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
   const phasesForRender = isEditing ? phases : props.phases;
 
-  const handleUpdatePhase = useCallback(
-    (phaseIndex: number, _updatedPhase: { title: string; period: string; progress: number; tasks: { id: string; task: string; done: boolean }[] }) => {
-      // Tasks are now persisted immediately via onAddTask/onDeleteTask
-      // This callback just shows confirmation and refreshes
-      toast({
-        title: t("toast.phaseUpdated"),
-        description: t("toast.phaseUpdatedDesc"),
-      });
-      router.refresh();
-    },
-    [toast, router],
-  );
-
-  // Wrapper for addTask that updates modal local state + persists via API
-  const handleModalAddTask = useCallback(
-    async (taskName: string, phaseIndex: number): Promise<{ id: string; task: string; done: boolean } | undefined> => {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: taskName,
-          priority: "high",
-          status: "todo",
-        }),
-      });
-
-      const json = (await res.json().catch(() => null)) as
-        | { ok?: boolean; task?: TaskRow; error?: string }
-        | null;
-
-      if (!res.ok || !json?.ok || !json?.task?.id) {
-        toast({
-          title: t("toast.error"),
-          description: json?.error || t("toast.taskAddError"),
-          variant: "destructive",
-        });
-        throw new Error("Failed to add task");
-      }
-
-      // Update local phases state immediately
-      setPhases((prev) => {
-        const next = [...prev];
-        const ph = next[phaseIndex] ?? null;
-        if (!ph) return prev;
-
-        next[phaseIndex] = {
-          ...ph,
-          tasks: [...(ph.tasks || []), json.task as TaskRow],
-        };
-        return next;
-      });
-
-      // Refresh to sync server data
-      router.refresh();
-
-      // Return task in modal format so the modal can update localPhase immediately
-      return {
-        id: String(json.task!.id),
-        task: json.task!.title || "—",
-        done: false,
-      };
-    },
-    [toast, router, t],
-  );
-
-  // Wrapper for deleteTask that persists via API
-  const handleModalDeleteTask = useCallback(
-    async (taskId: string) => {
-      // Update local state immediately
-      setPhases((prev) =>
-        prev.map((ph) => ({
-          ...ph,
-          tasks: (ph.tasks || []).filter((task) => String(task.id) !== String(taskId)),
-        })),
-      );
-
-      try {
-        const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
-          method: "DELETE",
-        });
-        const json = (await res.json().catch(() => null)) as
-          | { ok?: boolean; error?: string }
-          | null;
-
-        if (!res.ok || !json?.ok) {
-          toast({
-            title: t("toast.error"),
-            description: json?.error || t("toast.taskDeleteError"),
-            variant: "destructive",
-          });
-        }
-      } catch {
-        toast({
-          title: t("toast.error"),
-          description: t("toast.taskDeleteError"),
-          variant: "destructive",
-        });
-      }
-
-      router.refresh();
-    },
-    [toast, router, t],
-  );
+  const PHASE_SLUGS = ["fondations", "croissance", "scale"];
 
   const openPhase = useCallback(
     (phaseIndex: number) => {
       if (isEditing) return;
-      setSelectedPhaseIndex(phaseIndex);
+      const slug = PHASE_SLUGS[phaseIndex] || "fondations";
+      router.push(`/strategy/${slug}`);
     },
-    [isEditing],
+    [isEditing, router],
   );
 
   return (
@@ -1194,45 +1088,6 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                 })()}
             </div>
           </div>
-
-          {selectedPhaseIndex !== null &&
-            phasesForRender?.[selectedPhaseIndex] &&
-            (() => {
-              const ph = phasesForRender[selectedPhaseIndex] as Phase;
-              const allTasksInPhase = Array.isArray(ph.tasks) ? ph.tasks : [];
-              const activeTasksInPhase = allTasksInPhase.filter((t) => !isDoneStatus(statusById[String(t.id)] ?? t.status));
-              const completed = allTasksInPhase.filter((task) =>
-                isDoneStatus(statusById[String(task.id)] ?? task.status),
-              ).length;
-              const progress = allTasksInPhase.length
-                ? Math.round((completed / allTasksInPhase.length) * 100)
-                : 0;
-
-              return (
-                <PhaseDetailModal
-                  isOpen={selectedPhaseIndex !== null}
-                  onClose={() => setSelectedPhaseIndex(null)}
-                  phase={{
-                    title: ph.title,
-                    period: ph.period,
-                    progress,
-                    tasks: activeTasksInPhase.map((t) => ({
-                      id: String(t.id),
-                      task: t.title || "—",
-                      done: isDoneStatus(statusById[String(t.id)] ?? t.status),
-                      due_date: t.due_date ?? null,
-                      estimated_duration: t.estimated_duration ?? null,
-                    })),
-                  }}
-                  phaseIndex={selectedPhaseIndex}
-                  onToggleTask={toggleTask}
-                  onUpdatePhase={handleUpdatePhase}
-                  onAddTask={handleModalAddTask}
-                  onDeleteTask={handleModalDeleteTask}
-                  onOpenDetail={openTaskDetail}
-                />
-              );
-            })()}
 
           {selectedOfferType && (
             <OfferDetailModal

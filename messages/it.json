@@ -2263,7 +2263,7 @@
     "titlePlaceholder": "Titolo dell'attività",
     "statusDone": "Completata",
     "statusTodo": "Da fare",
-    "priorityHigh": "Priorità alta",
+    "priorityHigh": "Urgente",
     "priorityMedium": "Priorità media",
     "priorityLow": "Priorità bassa",
     "subtasksCount": "{done}/{total} sotto-obiettivi",
@@ -2278,6 +2278,13 @@
     "delete": "Elimina",
     "save": "Salva",
     "saving": "Salvataggio…"
+  },
+  "phasePage": {
+    "noPriority": "Nessuna",
+    "addTaskPlaceholder": "Aggiungi un'attività…",
+    "emptyPhase": "Nessuna attività in questa fase.",
+    "completedTasks": "{count} attività completata/e",
+    "saved": "Modifiche salvate"
   },
   "phaseDetail": {
     "objective": "Obiettivo di questa fase",
