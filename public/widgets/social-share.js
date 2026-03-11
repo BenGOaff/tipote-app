@@ -65,44 +65,34 @@
 
   function e(s) { return encodeURIComponent(s); }
 
-  // ─── CSS injection ──────────────────────────────────────────────────
-  function injectCSS(cfg) {
-    if (document.getElementById("tpt-share-css")) return;
+  // ─── Computed sizes ─────────────────────────────────────────────────
+  function getMetrics(cfg) {
     var sizes = { sm: 32, md: 40, lg: 48 };
     var sz = sizes[cfg.button_size] || 40;
     var iconSz = Math.round(sz * 0.45);
     var radius = { rounded: "8px", square: "0", circle: "50%", pill: "999px" }[cfg.button_style] || "8px";
     var gap = cfg.button_style === "circle" ? "8px" : "6px";
+    return { sz: sz, iconSz: iconSz, radius: radius, gap: gap };
+  }
+
+  // ─── CSS injection (supplementary — hover, animation, mobile) ─────
+  // All critical layout/visibility is set as inline styles on elements
+  // so the widget resists CMS CSS overrides (Systeme.io, WordPress…).
+  // This stylesheet only handles pseudo-states and media queries.
+  function injectCSS(cfg) {
+    if (document.getElementById("tpt-share-css")) return;
+    var m = getMetrics(cfg);
 
     var css = [
-      ".tpt-share-wrap{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1;z-index:9998;box-sizing:border-box}",
-      ".tpt-share-wrap *{box-sizing:border-box}",
-      ".tpt-share-btns{display:flex;flex-wrap:wrap;gap:" + gap + ";align-items:center}",
+      // Hover & active (cannot be inline)
+      ".tpt-share-btn:hover{transform:scale(1.08)!important;opacity:0.92!important}",
+      ".tpt-share-btn:active{transform:scale(0.95)!important}",
 
-      // Inline
-      ".tpt-share-inline .tpt-share-btns{justify-content:center}",
+      // Floating edge radius overrides
+      ".tpt-share-floating-left .tpt-share-btn{border-radius:0 " + m.radius + " " + m.radius + " 0!important}",
+      ".tpt-share-floating-right .tpt-share-btn{border-radius:" + m.radius + " 0 0 " + m.radius + "!important}",
 
-      // Floating
-      ".tpt-share-floating{position:fixed;top:50%;transform:translateY(-50%);z-index:9998}",
-      ".tpt-share-floating .tpt-share-btns{flex-direction:column}",
-      ".tpt-share-floating-left{left:0}",
-      ".tpt-share-floating-right{right:0}",
-      // Floating: rounded edge on outside only
-      ".tpt-share-floating-left .tpt-share-btn{border-radius:0 " + radius + " " + radius + " 0}",
-      ".tpt-share-floating-right .tpt-share-btn{border-radius:" + radius + " 0 0 " + radius + "}",
-
-      // Bottom bar
-      ".tpt-share-bottom{position:fixed;bottom:0;left:0;right:0;z-index:9998;padding:8px 12px;background:rgba(255,255,255,0.97);border-top:1px solid rgba(0,0,0,0.08);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}",
-      ".tpt-share-bottom .tpt-share-btns{justify-content:center}",
-
-      // Button base
-      ".tpt-share-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;cursor:pointer;text-decoration:none;transition:transform .15s ease,opacity .15s ease;padding:" + (cfg.show_labels ? "0 14px" : "0") + ";width:" + (cfg.show_labels ? "auto" : sz + "px") + ";height:" + sz + "px;min-width:" + sz + "px;border-radius:" + radius + ";color:#fff;font-size:13px;font-weight:600}",
-      ".tpt-share-btn:hover{transform:scale(1.08);opacity:0.92}",
-      ".tpt-share-btn:active{transform:scale(0.95)}",
-      ".tpt-share-btn svg{width:" + iconSz + "px;height:" + iconSz + "px;flex-shrink:0}",
-      ".tpt-share-label{white-space:nowrap}",
-
-      // Mono modes
+      // Mono modes (override inline bg)
       ".tpt-share-mono-light .tpt-share-btn{background:#f3f4f6!important;color:#374151!important}",
       ".tpt-share-mono-light .tpt-share-btn:hover{background:#e5e7eb!important}",
       ".tpt-share-mono-dark .tpt-share-btn{background:#374151!important;color:#fff!important}",
@@ -110,10 +100,10 @@
 
       // Mobile: bottom-bar compact
       "@media(max-width:640px){" +
-        ".tpt-share-floating{display:none}" +
-        ".tpt-share-bottom .tpt-share-label{display:none}" +
-        ".tpt-share-bottom .tpt-share-btn{padding:0;width:" + sz + "px}" +
-        ".tpt-share-bottom .tpt-share-btns{gap:4px}" +
+        ".tpt-share-floating{display:none!important}" +
+        ".tpt-share-bottom .tpt-share-label{display:none!important}" +
+        ".tpt-share-bottom .tpt-share-btn{padding:0!important;width:" + m.sz + "px!important}" +
+        ".tpt-share-bottom .tpt-share-btns{gap:4px!important}" +
       "}"
     ].join("\n");
 
@@ -123,34 +113,98 @@
     document.head.appendChild(style);
   }
 
+  // ─── Inline style helper ──────────────────────────────────────────
+  // Sets all properties with !important via cssText to beat CMS rules.
+  function setStyles(el, props) {
+    var parts = [];
+    for (var k in props) {
+      if (props.hasOwnProperty(k)) {
+        // Convert camelCase to kebab-case
+        var kebab = k.replace(/([A-Z])/g, function (m) { return "-" + m.toLowerCase(); });
+        parts.push(kebab + ":" + props[k] + " !important");
+      }
+    }
+    el.style.cssText = parts.join(";");
+  }
+
   // ─── Render ─────────────────────────────────────────────────────────
+  // Every visible element gets ALL critical styles inline so that
+  // third-party CMS stylesheets (Systeme.io, WordPress, Wix…) cannot
+  // override them. This is the same approach ShareThis uses.
   function render(cfg, scriptEl) {
     injectCSS(cfg);
 
+    var m = getMetrics(cfg);
     var pageUrl = cfg.share_url || window.location.href;
     var pageTitle = cfg.share_text || document.title;
     var hashtags = cfg.share_hashtags || "";
     var platforms = cfg.platforms || ["facebook", "twitter", "linkedin", "whatsapp", "email"];
     var containerId = scriptEl.getAttribute("data-container");
 
-    // Build wrapper classes
-    var wrapClass = "tpt-share-wrap";
-    var modeClass = "";
-    if (cfg.display_mode === "floating-left") modeClass = "tpt-share-floating tpt-share-floating-left";
-    else if (cfg.display_mode === "floating-right") modeClass = "tpt-share-floating tpt-share-floating-right";
-    else if (cfg.display_mode === "bottom-bar") modeClass = "tpt-share-bottom";
-    else modeClass = "tpt-share-inline";
-
-    var colorClass = "";
-    if (cfg.color_mode === "mono-light") colorClass = "tpt-share-mono-light";
-    else if (cfg.color_mode === "mono-dark") colorClass = "tpt-share-mono-dark";
-
+    // ── Wrapper ──
     var wrap = document.createElement("div");
-    wrap.className = wrapClass + " " + modeClass + " " + colorClass;
+    wrap.className = "tpt-share-wrap";
 
+    var wrapStyles = {
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+      lineHeight: "1",
+      boxSizing: "border-box",
+      zIndex: "9998",
+      visibility: "visible",
+      opacity: "1",
+      display: "block"
+    };
+
+    if (cfg.display_mode === "floating-left" || cfg.display_mode === "floating-right") {
+      wrap.className += " tpt-share-floating tpt-share-floating-" + (cfg.display_mode === "floating-left" ? "left" : "right");
+      wrapStyles.position = "fixed";
+      wrapStyles.top = "50%";
+      wrapStyles.transform = "translateY(-50%)";
+      if (cfg.display_mode === "floating-left") wrapStyles.left = "0";
+      else wrapStyles.right = "0";
+    } else if (cfg.display_mode === "bottom-bar") {
+      wrap.className += " tpt-share-bottom";
+      wrapStyles.position = "fixed";
+      wrapStyles.bottom = "0";
+      wrapStyles.left = "0";
+      wrapStyles.right = "0";
+      wrapStyles.padding = "8px 12px";
+      wrapStyles.background = "rgba(255,255,255,0.97)";
+      wrapStyles.borderTop = "1px solid rgba(0,0,0,0.08)";
+      wrapStyles.backdropFilter = "blur(8px)";
+      wrapStyles.WebkitBackdropFilter = "blur(8px)";
+    } else {
+      wrap.className += " tpt-share-inline";
+    }
+
+    if (cfg.color_mode === "mono-light") wrap.className += " tpt-share-mono-light";
+    else if (cfg.color_mode === "mono-dark") wrap.className += " tpt-share-mono-dark";
+
+    setStyles(wrap, wrapStyles);
+
+    // ── Buttons container ──
     var btnsWrap = document.createElement("div");
     btnsWrap.className = "tpt-share-btns";
+    var btnsStyles = {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: m.gap,
+      alignItems: "center",
+      visibility: "visible",
+      opacity: "1",
+      listStyle: "none",
+      margin: "0",
+      padding: "0"
+    };
+    if (cfg.display_mode === "floating-left" || cfg.display_mode === "floating-right") {
+      btnsStyles.flexDirection = "column";
+    }
+    if (cfg.display_mode === "bottom-bar" || cfg.display_mode === "inline" || !cfg.display_mode) {
+      btnsStyles.justifyContent = "center";
+    }
+    setStyles(btnsWrap, btnsStyles);
 
+    // ── Buttons ──
     platforms.forEach(function (key) {
       var p = PLATFORMS[key];
       if (!p) return;
@@ -174,16 +228,73 @@
         };
       }
 
-      // Button color
+      // Determine background color
+      var bgColor = "transparent";
       if (cfg.color_mode === "brand" || !cfg.color_mode) {
-        btn.style.backgroundColor = p.color;
+        bgColor = p.color;
       } else if (cfg.color_mode === "custom" && cfg.custom_color) {
-        btn.style.backgroundColor = cfg.custom_color;
+        bgColor = cfg.custom_color;
+      } else if (cfg.color_mode === "mono-light") {
+        bgColor = "#f3f4f6";
+      } else if (cfg.color_mode === "mono-dark") {
+        bgColor = "#374151";
       }
 
-      btn.innerHTML = p.icon;
+      var textColor = (cfg.color_mode === "mono-light") ? "#374151" : "#fff";
+
+      // ALL critical styles inline
+      setStyles(btn, {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "6px",
+        border: "none",
+        cursor: "pointer",
+        textDecoration: "none",
+        transition: "transform .15s ease, opacity .15s ease",
+        padding: cfg.show_labels ? "0 14px" : "0",
+        width: cfg.show_labels ? "auto" : m.sz + "px",
+        height: m.sz + "px",
+        minWidth: m.sz + "px",
+        borderRadius: m.radius,
+        backgroundColor: bgColor,
+        color: textColor,
+        fontSize: "13px",
+        fontWeight: "600",
+        visibility: "visible",
+        opacity: "1",
+        overflow: "visible",
+        lineHeight: "1",
+        boxSizing: "border-box",
+        float: "none",
+        position: "relative",
+        margin: "0"
+      });
+
+      // Build icon HTML with inline styles baked in
+      var svgInline = p.icon.replace(
+        "<svg",
+        '<svg style="display:inline-block !important;width:' + m.iconSz + 'px !important;height:' + m.iconSz + 'px !important;' +
+        'flex-shrink:0 !important;visibility:visible !important;opacity:1 !important;' +
+        'fill:currentColor !important;vertical-align:middle !important;overflow:visible !important"'
+      );
+
+      btn.innerHTML = svgInline;
+
       if (cfg.show_labels) {
-        btn.innerHTML += '<span class="tpt-share-label">' + p.name + "</span>";
+        var labelSpan = document.createElement("span");
+        labelSpan.className = "tpt-share-label";
+        setStyles(labelSpan, {
+          whiteSpace: "nowrap",
+          visibility: "visible",
+          opacity: "1",
+          display: "inline",
+          color: "inherit",
+          fontSize: "13px",
+          fontWeight: "600"
+        });
+        labelSpan.textContent = p.name;
+        btn.appendChild(labelSpan);
       }
 
       btnsWrap.appendChild(btn);
@@ -201,7 +312,7 @@
     }
 
     // For floating/bottom-bar, append to body
-    if (cfg.display_mode !== "inline") {
+    if (cfg.display_mode !== "inline" && cfg.display_mode) {
       document.body.appendChild(wrap);
     } else {
       // Inline: insert after the script tag
