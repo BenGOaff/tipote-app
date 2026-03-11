@@ -12,20 +12,6 @@
 (function () {
   "use strict";
 
-  if (window.__tipote_share_loaded) return;
-  window.__tipote_share_loaded = true;
-
-  var script = document.currentScript || (function () {
-    var s = document.getElementsByTagName("script");
-    return s[s.length - 1];
-  })();
-
-  var WIDGET_ID = script.getAttribute("data-widget-id");
-  if (!WIDGET_ID) return;
-
-  var API_BASE = script.src.replace(/\/widgets\/social-share\.js.*$/, "");
-  var CONTAINER_ID = script.getAttribute("data-container");
-
   // ─── Platform definitions ───────────────────────────────────────────
   var PLATFORMS = {
     facebook: {
@@ -68,12 +54,6 @@
       color: "#26A5E4",
       icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.492-1.302.48-.428-.013-1.252-.242-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>',
       share: function (u, t) { return "https://telegram.me/share/url?url=" + e(u) + "&text=" + e(t || ""); }
-    },
-    reddit: {
-      name: "Reddit",
-      color: "#FF4500",
-      icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 01.042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 014.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 01.14-.197.35.35 0 01.238-.042l2.906.617a1.214 1.214 0 011.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 00-.231.094.33.33 0 000 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 00.029-.463.33.33 0 00-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 00-.232-.095z"/></svg>',
-      share: function (u, t) { return "https://www.reddit.com/submit?url=" + e(u) + "&title=" + e(t || document.title); }
     },
     email: {
       name: "Email",
@@ -144,13 +124,14 @@
   }
 
   // ─── Render ─────────────────────────────────────────────────────────
-  function render(cfg) {
+  function render(cfg, scriptEl) {
     injectCSS(cfg);
 
     var pageUrl = cfg.share_url || window.location.href;
     var pageTitle = cfg.share_text || document.title;
     var hashtags = cfg.share_hashtags || "";
     var platforms = cfg.platforms || ["facebook", "twitter", "linkedin", "whatsapp", "email"];
+    var containerId = scriptEl.getAttribute("data-container");
 
     // Build wrapper classes
     var wrapClass = "tpt-share-wrap";
@@ -211,8 +192,8 @@
     wrap.appendChild(btnsWrap);
 
     // Place in DOM
-    if (CONTAINER_ID) {
-      var container = document.getElementById(CONTAINER_ID);
+    if (containerId) {
+      var container = document.getElementById(containerId);
       if (container) {
         container.appendChild(wrap);
         return;
@@ -224,27 +205,49 @@
       document.body.appendChild(wrap);
     } else {
       // Inline: insert after the script tag
-      if (script.parentNode) {
-        script.parentNode.insertBefore(wrap, script.nextSibling);
+      if (scriptEl.parentNode) {
+        scriptEl.parentNode.insertBefore(wrap, scriptEl.nextSibling);
       } else {
         document.body.appendChild(wrap);
       }
     }
   }
 
-  // ─── Init ───────────────────────────────────────────────────────────
-  function init() {
-    fetch(API_BASE + "/api/widgets/share/" + WIDGET_ID + "/public")
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.ok && data.widget) render(data.widget);
-      })
-      .catch(function () {});
+  // ─── Find & init all widget script tags ─────────────────────────────
+  // We cannot rely on document.currentScript — it is null in many CMS
+  // environments (Systeme.io, WordPress, etc.) that dynamically inject
+  // raw HTML blocks. Instead, we find ALL our script tags by selector.
+  function initAll() {
+    var scripts = document.querySelectorAll('script[data-widget-id][src*="social-share"]');
+    if (!scripts.length) return;
+
+    // Track which widget IDs we've already rendered (supports page re-runs)
+    if (!window.__tipote_share_ids) window.__tipote_share_ids = {};
+
+    for (var i = 0; i < scripts.length; i++) {
+      (function (scriptEl) {
+        var widgetId = scriptEl.getAttribute("data-widget-id");
+        if (!widgetId) return;
+
+        // Skip if this widget was already rendered
+        if (window.__tipote_share_ids[widgetId]) return;
+        window.__tipote_share_ids[widgetId] = true;
+
+        var apiBase = scriptEl.src.replace(/\/widgets\/social-share\.js.*$/, "");
+
+        fetch(apiBase + "/api/widgets/share/" + widgetId + "/public")
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.ok && data.widget) render(data.widget, scriptEl);
+          })
+          .catch(function () {});
+      })(scripts[i]);
+    }
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", initAll);
   } else {
-    init();
+    initAll();
   }
 })();

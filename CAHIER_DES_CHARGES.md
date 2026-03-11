@@ -606,7 +606,7 @@ Widget de boutons de partage social embarquable, permettant aux visiteurs de par
 
 **Plateformes supportées (7) :**
 
-- Facebook, X (Twitter), LinkedIn, WhatsApp, Telegram, Pinterest, Email
+- Facebook, X (Twitter), LinkedIn, WhatsApp, Telegram, Reddit, Pinterest, Email
 
 **Modes d'affichage :**
 
