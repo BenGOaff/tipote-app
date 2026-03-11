@@ -341,10 +341,17 @@ export async function GET(_req: Request) {
     // Primary: read from offer_pyramids table
     const dbResult = await loadPyramidsFromDb({ userId, projectId });
     if (dbResult && dbResult.pyramidSets.length > 0) {
+      // Also load selected_pyramid from plan_json for the selected pyramid data
+      let planQuery2 = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+      if (projectId) planQuery2 = planQuery2.eq("project_id", projectId);
+      const { data: planRow2 } = await planQuery2.maybeSingle();
+      const planJson2 = (planRow2?.plan_json ?? null) as AnyRecord | null;
+
       return NextResponse.json({
         success: true,
         offer_pyramids: dbResult.pyramidSets,
         selected_index: dbResult.selectedIndex,
+        selected_pyramid: planJson2 ? (asRecord(planJson2.selected_pyramid) ?? asRecord(planJson2.selected_offer_pyramid) ?? null) : null,
       });
     }
 
@@ -359,6 +366,7 @@ export async function GET(_req: Request) {
       offer_pyramids: planJson ? asArray(planJson.offer_pyramids) : [],
       selected_index: typeof planJson?.selected_offer_pyramid_index === "number"
         ? planJson.selected_offer_pyramid_index : null,
+      selected_pyramid: asRecord(planJson?.selected_pyramid) ?? asRecord(planJson?.selected_offer_pyramid) ?? null,
     });
   } catch (err) {
     console.error("GET /api/strategy/offer-pyramid error:", err);
@@ -437,6 +445,72 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("PATCH /api/strategy/offer-pyramid error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ─── DELETE — Remove generated offers from plan_json ────────────────────────
+
+export async function DELETE(req: Request) {
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session?.user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+    const userId = sessionData.session.user.id;
+    const projectId = await getActiveProjectId(supabase, userId);
+    const body = (await req.json().catch(() => ({}))) as AnyRecord;
+
+    // offerIndex: index in the selected_pyramid.offers array to remove
+    // If not provided, removes ALL generated offers (clears selected_pyramid entirely)
+    const offerIndex = typeof body.offerIndex === "number" ? body.offerIndex : null;
+
+    let planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+    if (projectId) planQuery = planQuery.eq("project_id", projectId);
+    const { data: planRow } = await planQuery.maybeSingle();
+    const basePlan: AnyRecord = isRecord(planRow?.plan_json) ? (planRow?.plan_json as AnyRecord) : {};
+
+    const nextPlan = { ...basePlan };
+
+    if (offerIndex !== null) {
+      // Remove a specific offer from the selected pyramid
+      const pyramid = asRecord(basePlan.selected_pyramid) ?? asRecord(basePlan.selected_offer_pyramid);
+      if (pyramid) {
+        const offers = asArray(pyramid.offers);
+        if (offerIndex >= 0 && offerIndex < offers.length) {
+          offers.splice(offerIndex, 1);
+          const updatedPyramid = { ...pyramid, offers };
+          nextPlan.selected_pyramid = updatedPyramid;
+          nextPlan.selected_offer_pyramid = updatedPyramid;
+        }
+      }
+    } else {
+      // Remove ALL generated offers
+      delete nextPlan.selected_pyramid;
+      delete nextPlan.selected_offer_pyramid;
+      delete nextPlan.selected_pyramid_index;
+      delete nextPlan.selected_offer_pyramid_index;
+      delete nextPlan.offer_pyramids;
+    }
+
+    nextPlan.updated_at = new Date().toISOString();
+
+    await supabase
+      .from("business_plan")
+      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: nextPlan.updated_at }, { onConflict: "user_id" })
+      .select("id")
+      .maybeSingle();
+
+    // Also clean offer_pyramids table if clearing all
+    if (offerIndex === null) {
+      let delQuery = supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
+      if (projectId) delQuery = delQuery.eq("project_id", projectId);
+      await delQuery;
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("DELETE /api/strategy/offer-pyramid error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

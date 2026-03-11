@@ -740,7 +740,7 @@ ${textContent.split("\n").map((line) => {
   const deviceCfg = DEVICE_CONFIG[device];
 
   return (
-    <div className="flex flex-col h-screen min-h-0 bg-background">
+    <div className="flex flex-col flex-1 min-h-0 bg-background">
       {/* Top toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background shrink-0">
         <div className="flex items-center gap-3">

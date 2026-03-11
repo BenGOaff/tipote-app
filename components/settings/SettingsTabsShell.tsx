@@ -313,6 +313,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [initialOffers, setInitialOffers] = useState<OfferItem[]>([]);
   const [pendingOffers, startOffersTransition] = useTransition();
 
+  // Generated offers (from AI strategy)
+  type GeneratedOffer = { name: string; level?: string; promise?: string; description?: string; price_min?: number; price_max?: number; format?: string };
+  const [generatedOffers, setGeneratedOffers] = useState<GeneratedOffer[]>([]);
+  const [generatedOffersLoading, setGeneratedOffersLoading] = useState(false);
+  const [deletingGenOffer, setDeletingGenOffer] = useState<number | null>(null);
+
   const [initialProfile, setInitialProfile] = useState<ProfileRow | null>(null);
 
   useEffect(() => {
@@ -419,6 +425,72 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       cancelled = true;
     };
   }, [toast]);
+
+  // Load generated offers from strategy plan
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setGeneratedOffersLoading(true);
+      try {
+        const res = await fetch("/api/strategy/offer-pyramid");
+        const json = await res.json().catch(() => null);
+        if (cancelled) return;
+        // Extract offers from selected_pyramid (returned by GET endpoint)
+        const pyramid = json?.selected_pyramid;
+        if (pyramid && Array.isArray(pyramid.offers)) {
+          setGeneratedOffers(pyramid.offers.map((o: any) => ({
+            name: String(o?.name ?? o?.offer_name ?? o?.title ?? ""),
+            level: String(o?.level ?? ""),
+            promise: String(o?.promise ?? o?.main_outcome ?? ""),
+            description: String(o?.description ?? ""),
+            price_min: typeof o?.price_min === "number" ? o.price_min : null,
+            price_max: typeof o?.price_max === "number" ? o.price_max : null,
+            format: String(o?.format ?? ""),
+          })));
+        }
+      } catch { /* ignore */ }
+      if (!cancelled) setGeneratedOffersLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const deleteGeneratedOffer = async (index: number) => {
+    setDeletingGenOffer(index);
+    try {
+      const res = await fetch("/api/strategy/offer-pyramid", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offerIndex: index }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedOffers((prev) => prev.filter((_, i) => i !== index));
+        toast({ title: tSP("reglages.generatedOfferDeleted") });
+      }
+    } catch {
+      toast({ title: "Error", variant: "destructive" });
+    }
+    setDeletingGenOffer(null);
+  };
+
+  const deleteAllGeneratedOffers = async () => {
+    setGeneratedOffersLoading(true);
+    try {
+      const res = await fetch("/api/strategy/offer-pyramid", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedOffers([]);
+        toast({ title: tSP("reglages.allGeneratedOffersDeleted") });
+      }
+    } catch {
+      toast({ title: "Error", variant: "destructive" });
+    }
+    setGeneratedOffersLoading(false);
+  };
 
   const profileDirty = useMemo(() => {
     const i = initialProfile;
@@ -1596,6 +1668,65 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {pendingOffers ? tSP("reglages.saving") : tSP("reglages.saveOffers")}
           </Button>
         </Card>
+
+        {/* Generated offers (from AI strategy) */}
+        {(generatedOffers.length > 0 || generatedOffersLoading) && (
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold">{tSP("reglages.generatedOffersTitle")}</h3>
+                <p className="text-sm text-muted-foreground">{tSP("reglages.generatedOffersDesc")}</p>
+              </div>
+              {generatedOffers.length > 0 && (
+                <Button variant="destructive" size="sm" onClick={deleteAllGeneratedOffers} disabled={generatedOffersLoading}>
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  {tSP("reglages.deleteAll")}
+                </Button>
+              )}
+            </div>
+
+            {generatedOffersLoading && generatedOffers.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {generatedOffers.map((offer, idx) => (
+                  <div key={idx} className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{offer.name || tSP("reglages.untitledOffer")}</span>
+                          {offer.level && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium uppercase">{offer.level}</span>
+                          )}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-medium">{tSP("reglages.generatedBadge")}</span>
+                        </div>
+                        {offer.promise && <p className="text-xs text-muted-foreground mb-1">{offer.promise}</p>}
+                        {(offer.price_min != null || offer.price_max != null) && (
+                          <p className="text-xs text-muted-foreground">
+                            {offer.price_min != null && offer.price_max != null
+                              ? `${offer.price_min}€ – ${offer.price_max}€`
+                              : offer.price_min != null ? `${offer.price_min}€+` : `${offer.price_max}€`}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 text-destructive hover:text-destructive"
+                        onClick={() => deleteGeneratedOffer(idx)}
+                        disabled={deletingGenOffer === idx}
+                      >
+                        {deletingGenOffer === idx ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
       </TabsContent>
 
       {/* POSITIONNEMENT */}

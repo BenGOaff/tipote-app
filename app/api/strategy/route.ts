@@ -1772,6 +1772,9 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
         ...basePlan,
         offer_mode: isAffiliate ? "affiliate" : hasOffersEffective ? "existing_offer" : "none",
         offers_satisfaction: offersSatisfactionRaw || null,
+        ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
+          ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
+          : {}),
         ...(shouldAuditOffers
           ? {
               offer_audit: offerAudit ?? (basePlan as any).offer_audit ?? null,
