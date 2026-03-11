@@ -1253,8 +1253,10 @@ function sectionAbout(d: Record<string, any>): string {
   return `<section class="tp-section dark">
   <div class="tp-container">
     ${title ? `<div class="tp-section-header"><h2 class="tp-section-title">${title}</h2></div>` : ""}
-    <div class="tp-about"${!hasPhoto ? ' style="grid-template-columns:1fr;text-align:center"' : ""}>
-      ${hasPhoto ? `<img src="${esc(photo)}" alt="${name}" class="tp-about-photo">` : ""}
+    <div class="tp-about"${!hasPhoto ? ' style="grid-template-columns:auto 1fr;text-align:left"' : ""}>
+      ${hasPhoto
+        ? `<img src="${esc(photo)}" alt="${name}" class="tp-about-photo" data-tipote-img-id="about-photo">`
+        : `<div class="tp-about-photo tp-about-photo-placeholder" data-tipote-img-id="about-photo" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.1);cursor:pointer;border:2px dashed rgba(255,255,255,0.3)"><svg width="32" height="32" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>`}
       <div>
         ${name ? `<h3 class="tp-about-name">${name}</h3>` : ""}
         ${bio ? `<p class="tp-about-bio" data-editable="true">${bio}</p>` : ""}
@@ -1415,7 +1417,7 @@ function buildFooter(d: Record<string, any>): string {
   if (d.legal_privacy_url) links.push(`<a href="${esc(safe(d.legal_privacy_url))}" target="_blank" rel="noopener">Politique de confidentialit&#233;</a>`);
 
   return `<footer class="tp-footer">
-  ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" class="tp-footer-logo">` : (logoText ? `<div class="tp-footer-brand">${esc(logoText)}</div>` : "")}
+  ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" class="tp-footer-logo" data-tipote-img-id="footer-logo">` : (logoText ? `<div class="tp-footer-brand">${esc(logoText)}</div>` : "")}
   ${links.length > 0 ? `<div class="tp-footer-links">${links.join("")}</div>` : ""}
   ${footerText ? `<div class="tp-footer-copy">${esc(footerText)}</div>` : ""}
 </footer>`;
@@ -1472,7 +1474,7 @@ function sectionShowcaseNav(d: Record<string, any>): string {
   return `<nav style="position:sticky;top:0;z-index:100;background:var(--white);border-bottom:1px solid var(--gray-100);padding:12px 0">
   <div class="tp-container" style="display:flex;align-items:center;justify-content:space-between">
     <div style="display:flex;align-items:center;gap:10px">
-      ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" style="height:36px;object-fit:contain">` : ""}
+      ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" style="height:36px;object-fit:contain" data-tipote-img-id="nav-logo">` : ""}
       ${logoText ? `<span style="font-family:var(--heading-font);font-weight:700;font-size:1.2rem;color:var(--gray-900)">${logoText}</span>` : ""}
     </div>
     <div style="display:flex;align-items:center;gap:24px">

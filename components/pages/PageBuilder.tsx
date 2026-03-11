@@ -170,10 +170,19 @@ const INLINE_EDIT_SCRIPT = `
       if (sel && url) {
         var el = document.querySelector(sel);
         if (el) {
-          if (el.tagName === 'IMG') { el.src = url; }
+          if (el.tagName === 'IMG') { el.src = url; setTimeout(setupClickableImages, 100); }
+          else if (el.classList.contains('tp-about-photo-placeholder') || el.hasAttribute('data-tipote-img-id')) {
+            /* Replace placeholder with real image, keeping same classes */
+            var img = document.createElement('img');
+            img.src = url;
+            img.className = el.className.replace('tp-about-photo-placeholder', '').trim();
+            img.setAttribute('data-tipote-img-id', el.getAttribute('data-tipote-img-id') || '');
+            img.style.cssText = el.style.cssText.replace(/display:[^;]+;?/,'').replace(/border:[^;]+dashed[^;]*;?/,'');
+            el.replaceWith(img);
+            setTimeout(setupClickableImages, 100);
+          }
           else {
             /* Fully replace the SVG/illustration container with an image */
-            /* Walk up to find the outermost illustration container */
             var container = el;
             while (container.parentElement && (
               container.parentElement.classList.contains('tp-illust') ||
@@ -184,12 +193,12 @@ const INLINE_EDIT_SCRIPT = `
             )) {
               container = container.parentElement;
             }
-            /* Replace with clean image element */
-            var img = document.createElement('img');
-            img.src = url;
-            img.style.cssText = 'width:100%;max-width:520px;height:auto;border-radius:16px;object-fit:cover;display:block;margin:0 auto;box-shadow:0 12px 40px rgba(0,0,0,0.12);';
-            img.setAttribute('data-tipote-img-id', el.getAttribute('data-tipote-img-id') || '');
-            container.replaceWith(img);
+            var img2 = document.createElement('img');
+            img2.src = url;
+            img2.style.cssText = 'width:100%;max-width:520px;height:auto;border-radius:16px;object-fit:cover;display:block;margin:0 auto;box-shadow:0 12px 40px rgba(0,0,0,0.12);';
+            img2.setAttribute('data-tipote-img-id', el.getAttribute('data-tipote-img-id') || '');
+            container.replaceWith(img2);
+            setTimeout(setupClickableImages, 100);
           }
         }
       }
@@ -202,6 +211,56 @@ const INLINE_EDIT_SCRIPT = `
       }
     }
   });
+
+  /* ── Click-to-replace for all images and image placeholders ── */
+  function setupClickableImages() {
+    /* Real images */
+    document.querySelectorAll('img').forEach(function(img) {
+      if (img.closest('.tipote-toolbar') || img.closest('.tipote-illust-overlay')) return;
+      if (img.getAttribute('data-tipote-img-setup')) return;
+      img.setAttribute('data-tipote-img-setup', '1');
+      img.style.cursor = 'pointer';
+      if (!img.getAttribute('data-tipote-img-id')) {
+        img.setAttribute('data-tipote-img-id', 'tipote-img-' + Date.now() + '-' + Math.random().toString(36).slice(2,6));
+      }
+      img.addEventListener('mouseenter', function() {
+        img.style.outline = '2px dashed rgba(37,99,235,0.5)';
+        img.style.outlineOffset = '3px';
+        img.style.borderRadius = '4px';
+      });
+      img.addEventListener('mouseleave', function() {
+        img.style.outline = 'none';
+        img.style.outlineOffset = '';
+      });
+      img.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var id = img.getAttribute('data-tipote-img-id');
+        parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: true }, '*');
+      });
+    });
+    /* Image placeholders (e.g. empty about-photo slot) */
+    document.querySelectorAll('[data-tipote-img-id]:not(img)').forEach(function(el) {
+      if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+      if (el.getAttribute('data-tipote-img-setup')) return;
+      el.setAttribute('data-tipote-img-setup', '1');
+      el.style.cursor = 'pointer';
+      el.addEventListener('mouseenter', function() {
+        el.style.outline = '2px dashed rgba(37,99,235,0.5)';
+        el.style.outlineOffset = '3px';
+      });
+      el.addEventListener('mouseleave', function() {
+        el.style.outline = 'none';
+        el.style.outlineOffset = '';
+      });
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var id = el.getAttribute('data-tipote-img-id');
+        parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: false }, '*');
+      });
+    });
+  }
 
   /* ── Init: make all text editable ── */
   function init() {
@@ -225,6 +284,9 @@ const INLINE_EDIT_SCRIPT = `
       el.addEventListener('mouseenter', onIllustEnter);
       el.addEventListener('mouseleave', onIllustLeave);
     });
+
+    /* Setup clickable images */
+    setupClickableImages();
   }
 
   function positionToolbar(el) {

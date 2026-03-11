@@ -144,9 +144,16 @@ export async function POST(req: Request) {
       "Your task: rephrase the user's request in a clear and precise sentence to confirm understanding.",
       "Respond ONLY with JSON: { \"reformulation\": \"...\" }",
       `The reformulation MUST be in ${langLabel}, short (1-2 sentences max), first person singular ("${firstPerson}...").`,
+      "",
+      "IMPORTANT: If the user asks to change an image (photo, logo, avatar, illustration), respond with:",
+      `{ "reformulation": "", "tip": "click_image" }`,
+      "This tells the user to click directly on the image in the preview to replace it.",
+      "",
       "Examples:",
       `- Input: "change the title" -> { "reformulation": "${firstPerson} modify the main title of your page." }`,
       `- Input: "more urgent" -> { "reformulation": "${firstPerson} make the overall tone more urgent with action words." }`,
+      `- Input: "change the author photo" -> { "reformulation": "", "tip": "click_image" }`,
+      `- Input: "je veux modifier la photo" -> { "reformulation": "", "tip": "click_image" }`,
     ].join("\n");
 
     const raw = await callClaude({
@@ -157,9 +164,13 @@ export async function POST(req: Request) {
       temperature: 0.3,
     });
     let reformulation = instruction;
+    let tip: string | null = null;
 
     try {
       const parsed = JSON.parse(raw);
+      if (parsed.tip) {
+        tip = parsed.tip;
+      }
       if (parsed.reformulation) {
         reformulation = parsed.reformulation;
       }
@@ -169,6 +180,14 @@ export async function POST(req: Request) {
       if (match?.[1]) {
         reformulation = match[1];
       }
+      const tipMatch = raw.match(/\{[\s\S]*?"tip"\s*:\s*"([^"]+)"[\s\S]*?\}/);
+      if (tipMatch?.[1]) {
+        tip = tipMatch[1];
+      }
+    }
+
+    if (tip) {
+      return NextResponse.json({ tip, reformulation: "" });
     }
 
     return NextResponse.json({ reformulation });

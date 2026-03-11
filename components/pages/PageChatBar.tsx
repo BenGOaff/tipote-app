@@ -89,6 +89,11 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
       }
 
       const data = await res.json();
+      if (data.tip === "click_image") {
+        addMessage("assistant", "💡 Pour modifier une image, clique directement dessus dans l'aperçu ! Tu pourras importer la photo de ton choix.");
+        setInstruction("");
+        return;
+      }
       setReformulation({
         originalInstruction: msg,
         reformulation: data.reformulation || msg,
@@ -310,18 +315,23 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Suggestions */}
+      {/* Inline editing tip + Suggestions */}
       {messages.length === 0 && !loading && !reformulating && !reformulation && (
-        <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-          {suggestions.map((s) => (
-            <button
-              key={s}
-              onClick={() => setInstruction(s)}
-              className="px-2.5 py-1 text-[11px] rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors text-muted-foreground"
-            >
-              {s}
-            </button>
-          ))}
+        <div className="px-3 pb-2 space-y-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+            <span className="text-[11px] text-blue-700 dark:text-blue-300">💡 Clique directement sur un texte ou une image dans l&apos;aperçu pour le modifier.</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                onClick={() => setInstruction(s)}
+                className="px-2.5 py-1 text-[11px] rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors text-muted-foreground"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
