@@ -101,6 +101,15 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     .rpc("increment_page_leads", { p_page_id: pageId })
     .then(() => {}, () => {});
 
+  // Create toast_event for social proof notifications (non-blocking)
+  // Find user's active toast widget and record the signup with the first_name
+  createToastEvent({
+    userId: page.user_id,
+    firstName: String(body?.first_name || "").trim(),
+    pageUrl: req.headers.get("referer") || "",
+    supabase,
+  }).catch(() => {});
+
   // Systeme.io sync (non-blocking)
   if (page.sio_capture_tag) {
     syncLeadToSystemeIo({ pageId, userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase }).catch(() => {});
@@ -181,6 +190,41 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 function escapeCsv(val: any): string {
   const s = String(val ?? "").replace(/"/g, '""');
   return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s}"` : s;
+}
+
+// ---------- Toast event helper ----------
+
+async function createToastEvent(params: {
+  userId: string;
+  firstName: string;
+  pageUrl: string;
+  supabase: any;
+}) {
+  try {
+    // Find user's first enabled toast widget
+    const { data: widget } = await params.supabase
+      .from("toast_widgets")
+      .select("id")
+      .eq("user_id", params.userId)
+      .eq("enabled", true)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!widget?.id) return;
+
+    await params.supabase
+      .from("toast_events")
+      .insert({
+        widget_id: widget.id,
+        event_type: "signup",
+        visitor_name: params.firstName || null,
+        page_url: params.pageUrl.slice(0, 500) || null,
+        metadata: {},
+      });
+  } catch {
+    // fail-open
+  }
 }
 
 // ---------- Systeme.io helper ----------

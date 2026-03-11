@@ -201,7 +201,7 @@ export default function ToastWidgetsClient() {
     if (mode === "display") {
       code = `<script src="${base}/widgets/social-proof.js" data-widget-id="${widgetId}"></script>`;
     } else {
-      code = `<script src="${base}/widgets/social-proof.js" data-widget-id="${widgetId}" data-event="${mode}"></script>`;
+      code = `<script src="${base}/widgets/social-proof.js" data-widget-id="${widgetId}" data-event="${mode}" data-name="{{ contact.first_name }}"></script>`;
     }
     navigator.clipboard.writeText(code);
     setCopied("toast-" + mode + "-" + widgetId);
@@ -350,7 +350,7 @@ export default function ToastWidgetsClient() {
                   <code className="text-xs text-muted-foreground break-all">
                     {mode === "display"
                       ? `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/widgets/social-proof.js" data-widget-id="${editingToast.id}"></script>`
-                      : `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/widgets/social-proof.js" data-widget-id="${editingToast.id}" data-event="${mode}"></script>`}
+                      : `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/widgets/social-proof.js" data-widget-id="${editingToast.id}" data-event="${mode}" data-name="{{ contact.first_name }}"></script>`}
                   </code>
                   {mode !== "display" && (
                     <p className="text-xs text-muted-foreground mt-1">{t(mode === "signup" ? "signupPixelHelp" : "purchasePixelHelp")}</p>
