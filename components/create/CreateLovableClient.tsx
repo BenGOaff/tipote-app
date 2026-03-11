@@ -698,7 +698,7 @@ export default function CreateLovableClient() {
                   </p>
                 </Card>
 
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {contentTypes.map((type) => (
                     <ContentTypeCard
                       key={type.id}
