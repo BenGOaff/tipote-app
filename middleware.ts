@@ -41,7 +41,6 @@ const PUBLIC_PREFIXES = [
   "/favicon.ico",
   "/icon.png",
   "/tipote-logo.png",
-  "/widgets/social-share.js", // ✅ widget JS embarquable (chargé cross-origin depuis blogs)
 ];
 
 const PROTECTED_PREFIXES = [
@@ -221,6 +220,8 @@ export const config = {
     "/analytics/:path*",
     "/admin/:path*",
     "/automations/:path*",
-    "/widgets/:path*",
+    // Only match /widgets page itself (app UI), NOT /widgets/*.js static files
+    // which must be served publicly for cross-origin embedding on external blogs.
+    "/widgets",
   ],
 };
