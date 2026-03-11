@@ -2189,5 +2189,109 @@
     "unpublished": "Pagina depubblicata",
     "publish": "Pubblica",
     "unpublish": "Depubblica"
+  },
+  "checklistTemplates": {
+    "applyTemplate": "Applica un template:",
+    "lead-magnet": {
+      "label": "Lead Magnet",
+      "description": "Creare un lead magnet dalla A alla Z",
+      "item_0": "Creare il contenuto (ebook, corso, quiz…)",
+      "item_1": "Creare la pagina (landing page, quiz…)",
+      "item_2": "Creare i tag in Systeme.io",
+      "item_3": "Automatizzare l'invio di bonus e contenuti promessi",
+      "item_4": "Creare una sequenza email Know Like Trust (onboarding) per accogliere il nuovo lead",
+      "item_5": "Aggiungere il tag alle automazioni (iscrizione → tag → sequenza email → accesso)",
+      "item_6": "Preparare post per i social media e pianificare la comunicazione"
+    },
+    "offre": {
+      "label": "Offerta",
+      "description": "Creare e lanciare un'offerta completa",
+      "item_0": "Creare l'offerta (corso, coaching, strumento…)",
+      "item_1": "Creare la pagina di vendita (pagina + modulo d'ordine + grazie +/- upsell, downsell e order bump)",
+      "item_2": "Creare la tariffa",
+      "item_3": "Creare i tag",
+      "item_4": "Creare le automazioni (tag aggiunto, sequenza email, apertura accessi…)",
+      "item_5": "Creare campagna email di vendita",
+      "item_6": "Creare post sui social media",
+      "item_7": "Creare video / articolo blog se necessario",
+      "item_8": "Preparare materiale e avvisare eventuali partner (affiliazione, influencer…)"
+    },
+    "tunnel-de-vente": {
+      "label": "Funnel di vendita",
+      "description": "Configurare un funnel di vendita completo",
+      "item_0": "Definire le fasi del funnel (cattura → nurturing → vendita → grazie)",
+      "item_1": "Creare la landing page",
+      "item_2": "Configurare la sequenza email di nurturing",
+      "item_3": "Creare la pagina di vendita",
+      "item_4": "Configurare il pagamento",
+      "item_5": "Configurare la pagina di conferma",
+      "item_6": "Testare l'intero percorso dall'inizio alla fine"
+    },
+    "affiliation": {
+      "label": "Affiliazione",
+      "description": "Creare un programma di affiliazione",
+      "item_0": "Creare landing page con bonus promessi agli affiliati",
+      "item_1": "Creare bonus",
+      "item_2": "Automatizzare l'invio dei bonus",
+      "item_3": "Aggiungere un tag Systeme.io",
+      "item_4": "Preparare contenuto promo (email, post, articoli, video)"
+    },
+    "challenge-webinaire": {
+      "label": "Challenge / Webinar",
+      "description": "Organizzare un challenge o webinar live",
+      "item_0": "Fissare date e orari",
+      "item_1": "Creare landing page + grazie",
+      "item_2": "Preparare le slide del challenge",
+      "item_3": "Testare attrezzatura e strumenti",
+      "item_4": "Preparare registrazione dei live per replay",
+      "item_5": "Preparare comunicazione (email, post, video)",
+      "item_6": "Preparare materiale e avvisare eventuali partner (affiliazione, influencer…)"
+    },
+    "contenu-recurrent": {
+      "label": "Contenuto ricorrente",
+      "description": "Impostare un calendario di pubblicazione regolare",
+      "item_0": "Definire la frequenza di pubblicazione (1x/sett, 3x/sett…)",
+      "item_1": "Creare un calendario editoriale di 1 mese",
+      "item_2": "Preparare un batch di contenuti (3-5 post in anticipo)",
+      "item_3": "Definire i formati (carosello, video breve, story…)",
+      "item_4": "Pianificare le pubblicazioni (strumento o manualmente)",
+      "item_5": "Riciclare i migliori contenuti in nuovi formati"
+    }
+  },
+  "taskDetail": {
+    "title": "Dettagli attività",
+    "titlePlaceholder": "Titolo dell'attività",
+    "statusDone": "Completata",
+    "statusTodo": "Da fare",
+    "priorityHigh": "Priorità alta",
+    "priorityMedium": "Priorità media",
+    "priorityLow": "Priorità bassa",
+    "subtasksCount": "{done}/{total} sotto-obiettivi",
+    "tags": "Tag",
+    "dueDate": "Scadenza",
+    "estimatedDuration": "Durata stimata",
+    "durationPlaceholder": "es: 2h, 1 giorno…",
+    "notes": "Note / descrizione",
+    "notesPlaceholder": "Aggiungi dettagli, link, note…",
+    "checklist": "Checklist",
+    "addSubtask": "Aggiungi un sotto-obiettivo…",
+    "delete": "Elimina",
+    "save": "Salva",
+    "saving": "Salvataggio…"
+  },
+  "phaseDetail": {
+    "objective": "Obiettivo di questa fase",
+    "progression": "Progresso",
+    "keyPoints": "Punti chiave da raggiungere",
+    "tasks": "Attività",
+    "newTask": "Nuova attività…",
+    "edit": "Modifica",
+    "cancel": "Annulla",
+    "done": "Fatto",
+    "noTasks": "Nessuna attività per ora.",
+    "dragHint": "Suggerimento: puoi riordinare le attività trascinandole.",
+    "phase1Desc": "Costruisci le basi del tuo business: crea il tuo lead magnet, prepara la tua prima offerta e ottimizza la tua presenza sui social.",
+    "phase2Desc": "Accelera la crescita: migliora la tua offerta con i feedback dei clienti, raccogli testimonianze e sviluppa partnership.",
+    "phase3Desc": "Scala: automatizza i tuoi processi, lancia pubblicità a pagamento e inizia a delegare."
   }
 }

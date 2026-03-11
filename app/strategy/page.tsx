@@ -147,6 +147,8 @@ type TaskRow = {
   status: string | null;
   priority: string | null;
   source: string | null;
+  due_date: string | null;
+  estimated_duration: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -368,7 +370,7 @@ export default async function StrategyPage() {
   // On filtre STRICTEMENT par user_id -> aucune fuite de données.
   const tasksRes = await supabaseAdmin
     .from("project_tasks")
-    .select("id, title, status, priority, source, position, created_at, updated_at")
+    .select("id, title, status, priority, source, position, due_date, estimated_duration, created_at, updated_at")
     .eq("user_id", user.id)
     .is("deleted_at", null)
     .order("position", { ascending: true })

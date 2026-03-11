@@ -63,6 +63,8 @@ type TaskRow = {
   status: string | null;
   priority: string | null;
   source: string | null;
+  due_date?: string | null;
+  estimated_duration?: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -1218,6 +1220,8 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       id: String(t.id),
                       task: t.title || "—",
                       done: isDoneStatus(statusById[String(t.id)] ?? t.status),
+                      due_date: t.due_date ?? null,
+                      estimated_duration: t.estimated_duration ?? null,
                     })),
                   }}
                   phaseIndex={selectedPhaseIndex}
@@ -1225,6 +1229,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   onUpdatePhase={handleUpdatePhase}
                   onAddTask={handleModalAddTask}
                   onDeleteTask={handleModalDeleteTask}
+                  onOpenDetail={openTaskDetail}
                 />
               );
             })()}
