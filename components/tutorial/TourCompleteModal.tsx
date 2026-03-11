@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
-import { PartyPopper, Sparkles, Settings, ChevronRight } from "lucide-react";
+import { PartyPopper, Sparkles, Settings, Target, Package, Users } from "lucide-react";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -71,15 +71,22 @@ export function TourCompleteModal() {
         {/* Actions */}
         <div className="px-8 py-6 space-y-4">
           {/* Primary: go to settings to complete profile */}
-          <div className="bg-primary/5 border border-primary/15 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                <Settings className="w-4 h-4 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{t("completeTip")}</p>
-                <p className="text-xs text-muted-foreground mt-1">{t("completeTipDesc")}</p>
-              </div>
+          <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 space-y-3">
+            <p className="text-sm font-medium text-foreground">{t("completeTip")}</p>
+            <p className="text-xs text-muted-foreground">{t("completeTipDesc")}</p>
+            <div className="space-y-2">
+              {[
+                { icon: Package, label: t("completeTipOffers") },
+                { icon: Target, label: t("completeTipPositioning") },
+                { icon: Users, label: t("completeTipPersona") },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                    <item.icon className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="text-xs text-foreground">{item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 

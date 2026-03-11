@@ -10,7 +10,7 @@ Application Web SaaS multilingue (FR/EN/ES/IT/AR) pour analyse business, planifi
 
 Tipote® est le « pote de business » des entrepreneurs. Contrairement aux outils IA génériques qui repartent de zéro à chaque conversation, Tipote® mémorise le profil business de l'utilisateur, son audience cible et ses objectifs pour générer une stratégie solide et des contenus véritablement personnalisés.
 
-La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storytelling \+ plan \+ pyramides \+ tâches) et sert de source de vérité pour tous les prompts de génération.
+La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storytelling \+ plan \+ offres \+ tâches) et sert de source de vérité pour tous les prompts de génération.
 
 ### 1.2. Problèmes résolus
 
@@ -21,9 +21,9 @@ La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storyte
 ### 1.3. Fonctionnalités clés (état actuel)
 
 - Onboarding intelligent qui capture le profil business complet  
-- Plan stratégique personnalisé avec pyramide d'offres  
+- Plan stratégique personnalisé avec offres
 - Génération de contenus (posts, emails, articles, scripts, offres, pages, quiz, stratégie éditoriale)
-- **Publication directe sur 8 réseaux sociaux** (LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest, Reddit)  
+- **Publication directe sur 7 réseaux sociaux** (LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest)
 - **Automatisations** (auto-commentaires, comment-to-DM, comment-to-email)  
 - Calendrier éditorial centralisé  
 - Constructeur de pages (capture, vente, vitrine, link-in-bio)
@@ -49,14 +49,13 @@ La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storyte
 
 Plateformes supportées avec publication directe :
 
-- LinkedIn (Posts \+ images)  
-- Facebook Pages (Posts \+ images \+ carrousels \+ vidéos)  
-- Instagram (Photos \+ vidéos \+ Reels)  
-- Threads (Posts)  
-- Twitter/X (Tweets \+ images)  
-- TikTok (Photos \+ vidéos)  
-- Pinterest (Pins avec images \+ liens)  
-- Reddit (Posts texte \+ liens)
+- LinkedIn (Posts \+ images)
+- Facebook Pages (Posts \+ images \+ carrousels \+ vidéos)
+- Instagram (Photos \+ vidéos \+ Reels)
+- Threads (Posts)
+- Twitter/X (Tweets \+ images)
+- TikTok (Photos \+ vidéos)
+- Pinterest (Pins avec images \+ liens)
 
 ### 2.2. Deux niveaux d'IA
 
@@ -64,7 +63,7 @@ Plateformes supportées avec publication directe :
 
 - Onboarding et diagnostic business  
 - Génération du plan stratégique  
-- Pyramide d'offres  
+- Propositions d'offres (onboarding)
 - Création des tâches  
 - Coach IA  
 - Analyse analytics  
@@ -93,27 +92,35 @@ Plateformes supportées avec publication directe :
 
 ## 3\. ARCHITECTURE UX
 
-### 3.1. Navigation principale (Sidebar — 8 entrées \+ sections)
+### 3.1. Navigation principale (Sidebar)
 
 **Section principale :**
 
 | Menu | URL | Icône | Description |
 | :---- | :---- | :---- | :---- |
 | Aujourd'hui | /app | Sun | Dashboard : prochaine tâche \+ stats clés |
-| Ma Stratégie | /strategy | Target | Pyramide \+ plan en 3 phases \+ persona |
+| Ma Stratégie | /strategy | Target | Plan d'action en 3 phases \+ tâches |
 | Créer | /create | Sparkles | Hub de création (8 types de contenu) |
 | Mes Contenus | /contents | FolderOpen | Liste \+ calendrier éditorial |
 | Templates | /templates | Layout | Templates Systeme.io |
-| Automatisations | /automations | Zap | Auto-commentaires et webhooks |
+| Automatisations | /automations | Zap | Automatisations sociales (comment-to-DM/email) |
 | Mes Leads | /leads | Users | Gestion des leads capturés |
+| Widgets | /widgets | Bell | Widgets embarquables (toast \+ partage social) |
 
 **Section secondaire :**
 
 | Menu | URL | Icône | Description |
 | :---- | :---- | :---- | :---- |
 | Analytics | /analytics | BarChart3 | KPIs \+ diagnostic IA |
-| Pépites | /pepites | — | Insights et pépites |
-| Paramètres | /settings | — | 7 onglets de configuration |
+| Pépites | /pepites | Sparkles | Insights et pépites business |
+
+**Footer sidebar :**
+
+| Menu | URL | Icône | Description |
+| :---- | :---- | :---- | :---- |
+| Support | /support | HelpCircle | Lien vers le support (nouvel onglet) |
+
+**Note :** Les Paramètres ne sont plus dans la sidebar. Ils sont accessibles via la photo de profil (avatar) en haut à droite du header.
 
 ### 3.2. Workflow utilisateur
 
@@ -169,63 +176,52 @@ ONBOARDING (une fois)
 
 1. Génération persona détaillé (basé sur diagnostic\_profile)  
 2. Diagnostic business (forces/faiblesses/leviers)  
-3. Création de 3-5 propositions de pyramide d'offres  
-4. L'utilisateur en choisit une (modifiable)  
+3. Création de 3 propositions d'offres (si l'utilisateur n'en a pas encore)
+4. L'utilisateur en choisit une → ces offres sont ajoutées à ses réglages
 5. Génération du plan stratégique en 3 phases
 6. Création automatique des tâches
 
 ### 4.3. Page « Aujourd'hui » (/app)
 
-Page d'accueil après login.
+Page d'accueil après login. Dashboard "Mode Pilote" — coaching automatique basé sur les données du profil.
 
 **Composants :**
 
-- Banner prochaine action avec titre, tags (type \+ canal \+ horaire), boutons "Créer en 1 clic" et "Voir la stratégie"  
-- 4 stats cards : Contenus publiés, Tâches complétées, Engagement, Prochaine échéance  
-- Progression de la semaine (barres de progression)  
-- Actions rapides : Créer du contenu, Voir mes contenus, Ma stratégie  
-- À venir cette semaine : liste des contenus planifiés
+- **Bloc 1 — Ton objectif** : Card gradient avec objectif stratégique de la phase en cours, badge phase, bouton CTA contextuel
+- **Bloc 1b — Contenus programmés aujourd'hui** : Liste des contenus planifiés pour la journée (canal, titre, horaire), lien vers le calendrier
+- **Bloc 2 — Cette semaine : coaching** : Résumé positif des actions accomplies, dernière tâche réalisée, prochaine étape recommandée, CTA contextuel
+- **Bloc 3 — Ta progression** : Analyse intelligente des stats analytics (revenus, ventes, inscrits, taux de conversion) ou invitation à remplir les stats
+- **Bloc 4 — Lien stratégie** : Lien discret vers la page stratégie complète
 
 ### 4.4. Page « Ma Stratégie » (/strategy)
 
-Vue unifiée stratégie \+ suivi, organisée en onglets.
+Page dédiée au plan d'action stratégique en 3 phases.
 
 **Header :**
 
-- Banner « Votre Vision Stratégique »  
-- 3 badges : Objectif Revenue, Phase actuelle, Progression (%)
+- Banner « Votre Vision Stratégique »
+- 3 badges : Objectif Revenue (éditable), Phase actuelle, Progression (%)
 
-**3 onglets :**
+**3 cards stats :**
 
-**Onglet Plan d'action (défaut) :**
+- Tâches complétées (compteur \+ barre de progression)
+- Phase actuelle
+- Objectif revenue
 
-- 3 stats : Tâches complétées, Progression globale, Phase actuelle
-- Phase 1 Fondations : barre progression \+ tâches cochables
+**Plan d'action :**
+
+- Phase 1 Fondations : barre progression \+ tâches cochables (tri drag-and-drop)
 - Phase 2 Croissance : barre progression \+ tâches cochables
 - Phase 3 Scale : barre progression \+ tâches cochables
-- Encart « Prochaine étape recommandée »
+- Archive des tâches complétées (section dépliable)
 
-**Onglet Pyramide d'offres :**
+**Note :** La pyramide d'offres et le persona ne sont plus affichés sur cette page. Les offres sont gérées dans Paramètres \> Profil, le persona dans Paramètres \> Positionnement.
 
-- 3 niveaux visuels : Lead Magnet → Low/Middle Ticket → High Ticket  
-- Chaque offre : nom, prix, statut  
-- Possibilité de modifier la pyramide
-
-**Onglet Persona cible :**
-
-- Profil principal  
-- Problèmes principaux \+ Objectifs  
-- Source : `personas.persona_json` (role \= client\_ideal)
-
-**Sous-page Pyramides (/strategy/pyramids) :**
-
-- Vue détaillée des propositions de pyramides
-
-**Interconnexion :** Toute modification de la pyramide déclenche une mise à jour automatique des tâches du plan d'action via IA Niveau 1\.
+**Flux des offres :** Lors de l'onboarding, si l'utilisateur n'a pas encore d'offres, Tipote lui propose 3 pyramides d'offres. L'utilisateur en choisit une, et ces offres deviennent ses offres dans les réglages. Il doit ensuite les mettre en œuvre via les tâches générées dans le plan d'action.
 
 ### 4.5. Page « Créer » (/create)
 
-Hub unique de création pour 8 types de contenu.
+Hub unique de création de contenu IA.
 
 **8 types de contenu :**
 
@@ -274,7 +270,7 @@ Vue centralisée de tous les contenus générés.
 - Type \+ Canal  
 - Titre \+ aperçu  
 - Date/délai  
-- Menu actions (voir, éditer, copier, supprimer, dupliquer)
+- Menu actions (éditer, marquer comme publié, planifier/modifier date, déplanifier, supprimer)
 
 **Fonctionnalité clé :** Les posts programmés sont éditables. Clic sur un post → ouvre l'éditeur complet (`/create?edit=<id>`) avec images, vidéos, auto-commentaires pré-remplis.
 
@@ -296,24 +292,23 @@ Bibliothèque de templates Systeme.io téléchargeables.
 
 Gestion des automatisations sociales.
 
-**Types d'automatisations :**
+**Types d'automatisations (page /automations) :**
 
-- **Auto-commentaires** : Commentaires automatiques sur les posts publiés (LinkedIn, Instagram, Twitter, TikTok, Facebook)  
-  - Coût : 0.25 crédit par commentaire  
-  - Contenu généré par Claude (contextuel au post)  
-- **Comment-to-DM** : Répondre automatiquement en DM aux commentaires contenant certains mots-clés  
+- **Comment-to-DM** : Répondre automatiquement en DM aux commentaires contenant certains mots-clés
 - **Comment-to-Email** : Capturer l'email des commentateurs via DM automatique
+
+**Note :** Les auto-commentaires (commentaires automatiques sur les posts publiés) sont configurés dans Paramètres \> Connexions et activés lors de la création d'un post. Coût : 0.25 crédit par commentaire, contenu généré par Claude.
 
 **Triggers :**
 
-- Mots-clés configurables  
-- Variantes de réponses  
+- Mots-clés configurables
+- Variantes de réponses
 - Logs d'exécution avec statut (success/fail)
 
 **Intégration n8n :**
 
-- Webhooks pour publication asynchrone  
-- Callback pour posts programmés  
+- Webhooks pour publication asynchrone
+- Callback pour posts programmés
 - Health check endpoint
 
 ### 4.9. Page « Mes Leads » (/leads)
@@ -356,32 +351,31 @@ Gestion centralisée des leads capturés.
 
 Suivi des performances business.
 
-**3 blocs :**
+**3 onglets :**
 
-**1\) Header KPIs :**
+**Onglet Résultats (défaut) :**
 
-- 4 cards : métriques clés du mois en cours
+- KPIs clés du mois en cours (revenus, ventes, inscrits, conversion)
+- Résumé des performances avec tendances
+- Lien vers les métriques par offre
 
-**2\) Saisie des données du mois :**
+**Onglet Saisir mes données :**
 
-- Sélecteur de période (mois \+ année)  
-- 8 métriques manuelles :  
-  - Acquisition : Visiteurs, Nouveaux inscrits, Taux d'ouverture, Taux de clic  
-  - Conversion : Vues page de vente, Nombre de ventes, Chiffre d'affaires  
-- Calculs automatiques dérivés  
+- Sélecteur de période (mois \+ année)
+- Métriques manuelles :
+  - Acquisition : Visiteurs, Nouveaux inscrits, Taux d'ouverture, Taux de clic
+  - Conversion : Vues page de vente, Nombre de ventes, Chiffre d'affaires
+- Calculs automatiques dérivés
 - Boutons : Enregistrer / Enregistrer & Analyser
+- Diagnostic IA déclenché après "Enregistrer & Analyser" (résumé, priorité, points forts, points d'attention)
 
-**3\) Diagnostic IA :**
+**Onglet Historique :**
 
-- Diagnostic rapide (résumé business)  
-- Priorité \#1 (recommandation actionable)  
-- Points forts (2-3 éléments)  
-- Points d'attention (2-3 éléments \+ conseils)  
-- Déclenché après "Enregistrer & Analyser"
+- Historique des données analytics par mois
 
 **Métriques d'offres :**
 
-- Suivi par offre (visiteurs, inscrits, ventes, CA, taux de conversion)  
+- Suivi par offre (visiteurs, inscrits, ventes, CA, taux de conversion)
 - Agrégation \+ analyse IA par offre
 
 ### 4.11. Page « Pépites » (/pepites)
@@ -390,26 +384,28 @@ Repository d'insights et de pépites business. Notifications de nouvelles pépit
 
 ### 4.12. Page « Paramètres » (/settings)
 
+**Accès :** Clic sur la photo de profil (avatar) en haut à droite du header. Le menu déroulant donne accès direct à chaque onglet.
+
 7 onglets de configuration :
 
 **Onglet Profil :**
 
-- Prénom, mission, formule de niche  
-- Storytelling fondateur en 6 étapes :  
-  1. Situation Initiale  
-  2. Élément Déclencheur  
-  3. Péripéties  
-  4. Moment Critique  
-  5. Résolution  
-  6. Situation Finale  
-- Gestion des offres (avec liens)  
-- URLs réseaux sociaux (LinkedIn, Instagram, YouTube, TikTok, Pinterest, Threads, Facebook)  
-- Liens personnalisés  
+- Prénom, mission, formule de niche
+- Storytelling fondateur en 6 étapes :
+  1. Situation Initiale
+  2. Élément Déclencheur
+  3. Péripéties
+  4. Moment Critique
+  5. Résolution
+  6. Situation Finale
+- Gestion des offres (avec liens)
+- URLs réseaux sociaux (LinkedIn, Instagram, YouTube, TikTok, Pinterest, Threads, Facebook)
+- Liens personnalisés
 - Langue du contenu généré
 
 **Onglet Connexions :**
 
-- Connexion OAuth des réseaux sociaux (8 plateformes)  
+- Connexion OAuth des réseaux sociaux (7 plateformes)
 - Configuration API Systeme.io  
 - Configuration auto-commentaires  
 - Gestion des tokens et rafraîchissement
@@ -436,9 +432,8 @@ Repository d'insights et de pépites business. Notifications de nouvelles pépit
 
 **Onglet IA :**
 
-- Panel crédits IA  
-- Gestion des clés API  
-- Paramètres du modèle
+- Panel crédits IA (consommation, solde, historique)
+- Style des auto-commentaires
 
 **Onglet Abonnement (Pricing) :**
 
@@ -518,34 +513,37 @@ Bulle flottante de conversation avec coach IA.
 
 Système de tutorial guidé pas-à-pas pour les nouveaux utilisateurs.
 
+**Objectif :** Présenter chaque section clairement et simplement, puis insister sur l'importance de compléter les réglages (offres, positionnement, persona, branding) AVANT de commencer à créer du contenu.
+
 **19 phases séquentielles :**
 
-1. Welcome (modal de bienvenue avec 4 étapes prévisualisées)  
-2. Tour Aujourd'hui  
-3. Tour Stratégie  
-4. Tour Créer  
-5. Tour Contenus  
-6. Tour Templates  
-7. Tour Crédits  
-8. Tour Analytics  
-9. Tour Pépites  
-10. Tour Paramètres (profil)  
-11. Tour Paramètres (connexions)  
-12. Tour Paramètres (réglages)  
-13. Tour Paramètres (positionnement)  
-14. Tour Paramètres (branding)  
-15. Tour Paramètres (IA)  
-16. Tour Paramètres (abonnement)  
-17. Tour Coach  
-18. Completion (modal de fin avec CTA vers paramètres)
+1. Welcome (modal de bienvenue — présente le tour + insiste sur l'importance des réglages)
+2. Tour Aujourd'hui — dashboard avec tâches prioritaires et progression
+3. Tour Stratégie — plan d'action personnalisé en 3 phases
+4. Tour Créer — hub de création de contenus (posts, emails, articles, etc.)
+5. Tour Contenus — organisation et calendrier éditorial
+6. Tour Templates — modèles Systeme.io téléchargeables
+7. Tour Crédits — compteur de crédits IA (en haut à droite)
+8. Tour Analytics — suivi des performances avec diagnostic IA
+9. Tour Pépites — insights et conseils business
+10. Tour Paramètres/Profil — infos perso, offres, storytelling (accès via avatar en haut à droite)
+11. Tour Paramètres/Connexions — connexion des réseaux sociaux et Systeme.io
+12. Tour Paramètres/Réglages — langue et infos clés sur l'activité
+13. Tour Paramètres/Positionnement — LE réglage le plus important pour des contenus personnalisés
+14. Tour Paramètres/Branding — couleurs, polices, logo
+15. Tour Paramètres/IA — crédits et style auto-commentaires
+16. Tour Paramètres/Abonnement — gestion du plan
+17. Tour Coach — conseiller IA personnel (Pro/Elite)
+18. Completion (modal de fin — rappelle l'importance de compléter offres, positionnement et persona)
 
 **UX :**
 
-- Tooltips avec compteur d'étapes ("3 / 17")  
-- Spotlight sur les éléments ciblés (portal-based)  
-- Opt-out visible (lien souligné, pas checkbox)  
-- Fenêtre : 7 premiers jours seulement  
+- Tooltips avec compteur d'étapes ("3 / 17")
+- Spotlight sur les éléments ciblés (portal-based)
+- Opt-out visible (lien souligné, pas checkbox)
+- Fenêtre : 7 premiers jours seulement
 - Peut être relancé ou réactivé via le bouton d'aide flottant
+- Paramètres accessibles via la photo de profil en haut à droite (plus dans la sidebar)
 
 ### 4.17. Système de Notifications
 
@@ -606,9 +604,9 @@ Pop-ups de type « social proof » affichés sur les pages de l'utilisateur pour
 
 Widget de boutons de partage social embarquable, permettant aux visiteurs de partager le contenu sur leurs réseaux.
 
-**Plateformes supportées (8) :**
+**Plateformes supportées (7) :**
 
-- Facebook, X (Twitter), LinkedIn, WhatsApp, Telegram, Reddit, Pinterest, Email
+- Facebook, X (Twitter), LinkedIn, WhatsApp, Telegram, Pinterest, Email
 
 **Modes d'affichage :**
 
@@ -670,8 +668,8 @@ Accès restreint aux emails admin.
 
 | Événement | Déclenche | Mécanisme |
 | :---- | :---- | :---- |
-| Modification pyramide d'offres | Mise à jour tâches plan d'action | IA Niveau 1 recalcule |
-| Création d'offre (hub Créer) | Ajout à la pyramide \+ nouvelles tâches | Insertion auto |
+| Modification des offres (réglages) | Mise à jour tâches plan d'action | IA Niveau 1 recalcule |
+| Création d'offre (hub Créer) | Ajout aux offres \+ nouvelles tâches | Insertion auto |
 | Tâche cochée | MAJ progression \+ stats dashboard | Recalcul temps réel |
 | Contenu généré | Ajout content\_item \+ consommation crédits | Insert DB \+ décrément |
 | Post publié sur réseau social | MAJ statut \+ stockage post\_id/post\_url | Callback API |
@@ -684,7 +682,7 @@ Accès restreint aux emails admin.
 
 Onboarding → business\_profiles → personas
 
-    → business\_plan (pyramide \+ tâches)
+    → business\_plan (offres \+ tâches)
 
         → Créer (contexte pré-rempli)
 
@@ -713,7 +711,7 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 | Stockage fichiers | Supabase Storage (images \+ vidéos) |
 | IA Stratégique | OpenAI GPT (clé propriétaire) |
 | IA Contenu | Claude Anthropic (clé propriétaire) |
-| Social OAuth | LinkedIn, Meta, Twitter, TikTok, Pinterest, Reddit |
+| Social OAuth | LinkedIn, Meta, Twitter, TikTok, Pinterest |
 | Automatisations | n8n (webhooks) |
 | CRM / Paiement | Systeme.io (API \+ webhooks) |
 | Chiffrement | AES-256-GCM (tokens \+ PII) |
@@ -730,7 +728,7 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Stratégie :**
 
-- `business_plan` — plan\_json (pyramide \+ phases)  
+- `business_plan` — plan\_json (offres \+ phases)
 - `project_tasks` — tâches avec statut, soft delete
 
 **Contenu :**
@@ -739,7 +737,7 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Social :**
 
-- `social_connections` — tokens OAuth chiffrés (AES-256-GCM) pour 8 plateformes  
+- `social_connections` — tokens OAuth chiffrés (AES-256-GCM) pour 7 plateformes
 - `social_automations` — comment-to-DM/email, trigger keywords  
 - `auto_comment_logs` — logs d'exécution des auto-commentaires  
 - `automation_credits` — crédits d'automatisation
@@ -790,11 +788,11 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 **Auth & Compte :**
 
 - POST /api/account/delete, /ensure-profile, /reset  
-- GET/POST /api/auth/{linkedin,twitter,tiktok,pinterest,instagram,meta}/callback
+- GET/POST /api/auth/{linkedin,twitter,tiktok,pinterest,instagram,meta,threads}/callback
 
 **Social :**
 
-- POST /api/social/publish — Publication directe (8 plateformes, images, vidéos, carrousels)  
+- POST /api/social/publish — Publication directe (7 plateformes, images, vidéos, carrousels)
 - GET /api/social/connections  
 - GET /api/social/{linkedin-posts, facebook-posts, instagram-posts, twitter-tweets, tiktok-videos, pinterest-boards}
 
@@ -882,8 +880,7 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 - THREADS\_APP\_ID, THREADS\_APP\_SECRET  
 - TWITTER\_CLIENT\_ID, TWITTER\_CLIENT\_SECRET  
 - TIKTOK\_CLIENT\_KEY, TIKTOK\_CLIENT\_SECRET  
-- PINTEREST\_APP\_ID, PINTEREST\_APP\_SECRET  
-- REDDIT\_CLIENT\_ID, REDDIT\_CLIENT\_SECRET
+- PINTEREST\_APP\_ID, PINTEREST\_APP\_SECRET
 
 **Intégrations :**
 
@@ -1015,9 +1012,9 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 
 - Architecture complète (8+ pages principales)  
 - Onboarding intelligent  
-- Plan stratégique IA avec pyramide d'offres  
+- Plan stratégique IA avec offres personnalisées  
 - Hub création unifié (8 types de contenu)  
-- **Publication directe sur 8 réseaux sociaux**  
+- **Publication directe sur 7 réseaux sociaux**
 - **Automatisations** (auto-commentaires, comment-to-DM/email)  
 - **Constructeur de pages** (capture, vente, vitrine, link-in-bio)  
 - **Système de quiz** avec capture de leads  
