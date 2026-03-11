@@ -67,7 +67,7 @@ export default async function PhaseDetailPage({
 
   // Fetch plan JSON for phase assignment
   const { data: bpRow } = await supabaseAdmin
-    .from("business_plans")
+    .from("business_plan")
     .select("plan_json")
     .eq("user_id", auth.user.id)
     .order("created_at", { ascending: false })
