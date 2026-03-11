@@ -12,7 +12,7 @@ import { Send, Loader2, Undo2, Check, X, MessageCircle, Sparkles, ChevronRight, 
 type Props = {
   pageId: string;
   templateId: string;
-  kind: "capture" | "vente";
+  kind: "capture" | "vente" | "vitrine";
   contentData: Record<string, any>;
   brandTokens: Record<string, any>;
   onUpdate: (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, explanation: string) => void;

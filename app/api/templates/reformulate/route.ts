@@ -86,7 +86,7 @@ async function callClaude(args: {
 
 const InputSchema = z.object({
   instruction: z.string().min(3),
-  kind: z.enum(["capture", "vente"]),
+  kind: z.enum(["capture", "vente", "vitrine"]),
   locale: z.string().optional(),
 });
 
@@ -122,12 +122,12 @@ export async function POST(req: Request) {
   const langLabel = LOCALE_LABELS[userLocale] ?? "francais";
 
   const pageTypeLabels: Record<string, Record<string, string>> = {
-    fr: { capture: "page de capture", vente: "page de vente" },
-    en: { capture: "capture page", vente: "sales page" },
-    es: { capture: "pagina de captura", vente: "pagina de venta" },
-    it: { capture: "pagina di cattura", vente: "pagina di vendita" },
-    de: { capture: "Erfassungsseite", vente: "Verkaufsseite" },
-    pt: { capture: "pagina de captura", vente: "pagina de venda" },
+    fr: { capture: "page de capture", vente: "page de vente", vitrine: "site vitrine" },
+    en: { capture: "capture page", vente: "sales page", vitrine: "showcase website" },
+    es: { capture: "pagina de captura", vente: "pagina de venta", vitrine: "sitio vitrina" },
+    it: { capture: "pagina di cattura", vente: "pagina di vendita", vitrine: "sito vetrina" },
+    de: { capture: "Erfassungsseite", vente: "Verkaufsseite", vitrine: "Schaufensterseite" },
+    pt: { capture: "pagina de captura", vente: "pagina de venda", vitrine: "site vitrine" },
   };
   const pageTypeLabel = pageTypeLabels[userLocale]?.[kind] || pageTypeLabels.fr[kind];
 
