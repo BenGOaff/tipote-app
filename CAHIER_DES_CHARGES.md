@@ -28,7 +28,8 @@ La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storyte
 - Calendrier éditorial centralisé  
 - Constructeur de pages (capture, vente, vitrine, link-in-bio)
 - Système de quiz avec capture de leads
-- Gestion des leads avec chiffrement AES-256  
+- Gestion des leads avec chiffrement AES-256
+- Gestion des clients (suivi, notes, statuts, processus d'accompagnement)
 - Templates Systeme.io  
 - Suivi des tâches et progression  
 - Analytics avec diagnostic IA  
@@ -105,6 +106,7 @@ Plateformes supportées avec publication directe :
 | Templates | /templates | Layout | Templates Systeme.io |
 | Automatisations | /automations | Zap | Automatisations sociales (comment-to-DM/email) |
 | Mes Leads | /leads | Users | Gestion des leads capturés |
+| Mes Clients | /clients | UserCheck | Gestion et suivi des clients |
 | Widgets | /widgets | Bell | Widgets embarquables (toast \+ partage social) |
 
 **Section secondaire :**
@@ -347,7 +349,59 @@ Gestion centralisée des leads capturés.
 - Index aveugle HMAC pour recherche sur email chiffré  
 - Badge de sécurité visible : « Vos données sont chiffrées de bout en bout (AES-256) »
 
-### 4.10. Page « Analytics » (/analytics)
+### 4.10. Page « Mes Clients » (/clients)
+
+Gestion centralisée des clients pour les coachs, consultants et prestataires de services.
+
+**Positionnement :** Complémentaire à la page Leads. Un lead est un prospect capturé automatiquement ; un client est une personne avec qui l'utilisateur travaille activement. Les clients sont gérés manuellement (pas de promotion automatique depuis les leads pour l'instant).
+
+**4 stats en haut de page :**
+
+- Total clients
+- Clients actifs
+- Clients complétés
+- Taux de complétion moyen
+
+**Tableau principal :**
+
+- Colonnes : nom, email, statut (Nouveau / Actif / En pause / Complété), progression (barre %), date d'ajout
+- Recherche par nom/email
+- Filtre par statut
+- Pagination
+
+**Statuts disponibles :**
+
+| Statut | Couleur | Description |
+| :---- | :---- | :---- |
+| Nouveau | Bleu | Client récemment ajouté, pas encore démarré |
+| Actif | Vert | Accompagnement en cours |
+| En pause | Jaune | Accompagnement temporairement suspendu |
+| Complété | Gris | Accompagnement terminé |
+
+**Création / Édition (Dialog modal) :**
+
+- Nom, email, téléphone (optionnel)
+- Statut
+- Notes libres (textarea)
+
+**Panel détail (Sheet latéral) :**
+
+- Informations du client (nom, email, téléphone, statut)
+- Notes
+- Section « Processus d'accompagnement » :
+  - Liste d'étapes personnalisables (ex : « Audit initial », « Plan d'action », « Suivi mensuel »)
+  - Chaque étape a un statut (à faire / en cours / terminé)
+  - Barre de progression calculée automatiquement
+  - Ajout/suppression d'étapes
+  - Templates de processus prédéfinis (coaching 3 mois, consulting projet, formation)
+- Actions : éditer / supprimer / changer statut
+
+**Données stockées côté client (pas de chiffrement PII pour cette V1) :**
+
+- Les clients sont des contacts gérés manuellement par l'utilisateur
+- Pas de capture automatique ni d'intégration tierce
+
+### 4.11. Page « Analytics » (/analytics)
 
 Suivi des performances business.
 
@@ -378,11 +432,11 @@ Suivi des performances business.
 - Suivi par offre (visiteurs, inscrits, ventes, CA, taux de conversion)
 - Agrégation \+ analyse IA par offre
 
-### 4.11. Page « Pépites » (/pepites)
+### 4.12. Page « Pépites » (/pepites)
 
 Repository d'insights et de pépites business. Notifications de nouvelles pépites avec badge compteur dans la sidebar.
 
-### 4.12. Page « Paramètres » (/settings)
+### 4.13. Page « Paramètres » (/settings)
 
 **Accès :** Clic sur la photo de profil (avatar) en haut à droite du header. Le menu déroulant donne accès direct à chaque onglet.
 
@@ -443,7 +497,7 @@ Repository d'insights et de pépites business. Notifications de nouvelles pépit
 - Consommation par type de contenu  
 - Actions : Acheter crédits, Upgrade/Downgrade, Gérer abonnement
 
-### 4.13. Constructeur de Pages (/pages)
+### 4.14. Constructeur de Pages (/pages)
 
 Constructeur complet de landing pages hébergées, inspiré de Systeme.io avec branding Tipote.
 
@@ -535,7 +589,7 @@ Layout : barre supérieure (logo + responsive toggle + actions) + sidebar gauche
 
 **Pages publiques :** Accessibles via `/p/[slug]`
 
-### 4.14. Système de Quiz (/quiz)
+### 4.15. Système de Quiz (/quiz)
 
 Constructeur de quiz interactifs pour capture de leads.
 
@@ -554,7 +608,7 @@ Constructeur de quiz interactifs pour capture de leads.
 - Sync leads vers Systeme.io
 - Stats : vues, partages, leads capturés
 
-### 4.15. Coach IA
+### 4.16. Coach IA
 
 Bulle flottante de conversation avec coach IA.
 
@@ -571,7 +625,7 @@ Bulle flottante de conversation avec coach IA.
 - Historique des conversations  
 - Panneau latéral avec header "Coach IA"
 
-### 4.16. Didacticiel interactif
+### 4.17. Didacticiel interactif
 
 Système de tutorial guidé pas-à-pas pour les nouveaux utilisateurs.
 
@@ -607,7 +661,7 @@ Système de tutorial guidé pas-à-pas pour les nouveaux utilisateurs.
 - Peut être relancé ou réactivé via le bouton d'aide flottant
 - Paramètres accessibles via la photo de profil en haut à droite (plus dans la sidebar)
 
-### 4.17. Système de Notifications
+### 4.18. Système de Notifications
 
 **Types :**
 
@@ -621,11 +675,11 @@ Système de tutorial guidé pas-à-pas pour les nouveaux utilisateurs.
 - Panel de notifications avec deep-linking  
 - Marquage lu/archivé
 
-### 4.18. Page « Widgets » (/widgets)
+### 4.19. Page « Widgets » (/widgets)
 
 Gestion des widgets embarquables à intégrer sur les pages externes (sites, landing pages, pages Systeme.io, etc.).
 
-#### 4.18.1. Notifications de preuve sociale (Toast)
+#### 4.19.1. Notifications de preuve sociale (Toast)
 
 Pop-ups de type « social proof » affichés sur les pages de l'utilisateur pour renforcer la confiance et l'urgence.
 
@@ -662,7 +716,7 @@ Pop-ups de type « social proof » affichés sur les pages de l'utilisateur pour
 - Grille responsive : 1 colonne mobile, 2 colonnes tablette, 3 colonnes desktop
 - Historique des événements récents (avec badge type d'événement)
 
-#### 4.18.2. Boutons de partage social (Share)
+#### 4.19.2. Boutons de partage social (Share)
 
 Widget de boutons de partage social embarquable, permettant aux visiteurs de partager le contenu sur leurs réseaux.
 
@@ -700,7 +754,7 @@ Widget de boutons de partage social embarquable, permettant aux visiteurs de par
 - Sélection des plateformes via grille de checkboxes (2 col mobile, 4 col desktop)
 - Code d'intégration copiable avec bouton Copy
 
-### 4.19. Pages légales
+### 4.20. Pages légales
 
 Pages dynamiques via `/legal/[slug]` :
 
@@ -709,7 +763,7 @@ Pages dynamiques via `/legal/[slug]` :
 - Mentions légales  
 - CGV
 
-### 4.20. Backoffice Admin (/admin)
+### 4.21. Backoffice Admin (/admin)
 
 Accès restreint aux emails admin.
 
@@ -737,6 +791,7 @@ Accès restreint aux emails admin.
 | Post publié sur réseau social | MAJ statut \+ stockage post\_id/post\_url | Callback API |
 | Modification persona | MAJ contexte génération contenu | personas.persona\_json update |
 | Lead capturé (quiz/page) | Insert leads (chiffré) \+ notification | Insert \+ trigger |
+| Étape processus client cochée | MAJ progression client \+ stats | Recalcul temps réel |
 | Commentaire détecté (automation) | Auto-reply \+ log \+ consommation crédit | Webhook \+ Claude |
 | Analytics renseignés | Diagnostic IA | Trigger analyse |
 
@@ -812,6 +867,10 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 - `quizzes` — quiz avec questions, résultats, CTA  
 - `quiz_leads` — leads capturés par les quiz
 
+**Clients :**
+
+- `clients` — clients gérés manuellement (nom, email, téléphone, statut, notes, processus d'accompagnement JSONB, progression)
+
 **Leads :**
 
 - `leads` — leads unifiés (toutes sources), champs chiffrés (email\_encrypted, first\_name\_encrypted, etc.), blind index HMAC  
@@ -880,10 +939,16 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 - GET /api/quiz/\[quizId\]/public  
 - POST /api/quiz/\[quizId\]/sync-systeme
 
+**Clients :**
+
+- GET/POST /api/clients — Liste \+ création
+- GET/PATCH/DELETE /api/clients/\[id\]
+- PATCH /api/clients/\[id\]/process — Mise à jour du processus d'accompagnement
+
 **Leads :**
 
-- GET/POST /api/leads — Liste \+ création (avec chiffrement)  
-- GET/PATCH/DELETE /api/leads/\[id\]  
+- GET/POST /api/leads — Liste \+ création (avec chiffrement)
+- GET/PATCH/DELETE /api/leads/\[id\]
 - GET /api/leads/export — Export CSV (avec déchiffrement)
 
 **Analytics :**
@@ -1072,7 +1137,7 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 
 ### V1 (État actuel — Mars 2026\) ✅
 
-- Architecture complète (8+ pages principales)  
+- Architecture complète (9+ pages principales)  
 - Onboarding intelligent  
 - Plan stratégique IA avec offres personnalisées  
 - Hub création unifié (8 types de contenu)  
@@ -1080,7 +1145,8 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 - **Automatisations** (auto-commentaires, comment-to-DM/email)  
 - **Constructeur de pages** (capture, vente, vitrine, link-in-bio)  
 - **Système de quiz** avec capture de leads  
-- **Gestion des leads** avec chiffrement AES-256  
+- **Gestion des leads** avec chiffrement AES-256
+- **Gestion des clients** (suivi, notes, statuts, processus d'accompagnement)
 - Calendrier éditorial (édition des posts programmés)  
 - Système de crédits (achat \+ consommation)  
 - Templates Systeme.io  
