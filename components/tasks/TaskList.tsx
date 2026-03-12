@@ -8,7 +8,7 @@
 // ✅ Création via POST /api/tasks
 // ✅ Passe allowEdit/allowDelete à TaskItem
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 import TaskItemRow from './TaskItem'
@@ -65,17 +65,27 @@ export function TaskList({
 
   const [newTitle, setNewTitle] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const [createPending, setCreatePending] = useState(false)
+  // Optimistic: local tasks for immediate UI feedback
+  const [optimisticTasks, setOptimisticTasks] = useState<TaskItemType[]>([])
 
   const [syncPending, startSync] = useTransition()
-  const [createPending, startCreate] = useTransition()
 
   const containerClass = useMemo(() => {
     if (variant === 'card') return 'space-y-4'
     return 'space-y-4'
   }, [variant])
 
+  // Merge server tasks + optimistic tasks
+  const allTasks = useMemo(() => {
+    const serverIds = new Set(tasks.map(t => t.id))
+    // Only keep optimistic tasks that haven't appeared in server data yet
+    const pending = optimisticTasks.filter(t => !serverIds.has(t.id))
+    return [...tasks, ...pending]
+  }, [tasks, optimisticTasks])
+
   const sortedTasks = useMemo(() => {
-    const copy = [...tasks]
+    const copy = [...allTasks]
     copy.sort((a, b) => {
       const ad = (a.status ?? '').toLowerCase()
       const bd = (b.status ?? '').toLowerCase()
@@ -85,7 +95,7 @@ export function TaskList({
       return aIsDone ? 1 : -1
     })
     return copy
-  }, [tasks])
+  }, [allTasks])
 
   const canShowHeader = Boolean(title) || showSync || allowCreate
 
@@ -111,7 +121,7 @@ export function TaskList({
     })
   }
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(async () => {
     if (createPending) return
 
     const t = cleanTitle(newTitle)
@@ -121,30 +131,43 @@ export function TaskList({
     }
 
     setError(null)
+    setCreatePending(true)
 
-    startCreate(async () => {
-      try {
-        const res = await fetch('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: t }),
-        })
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: t }),
+      })
 
-        const json: unknown = await res.json().catch(() => null)
-        const parsed = parseOkError(json)
+      const json: unknown = await res.json().catch(() => null)
+      const parsed = parseOkError(json)
 
-        if (!res.ok || !parsed?.ok) {
-          setError(parsed?.error ?? 'Création impossible')
-          return
-        }
-
-        setNewTitle('')
-        router.refresh()
-      } catch {
-        setError('Erreur réseau')
+      if (!res.ok || !parsed?.ok) {
+        setError(parsed?.error ?? 'Création impossible')
+        return
       }
-    })
-  }
+
+      // Extract the created task for optimistic update
+      const taskData = (json as Record<string, unknown>)?.task as Record<string, unknown> | undefined
+      if (taskData) {
+        setOptimisticTasks((prev) => [...prev, {
+          id: String(taskData.id ?? `temp-${Date.now()}`),
+          title: t,
+          status: 'todo',
+          priority: null,
+          source: 'manual',
+        }])
+      }
+
+      setNewTitle('')
+      router.refresh()
+    } catch {
+      setError('Erreur réseau')
+    } finally {
+      setCreatePending(false)
+    }
+  }, [createPending, newTitle, router])
 
   return (
     <div className={containerClass}>
@@ -153,7 +176,7 @@ export function TaskList({
           <div className="min-w-0">
             {title ? <h2 className="truncate text-base font-semibold">{title}</h2> : null}
             <p className="text-sm text-muted-foreground">
-              {tasks.length} tâche{tasks.length > 1 ? 's' : ''}
+              {allTasks.length} tâche{allTasks.length > 1 ? 's' : ''}
             </p>
             {error ? <p className="mt-1 text-sm text-destructive">{error}</p> : null}
           </div>

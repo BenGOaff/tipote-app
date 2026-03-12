@@ -49,7 +49,8 @@ function normalizePriority(raw: unknown): string | null {
   const s = cleanNullableString(raw);
   if (!s) return null;
   const low = s.toLowerCase();
-  return low === "high" ? "high" : null;
+  if (low === "high" || low === "medium" || low === "low") return low;
+  return null;
 }
 
 export async function GET() {

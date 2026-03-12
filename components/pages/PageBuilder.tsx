@@ -199,7 +199,14 @@ const INLINE_EDIT_SCRIPT = `
 
   colorInput.addEventListener('input', function(e) {
     if (activeEl) {
-      activeEl.style.color = e.target.value;
+      var sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed && activeEl.contains(sel.anchorNode)) {
+        // Apply color only to selected text using execCommand
+        document.execCommand('foreColor', false, e.target.value);
+      } else {
+        // No selection: apply to entire element
+        activeEl.style.color = e.target.value;
+      }
       parent.postMessage({ type: 'tipote:text-edit', tag: activeEl.tagName.toLowerCase(), text: (activeEl.innerText || '').trim(), html: activeEl.innerHTML }, '*');
     }
   });
@@ -756,6 +763,21 @@ const INLINE_EDIT_SCRIPT = `
       parent.postMessage({ type: 'tipote:text-edit', tag: 'element-style', text: '' }, '*');
     }
 
+    // Apply color to text selection within an element
+    if (e.data && e.data.type === 'tipote:apply-text-color') {
+      var el = document.getElementById(e.data.elId);
+      if (!el) return;
+      var sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed && el.contains(sel.anchorNode)) {
+        // Apply to selection only
+        document.execCommand('foreColor', false, e.data.color);
+      } else {
+        // No selection in this element: apply to whole element
+        el.style.color = e.data.color;
+      }
+      parent.postMessage({ type: 'tipote:text-edit', tag: 'text-color', text: '' }, '*');
+    }
+
     // Duplicate element
     if (e.data && e.data.type === 'tipote:duplicate-element') {
       var el = document.getElementById(e.data.elId);
@@ -823,6 +845,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [sections, setSections] = useState<SectionInfo[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<SelectedElementInfo | null>(null);
+  const [sectionBgMode, setSectionBgMode] = useState<"color" | "gradient">("color");
 
   // Publish modal state
   const [publishSlug, setPublishSlug] = useState(initialPage.slug);
@@ -962,18 +985,22 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       }
       // Element selection
       if (e.data?.type === "tipote:element-selected") {
+        const styles = e.data.styles || {};
         setSelectedElement({
           elId: e.data.elId,
           elType: e.data.elType,
           label: e.data.label,
           breadcrumb: e.data.breadcrumb || [],
-          styles: e.data.styles || {},
+          styles,
           text: e.data.text || "",
           tagName: e.data.tagName || "",
           href: e.data.href || "",
           imgSrc: e.data.imgSrc || "",
           imgId: e.data.imgId || "",
         });
+        // Detect if the element has a gradient background
+        const bgImg = styles.backgroundImage || "none";
+        setSectionBgMode(bgImg !== "none" && bgImg.includes("gradient") ? "gradient" : "color");
         setLeftTab("builder");
         setSidebarOpen(true);
       }
@@ -1457,7 +1484,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
         {/* ──── LEFT SIDEBAR (Builder + Paramètres + Chat IA) ──── */}
         {sidebarOpen && (
-          <div className="w-[300px] shrink-0 bg-[#1e3a5f] text-white border-r border-[#2a4a6f] flex flex-col overflow-hidden">
+          <div className="w-[300px] shrink-0 bg-[#18181b] text-white border-r border-[#27272a] flex flex-col overflow-hidden">
 
             {/* Tab switcher */}
             <div className="flex border-b border-white/10">
@@ -1571,7 +1598,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 <input
                                   type="color"
                                   value={selectedElement.styles.color || "#000000"}
-                                  onChange={(e) => updateElementStyle(selectedElement.elId, { color: e.target.value })}
+                                  onChange={(e) => {
+                                    const iframe = iframeRef.current;
+                                    if (iframe?.contentWindow) {
+                                      iframe.contentWindow.postMessage({ type: "tipote:apply-text-color", elId: selectedElement.elId, color: e.target.value }, "*");
+                                    }
+                                    setSelectedElement((prev) => prev ? { ...prev, styles: { ...prev.styles, color: e.target.value } } : null);
+                                  }}
                                   className="w-6 h-6 rounded border border-white/20 cursor-pointer"
                                 />
                               </div>
@@ -1797,72 +1830,90 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           {/* SECTION / ROW specific */}
                           {(selectedElement.elType === "section" || selectedElement.elType === "row" || selectedElement.elType === "nav" || selectedElement.elType === "form") && (
                             <>
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-white/60">Arrière-fond</span>
-                                <input
-                                  type="color"
-                                  value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#ffffff"}
-                                  onChange={(e) => updateElementStyle(selectedElement.elId, { backgroundColor: e.target.value })}
-                                  className="w-6 h-6 rounded border border-white/20 cursor-pointer"
-                                />
-                              </div>
-
-                              {/* Gradient for section */}
+                              {/* Toggle: Solid color vs Gradient */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">Dégradé de fond</span>
-                                <div className="flex gap-1.5 items-center">
-                                  <input
-                                    type="color"
-                                    defaultValue="#1e3a5f"
-                                    onChange={(e) => {
-                                      const c2 = (document.getElementById("sec-grad-c2-" + selectedElement.elId) as HTMLInputElement)?.value || "#5D6CDB";
-                                      const angle = (document.getElementById("sec-grad-angle-" + selectedElement.elId) as HTMLInputElement)?.value || "135";
-                                      updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${e.target.value}, ${c2})` });
-                                    }}
-                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
-                                    title="Couleur 1"
-                                  />
-                                  <input
-                                    id={"sec-grad-c2-" + selectedElement.elId}
-                                    type="color"
-                                    defaultValue="#5D6CDB"
-                                    onChange={(e) => {
-                                      const prev = e.target.previousElementSibling as HTMLInputElement;
-                                      const c1 = prev?.value || "#1e3a5f";
-                                      const angle = (document.getElementById("sec-grad-angle-" + selectedElement.elId) as HTMLInputElement)?.value || "135";
-                                      updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${c1}, ${e.target.value})` });
-                                    }}
-                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
-                                    title="Couleur 2"
-                                  />
-                                  <input
-                                    id={"sec-grad-angle-" + selectedElement.elId}
-                                    type="number"
-                                    defaultValue={135}
-                                    min={0}
-                                    max={360}
-                                    className="w-14 px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
-                                    title="Angle"
-                                  />
-                                  <span className="text-[9px] text-white/40">°</span>
+                                <span className="text-xs text-white/60 block mb-1.5">Arrière-fond</span>
+                                <div className="flex gap-1 mb-2">
                                   <button
-                                    onClick={() => updateElementStyle(selectedElement.elId, { backgroundImage: "none" })}
-                                    className="p-1 rounded hover:bg-white/10 text-white/40"
-                                    title="Supprimer"
+                                    onClick={() => {
+                                      setSectionBgMode("color");
+                                      updateElementStyle(selectedElement.elId, { backgroundImage: "none" });
+                                    }}
+                                    className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
+                                      sectionBgMode === "color"
+                                        ? "bg-white/20 border-white/40 text-white font-medium"
+                                        : "border-white/10 text-white/50 hover:bg-white/10"
+                                    }`}
                                   >
-                                    <X className="w-3 h-3" />
+                                    Couleur unie
+                                  </button>
+                                  <button
+                                    onClick={() => setSectionBgMode("gradient")}
+                                    className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
+                                      sectionBgMode === "gradient"
+                                        ? "bg-white/20 border-white/40 text-white font-medium"
+                                        : "border-white/10 text-white/50 hover:bg-white/10"
+                                    }`}
+                                  >
+                                    Dégradé
                                   </button>
                                 </div>
-                              </div>
 
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-white/60">Couleur texte</span>
-                                <input
-                                  type="color"
-                                  value={selectedElement.styles.color || "#1a1a1a"}
-                                  onChange={(e) => updateElementStyle(selectedElement.elId, { color: e.target.value })}
-                                  className="w-6 h-6 rounded border border-white/20 cursor-pointer"
-                                />
+                                {sectionBgMode === "color" ? (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] text-white/40">Couleur</span>
+                                    <input
+                                      type="color"
+                                      value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#ffffff"}
+                                      onChange={(e) => updateElementStyle(selectedElement.elId, { backgroundColor: e.target.value })}
+                                      className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-1.5 items-center">
+                                    <input
+                                      type="color"
+                                      defaultValue="#5D6CDB"
+                                      onChange={(e) => {
+                                        const c2 = (document.getElementById("sec-grad-c2-" + selectedElement.elId) as HTMLInputElement)?.value || "#2E3A6E";
+                                        const angle = (document.getElementById("sec-grad-angle-" + selectedElement.elId) as HTMLInputElement)?.value || "135";
+                                        updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${e.target.value}, ${c2})` });
+                                      }}
+                                      className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                      title="Couleur 1"
+                                    />
+                                    <input
+                                      id={"sec-grad-c2-" + selectedElement.elId}
+                                      type="color"
+                                      defaultValue="#2E3A6E"
+                                      onChange={(e) => {
+                                        const prev = e.target.previousElementSibling as HTMLInputElement;
+                                        const c1 = prev?.value || "#5D6CDB";
+                                        const angle = (document.getElementById("sec-grad-angle-" + selectedElement.elId) as HTMLInputElement)?.value || "135";
+                                        updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${c1}, ${e.target.value})` });
+                                      }}
+                                      className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                      title="Couleur 2"
+                                    />
+                                    <input
+                                      id={"sec-grad-angle-" + selectedElement.elId}
+                                      type="number"
+                                      defaultValue={135}
+                                      min={0}
+                                      max={360}
+                                      className="w-14 px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                      title="Angle"
+                                      onChange={(e) => {
+                                        const c1El = document.getElementById("sec-grad-c2-" + selectedElement.elId)?.previousElementSibling as HTMLInputElement;
+                                        const c2El = document.getElementById("sec-grad-c2-" + selectedElement.elId) as HTMLInputElement;
+                                        const c1 = c1El?.value || "#5D6CDB";
+                                        const c2 = c2El?.value || "#2E3A6E";
+                                        updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${e.target.value}deg, ${c1}, ${c2})` });
+                                      }}
+                                    />
+                                    <span className="text-[9px] text-white/40">°</span>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Padding */}

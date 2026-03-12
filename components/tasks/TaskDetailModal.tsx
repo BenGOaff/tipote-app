@@ -58,6 +58,7 @@ export function TaskDetailModal({
   const tc = useTranslations("checklistTemplates");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [estimatedDuration, setEstimatedDuration] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -69,6 +70,7 @@ export function TaskDetailModal({
     if (task) {
       setTitle(task.title || "");
       setDescription(task.description || "");
+      setPriority(task.priority);
       setDueDate(task.due_date || "");
       setEstimatedDuration(task.estimated_duration || "");
       setSelectedTagIds(task.tags.map((tg) => tg.id));
@@ -83,6 +85,7 @@ export function TaskDetailModal({
       await onSave(task.id, {
         title,
         description: description || null,
+        priority: priority || null,
         due_date: dueDate || null,
         estimated_duration: estimatedDuration || null,
         tag_ids: selectedTagIds,
@@ -90,7 +93,7 @@ export function TaskDetailModal({
     } finally {
       setSaving(false);
     }
-  }, [task, title, description, dueDate, estimatedDuration, selectedTagIds, onSave]);
+  }, [task, title, description, priority, dueDate, estimatedDuration, selectedTagIds, onSave]);
 
   const handleToggleTag = useCallback((tagId: string) => {
     setSelectedTagIds((prev) =>
@@ -156,25 +159,45 @@ export function TaskDetailModal({
             placeholder={t("titlePlaceholder")}
           />
 
-          {/* Status badge */}
+          {/* Status + Priority */}
           <div className="flex items-center gap-2 flex-wrap">
             {task.status === "done" ? (
               <Badge variant="default">{t("statusDone")}</Badge>
             ) : (
               <Badge variant="outline">{t("statusTodo")}</Badge>
             )}
-            {task.priority && (
-              <Badge
-                variant={task.priority === "high" ? "destructive" : "secondary"}
-              >
-                {task.priority === "high" ? t("priorityHigh") : task.priority === "medium" ? t("priorityMedium") : t("priorityLow")}
-              </Badge>
-            )}
             {total > 0 && (
               <Badge variant="secondary">
                 {t("subtasksCount", { done, total })}
               </Badge>
             )}
+          </div>
+
+          {/* Priority selector */}
+          <div className="space-y-1">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              Priorité
+            </label>
+            <div className="flex gap-1.5">
+              {[
+                { value: "high", label: t("priorityHigh"), color: "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" },
+                { value: "medium", label: t("priorityMedium"), color: "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200" },
+                { value: "low", label: t("priorityLow"), color: "bg-green-100 text-green-700 border-green-200 hover:bg-green-200" },
+              ].map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPriority(priority === p.value ? null : p.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                    priority === p.value
+                      ? p.color + " ring-1 ring-offset-1 ring-slate-300"
+                      : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Tags */}
