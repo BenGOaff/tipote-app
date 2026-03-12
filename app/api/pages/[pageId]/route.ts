@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { buildPage } from "@/lib/pageBuilder";
 import { buildLinkinbioPage, type LinkinbioPageData } from "@/lib/linkinbioBuilder";
+import { sanitizeHtmlSnapshot } from "@/lib/sanitizeHtml";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,6 +126,11 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
         }
       } catch { /* keep existing snapshot */ }
     }
+  }
+
+  // Always sanitize html_snapshot to strip editor artifacts (defense-in-depth)
+  if (typeof updates.html_snapshot === "string" && updates.html_snapshot) {
+    updates.html_snapshot = sanitizeHtmlSnapshot(updates.html_snapshot);
   }
 
   if (Object.keys(updates).length === 0) {
