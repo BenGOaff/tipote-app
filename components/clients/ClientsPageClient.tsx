@@ -55,9 +55,16 @@ import {
   Mail,
   FileText,
   Loader2,
+  DollarSign,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
+type ProcessSummary = {
+  template_id: string | null;
+  name: string;
+  progress: number;
+};
+
 export type Client = {
   id: string;
   name: string;
@@ -67,6 +74,7 @@ export type Client = {
   notes: string | null;
   lead_id: string | null;
   created_at: string;
+  process_summaries?: ProcessSummary[];
 };
 
 type ProcessItem = {
@@ -87,6 +95,10 @@ type ClientProcess = {
   total: number;
   done: number;
   progress: number;
+  amount_total: number | null;
+  amount_collected: number | null;
+  payment_type: string;
+  installments_count: number | null;
 };
 
 type TemplateItem = {
@@ -134,6 +146,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
   const [templates, setTemplates] = useState<Template[]>(initialTemplates);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [templateFilter, setTemplateFilter] = useState<string>("all");
   const [view, setView] = useState<"list" | "detail" | "templates">("list");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientProcesses, setClientProcesses] = useState<ClientProcess[]>([]);
@@ -162,6 +175,11 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
     if (statusFilter !== "all") {
       list = list.filter((c) => c.status === statusFilter);
     }
+    if (templateFilter !== "all") {
+      list = list.filter((c) =>
+        c.process_summaries?.some((ps) => ps.template_id === templateFilter),
+      );
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -172,7 +190,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
       );
     }
     return list;
-  }, [clients, search, statusFilter]);
+  }, [clients, search, statusFilter, templateFilter]);
 
   // ─── Stats ────────────────────────────────────────
   const stats = useMemo(() => ({
@@ -318,7 +336,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
     }
   }, [t, toast]);
 
-  const applyTemplate = useCallback(async (templateId: string, dueDate?: string) => {
+  const applyTemplate = useCallback(async (templateId: string, dueDate?: string, payment?: { amount_total?: number; payment_type?: string; installments_count?: number }) => {
     if (!selectedClient) return;
     setLoading(true);
     try {
@@ -329,6 +347,9 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
           client_id: selectedClient.id,
           template_id: templateId,
           due_date: dueDate || null,
+          ...(payment?.amount_total ? { amount_total: payment.amount_total } : {}),
+          ...(payment?.payment_type ? { payment_type: payment.payment_type } : {}),
+          ...(payment?.installments_count ? { installments_count: payment.installments_count } : {}),
         }),
       });
       const json = await res.json();
@@ -355,6 +376,24 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
       setLoading(false);
     }
   }, [selectedClient, t, toast]);
+
+  const updateProcess = useCallback(async (processId: string, data: Record<string, unknown>) => {
+    try {
+      const res = await fetch(`/api/client-processes/${processId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || "Error");
+      setClientProcesses((prev) =>
+        prev.map((p) => (p.id === processId ? { ...p, ...data } : p)),
+      );
+      toast({ title: t("processUpdated") });
+    } catch (e: any) {
+      toast({ title: t("error"), description: e.message, variant: "destructive" });
+    }
+  }, [t, toast]);
 
   const toggleProcessItem = useCallback(async (processId: string, itemId: string, isDone: boolean) => {
     // Optimistic update
@@ -474,8 +513,8 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
 
               {/* Actions bar */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="relative flex-1 max-w-xs">
+                <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+                  <div className="relative flex-1 max-w-xs min-w-[160px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       value={search}
@@ -485,7 +524,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                     />
                   </div>
 
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
                     {["all", "active", "prospect", "completed", "paused"].map((s) => (
                       <Button
                         key={s}
@@ -498,6 +537,19 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                       </Button>
                     ))}
                   </div>
+
+                  {templates.length > 0 && (
+                    <select
+                      value={templateFilter}
+                      onChange={(e) => setTemplateFilter(e.target.value)}
+                      className="h-8 text-xs border border-slate-200 rounded-md px-2 bg-white text-slate-700"
+                    >
+                      <option value="all">{t("filterAll")}</option>
+                      {templates.map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="flex gap-2 shrink-0">
@@ -547,6 +599,16 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                             {t(`status_${client.status}`)}
                           </Badge>
                         </div>
+                        {client.process_summaries && client.process_summaries.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {client.process_summaries.map((ps, i) => (
+                              <div key={i} className="flex items-center gap-1.5 bg-slate-50 rounded-md px-2 py-1">
+                                <span className="text-xs font-medium text-slate-600 truncate max-w-[120px]">{ps.name}</span>
+                                <span className={`text-xs font-bold ${ps.progress === 100 ? "text-green-600" : "text-slate-500"}`}>{ps.progress}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {client.notes && (
                           <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{client.notes}</p>
                         )}
@@ -699,6 +761,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                       onToggleItem={(itemId, isDone) => toggleProcessItem(proc.id, itemId, isDone)}
                       onAddItem={(title) => addProcessItem(proc.id, title)}
                       onDeleteItem={(itemId) => deleteProcessItem(proc.id, itemId)}
+                      onUpdateProcess={(data) => updateProcess(proc.id, data)}
                     />
                   ))}
                 </div>
@@ -971,15 +1034,22 @@ function ProcessCard({
   onToggleItem,
   onAddItem,
   onDeleteItem,
+  onUpdateProcess,
 }: {
   process: ClientProcess;
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   onToggleItem: (itemId: string, isDone: boolean) => void;
   onAddItem: (title: string) => void;
   onDeleteItem: (itemId: string) => void;
+  onUpdateProcess: (data: Record<string, unknown>) => void;
 }) {
   const [newItemTitle, setNewItemTitle] = useState("");
   const [expanded, setExpanded] = useState(true);
+  const [editingPayment, setEditingPayment] = useState(false);
+  const [payAmount, setPayAmount] = useState(String(process.amount_collected ?? 0));
+
+  const hasPayment = process.amount_total != null && process.amount_total > 0;
+  const collectedPct = hasPayment ? Math.round(((process.amount_collected ?? 0) / process.amount_total!) * 100) : 0;
 
   return (
     <Card className="p-4">
@@ -1006,6 +1076,60 @@ function ProcessCard({
       </div>
 
       <Progress value={process.progress} className="h-1.5 mt-3" />
+
+      {/* Payment summary */}
+      {hasPayment && (
+        <div className="mt-3 flex items-center gap-3 text-xs border-t border-slate-100 pt-3">
+          <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="font-medium text-slate-700">
+              {process.amount_collected ?? 0}€ / {process.amount_total}€
+            </span>
+            <span className="text-muted-foreground">
+              ({collectedPct}% {t("collected")})
+            </span>
+            {process.payment_type === "installments" && process.installments_count && (
+              <Badge variant="outline" className="text-xs">
+                {process.installments_count}x {t("paymentInstallments").toLowerCase()}
+              </Badge>
+            )}
+          </div>
+          {!editingPayment ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setEditingPayment(true); setPayAmount(String(process.amount_collected ?? 0)); }}
+              className="text-xs text-primary hover:underline"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="number"
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+                className="w-20 h-6 text-xs border rounded px-1"
+                min="0"
+                step="0.01"
+              />
+              <span className="text-xs">€</span>
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdateProcess({ amount_collected: parseFloat(payAmount) || 0 });
+                  setEditingPayment(false);
+                }}
+                className="text-green-600 hover:text-green-700"
+              >
+                <Save className="h-3 w-3" />
+              </button>
+              <button type="button" onClick={() => setEditingPayment(false)} className="text-slate-400">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {expanded && (
         <div className="mt-3 space-y-1">
@@ -1166,13 +1290,16 @@ function ApplyTemplateDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   templates: Template[];
-  onApply: (templateId: string, dueDate?: string) => void;
+  onApply: (templateId: string, dueDate?: string, payment?: { amount_total?: number; payment_type?: string; installments_count?: number }) => void;
   onCreateTemplate: () => void;
   loading: boolean;
   t: (key: string, values?: Record<string, string | number | Date>) => string;
 }) {
   const [selectedTpl, setSelectedTpl] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
+  const [amountTotal, setAmountTotal] = useState("");
+  const [paymentType, setPaymentType] = useState("full");
+  const [installmentsCount, setInstallmentsCount] = useState("");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1232,6 +1359,50 @@ function ApplyTemplateDialog({
                 />
               </div>
 
+              {/* Payment info */}
+              <div className="border-t border-slate-100 pt-3 space-y-3">
+                <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                  <DollarSign className="h-3.5 w-3.5" />
+                  {t("paymentInfo")}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">{t("amountTotal")}</label>
+                    <Input
+                      type="number"
+                      value={amountTotal}
+                      onChange={(e) => setAmountTotal(e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">{t("paymentType")}</label>
+                    <select
+                      value={paymentType}
+                      onChange={(e) => setPaymentType(e.target.value)}
+                      className="w-full h-9 text-sm border border-slate-200 rounded-md px-2 bg-white"
+                    >
+                      <option value="full">{t("paymentFull")}</option>
+                      <option value="installments">{t("paymentInstallments")}</option>
+                    </select>
+                  </div>
+                </div>
+                {paymentType === "installments" && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">{t("installmentsCount")}</label>
+                    <Input
+                      type="number"
+                      value={installmentsCount}
+                      onChange={(e) => setInstallmentsCount(e.target.value)}
+                      placeholder="3"
+                      min="2"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                   {t("cancel")}
@@ -1239,7 +1410,14 @@ function ApplyTemplateDialog({
                 <Button
                   size="sm"
                   onClick={() => {
-                    if (selectedTpl) onApply(selectedTpl, dueDate || undefined);
+                    if (selectedTpl) {
+                      const payment = amountTotal ? {
+                        amount_total: parseFloat(amountTotal),
+                        payment_type: paymentType,
+                        ...(paymentType === "installments" && installmentsCount ? { installments_count: parseInt(installmentsCount) } : {}),
+                      } : undefined;
+                      onApply(selectedTpl, dueDate || undefined, payment);
+                    }
                   }}
                   disabled={loading || !selectedTpl}
                 >

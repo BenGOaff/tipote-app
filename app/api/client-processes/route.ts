@@ -59,6 +59,10 @@ export async function POST(req: NextRequest) {
       name: processName,
       status: "in_progress",
       due_date: body.due_date ?? null,
+      amount_total: body.amount_total ?? null,
+      amount_collected: body.amount_collected ?? 0,
+      payment_type: body.payment_type ?? "full",
+      installments_count: body.installments_count ?? null,
     })
     .select()
     .single();
