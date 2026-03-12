@@ -1,20 +1,20 @@
 // components/pages/PageBuilder.tsx
-// Main page editor: preview iframe + chat bar + publish modal.
-// Features: multi-device preview, always-on inline text editing,
-// inline color picker for text/illustrations, illustration delete/replace,
-// publish modal with slug/SIO tag/OG image/meta description,
-// download HTML, download text as PDF, edit after publication.
+// Full-screen page builder inspired by Systeme.io.
+// Layout: top bar (logo + devices + save/exit) + optional left sidebar + full preview + Chat IA right.
+// All settings accessible from a left panel (Paramètres) instead of modals.
 
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
-  Download, ExternalLink, Copy, Check, X,
+  Download, Copy, Check, X,
   Upload, Smartphone, Tablet, Monitor,
-  Globe, Loader2, ArrowLeft,
+  Globe, Loader2,
   FileText, FileDown,
   Share2, Tag, Image as ImageIcon, Link2,
-  EyeOff, Users, QrCode, HelpCircle,
+  EyeOff, Users, QrCode,
+  Settings, Play,
+  Save, LogOut, Type,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 
@@ -69,9 +69,11 @@ const DEVICE_CONFIG: Record<Device, { width: number; label: string; icon: typeof
   desktop: { width: 1200, label: "Desktop", icon: Monitor },
 };
 
+// ---------- Left sidebar tabs ----------
+
+type LeftTab = "parametres" | "section" | null;
+
 // ---------- Always-on inline editing script ----------
-// Text is always editable, hover shows a minimal toolbar with color picker.
-// Illustrations/SVGs/animations get hover overlay: delete, replace image, or change color.
 
 const INLINE_EDIT_SCRIPT = `
 <script>
@@ -146,237 +148,133 @@ const INLINE_EDIT_SCRIPT = `
   illustReplaceBtn.addEventListener('click', function(e) {
     e.stopPropagation();
     if (!activeIllust) return;
-    /* Find or set ID on outermost container */
     var target = activeIllust;
-    var p = target.closest('.tp-visual, .tp-illust, [data-tipote-visual]');
-    if (p) target = p;
-    var id = target.getAttribute('data-tipote-img-id');
-    if (!id) {
-      id = 'tipote-img-' + Date.now();
-      target.setAttribute('data-tipote-img-id', id);
-    }
-    parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: false }, '*');
+    if (!target.id) target.id = 'tipote-illust-' + Date.now();
+    parent.postMessage({ type: 'tipote:image-click', imgId: target.id, hasImage: false }, '*');
     illustOverlay.style.display = 'none';
     activeIllust = null;
   });
 
-  illustOverlay.addEventListener('click', function(e) { e.stopPropagation(); });
+  /* ── Shared positioning helper ── */
+  function positionAbove(el, overlay) {
+    var r = el.getBoundingClientRect();
+    overlay.style.left = Math.max(8, r.left + r.width/2 - overlay.offsetWidth/2) + 'px';
+    overlay.style.top = Math.max(8, r.top - overlay.offsetHeight - 8) + 'px';
+  }
 
-  /* ── Listen for messages from parent ── */
+  /* ── Make all text elements editable ── */
+  document.querySelectorAll(editableSelectors).forEach(function(el) {
+    if (el.closest('script') || el.closest('style') || el.closest('noscript') || el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+    if (el.children.length > 3) return;
+    el.contentEditable = 'true';
+    el.style.outline = 'none';
+    el.style.cursor = 'text';
+
+    el.addEventListener('focus', function() {
+      activeEl = el;
+      toolbar.style.display = 'flex';
+      colorInput.value = getComputedStyle(el).color.indexOf('rgb') >= 0 ? rgbToHex(getComputedStyle(el).color) : '#000000';
+      setTimeout(function() { positionAbove(el, toolbar); }, 0);
+    });
+
+    el.addEventListener('blur', function() {
+      setTimeout(function() {
+        if (document.activeElement !== colorInput && document.activeElement !== el) {
+          toolbar.style.display = 'none';
+          activeEl = null;
+        }
+      }, 200);
+      parent.postMessage({ type: 'tipote:text-edit', tag: el.tagName.toLowerCase(), text: (el.innerText || '').trim(), html: el.innerHTML }, '*');
+    });
+  });
+
+  /* ── Illustration/SVG hover overlay ── */
+  document.querySelectorAll(illustSelectors).forEach(function(el) {
+    if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+    if (el.closest(illustSelectors) !== el) return;
+
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (el.hasAttribute('data-tipote-img-id') || el.querySelector('[data-tipote-img-id]')) {
+        var imgTarget = el.hasAttribute('data-tipote-img-id') ? el : el.querySelector('[data-tipote-img-id]');
+        if (imgTarget) {
+          parent.postMessage({ type: 'tipote:image-click', imgId: imgTarget.getAttribute('data-tipote-img-id'), hasImage: !!imgTarget.src }, '*');
+          return;
+        }
+      }
+
+      activeIllust = el;
+      illustOverlay.style.display = 'flex';
+      var brandColor = getComputedStyle(el).getPropertyValue('--brand').trim() || '#5D6CDB';
+      if (brandColor.indexOf('rgb') >= 0) brandColor = rgbToHex(brandColor);
+      illustColorInput.value = brandColor;
+      setTimeout(function() { positionAbove(el, illustOverlay); }, 0);
+    });
+  });
+
+  /* ── Also listen for image clicks (standalone images) ── */
+  document.querySelectorAll('img[data-tipote-img-id]').forEach(function(img) {
+    img.style.cursor = 'pointer';
+    img.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      parent.postMessage({ type: 'tipote:image-click', imgId: img.getAttribute('data-tipote-img-id'), hasImage: !!img.src }, '*');
+    });
+  });
+
+  /* ── Placeholder image click handlers ── */
+  document.querySelectorAll('[data-tipote-img-id]:not(img)').forEach(function(el) {
+    if (el.closest(illustSelectors)) return;
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      parent.postMessage({ type: 'tipote:image-click', imgId: el.getAttribute('data-tipote-img-id'), hasImage: false }, '*');
+    });
+  });
+
+  /* ── Click outside to dismiss overlays ── */
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.tipote-illust-overlay') && !e.target.closest(illustSelectors)) {
+      illustOverlay.style.display = 'none';
+      activeIllust = null;
+    }
+  });
+
+  /* ── Listen for uploaded image from parent ── */
   window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'tipote:image-uploaded') {
-      var sel = e.data.selector;
-      var url = e.data.url;
-      if (sel && url) {
-        var el = document.querySelector(sel);
-        if (el) {
-          if (el.tagName === 'IMG') { el.src = url; setTimeout(setupClickableImages, 100); }
-          else if (el.classList.contains('tp-about-photo-placeholder') || el.hasAttribute('data-tipote-img-id')) {
-            /* Replace placeholder with real image, keeping same classes */
-            var img = document.createElement('img');
-            img.src = url;
-            img.className = el.className.replace('tp-about-photo-placeholder', '').trim();
-            img.setAttribute('data-tipote-img-id', el.getAttribute('data-tipote-img-id') || '');
-            img.style.cssText = el.style.cssText.replace(/display:[^;]+;?/,'').replace(/border:[^;]+dashed[^;]*;?/,'');
-            el.replaceWith(img);
-            setTimeout(setupClickableImages, 100);
-          }
-          else {
-            /* Fully replace the SVG/illustration container with an image */
-            var container = el;
-            while (container.parentElement && (
-              container.parentElement.classList.contains('tp-illust') ||
-              container.parentElement.classList.contains('tp-visual') ||
-              container.parentElement.classList.contains('tp-mockup') ||
-              container.parentElement.tagName === 'svg' ||
-              container.parentElement.hasAttribute('data-tipote-visual')
-            )) {
-              container = container.parentElement;
-            }
-            var img2 = document.createElement('img');
-            img2.src = url;
-            img2.style.cssText = 'width:100%;max-width:520px;height:auto;border-radius:16px;object-fit:cover;display:block;margin:0 auto;box-shadow:0 12px 40px rgba(0,0,0,0.12);';
-            img2.setAttribute('data-tipote-img-id', el.getAttribute('data-tipote-img-id') || '');
-            container.replaceWith(img2);
-            setTimeout(setupClickableImages, 100);
-          }
+      var target = document.querySelector(e.data.selector);
+      if (target) {
+        if (target.tagName === 'IMG') {
+          target.src = e.data.url;
+        } else {
+          var newImg = document.createElement('img');
+          newImg.src = e.data.url;
+          newImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;';
+          newImg.setAttribute('data-tipote-img-id', target.getAttribute('data-tipote-img-id') || '');
+          target.replaceWith(newImg);
         }
       }
     }
-    if (e.data && e.data.type === 'tipote:image-removed') {
-      var sel2 = e.data.selector;
-      if (sel2) {
-        var el2 = document.querySelector(sel2);
-        if (el2) { el2.style.display = 'none'; }
-      }
-    }
   });
 
-  /* ── Click-to-replace for all images and image placeholders ── */
-  function setupClickableImages() {
-    /* Real images */
-    document.querySelectorAll('img').forEach(function(img) {
-      if (img.closest('.tipote-toolbar') || img.closest('.tipote-illust-overlay')) return;
-      if (img.getAttribute('data-tipote-img-setup')) return;
-      img.setAttribute('data-tipote-img-setup', '1');
-      img.style.cursor = 'pointer';
-      if (!img.getAttribute('data-tipote-img-id')) {
-        img.setAttribute('data-tipote-img-id', 'tipote-img-' + Date.now() + '-' + Math.random().toString(36).slice(2,6));
-      }
-      img.addEventListener('mouseenter', function() {
-        img.style.outline = '2px dashed rgba(37,99,235,0.5)';
-        img.style.outlineOffset = '3px';
-        img.style.borderRadius = '4px';
-      });
-      img.addEventListener('mouseleave', function() {
-        img.style.outline = 'none';
-        img.style.outlineOffset = '';
-      });
-      img.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var id = img.getAttribute('data-tipote-img-id');
-        parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: true }, '*');
-      });
-    });
-    /* Image placeholders (e.g. empty about-photo slot) */
-    document.querySelectorAll('[data-tipote-img-id]:not(img)').forEach(function(el) {
-      if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
-      if (el.getAttribute('data-tipote-img-setup')) return;
-      el.setAttribute('data-tipote-img-setup', '1');
-      el.style.cursor = 'pointer';
-      el.addEventListener('mouseenter', function() {
-        el.style.outline = '2px dashed rgba(37,99,235,0.5)';
-        el.style.outlineOffset = '3px';
-      });
-      el.addEventListener('mouseleave', function() {
-        el.style.outline = 'none';
-        el.style.outlineOffset = '';
-      });
-      el.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var id = el.getAttribute('data-tipote-img-id');
-        parent.postMessage({ type: 'tipote:image-click', imgId: id, hasImage: false }, '*');
-      });
-    });
-  }
-
-  /* ── Init: make all text editable ── */
-  function init() {
-    document.body.classList.add('tipote-edit-mode');
-    var els = document.querySelectorAll(editableSelectors);
-    els.forEach(function(el) {
-      if (el.closest('script') || el.closest('style') || el.closest('noscript') || el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
-      if (el.children.length > 3 && !el.matches('[data-editable]')) return;
-      var text = (el.textContent || '').trim();
-      if (!text || text.length < 2) return;
-      el.setAttribute('contenteditable', 'true');
-      el.style.outline = 'none';
-      el.style.cursor = 'text';
-      el.addEventListener('focus', onFocus);
-      el.addEventListener('blur', onBlur);
-    });
-
-    /* Setup illustration hover targets */
-    document.querySelectorAll(illustSelectors).forEach(function(el) {
-      if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
-      el.addEventListener('mouseenter', onIllustEnter);
-      el.addEventListener('mouseleave', onIllustLeave);
-    });
-
-    /* Setup clickable images */
-    setupClickableImages();
-  }
-
-  function positionToolbar(el) {
-    var rect = el.getBoundingClientRect();
-    toolbar.style.display = 'flex';
-    toolbar.style.left = Math.max(4, rect.left) + 'px';
-    toolbar.style.top = Math.max(4, rect.top - 38) + 'px';
-    colorInput.value = rgbToHex(getComputedStyle(el).color);
-    activeEl = el;
-  }
-
-  function positionIllustOverlay(el) {
-    var rect = el.getBoundingClientRect();
-    illustOverlay.style.display = 'flex';
-    illustOverlay.style.left = (rect.left + rect.width/2 - 80) + 'px';
-    illustOverlay.style.top = (rect.top + rect.height/2 - 18) + 'px';
-    var brand = getComputedStyle(el).getPropertyValue('--brand') || getComputedStyle(document.documentElement).getPropertyValue('--brand') || '#2563eb';
-    illustColorInput.value = brand.trim().startsWith('#') ? brand.trim() : '#2563eb';
-    activeIllust = el;
-  }
-
-  function onFocus(e) {
-    e.target.style.outlineOffset = '2px';
-    e.target.style.borderRadius = '4px';
-    positionToolbar(e.target);
-  }
-
-  function onBlur(e) {
-    e.target.style.outline = 'none';
-    e.target.style.outlineOffset = '';
-    setTimeout(function() {
-      if (!document.activeElement || !document.activeElement.closest('.tipote-toolbar')) {
-        toolbar.style.display = 'none';
-        activeEl = null;
-      }
-    }, 200);
-    var tag = e.target.tagName.toLowerCase();
-    var text = e.target.innerText || e.target.textContent || '';
-    parent.postMessage({ type: 'tipote:text-edit', tag: tag, text: text.trim(), html: e.target.innerHTML }, '*');
-  }
-
-  var illustLeaveTimer = null;
-  function onIllustEnter(e) {
-    clearTimeout(illustLeaveTimer);
-    positionIllustOverlay(e.currentTarget);
-  }
-  function onIllustLeave(e) {
-    illustLeaveTimer = setTimeout(function() {
-      if (!illustOverlay.matches(':hover')) {
-        illustOverlay.style.display = 'none';
-        activeIllust = null;
-      }
-    }, 300);
-  }
-  illustOverlay.addEventListener('mouseenter', function() { clearTimeout(illustLeaveTimer); });
-  illustOverlay.addEventListener('mouseleave', function() {
-    illustOverlay.style.display = 'none';
-    activeIllust = null;
-  });
-
+  /* ── Helper: rgb to hex ── */
   function rgbToHex(rgb) {
-    if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
-    var m = rgb.match(/\\d+/g);
+    var m = rgb.match(/(\d+)/g);
     if (!m || m.length < 3) return '#000000';
-    return '#' + [m[0],m[1],m[2]].map(function(x){var h=parseInt(x).toString(16);return h.length<2?'0'+h:h;}).join('');
-  }
-
-  /* Styles */
-  var style = document.createElement('style');
-  style.textContent = [
-    '.tipote-edit-mode [contenteditable]:hover { outline: 1px dashed rgba(37,99,235,0.4) !important; outline-offset: 2px; border-radius: 4px; cursor: text; }',
-    '.tipote-edit-mode [contenteditable]:focus { outline: 2px solid #2563eb !important; outline-offset: 2px; border-radius: 4px; }',
-    '.tp-color-input::-webkit-color-swatch-wrapper { padding: 2px; }',
-    '.tp-color-input::-webkit-color-swatch { border: none; border-radius: 4px; }',
-    '.tp-illust-color::-webkit-color-swatch-wrapper { padding: 2px; }',
-    '.tp-illust-color::-webkit-color-swatch { border: none; border-radius: 4px; }',
-    '.tp-illust-btn:hover { background: rgba(255,255,255,0.2) !important; }',
-  ].join('\\n');
-  document.head.appendChild(style);
-
-  /* Init on load */
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+    return '#' + m.slice(0,3).map(function(x) { return parseInt(x).toString(16).padStart(2,'0'); }).join('');
   }
 })();
 </script>`;
 
-// ---------- Component ----------
+
+// ─────────────────────────────────────────────────────────
+// COMPONENT
+// ─────────────────────────────────────────────────────────
 
 export default function PageBuilder({ initialPage, onBack }: Props) {
   const [page, setPage] = useState<PageData>(initialPage);
@@ -389,6 +287,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const pendingHtmlRef = useRef<string | null>(null);
+
+  // Left sidebar
+  const [leftTab, setLeftTab] = useState<LeftTab>(null);
 
   // Publish modal state
   const [publishSlug, setPublishSlug] = useState(initialPage.slug);
@@ -406,7 +307,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
   // QR code state
   const [showQrModal, setShowQrModal] = useState(false);
-
 
   // Thank-you page
   const [showThankYouModal, setShowThankYouModal] = useState(false);
@@ -437,7 +337,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, []);
 
-  // Handle image click from iframe — always upload (delete is handled by illustration overlay)
+  // Handle image click from iframe
   const handleIframeImageClick = useCallback((imgId: string, _hasImage: boolean) => {
     triggerImageUploadForIframe(imgId);
   }, []);
@@ -487,16 +387,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "tipote:text-edit") {
         setSaving(true);
-        // Debounce save: extract updated HTML from iframe and persist
-        // IMPORTANT: do NOT update htmlPreview here — that causes React re-render
-        // which resets the iframe and loses edit mode state.
         clearTimeout((window as any).__tipoteSaveTimer);
         (window as any).__tipoteSaveTimer = setTimeout(() => {
           const iframe = iframeRef.current;
           if (iframe?.contentDocument) {
             const fullHtml = "<!DOCTYPE html>" + iframe.contentDocument.documentElement.outerHTML;
-            // Save to API (persists html_snapshot in DB)
-            // Store pending HTML so it's applied when exiting edit mode
             pendingHtmlRef.current = fullHtml;
             fetch(`/api/pages/${page.id}`, {
               method: "PATCH",
@@ -539,7 +434,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }).catch(() => {});
   }, [page.id]);
 
-  // Load leads for leads modal
+  // Load leads
   const loadLeads = useCallback(async () => {
     setLeadsLoading(true);
     try {
@@ -551,11 +446,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, [page.id]);
 
-  // Download leads CSV
   const downloadLeadsCsv = useCallback(() => {
     window.open(`/api/pages/${page.id}/leads?format=csv`, "_blank");
   }, [page.id]);
-
 
   // Open publish modal
   const openPublishModal = useCallback(() => {
@@ -568,11 +461,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     setShowPublishModal(true);
   }, [page.slug, page.sio_capture_tag, page.meta_description, page.og_image_url, page.facebook_pixel_id, page.google_tag_id]);
 
-  // Publish with modal settings
+  // Publish
   const handlePublish = useCallback(async () => {
     setPublishing(true);
     try {
-      // Save settings first
       await fetch(`/api/pages/${page.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -586,7 +478,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         }),
       });
 
-      // Publish
       const res = await fetch(`/api/pages/${page.id}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -629,7 +520,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, [page.id]);
 
-  // Copy public URL
+  // Copy URL
   const copyUrl = useCallback(() => {
     const url = `${window.location.origin}/p/${page.slug}`;
     navigator.clipboard.writeText(url).then(() => {
@@ -649,37 +540,26 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     URL.revokeObjectURL(url);
   }, [htmlPreview, page.slug]);
 
-  // Download text as PDF (printable HTML)
+  // Download text as PDF
   const downloadTextPdf = useCallback(() => {
-    // Extract text content from the iframe
     const iframe = iframeRef.current;
     let textContent = "";
-
     if (iframe?.contentDocument) {
       const body = iframe.contentDocument.body;
       const elements = body.querySelectorAll("h1, h2, h3, h4, h5, h6, p, li, span, a, button, blockquote, td, th");
       const seen = new Set<string>();
-
       elements.forEach((el) => {
-        // Skip nested elements already captured by parent
         if (el.closest("script") || el.closest("style") || el.closest("noscript")) return;
         const text = (el.textContent || "").trim();
         if (!text || text.length < 3 || seen.has(text)) return;
         seen.add(text);
-
         const tag = el.tagName.toLowerCase();
-        if (tag.startsWith("h")) {
-          textContent += `\n${"#".repeat(parseInt(tag[1]) || 1)} ${text}\n\n`;
-        } else if (tag === "li") {
-          textContent += `- ${text}\n`;
-        } else if (tag === "blockquote") {
-          textContent += `> ${text}\n\n`;
-        } else {
-          textContent += `${text}\n\n`;
-        }
+        if (tag.startsWith("h")) textContent += `\n${"#".repeat(parseInt(tag[1]) || 1)} ${text}\n\n`;
+        else if (tag === "li") textContent += `- ${text}\n`;
+        else if (tag === "blockquote") textContent += `> ${text}\n\n`;
+        else textContent += `${text}\n\n`;
       });
     } else {
-      // Fallback: extract from content_data
       const cd = page.content_data;
       for (const [key, val] of Object.entries(cd)) {
         if (typeof val === "string" && val.trim() && !key.includes("url") && !key.includes("image") && !key.includes("color")) {
@@ -687,69 +567,19 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         }
       }
     }
-
-    if (!textContent.trim()) {
-      textContent = "Aucun contenu texte disponible.";
-    }
-
-    // Create a printable HTML document
-    const printHtml = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<title>${page.title || "Page"} - Texte</title>
-<style>
-  @media print { @page { margin: 2cm; } }
-  body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; line-height: 1.8; font-size: 14px; }
-  h1, h2, h3, h4, h5, h6 { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; color: #111; }
-  h1 { font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 8px; }
-  h2 { font-size: 20px; }
-  h3 { font-size: 17px; }
-  p { margin: 0 0 1em; }
-  blockquote { border-left: 3px solid #ddd; padding-left: 16px; color: #555; margin: 1em 0; }
-  ul { padding-left: 20px; }
-  li { margin-bottom: 4px; }
-  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #eee; font-size: 11px; color: #999; }
-</style>
-</head>
-<body>
-<h1>${page.title || "Page"}</h1>
-${textContent.split("\n").map((line) => {
-      const l = line.trim();
-      if (!l) return "";
-      if (l.startsWith("# ")) return `<h1>${l.slice(2)}</h1>`;
-      if (l.startsWith("## ")) return `<h2>${l.slice(3)}</h2>`;
-      if (l.startsWith("### ")) return `<h3>${l.slice(4)}</h3>`;
-      if (l.startsWith("#### ")) return `<h4>${l.slice(5)}</h4>`;
-      if (l.startsWith("- ")) return `<li>${l.slice(2)}</li>`;
-      if (l.startsWith("> ")) return `<blockquote>${l.slice(2)}</blockquote>`;
-      return `<p>${l}</p>`;
-    }).join("\n")}
-<div class="footer">Genere par Tipote</div>
-</body>
-</html>`;
-
-    // Open in new window and trigger print (saves as PDF)
+    if (!textContent.trim()) textContent = "Aucun contenu texte disponible.";
+    const printHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${page.title || "Page"} - Texte</title><style>@media print{@page{margin:2cm}}body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:0 20px;color:#1a1a1a;line-height:1.8;font-size:14px}h1,h2,h3{font-family:-apple-system,sans-serif;margin-top:1.5em;margin-bottom:.5em;color:#111}h1{font-size:24px;border-bottom:2px solid #eee;padding-bottom:8px}p{margin:0 0 1em}li{margin-bottom:4px}.footer{margin-top:40px;border-top:1px solid #eee;font-size:11px;color:#999;padding-top:16px}</style></head><body><h1>${page.title || "Page"}</h1>${textContent.split("\n").map((l) => { const t = l.trim(); if (!t) return ""; if (t.startsWith("# ")) return `<h1>${t.slice(2)}</h1>`; if (t.startsWith("## ")) return `<h2>${t.slice(3)}</h2>`; if (t.startsWith("### ")) return `<h3>${t.slice(4)}</h3>`; if (t.startsWith("- ")) return `<li>${t.slice(2)}</li>`; if (t.startsWith("> ")) return `<blockquote>${t.slice(2)}</blockquote>`; return `<p>${t}</p>`; }).join("\n")}<div class="footer">Genere par Tipote</div></body></html>`;
     const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(printHtml);
-      win.document.close();
-      // Auto-trigger print dialog after load
-      win.onload = () => win.print();
-      setTimeout(() => win.print(), 500);
-    }
+    if (win) { win.document.write(printHtml); win.document.close(); win.onload = () => win.print(); setTimeout(() => win.print(), 500); }
   }, [page.content_data, page.title]);
 
-  // Open in new tab
+  // Preview in new tab
   const openPreview = useCallback(() => {
     const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(htmlPreview);
-      win.document.close();
-    }
+    if (win) { win.document.write(htmlPreview); win.document.close(); }
   }, [htmlPreview]);
 
-  // OG image upload (for publish modal)
+  // OG image upload
   const handleOgImageUpload = useCallback(async () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -757,210 +587,397 @@ ${textContent.split("\n").map((line) => {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-
       setUploadingOg(true);
       try {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("contentId", `page-${page.id}-og`);
-
         const res = await fetch("/api/upload/image", { method: "POST", body: formData });
         const data = await res.json();
-        if (data.ok && data.url) {
-          setPublishOgUrl(data.url);
-        }
-      } catch { /* ignore */ } finally {
-        setUploadingOg(false);
-      }
+        if (data.ok && data.url) setPublishOgUrl(data.url);
+      } catch { /* ignore */ } finally { setUploadingOg(false); }
     };
     input.click();
   }, [page.id]);
 
-  // Save thank-you page settings (direct DB columns, not content_data)
+  // Save thank-you
   const saveThankYou = useCallback(async () => {
     setSavingThankYou(true);
     try {
       await fetch(`/api/pages/${page.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          thank_you_title: thankYouHeading,
-          thank_you_message: thankYouMessage,
-          thank_you_cta_text: thankYouCtaText,
-          thank_you_cta_url: thankYouCtaUrl,
-        }),
+        body: JSON.stringify({ thank_you_title: thankYouHeading, thank_you_message: thankYouMessage, thank_you_cta_text: thankYouCtaText, thank_you_cta_url: thankYouCtaUrl }),
       });
       setShowThankYouModal(false);
-    } catch { /* ignore */ } finally {
-      setSavingThankYou(false);
-    }
+    } catch { /* ignore */ } finally { setSavingThankYou(false); }
   }, [page.id, thankYouHeading, thankYouMessage, thankYouCtaText, thankYouCtaUrl]);
+
+  // Manual save (triggers re-render + persist)
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      // If there's pending inline HTML edits, save them
+      const iframe = iframeRef.current;
+      if (iframe?.contentDocument) {
+        const fullHtml = "<!DOCTYPE html>" + iframe.contentDocument.documentElement.outerHTML;
+        pendingHtmlRef.current = fullHtml;
+        await fetch(`/api/pages/${page.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ html_snapshot: fullHtml, content_data: page.content_data, brand_tokens: page.brand_tokens }),
+        });
+      }
+    } catch { /* ignore */ } finally {
+      setSaving(false);
+    }
+  }, [page.id, page.content_data, page.brand_tokens]);
 
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
   const publishPreviewUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${publishSlug}` : `/p/${publishSlug}`;
   const isPublished = page.status === "published";
   const deviceCfg = DEVICE_CONFIG[device];
 
+  // ─────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────
+
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-background">
-      {/* Top toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-background shrink-0">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
-            <ArrowLeft className="w-4 h-4" />
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#f0f2f5] dark:bg-[#0d1117]">
+
+      {/* ════════════════ TOP BAR (Systeme.io style) ════════════════ */}
+      <div className="h-12 shrink-0 flex items-center justify-between px-3 bg-white dark:bg-[#161b22] border-b border-border/50 shadow-sm">
+
+        {/* Left: Back + Title */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={() => setLeftTab(leftTab === "parametres" ? null : "parametres")}
+            className={`p-2 rounded-lg transition-colors ${leftTab === "parametres" ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"}`}
+            title="Paramètres"
+          >
+            <Settings className="w-4 h-4" />
           </button>
-          <div>
-            <h1 className="text-sm font-semibold truncate max-w-[200px]">{page.title}</h1>
-            <p className="text-xs text-muted-foreground">
-              {page.views_count} vues · {page.leads_count} leads
-            </p>
+
+          {/* Tipote logo mark */}
+          <div className="flex items-center gap-1.5">
+            <div className="w-6 h-6 rounded-md gradient-primary flex items-center justify-center">
+              <span className="text-white text-xs font-bold">t</span>
+            </div>
+            <span className="text-sm font-semibold text-foreground hidden sm:inline truncate max-w-[140px]">{page.title}</span>
           </div>
+
+          {/* Saving indicator */}
+          {saving && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="hidden sm:inline">Sauvegarde...</span>
+            </div>
+          )}
+          {uploadingImage && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="hidden sm:inline">Upload...</span>
+            </div>
+          )}
         </div>
 
+        {/* Center: Device toggle + Preview */}
         <div className="flex items-center gap-2">
-          {/* Device toggle */}
-          <div className="flex items-center bg-muted rounded-lg p-1 gap-0.5">
+          <div className="flex items-center bg-muted/60 rounded-lg p-0.5 gap-0.5">
             {(Object.keys(DEVICE_CONFIG) as Device[]).map((d) => {
               const Icon = DEVICE_CONFIG[d].icon;
               return (
                 <button
                   key={d}
                   onClick={() => setDevice(d)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors ${
-                    device === d ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs transition-all ${
+                    device === d ? "bg-white dark:bg-[#21262d] shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{DEVICE_CONFIG[d].label}</span>
+                  <span className="hidden md:inline">{DEVICE_CONFIG[d].label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Upload indicator */}
-          {uploadingImage && (
-            <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span className="hidden sm:inline">Upload...</span>
-            </div>
-          )}
+          {/* Preview button */}
+          <button onClick={openPreview} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Aperçu">
+            <Play className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
-          {/* Thank-you page (capture only) */}
-          {(page.page_type === "capture" || page.template_kind === "capture") && (
-            <button
-              onClick={() => setShowThankYouModal(true)}
-              className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
-              title="Page de remerciement"
-            >
-              <Check className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* View leads */}
-          <button
-            onClick={() => { setShowLeadsModal(true); loadLeads(); }}
-            className="p-2 rounded-lg border hover:bg-muted text-muted-foreground relative"
-            title="Voir les leads"
-          >
-            <Users className="w-4 h-4" />
-            {page.leads_count > 0 && (
-              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {page.leads_count > 99 ? "99+" : page.leads_count}
-              </span>
+        {/* Right: Actions + Sauvegarder + Sortir */}
+        <div className="flex items-center gap-1.5">
+          {/* Quick actions */}
+          <div className="hidden sm:flex items-center gap-1">
+            {(page.page_type === "capture" || page.template_kind === "capture") && (
+              <button onClick={() => setShowThankYouModal(true)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Page de remerciement">
+                <Check className="w-3.5 h-3.5" />
+              </button>
             )}
-          </button>
-
-          {/* Full-screen preview */}
-          <button onClick={openPreview} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Aperçu plein écran">
-            <ExternalLink className="w-4 h-4" />
-          </button>
-
-          {/* Download HTML */}
-          <button onClick={downloadHtml} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Télécharger HTML">
-            <Download className="w-4 h-4" />
-          </button>
-
-          {/* Download text as PDF */}
-          <button onClick={downloadTextPdf} className="p-2 rounded-lg border hover:bg-muted text-muted-foreground" title="Télécharger le texte en PDF">
-            <FileDown className="w-4 h-4" />
-          </button>
-
-          {/* QR code (only when published) */}
-          {isPublished && (
-            <button
-              onClick={() => setShowQrModal(true)}
-              className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
-              title="QR Code"
-            >
-              <QrCode className="w-4 h-4" />
+            <button onClick={() => { setShowLeadsModal(true); loadLeads(); }} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground relative" title="Leads">
+              <Users className="w-3.5 h-3.5" />
+              {page.leads_count > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                  {page.leads_count > 99 ? "+" : page.leads_count}
+                </span>
+              )}
             </button>
-          )}
+            <button onClick={downloadHtml} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Télécharger HTML">
+              <Download className="w-3.5 h-3.5" />
+            </button>
+            {isPublished && (
+              <button onClick={() => setShowQrModal(true)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="QR Code">
+                <QrCode className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
-          {/* Publish / manage */}
+          {/* Divider */}
+          <div className="w-px h-5 bg-border/50 mx-1 hidden sm:block" />
+
+          {/* Publish / En ligne */}
           {isPublished ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
                 onClick={copyUrl}
-                className="px-3 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 flex items-center gap-1.5"
+                className="h-8 px-3 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 flex items-center gap-1.5 transition-colors"
               >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
-                {copied ? "Copie !" : "En ligne"}
+                {copied ? <Check className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
+                {copied ? "Copié !" : "En ligne"}
               </button>
               <button
                 onClick={handleUnpublish}
                 disabled={publishing}
-                className="p-2 rounded-lg border hover:bg-muted text-muted-foreground"
-                title="Depublier"
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
+                title="Dépublier"
               >
-                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <EyeOff className="w-4 h-4" />}
+                {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <EyeOff className="w-3.5 h-3.5" />}
               </button>
             </div>
           ) : (
             <button
               onClick={openPublishModal}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5"
+              className="h-8 px-3 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 transition-colors"
             >
-              <Share2 className="w-3.5 h-3.5" />
+              <Share2 className="w-3 h-3" />
               Publier
             </button>
           )}
+
+          {/* Sauvegarder */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="h-8 px-3 rounded-lg text-xs font-semibold border border-border hover:bg-muted flex items-center gap-1.5 transition-colors"
+          >
+            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+            <span className="hidden sm:inline">Sauvegarder</span>
+          </button>
+
+          {/* Sortir */}
+          <button
+            onClick={onBack}
+            className="h-8 px-3 rounded-lg text-xs font-semibold bg-red-500 hover:bg-red-600 text-white flex items-center gap-1.5 transition-colors"
+          >
+            <LogOut className="w-3 h-3" />
+            Sortir
+          </button>
         </div>
       </div>
 
-      {/* Published URL bar */}
+      {/* Published URL bar (slim) */}
       {isPublished && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/20 border-b text-sm">
-          <Globe className="w-4 h-4 text-green-600" />
-          <span className="text-green-700 dark:text-green-400 font-medium">En ligne :</span>
+        <div className="h-7 shrink-0 flex items-center gap-2 px-3 bg-green-50 dark:bg-green-950/20 border-b border-green-200/50 text-xs">
+          <Globe className="w-3 h-3 text-green-600" />
           <a href={publicUrl} target="_blank" rel="noopener" className="text-green-600 underline truncate">
             {publicUrl}
           </a>
-          <button onClick={copyUrl} className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900/30">
-            {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-green-600" />}
+          <button onClick={copyUrl} className="p-0.5 rounded hover:bg-green-100 dark:hover:bg-green-900/30">
+            {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3 text-green-600" />}
           </button>
-          <span className="text-xs text-green-600/60 ml-auto">Modifications en temps reel</span>
+          <span className="text-green-600/50 ml-auto hidden sm:inline">Modifications en temps réel</span>
         </div>
       )}
 
-      {/* Saving indicator */}
-      {saving && (
-        <div className="flex items-center gap-2 px-4 py-1 border-b text-xs text-muted-foreground bg-muted/30">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          Sauvegarde...
-        </div>
-      )}
+      {/* ════════════════ MAIN AREA ════════════════ */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
 
-      {/* Main content + Chat side panel */}
-      <div className="flex-1 flex min-h-0">
-        {/* Preview area */}
-        <div className="flex-1 flex justify-center bg-muted/30 overflow-auto p-4 min-h-0">
+        {/* ──── LEFT SIDEBAR (Paramètres) ──── */}
+        {leftTab && (
+          <div className="w-[300px] shrink-0 bg-white dark:bg-[#161b22] border-r border-border/50 flex flex-col overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
+              <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                {leftTab === "parametres" ? "Paramètres" : "Section"}
+              </h3>
+              <button onClick={() => setLeftTab(null)} className="p-1 rounded hover:bg-muted text-muted-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-4">
+              {leftTab === "parametres" && (
+                <>
+                  {/* URL / Slug */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                      <Link2 className="w-3 h-3" /> URL
+                    </label>
+                    <div className="flex items-center gap-1 bg-muted/30 rounded-lg px-2 py-1.5 border text-xs">
+                      <span className="text-muted-foreground whitespace-nowrap">/p/</span>
+                      <input
+                        type="text"
+                        value={page.slug}
+                        onChange={(e) => {
+                          const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+                          handleSettingUpdate("slug", val);
+                        }}
+                        className="flex-1 bg-transparent font-medium focus:outline-none min-w-0"
+                      />
+                    </div>
+                  </div>
+
+                  {/* SEO */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                      <FileText className="w-3 h-3" /> Description SEO
+                    </label>
+                    <textarea
+                      value={page.meta_description || ""}
+                      onChange={(e) => handleSettingUpdate("meta_description", e.target.value)}
+                      className="w-full px-2 py-1.5 border rounded-lg text-xs resize-none"
+                      rows={2}
+                      maxLength={160}
+                      placeholder="Description pour Google..."
+                    />
+                  </div>
+
+                  {/* Systeme.io tag */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                      <Tag className="w-3 h-3" /> Tag Systeme.io
+                    </label>
+                    <input
+                      type="text"
+                      value={page.sio_capture_tag || ""}
+                      onChange={(e) => handleSettingUpdate("sio_capture_tag", e.target.value)}
+                      placeholder="capture-ebook"
+                      className="w-full px-2 py-1.5 border rounded-lg text-xs"
+                    />
+                  </div>
+
+                  {/* OG Image */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                      <ImageIcon className="w-3 h-3" /> Image de partage
+                    </label>
+                    {page.og_image_url ? (
+                      <div className="relative rounded-lg overflow-hidden border">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={page.og_image_url} alt="OG" className="w-full h-20 object-cover" />
+                        <button
+                          onClick={() => handleSettingUpdate("og_image_url", "")}
+                          className="absolute top-1 right-1 p-1 rounded bg-black/50 text-white hover:bg-black/70"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleOgImageUpload}
+                        className="w-full py-4 border border-dashed rounded-lg text-xs text-muted-foreground hover:bg-muted/30 flex flex-col items-center gap-1"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Ajouter
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Tracking */}
+                  <div className="pt-2 border-t border-border/30">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Tracking</p>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={page.facebook_pixel_id || ""}
+                        onChange={(e) => handleSettingUpdate("facebook_pixel_id", e.target.value.replace(/[^0-9]/g, ""))}
+                        placeholder="Facebook Pixel ID"
+                        className="w-full px-2 py-1.5 border rounded-lg text-xs"
+                      />
+                      <input
+                        type="text"
+                        value={page.google_tag_id || ""}
+                        onChange={(e) => handleSettingUpdate("google_tag_id", e.target.value.replace(/[^a-zA-Z0-9-]/g, ""))}
+                        placeholder="Google Tag (G-XXXX)"
+                        className="w-full px-2 py-1.5 border rounded-lg text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Thank-you page (capture only) */}
+                  {(page.page_type === "capture" || page.template_kind === "capture") && (
+                    <div className="pt-2 border-t border-border/30">
+                      <button
+                        onClick={() => setShowThankYouModal(true)}
+                        className="w-full py-2 border rounded-lg text-xs font-medium hover:bg-muted/30 flex items-center justify-center gap-1.5"
+                      >
+                        <Check className="w-3 h-3" />
+                        Page de remerciement
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Downloads */}
+                  <div className="pt-2 border-t border-border/30">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Exports</p>
+                    <div className="flex gap-2">
+                      <button onClick={downloadHtml} className="flex-1 py-1.5 border rounded-lg text-xs hover:bg-muted/30 flex items-center justify-center gap-1">
+                        <Download className="w-3 h-3" /> HTML
+                      </button>
+                      <button onClick={downloadTextPdf} className="flex-1 py-1.5 border rounded-lg text-xs hover:bg-muted/30 flex items-center justify-center gap-1">
+                        <FileDown className="w-3 h-3" /> PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="pt-2 border-t border-border/30">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Statistiques</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 rounded-lg bg-muted/30 text-center">
+                        <p className="text-lg font-bold">{page.views_count}</p>
+                        <p className="text-[10px] text-muted-foreground">Vues</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-muted/30 text-center">
+                        <p className="text-lg font-bold">{page.leads_count}</p>
+                        <p className="text-[10px] text-muted-foreground">Leads</p>
+                      </div>
+                    </div>
+                    {page.leads_count > 0 && (
+                      <button
+                        onClick={() => { setShowLeadsModal(true); loadLeads(); }}
+                        className="w-full mt-2 py-1.5 border rounded-lg text-xs hover:bg-muted/30 flex items-center justify-center gap-1"
+                      >
+                        <Users className="w-3 h-3" /> Voir les leads
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ──── PREVIEW AREA (full width) ──── */}
+        <div className="flex-1 flex justify-center overflow-auto p-2 sm:p-4 min-h-0">
           <div
-            className="bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300"
+            className="bg-white shadow-lg rounded-lg overflow-hidden transition-all duration-300"
             style={{
               width: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
-              maxWidth: device === "desktop" ? "1200px" : `${deviceCfg.width}px`,
+              maxWidth: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
               height: "100%",
-              minHeight: "400px",
+              minHeight: "300px",
             }}
           >
             <iframe
@@ -973,7 +990,7 @@ ${textContent.split("\n").map((line) => {
           </div>
         </div>
 
-        {/* Chat panel (right side) */}
+        {/* ──── RIGHT: Chat IA ──── */}
         <PageChatBar
           pageId={page.id}
           templateId={page.template_id}
@@ -985,14 +1002,12 @@ ${textContent.split("\n").map((line) => {
         />
       </div>
 
-      {/* ==================== PUBLISH MODAL ==================== */}
+      {/* ════════════════ MODALS ════════════════ */}
+
+      {/* PUBLISH MODAL */}
       {showPublishModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPublishModal(false)}>
-          <div
-            className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 pb-4 border-b">
               <div>
                 <h2 className="text-lg font-bold">Publier ta page</h2>
@@ -1002,14 +1017,11 @@ ${textContent.split("\n").map((line) => {
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            {/* Body */}
             <div className="p-6 space-y-5">
-              {/* URL / Slug */}
+              {/* URL */}
               <div>
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <Link2 className="w-4 h-4 text-muted-foreground" />
-                  URL de partage
+                  <Link2 className="w-4 h-4 text-muted-foreground" /> URL de partage
                 </label>
                 <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-3 py-2 border">
                   <span className="text-sm text-muted-foreground whitespace-nowrap">{typeof window !== "undefined" ? window.location.origin : ""}/p/</span>
@@ -1024,168 +1036,59 @@ ${textContent.split("\n").map((line) => {
                 <p className="text-[10px] text-muted-foreground mt-1 truncate">{publishPreviewUrl}</p>
               </div>
 
-              {/* Systeme.io tag */}
+              {/* Tag SIO */}
               <div>
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <Tag className="w-4 h-4 text-muted-foreground" />
-                  Tag Systeme.io (optionnel)
+                  <Tag className="w-4 h-4 text-muted-foreground" /> Tag Systeme.io
                 </label>
-                <input
-                  type="text"
-                  value={publishTag}
-                  onChange={(e) => setPublishTag(e.target.value)}
-                  placeholder="Ex: capture-ebook-fitness"
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Les leads captures seront tagges dans Systeme.io avec ce tag.
-                </p>
+                <input type="text" value={publishTag} onChange={(e) => setPublishTag(e.target.value)} placeholder="capture-ebook" className="w-full px-3 py-2 border rounded-lg text-sm" />
               </div>
 
               {/* OG Image */}
               <div>
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <ImageIcon className="w-4 h-4 text-muted-foreground" />
-                  Image de partage (OG)
+                  <ImageIcon className="w-4 h-4 text-muted-foreground" /> Image de partage
                 </label>
                 {publishOgUrl ? (
                   <div className="relative rounded-lg overflow-hidden border bg-muted/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={publishOgUrl} alt="OG preview" className="w-full h-32 object-cover" />
                     <div className="absolute top-2 right-2 flex gap-1">
-                      <button
-                        onClick={handleOgImageUpload}
-                        className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs"
-                      >
-                        Changer
-                      </button>
-                      <button
-                        onClick={() => setPublishOgUrl("")}
-                        className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs text-destructive"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                      <button onClick={handleOgImageUpload} className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs">Changer</button>
+                      <button onClick={() => setPublishOgUrl("")} className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs text-destructive"><X className="w-3 h-3" /></button>
                     </div>
                   </div>
                 ) : (
-                  <button
-                    onClick={handleOgImageUpload}
-                    disabled={uploadingOg}
-                    className="w-full py-8 border-2 border-dashed rounded-lg text-sm text-muted-foreground hover:bg-muted/30 transition-colors flex flex-col items-center gap-2"
-                  >
-                    {uploadingOg ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        <Upload className="w-5 h-5" />
-                        <span>Ajouter une image de partage</span>
-                      </>
-                    )}
+                  <button onClick={handleOgImageUpload} disabled={uploadingOg} className="w-full py-8 border-2 border-dashed rounded-lg text-sm text-muted-foreground hover:bg-muted/30 flex flex-col items-center gap-2">
+                    {uploadingOg ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Upload className="w-5 h-5" /><span>Ajouter une image</span></>}
                   </button>
                 )}
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Affichée quand ta page est partagée sur les réseaux sociaux.
-                </p>
               </div>
 
-              {/* Meta description */}
+              {/* Meta desc */}
               <div>
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  Description (SEO)
+                  <FileText className="w-4 h-4 text-muted-foreground" /> Description SEO
                 </label>
-                <textarea
-                  value={publishMetaDesc}
-                  onChange={(e) => setPublishMetaDesc(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
-                  rows={3}
-                  maxLength={160}
-                  placeholder="Description qui apparaît dans Google..."
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  {publishMetaDesc.length}/160 caractères
-                </p>
+                <textarea value={publishMetaDesc} onChange={(e) => setPublishMetaDesc(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm resize-none" rows={3} maxLength={160} placeholder="Description pour Google..." />
+                <p className="text-[10px] text-muted-foreground mt-1">{publishMetaDesc.length}/160</p>
               </div>
 
-              {/* Facebook Pixel */}
-              <div>
-                <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <svg className="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                  Facebook Pixel ID
-                  <a href="https://www.facebook.com/business/help/952192354843755" target="_blank" rel="noopener" title="Comment trouver son Pixel ID ?">
-                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-primary" />
-                  </a>
-                </label>
-                <input
-                  type="text"
-                  value={publishFbPixel}
-                  onChange={(e) => setPublishFbPixel(e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder="Ex: 123456789012345"
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Suivi des conversions Facebook/Meta Ads.
-                </p>
-              </div>
-
-              {/* Google Tag */}
-              <div>
-                <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <svg className="w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
-                  Google Tag (gtag)
-                  <a href="https://support.google.com/tagmanager/answer/6102821" target="_blank" rel="noopener" title="Comment trouver son Google Tag ?">
-                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-primary" />
-                  </a>
-                </label>
-                <input
-                  type="text"
-                  value={publishGtag}
-                  onChange={(e) => setPublishGtag(e.target.value.replace(/[^a-zA-Z0-9-]/g, ""))}
-                  placeholder="Ex: G-XXXXXXXXXX ou GTM-XXXXXX"
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Suivi Google Analytics / Google Ads.
-                </p>
-              </div>
-
-              {/* Widgets */}
-              <div className="pt-2 border-t">
-                <p className="text-sm font-medium mb-3 flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  Widgets
-                </p>
-                <p className="text-[10px] text-muted-foreground mb-3">
-                  Affiche des widgets sur ta page publique (preuve sociale, partage).
-                  Les widgets activés dans ta section Widgets apparaîtront automatiquement.
-                </p>
-                <div className="flex gap-2">
-                  <a
-                    href="/widgets"
-                    target="_blank"
-                    rel="noopener"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium hover:bg-muted/50 transition-colors"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    Gérer les widgets
-                  </a>
+              {/* Tracking */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">Facebook Pixel ID</label>
+                  <input type="text" value={publishFbPixel} onChange={(e) => setPublishFbPixel(e.target.value.replace(/[^0-9]/g, ""))} placeholder="123456789012345" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">Google Tag</label>
+                  <input type="text" value={publishGtag} onChange={(e) => setPublishGtag(e.target.value.replace(/[^a-zA-Z0-9-]/g, ""))} placeholder="G-XXXXXXXXXX" className="w-full px-3 py-2 border rounded-lg text-sm" />
                 </div>
               </div>
             </div>
-
-            {/* Footer */}
             <div className="p-6 pt-4 border-t flex items-center justify-end gap-3">
-              <button
-                onClick={() => setShowPublishModal(false)}
-                className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handlePublish}
-                disabled={publishing || !publishSlug.trim()}
-                className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
-              >
+              <button onClick={() => setShowPublishModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted">Annuler</button>
+              <button onClick={handlePublish} disabled={publishing || !publishSlug.trim()} className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2">
                 {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
                 Mettre en ligne
               </button>
@@ -1194,44 +1097,31 @@ ${textContent.split("\n").map((line) => {
         </div>
       )}
 
-      {/* ==================== LEADS MODAL ==================== */}
+      {/* LEADS MODAL */}
       {showLeadsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowLeadsModal(false)}>
-          <div
-            className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 pb-4 border-b">
               <div>
                 <h2 className="text-lg font-bold">Leads capturés</h2>
                 <p className="text-sm text-muted-foreground">
-                  {leadsData.length} lead{leadsData.length !== 1 ? "s" : ""} ·{" "}
-                  {page.views_count > 0 ? ((page.leads_count / page.views_count) * 100).toFixed(1) : "0"}% de conversion
+                  {leadsData.length} lead{leadsData.length !== 1 ? "s" : ""} · {page.views_count > 0 ? ((page.leads_count / page.views_count) * 100).toFixed(1) : "0"}% conversion
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={downloadLeadsCsv}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-muted flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Exporter CSV
+                <button onClick={downloadLeadsCsv} className="px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-muted flex items-center gap-1.5">
+                  <Download className="w-3.5 h-3.5" /> CSV
                 </button>
-                <button onClick={() => setShowLeadsModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
-                  <X className="w-4 h-4" />
-                </button>
+                <button onClick={() => setShowLeadsModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
               </div>
             </div>
-
             <div className="flex-1 overflow-y-auto p-6">
               {leadsLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
+                <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
               ) : leadsData.length === 0 ? (
                 <div className="text-center py-12">
                   <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Aucun lead capturé pour le moment.</p>
+                  <p className="text-sm text-muted-foreground">Aucun lead pour le moment.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1242,20 +1132,9 @@ ${textContent.split("\n").map((line) => {
                         <p className="text-xs text-muted-foreground">
                           {lead.first_name && <span>{lead.first_name} · </span>}
                           {new Date(lead.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                          {lead.utm_source && <span> · via {lead.utm_source}</span>}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {lead.sio_synced ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                            Sync SIO
-                          </span>
-                        ) : page.sio_capture_tag ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-                            En attente
-                          </span>
-                        ) : null}
-                      </div>
+                      {lead.sio_synced && <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700">Sync SIO</span>}
                     </div>
                   ))}
                 </div>
@@ -1265,48 +1144,28 @@ ${textContent.split("\n").map((line) => {
         </div>
       )}
 
-      {/* ==================== QR CODE MODAL ==================== */}
+      {/* QR CODE MODAL */}
       {showQrModal && isPublished && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowQrModal(false)}>
-          <div
-            className="bg-background rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">QR Code</h2>
-              <button onClick={() => setShowQrModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setShowQrModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
             </div>
-
             <div className="flex flex-col items-center gap-4">
-              {/* QR code via public API (no dependency needed) */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicUrl)}`}
-                alt="QR Code"
-                className="w-60 h-60 rounded-lg border"
-              />
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicUrl)}`} alt="QR Code" className="w-60 h-60 rounded-lg border" />
               <p className="text-xs text-muted-foreground text-center break-all">{publicUrl}</p>
               <div className="flex gap-2 w-full">
                 <button
-                  onClick={() => {
-                    const link = document.createElement("a");
-                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&data=${encodeURIComponent(publicUrl)}`;
-                    link.download = `qr-${page.slug}.png`;
-                    link.click();
-                  }}
+                  onClick={() => { const l = document.createElement("a"); l.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&data=${encodeURIComponent(publicUrl)}`; l.download = `qr-${page.slug}.png`; l.click(); }}
                   className="flex-1 py-2 rounded-lg text-sm font-medium border hover:bg-muted flex items-center justify-center gap-1.5"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  Télécharger PNG
+                  <Download className="w-3.5 h-3.5" /> PNG
                 </button>
-                <button
-                  onClick={copyUrl}
-                  className="flex-1 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-1.5"
-                >
+                <button onClick={copyUrl} className="flex-1 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-1.5">
                   {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? "Copié !" : "Copier le lien"}
+                  {copied ? "Copié !" : "Copier"}
                 </button>
               </div>
             </div>
@@ -1314,95 +1173,43 @@ ${textContent.split("\n").map((line) => {
         </div>
       )}
 
-      {/* ==================== THANK-YOU PAGE MODAL ==================== */}
+      {/* THANK-YOU MODAL */}
       {showThankYouModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowThankYouModal(false)}>
-          <div
-            className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 pb-4 border-b">
               <div>
                 <h2 className="text-lg font-bold">Page de remerciement</h2>
-                <p className="text-sm text-muted-foreground">
-                  Affichée après l&apos;inscription. Personnalise le message et ajoute un lien.
-                </p>
+                <p className="text-sm text-muted-foreground">Affichée après inscription.</p>
               </div>
-              <button onClick={() => setShowThankYouModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setShowThankYouModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
             </div>
-
             <div className="p-6 space-y-5">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Titre</label>
-                <input
-                  type="text"
-                  value={thankYouHeading}
-                  onChange={(e) => setThankYouHeading(e.target.value)}
-                  placeholder="Merci pour ton inscription !"
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                  maxLength={100}
-                />
+                <input type="text" value={thankYouHeading} onChange={(e) => setThankYouHeading(e.target.value)} placeholder="Merci !" className="w-full px-3 py-2 border rounded-lg text-sm" maxLength={100} />
               </div>
-
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Message</label>
-                <textarea
-                  value={thankYouMessage}
-                  onChange={(e) => setThankYouMessage(e.target.value)}
-                  placeholder="Tu vas recevoir un email..."
-                  className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
-                  rows={4}
-                  maxLength={500}
-                />
+                <textarea value={thankYouMessage} onChange={(e) => setThankYouMessage(e.target.value)} placeholder="Tu vas recevoir un email..." className="w-full px-3 py-2 border rounded-lg text-sm resize-none" rows={4} maxLength={500} />
               </div>
-
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Bouton (optionnel)</label>
-                <input
-                  type="text"
-                  value={thankYouCtaText}
-                  onChange={(e) => setThankYouCtaText(e.target.value)}
-                  placeholder="Rejoindre le groupe Facebook"
-                  className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
-                  maxLength={50}
-                />
-                <input
-                  type="url"
-                  value={thankYouCtaUrl}
-                  onChange={(e) => setThankYouCtaUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
+                <input type="text" value={thankYouCtaText} onChange={(e) => setThankYouCtaText(e.target.value)} placeholder="Rejoindre le groupe" className="w-full px-3 py-2 border rounded-lg text-sm mb-2" maxLength={50} />
+                <input type="url" value={thankYouCtaUrl} onChange={(e) => setThankYouCtaUrl(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 border rounded-lg text-sm" />
               </div>
-
               {/* Preview */}
               <div className="rounded-xl border bg-muted/20 p-6 text-center">
                 <p className="text-xs text-muted-foreground mb-3">Aperçu</p>
                 <div className="text-3xl mb-2">&#10003;</div>
                 <h3 className="text-lg font-bold mb-2">{thankYouHeading || "Merci !"}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{thankYouMessage || "..."}</p>
-                {thankYouCtaText && (
-                  <span className="inline-block px-6 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium">
-                    {thankYouCtaText}
-                  </span>
-                )}
+                {thankYouCtaText && <span className="inline-block px-6 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium">{thankYouCtaText}</span>}
               </div>
             </div>
-
             <div className="p-6 pt-4 border-t flex items-center justify-end gap-3">
-              <button
-                onClick={() => setShowThankYouModal(false)}
-                className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={saveThankYou}
-                disabled={savingThankYou}
-                className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
-              >
+              <button onClick={() => setShowThankYouModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted">Annuler</button>
+              <button onClick={saveThankYou} disabled={savingThankYou} className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2">
                 {savingThankYou ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Enregistrer
               </button>
@@ -1410,7 +1217,6 @@ ${textContent.split("\n").map((line) => {
           </div>
         </div>
       )}
-
     </div>
   );
 }
