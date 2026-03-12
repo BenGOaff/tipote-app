@@ -528,14 +528,29 @@ fbq('init','${pid}');fbq('track','PageView');
 }
 
 // Strip any editor artifacts that may have leaked into html_snapshot.
-// Belt-and-suspenders: even if the editor cleanup works, this ensures
-// the public page is always clean.
+// Uses both regex pre-cleaning AND a DOM-based cleanup script that runs
+// inside the iframe to guarantee nothing slips through.
 function sanitizeEditorArtifacts(html: string): string {
-  // Remove the entire inline editing script block (data-tipote-injected)
-  html = html.replace(/<script[^>]*data-tipote-injected[^>]*>[\s\S]*?<\/script>/gi, "");
+  // ── Regex pre-cleaning (best-effort) ──
 
-  // Remove any remaining elements with data-tipote-injected (highlights, toolbar, overlays)
-  html = html.replace(/<div[^>]*data-tipote-injected[^>]*>[\s\S]*?<\/div>/gi, "");
+  // Remove inline editing script blocks — use index-based removal for robustness
+  // (regex with [\s\S]*? can fail on very long scripts or nested content)
+  let searchFrom = 0;
+  while (true) {
+    const scriptStart = html.indexOf("<script", searchFrom);
+    if (scriptStart === -1) break;
+    const tagEnd = html.indexOf(">", scriptStart);
+    if (tagEnd === -1) break;
+    const tagContent = html.slice(scriptStart, tagEnd + 1);
+    if (tagContent.includes("data-tipote-injected")) {
+      const scriptClose = html.indexOf("</script>", tagEnd);
+      if (scriptClose !== -1) {
+        html = html.slice(0, scriptStart) + html.slice(scriptClose + "</script>".length);
+        continue; // Don't advance searchFrom since we removed content
+      }
+    }
+    searchFrom = tagEnd + 1;
+  }
 
   // Remove data-tp-section-idx attributes (editor tracking)
   html = html.replace(/\s*data-tp-section-idx="[^"]*"/g, "");
@@ -552,11 +567,36 @@ function sanitizeEditorArtifacts(html: string): string {
   // Clean up empty style attributes left after removing editor styles
   html = html.replace(/\s*style="[\s;]*"/g, "");
 
-  // Inject a safety CSS rule that hides any remaining editor artifacts
-  const safetyCSS = `<style>[data-tipote-injected]{display:none!important}[data-tp-section-idx]{outline:none!important}</style>`;
+  // ── CSS safety net — hides any remaining artifacts ──
+  const safetyCSS = `<style>[data-tipote-injected]{display:none!important}[contenteditable]{-webkit-user-modify:read-only!important}</style>`;
   const headEnd = html.indexOf("</head>");
   if (headEnd !== -1) {
     html = html.slice(0, headEnd) + safetyCSS + html.slice(headEnd);
+  }
+
+  // ── DOM-based cleanup script — runs immediately, before anything else ──
+  // This is the ultimate safety net: even if regex misses something,
+  // this script uses the real DOM API to strip all editor artifacts.
+  const cleanupScript = `<script>
+(function(){
+  function clean(){
+    document.querySelectorAll('[data-tipote-injected]').forEach(function(el){el.remove()});
+    document.querySelectorAll('[data-tp-section-idx]').forEach(function(el){el.removeAttribute('data-tp-section-idx')});
+    document.querySelectorAll('[contenteditable]').forEach(function(el){el.removeAttribute('contenteditable');el.style.removeProperty('cursor');el.style.removeProperty('outline')});
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',clean)}else{clean()}
+  // Also run after a short delay to catch any dynamically created elements
+  setTimeout(clean,100);setTimeout(clean,500);
+})();
+</script>`;
+
+  // Inject cleanup script right after <head> (runs before any other scripts)
+  const headStart = html.indexOf("<head");
+  if (headStart !== -1) {
+    const headTagEnd = html.indexOf(">", headStart);
+    if (headTagEnd !== -1) {
+      html = html.slice(0, headTagEnd + 1) + cleanupScript + html.slice(headTagEnd + 1);
+    }
   }
 
   return html;
