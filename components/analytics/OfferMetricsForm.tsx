@@ -8,8 +8,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, Plus, Trash2, HelpCircle, ChevronDown, ChevronUp, Mail, BarChart3, ExternalLink } from "lucide-react";
-import { format, startOfMonth, subMonths } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Loader2, Save, Plus, Trash2, HelpCircle, ChevronDown, ChevronUp, Mail, BarChart3, ExternalLink, CalendarIcon } from "lucide-react";
+import { format, startOfMonth, subMonths, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { OfferMetric, AggregatedSource, EmailStats } from "@/hooks/useOfferMetrics";
 import type { OfferOption } from "@/lib/offers";
@@ -31,17 +33,23 @@ interface OfferMetricsFormProps {
   onMonthConsumed?: () => void;
 }
 
-const getAvailableMonths = () => {
-  const months: Array<{ value: string; label: string }> = [];
+const getQuickDates = () => {
+  const dates: Array<{ value: string; label: string }> = [];
   const now = new Date();
-  for (let i = 0; i < 12; i++) {
+  // Today
+  dates.push({
+    value: format(now, "yyyy-MM-dd"),
+    label: `Aujourd'hui (${format(now, "d MMM yyyy", { locale: fr })})`,
+  });
+  // Last 6 months (first of month)
+  for (let i = 0; i < 6; i++) {
     const date = startOfMonth(subMonths(now, i));
-    months.push({
+    dates.push({
       value: format(date, "yyyy-MM-dd"),
       label: format(date, "MMMM yyyy", { locale: fr }),
     });
   }
-  return months;
+  return dates;
 };
 
 function pct(n: number, d: number) {
@@ -74,8 +82,9 @@ export const OfferMetricsForm = ({
   initialMonth,
   onMonthConsumed,
 }: OfferMetricsFormProps) => {
-  const availableMonths = useMemo(() => getAvailableMonths(), []);
-  const [month, setMonth] = useState(availableMonths[0].value);
+  const quickDates = useMemo(() => getQuickDates(), []);
+  const [month, setMonth] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // When navigating from history tab with a specific month to edit
   useEffect(() => {
@@ -209,21 +218,44 @@ export const OfferMetricsForm = ({
     <div className="space-y-6">
       {/* Period selector */}
       <Card className="p-5">
-        <div className="flex items-center gap-4">
-          <div className="space-y-1 flex-1 max-w-xs">
-            <Label className="font-semibold">Période des données</Label>
-            <Select value={month} onValueChange={setMonth}>
-              <SelectTrigger>
-                <SelectValue placeholder="Mois" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableMonths.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+          <div className="space-y-1">
+            <Label className="font-semibold">Date des données</Label>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(parseISO(month), "d MMMM yyyy", { locale: fr })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={parseISO(month)}
+                  onSelect={(date) => {
+                    if (date) {
+                      setMonth(format(date, "yyyy-MM-dd"));
+                      setCalendarOpen(false);
+                    }
+                  }}
+                  locale={fr}
+                  disabled={(date) => date > new Date()}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {quickDates.map((d) => (
+              <Button
+                key={d.value}
+                variant={month === d.value ? "default" : "outline"}
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setMonth(d.value)}
+              >
+                {d.label}
+              </Button>
+            ))}
           </div>
         </div>
       </Card>
@@ -291,7 +323,7 @@ export const OfferMetricsForm = ({
                     <>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">
-                          Nombre de ventes de &quot;{row.offer_name}&quot; ce mois
+                          Nombre de ventes de &quot;{row.offer_name}&quot;
                         </Label>
                         <Input
                           type="number"
@@ -303,7 +335,7 @@ export const OfferMetricsForm = ({
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">
-                          CA total de &quot;{row.offer_name}&quot; ce mois (EUR)
+                          CA total de &quot;{row.offer_name}&quot; (EUR)
                         </Label>
                         <Input
                           type="number"
@@ -367,7 +399,7 @@ export const OfferMetricsForm = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Nombre total d&apos;emails dans ta liste à la fin de ce mois
+              Nombre total d&apos;emails dans ta liste
             </Label>
             <Input
               type="number"
@@ -379,7 +411,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Nombre d&apos;emails envoyés ce mois (newsletters, sequences...)
+              Nombre d&apos;emails envoyés (newsletters, sequences...)
             </Label>
             <Input
               type="number"
@@ -391,7 +423,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Taux d&apos;ouverture moyen des emails envoyés ce mois (%)
+              Taux d&apos;ouverture moyen des emails (%)
             </Label>
             <Input
               type="number"
@@ -404,7 +436,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Taux de clics moyen des emails envoyés ce mois (%)
+              Taux de clics moyen des emails (%)
             </Label>
             <Input
               type="number"
