@@ -75,7 +75,41 @@ const DEVICE_CONFIG: Record<Device, { width: number; label: string; icon: typeof
 
 type LeftTab = "builder" | "parametres";
 
-// ---------- Section info from iframe ----------
+// ---------- Selected element info from iframe ----------
+
+type SelectedElementInfo = {
+  /** Auto-generated id on the element */
+  elId: string;
+  /** Detected type: section, heading, text, image, button, list, row, divider, nav, form, unknown */
+  elType: string;
+  /** Display label */
+  label: string;
+  /** Breadcrumb path, e.g. ["Section", "Rangée", "Titre"] */
+  breadcrumb: string[];
+  /** Current computed styles */
+  styles: {
+    color: string;
+    backgroundColor: string;
+    fontSize: string;
+    fontWeight: string;
+    textAlign: string;
+    paddingTop: string;
+    paddingBottom: string;
+    paddingLeft: string;
+    paddingRight: string;
+    borderRadius: string;
+  };
+  /** Text content (for text elements) */
+  text: string;
+  /** Tag name */
+  tagName: string;
+  /** Whether it has a link (href) */
+  href: string;
+  /** Image src if image */
+  imgSrc: string;
+  /** Image data-tipote-img-id if image */
+  imgId: string;
+};
 
 type SectionInfo = {
   id: string;
@@ -83,16 +117,6 @@ type SectionInfo = {
   tagName: string;
   classes: string;
   top: number;
-};
-
-// Section labels for display
-const SECTION_LABELS: Record<string, string> = {
-  "tp-header-bar": "Barre d'annonce",
-  "tp-hero": "Hero",
-  "tp-section": "Section",
-  "tp-final-cta": "CTA final",
-  "tp-footer": "Pied de page",
-  "nav": "Navigation",
 };
 
 // Elements that can be added
@@ -103,6 +127,24 @@ const ELEMENT_PALETTE = [
   { type: "image", label: "Image", icon: ImageIcon },
   { type: "divider", label: "Séparateur", icon: Minus },
 ];
+
+// Type label mapping
+const EL_TYPE_LABELS: Record<string, string> = {
+  section: "Section",
+  heading: "Titre",
+  text: "Texte",
+  image: "Image",
+  button: "Bouton",
+  list: "Liste",
+  "list-item": "Élément de liste",
+  row: "Rangée",
+  divider: "Séparateur",
+  nav: "Navigation",
+  form: "Formulaire",
+  link: "Lien",
+  blockquote: "Citation",
+  unknown: "Élément",
+};
 
 // ---------- Always-on inline editing script ----------
 
@@ -193,6 +235,112 @@ const INLINE_EDIT_SCRIPT = `
     overlay.style.top = Math.max(8, r.top - overlay.offsetHeight - 8) + 'px';
   }
 
+  /* ── Element selection highlight ── */
+  var elHighlight = document.createElement('div');
+  elHighlight.style.cssText = 'position:absolute;z-index:99989;pointer-events:none;border:2px solid #5D6CDB;background:rgba(93,108,219,0.06);display:none;transition:all 0.12s ease;border-radius:4px;';
+  var elLabel = document.createElement('div');
+  elLabel.style.cssText = 'position:absolute;top:-20px;left:0;background:#5D6CDB;color:#fff;font-size:10px;font-family:system-ui;padding:1px 6px;border-radius:3px 3px 0 0;white-space:nowrap;';
+  elHighlight.appendChild(elLabel);
+  document.body.appendChild(elHighlight);
+  var selectedEl = null;
+
+  function detectElType(el) {
+    var tag = el.tagName.toLowerCase();
+    if (tag === 'img' || el.hasAttribute('data-tipote-img-id') || el.querySelector('img')) return 'image';
+    if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') return 'heading';
+    if (tag === 'a' && (el.classList.contains('tp-cta-btn') || el.classList.contains('tp-cta'))) return 'button';
+    if (tag === 'button') return 'button';
+    if (tag === 'a') return 'link';
+    if (tag === 'ul' || tag === 'ol') return 'list';
+    if (tag === 'li') return 'list-item';
+    if (tag === 'hr') return 'divider';
+    if (tag === 'blockquote') return 'blockquote';
+    if (tag === 'form') return 'form';
+    if (tag === 'nav') return 'nav';
+    if (tag === 'p' || tag === 'span' || tag === 'label' || tag === 'figcaption' || tag === 'td' || tag === 'th') return 'text';
+    if (el.style && (el.style.display === 'flex' || el.style.display === 'grid') && el.children.length > 1) return 'row';
+    var cs = getComputedStyle(el);
+    if ((cs.display === 'flex' || cs.display === 'grid') && el.children.length > 1) return 'row';
+    // Check if it's a section-level element
+    var cls = el.className || '';
+    if (cls.indexOf('tp-hero') >= 0 || cls.indexOf('tp-section') >= 0 || cls.indexOf('tp-final-cta') >= 0 || cls.indexOf('tp-footer') >= 0 || cls.indexOf('tp-header-bar') >= 0) return 'section';
+    return 'unknown';
+  }
+
+  function buildBreadcrumb(el) {
+    var crumbs = [];
+    var cur = el;
+    var maxDepth = 6;
+    while (cur && cur !== document.body && maxDepth-- > 0) {
+      var t = detectElType(cur);
+      var labels = { section:'Section', heading:'Titre', text:'Texte', image:'Image', button:'Bouton', list:'Liste', 'list-item':'Item', row:'Rangée', divider:'Séparateur', nav:'Navigation', form:'Formulaire', link:'Lien', blockquote:'Citation', unknown:'' };
+      var lbl = labels[t] || '';
+      if (lbl && (crumbs.length === 0 || crumbs[crumbs.length-1] !== lbl)) crumbs.push(lbl);
+      if (t === 'section') break;
+      cur = cur.parentElement;
+    }
+    crumbs.reverse();
+    return crumbs;
+  }
+
+  function getElStyles(el) {
+    var cs = getComputedStyle(el);
+    return {
+      color: rgbToHex(cs.color),
+      backgroundColor: cs.backgroundColor === 'rgba(0, 0, 0, 0)' ? 'transparent' : rgbToHex(cs.backgroundColor),
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      textAlign: cs.textAlign,
+      paddingTop: cs.paddingTop,
+      paddingBottom: cs.paddingBottom,
+      paddingLeft: cs.paddingLeft,
+      paddingRight: cs.paddingRight,
+      borderRadius: cs.borderRadius
+    };
+  }
+
+  function sendElSelected(el) {
+    if (!el) return;
+    if (!el.id) el.id = 'tp-el-' + Date.now() + '-' + Math.random().toString(36).substr(2,4);
+    var elType = detectElType(el);
+    var typeLabels = { section:'Section', heading:'Titre', text:'Texte', image:'Image', button:'Bouton', list:'Liste', 'list-item':'Élément', row:'Rangée', divider:'Séparateur', nav:'Navigation', form:'Formulaire', link:'Lien', blockquote:'Citation', unknown:'Élément' };
+    var label = typeLabels[elType] || 'Élément';
+    // For headings/text, add a preview of the content
+    if ((elType === 'heading' || elType === 'text' || elType === 'button' || elType === 'link') && el.textContent) {
+      var preview = el.textContent.trim().substring(0, 30);
+      if (preview) label += ' : ' + preview + (el.textContent.trim().length > 30 ? '...' : '');
+    }
+
+    var imgEl = el.tagName === 'IMG' ? el : el.querySelector('img');
+    parent.postMessage({
+      type: 'tipote:element-selected',
+      elId: el.id,
+      elType: elType,
+      label: label,
+      breadcrumb: buildBreadcrumb(el),
+      styles: getElStyles(el),
+      text: (el.innerText || '').trim().substring(0, 200),
+      tagName: el.tagName.toLowerCase(),
+      href: el.getAttribute('href') || '',
+      imgSrc: imgEl ? (imgEl.src || '') : '',
+      imgId: el.getAttribute('data-tipote-img-id') || (imgEl ? imgEl.getAttribute('data-tipote-img-id') || '' : '')
+    }, '*');
+  }
+
+  function highlightEl(el) {
+    if (!el) { elHighlight.style.display = 'none'; return; }
+    var rect = el.getBoundingClientRect();
+    var scrollY = window.scrollY || document.documentElement.scrollTop;
+    var scrollX = window.scrollX || document.documentElement.scrollLeft;
+    elHighlight.style.display = 'block';
+    elHighlight.style.left = (rect.left + scrollX - 2) + 'px';
+    elHighlight.style.top = (rect.top + scrollY - 2) + 'px';
+    elHighlight.style.width = (rect.width + 4) + 'px';
+    elHighlight.style.height = (rect.height + 4) + 'px';
+    var typeLabels = { section:'Section', heading:'Titre', text:'Texte', image:'Image', button:'Bouton', list:'Liste', 'list-item':'Item', row:'Rangée', divider:'Séparateur', nav:'Nav', form:'Form', link:'Lien', blockquote:'Citation', unknown:'' };
+    elLabel.textContent = typeLabels[detectElType(el)] || '';
+  }
+
   /* ── Make all text elements editable ── */
   document.querySelectorAll(editableSelectors).forEach(function(el) {
     if (el.closest('script') || el.closest('style') || el.closest('noscript') || el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
@@ -203,9 +351,12 @@ const INLINE_EDIT_SCRIPT = `
 
     el.addEventListener('focus', function() {
       activeEl = el;
+      selectedEl = el;
       toolbar.style.display = 'flex';
       colorInput.value = getComputedStyle(el).color.indexOf('rgb') >= 0 ? rgbToHex(getComputedStyle(el).color) : '#000000';
       setTimeout(function() { positionAbove(el, toolbar); }, 0);
+      highlightEl(el);
+      sendElSelected(el);
     });
 
     el.addEventListener('blur', function() {
@@ -267,11 +418,27 @@ const INLINE_EDIT_SCRIPT = `
     });
   });
 
-  /* ── Click outside to dismiss overlays ── */
+  /* ── Click outside to dismiss overlays + generic element selection ── */
   document.addEventListener('click', function(e) {
     if (!e.target.closest('.tipote-illust-overlay') && !e.target.closest(illustSelectors)) {
       illustOverlay.style.display = 'none';
       activeIllust = null;
+    }
+    // Generic element selection: for any click, detect and highlight the nearest meaningful element
+    var clicked = e.target;
+    if (clicked.closest('.tipote-toolbar') || clicked.closest('.tipote-illust-overlay') || clicked === elHighlight) return;
+    // Find the closest meaningful element (not body/html)
+    var meaningful = clicked;
+    // If it's a tiny inline element, go up to find something meaningful
+    while (meaningful && meaningful !== document.body) {
+      var mt = detectElType(meaningful);
+      if (mt !== 'unknown') break;
+      meaningful = meaningful.parentElement;
+    }
+    if (meaningful && meaningful !== document.body) {
+      selectedEl = meaningful;
+      highlightEl(meaningful);
+      sendElSelected(meaningful);
     }
   });
 
@@ -485,15 +652,51 @@ const INLINE_EDIT_SCRIPT = `
       if (typeof e.data.paddingX === 'number') { sec.style.paddingLeft = e.data.paddingX + 'px'; sec.style.paddingRight = e.data.paddingX + 'px'; }
       parent.postMessage({ type: 'tipote:text-edit', tag: 'section-style', text: '' }, '*');
     }
+
+    // Element-level style updates
+    if (e.data && e.data.type === 'tipote:update-element-style') {
+      var el = document.getElementById(e.data.elId);
+      if (!el) return;
+      var s = e.data;
+      if (s.color) el.style.color = s.color;
+      if (s.backgroundColor && s.backgroundColor !== 'transparent') el.style.backgroundColor = s.backgroundColor;
+      if (s.fontSize) el.style.fontSize = s.fontSize;
+      if (s.fontWeight) el.style.fontWeight = s.fontWeight;
+      if (s.textAlign) el.style.textAlign = s.textAlign;
+      if (s.borderRadius) el.style.borderRadius = s.borderRadius;
+      if (s.paddingY != null) { el.style.paddingTop = s.paddingY + 'px'; el.style.paddingBottom = s.paddingY + 'px'; }
+      if (s.paddingX != null) { el.style.paddingLeft = s.paddingX + 'px'; el.style.paddingRight = s.paddingX + 'px'; }
+      if (typeof s.href === 'string') el.setAttribute('href', s.href);
+      parent.postMessage({ type: 'tipote:text-edit', tag: 'element-style', text: '' }, '*');
+    }
+
+    // Delete element
+    if (e.data && e.data.type === 'tipote:delete-element') {
+      var el = document.getElementById(e.data.elId);
+      if (el) {
+        el.remove();
+        elHighlight.style.display = 'none';
+        selectedEl = null;
+        parent.postMessage({ type: 'tipote:element-deselected' }, '*');
+        parent.postMessage({ type: 'tipote:text-edit', tag: 'element-delete', text: '' }, '*');
+      }
+    }
+
+    // Deselect element
+    if (e.data && e.data.type === 'tipote:deselect-element') {
+      elHighlight.style.display = 'none';
+      selectedEl = null;
+    }
   });
 
-  // Update highlight on scroll
+  // Update highlights on scroll
   window.addEventListener('scroll', function() {
     if (selectedSectionEl) {
       var rect = selectedSectionEl.getBoundingClientRect();
       var scrollY = window.scrollY || document.documentElement.scrollTop;
       sectionHighlight.style.top = (rect.top + scrollY) + 'px';
     }
+    if (selectedEl) highlightEl(selectedEl);
   });
 })();
 </script>`;
@@ -519,13 +722,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [leftTab, setLeftTab] = useState<LeftTab>("builder");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Section selection
+  // Section & element selection
   const [sections, setSections] = useState<SectionInfo[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
-  const [sectionBgColor, setSectionBgColor] = useState("#ffffff");
-  const [sectionTextColor, setSectionTextColor] = useState("#1a1a1a");
-  const [sectionPaddingY, setSectionPaddingY] = useState(80);
-  const [sectionPaddingX, setSectionPaddingX] = useState(40);
+  const [selectedElement, setSelectedElement] = useState<SelectedElementInfo | null>(null);
 
   // Publish modal state
   const [publishSlug, setPublishSlug] = useState(initialPage.slug);
@@ -652,6 +852,26 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         setSelectedSectionId(e.data.sectionId);
         setLeftTab("builder");
         setSidebarOpen(true);
+      }
+      // Element selection
+      if (e.data?.type === "tipote:element-selected") {
+        setSelectedElement({
+          elId: e.data.elId,
+          elType: e.data.elType,
+          label: e.data.label,
+          breadcrumb: e.data.breadcrumb || [],
+          styles: e.data.styles || {},
+          text: e.data.text || "",
+          tagName: e.data.tagName || "",
+          href: e.data.href || "",
+          imgSrc: e.data.imgSrc || "",
+          imgId: e.data.imgId || "",
+        });
+        setLeftTab("builder");
+        setSidebarOpen(true);
+      }
+      if (e.data?.type === "tipote:element-deselected") {
+        setSelectedElement(null);
       }
     };
     window.addEventListener("message", handler);
@@ -920,6 +1140,31 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, []);
 
+  const updateElementStyle = useCallback((elId: string, updates: Record<string, any>) => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:update-element-style", elId, ...updates }, "*");
+    }
+    // Also update local state so the sidebar reflects changes immediately
+    setSelectedElement((prev) => prev ? { ...prev, styles: { ...prev.styles, ...updates } } : null);
+  }, []);
+
+  const deleteElement = useCallback((elId: string) => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:delete-element", elId }, "*");
+    }
+    setSelectedElement(null);
+  }, []);
+
+  const deselectElement = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:deselect-element" }, "*");
+    }
+    setSelectedElement(null);
+  }, []);
+
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
   const publishPreviewUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${publishSlug}` : `/p/${publishSlug}`;
   const isPublished = page.status === "published";
@@ -1125,163 +1370,329 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 <div className="flex flex-col h-full">
                   <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
 
-                    {/* Section list */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Sections</p>
-                        {selectedSectionId && (
-                          <button onClick={() => selectSection(null)} className="text-[10px] text-primary hover:underline">
-                            Désélectionner
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        {sections.length === 0 && (
-                          <p className="text-[11px] text-muted-foreground/60 py-2">Clique sur une section dans l&apos;aperçu</p>
-                        )}
-                        {sections.map((s) => (
-                          <div
-                            key={s.id}
-                            className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all text-xs ${
-                              selectedSectionId === s.id
-                                ? "bg-primary/10 border border-primary/30 text-primary font-medium"
-                                : "hover:bg-muted/50 border border-transparent"
-                            }`}
-                            onClick={() => selectSection(s.id)}
-                          >
-                            <MousePointer className="w-3 h-3 shrink-0 opacity-50" />
-                            <span className="flex-1 truncate">{s.label}</span>
-
-                            {/* Section actions (visible on hover or when selected) */}
-                            <div className={`flex items-center gap-0.5 ${selectedSectionId === s.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }}
-                                className="p-0.5 rounded hover:bg-muted"
-                                title="Monter"
-                              >
-                                <ChevronUp className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); moveSection(s.id, "down"); }}
-                                className="p-0.5 rounded hover:bg-muted"
-                                title="Descendre"
-                              >
-                                <ChevronDown className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); deleteSection(s.id); }}
-                                className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
-                                title="Supprimer"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Section properties (when selected) */}
-                    {selectedSectionId && (
-                      <div className="pt-3 border-t border-border/30 space-y-3">
-                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Propriétés</p>
-
-                        {/* Background color */}
+                    {/* ── Selected element panel ── */}
+                    {selectedElement ? (
+                      <>
+                        {/* Breadcrumb + Back */}
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Arrière-fond</span>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="color"
-                              value={sectionBgColor}
-                              onChange={(e) => {
-                                setSectionBgColor(e.target.value);
-                                updateSectionStyle(selectedSectionId, { bgColor: e.target.value });
-                              }}
-                              className="w-6 h-6 rounded border cursor-pointer"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Text color */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Couleur texte</span>
-                          <input
-                            type="color"
-                            value={sectionTextColor}
-                            onChange={(e) => {
-                              setSectionTextColor(e.target.value);
-                              updateSectionStyle(selectedSectionId, { textColor: e.target.value });
-                            }}
-                            className="w-6 h-6 rounded border cursor-pointer"
-                          />
-                        </div>
-
-                        {/* Padding Y */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs text-muted-foreground">Rembourrage vertical</span>
-                            <span className="text-[10px] text-muted-foreground">{sectionPaddingY}px</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={200}
-                            value={sectionPaddingY}
-                            onChange={(e) => {
-                              const v = Number(e.target.value);
-                              setSectionPaddingY(v);
-                              updateSectionStyle(selectedSectionId, { paddingY: v });
-                            }}
-                            className="w-full h-1.5 accent-primary"
-                          />
-                        </div>
-
-                        {/* Padding X */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs text-muted-foreground">Rembourrage horizontal</span>
-                            <span className="text-[10px] text-muted-foreground">{sectionPaddingX}px</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={120}
-                            value={sectionPaddingX}
-                            onChange={(e) => {
-                              const v = Number(e.target.value);
-                              setSectionPaddingX(v);
-                              updateSectionStyle(selectedSectionId, { paddingX: v });
-                            }}
-                            className="w-full h-1.5 accent-primary"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Element palette */}
-                    <div className="pt-3 border-t border-border/30">
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Ajouter un élément</p>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {ELEMENT_PALETTE.map((el) => {
-                          const Icon = el.icon;
-                          return (
-                            <button
-                              key={el.type}
-                              onClick={() => addElement(el.type)}
-                              className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-border/50 hover:bg-muted/50 hover:border-primary/30 transition-all text-muted-foreground hover:text-foreground"
-                            >
-                              <Icon className="w-4 h-4" />
-                              <span className="text-[10px]">{el.label}</span>
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground overflow-hidden">
+                            <button onClick={deselectElement} className="text-primary hover:underline shrink-0">
+                              ← Retour
                             </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                            {selectedElement.breadcrumb.length > 0 && (
+                              <>
+                                <span className="mx-1">·</span>
+                                {selectedElement.breadcrumb.map((crumb, i) => (
+                                  <span key={i} className="shrink-0">
+                                    {i > 0 && <span className="mx-0.5">›</span>}
+                                    {crumb}
+                                  </span>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        </div>
 
-                    {/* Inline editing tip */}
-                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50">
-                      <span className="text-[10px] text-blue-700 dark:text-blue-300">💡 Clique sur un texte ou une image dans l&apos;aperçu pour le modifier directement.</span>
-                    </div>
+                        {/* Element type header */}
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold">{EL_TYPE_LABELS[selectedElement.elType] || "Élément"}</h3>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => { moveSection(selectedElement.elId, "up"); }}
+                              className="p-1 rounded hover:bg-muted text-muted-foreground"
+                              title="Monter"
+                            >
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => { moveSection(selectedElement.elId, "down"); }}
+                              className="p-1 rounded hover:bg-muted text-muted-foreground"
+                              title="Descendre"
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => deleteElement(selectedElement.elId)}
+                              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* ── Properties per element type ── */}
+                        <div className="space-y-3">
+
+                          {/* TEXT COLOR (all text types) */}
+                          {["heading", "text", "button", "link", "list", "list-item", "blockquote"].includes(selectedElement.elType) && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Couleur du texte</span>
+                                <input
+                                  type="color"
+                                  value={selectedElement.styles.color || "#000000"}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { color: e.target.value })}
+                                  className="w-6 h-6 rounded border cursor-pointer"
+                                />
+                              </div>
+
+                              {/* Font size */}
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-muted-foreground">Taille de police</span>
+                                  <span className="text-[10px] text-muted-foreground">{selectedElement.styles.fontSize || "16px"}</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min={10}
+                                  max={72}
+                                  value={parseInt(selectedElement.styles.fontSize) || 16}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { fontSize: e.target.value + "px" })}
+                                  className="w-full h-1.5 accent-primary"
+                                />
+                              </div>
+
+                              {/* Font weight */}
+                              <div>
+                                <span className="text-xs text-muted-foreground block mb-1">Graisse</span>
+                                <div className="flex gap-1">
+                                  {[
+                                    { v: "400", l: "Normal" },
+                                    { v: "600", l: "Semi-gras" },
+                                    { v: "700", l: "Gras" },
+                                    { v: "900", l: "Noir" },
+                                  ].map((fw) => (
+                                    <button
+                                      key={fw.v}
+                                      onClick={() => updateElementStyle(selectedElement.elId, { fontWeight: fw.v })}
+                                      className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
+                                        String(selectedElement.styles.fontWeight) === fw.v
+                                          ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                                          : "border-border hover:bg-muted/50"
+                                      }`}
+                                    >
+                                      {fw.l}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Text alignment */}
+                              <div>
+                                <span className="text-xs text-muted-foreground block mb-1">Alignement</span>
+                                <div className="flex gap-1">
+                                  {[
+                                    { v: "left", l: "Gauche" },
+                                    { v: "center", l: "Centre" },
+                                    { v: "right", l: "Droite" },
+                                  ].map((ta) => (
+                                    <button
+                                      key={ta.v}
+                                      onClick={() => updateElementStyle(selectedElement.elId, { textAlign: ta.v })}
+                                      className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
+                                        selectedElement.styles.textAlign === ta.v
+                                          ? "bg-primary/10 border-primary/30 text-primary font-medium"
+                                          : "border-border hover:bg-muted/50"
+                                      }`}
+                                    >
+                                      {ta.l}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* BUTTON specific */}
+                          {(selectedElement.elType === "button" || selectedElement.elType === "link") && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Couleur du fond</span>
+                                <input
+                                  type="color"
+                                  value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#5D6CDB"}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { backgroundColor: e.target.value })}
+                                  className="w-6 h-6 rounded border cursor-pointer"
+                                />
+                              </div>
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-muted-foreground">Arrondi</span>
+                                  <span className="text-[10px] text-muted-foreground">{selectedElement.styles.borderRadius || "0px"}</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={50}
+                                  value={parseInt(selectedElement.styles.borderRadius) || 0}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { borderRadius: e.target.value + "px" })}
+                                  className="w-full h-1.5 accent-primary"
+                                />
+                              </div>
+                              <div>
+                                <span className="text-xs text-muted-foreground block mb-1">Lien (URL)</span>
+                                <input
+                                  type="url"
+                                  value={selectedElement.href || ""}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { href: e.target.value })}
+                                  placeholder="https://..."
+                                  className="w-full px-2 py-1.5 border rounded-lg text-xs"
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          {/* IMAGE specific */}
+                          {selectedElement.elType === "image" && (
+                            <>
+                              {selectedElement.imgSrc && (
+                                <div className="rounded-lg border overflow-hidden">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={selectedElement.imgSrc} alt="" className="w-full h-24 object-cover" />
+                                </div>
+                              )}
+                              <button
+                                onClick={() => {
+                                  if (selectedElement.imgId) {
+                                    triggerImageUploadForIframe(selectedElement.imgId);
+                                  }
+                                }}
+                                className="w-full py-2 border border-dashed rounded-lg text-xs text-muted-foreground hover:bg-muted/30 flex items-center justify-center gap-1.5"
+                              >
+                                <Upload className="w-3.5 h-3.5" />
+                                {selectedElement.imgSrc ? "Changer l'image" : "Ajouter une image"}
+                              </button>
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-muted-foreground">Arrondi</span>
+                                  <span className="text-[10px] text-muted-foreground">{selectedElement.styles.borderRadius || "0px"}</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={50}
+                                  value={parseInt(selectedElement.styles.borderRadius) || 0}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { borderRadius: e.target.value + "px" })}
+                                  className="w-full h-1.5 accent-primary"
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          {/* SECTION / ROW specific */}
+                          {(selectedElement.elType === "section" || selectedElement.elType === "row" || selectedElement.elType === "nav" || selectedElement.elType === "form") && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Arrière-fond</span>
+                                <input
+                                  type="color"
+                                  value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#ffffff"}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { backgroundColor: e.target.value })}
+                                  className="w-6 h-6 rounded border cursor-pointer"
+                                />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Couleur texte</span>
+                                <input
+                                  type="color"
+                                  value={selectedElement.styles.color || "#1a1a1a"}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { color: e.target.value })}
+                                  className="w-6 h-6 rounded border cursor-pointer"
+                                />
+                              </div>
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-muted-foreground">Rembourrage V</span>
+                                  <span className="text-[10px] text-muted-foreground">{parseInt(selectedElement.styles.paddingTop) || 0}px</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={200}
+                                  value={parseInt(selectedElement.styles.paddingTop) || 0}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { paddingY: Number(e.target.value) })}
+                                  className="w-full h-1.5 accent-primary"
+                                />
+                              </div>
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-muted-foreground">Rembourrage H</span>
+                                  <span className="text-[10px] text-muted-foreground">{parseInt(selectedElement.styles.paddingLeft) || 0}px</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={120}
+                                  value={parseInt(selectedElement.styles.paddingLeft) || 0}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { paddingX: Number(e.target.value) })}
+                                  className="w-full h-1.5 accent-primary"
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      /* ── No element selected: show sections + palette ── */
+                      <>
+                        {/* Sections list */}
+                        <div>
+                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Sections</p>
+                          <div className="space-y-1">
+                            {sections.length === 0 && (
+                              <p className="text-[11px] text-muted-foreground/60 py-2">Clique sur un élément dans l&apos;aperçu</p>
+                            )}
+                            {sections.map((s) => (
+                              <div
+                                key={s.id}
+                                className="group flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-all text-xs hover:bg-muted/50 border border-transparent"
+                                onClick={() => selectSection(s.id)}
+                              >
+                                <MousePointer className="w-3 h-3 shrink-0 opacity-40" />
+                                <span className="flex-1 truncate">{s.label}</span>
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }} className="p-0.5 rounded hover:bg-muted" title="Monter">
+                                    <ChevronUp className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "down"); }} className="p-0.5 rounded hover:bg-muted" title="Descendre">
+                                    <ChevronDown className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); deleteSection(s.id); }} className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500" title="Supprimer">
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Element palette */}
+                        <div className="pt-3 border-t border-border/30">
+                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Ajouter un élément</p>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {ELEMENT_PALETTE.map((el) => {
+                              const Icon = el.icon;
+                              return (
+                                <button
+                                  key={el.type}
+                                  onClick={() => addElement(el.type)}
+                                  className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-border/50 hover:bg-muted/50 hover:border-primary/30 transition-all text-muted-foreground hover:text-foreground"
+                                >
+                                  <Icon className="w-4 h-4" />
+                                  <span className="text-[10px]">{el.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Tip */}
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50">
+                          <span className="text-[10px] text-blue-700 dark:text-blue-300">💡 Clique sur un élément dans l&apos;aperçu pour modifier ses propriétés.</span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* ──── AI CHAT (bottom of builder tab) ──── */}
