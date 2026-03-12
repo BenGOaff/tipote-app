@@ -2,7 +2,8 @@
 // Cron endpoint (called daily by n8n or Vercel cron) to generate automatic notifications:
 // 1. Content reminders: manual posts scheduled for today
 // 2. Stats reminders: J-1 before end of month, if user hasn't filled stats
-// 3. Strategy progression: (checked on profile update, not here)
+// 3. Client deadline reminders: processes/items due today
+// 4. Strategy progression: (checked on profile update, not here)
 // Auth: internal key
 
 import { NextRequest, NextResponse } from "next/server";
@@ -112,6 +113,98 @@ export async function GET(req: NextRequest) {
     }
   } catch (e) {
     results.push(`stats_reminders: error - ${e instanceof Error ? e.message : "unknown"}`);
+  }
+
+  // ─── 3. Client deadline reminders: processes & items due today ───
+  try {
+    // 3a. Client processes with due_date = today
+    const { data: dueProcesses } = await supabaseAdmin
+      .from("client_processes")
+      .select("id, name, due_date, status, client_id, clients!inner(user_id, name, project_id)")
+      .eq("due_date", today)
+      .eq("status", "in_progress");
+
+    if (dueProcesses?.length) {
+      const byUser = new Map<string, typeof dueProcesses>();
+      for (const proc of dueProcesses) {
+        const uid = (proc as any).clients?.user_id;
+        if (!uid) continue;
+        if (!byUser.has(uid)) byUser.set(uid, []);
+        byUser.get(uid)!.push(proc);
+      }
+
+      for (const [userId, procs] of byUser) {
+        if (procs.length === 1) {
+          const p = procs[0];
+          const clientName = (p as any).clients?.name ?? "client";
+          await createNotification({
+            user_id: userId,
+            project_id: (p as any).clients?.project_id ?? null,
+            type: "client_deadline",
+            title: `Échéance aujourd'hui : "${p.name}" pour ${clientName}`,
+            icon: "📋",
+            action_url: "/clients",
+            action_label: "Suivi clients",
+          });
+        } else {
+          await createNotification({
+            user_id: userId,
+            type: "client_deadline",
+            title: `${procs.length} processus clients arrivent à échéance aujourd'hui !`,
+            icon: "📋",
+            action_url: "/clients",
+            action_label: "Suivi clients",
+          });
+        }
+      }
+      results.push(`client_process_deadlines: ${dueProcesses.length} processes, ${byUser.size} users`);
+    }
+
+    // 3b. Individual process items with due_date = today (not yet done)
+    const { data: dueItems } = await supabaseAdmin
+      .from("client_process_items")
+      .select("id, title, due_date, process_id, client_processes!inner(id, name, client_id, clients!inner(user_id, name, project_id))")
+      .eq("due_date", today)
+      .eq("is_done", false);
+
+    if (dueItems?.length) {
+      const byUser = new Map<string, typeof dueItems>();
+      for (const item of dueItems) {
+        const uid = (item as any).client_processes?.clients?.user_id;
+        if (!uid) continue;
+        if (!byUser.has(uid)) byUser.set(uid, []);
+        byUser.get(uid)!.push(item);
+      }
+
+      for (const [userId, items] of byUser) {
+        if (items.length === 1) {
+          const item = items[0];
+          const clientName = (item as any).client_processes?.clients?.name ?? "client";
+          const processName = (item as any).client_processes?.name ?? "processus";
+          await createNotification({
+            user_id: userId,
+            project_id: (item as any).client_processes?.clients?.project_id ?? null,
+            type: "client_item_deadline",
+            title: `Tâche due aujourd'hui : "${item.title}" (${clientName} — ${processName})`,
+            icon: "✅",
+            action_url: "/clients",
+            action_label: "Suivi clients",
+          });
+        } else {
+          await createNotification({
+            user_id: userId,
+            type: "client_item_deadline",
+            title: `${items.length} étapes clients arrivent à échéance aujourd'hui !`,
+            icon: "✅",
+            action_url: "/clients",
+            action_label: "Suivi clients",
+          });
+        }
+      }
+      results.push(`client_item_deadlines: ${dueItems.length} items, ${byUser.size} users`);
+    }
+  } catch (e) {
+    results.push(`client_deadlines: error - ${e instanceof Error ? e.message : "unknown"}`);
   }
 
   return NextResponse.json({ ok: true, today, results });

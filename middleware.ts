@@ -57,6 +57,7 @@ const PROTECTED_PREFIXES = [
   "/admin",
   "/automations",
   "/widgets",
+  "/clients",
 ];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
@@ -223,5 +224,6 @@ export const config = {
     // Only match /widgets page itself (app UI), NOT /widgets/*.js static files
     // which must be served publicly for cross-origin embedding on external blogs.
     "/widgets",
+    "/clients/:path*",
   ],
 };

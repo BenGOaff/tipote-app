@@ -13,6 +13,7 @@ import {
   Layout,
   Zap,
   Users,
+  Briefcase,
   Bell,
   PanelLeftClose,
   HelpCircle,
@@ -81,6 +82,7 @@ const MAIN_ITEM_CONFIG = [
   { key: "templates" as const, url: "/templates", icon: Layout, spotlightId: "templates" },
   { key: "automations" as const, url: "/automations", icon: Zap, spotlightId: "automations" },
   { key: "leads" as const, url: "/leads", icon: Users, spotlightId: "leads" },
+  { key: "clients" as const, url: "/clients", icon: Briefcase, spotlightId: "clients" },
   { key: "widgets" as const, url: "/widgets", icon: Bell, spotlightId: "widgets" },
 ];
 
