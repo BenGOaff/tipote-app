@@ -435,10 +435,15 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
   return (
     <SidebarProvider>
       <AppSidebar />
-      <main className="flex-1 flex flex-col min-h-screen bg-background">
-        <PageHeader />
+      <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+        <PageHeader
+          left={
+            <h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>
+          }
+        />
 
-        <div className="flex-1 p-4 sm:p-5 lg:p-6 max-w-[1200px] w-full mx-auto space-y-5">
+        <div className="flex-1 p-4 sm:p-5 lg:p-6">
+        <div className="max-w-[1200px] mx-auto w-full space-y-5">
           <PageBanner
             icon={<Briefcase className="w-5 h-5" />}
             title={t("title")}
@@ -775,6 +780,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               )}
             </>
           )}
+        </div>
         </div>
       </main>
 
