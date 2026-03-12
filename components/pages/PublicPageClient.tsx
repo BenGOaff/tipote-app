@@ -239,7 +239,7 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
           border: "none",
           display: "block",
         }}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
       />
 
       {/* Capture overlay (triggered by message from iframe) */}
@@ -527,11 +527,46 @@ fbq('init','${pid}');fbq('track','PageView');
   return snippets;
 }
 
+// Strip any editor artifacts that may have leaked into html_snapshot.
+// Belt-and-suspenders: even if the editor cleanup works, this ensures
+// the public page is always clean.
+function sanitizeEditorArtifacts(html: string): string {
+  // Remove the entire inline editing script block (data-tipote-injected)
+  html = html.replace(/<script[^>]*data-tipote-injected[^>]*>[\s\S]*?<\/script>/gi, "");
+
+  // Remove any remaining elements with data-tipote-injected (highlights, toolbar, overlays)
+  html = html.replace(/<div[^>]*data-tipote-injected[^>]*>[\s\S]*?<\/div>/gi, "");
+
+  // Remove data-tp-section-idx attributes (editor tracking)
+  html = html.replace(/\s*data-tp-section-idx="[^"]*"/g, "");
+
+  // Remove contenteditable attributes (prevents links from being editable instead of clickable)
+  html = html.replace(/\s*contenteditable="[^"]*"/g, "");
+
+  // Remove cursor:text inline style that editor adds
+  html = html.replace(/cursor:\s*text;?\s*/g, "");
+
+  // Remove outline:none inline style from editor
+  html = html.replace(/outline:\s*none;?\s*/g, "");
+
+  // Clean up empty style attributes left after removing editor styles
+  html = html.replace(/\s*style="[\s;]*"/g, "");
+
+  // Inject a safety CSS rule that hides any remaining editor artifacts
+  const safetyCSS = `<style>[data-tipote-injected]{display:none!important}[data-tp-section-idx]{outline:none!important}</style>`;
+  const headEnd = html.indexOf("</head>");
+  if (headEnd !== -1) {
+    html = html.slice(0, headEnd) + safetyCSS + html.slice(headEnd);
+  }
+
+  return html;
+}
+
 // Inject a small script into the HTML that intercepts CTA clicks
 // and posts a message to the parent to open the capture overlay.
 // IMPORTANT: Does NOT re-inject legal footer or capture form (already in html_snapshot from render.ts).
 function injectCaptureScript(page: PublicPageData): string {
-  let html = page.html_snapshot || "";
+  let html = sanitizeEditorArtifacts(page.html_snapshot || "");
 
   // Inject tracking pixels into <head>
   const trackingSnippets = buildTrackingSnippets(page);
