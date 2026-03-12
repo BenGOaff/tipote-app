@@ -14,7 +14,9 @@ import {
   Share2, Tag, Image as ImageIcon, Link2,
   EyeOff, Users, QrCode,
   Settings, Play,
-  Save, LogOut, Type,
+  Save, LogOut,
+  Layers, Trash2, ChevronUp, ChevronDown,
+  MousePointer, Heading, AlignLeft, Square, Minus,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 
@@ -71,7 +73,36 @@ const DEVICE_CONFIG: Record<Device, { width: number; label: string; icon: typeof
 
 // ---------- Left sidebar tabs ----------
 
-type LeftTab = "parametres" | "section" | null;
+type LeftTab = "builder" | "parametres";
+
+// ---------- Section info from iframe ----------
+
+type SectionInfo = {
+  id: string;
+  label: string;
+  tagName: string;
+  classes: string;
+  top: number;
+};
+
+// Section labels for display
+const SECTION_LABELS: Record<string, string> = {
+  "tp-header-bar": "Barre d'annonce",
+  "tp-hero": "Hero",
+  "tp-section": "Section",
+  "tp-final-cta": "CTA final",
+  "tp-footer": "Pied de page",
+  "nav": "Navigation",
+};
+
+// Elements that can be added
+const ELEMENT_PALETTE = [
+  { type: "heading", label: "Titre", icon: Heading },
+  { type: "text", label: "Texte", icon: AlignLeft },
+  { type: "button", label: "Bouton", icon: Square },
+  { type: "image", label: "Image", icon: ImageIcon },
+  { type: "divider", label: "Séparateur", icon: Minus },
+];
 
 // ---------- Always-on inline editing script ----------
 
@@ -268,6 +299,202 @@ const INLINE_EDIT_SCRIPT = `
     if (!m || m.length < 3) return '#000000';
     return '#' + m.slice(0,3).map(function(x) { return parseInt(x).toString(16).padStart(2,'0'); }).join('');
   }
+
+  /* ── Section detection: identify all top-level sections ── */
+  var sectionSelectors = '.tp-header-bar, .tp-hero, .tp-section, .tp-final-cta, .tp-footer, nav, [class*="tp-section"]';
+  var allSections = document.querySelectorAll(sectionSelectors);
+  var sectionList = [];
+  var selectedSectionEl = null;
+  var sectionHighlight = document.createElement('div');
+  sectionHighlight.style.cssText = 'position:absolute;z-index:99990;pointer-events:none;border:2px solid #5D6CDB;background:rgba(93,108,219,0.05);display:none;transition:all 0.15s ease;';
+  document.body.appendChild(sectionHighlight);
+
+  // Gather section info and send to parent
+  allSections.forEach(function(el, i) {
+    if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+    var id = el.id || ('tp-auto-section-' + i);
+    if (!el.id) el.id = id;
+    el.setAttribute('data-tp-section-idx', String(i));
+
+    var cls = el.className || '';
+    var label = 'Section';
+    if (cls.indexOf('tp-header-bar') >= 0) label = 'Barre d\\'annonce';
+    else if (cls.indexOf('tp-hero') >= 0) label = 'Hero';
+    else if (cls.indexOf('tp-final-cta') >= 0) label = 'CTA final';
+    else if (cls.indexOf('tp-footer') >= 0) label = 'Pied de page';
+    else if (el.tagName === 'NAV') label = 'Navigation';
+    else if (cls.indexOf('dark') >= 0) label = 'Section sombre';
+    else if (cls.indexOf('alt') >= 0) label = 'Section alt';
+
+    // Try to find a section title for better labeling
+    var titleEl = el.querySelector('.tp-section-title, h2, h1');
+    if (titleEl) {
+      var titleText = (titleEl.textContent || '').trim().substring(0, 40);
+      if (titleText) label = titleText;
+    }
+
+    sectionList.push({ id: id, label: label, tagName: el.tagName, classes: cls, top: el.offsetTop, idx: i });
+
+    // Section click detection (only on section background, not on editable content)
+    el.addEventListener('click', function(e) {
+      // Don't intercept clicks on editable elements
+      var target = e.target;
+      if (target.contentEditable === 'true' || target.closest('[contenteditable="true"]')) return;
+      if (target.closest('.tipote-toolbar') || target.closest('.tipote-illust-overlay')) return;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+
+      selectedSectionEl = el;
+      var rect = el.getBoundingClientRect();
+      var scrollY = window.scrollY || document.documentElement.scrollTop;
+      sectionHighlight.style.display = 'block';
+      sectionHighlight.style.left = rect.left + 'px';
+      sectionHighlight.style.top = (rect.top + scrollY) + 'px';
+      sectionHighlight.style.width = rect.width + 'px';
+      sectionHighlight.style.height = rect.height + 'px';
+
+      parent.postMessage({ type: 'tipote:section-click', sectionId: id, sectionIdx: i }, '*');
+    });
+  });
+
+  // Send section list to parent on load
+  setTimeout(function() {
+    parent.postMessage({ type: 'tipote:sections-list', sections: sectionList }, '*');
+  }, 300);
+
+  // Listen for parent commands
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'tipote:select-section') {
+      var el = document.getElementById(e.data.sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        selectedSectionEl = el;
+        var rect = el.getBoundingClientRect();
+        var scrollY = window.scrollY || document.documentElement.scrollTop;
+        sectionHighlight.style.display = 'block';
+        sectionHighlight.style.left = rect.left + 'px';
+        sectionHighlight.style.top = (rect.top + scrollY) + 'px';
+        sectionHighlight.style.width = rect.width + 'px';
+        sectionHighlight.style.height = rect.height + 'px';
+      }
+    }
+
+    if (e.data && e.data.type === 'tipote:deselect-section') {
+      sectionHighlight.style.display = 'none';
+      selectedSectionEl = null;
+    }
+
+    if (e.data && e.data.type === 'tipote:delete-section') {
+      var target = document.getElementById(e.data.sectionId);
+      if (target) {
+        target.remove();
+        sectionHighlight.style.display = 'none';
+        selectedSectionEl = null;
+        parent.postMessage({ type: 'tipote:text-edit', tag: 'section-delete', text: '' }, '*');
+        // Re-scan sections
+        setTimeout(function() {
+          var remaining = document.querySelectorAll(sectionSelectors);
+          var updated = [];
+          remaining.forEach(function(el, i) {
+            var t = el.querySelector('.tp-section-title, h2, h1');
+            updated.push({ id: el.id, label: t ? (t.textContent || '').trim().substring(0,40) : 'Section', tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i });
+          });
+          parent.postMessage({ type: 'tipote:sections-list', sections: updated }, '*');
+        }, 100);
+      }
+    }
+
+    if (e.data && e.data.type === 'tipote:move-section') {
+      var el = document.getElementById(e.data.sectionId);
+      if (!el) return;
+      var dir = e.data.direction;
+      if (dir === 'up' && el.previousElementSibling) {
+        el.parentNode.insertBefore(el, el.previousElementSibling);
+      } else if (dir === 'down' && el.nextElementSibling) {
+        el.parentNode.insertBefore(el.nextElementSibling, el);
+      }
+      parent.postMessage({ type: 'tipote:text-edit', tag: 'section-move', text: '' }, '*');
+      // Re-scan
+      setTimeout(function() {
+        var remaining = document.querySelectorAll(sectionSelectors);
+        var updated = [];
+        remaining.forEach(function(el, i) {
+          var t = el.querySelector('.tp-section-title, h2, h1');
+          updated.push({ id: el.id, label: t ? (t.textContent || '').trim().substring(0,40) : 'Section', tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i });
+        });
+        parent.postMessage({ type: 'tipote:sections-list', sections: updated }, '*');
+      }, 100);
+    }
+
+    if (e.data && e.data.type === 'tipote:add-element') {
+      var targetSection = selectedSectionEl || document.querySelector('.tp-section');
+      if (!targetSection) return;
+      var container = targetSection.querySelector('.tp-container') || targetSection;
+      var newEl;
+      switch (e.data.elementType) {
+        case 'heading':
+          newEl = document.createElement('h2');
+          newEl.className = 'tp-section-title';
+          newEl.setAttribute('data-editable', 'true');
+          newEl.contentEditable = 'true';
+          newEl.style.outline = 'none';
+          newEl.style.cursor = 'text';
+          newEl.textContent = 'Nouveau titre';
+          break;
+        case 'text':
+          newEl = document.createElement('p');
+          newEl.setAttribute('data-editable', 'true');
+          newEl.contentEditable = 'true';
+          newEl.style.cssText = 'outline:none;cursor:text;font-size:1rem;line-height:1.7;color:inherit;margin:16px 0;';
+          newEl.textContent = 'Nouveau paragraphe de texte. Cliquez pour modifier.';
+          break;
+        case 'button':
+          newEl = document.createElement('a');
+          newEl.className = 'tp-cta-btn';
+          newEl.setAttribute('data-editable', 'true');
+          newEl.contentEditable = 'true';
+          newEl.style.cssText = 'outline:none;cursor:text;display:inline-block;padding:14px 32px;border-radius:8px;font-weight:700;text-decoration:none;margin:16px 0;background:var(--brand);color:#fff;';
+          newEl.textContent = 'Bouton';
+          break;
+        case 'image':
+          newEl = document.createElement('div');
+          var imgId = 'user-img-' + Date.now();
+          newEl.setAttribute('data-tipote-img-id', imgId);
+          newEl.style.cssText = 'width:100%;max-width:600px;height:250px;background:#e5e7eb;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:24px auto;cursor:pointer;color:#9ca3af;font-size:14px;';
+          newEl.textContent = 'Cliquer pour ajouter une image';
+          newEl.addEventListener('click', function(ev) {
+            ev.preventDefault(); ev.stopPropagation();
+            parent.postMessage({ type: 'tipote:image-click', imgId: imgId, hasImage: false }, '*');
+          });
+          break;
+        case 'divider':
+          newEl = document.createElement('hr');
+          newEl.style.cssText = 'border:none;border-top:1px solid #e5e7eb;margin:32px auto;max-width:200px;';
+          break;
+        default: return;
+      }
+      container.appendChild(newEl);
+      parent.postMessage({ type: 'tipote:text-edit', tag: 'element-add', text: e.data.elementType }, '*');
+    }
+
+    if (e.data && e.data.type === 'tipote:update-section-style') {
+      var sec = document.getElementById(e.data.sectionId);
+      if (!sec) return;
+      if (e.data.bgColor) sec.style.backgroundColor = e.data.bgColor;
+      if (e.data.textColor) sec.style.color = e.data.textColor;
+      if (typeof e.data.paddingY === 'number') { sec.style.paddingTop = e.data.paddingY + 'px'; sec.style.paddingBottom = e.data.paddingY + 'px'; }
+      if (typeof e.data.paddingX === 'number') { sec.style.paddingLeft = e.data.paddingX + 'px'; sec.style.paddingRight = e.data.paddingX + 'px'; }
+      parent.postMessage({ type: 'tipote:text-edit', tag: 'section-style', text: '' }, '*');
+    }
+  });
+
+  // Update highlight on scroll
+  window.addEventListener('scroll', function() {
+    if (selectedSectionEl) {
+      var rect = selectedSectionEl.getBoundingClientRect();
+      var scrollY = window.scrollY || document.documentElement.scrollTop;
+      sectionHighlight.style.top = (rect.top + scrollY) + 'px';
+    }
+  });
 })();
 </script>`;
 
@@ -289,7 +516,16 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const pendingHtmlRef = useRef<string | null>(null);
 
   // Left sidebar
-  const [leftTab, setLeftTab] = useState<LeftTab>(null);
+  const [leftTab, setLeftTab] = useState<LeftTab>("builder");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Section selection
+  const [sections, setSections] = useState<SectionInfo[]>([]);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [sectionBgColor, setSectionBgColor] = useState("#ffffff");
+  const [sectionTextColor, setSectionTextColor] = useState("#1a1a1a");
+  const [sectionPaddingY, setSectionPaddingY] = useState(80);
+  const [sectionPaddingX, setSectionPaddingX] = useState(40);
 
   // Publish modal state
   const [publishSlug, setPublishSlug] = useState(initialPage.slug);
@@ -382,7 +618,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }).catch(() => {});
   }, [page.id]);
 
-  // Listen for inline edits from iframe
+  // Listen for inline edits + section events from iframe
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "tipote:text-edit") {
@@ -407,6 +643,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       }
       if (e.data?.type === "tipote:image-click") {
         handleIframeImageClick(e.data.imgId, e.data.hasImage);
+      }
+      // Section events
+      if (e.data?.type === "tipote:sections-list") {
+        setSections(e.data.sections || []);
+      }
+      if (e.data?.type === "tipote:section-click") {
+        setSelectedSectionId(e.data.sectionId);
+        setLeftTab("builder");
+        setSidebarOpen(true);
       }
     };
     window.addEventListener("message", handler);
@@ -633,6 +878,48 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, [page.id, page.content_data, page.brand_tokens]);
 
+  // Section operations
+  const selectSection = useCallback((sectionId: string | null) => {
+    setSelectedSectionId(sectionId);
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      if (sectionId) {
+        iframe.contentWindow.postMessage({ type: "tipote:select-section", sectionId }, "*");
+      } else {
+        iframe.contentWindow.postMessage({ type: "tipote:deselect-section" }, "*");
+      }
+    }
+  }, []);
+
+  const deleteSection = useCallback((sectionId: string) => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:delete-section", sectionId }, "*");
+    }
+    setSelectedSectionId(null);
+  }, []);
+
+  const moveSection = useCallback((sectionId: string, direction: "up" | "down") => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:move-section", sectionId, direction }, "*");
+    }
+  }, []);
+
+  const addElement = useCallback((elementType: string) => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:add-element", elementType }, "*");
+    }
+  }, []);
+
+  const updateSectionStyle = useCallback((sectionId: string, updates: Record<string, any>) => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:update-section-style", sectionId, ...updates }, "*");
+    }
+  }, []);
+
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
   const publishPreviewUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${publishSlug}` : `/p/${publishSlug}`;
   const isPublished = page.status === "published";
@@ -648,14 +935,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       {/* ════════════════ TOP BAR (Systeme.io style) ════════════════ */}
       <div className="h-12 shrink-0 flex items-center justify-between px-3 bg-white dark:bg-[#161b22] border-b border-border/50 shadow-sm">
 
-        {/* Left: Back + Title */}
+        {/* Left: Sidebar toggle + Title */}
         <div className="flex items-center gap-2 min-w-0">
           <button
-            onClick={() => setLeftTab(leftTab === "parametres" ? null : "parametres")}
-            className={`p-2 rounded-lg transition-colors ${leftTab === "parametres" ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"}`}
-            title="Paramètres"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className={`p-2 rounded-lg transition-colors ${sidebarOpen ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"}`}
+            title="Panneau latéral"
           >
-            <Settings className="w-4 h-4" />
+            <Layers className="w-4 h-4" />
           </button>
 
           {/* Tipote logo mark */}
@@ -804,21 +1091,218 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       {/* ════════════════ MAIN AREA ════════════════ */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
-        {/* ──── LEFT SIDEBAR (Paramètres) ──── */}
-        {leftTab && (
-          <div className="w-[300px] shrink-0 bg-white dark:bg-[#161b22] border-r border-border/50 flex flex-col overflow-hidden animate-fade-in">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
-              <h3 className="text-xs font-semibold text-foreground uppercase tracking-wide">
-                {leftTab === "parametres" ? "Paramètres" : "Section"}
-              </h3>
-              <button onClick={() => setLeftTab(null)} className="p-1 rounded hover:bg-muted text-muted-foreground">
-                <X className="w-3.5 h-3.5" />
+        {/* ──── LEFT SIDEBAR (Builder + Paramètres + Chat IA) ──── */}
+        {sidebarOpen && (
+          <div className="w-[300px] shrink-0 bg-white dark:bg-[#161b22] border-r border-border/50 flex flex-col overflow-hidden">
+
+            {/* Tab switcher */}
+            <div className="flex border-b border-border/30">
+              <button
+                onClick={() => setLeftTab("builder")}
+                className={`flex-1 py-2 text-xs font-semibold text-center transition-colors ${
+                  leftTab === "builder" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Layers className="w-3 h-3 inline mr-1" />
+                Builder
+              </button>
+              <button
+                onClick={() => setLeftTab("parametres")}
+                className={`flex-1 py-2 text-xs font-semibold text-center transition-colors ${
+                  leftTab === "parametres" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Settings className="w-3 h-3 inline mr-1" />
+                Paramètres
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-4">
+            {/* Tab content */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+
+              {/* ──── BUILDER TAB ──── */}
+              {leftTab === "builder" && (
+                <div className="flex flex-col h-full">
+                  <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+
+                    {/* Section list */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Sections</p>
+                        {selectedSectionId && (
+                          <button onClick={() => selectSection(null)} className="text-[10px] text-primary hover:underline">
+                            Désélectionner
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {sections.length === 0 && (
+                          <p className="text-[11px] text-muted-foreground/60 py-2">Clique sur une section dans l&apos;aperçu</p>
+                        )}
+                        {sections.map((s) => (
+                          <div
+                            key={s.id}
+                            className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all text-xs ${
+                              selectedSectionId === s.id
+                                ? "bg-primary/10 border border-primary/30 text-primary font-medium"
+                                : "hover:bg-muted/50 border border-transparent"
+                            }`}
+                            onClick={() => selectSection(s.id)}
+                          >
+                            <MousePointer className="w-3 h-3 shrink-0 opacity-50" />
+                            <span className="flex-1 truncate">{s.label}</span>
+
+                            {/* Section actions (visible on hover or when selected) */}
+                            <div className={`flex items-center gap-0.5 ${selectedSectionId === s.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }}
+                                className="p-0.5 rounded hover:bg-muted"
+                                title="Monter"
+                              >
+                                <ChevronUp className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); moveSection(s.id, "down"); }}
+                                className="p-0.5 rounded hover:bg-muted"
+                                title="Descendre"
+                              >
+                                <ChevronDown className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteSection(s.id); }}
+                                className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Section properties (when selected) */}
+                    {selectedSectionId && (
+                      <div className="pt-3 border-t border-border/30 space-y-3">
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Propriétés</p>
+
+                        {/* Background color */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Arrière-fond</span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="color"
+                              value={sectionBgColor}
+                              onChange={(e) => {
+                                setSectionBgColor(e.target.value);
+                                updateSectionStyle(selectedSectionId, { bgColor: e.target.value });
+                              }}
+                              className="w-6 h-6 rounded border cursor-pointer"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Text color */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Couleur texte</span>
+                          <input
+                            type="color"
+                            value={sectionTextColor}
+                            onChange={(e) => {
+                              setSectionTextColor(e.target.value);
+                              updateSectionStyle(selectedSectionId, { textColor: e.target.value });
+                            }}
+                            className="w-6 h-6 rounded border cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Padding Y */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-muted-foreground">Rembourrage vertical</span>
+                            <span className="text-[10px] text-muted-foreground">{sectionPaddingY}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={200}
+                            value={sectionPaddingY}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setSectionPaddingY(v);
+                              updateSectionStyle(selectedSectionId, { paddingY: v });
+                            }}
+                            className="w-full h-1.5 accent-primary"
+                          />
+                        </div>
+
+                        {/* Padding X */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-muted-foreground">Rembourrage horizontal</span>
+                            <span className="text-[10px] text-muted-foreground">{sectionPaddingX}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={120}
+                            value={sectionPaddingX}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setSectionPaddingX(v);
+                              updateSectionStyle(selectedSectionId, { paddingX: v });
+                            }}
+                            className="w-full h-1.5 accent-primary"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Element palette */}
+                    <div className="pt-3 border-t border-border/30">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Ajouter un élément</p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {ELEMENT_PALETTE.map((el) => {
+                          const Icon = el.icon;
+                          return (
+                            <button
+                              key={el.type}
+                              onClick={() => addElement(el.type)}
+                              className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-border/50 hover:bg-muted/50 hover:border-primary/30 transition-all text-muted-foreground hover:text-foreground"
+                            >
+                              <Icon className="w-4 h-4" />
+                              <span className="text-[10px]">{el.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Inline editing tip */}
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50">
+                      <span className="text-[10px] text-blue-700 dark:text-blue-300">💡 Clique sur un texte ou une image dans l&apos;aperçu pour le modifier directement.</span>
+                    </div>
+                  </div>
+
+                  {/* ──── AI CHAT (bottom of builder tab) ──── */}
+                  <div className="h-[280px] shrink-0 border-t border-border/30">
+                    <PageChatBar
+                      pageId={page.id}
+                      templateId={page.template_id}
+                      kind={page.template_kind as "capture" | "vente" | "vitrine"}
+                      contentData={page.content_data}
+                      brandTokens={page.brand_tokens}
+                      onUpdate={handleChatUpdate}
+                      locale={page.locale}
+                      compact
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ──── PARAMETRES TAB ──── */}
               {leftTab === "parametres" && (
-                <>
+                <div className="p-3 space-y-4">
                   {/* URL / Slug */}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
@@ -963,7 +1447,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       </button>
                     )}
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -989,17 +1473,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
             />
           </div>
         </div>
-
-        {/* ──── RIGHT: Chat IA ──── */}
-        <PageChatBar
-          pageId={page.id}
-          templateId={page.template_id}
-          kind={page.template_kind as "capture" | "vente" | "vitrine"}
-          contentData={page.content_data}
-          brandTokens={page.brand_tokens}
-          onUpdate={handleChatUpdate}
-          locale={page.locale}
-        />
       </div>
 
       {/* ════════════════ MODALS ════════════════ */}
