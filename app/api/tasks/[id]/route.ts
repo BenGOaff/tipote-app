@@ -160,6 +160,19 @@ export async function PATCH(request: NextRequest, context: Ctx) {
       update.estimated_duration = typeof dur === "string" ? dur.trim().slice(0, 50) || null : null;
     }
 
+    // Priority
+    if ("priority" in body) {
+      const rawPriority = cleanString((body as Record<string, unknown>).priority);
+      if (rawPriority === null) {
+        update.priority = null;
+      } else {
+        const lp = rawPriority.toLowerCase();
+        if (lp === "high" || lp === "medium" || lp === "low") {
+          update.priority = lp;
+        }
+      }
+    }
+
     // Status (tolérant)
     if ("status" in body) {
       const st = normalizeStatus((body as Record<string, unknown>).status);
