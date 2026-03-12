@@ -967,7 +967,7 @@ function ProcessCard({
   onDeleteItem,
 }: {
   process: ClientProcess;
-  t: (key: string, values?: Record<string, unknown>) => string;
+  t: (key: string, values?: Record<string, string | number | Date>) => string;
   onToggleItem: (itemId: string, isDone: boolean) => void;
   onAddItem: (title: string) => void;
   onDeleteItem: (itemId: string) => void;
@@ -1163,7 +1163,7 @@ function ApplyTemplateDialog({
   onApply: (templateId: string, dueDate?: string) => void;
   onCreateTemplate: () => void;
   loading: boolean;
-  t: (key: string, values?: Record<string, unknown>) => string;
+  t: (key: string, values?: Record<string, string | number | Date>) => string;
 }) {
   const [selectedTpl, setSelectedTpl] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
