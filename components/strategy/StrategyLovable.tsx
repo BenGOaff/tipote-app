@@ -518,6 +518,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   const addTask = useCallback(
     async (taskName: string, phaseIndex: number) => {
       try {
+        const phaseKey = phaseIndex === 0 ? "p1" : phaseIndex === 1 ? "p2" : "p3";
         const res = await fetch("/api/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -525,6 +526,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
             title: taskName,
             priority: "high",
             status: "todo",
+            phase: phaseKey,
           }),
         });
 

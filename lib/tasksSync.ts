@@ -67,22 +67,22 @@ export function pickTasksFromPlan(planJson: AnyRecord | null) {
   if (!planJson) return [];
 
   const direct = asArray(planJson.tasks).map(normalizeTask).filter(Boolean);
-  if (direct.length) return direct;
+  if (direct.length) return direct.map((t) => ({ ...t, phase: null as string | null }));
 
   const plan = asRecord(planJson.plan);
   const plan90 = asRecord(planJson.plan90 ?? planJson.plan_90 ?? planJson.plan_90_days);
 
   const a = asArray(plan?.tasks).map(normalizeTask).filter(Boolean);
-  if (a.length) return a;
+  if (a.length) return a.map((t) => ({ ...t, phase: null as string | null }));
 
   const b = asArray(plan90?.tasks).map(normalizeTask).filter(Boolean);
-  if (b.length) return b;
+  if (b.length) return b.map((t) => ({ ...t, phase: null as string | null }));
 
   const grouped = asRecord(plan90?.tasks_by_timeframe ?? planJson.tasks_by_timeframe);
   if (grouped) {
-    const d30 = asArray(grouped.d30).map(normalizeTask).filter(Boolean);
-    const d60 = asArray(grouped.d60).map(normalizeTask).filter(Boolean);
-    const d90 = asArray(grouped.d90).map(normalizeTask).filter(Boolean);
+    const d30 = asArray(grouped.d30).map(normalizeTask).filter(Boolean).map((t) => ({ ...t, phase: "p1" as string | null }));
+    const d60 = asArray(grouped.d60).map(normalizeTask).filter(Boolean).map((t) => ({ ...t, phase: "p2" as string | null }));
+    const d90 = asArray(grouped.d90).map(normalizeTask).filter(Boolean).map((t) => ({ ...t, phase: "p3" as string | null }));
     return [...d30, ...d60, ...d90].filter(Boolean);
   }
 
@@ -101,7 +101,7 @@ export async function syncStrategyTasksFromPlanJson(params: {
   const { supabase, userId, planJson } = params;
 
   const parsed = pickTasksFromPlan(planJson).filter(
-    (t): t is { title: string; due_date: string | null; priority: string | null } => Boolean(t),
+    (t): t is { title: string; due_date: string | null; priority: string | null; phase: string | null } => Boolean(t),
   );
 
   // préserver status existant + repérer les tâches soft-deleted
@@ -157,6 +157,7 @@ export async function syncStrategyTasksFromPlanJson(params: {
       priority: t.priority ?? null,
       status: statusByKey.get(keyOf(t.title, t.due_date ?? null)) ?? "todo",
       source: "strategy",
+      phase: t.phase ?? null,
     }));
 
   if (payload.length === 0) {

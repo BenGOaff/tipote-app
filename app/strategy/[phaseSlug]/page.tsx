@@ -124,7 +124,7 @@ export default async function PhaseDetailPage({
   let taskQuery = supabaseAdmin
     .from("project_tasks")
     .select(`
-      id, title, description, status, priority, due_date, estimated_duration, source, position,
+      id, title, description, status, priority, due_date, estimated_duration, source, position, phase,
       task_tag_assignments(tag_id, task_tags(id, name, color)),
       task_subtasks(id, is_done)
     `)
@@ -140,6 +140,11 @@ export default async function PhaseDetailPage({
 
   // Filter tasks belonging to this phase
   const phaseTasks = (rawTasks ?? []).filter((t: AnyRecord) => {
+    // Explicit phase column takes precedence over title-based matching
+    const explicitPhase = t.phase as string | null;
+    if (explicitPhase) {
+      return explicitPhase === config.key;
+    }
     const normalized = ((t.title as string) ?? "").trim().toLowerCase().replace(/\s+/g, " ");
     if (phaseTitles.has(normalized)) return true;
     if (otherPhaseTitles.has(normalized)) return false;
