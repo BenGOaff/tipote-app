@@ -306,7 +306,8 @@ export async function POST(req: NextRequest) {
         send("step", { id: "schema", label: "Je prépare la structure de ta page...", progress: 30, done: true });
 
         // ==================== STEP 4: Load copywriting knowledge ====================
-        send("step", { id: "knowledge", label: "Je m'inspire des meilleures pages de vente...", progress: 35 });
+        const knowledgeLabel = input.pageType === "sales" ? "Je m'inspire des meilleures pages de vente..." : input.pageType === "showcase" ? "Je m'inspire des meilleurs sites vitrines..." : "Je m'inspire des meilleures pages de capture...";
+        send("step", { id: "knowledge", label: knowledgeLabel, progress: 35 });
 
         // Static knowledge: always injected (proven copywriting frameworks)
         const copywritingKnowledge = buildCopywritingKnowledge(input.pageType);
@@ -320,10 +321,10 @@ export async function POST(req: NextRequest) {
         } catch { /* fail-open */ }
 
         await wait(500);
-        send("step", { id: "knowledge", label: "Je m'inspire des meilleures pages de vente...", progress: 40, done: true });
+        send("step", { id: "knowledge", label: knowledgeLabel, progress: 40, done: true });
 
         // ==================== STEP 5: Generate copywriting ====================
-        send("step", { id: "copy", label: input.pageType === "sales" ? "Je rédige ton texte de vente..." : "Je rédige ton texte de capture...", progress: 45 });
+        send("step", { id: "copy", label: input.pageType === "sales" ? "Je rédige ton texte de vente..." : input.pageType === "showcase" ? "Je rédige le contenu de ton site vitrine..." : "Je rédige ton texte de capture...", progress: 45 });
 
         // Build niche-specific recommendations
         const nichePrompt = buildNichePrompt(niche, input.offerDescription || input.offerName || "");
@@ -366,7 +367,7 @@ export async function POST(req: NextRequest) {
           testimonials: userTestimonials,
         });
 
-        const copyLabel = input.pageType === "sales" ? "Je rédige ton texte de vente..." : "Je rédige ton texte de capture...";
+        const copyLabel = input.pageType === "sales" ? "Je rédige ton texte de vente..." : input.pageType === "showcase" ? "Je rédige le contenu de ton site vitrine..." : "Je rédige ton texte de capture...";
 
         // Wrap the long-running Claude call with SSE keepalive heartbeats + sub-progress
         // to prevent Cloudflare/Vercel/QUIC from dropping the idle connection
@@ -383,7 +384,7 @@ export async function POST(req: NextRequest) {
           }),
         );
 
-        send("step", { id: "copy", label: input.pageType === "sales" ? "Je rédige ton texte de vente..." : "Je rédige ton texte de capture...", progress: 60, done: true });
+        send("step", { id: "copy", label: input.pageType === "sales" ? "Je rédige ton texte de vente..." : input.pageType === "showcase" ? "Je rédige le contenu de ton site vitrine..." : "Je rédige ton texte de capture...", progress: 60, done: true });
 
         // ==================== STEP 6: Parse + apply to template ====================
         send("step", { id: "design", label: "Je crée ton design personnalisé...", progress: 65 });

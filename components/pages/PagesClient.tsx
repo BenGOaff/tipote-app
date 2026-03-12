@@ -120,9 +120,11 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
     setOffersLoading(true);
     try {
       const result = await loadAllOffers(supabase);
-      setOffers(result);
-      if (result.length > 0) {
-        setSelectedOfferId(result[0].id);
+      // Only show user-created offers (from settings), not AI-generated strategy offers
+      const userOffers = result.filter((o) => o.source !== "generated");
+      setOffers(userOffers);
+      if (userOffers.length > 0) {
+        setSelectedOfferId(userOffers[0].id);
         setOfferSource("existing");
       } else {
         setOfferSource("scratch");
