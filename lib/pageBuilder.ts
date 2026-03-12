@@ -488,7 +488,7 @@ a { color: var(--brand); text-decoration: none; }
   padding: 80px 40px;
   position: relative;
 }
-.tp-section.alt { background: ${sectionBg || "var(--gray-50)"}; }
+.tp-section.alt { background: ${sectionBg || "var(--gray-100)"}; }
 .tp-section.dark {
   background: linear-gradient(135deg, var(--dark) 0%, var(--dark-2) 100%);
   color: #fff;
@@ -547,6 +547,7 @@ a { color: var(--brand); text-decoration: none; }
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
   padding: 28px 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 .tp-benefit-card:hover {
@@ -620,7 +621,7 @@ a { color: var(--brand); text-decoration: none; }
   white-space: nowrap;
   line-height: 1.3;
 }
-.tp-section.alt .tp-step-badge { box-shadow: 0 0 0 6px var(--gray-50); }
+.tp-section.alt .tp-step-badge { box-shadow: 0 0 0 6px var(--gray-100); }
 .tp-step-content { flex: 1; padding-top: 10px; }
 .tp-step-title {
   font-family: var(--heading-font);
@@ -688,6 +689,7 @@ a { color: var(--brand); text-decoration: none; }
   border-radius: var(--radius);
   padding: 28px;
   position: relative;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .tp-testimonial-card::before {
   content: "\\201C";
@@ -805,11 +807,12 @@ a { color: var(--brand); text-decoration: none; }
 .tp-guarantee-box {
   max-width: 700px;
   margin: 0 auto;
-  background: var(--gray-50);
-  border: 1px solid var(--gray-200);
+  background: var(--white);
+  border: 2px solid var(--brand-15);
   border-radius: var(--radius);
   padding: 32px;
   text-align: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
 }
 .tp-guarantee-icon { font-size: 2.5rem; margin-bottom: 12px; }
 .tp-faq-item {
@@ -818,6 +821,7 @@ a { color: var(--brand); text-decoration: none; }
   padding: 20px 24px;
   margin-bottom: 10px;
   background: var(--white);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .tp-faq-q { font-weight: 700; font-size: 1rem; color: var(--gray-900); margin-bottom: 8px; }
 .tp-faq-a { font-size: 0.92rem; color: var(--gray-600); line-height: 1.6; }
@@ -1267,7 +1271,6 @@ function sectionSolution(d: Record<string, any>): string {
         <span style="color:var(--gray-700);font-size:0.95rem;line-height:1.7">${esc(b)}</span>
       </li>`).join("")}
     </ul>` : ""}
-    ${svgTransformationVisual()}
   </div>
 </section>`;
 }
