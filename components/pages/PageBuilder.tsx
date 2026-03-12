@@ -996,6 +996,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       if (htmlEl.style.outline === "none") htmlEl.style.removeProperty("outline");
       if (htmlEl.getAttribute("style") === "") htmlEl.removeAttribute("style");
     });
+    // Remove editor tracking attributes
+    clone.querySelectorAll("[data-tp-section-idx]").forEach(el => {
+      el.removeAttribute("data-tp-section-idx");
+    });
     return "<!DOCTYPE html>" + clone.outerHTML;
   }, [htmlPreview]);
 
