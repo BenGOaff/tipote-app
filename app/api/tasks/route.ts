@@ -15,6 +15,7 @@ type CreateBody = {
   priority?: unknown;
   importance?: unknown; // compat ancienne UI
   status?: unknown;
+  phase?: unknown;
 };
 
 function cleanString(v: unknown): string {
@@ -124,6 +125,9 @@ export async function POST(req: Request) {
       }
     }
 
+    const rawPhase = cleanNullableString(raw.phase);
+    const phase = rawPhase && ["p1", "p2", "p3"].includes(rawPhase) ? rawPhase : null;
+
     const insertPayload: Record<string, unknown> = {
       user_id: auth.user.id,
       project_id: projectId,
@@ -132,12 +136,13 @@ export async function POST(req: Request) {
       due_date,
       priority,
       source: "manual",
+      phase,
     };
 
     const { data, error } = await supabaseAdmin
       .from("project_tasks")
       .insert(insertPayload)
-      .select("id, title, status, priority, due_date, source, created_at, updated_at")
+      .select("id, title, status, priority, due_date, source, phase, created_at, updated_at")
       .single();
 
     if (error) {

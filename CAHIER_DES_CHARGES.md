@@ -364,16 +364,17 @@ Gestion centralisée des clients pour les coachs, consultants et prestataires de
 
 **Tableau principal :**
 
-- Colonnes : nom, email, statut (Nouveau / Actif / En pause / Complété), progression (barre %), date d'ajout
+- Colonnes : nom, email, statut (Prospect / Actif / En pause / Complété), badges accompagnements avec progression (%), date d'ajout
 - Recherche par nom/email
 - Filtre par statut
+- **Filtre par accompagnement** : dropdown permettant de filtrer les clients ayant un accompagnement spécifique en cours
 - Pagination
 
 **Statuts disponibles :**
 
 | Statut | Couleur | Description |
 | :---- | :---- | :---- |
-| Nouveau | Bleu | Client récemment ajouté, pas encore démarré |
+| Prospect | Bleu | Client récemment ajouté, pas encore démarré |
 | Actif | Vert | Accompagnement en cours |
 | En pause | Jaune | Accompagnement temporairement suspendu |
 | Complété | Gris | Accompagnement terminé |
@@ -388,13 +389,26 @@ Gestion centralisée des clients pour les coachs, consultants et prestataires de
 
 - Informations du client (nom, email, téléphone, statut)
 - Notes
-- Section « Processus d'accompagnement » :
+- Section « Accompagnements » (anciennement « Processus d'accompagnement ») :
   - Liste d'étapes personnalisables (ex : « Audit initial », « Plan d'action », « Suivi mensuel »)
-  - Chaque étape a un statut (à faire / en cours / terminé)
+  - Chaque étape a un statut (checkbox à cocher)
   - Barre de progression calculée automatiquement
   - Ajout/suppression d'étapes
-  - Templates de processus prédéfinis (coaching 3 mois, consulting projet, formation)
+  - **Suivi financier par accompagnement** :
+    - Montant closé (montant total du deal)
+    - Montant encaissé (mis à jour inline)
+    - Type de paiement : comptant ou en tranches
+    - Nombre de tranches (si paiement en tranches)
+    - Affichage résumé : « X € encaissés sur Y € »
+  - Application de « Mes accompagnements » (templates réutilisables) avec possibilité de saisir les infos de paiement lors de l'application
 - Actions : éditer / supprimer / changer statut
+
+**Section « Mes accompagnements » (anciennement « Mes Templates ») :**
+
+- Templates de processus réutilisables pour les accompagnements clients
+- Renommé "accompagnements" (FR), "programs" (EN), "programas" (ES), "programmi" (IT), "برامج" (AR)
+- Création : nom, description, couleur, liste d'étapes ordonnées
+- Application à un client : sélection du template + saisie optionnelle des informations de paiement (montant, type, nombre de tranches)
 
 **Données stockées côté client (pas de chiffrement PII pour cette V1) :**
 
@@ -571,6 +585,12 @@ Layout : barre supérieure (logo + responsive toggle + actions) + sidebar gauche
 - Suggestions contextuelles par type de page
 - Indication visuelle de l'élément sélectionné pour modifications ciblées
 
+**Design pages publiques :**
+
+- Sections alternées avec contraste visible (fond `--gray-100` pour les sections `.alt`)
+- Ombres portées sur les cards (bénéfices, témoignages, FAQ) pour une meilleure lisibilité
+- Pas d'illustrations SVG abstraites sans valeur ajoutée
+
 **Publication & configuration :**
 
 - Publication avec slug personnalisé
@@ -586,6 +606,13 @@ Layout : barre supérieure (logo + responsive toggle + actions) + sidebar gauche
 - Analytics intégrés (vues, leads, taux conversion)
 - Export leads CSV
 - QR Code de partage
+
+**Sanitisation HTML (défense en profondeur) :**
+
+- Nettoyage serveur (`lib/sanitizeHtml.ts`) à chaque sauvegarde de `html_snapshot` pour supprimer les artefacts de l'éditeur (scripts injectés, overlays toolbar, highlights de sélection)
+- Nettoyage client dans `PublicPageClient.tsx` avec CSS safety net + script DOM cleanup dans l'iframe
+- Endpoint admin `/api/admin/sanitize-pages` pour nettoyage en masse des pages existantes
+- Détection par signatures (classes CSS, z-index, contenu de script) plutôt que par attributs seuls
 
 **Pages publiques :** Accessibles via `/p/[slug]`
 
@@ -791,7 +818,8 @@ Accès restreint aux emails admin.
 | Post publié sur réseau social | MAJ statut \+ stockage post\_id/post\_url | Callback API |
 | Modification persona | MAJ contexte génération contenu | personas.persona\_json update |
 | Lead capturé (quiz/page) | Insert leads (chiffré) \+ notification | Insert \+ trigger |
-| Étape processus client cochée | MAJ progression client \+ stats | Recalcul temps réel |
+| Étape accompagnement client cochée | MAJ progression client \+ stats | Recalcul temps réel |
+| Montant encaissé mis à jour | MAJ résumé financier accompagnement | Update inline |
 | Commentaire détecté (automation) | Auto-reply \+ log \+ consommation crédit | Webhook \+ Claude |
 | Analytics renseignés | Diagnostic IA | Trigger analyse |
 
@@ -869,7 +897,11 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Clients :**
 
-- `clients` — clients gérés manuellement (nom, email, téléphone, statut, notes, processus d'accompagnement JSONB, progression)
+- `clients` — clients gérés manuellement (nom, email, téléphone, statut, notes, lead_id)
+- `client_templates` — templates d'accompagnement réutilisables (nom, description, couleur)
+- `client_template_items` — étapes d'un template (title, position)
+- `client_processes` — accompagnements appliqués à un client (name, status, template_id, due_date, amount_total, amount_collected, payment_type, installments_count)
+- `client_process_items` — étapes d'un accompagnement en cours (title, is_done, position, due_date)
 
 **Leads :**
 
@@ -941,9 +973,12 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Clients :**
 
-- GET/POST /api/clients — Liste \+ création
+- GET/POST /api/clients — Liste \+ création (GET inclut process\_summaries par client)
 - GET/PATCH/DELETE /api/clients/\[id\]
-- PATCH /api/clients/\[id\]/process — Mise à jour du processus d'accompagnement
+- POST /api/client-processes — Créer un accompagnement (appliquer un template à un client, avec infos de paiement)
+- PATCH /api/client-processes/\[processId\] — Mise à jour d'un accompagnement (statut, paiement, échéance)
+- PATCH /api/client-processes/\[processId\]/items/\[itemId\] — Toggle étape
+- GET/POST /api/client-templates — CRUD templates d'accompagnement
 
 **Leads :**
 
@@ -976,6 +1011,7 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 **Admin :**
 
 - POST /api/admin/{users, notifications, bulk}
+- POST /api/admin/sanitize-pages — Nettoyage en masse des html\_snapshot (artefacts éditeur)
 
 ### 6.4. Variables d'environnement
 
@@ -1146,7 +1182,7 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 - **Constructeur de pages** (capture, vente, vitrine, link-in-bio)  
 - **Système de quiz** avec capture de leads  
 - **Gestion des leads** avec chiffrement AES-256
-- **Gestion des clients** (suivi, notes, statuts, processus d'accompagnement)
+- **Gestion des clients** (suivi, notes, statuts, accompagnements avec suivi financier et progression)
 - Calendrier éditorial (édition des posts programmés)  
 - Système de crédits (achat \+ consommation)  
 - Templates Systeme.io  

@@ -147,6 +147,7 @@ type TaskRow = {
   status: string | null;
   priority: string | null;
   source: string | null;
+  phase: string | null;
   due_date: string | null;
   estimated_duration: string | null;
   created_at: string | null;
@@ -370,7 +371,7 @@ export default async function StrategyPage() {
   // On filtre STRICTEMENT par user_id -> aucune fuite de données.
   const tasksRes = await supabaseAdmin
     .from("project_tasks")
-    .select("id, title, status, priority, source, position, due_date, estimated_duration, created_at, updated_at")
+    .select("id, title, status, priority, source, phase, position, due_date, estimated_duration, created_at, updated_at")
     .eq("user_id", user.id)
     .is("deleted_at", null)
     .order("position", { ascending: true })
@@ -419,9 +420,15 @@ export default async function StrategyPage() {
   const byPhase = { p1: [] as TaskRow[], p2: [] as TaskRow[], p3: [] as TaskRow[] };
 
   for (const t of tasks) {
-    const normalized = (t.title ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-    const phase = titleToPhase.get(normalized) ?? "p1"; // default to Phase 1
-    byPhase[phase].push(t);
+    // Explicit phase column takes precedence over title-based matching
+    const explicitPhase = t.phase as "p1" | "p2" | "p3" | null;
+    if (explicitPhase && (explicitPhase === "p1" || explicitPhase === "p2" || explicitPhase === "p3")) {
+      byPhase[explicitPhase].push(t);
+    } else {
+      const normalized = (t.title ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+      const phase = titleToPhase.get(normalized) ?? "p1"; // default to Phase 1
+      byPhase[phase].push(t);
+    }
   }
 
   // ✅ Objectif revenu :

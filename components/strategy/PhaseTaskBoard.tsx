@@ -128,11 +128,12 @@ export default function PhaseTaskBoard({
     if (!name) return;
     setNewTaskName("");
     setIsAdding(true);
+    const phaseKey = phaseSlug === "fondations" ? "p1" : phaseSlug === "croissance" ? "p2" : "p3";
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: name, status: "todo" }),
+        body: JSON.stringify({ title: name, status: "todo", phase: phaseKey }),
       });
       const json = await res.json();
       if (json.ok && json.task) {
@@ -157,7 +158,7 @@ export default function PhaseTaskBoard({
     } finally {
       setIsAdding(false);
     }
-  }, [newTaskName, toast]);
+  }, [newTaskName, phaseSlug, toast]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
