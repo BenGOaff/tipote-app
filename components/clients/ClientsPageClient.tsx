@@ -85,6 +85,13 @@ type ProcessItem = {
   due_date: string | null;
 };
 
+type ClientPayment = {
+  id: string;
+  amount: number;
+  paid_at: string;
+  note: string | null;
+};
+
 type ClientProcess = {
   id: string;
   name: string;
@@ -99,6 +106,7 @@ type ClientProcess = {
   amount_collected: number | null;
   payment_type: string;
   installments_count: number | null;
+  payments?: ClientPayment[];
 };
 
 type TemplateItem = {
@@ -1045,11 +1053,51 @@ function ProcessCard({
 }) {
   const [newItemTitle, setNewItemTitle] = useState("");
   const [expanded, setExpanded] = useState(true);
-  const [editingPayment, setEditingPayment] = useState(false);
-  const [payAmount, setPayAmount] = useState(String(process.amount_collected ?? 0));
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [newPayAmount, setNewPayAmount] = useState("");
+  const [newPayDate, setNewPayDate] = useState(new Date().toISOString().slice(0, 10));
+  const [newPayNote, setNewPayNote] = useState("");
+  const [payments, setPayments] = useState<ClientPayment[]>(process.payments ?? []);
+  const [localCollected, setLocalCollected] = useState(process.amount_collected ?? 0);
+  const { toast } = useToast();
 
   const hasPayment = process.amount_total != null && process.amount_total > 0;
-  const collectedPct = hasPayment ? Math.round(((process.amount_collected ?? 0) / process.amount_total!) * 100) : 0;
+  const collectedPct = hasPayment ? Math.round((localCollected / process.amount_total!) * 100) : 0;
+
+  const addPayment = async () => {
+    const amount = parseFloat(newPayAmount);
+    if (!amount || amount <= 0) return;
+    try {
+      const res = await fetch(`/api/client-processes/${process.id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, paid_at: newPayDate, note: newPayNote.trim() || null }),
+      });
+      const json = await res.json();
+      if (json.ok && json.payment) {
+        setPayments((prev) => [json.payment, ...prev]);
+        setLocalCollected(json.amount_collected);
+        setNewPayAmount("");
+        setNewPayNote("");
+        setShowAddPayment(false);
+      }
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    }
+  };
+
+  const deletePayment = async (paymentId: string) => {
+    try {
+      const res = await fetch(`/api/client-processes/${process.id}/payments/${paymentId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (json.ok) {
+        setPayments((prev) => prev.filter((p) => p.id !== paymentId));
+        setLocalCollected(json.amount_collected);
+      }
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    }
+  };
 
   return (
     <Card className="p-4">
@@ -1077,55 +1125,102 @@ function ProcessCard({
 
       <Progress value={process.progress} className="h-1.5 mt-3" />
 
-      {/* Payment summary */}
+      {/* Payment summary + log */}
       {hasPayment && (
-        <div className="mt-3 flex items-center gap-3 text-xs border-t border-slate-100 pt-3">
-          <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="font-medium text-slate-700">
-              {process.amount_collected ?? 0}€ / {process.amount_total}€
-            </span>
-            <span className="text-muted-foreground">
-              ({collectedPct}% {t("collected")})
-            </span>
-            {process.payment_type === "installments" && process.installments_count && (
-              <Badge variant="outline" className="text-xs">
-                {process.installments_count}x {t("paymentInstallments").toLowerCase()}
-              </Badge>
-            )}
-          </div>
-          {!editingPayment ? (
+        <div className="mt-3 border-t border-slate-100 pt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-3 text-xs">
+            <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="font-medium text-slate-700">
+                {localCollected}€ / {process.amount_total}€
+              </span>
+              <span className="text-muted-foreground">
+                ({collectedPct}% {t("collected")})
+              </span>
+              {process.payment_type === "installments" && process.installments_count && (
+                <Badge variant="outline" className="text-xs">
+                  {process.installments_count}x {t("paymentInstallments").toLowerCase()}
+                </Badge>
+              )}
+            </div>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setEditingPayment(true); setPayAmount(String(process.amount_collected ?? 0)); }}
-              className="text-xs text-primary hover:underline"
+              onClick={() => setShowAddPayment(!showAddPayment)}
+              className="text-xs text-primary hover:underline flex items-center gap-1"
             >
-              <Pencil className="h-3 w-3" />
+              <Plus className="h-3 w-3" /> Paiement
             </button>
-          ) : (
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              <input
-                type="number"
-                value={payAmount}
-                onChange={(e) => setPayAmount(e.target.value)}
-                className="w-20 h-6 text-xs border rounded px-1"
-                min="0"
-                step="0.01"
-              />
-              <span className="text-xs">€</span>
-              <button
-                type="button"
-                onClick={() => {
-                  onUpdateProcess({ amount_collected: parseFloat(payAmount) || 0 });
-                  setEditingPayment(false);
-                }}
-                className="text-green-600 hover:text-green-700"
-              >
-                <Save className="h-3 w-3" />
-              </button>
-              <button type="button" onClick={() => setEditingPayment(false)} className="text-slate-400">
-                <X className="h-3 w-3" />
-              </button>
+          </div>
+
+          {/* Add payment form */}
+          {showAddPayment && (
+            <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-medium">Montant (€)</label>
+                  <input
+                    type="number"
+                    value={newPayAmount}
+                    onChange={(e) => setNewPayAmount(e.target.value)}
+                    className="w-full h-7 text-xs border rounded px-2"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-medium">Date</label>
+                  <input
+                    type="date"
+                    value={newPayDate}
+                    onChange={(e) => setNewPayDate(e.target.value)}
+                    className="w-full h-7 text-xs border rounded px-2"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-medium">Note (optionnel)</label>
+                  <input
+                    type="text"
+                    value={newPayNote}
+                    onChange={(e) => setNewPayNote(e.target.value)}
+                    className="w-full h-7 text-xs border rounded px-2"
+                    placeholder="Ex: Tranche 1"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setShowAddPayment(false)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1">
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={addPayment}
+                  disabled={!newPayAmount || parseFloat(newPayAmount) <= 0}
+                  className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded hover:bg-primary/90 disabled:opacity-50"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Payment log */}
+          {payments.length > 0 && (
+            <div className="space-y-1">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 text-xs px-1 py-0.5 group">
+                  <span className="text-muted-foreground w-20 shrink-0">{new Date(p.paid_at).toLocaleDateString("fr-FR")}</span>
+                  <span className="font-medium text-green-700">+{p.amount}€</span>
+                  {p.note && <span className="text-muted-foreground truncate">{p.note}</span>}
+                  <button
+                    type="button"
+                    onClick={() => deletePayment(p.id)}
+                    className="ml-auto opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
