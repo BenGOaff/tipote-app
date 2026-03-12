@@ -121,7 +121,7 @@ function readableSubtextColor(bgHex: string): string {
 
 // ─────────────── CSS Generation ───────────────
 
-function buildCSS(primary: string, accent: string, font: string): string {
+function buildCSS(primary: string, accent: string, font: string, heroBg?: string, sectionBg?: string): string {
   const safePrimary = primary || "#2563eb";
   const safeAccent = accent || safePrimary;
   // Generate contrast-aware variants for dark backgrounds (hero, footer, CTA sections)
@@ -211,7 +211,7 @@ a { color: var(--brand); text-decoration: none; }
 
 /* ─── HERO SECTION (Capture) ─── */
 .tp-hero {
-  background: linear-gradient(135deg, var(--dark) 0%, var(--dark-2) 50%, #0f2847 100%);
+  background: ${heroBg ? heroBg : "linear-gradient(135deg, var(--dark) 0%, var(--dark-2) 50%, #0f2847 100%)"};
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -488,7 +488,7 @@ a { color: var(--brand); text-decoration: none; }
   padding: 80px 40px;
   position: relative;
 }
-.tp-section.alt { background: var(--gray-50); }
+.tp-section.alt { background: ${sectionBg || "var(--gray-50)"}; }
 .tp-section.dark {
   background: linear-gradient(135deg, var(--dark) 0%, var(--dark-2) 100%);
   color: #fff;
@@ -845,16 +845,48 @@ a { color: var(--brand); text-decoration: none; }
   .tp-visual { max-width: 380px; margin: 0 auto; }
   .tp-float { display: none; }
   .tp-hero { padding: 50px 20px !important; min-height: auto !important; }
-  .tp-about { grid-template-columns: 1fr; text-align: center; }
+  .tp-about { grid-template-columns: 1fr !important; text-align: center; }
   .tp-about-photo { margin: 0 auto 24px; width: 160px; height: 160px; }
+  .tp-section { padding: 60px 24px; }
+  /* Force inline grids to stack on tablet */
+  [style*="grid-template-columns: repeat(2"] ,
+  [style*="grid-template-columns: repeat(3"] ,
+  [style*="grid-template-columns:repeat(2"] ,
+  [style*="grid-template-columns:repeat(3"] {
+    grid-template-columns: 1fr !important;
+    max-width: 100% !important;
+  }
 }
 @media (max-width: 520px) {
   .tp-hero h1 { font-size: 1.5rem !important; }
-  .tp-section { padding: 50px 20px; }
+  .tp-hero h2 { font-size: 1.2rem !important; }
+  .tp-section { padding: 40px 16px; }
+  .tp-section-title { font-size: 1.3rem !important; }
+  .tp-section-subtitle { font-size: 0.9rem !important; }
+  .tp-container { padding: 0 16px; }
   .tp-mockup { max-width: 100%; }
-  .tp-mock-sidebar { width: 110px; padding: 10px; }
-  .tp-benefits-grid { grid-template-columns: 1fr; }
-  .tp-testimonials-grid { grid-template-columns: 1fr; }
+  .tp-mock-sidebar { width: 90px; padding: 8px; font-size: 0.6rem; }
+  .tp-mock-nav-item { font-size: 0.6rem; padding: 5px 6px; }
+  .tp-benefits-grid { grid-template-columns: 1fr !important; }
+  .tp-testimonials-grid { grid-template-columns: 1fr !important; }
+  .tp-steps-timeline { grid-template-columns: 1fr !important; }
+  .tp-price-card { padding: 24px 16px; }
+  .tp-price-amount { font-size: 2.2rem !important; }
+  .tp-final-cta { padding: 50px 20px !important; }
+  .tp-final-cta h2 { font-size: 1.3rem !important; }
+  .tp-final-btn { font-size: 0.95rem !important; padding: 14px 28px !important; }
+  .tp-header-bar { font-size: 0.75rem; padding: 8px 12px; }
+  .tp-faq-item { padding: 14px 16px; }
+  .tp-guarantee-box { padding: 24px 16px; }
+  /* Force ALL inline grids to single column on mobile */
+  [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    max-width: 100% !important;
+  }
+  /* Ensure images don't overflow */
+  img { max-width: 100% !important; height: auto !important; }
+  /* Showcase nav stacks on mobile */
+  .tp-showcase-nav-links { display: none !important; }
 }
 
 /* Ensure all text in colored rows is readable */
@@ -1478,7 +1510,9 @@ function sectionShowcaseNav(d: Record<string, any>): string {
       ${logoText ? `<span style="font-family:var(--heading-font);font-weight:700;font-size:1.2rem;color:var(--gray-900)">${logoText}</span>` : ""}
     </div>
     <div style="display:flex;align-items:center;gap:24px">
-      ${navItems.map(item => `<a href="#sc-${esc(safe(item)).toLowerCase().replace(/\s+/g, "-")}" style="font-size:0.9rem;color:var(--gray-600);text-decoration:none;font-weight:500" data-editable="true">${esc(safe(item))}</a>`).join("")}
+      <div class="tp-showcase-nav-links" style="display:flex;align-items:center;gap:24px">
+        ${navItems.map(item => `<a href="#sc-${esc(safe(item)).toLowerCase().replace(/\s+/g, "-")}" style="font-size:0.9rem;color:var(--gray-600);text-decoration:none;font-weight:500" data-editable="true">${esc(safe(item))}</a>`).join("")}
+      </div>
       <a href="${esc(ctaUrl)}" style="background:var(--brand);color:var(--brand-text);padding:8px 20px;border-radius:var(--radius);font-size:0.9rem;font-weight:600;text-decoration:none" data-editable="true">${ctaText}</a>
     </div>
   </div>
@@ -1587,14 +1621,17 @@ function sectionContact(d: Record<string, any>): string {
 
 export function buildPage(params: PageParams): string {
   const { pageType, contentData: d, brandTokens, locale } = params;
-  const primary = brandTokens?.["colors-primary"] || "#2563eb";
-  const accent = brandTokens?.["colors-accent"] || primary;
-  const font = brandTokens?.["typography-heading"] || "";
+  // Support both legacy ("colors-primary") and Chat IA ("primary") key formats
+  const primary = brandTokens?.primary || brandTokens?.["colors-primary"] || "#2563eb";
+  const accent = brandTokens?.accent || brandTokens?.["colors-accent"] || primary;
+  const font = brandTokens?.headingFont || brandTokens?.["typography-heading"] || "";
+  const heroBg = brandTokens?.heroBg || "";
+  const sectionBg = brandTokens?.sectionBg || "";
   const isCapture = pageType === "capture";
   const isShowcase = pageType === "showcase";
   const lang = (locale || "fr").slice(0, 2);
 
-  const css = buildCSS(primary, accent, font);
+  const css = buildCSS(primary, accent, font, heroBg, sectionBg);
   const fonts = buildFontImport(font);
   const header = isShowcase ? "" : buildHeader(d);
 

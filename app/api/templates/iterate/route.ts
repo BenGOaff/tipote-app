@@ -40,6 +40,7 @@ async function callClaude(args: {
   system: string;
   user: string;
   maxTokens?: number;
+  temperature?: number;
 }): Promise<string> {
   const model = resolveClaudeModel();
   const controller = new AbortController();
@@ -58,6 +59,7 @@ async function callClaude(args: {
       body: JSON.stringify({
         model,
         max_tokens: args.maxTokens ?? 4000,
+        temperature: args.temperature ?? 0.2,
         system: args.system,
         messages: [{ role: "user", content: args.user }],
       }),
@@ -114,40 +116,61 @@ const OutputSchema = z.object({
 
 const CONTENT_WHITELIST: Record<Kind, string[]> = {
   capture: [
+    // Hero & headline
     "hero_pretitle",
     "hero_badge",
     "hero_kicker",
+    "hero_eyebrow",
     "hero_title",
     "hero_subtitle",
+    "hero_description",
     "hook",
     "headline",
     "main_headline",
+    "header_bar_text",
+    // Visual
+    "hero_visual_type",
+    "hero_visual_title",
+    "hero_visual_subtitle",
+    "hero_visual_items",
+    "hero_visual_metrics",
+    // Content
     "bullets",
     "features",
     "steps",
-    "cta_text",
-    "cta_subtitle",
-    "reassurance_text",
-    "side_badge",
-    "key_number",
-    // Extended fields for page builder iterations
-    "top_notice_text",
-    "top_notice_link_text",
-    "logo_text",
-    "logo_subtitle",
     "benefits_title",
     "benefits",
+    "problem_bullets",
+    "program_title",
+    "program_items",
+    // Social proof
+    "social_proof_text",
+    "testimonials_title",
+    "testimonials",
+    // About
+    "about_title",
     "about_label",
     "about_name",
     "about_story",
+    "about_description",
+    // CTA
+    "cta_text",
+    "cta_subtitle",
+    "reassurance_text",
+    "final_title",
+    "final_description",
+    // Brand & layout
+    "logo_text",
+    "logo_subtitle",
     "footer_text",
+    // Extended / legacy
+    "top_notice_text",
+    "top_notice_link_text",
+    "side_badge",
+    "key_number",
     "promises",
-    "testimonials_title",
-    "testimonials",
-    "hero_description",
     "hero_date",
     "target_profiles",
-    "program_items",
     "schedule_days",
     "floating_labels",
     "daily_program",
@@ -158,33 +181,77 @@ const CONTENT_WHITELIST: Record<Kind, string[]> = {
     "trainer_name",
     "capture_heading",
     "capture_subtitle",
+    // Thank-you page
+    "thank_you_title",
+    "thank_you_message",
+    "thank_you_cta_text",
   ],
   vente: [
+    // Hero
+    "hero_eyebrow",
     "hero_title",
     "hero_subtitle",
     "hero_bullets",
     "hero_description",
+    "alert_banner_text",
+    // Problem / Solution
+    "problem_title",
+    "problem_description",
+    "problem_bullets",
+    "solution_title",
+    "solution_description",
+    "solution_bullets",
+    // Benefits
+    "benefits_title",
+    "benefits",
+    "benefits_grid",
+    // Program
+    "program_title",
+    "program_items",
+    "program_days",
+    // About
+    "about_title",
+    "about_name",
+    "about_story",
+    "about_description",
+    // Testimonials
+    "testimonials_title",
+    "testimonials",
+    "visual_testimonials",
+    // Bonuses
+    "bonuses_title",
+    "bonuses",
+    // Guarantee
+    "guarantee_title",
+    "guarantee_text",
+    // Pricing
+    "price_title",
+    "price_amount",
+    "price_old",
+    "price_note",
+    "pricing_tiers",
+    "pricing_plans",
+    // Urgency
+    "urgency_text",
+    // FAQ
+    "faq_title",
+    "faq_items",
+    "faqs",
+    // CTA
     "cta_main",
     "cta_text",
     "cta_subtitle",
-    "faq_items",
-    // Extended fields for page builder iterations
+    "final_title",
+    "final_description",
+    // Brand & layout
     "logo_text",
-    "alert_banner_text",
     "nav_links",
+    "footer_text",
+    "footer_links",
+    // Extended / legacy
     "stats",
     "speakers",
-    "testimonials",
-    "program_days",
-    "bonuses",
-    "pricing_tiers",
-    "pricing_plans",
     "info_cards",
-    "footer_links",
-    "guarantee_title",
-    "guarantee_text",
-    "about_name",
-    "about_story",
     "offer_hook",
     "offer_title",
     "offer_price",
@@ -194,21 +261,19 @@ const CONTENT_WHITELIST: Record<Kind, string[]> = {
     "methods",
     "comparison_rows",
     "qualification_list",
-    "benefits",
     "pain_points_checklist",
-    "benefits_grid",
     "limiting_beliefs",
-    "visual_testimonials",
     "disclaimer_text",
     "proof_intro_text",
     "proof_evidence_text",
     "proof_transformation_text",
   ],
   vitrine: [
-    // Showcase / vitrine page fields (matching pageBuilder.ts sections)
+    // Brand & nav
     "logo_text",
     "logo_image_url",
     "nav_links",
+    // Hero
     "hero_eyebrow",
     "hero_title",
     "hero_subtitle",
@@ -217,24 +282,39 @@ const CONTENT_WHITELIST: Record<Kind, string[]> = {
     "cta_url",
     "secondary_cta_text",
     "secondary_cta_url",
+    // Services
     "services_title",
     "services_subtitle",
     "services",
+    // Key numbers
     "numbers_title",
     "key_numbers",
+    // Benefits
     "benefits_title",
     "benefits",
+    // Program / Process
     "program_title",
     "program_items",
+    // About
+    "about_title",
     "about_label",
     "about_name",
     "about_story",
+    "about_description",
+    // Testimonials
     "testimonials_title",
     "testimonials",
+    // Pricing
+    "price_title",
+    "price_amount",
+    "price_note",
     "pricing_title",
     "pricing_plans",
+    // FAQ
     "faq_title",
     "faq_items",
+    "faqs",
+    // Contact
     "contact_title",
     "contact_description",
     "contact_cta_text",
@@ -242,11 +322,12 @@ const CONTENT_WHITELIST: Record<Kind, string[]> = {
     "contact_email",
     "contact_phone",
     "contact_address",
+    // Footer
     "footer_text",
   ],
 };
 
-const BRANDTOKENS_WHITELIST = ["accent", "headingFont", "bodyFont"];
+const BRANDTOKENS_WHITELIST = ["primary", "accent", "headingFont", "bodyFont", "heroBg", "sectionBg"];
 
 function isPathAllowed(path: string, kind: Kind) {
   const p = String(path || "").trim();
@@ -393,7 +474,9 @@ export async function POST(req: Request) {
   const system = [
     "Tu es un assistant d’édition de pages web (capture, vente, vitrine).",
     "Tu ne modifies jamais le HTML.",
-    "Tu produis UNIQUEMENT un JSON qui respecte ce schéma :",
+    "Tu produis UNIQUEMENT un objet JSON (pas de markdown, pas de ```json, pas de texte autour).",
+    "",
+    "Format de sortie EXACT :",
     JSON.stringify(
       {
         patches: [{ op: "set", path: "hero_title", value: "Nouveau titre" }],
@@ -405,14 +488,23 @@ export async function POST(req: Request) {
     ),
     "",
     "Règles OBLIGATOIRES :",
-    "- Réponds strictement en JSON valide (pas de markdown, pas de texte autour).",
+    "- Ta réponse COMMENCE par { et FINIT par }. Rien d’autre.",
+    "- Pas de triple backticks, pas de commentaire, pas de texte explicatif autour du JSON.",
+    "- Les valeurs texte (value) DOIVENT être en français.",
+    "- Adapte ton copywriting au ton de la page existante.",
     `- kind = ${kind}`,
     `- templateId = ${templateId}`,
     `- variantId = ${variantId || ""}`,
     "",
     "WHITELIST paths autorisés :",
     `- contentData roots: ${CONTENT_WHITELIST[kind].join(", ")}`,
-    `- brandTokens roots: ${BRANDTOKENS_WHITELIST.join(", ")}`,
+    `- brandTokens: ${BRANDTOKENS_WHITELIST.join(", ")}`,
+    "",
+    "Pour changer les couleurs :",
+    `- Couleur principale (brand) : { "op": "set", "path": "brandTokens.primary", "value": "#hexcolor" }`,
+    `- Couleur d’accent : { "op": "set", "path": "brandTokens.accent", "value": "#hexcolor" }`,
+    `- Fond hero : { "op": "set", "path": "brandTokens.heroBg", "value": "#hexcolor" }`,
+    `- Fond sections : { "op": "set", "path": "brandTokens.sectionBg", "value": "#hexcolor" }`,
     "",
     "Interdictions :",
     "- Ne propose pas de nouveaux champs hors whitelist.",
@@ -446,9 +538,28 @@ export async function POST(req: Request) {
     );
   }
 
+  // Robust JSON extraction: Claude sometimes wraps JSON in markdown fences
+  // or adds explanatory text before/after the JSON object.
+  function extractJSON(text: string): string {
+    // 1. Try raw text first
+    const trimmed = text.trim();
+    if (trimmed.startsWith("{")) return trimmed;
+    // 2. Strip markdown code fences (```json ... ``` or ``` ... ```)
+    const fenced = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+    if (fenced?.[1]?.trim()) return fenced[1].trim();
+    // 3. Find first { ... last } in the text
+    const firstBrace = trimmed.indexOf("{");
+    const lastBrace = trimmed.lastIndexOf("}");
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      return trimmed.slice(firstBrace, lastBrace + 1);
+    }
+    return trimmed;
+  }
+
   let out: z.infer<typeof OutputSchema>;
   try {
-    out = OutputSchema.parse(JSON.parse(raw));
+    const jsonStr = extractJSON(raw);
+    out = OutputSchema.parse(JSON.parse(jsonStr));
   } catch {
     return NextResponse.json(
       { error: "Invalid AI response", raw },

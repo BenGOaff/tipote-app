@@ -196,10 +196,26 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
     }).catch(() => {});
   }, [history, onUpdate, pageId]);
 
-  const suggestions = [
+  const suggestions = kind === "vitrine" ? [
+    "Change le titre principal",
+    "Modifie la couleur principale",
+    "Rends le CTA plus accrocheur",
+    "Ajoute un service",
+    "Change le fond du hero",
+    "Rends le ton plus professionnel",
+  ] : kind === "vente" ? [
+    "Change le titre principal",
+    "Rends le CTA plus urgent",
+    "Modifie les bénéfices",
+    "Change la couleur principale",
+    "Améliore la section garantie",
+    "Modifie la FAQ",
+  ] : [
     "Change le titre principal",
     "Rends le CTA plus urgent",
     "Ajoute plus de bénéfices",
+    "Change la couleur principale",
+    "Modifie la description",
     "Rends le ton plus professionnel",
   ];
 
