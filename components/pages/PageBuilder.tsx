@@ -5,7 +5,8 @@
 
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Download, Copy, Check, X,
   Upload, Smartphone, Tablet, Monitor,
@@ -66,10 +67,10 @@ type Props = {
 
 type Device = "mobile" | "tablet" | "desktop";
 
-const DEVICE_CONFIG: Record<Device, { width: number; label: string; icon: typeof Monitor }> = {
-  mobile: { width: 375, label: "Mobile", icon: Smartphone },
-  tablet: { width: 768, label: "Tablette", icon: Tablet },
-  desktop: { width: 1200, label: "Desktop", icon: Monitor },
+const DEVICE_WIDTHS: Record<Device, { width: number; icon: typeof Monitor }> = {
+  mobile: { width: 375, icon: Smartphone },
+  tablet: { width: 768, icon: Tablet },
+  desktop: { width: 1200, icon: Monitor },
 };
 
 // ---------- Left sidebar tabs ----------
@@ -127,18 +128,18 @@ type SectionInfo = {
   top: number;
 };
 
-// Elements that can be added
-const ELEMENT_PALETTE = [
-  { type: "section", label: "Section", icon: LayoutGrid },
-  { type: "row", label: "Rangée", icon: Columns },
-  { type: "heading", label: "Titre", icon: Heading },
-  { type: "text", label: "Texte", icon: AlignLeft },
-  { type: "button", label: "Bouton", icon: Square },
-  { type: "image", label: "Image", icon: ImageIcon },
-  { type: "video", label: "Vidéo", icon: Video },
-  { type: "divider", label: "Séparateur", icon: Minus },
-  { type: "columns", label: "Colonnes", icon: Columns },
-  { type: "link", label: "Lien", icon: Link2 },
+// Elements palette (labels translated inside component)
+const ELEMENT_PALETTE_KEYS = [
+  { type: "section", tKey: "addElement.section", icon: LayoutGrid },
+  { type: "row", tKey: "addElement.row", icon: Columns },
+  { type: "heading", tKey: "addElement.heading", icon: Heading },
+  { type: "text", tKey: "addElement.text", icon: AlignLeft },
+  { type: "button", tKey: "addElement.button", icon: Square },
+  { type: "image", tKey: "addElement.image", icon: ImageIcon },
+  { type: "video", tKey: "addElement.video", icon: Video },
+  { type: "divider", tKey: "addElement.divider", icon: Minus },
+  { type: "columns", tKey: "addElement.columns", icon: Columns },
+  { type: "link", tKey: "addElement.link", icon: Link2 },
 ];
 
 // Google Fonts available
@@ -149,40 +150,24 @@ const GOOGLE_FONTS = [
   "Rubik", "Work Sans", "Quicksand", "Josefin Sans", "Crimson Text",
 ];
 
-// CSS animations available
-const CSS_ANIMATIONS = [
-  { value: "none", label: "Aucune" },
-  { value: "fadeIn", label: "Fondu" },
-  { value: "fadeUp", label: "Fondu + haut" },
-  { value: "slideInLeft", label: "Glisser gauche" },
-  { value: "slideInRight", label: "Glisser droite" },
-  { value: "zoomIn", label: "Zoom" },
-  { value: "bounce", label: "Rebond" },
-  { value: "pulse", label: "Pulsation" },
+// CSS animations (labels translated inside component)
+const CSS_ANIMATION_KEYS = [
+  { value: "none", tKey: "controls.animNone" },
+  { value: "fadeIn", tKey: "controls.animFade" },
+  { value: "fadeUp", tKey: "controls.animFadeUp" },
+  { value: "slideInLeft", tKey: "controls.animSlideLeft" },
+  { value: "slideInRight", tKey: "controls.animSlideRight" },
+  { value: "zoomIn", tKey: "controls.animZoom" },
+  { value: "bounce", tKey: "controls.animBounce" },
+  { value: "pulse", tKey: "controls.animPulse" },
 ];
 
-// Type label mapping
-const EL_TYPE_LABELS: Record<string, string> = {
-  section: "Section",
-  heading: "Titre",
-  text: "Texte",
-  image: "Image",
-  button: "Bouton",
-  list: "Liste",
-  "list-item": "Élément de liste",
-  row: "Rangée",
-  divider: "Séparateur",
-  nav: "Navigation",
-  form: "Formulaire",
-  link: "Lien",
-  blockquote: "Citation",
-  unknown: "Élément",
-};
+// EL_TYPE_LABELS moved inside component as elTypeLabels (translated)
 
 // ---------- Always-on inline editing script ----------
 
 const INLINE_EDIT_SCRIPT = `
-<script>
+<script data-tipote-injected="1">
 (function(){
   var editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, li, a, button, blockquote, figcaption, td, th, label, .hero-title, .hero-subtitle, .cta-text, [data-editable]';
   var illustSelectors = '.tp-illust, .tp-visual, .tp-mockup, [data-tipote-visual], svg:not(.tp-toolbar-icon), .tp-float, [class*="illustration"], [class*="animation"]';
@@ -191,7 +176,8 @@ const INLINE_EDIT_SCRIPT = `
   var toolbar = document.createElement('div');
   toolbar.className = 'tipote-toolbar';
   toolbar.style.cssText = 'position:fixed;z-index:99999;display:none;align-items:center;gap:6px;padding:4px 8px;background:#1e293b;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.25);pointer-events:auto;transition:opacity 0.15s;';
-  toolbar.innerHTML = '<input type="color" class="tp-color-input" title="Couleur du texte" style="width:24px;height:24px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
+  toolbar.setAttribute('data-tipote-injected', '1');
+  toolbar.innerHTML = '<input type="color" class="tp-color-input" title="{t("controls.textColor")}" style="width:24px;height:24px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
   document.body.appendChild(toolbar);
 
   var colorInput = toolbar.querySelector('.tp-color-input');
@@ -216,7 +202,8 @@ const INLINE_EDIT_SCRIPT = `
   var illustOverlay = document.createElement('div');
   illustOverlay.className = 'tipote-illust-overlay';
   illustOverlay.style.cssText = 'position:fixed;z-index:99998;display:none;align-items:center;justify-content:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);border-radius:10px;pointer-events:auto;';
-  illustOverlay.innerHTML = '<button class="tp-illust-btn tp-illust-delete" title="Supprimer" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,70,70,0.2);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:system-ui;">'+
+  illustOverlay.setAttribute('data-tipote-injected', '1');
+  illustOverlay.innerHTML = '<button class="tp-illust-btn tp-illust-delete" title={t("elementActions.delete")} style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,70,70,0.2);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:system-ui;">'+
     '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="tp-toolbar-icon"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/></svg>'+
     '</button>'+
     '<button class="tp-illust-btn tp-illust-replace" title="Remplacer par une image" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:system-ui;">'+
@@ -278,6 +265,7 @@ const INLINE_EDIT_SCRIPT = `
   /* ── Element selection highlight ── */
   var elHighlight = document.createElement('div');
   elHighlight.style.cssText = 'position:absolute;z-index:99989;pointer-events:none;border:2px solid #5D6CDB;background:rgba(93,108,219,0.06);display:none;transition:all 0.12s ease;border-radius:4px;';
+  elHighlight.setAttribute('data-tipote-injected', '1');
   var elLabel = document.createElement('div');
   elLabel.style.cssText = 'position:absolute;top:-20px;left:0;background:#5D6CDB;color:#fff;font-size:10px;font-family:system-ui;padding:1px 6px;border-radius:3px 3px 0 0;white-space:nowrap;';
   elHighlight.appendChild(elLabel);
@@ -325,8 +313,20 @@ const INLINE_EDIT_SCRIPT = `
 
   function getElStyles(el) {
     var cs = getComputedStyle(el);
+    // Detect the actual visible text color (may come from child spans/fonts)
+    var textColor = cs.color;
+    var fillColor = cs.webkitTextFillColor || cs.getPropertyValue('-webkit-text-fill-color');
+    if (fillColor && fillColor !== 'inherit' && fillColor !== 'initial' && fillColor !== 'currentcolor' && fillColor !== textColor) {
+      textColor = fillColor;
+    }
+    // If element has children with a more specific color, prefer that
+    var firstInline = el.querySelector('span, font, strong, em, b, i, a');
+    if (firstInline) {
+      var childColor = getComputedStyle(firstInline).color;
+      if (childColor && childColor !== textColor) textColor = childColor;
+    }
     return {
-      color: rgbToHex(cs.color),
+      color: rgbToHex(textColor),
       backgroundColor: cs.backgroundColor === 'rgba(0, 0, 0, 0)' ? 'transparent' : rgbToHex(cs.backgroundColor),
       fontSize: cs.fontSize,
       fontWeight: cs.fontWeight,
@@ -400,7 +400,12 @@ const INLINE_EDIT_SCRIPT = `
       activeEl = el;
       selectedEl = el;
       toolbar.style.display = 'flex';
-      colorInput.value = getComputedStyle(el).color.indexOf('rgb') >= 0 ? rgbToHex(getComputedStyle(el).color) : '#000000';
+      var elCs = getComputedStyle(el);
+      var elColor = elCs.color;
+      // Check children for more specific color
+      var firstInl = el.querySelector('span, font, strong, em, b, i, a');
+      if (firstInl) { var cc = getComputedStyle(firstInl).color; if (cc && cc !== elColor) elColor = cc; }
+      colorInput.value = rgbToHex(elColor);
       setTimeout(function() { positionAbove(el, toolbar); }, 0);
       highlightEl(el);
       sendElSelected(el);
@@ -483,8 +488,18 @@ const INLINE_EDIT_SCRIPT = `
       meaningful = meaningful.parentElement;
     }
     if (meaningful && meaningful !== document.body) {
-      selectedEl = meaningful;
-      highlightEl(meaningful);
+      var mt = detectElType(meaningful);
+      if (mt === 'section' || mt === 'nav' || mt === 'form') {
+        // Section-level: hide element highlight (section handler shows sectionHighlight)
+        elHighlight.style.display = 'none';
+        selectedEl = null;
+      } else {
+        // Regular element: show element highlight, hide section highlight
+        sectionHighlight.style.display = 'none';
+        selectedSectionEl = null;
+        selectedEl = meaningful;
+        highlightEl(meaningful);
+      }
       sendElSelected(meaningful);
     }
   });
@@ -509,9 +524,11 @@ const INLINE_EDIT_SCRIPT = `
 
   /* ── Helper: rgb to hex ── */
   function rgbToHex(rgb) {
-    var m = rgb.match(/(\d+)/g);
+    if (!rgb || rgb === 'transparent' || rgb === 'inherit' || rgb === 'initial') return '#000000';
+    if (rgb.charAt(0) === '#') return rgb.length === 4 ? '#' + rgb[1]+rgb[1]+rgb[2]+rgb[2]+rgb[3]+rgb[3] : rgb.substring(0, 7);
+    var m = rgb.match(/([\d.]+)/g);
     if (!m || m.length < 3) return '#000000';
-    return '#' + m.slice(0,3).map(function(x) { return parseInt(x).toString(16).padStart(2,'0'); }).join('');
+    return '#' + m.slice(0,3).map(function(x) { return Math.round(parseFloat(x)).toString(16).padStart(2,'0'); }).join('');
   }
 
   /* ── Section detection: identify all top-level sections ── */
@@ -521,6 +538,7 @@ const INLINE_EDIT_SCRIPT = `
   var selectedSectionEl = null;
   var sectionHighlight = document.createElement('div');
   sectionHighlight.style.cssText = 'position:absolute;z-index:99990;pointer-events:none;border:2px solid #5D6CDB;background:rgba(93,108,219,0.05);display:none;transition:all 0.15s ease;';
+  sectionHighlight.setAttribute('data-tipote-injected', '1');
   document.body.appendChild(sectionHighlight);
 
   // Gather section info and send to parent
@@ -826,6 +844,33 @@ const INLINE_EDIT_SCRIPT = `
 // ─────────────────────────────────────────────────────────
 
 export default function PageBuilder({ initialPage, onBack }: Props) {
+  const t = useTranslations("pageBuilder");
+
+  // Translated device labels
+  const deviceLabels = useMemo<Record<Device, string>>(() => ({
+    mobile: t("devices.mobile"),
+    tablet: t("devices.tablet"),
+    desktop: t("devices.desktop"),
+  }), [t]);
+
+  // Translated element type labels
+  const elTypeLabels = useMemo<Record<string, string>>(() => ({
+    section: t("elementTypes.section"),
+    heading: t("elementTypes.heading"),
+    text: t("elementTypes.text"),
+    image: t("elementTypes.image"),
+    button: t("elementTypes.button"),
+    list: t("elementTypes.list"),
+    "list-item": t("elementTypes.listItem"),
+    row: t("elementTypes.row"),
+    divider: t("elementTypes.divider"),
+    nav: t("elementTypes.nav"),
+    form: t("elementTypes.form"),
+    link: t("elementTypes.link"),
+    blockquote: t("elementTypes.blockquote"),
+    unknown: t("elementTypes.unknown"),
+  }), [t]);
+
   const [page, setPage] = useState<PageData>(initialPage);
   const [htmlPreview, setHtmlPreview] = useState(initialPage.html_snapshot);
   const [device, setDevice] = useState<Device>("desktop");
@@ -936,17 +981,33 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     input.click();
   }, [page.id]);
 
-  const saveIframeHtml = useCallback(() => {
+  // Extract clean HTML from iframe by removing injected editing UI
+  const getCleanIframeHtml = useCallback(() => {
     const iframe = iframeRef.current;
-    if (!iframe?.contentDocument) return;
-    const updatedHtml = iframe.contentDocument.documentElement.outerHTML;
-    setHtmlPreview("<!DOCTYPE html><html>" + updatedHtml.slice(updatedHtml.indexOf("<html>") + 6));
+    if (!iframe?.contentDocument) return htmlPreview;
+    const clone = iframe.contentDocument.documentElement.cloneNode(true) as HTMLElement;
+    // Remove all injected elements (toolbar, overlays, highlights, script)
+    clone.querySelectorAll("[data-tipote-injected]").forEach(el => el.remove());
+    // Remove contentEditable attributes added by the inline script
+    clone.querySelectorAll("[contenteditable]").forEach(el => {
+      el.removeAttribute("contenteditable");
+      const htmlEl = el as HTMLElement;
+      if (htmlEl.style.cursor === "text") htmlEl.style.removeProperty("cursor");
+      if (htmlEl.style.outline === "none") htmlEl.style.removeProperty("outline");
+      if (htmlEl.getAttribute("style") === "") htmlEl.removeAttribute("style");
+    });
+    return "<!DOCTYPE html>" + clone.outerHTML;
+  }, [htmlPreview]);
+
+  const saveIframeHtml = useCallback(() => {
+    const cleanHtml = getCleanIframeHtml();
+    // Don't update htmlPreview to avoid iframe reload (iframe already has correct state)
     fetch(`/api/pages/${page.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html_snapshot: updatedHtml }),
+      body: JSON.stringify({ html_snapshot: cleanHtml }),
     }).catch(() => {});
-  }, [page.id]);
+  }, [page.id, getCleanIframeHtml]);
 
   // Listen for inline edits + section events from iframe
   useEffect(() => {
@@ -955,20 +1016,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         setSaving(true);
         clearTimeout((window as any).__tipoteSaveTimer);
         (window as any).__tipoteSaveTimer = setTimeout(() => {
-          const iframe = iframeRef.current;
-          if (iframe?.contentDocument) {
-            const fullHtml = "<!DOCTYPE html>" + iframe.contentDocument.documentElement.outerHTML;
-            pendingHtmlRef.current = fullHtml;
-            fetch(`/api/pages/${page.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ html_snapshot: fullHtml }),
-            }).then(() => {
-              setSaving(false);
-            }).catch(() => setSaving(false));
-          } else {
+          const cleanHtml = getCleanIframeHtml();
+          pendingHtmlRef.current = cleanHtml;
+          fetch(`/api/pages/${page.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ html_snapshot: cleanHtml }),
+          }).then(() => {
             setSaving(false);
-          }
+          }).catch(() => setSaving(false));
         }, 2000);
       }
       if (e.data?.type === "tipote:image-click") {
@@ -1010,7 +1066,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [page.id, handleIframeImageClick]);
+  }, [page.id, handleIframeImageClick, getCleanIframeHtml]);
 
   // Chat update handler
   const handleChatUpdate = useCallback(async (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, _explanation: string) => {
@@ -1130,14 +1186,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
   // Download HTML
   const downloadHtml = useCallback(() => {
-    const blob = new Blob([htmlPreview], { type: "text/html" });
+    const cleanHtml = getCleanIframeHtml();
+    const blob = new Blob([cleanHtml], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `${page.slug || "page"}.html`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [htmlPreview, page.slug]);
+  }, [getCleanIframeHtml, page.slug]);
 
   // Download text as PDF
   const downloadTextPdf = useCallback(() => {
@@ -1166,7 +1223,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         }
       }
     }
-    if (!textContent.trim()) textContent = "Aucun contenu texte disponible.";
+    if (!textContent.trim()) textContent = t("noContent");
     const printHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${page.title || "Page"} - Texte</title><style>@media print{@page{margin:2cm}}body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:0 20px;color:#1a1a1a;line-height:1.8;font-size:14px}h1,h2,h3{font-family:-apple-system,sans-serif;margin-top:1.5em;margin-bottom:.5em;color:#111}h1{font-size:24px;border-bottom:2px solid #eee;padding-bottom:8px}p{margin:0 0 1em}li{margin-bottom:4px}.footer{margin-top:40px;border-top:1px solid #eee;font-size:11px;color:#999;padding-top:16px}</style></head><body><h1>${page.title || "Page"}</h1>${textContent.split("\n").map((l) => { const t = l.trim(); if (!t) return ""; if (t.startsWith("# ")) return `<h1>${t.slice(2)}</h1>`; if (t.startsWith("## ")) return `<h2>${t.slice(3)}</h2>`; if (t.startsWith("### ")) return `<h3>${t.slice(4)}</h3>`; if (t.startsWith("- ")) return `<li>${t.slice(2)}</li>`; if (t.startsWith("> ")) return `<blockquote>${t.slice(2)}</blockquote>`; return `<p>${t}</p>`; }).join("\n")}<div class="footer">Genere par Tipote</div></body></html>`;
     const win = window.open("", "_blank");
     if (win) { win.document.write(printHtml); win.document.close(); win.onload = () => win.print(); setTimeout(() => win.print(), 500); }
@@ -1174,9 +1231,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
   // Preview in new tab
   const openPreview = useCallback(() => {
+    const cleanHtml = getCleanIframeHtml();
     const win = window.open("", "_blank");
-    if (win) { win.document.write(htmlPreview); win.document.close(); }
-  }, [htmlPreview]);
+    if (win) { win.document.write(cleanHtml); win.document.close(); }
+  }, [getCleanIframeHtml]);
 
   // OG image upload
   const handleOgImageUpload = useCallback(async () => {
@@ -1314,7 +1372,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
   const publishPreviewUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${publishSlug}` : `/p/${publishSlug}`;
   const isPublished = page.status === "published";
-  const deviceCfg = DEVICE_CONFIG[device];
+  const deviceCfg = DEVICE_WIDTHS[device];
 
   // ─────────────────────────────────────────────────────────
   // RENDER
@@ -1331,7 +1389,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className={`p-2 rounded-lg transition-colors ${sidebarOpen ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"}`}
-            title="Panneau latéral"
+            title={t("nav.sidePanel")}
           >
             <Layers className="w-4 h-4" />
           </button>
@@ -1348,7 +1406,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           {saving && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Loader2 className="w-3 h-3 animate-spin" />
-              <span className="hidden sm:inline">Sauvegarde...</span>
+              <span className="hidden sm:inline">{t("nav.saving")}</span>
             </div>
           )}
           {uploadingImage && (
@@ -1362,8 +1420,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         {/* Center: Device toggle + Preview */}
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-muted/60 rounded-lg p-0.5 gap-0.5">
-            {(Object.keys(DEVICE_CONFIG) as Device[]).map((d) => {
-              const Icon = DEVICE_CONFIG[d].icon;
+            {(Object.keys(DEVICE_WIDTHS) as Device[]).map((d) => {
+              const Icon = DEVICE_WIDTHS[d].icon;
               return (
                 <button
                   key={d}
@@ -1373,14 +1431,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">{DEVICE_CONFIG[d].label}</span>
+                  <span className="hidden md:inline">{deviceLabels[d]}</span>
                 </button>
               );
             })}
           </div>
 
           {/* Preview button */}
-          <button onClick={openPreview} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Aperçu">
+          <button onClick={openPreview} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title={t("actions.preview")}>
             <Play className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -1390,11 +1448,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           {/* Quick actions */}
           <div className="hidden sm:flex items-center gap-1">
             {(page.page_type === "capture" || page.template_kind === "capture") && (
-              <button onClick={() => setShowThankYouModal(true)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Page de remerciement">
+              <button onClick={() => setShowThankYouModal(true)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title={t("actions.thankYou")}>
                 <Check className="w-3.5 h-3.5" />
               </button>
             )}
-            <button onClick={() => { setShowLeadsModal(true); loadLeads(); }} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground relative" title="Leads">
+            <button onClick={() => { setShowLeadsModal(true); loadLeads(); }} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground relative" title={t("actions.leads")}>
               <Users className="w-3.5 h-3.5" />
               {page.leads_count > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
@@ -1402,11 +1460,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 </span>
               )}
             </button>
-            <button onClick={downloadHtml} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Télécharger HTML">
+            <button onClick={downloadHtml} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title={t("actions.downloadHtml")}>
               <Download className="w-3.5 h-3.5" />
             </button>
             {isPublished && (
-              <button onClick={() => setShowQrModal(true)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="QR Code">
+              <button onClick={() => setShowQrModal(true)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title={t("actions.qrCode")}>
                 <QrCode className="w-3.5 h-3.5" />
               </button>
             )}
@@ -1423,13 +1481,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 className="h-8 px-3 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 flex items-center gap-1.5 transition-colors"
               >
                 {copied ? <Check className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-                {copied ? "Copié !" : "En ligne"}
+                {copied ? t("actions.copied") : t("actions.online")}
               </button>
               <button
                 onClick={handleUnpublish}
                 disabled={publishing}
                 className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
-                title="Dépublier"
+                title={t("publish.unpublish")}
               >
                 {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <EyeOff className="w-3.5 h-3.5" />}
               </button>
@@ -1451,7 +1509,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
             className="h-8 px-3 rounded-lg text-xs font-semibold border border-border hover:bg-muted flex items-center gap-1.5 transition-colors"
           >
             {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-            <span className="hidden sm:inline">Sauvegarder</span>
+            <span className="hidden sm:inline">{t("actions.save")}</span>
           </button>
 
           {/* Sortir */}
@@ -1460,7 +1518,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
             className="h-8 px-3 rounded-lg text-xs font-semibold bg-red-500 hover:bg-red-600 text-white flex items-center gap-1.5 transition-colors"
           >
             <LogOut className="w-3 h-3" />
-            Sortir
+            {t("actions.exit")}
           </button>
         </div>
       </div>
@@ -1495,7 +1553,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 }`}
               >
                 <Layers className="w-3 h-3 inline mr-1" />
-                Builder
+                {t("tabs.builder")}
               </button>
               <button
                 onClick={() => setLeftTab("parametres")}
@@ -1504,7 +1562,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 }`}
               >
                 <Settings className="w-3 h-3 inline mr-1" />
-                Paramètres
+                {t("tabs.settings")}
               </button>
             </div>
 
@@ -1523,7 +1581,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1 text-[10px] text-white/50 overflow-hidden">
                             <button onClick={deselectElement} className="text-blue-300 hover:underline shrink-0">
-                              ← Retour
+                              ← {t("nav.back")}
                             </button>
                             {selectedElement.breadcrumb.length > 0 && (
                               <>
@@ -1541,33 +1599,33 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                         {/* Element type header */}
                         <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-semibold text-white">{EL_TYPE_LABELS[selectedElement.elType] || "Élément"}</h3>
+                          <h3 className="text-sm font-semibold text-white">{elTypeLabels[selectedElement.elType] || t("elementTypes.element")}</h3>
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => duplicateElement(selectedElement.elId)}
                               className="p-1 rounded hover:bg-white/10 text-white/60"
-                              title="Dupliquer"
+                              title={t("elementActions.duplicate")}
                             >
                               <CopyIcon className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => { moveSection(selectedElement.elId, "up"); }}
                               className="p-1 rounded hover:bg-white/10 text-white/60"
-                              title="Monter"
+                              title={t("elementActions.moveUp")}
                             >
                               <ChevronUp className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => { moveSection(selectedElement.elId, "down"); }}
                               className="p-1 rounded hover:bg-white/10 text-white/60"
-                              title="Descendre"
+                              title={t("elementActions.moveDown")}
                             >
                               <ChevronDown className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => deleteElement(selectedElement.elId)}
                               className="p-1 rounded hover:bg-red-500/20 text-red-400"
-                              title="Supprimer"
+                              title={t("elementActions.delete")}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1582,19 +1640,19 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                             <>
                               {/* Google Font picker */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">Police</span>
+                                <span className="text-xs text-white/60 block mb-1">{t("controls.font")}</span>
                                 <select
                                   value={(() => { const ff = selectedElement.styles.fontFamily || ""; const match = GOOGLE_FONTS.find(f => ff.includes(f)); return match || ""; })()}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { fontFamily: e.target.value ? `'${e.target.value}', sans-serif` : "inherit" })}
                                   className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white"
                                 >
-                                  <option value="" className="text-gray-900">Par défaut</option>
+                                  <option value="" className="text-gray-900">{t("controls.default")}</option>
                                   {GOOGLE_FONTS.map(f => <option key={f} value={f} className="text-gray-900">{f}</option>)}
                                 </select>
                               </div>
 
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-white/60">Couleur du texte</span>
+                                <span className="text-xs text-white/60">{t("controls.textColor")}</span>
                                 <input
                                   type="color"
                                   value={selectedElement.styles.color || "#000000"}
@@ -1612,7 +1670,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               {/* Font size */}
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">Taille</span>
+                                  <span className="text-xs text-white/60">{t("controls.size")}</span>
                                   <span className="text-[10px] text-white/40">{selectedElement.styles.fontSize || "16px"}</span>
                                 </div>
                                 <input
@@ -1627,13 +1685,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               {/* Font weight */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">Graisse</span>
+                                <span className="text-xs text-white/60 block mb-1">{t("controls.weight")}</span>
                                 <div className="flex gap-1">
                                   {[
-                                    { v: "400", l: "Normal" },
-                                    { v: "600", l: "Semi" },
-                                    { v: "700", l: "Gras" },
-                                    { v: "900", l: "Noir" },
+                                    { v: "400", l: t("controls.weightNormal") },
+                                    { v: "600", l: t("controls.weightSemi") },
+                                    { v: "700", l: t("controls.weightBold") },
+                                    { v: "900", l: t("controls.weightBlack") },
                                   ].map((fw) => (
                                     <button
                                       key={fw.v}
@@ -1652,12 +1710,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               {/* Text alignment */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">Alignement</span>
+                                <span className="text-xs text-white/60 block mb-1">{t("controls.alignment")}</span>
                                 <div className="flex gap-1">
                                   {[
-                                    { v: "left", l: "Gauche" },
-                                    { v: "center", l: "Centre" },
-                                    { v: "right", l: "Droite" },
+                                    { v: "left", l: t("controls.alignLeft") },
+                                    { v: "center", l: t("controls.alignCenter") },
+                                    { v: "right", l: t("controls.alignRight") },
                                   ].map((ta) => (
                                     <button
                                       key={ta.v}
@@ -1680,7 +1738,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           {(selectedElement.elType === "button" || selectedElement.elType === "link") && (
                             <>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-white/60">Couleur du fond</span>
+                                <span className="text-xs text-white/60">{t("controls.bgColor")}</span>
                                 <input
                                   type="color"
                                   value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#5D6CDB"}
@@ -1691,7 +1749,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               {/* Gradient for button */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">Dégradé</span>
+                                <span className="text-xs text-white/60 block mb-1">{t("controls.gradient")}</span>
                                 <div className="flex gap-1.5 items-center">
                                   <input
                                     type="color"
@@ -1702,7 +1760,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${e.target.value}, ${c2})` });
                                     }}
                                     className="w-6 h-6 rounded border border-white/20 cursor-pointer"
-                                    title="Couleur 1"
+                                    title={t("controls.color1")}
                                   />
                                   <input
                                     id="btn-grad-c2"
@@ -1715,7 +1773,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${c1}, ${e.target.value})` });
                                     }}
                                     className="w-6 h-6 rounded border border-white/20 cursor-pointer"
-                                    title="Couleur 2"
+                                    title={t("controls.color2")}
                                   />
                                   <input
                                     id="btn-grad-angle"
@@ -1733,7 +1791,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   <button
                                     onClick={() => updateElementStyle(selectedElement.elId, { backgroundImage: "none" })}
                                     className="p-1 rounded hover:bg-white/10 text-white/40"
-                                    title="Supprimer le dégradé"
+                                    title={t("controls.removeGradient")}
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
@@ -1742,7 +1800,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">Arrondi</span>
+                                  <span className="text-xs text-white/60">{t("controls.borderRadius")}</span>
                                   <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
                                 </div>
                                 <input
@@ -1757,7 +1815,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               {/* Border */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">Bordure</span>
+                                <span className="text-xs text-white/60 block mb-1">{t("controls.border")}</span>
                                 <div className="flex gap-1.5 items-center">
                                   <input
                                     type="number"
@@ -1778,7 +1836,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               </div>
 
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">Lien (URL)</span>
+                                <span className="text-xs text-white/60 block mb-1">{t("controls.linkUrl")}</span>
                                 <input
                                   type="url"
                                   value={selectedElement.href || ""}
@@ -1808,11 +1866,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 className="w-full py-2 border border-dashed border-white/20 rounded-lg text-xs text-white/60 hover:bg-white/10 flex items-center justify-center gap-1.5"
                               >
                                 <Upload className="w-3.5 h-3.5" />
-                                {selectedElement.imgSrc ? "Changer l'image" : "Ajouter une image"}
+                                {selectedElement.imgSrc ? t("publish.changeImage") : t("publish.addImage")}
                               </button>
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">Arrondi</span>
+                                  <span className="text-xs text-white/60">{t("controls.borderRadius")}</span>
                                   <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
                                 </div>
                                 <input
@@ -1832,7 +1890,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                             <>
                               {/* Toggle: Solid color vs Gradient */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1.5">Arrière-fond</span>
+                                <span className="text-xs text-white/60 block mb-1.5">{t("controls.background")}</span>
                                 <div className="flex gap-1 mb-2">
                                   <button
                                     onClick={() => {
@@ -1845,7 +1903,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                         : "border-white/10 text-white/50 hover:bg-white/10"
                                     }`}
                                   >
-                                    Couleur unie
+                                    {t("controls.solidColor")}
                                   </button>
                                   <button
                                     onClick={() => setSectionBgMode("gradient")}
@@ -1855,13 +1913,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                         : "border-white/10 text-white/50 hover:bg-white/10"
                                     }`}
                                   >
-                                    Dégradé
+                                    {t("controls.gradient")}
                                   </button>
                                 </div>
 
                                 {sectionBgMode === "color" ? (
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[10px] text-white/40">Couleur</span>
+                                    <span className="text-[10px] text-white/40">{t("controls.color")}</span>
                                     <input
                                       type="color"
                                       value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#ffffff"}
@@ -1880,7 +1938,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                         updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${e.target.value}, ${c2})` });
                                       }}
                                       className="w-6 h-6 rounded border border-white/20 cursor-pointer"
-                                      title="Couleur 1"
+                                      title={t("controls.color1")}
                                     />
                                     <input
                                       id={"sec-grad-c2-" + selectedElement.elId}
@@ -1893,7 +1951,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                         updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${c1}, ${e.target.value})` });
                                       }}
                                       className="w-6 h-6 rounded border border-white/20 cursor-pointer"
-                                      title="Couleur 2"
+                                      title={t("controls.color2")}
                                     />
                                     <input
                                       id={"sec-grad-angle-" + selectedElement.elId}
@@ -1919,7 +1977,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               {/* Padding */}
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">Padding V</span>
+                                  <span className="text-xs text-white/60">{t("controls.paddingV")}</span>
                                   <span className="text-[10px] text-white/40">{parseInt(selectedElement.styles.paddingTop) || 0}px</span>
                                 </div>
                                 <input
@@ -1933,7 +1991,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               </div>
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">Padding H</span>
+                                  <span className="text-xs text-white/60">{t("controls.paddingH")}</span>
                                   <span className="text-[10px] text-white/40">{parseInt(selectedElement.styles.paddingLeft) || 0}px</span>
                                 </div>
                                 <input
@@ -1950,7 +2008,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               {(selectedElement.elType === "row") && (
                                 <div>
                                   <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs text-white/60">Arrondi</span>
+                                    <span className="text-xs text-white/60">{t("controls.borderRadius")}</span>
                                     <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
                                   </div>
                                   <input
@@ -1968,10 +2026,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                           {/* ── COMMON: Margin, Border, Animation (all elements) ── */}
                           <div className="pt-2 border-t border-white/10">
-                            <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wide">Espacement</span>
+                            <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wide">{t("controls.spacing")}</span>
                             <div className="grid grid-cols-2 gap-2 mt-1.5">
                               <div>
-                                <span className="text-[9px] text-white/40">Marge haut</span>
+                                <span className="text-[9px] text-white/40">{t("controls.marginTop")}</span>
                                 <input
                                   type="number"
                                   min={0}
@@ -1982,7 +2040,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 />
                               </div>
                               <div>
-                                <span className="text-[9px] text-white/40">Marge bas</span>
+                                <span className="text-[9px] text-white/40">{t("controls.marginBottom")}</span>
                                 <input
                                   type="number"
                                   min={0}
@@ -1997,13 +2055,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                           {/* Animation */}
                           <div>
-                            <span className="text-xs text-white/60 block mb-1">Animation</span>
+                            <span className="text-xs text-white/60 block mb-1">{t("controls.animation")}</span>
                             <select
                               onChange={(e) => updateElementStyle(selectedElement.elId, { animation: e.target.value })}
                               className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white"
                               defaultValue="none"
                             >
-                              {CSS_ANIMATIONS.map(a => <option key={a.value} value={a.value} className="text-gray-900">{a.label}</option>)}
+                              {CSS_ANIMATION_KEYS.map(a => <option key={a.value} value={a.value} className="text-gray-900">{t(a.tKey)}</option>)}
                             </select>
                           </div>
 
@@ -2011,10 +2069,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           <div className="pt-2 border-t border-white/10">
                             <div className="flex items-center gap-1.5 mb-1.5">
                               <Sparkles className="w-3 h-3 text-blue-300" />
-                              <span className="text-xs text-white/60">Modifier avec l&apos;IA</span>
+                              <span className="text-xs text-white/60">{t("chat.editWithAi")}</span>
                             </div>
                             <p className="text-[10px] text-white/30 mb-1.5">
-                              Ex: &quot;ajoute un dégradé vert-bleu&quot;, &quot;rends-le plus gros&quot;
+                              {t("chat.placeholder")}
                             </p>
                           </div>
                         </div>
@@ -2024,7 +2082,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       <>
                         {/* Sections list */}
                         <div>
-                          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide mb-2">Sections</p>
+                          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide mb-2">{t("elementTypes.section")}s</p>
                           <div className="space-y-1">
                             {sections.length === 0 && (
                               <p className="text-[11px] text-white/30 py-2">Clique sur un élément dans l&apos;aperçu</p>
@@ -2038,13 +2096,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 <MousePointer className="w-3 h-3 shrink-0 opacity-40" />
                                 <span className="flex-1 truncate">{s.label}</span>
                                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }} className="p-0.5 rounded hover:bg-white/10" title="Monter">
+                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }} className="p-0.5 rounded hover:bg-white/10" title={t("elementActions.moveUp")}>
                                     <ChevronUp className="w-3 h-3" />
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "down"); }} className="p-0.5 rounded hover:bg-white/10" title="Descendre">
+                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "down"); }} className="p-0.5 rounded hover:bg-white/10" title={t("elementActions.moveDown")}>
                                     <ChevronDown className="w-3 h-3" />
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); deleteSection(s.id); }} className="p-0.5 rounded hover:bg-red-500/20 text-red-400" title="Supprimer">
+                                  <button onClick={(e) => { e.stopPropagation(); deleteSection(s.id); }} className="p-0.5 rounded hover:bg-red-500/20 text-red-400" title={t("elementActions.delete")}>
                                     <Trash2 className="w-3 h-3" />
                                   </button>
                                 </div>
@@ -2055,9 +2113,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                         {/* Element palette */}
                         <div className="pt-3 border-t border-white/10">
-                          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide mb-2">Ajouter un élément</p>
+                          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide mb-2">{t("addElement.title")}</p>
                           <div className="grid grid-cols-3 gap-1.5">
-                            {ELEMENT_PALETTE.map((el) => {
+                            {ELEMENT_PALETTE_KEYS.map((el) => {
                               const Icon = el.icon;
                               return (
                                 <button
@@ -2066,7 +2124,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all text-white/60 hover:text-white"
                                 >
                                   <Icon className="w-4 h-4" />
-                                  <span className="text-[10px]">{el.label}</span>
+                                  <span className="text-[10px]">{t(el.tKey)}</span>
                                 </button>
                               );
                             })}
@@ -2075,7 +2133,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                         {/* Tip */}
                         <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[10px] text-white/50">Clique sur un élément dans l&apos;aperçu pour modifier ses propriétés.</span>
+                          <span className="text-[10px] text-white/50">{t("tip")}</span>
                         </div>
                       </>
                     )}
@@ -2204,14 +2262,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         className="w-full py-2 border border-white/20 rounded-lg text-xs font-medium text-white/70 hover:bg-white/10 flex items-center justify-center gap-1.5"
                       >
                         <Check className="w-3 h-3" />
-                        Page de remerciement
+                        {t("thankYou.title")}
                       </button>
                     </div>
                   )}
 
                   {/* Downloads */}
                   <div className="pt-2 border-t border-white/10">
-                    <p className="text-xs font-medium text-white/60 mb-2">Exports</p>
+                    <p className="text-xs font-medium text-white/60 mb-2">{t("actions.exports")}</p>
                     <div className="flex gap-2">
                       <button onClick={downloadHtml} className="flex-1 py-1.5 border border-white/20 rounded-lg text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1">
                         <Download className="w-3 h-3" /> HTML
@@ -2224,11 +2282,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                   {/* Stats */}
                   <div className="pt-2 border-t border-white/10">
-                    <p className="text-xs font-medium text-white/60 mb-2">Statistiques</p>
+                    <p className="text-xs font-medium text-white/60 mb-2">{t("actions.stats")}</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="p-2 rounded-lg bg-white/10 text-center">
                         <p className="text-lg font-bold text-white">{page.views_count}</p>
-                        <p className="text-[10px] text-white/40">Vues</p>
+                        <p className="text-[10px] text-white/40">{t("actions.views")}</p>
                       </div>
                       <div className="p-2 rounded-lg bg-white/10 text-center">
                         <p className="text-lg font-bold text-white">{page.leads_count}</p>
@@ -2240,7 +2298,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         onClick={() => { setShowLeadsModal(true); loadLeads(); }}
                         className="w-full mt-2 py-1.5 border border-white/20 rounded-lg text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1"
                       >
-                        <Users className="w-3 h-3" /> Voir les leads
+                        <Users className="w-3 h-3" /> {t("leads.viewAll")}
                       </button>
                     )}
                   </div>
@@ -2280,8 +2338,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 pb-4 border-b">
               <div>
-                <h2 className="text-lg font-bold">Publier ta page</h2>
-                <p className="text-sm text-muted-foreground">Configure les paramètres avant la mise en ligne.</p>
+                <h2 className="text-lg font-bold">{t("publish.title")}</h2>
+                <p className="text-sm text-muted-foreground">{t("publish.description")}</p>
               </div>
               <button onClick={() => setShowPublishModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground">
                 <X className="w-4 h-4" />
@@ -2291,7 +2349,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               {/* URL */}
               <div>
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <Link2 className="w-4 h-4 text-muted-foreground" /> URL de partage
+                  <Link2 className="w-4 h-4 text-muted-foreground" /> {t("publish.url")}
                 </label>
                 <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-3 py-2 border">
                   <span className="text-sm text-muted-foreground whitespace-nowrap">{typeof window !== "undefined" ? window.location.origin : ""}/p/</span>
@@ -2309,7 +2367,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               {/* Tag SIO */}
               <div>
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <Tag className="w-4 h-4 text-muted-foreground" /> Tag Systeme.io
+                  <Tag className="w-4 h-4 text-muted-foreground" /> {t("publish.captureTag")}
                 </label>
                 <input type="text" value={publishTag} onChange={(e) => setPublishTag(e.target.value)} placeholder="capture-ebook" className="w-full px-3 py-2 border rounded-lg text-sm" />
               </div>
@@ -2317,20 +2375,20 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               {/* OG Image */}
               <div>
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <ImageIcon className="w-4 h-4 text-muted-foreground" /> Image de partage
+                  <ImageIcon className="w-4 h-4 text-muted-foreground" /> {t("publish.ogImage")}
                 </label>
                 {publishOgUrl ? (
                   <div className="relative rounded-lg overflow-hidden border bg-muted/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={publishOgUrl} alt="OG preview" className="w-full h-32 object-cover" />
                     <div className="absolute top-2 right-2 flex gap-1">
-                      <button onClick={handleOgImageUpload} className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs">Changer</button>
+                      <button onClick={handleOgImageUpload} className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs">{t("publish.changeImage")}</button>
                       <button onClick={() => setPublishOgUrl("")} className="p-1.5 rounded-md bg-background/80 hover:bg-background border text-xs text-destructive"><X className="w-3 h-3" /></button>
                     </div>
                   </div>
                 ) : (
                   <button onClick={handleOgImageUpload} disabled={uploadingOg} className="w-full py-8 border-2 border-dashed rounded-lg text-sm text-muted-foreground hover:bg-muted/30 flex flex-col items-center gap-2">
-                    {uploadingOg ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Upload className="w-5 h-5" /><span>Ajouter une image</span></>}
+                    {uploadingOg ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Upload className="w-5 h-5" /><span>{t("publish.addImage")}</span></>}
                   </button>
                 )}
               </div>
@@ -2338,7 +2396,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               {/* Meta desc */}
               <div>
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
-                  <FileText className="w-4 h-4 text-muted-foreground" /> Description SEO
+                  <FileText className="w-4 h-4 text-muted-foreground" /> {t("publish.metaDesc")}
                 </label>
                 <textarea value={publishMetaDesc} onChange={(e) => setPublishMetaDesc(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm resize-none" rows={3} maxLength={160} placeholder="Description pour Google..." />
                 <p className="text-[10px] text-muted-foreground mt-1">{publishMetaDesc.length}/160</p>
@@ -2357,10 +2415,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               </div>
             </div>
             <div className="p-6 pt-4 border-t flex items-center justify-end gap-3">
-              <button onClick={() => setShowPublishModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted">Annuler</button>
+              <button onClick={() => setShowPublishModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted">{t("publish.close")}</button>
               <button onClick={handlePublish} disabled={publishing || !publishSlug.trim()} className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2">
                 {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
-                Mettre en ligne
+                {t("publish.publishBtn")}
               </button>
             </div>
           </div>
@@ -2373,7 +2431,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 pb-4 border-b">
               <div>
-                <h2 className="text-lg font-bold">Leads capturés</h2>
+                <h2 className="text-lg font-bold">{t("leads.title")}</h2>
                 <p className="text-sm text-muted-foreground">
                   {leadsData.length} lead{leadsData.length !== 1 ? "s" : ""} · {page.views_count > 0 ? ((page.leads_count / page.views_count) * 100).toFixed(1) : "0"}% conversion
                 </p>
@@ -2391,7 +2449,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               ) : leadsData.length === 0 ? (
                 <div className="text-center py-12">
                   <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Aucun lead pour le moment.</p>
+                  <p className="text-sm text-muted-foreground">{t("leads.none")}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -2419,7 +2477,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowQrModal(false)}>
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">QR Code</h2>
+              <h2 className="text-lg font-bold">{t("qrCode.title")}</h2>
               <button onClick={() => setShowQrModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
             </div>
             <div className="flex flex-col items-center gap-4">
@@ -2435,7 +2493,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 </button>
                 <button onClick={copyUrl} className="flex-1 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-1.5">
                   {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? "Copié !" : "Copier"}
+                  {copied ? t("actions.copied") : t("actions.copy")}
                 </button>
               </div>
             </div>
@@ -2449,28 +2507,28 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           <div className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 pb-4 border-b">
               <div>
-                <h2 className="text-lg font-bold">Page de remerciement</h2>
-                <p className="text-sm text-muted-foreground">Affichée après inscription.</p>
+                <h2 className="text-lg font-bold">{t("thankYou.title")}</h2>
+                <p className="text-sm text-muted-foreground">{t("thankYou.subtitle")}</p>
               </div>
               <button onClick={() => setShowThankYouModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-6 space-y-5">
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Titre</label>
-                <input type="text" value={thankYouHeading} onChange={(e) => setThankYouHeading(e.target.value)} placeholder="Merci !" className="w-full px-3 py-2 border rounded-lg text-sm" maxLength={100} />
+                <label className="text-sm font-medium mb-1.5 block">{t("thankYou.heading")}</label>
+                <input type="text" value={thankYouHeading} onChange={(e) => setThankYouHeading(e.target.value)} placeholder={t("thankYou.defaultHeading")} className="w-full px-3 py-2 border rounded-lg text-sm" maxLength={100} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Message</label>
-                <textarea value={thankYouMessage} onChange={(e) => setThankYouMessage(e.target.value)} placeholder="Tu vas recevoir un email..." className="w-full px-3 py-2 border rounded-lg text-sm resize-none" rows={4} maxLength={500} />
+                <label className="text-sm font-medium mb-1.5 block">{t("thankYou.message")}</label>
+                <textarea value={thankYouMessage} onChange={(e) => setThankYouMessage(e.target.value)} placeholder={t("thankYou.defaultMessage")} className="w-full px-3 py-2 border rounded-lg text-sm resize-none" rows={4} maxLength={500} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Bouton (optionnel)</label>
+                <label className="text-sm font-medium mb-1.5 block">{t("thankYou.ctaText")}</label>
                 <input type="text" value={thankYouCtaText} onChange={(e) => setThankYouCtaText(e.target.value)} placeholder="Rejoindre le groupe" className="w-full px-3 py-2 border rounded-lg text-sm mb-2" maxLength={50} />
                 <input type="url" value={thankYouCtaUrl} onChange={(e) => setThankYouCtaUrl(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 border rounded-lg text-sm" />
               </div>
               {/* Preview */}
               <div className="rounded-xl border bg-muted/20 p-6 text-center">
-                <p className="text-xs text-muted-foreground mb-3">Aperçu</p>
+                <p className="text-xs text-muted-foreground mb-3">{t("actions.preview")}</p>
                 <div className="text-3xl mb-2">&#10003;</div>
                 <h3 className="text-lg font-bold mb-2">{thankYouHeading || "Merci !"}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{thankYouMessage || "..."}</p>
@@ -2478,10 +2536,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               </div>
             </div>
             <div className="p-6 pt-4 border-t flex items-center justify-end gap-3">
-              <button onClick={() => setShowThankYouModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted">Annuler</button>
+              <button onClick={() => setShowThankYouModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted">{t("publish.close")}</button>
               <button onClick={saveThankYou} disabled={savingThankYou} className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2">
                 {savingThankYou ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Enregistrer
+                {t("thankYou.save")}
               </button>
             </div>
           </div>
