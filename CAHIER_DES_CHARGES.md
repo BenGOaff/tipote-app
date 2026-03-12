@@ -445,7 +445,7 @@ Repository d'insights et de pépites business. Notifications de nouvelles pépit
 
 ### 4.13. Constructeur de Pages (/pages)
 
-Constructeur complet de landing pages hébergées.
+Constructeur complet de landing pages hébergées, inspiré de Systeme.io avec branding Tipote.
 
 **Types de pages :**
 
@@ -454,22 +454,84 @@ Constructeur complet de landing pages hébergées.
 - Site vitrine (showcase)
 - Link-in-bio (page de liens personnalisée)
 
-**Fonctionnalités de l'éditeur :**
+**Éditeur plein écran (Page Builder) :**
 
-- Prévisualisation multi-device (mobile, tablette, desktop)  
-- Édition de texte inline  
-- Sélecteur de couleurs inline  
-- Gestion des illustrations (upload/remplacement)  
-- Chat IA pour modifier la page par conversation  
-- Publication avec slug personnalisé  
-- Configuration Systeme.io (tags de capture)  
-- OG Image uploader  
-- Meta description  
-- Téléchargement HTML / PDF  
-- Analytics intégrés (vues, leads, clics)  
-- Tracking pixels (Facebook Pixel, Google Tag Manager)  
-- URL de paiement configurable  
-- Mentions légales auto-générées
+Layout : barre supérieure (logo + responsive toggle + actions) + sidebar gauche bleu + aperçu WYSIWYG + Chat IA intégré.
+
+- Sidebar gauche thème bleu (fond `#1e3a5f`, texte blanc) avec 2 onglets : Builder & Paramètres
+- Prévisualisation multi-device (mobile, tablette, desktop) en temps réel
+- Édition de texte inline directement dans l'aperçu (contentEditable)
+- Sélection d'éléments par clic (section, titre, texte, bouton, image, liste, lien, etc.)
+- Panneau de propriétés contextuel par type d'élément sélectionné
+- Sélecteur de couleurs inline (texte, fond, bordures)
+
+**Dégradés (Gradients) :**
+
+- Support dégradé linéaire sur fonds de section, rangées et boutons
+- Contrôle couleur 1, couleur 2 et angle (0-360°)
+- Suppression du dégradé en un clic
+
+**Polices Google Fonts :**
+
+- 20 polices Google pré-sélectionnées (Inter, Poppins, Montserrat, Playfair Display, etc.)
+- Sélecteur de police par élément
+- Chargement automatique des fonts dans l'aperçu
+
+**Animations CSS :**
+
+- 8 animations disponibles : Fondu, Fondu+haut, Glisser gauche/droite, Zoom, Rebond, Pulsation
+- Applicable à tout élément sélectionné
+
+**Styles avancés par élément :**
+
+- Taille de police (10-72px), graisse (Normal, Semi, Gras, Noir)
+- Alignement texte (gauche, centre, droite)
+- Marges (haut/bas en px)
+- Padding (vertical/horizontal) pour sections et rangées
+- Bordures (épaisseur, couleur, style) pour boutons
+- Arrondi (border-radius) pour boutons, images et rangées
+
+**Palette d'éléments (ajout) :**
+
+- Section, Rangée, Titre, Texte, Bouton, Image, Vidéo, Séparateur, Colonnes (3), Lien
+- Ajout en un clic dans la section active
+
+**Duplication d'éléments :**
+
+- Bouton de duplication sur chaque élément sélectionné
+- Clone complet (styles + contenu) inséré après l'original
+
+**Gestion des sections :**
+
+- Liste des sections dans la sidebar avec labels auto-détectés
+- Réorganisation (monter/descendre)
+- Suppression de section
+- Sélection de section par clic
+
+**Chat IA intégré (compact, 180px) :**
+
+- Chat conversationnel pour modifier la page par instructions naturelles
+- Reformulation IA avant application
+- Coût 0.5 crédit par modification
+- Annulation (undo) de la dernière modification
+- Suggestions contextuelles par type de page
+- Indication visuelle de l'élément sélectionné pour modifications ciblées
+
+**Publication & configuration :**
+
+- Publication avec slug personnalisé
+- Configuration Systeme.io (tags de capture)
+- OG Image uploader
+- Meta description SEO
+- Tracking pixels (Facebook Pixel, Google Tag)
+- Page de remerciement configurable (capture uniquement)
+
+**Exports & analytics :**
+
+- Téléchargement HTML / PDF
+- Analytics intégrés (vues, leads, taux conversion)
+- Export leads CSV
+- QR Code de partage
 
 **Pages publiques :** Accessibles via `/p/[slug]`
 
