@@ -13,6 +13,7 @@ import { PageBanner } from "@/components/PageBanner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 import {
   ArrowRight,
@@ -72,6 +73,9 @@ type ProgressionData = {
   prevRevenue: number | null;
   prevNewSubscribers: number | null;
   prevConversionRate: number | null;
+  // revenus vs objectif
+  revenueGoal: number | null;
+  currentMonthRevenue: number;
 };
 
 /* ------------------------------------------------------------------ */
@@ -518,6 +522,8 @@ export default function TodayLovable() {
     prevRevenue: null,
     prevNewSubscribers: null,
     prevConversionRate: null,
+    revenueGoal: null,
+    currentMonthRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -740,6 +746,45 @@ export default function TodayLovable() {
           contentCounts[cType] = (contentCounts[cType] || 0) + 1;
         }
 
+        // Revenue goal from business_profiles
+        let revenueGoalNum: number | null = null;
+        try {
+          const { data: bpRow } = await supabase
+            .from("business_profiles")
+            .select("revenue_goal_monthly")
+            .eq("user_id", userId)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (bpRow?.revenue_goal_monthly) {
+            const raw = String(bpRow.revenue_goal_monthly);
+            const digits = raw.replace(/[^\d.,]/g, "").replace(",", ".");
+            const n = parseFloat(digits);
+            if (Number.isFinite(n) && n > 0) revenueGoalNum = n;
+          }
+        } catch { /* fail-open */ }
+
+        // Current month revenue from offer_metrics
+        let currentMonthRev = 0;
+        try {
+          const nowD = new Date();
+          const mStart = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}-01`;
+          const mEnd = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}-31`;
+          const { data: revRows } = await supabase
+            .from("offer_metrics")
+            .select("revenue")
+            .eq("user_id", userId)
+            .eq("is_paid", true)
+            .gte("month", mStart)
+            .lte("month", mEnd)
+            .neq("offer_name", "__email_stats__");
+          if (revRows) {
+            for (const r of revRows as any[]) {
+              currentMonthRev += Number(r.revenue) || 0;
+            }
+          }
+        } catch { /* fail-open */ }
+
         if (!cancelled) {
           setObjective(obj);
           setCoaching(coach);
@@ -757,6 +802,8 @@ export default function TodayLovable() {
             prevRevenue,
             prevNewSubscribers,
             prevConversionRate,
+            revenueGoal: revenueGoalNum,
+            currentMonthRevenue: currentMonthRev,
           });
           setLoading(false);
         }
@@ -968,6 +1015,26 @@ export default function TodayLovable() {
                     </p>
 
                     <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Revenue vs Goal */}
+                      {(progression.revenueGoal && progression.revenueGoal > 0) ? (() => {
+                        const rev = progression.currentMonthRevenue;
+                        const goal = progression.revenueGoal!;
+                        const pct = Math.min(100, Math.round((rev / goal) * 100));
+                        return (
+                          <div className="rounded-lg border border-border/60 p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium text-muted-foreground">Revenus ce mois vs objectif</span>
+                              <span className={`text-sm font-bold ${pct >= 100 ? "text-green-600" : pct >= 50 ? "text-amber-600" : "text-muted-foreground"}`}>{pct}%</span>
+                            </div>
+                            <Progress value={pct} className="h-2" />
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>{rev.toLocaleString("fr-FR")} €</span>
+                              <span>Objectif : {goal.toLocaleString("fr-FR")} €</span>
+                            </div>
+                          </div>
+                        );
+                      })() : null}
+
                       {/* Analyse intelligente des stats analytics */}
                       {progression.hasMetrics && progressionSummary ? (
                         <div className="flex items-start gap-3 rounded-lg bg-muted/40 border border-border/60 p-4">

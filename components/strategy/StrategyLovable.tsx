@@ -94,9 +94,10 @@ type StrategyLovableProps = {
   initialSelectedIndex: number;
   initialSelectedOffers?: AnyRecord;
   planTasksCount: number;
+  currentMonthRevenue?: number;
 
   // ✅ nouveau (optionnel) : permet d’afficher un état “plan en cours”
-  mode?: "ready" | "generating";
+  mode?: “ready” | “generating”;
 };
 
 function toStr(v: unknown): string {
@@ -733,6 +734,21 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     </button>
                   </div>
                 )}
+                {(() => {
+                  const rev = props.currentMonthRevenue ?? 0;
+                  const goalNum = parseFloat(revenueGoalLocal.replace(/[^\d.,]/g, "").replace(",", ".")) || 0;
+                  if (goalNum <= 0 && rev <= 0) return null;
+                  const pct = goalNum > 0 ? Math.min(100, Math.round((rev / goalNum) * 100)) : 0;
+                  return (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{rev.toLocaleString("fr-FR")} € ce mois</span>
+                        {goalNum > 0 && <span className={pct >= 100 ? "text-green-600 font-semibold" : pct >= 50 ? "text-amber-600" : "text-muted-foreground"}>{pct}%</span>}
+                      </div>
+                      {goalNum > 0 && <Progress value={pct} className="h-1.5" />}
+                    </div>
+                  );
+                })()}
               </Card>
               <Card className="p-4">
                 <p className="text-xs font-medium text-muted-foreground mb-1">{t("progress.currentPhase")}</p>
