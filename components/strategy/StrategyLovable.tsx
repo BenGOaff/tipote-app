@@ -96,8 +96,8 @@ type StrategyLovableProps = {
   planTasksCount: number;
   currentMonthRevenue?: number;
 
-  // nouveau (optionnel) : permet d’afficher un etat “plan en cours”
-  mode?: “ready” | “generating”;
+  // nouveau (optionnel) : permet d'afficher un etat 'plan en cours'
+  mode?: "ready" | "generating";
 };
 
 function toStr(v: unknown): string {
@@ -465,7 +465,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
   }, [savedPhases]);
 
   const handleSaveChanges = useCallback(() => {
-    // Ici on conserve le comportement Lovable : sauvegarde UX (ordre local + add/delete) sans casser l’existant.
+    // Ici on conserve le comportement Lovable : sauvegarde UX (ordre local + add/delete) sans casser l'existant.
     setSavedPhases(phases);
     setIsEditing(false);
     toast({
@@ -642,7 +642,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
           <div className="flex-1 p-4 sm:p-5 lg:p-6">
             <div className="max-w-[1200px] mx-auto w-full space-y-5">
-            {/* ✅ NEW : Bandeau “plan en cours” (sans casser le reste) */}
+            {/* Bandeau "plan en cours" */}
             {(props.mode === "generating" ||
               (!props.planTasksCount &&
                 (!props.offerSets || props.offerSets.length === 0))) && (
