@@ -96,7 +96,7 @@ type StrategyLovableProps = {
   planTasksCount: number;
   currentMonthRevenue?: number;
 
-  // ✅ nouveau (optionnel) : permet d’afficher un état “plan en cours”
+  // nouveau (optionnel) : permet d’afficher un etat “plan en cours”
   mode?: “ready” | “generating”;
 };
 
