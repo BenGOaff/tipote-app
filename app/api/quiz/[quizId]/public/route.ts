@@ -6,6 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getUserDEK } from "@/lib/piiKeys";
+import { encryptLeadPII } from "@/lib/piiCrypto";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -229,7 +231,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // Verify quiz is active
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id")
+      .select("id, user_id, title")
       .eq("id", quizId)
       .eq("status", "active")
       .maybeSingle();
@@ -269,6 +271,51 @@ export async function POST(req: NextRequest, context: RouteContext) {
       console.error("[POST /api/quiz/[quizId]/public] Lead insert error:", error.message);
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
+
+    // ── Sync to unified leads table (non-blocking) ──
+    (async () => {
+      try {
+        // Get result title
+        let resultTitle: string | null = null;
+        if (resultId) {
+          const { data: result } = await admin
+            .from("quiz_results")
+            .select("title")
+            .eq("id", resultId)
+            .maybeSingle();
+          resultTitle = result?.title ?? null;
+        }
+
+        // Encrypt PII with user's DEK
+        const dek = await getUserDEK(admin, quiz.user_id);
+        const encrypted = encryptLeadPII(
+          { email, first_name: firstName || null, last_name: lastName || null, phone: phone || null, quiz_answers: answers },
+          dek,
+          quiz.user_id,
+        );
+
+        await admin
+          .from("leads")
+          .upsert(
+            {
+              user_id: quiz.user_id,
+              email,
+              first_name: firstName || null,
+              last_name: lastName || null,
+              phone: phone || null,
+              ...encrypted,
+              source: "quiz",
+              source_id: quizId,
+              source_name: quiz.title,
+              quiz_answers: answers,
+              quiz_result_title: resultTitle,
+            },
+            { onConflict: "user_id,source,source_id,email" },
+          );
+      } catch (e) {
+        console.error("[leads sync] quiz lead error:", e);
+      }
+    })();
 
     // ── Auto-send to Systeme.io with result tag (non-blocking) ──
     if (resultId) {

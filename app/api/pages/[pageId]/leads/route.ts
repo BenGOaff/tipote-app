@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getUserDEK } from "@/lib/piiKeys";
+import { encryptLeadPII } from "@/lib/piiCrypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   // Fetch the page to get user_id and validate it exists
   const { data: page } = await supabase
     .from("hosted_pages")
-    .select("id, user_id, sio_capture_tag, status")
+    .select("id, user_id, title, sio_capture_tag, status")
     .eq("id", pageId)
     .eq("status", "published")
     .single();
@@ -95,6 +97,39 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: "Erreur sauvegarde" }, { status: 500 });
     }
   }
+
+  // ── Sync to unified leads table (non-blocking) ──
+  const leadFirstName = String(body?.first_name || "").trim().slice(0, 100);
+  const leadPhone = String(body?.phone || "").trim().slice(0, 30);
+  (async () => {
+    try {
+      const dek = await getUserDEK(supabase, page.user_id);
+      const encrypted = encryptLeadPII(
+        { email, first_name: leadFirstName || null, phone: leadPhone || null },
+        dek,
+        page.user_id,
+      );
+
+      await supabase
+        .from("leads")
+        .upsert(
+          {
+            user_id: page.user_id,
+            email,
+            first_name: leadFirstName || null,
+            phone: leadPhone || null,
+            ...encrypted,
+            source: "landing_page",
+            source_id: pageId,
+            source_name: (page as any).title ?? null,
+            meta: { utm_source, utm_medium, utm_campaign, referrer },
+          },
+          { onConflict: "user_id,source,source_id,email" },
+        );
+    } catch (e) {
+      console.error("[leads sync] page lead error:", e);
+    }
+  })();
 
   // Increment leads_count via RPC (non-blocking)
   supabase
