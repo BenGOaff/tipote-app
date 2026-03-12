@@ -17,6 +17,7 @@ import {
   Save, LogOut,
   Layers, Trash2, ChevronUp, ChevronDown,
   MousePointer, Heading, AlignLeft, Square, Minus,
+  Copy as CopyIcon, Columns, Video, LayoutGrid, Sparkles,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 
@@ -97,7 +98,14 @@ type SelectedElementInfo = {
     paddingBottom: string;
     paddingLeft: string;
     paddingRight: string;
+    marginTop: string;
+    marginBottom: string;
     borderRadius: string;
+    borderWidth: string;
+    borderColor: string;
+    borderStyle: string;
+    backgroundImage: string;
+    fontFamily: string;
   };
   /** Text content (for text elements) */
   text: string;
@@ -121,11 +129,36 @@ type SectionInfo = {
 
 // Elements that can be added
 const ELEMENT_PALETTE = [
+  { type: "section", label: "Section", icon: LayoutGrid },
+  { type: "row", label: "Rangée", icon: Columns },
   { type: "heading", label: "Titre", icon: Heading },
   { type: "text", label: "Texte", icon: AlignLeft },
   { type: "button", label: "Bouton", icon: Square },
   { type: "image", label: "Image", icon: ImageIcon },
+  { type: "video", label: "Vidéo", icon: Video },
   { type: "divider", label: "Séparateur", icon: Minus },
+  { type: "columns", label: "Colonnes", icon: Columns },
+  { type: "link", label: "Lien", icon: Link2 },
+];
+
+// Google Fonts available
+const GOOGLE_FONTS = [
+  "Inter", "DM Sans", "Poppins", "Montserrat", "Playfair Display",
+  "Raleway", "Open Sans", "Lato", "Roboto", "Nunito",
+  "Oswald", "Merriweather", "Source Sans 3", "Ubuntu", "PT Sans",
+  "Rubik", "Work Sans", "Quicksand", "Josefin Sans", "Crimson Text",
+];
+
+// CSS animations available
+const CSS_ANIMATIONS = [
+  { value: "none", label: "Aucune" },
+  { value: "fadeIn", label: "Fondu" },
+  { value: "fadeUp", label: "Fondu + haut" },
+  { value: "slideInLeft", label: "Glisser gauche" },
+  { value: "slideInRight", label: "Glisser droite" },
+  { value: "zoomIn", label: "Zoom" },
+  { value: "bounce", label: "Rebond" },
+  { value: "pulse", label: "Pulsation" },
 ];
 
 // Type label mapping
@@ -295,7 +328,14 @@ const INLINE_EDIT_SCRIPT = `
       paddingBottom: cs.paddingBottom,
       paddingLeft: cs.paddingLeft,
       paddingRight: cs.paddingRight,
-      borderRadius: cs.borderRadius
+      marginTop: cs.marginTop,
+      marginBottom: cs.marginBottom,
+      borderRadius: cs.borderRadius,
+      borderWidth: cs.borderWidth || cs.borderTopWidth || '0px',
+      borderColor: cs.borderColor ? rgbToHex(cs.borderColor) : '#000000',
+      borderStyle: cs.borderStyle || 'none',
+      backgroundImage: el.style.backgroundImage || cs.backgroundImage || 'none',
+      fontFamily: cs.fontFamily || ''
     };
   }
 
@@ -637,6 +677,38 @@ const INLINE_EDIT_SCRIPT = `
           newEl = document.createElement('hr');
           newEl.style.cssText = 'border:none;border-top:1px solid #e5e7eb;margin:32px auto;max-width:200px;';
           break;
+        case 'section':
+          newEl = document.createElement('section');
+          newEl.className = 'tp-section';
+          newEl.style.cssText = 'padding:60px 0;';
+          var secContainer = document.createElement('div');
+          secContainer.className = 'tp-container';
+          secContainer.innerHTML = '<h2 class="tp-section-title" data-editable="true" contenteditable="true" style="outline:none;cursor:text;">Nouvelle section</h2><p data-editable="true" contenteditable="true" style="outline:none;cursor:text;margin:16px 0;">Contenu de la section. Cliquez pour modifier.</p>';
+          newEl.appendChild(secContainer);
+          break;
+        case 'row':
+          newEl = document.createElement('div');
+          newEl.style.cssText = 'display:flex;gap:24px;margin:24px 0;flex-wrap:wrap;';
+          newEl.innerHTML = '<div style="flex:1;min-width:200px;padding:20px;background:#f8fafc;border-radius:12px;"><p data-editable="true" contenteditable="true" style="outline:none;cursor:text;">Colonne 1</p></div><div style="flex:1;min-width:200px;padding:20px;background:#f8fafc;border-radius:12px;"><p data-editable="true" contenteditable="true" style="outline:none;cursor:text;">Colonne 2</p></div>';
+          break;
+        case 'columns':
+          newEl = document.createElement('div');
+          newEl.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:24px 0;';
+          newEl.innerHTML = '<div style="padding:24px;background:#f8fafc;border-radius:12px;text-align:center;"><p data-editable="true" contenteditable="true" style="outline:none;cursor:text;font-weight:600;">Colonne 1</p></div><div style="padding:24px;background:#f8fafc;border-radius:12px;text-align:center;"><p data-editable="true" contenteditable="true" style="outline:none;cursor:text;font-weight:600;">Colonne 2</p></div><div style="padding:24px;background:#f8fafc;border-radius:12px;text-align:center;"><p data-editable="true" contenteditable="true" style="outline:none;cursor:text;font-weight:600;">Colonne 3</p></div>';
+          break;
+        case 'video':
+          newEl = document.createElement('div');
+          newEl.style.cssText = 'position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:24px auto;max-width:800px;background:#1e293b;border-radius:12px;';
+          newEl.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:14px;flex-direction:column;gap:8px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Coller l\\\'URL de la vidéo</span></div>';
+          break;
+        case 'link':
+          newEl = document.createElement('a');
+          newEl.href = '#';
+          newEl.setAttribute('data-editable', 'true');
+          newEl.contentEditable = 'true';
+          newEl.style.cssText = 'outline:none;cursor:text;display:inline-block;color:var(--brand);text-decoration:underline;margin:16px 0;font-size:1rem;';
+          newEl.textContent = 'Lien texte';
+          break;
         default: return;
       }
       container.appendChild(newEl);
@@ -650,6 +722,9 @@ const INLINE_EDIT_SCRIPT = `
       if (e.data.textColor) sec.style.color = e.data.textColor;
       if (typeof e.data.paddingY === 'number') { sec.style.paddingTop = e.data.paddingY + 'px'; sec.style.paddingBottom = e.data.paddingY + 'px'; }
       if (typeof e.data.paddingX === 'number') { sec.style.paddingLeft = e.data.paddingX + 'px'; sec.style.paddingRight = e.data.paddingX + 'px'; }
+      if (e.data.backgroundImage) sec.style.backgroundImage = e.data.backgroundImage;
+      if (e.data.backgroundSize) sec.style.backgroundSize = e.data.backgroundSize;
+      if (e.data.backgroundPosition) sec.style.backgroundPosition = e.data.backgroundPosition;
       parent.postMessage({ type: 'tipote:text-edit', tag: 'section-style', text: '' }, '*');
     }
 
@@ -666,8 +741,30 @@ const INLINE_EDIT_SCRIPT = `
       if (s.borderRadius) el.style.borderRadius = s.borderRadius;
       if (s.paddingY != null) { el.style.paddingTop = s.paddingY + 'px'; el.style.paddingBottom = s.paddingY + 'px'; }
       if (s.paddingX != null) { el.style.paddingLeft = s.paddingX + 'px'; el.style.paddingRight = s.paddingX + 'px'; }
+      if (s.marginTop != null) el.style.marginTop = s.marginTop + 'px';
+      if (s.marginBottom != null) el.style.marginBottom = s.marginBottom + 'px';
+      if (s.borderWidth != null) el.style.borderWidth = s.borderWidth + 'px';
+      if (s.borderColor) el.style.borderColor = s.borderColor;
+      if (s.borderStyle) el.style.borderStyle = s.borderStyle;
+      if (s.backgroundImage) el.style.backgroundImage = s.backgroundImage;
+      if (s.fontFamily) el.style.fontFamily = s.fontFamily;
+      if (s.animation) {
+        if (s.animation === 'none') { el.style.animation = 'none'; }
+        else { el.style.animation = 'tp-' + s.animation + ' 0.6s ease both'; }
+      }
       if (typeof s.href === 'string') el.setAttribute('href', s.href);
       parent.postMessage({ type: 'tipote:text-edit', tag: 'element-style', text: '' }, '*');
+    }
+
+    // Duplicate element
+    if (e.data && e.data.type === 'tipote:duplicate-element') {
+      var el = document.getElementById(e.data.elId);
+      if (el) {
+        var clone = el.cloneNode(true);
+        clone.id = 'tp-el-' + Date.now() + '-' + Math.random().toString(36).substr(2,4);
+        el.parentNode.insertBefore(clone, el.nextSibling);
+        parent.postMessage({ type: 'tipote:text-edit', tag: 'element-duplicate', text: '' }, '*');
+      }
     }
 
     // Delete element
@@ -752,11 +849,21 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [thankYouCtaUrl, setThankYouCtaUrl] = useState(page.content_data?.thank_you_cta_url || "");
   const [savingThankYou, setSavingThankYou] = useState(false);
 
-  // Inject always-on inline edit script into HTML
+  // Google Fonts link tag
+  const GOOGLE_FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=${GOOGLE_FONTS.map(f => f.replace(/ /g, "+")+":wght@400;600;700;900").join("&family=")}&display=swap" rel="stylesheet">`;
+
+  // Inject always-on inline edit script + Google Fonts into HTML
   const getPreviewHtml = useCallback((html: string) => {
-    const idx = html.lastIndexOf("</body>");
-    if (idx === -1) return html + INLINE_EDIT_SCRIPT;
-    return html.slice(0, idx) + INLINE_EDIT_SCRIPT + html.slice(idx);
+    // Inject Google Fonts into <head>
+    let result = html;
+    const headIdx = result.indexOf("</head>");
+    if (headIdx !== -1) {
+      result = result.slice(0, headIdx) + GOOGLE_FONTS_LINK + result.slice(headIdx);
+    }
+    // Inject inline edit script before </body>
+    const idx = result.lastIndexOf("</body>");
+    if (idx === -1) return result + INLINE_EDIT_SCRIPT;
+    return result.slice(0, idx) + INLINE_EDIT_SCRIPT + result.slice(idx);
   }, []);
 
   // Re-render HTML when content changes
@@ -1145,8 +1252,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     if (iframe?.contentWindow) {
       iframe.contentWindow.postMessage({ type: "tipote:update-element-style", elId, ...updates }, "*");
     }
-    // Also update local state so the sidebar reflects changes immediately
-    setSelectedElement((prev) => prev ? { ...prev, styles: { ...prev.styles, ...updates } } : null);
+    // Map special fields to style keys for local state
+    const styleUpdates: Record<string, any> = { ...updates };
+    if (updates.paddingY != null) { styleUpdates.paddingTop = updates.paddingY + "px"; styleUpdates.paddingBottom = updates.paddingY + "px"; }
+    if (updates.paddingX != null) { styleUpdates.paddingLeft = updates.paddingX + "px"; styleUpdates.paddingRight = updates.paddingX + "px"; }
+    if (updates.marginTop != null) { styleUpdates.marginTop = updates.marginTop + "px"; }
+    if (updates.marginBottom != null) { styleUpdates.marginBottom = updates.marginBottom + "px"; }
+    setSelectedElement((prev) => prev ? { ...prev, styles: { ...prev.styles, ...styleUpdates } } : null);
   }, []);
 
   const deleteElement = useCallback((elId: string) => {
@@ -1163,6 +1275,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       iframe.contentWindow.postMessage({ type: "tipote:deselect-element" }, "*");
     }
     setSelectedElement(null);
+  }, []);
+
+  const duplicateElement = useCallback((elId: string) => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:duplicate-element", elId }, "*");
+    }
   }, []);
 
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
@@ -1338,14 +1457,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
         {/* ──── LEFT SIDEBAR (Builder + Paramètres + Chat IA) ──── */}
         {sidebarOpen && (
-          <div className="w-[300px] shrink-0 bg-white dark:bg-[#161b22] border-r border-border/50 flex flex-col overflow-hidden">
+          <div className="w-[300px] shrink-0 bg-[#1e3a5f] text-white border-r border-[#2a4a6f] flex flex-col overflow-hidden">
 
             {/* Tab switcher */}
-            <div className="flex border-b border-border/30">
+            <div className="flex border-b border-white/10">
               <button
                 onClick={() => setLeftTab("builder")}
                 className={`flex-1 py-2 text-xs font-semibold text-center transition-colors ${
-                  leftTab === "builder" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                  leftTab === "builder" ? "text-white border-b-2 border-white bg-white/10" : "text-white/60 hover:text-white/80"
                 }`}
               >
                 <Layers className="w-3 h-3 inline mr-1" />
@@ -1354,7 +1473,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               <button
                 onClick={() => setLeftTab("parametres")}
                 className={`flex-1 py-2 text-xs font-semibold text-center transition-colors ${
-                  leftTab === "parametres" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                  leftTab === "parametres" ? "text-white border-b-2 border-white bg-white/10" : "text-white/60 hover:text-white/80"
                 }`}
               >
                 <Settings className="w-3 h-3 inline mr-1" />
@@ -1375,8 +1494,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       <>
                         {/* Breadcrumb + Back */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground overflow-hidden">
-                            <button onClick={deselectElement} className="text-primary hover:underline shrink-0">
+                          <div className="flex items-center gap-1 text-[10px] text-white/50 overflow-hidden">
+                            <button onClick={deselectElement} className="text-blue-300 hover:underline shrink-0">
                               ← Retour
                             </button>
                             {selectedElement.breadcrumb.length > 0 && (
@@ -1395,25 +1514,32 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                         {/* Element type header */}
                         <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-semibold">{EL_TYPE_LABELS[selectedElement.elType] || "Élément"}</h3>
+                          <h3 className="text-sm font-semibold text-white">{EL_TYPE_LABELS[selectedElement.elType] || "Élément"}</h3>
                           <div className="flex items-center gap-1">
                             <button
+                              onClick={() => duplicateElement(selectedElement.elId)}
+                              className="p-1 rounded hover:bg-white/10 text-white/60"
+                              title="Dupliquer"
+                            >
+                              <CopyIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
                               onClick={() => { moveSection(selectedElement.elId, "up"); }}
-                              className="p-1 rounded hover:bg-muted text-muted-foreground"
+                              className="p-1 rounded hover:bg-white/10 text-white/60"
                               title="Monter"
                             >
                               <ChevronUp className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => { moveSection(selectedElement.elId, "down"); }}
-                              className="p-1 rounded hover:bg-muted text-muted-foreground"
+                              className="p-1 rounded hover:bg-white/10 text-white/60"
                               title="Descendre"
                             >
                               <ChevronDown className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => deleteElement(selectedElement.elId)}
-                              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                              className="p-1 rounded hover:bg-red-500/20 text-red-400"
                               title="Supprimer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1424,24 +1550,37 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         {/* ── Properties per element type ── */}
                         <div className="space-y-3">
 
-                          {/* TEXT COLOR (all text types) */}
+                          {/* TEXT COLOR + FONT (all text types) */}
                           {["heading", "text", "button", "link", "list", "list-item", "blockquote"].includes(selectedElement.elType) && (
                             <>
+                              {/* Google Font picker */}
+                              <div>
+                                <span className="text-xs text-white/60 block mb-1">Police</span>
+                                <select
+                                  value={(() => { const ff = selectedElement.styles.fontFamily || ""; const match = GOOGLE_FONTS.find(f => ff.includes(f)); return match || ""; })()}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { fontFamily: e.target.value ? `'${e.target.value}', sans-serif` : "inherit" })}
+                                  className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white"
+                                >
+                                  <option value="" className="text-gray-900">Par défaut</option>
+                                  {GOOGLE_FONTS.map(f => <option key={f} value={f} className="text-gray-900">{f}</option>)}
+                                </select>
+                              </div>
+
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Couleur du texte</span>
+                                <span className="text-xs text-white/60">Couleur du texte</span>
                                 <input
                                   type="color"
                                   value={selectedElement.styles.color || "#000000"}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { color: e.target.value })}
-                                  className="w-6 h-6 rounded border cursor-pointer"
+                                  className="w-6 h-6 rounded border border-white/20 cursor-pointer"
                                 />
                               </div>
 
                               {/* Font size */}
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-muted-foreground">Taille de police</span>
-                                  <span className="text-[10px] text-muted-foreground">{selectedElement.styles.fontSize || "16px"}</span>
+                                  <span className="text-xs text-white/60">Taille</span>
+                                  <span className="text-[10px] text-white/40">{selectedElement.styles.fontSize || "16px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -1449,17 +1588,17 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   max={72}
                                   value={parseInt(selectedElement.styles.fontSize) || 16}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { fontSize: e.target.value + "px" })}
-                                  className="w-full h-1.5 accent-primary"
+                                  className="w-full h-1.5 accent-blue-400"
                                 />
                               </div>
 
                               {/* Font weight */}
                               <div>
-                                <span className="text-xs text-muted-foreground block mb-1">Graisse</span>
+                                <span className="text-xs text-white/60 block mb-1">Graisse</span>
                                 <div className="flex gap-1">
                                   {[
                                     { v: "400", l: "Normal" },
-                                    { v: "600", l: "Semi-gras" },
+                                    { v: "600", l: "Semi" },
                                     { v: "700", l: "Gras" },
                                     { v: "900", l: "Noir" },
                                   ].map((fw) => (
@@ -1468,8 +1607,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       onClick={() => updateElementStyle(selectedElement.elId, { fontWeight: fw.v })}
                                       className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
                                         String(selectedElement.styles.fontWeight) === fw.v
-                                          ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                                          : "border-border hover:bg-muted/50"
+                                          ? "bg-white/20 border-white/40 text-white font-medium"
+                                          : "border-white/10 text-white/50 hover:bg-white/10"
                                       }`}
                                     >
                                       {fw.l}
@@ -1480,7 +1619,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               {/* Text alignment */}
                               <div>
-                                <span className="text-xs text-muted-foreground block mb-1">Alignement</span>
+                                <span className="text-xs text-white/60 block mb-1">Alignement</span>
                                 <div className="flex gap-1">
                                   {[
                                     { v: "left", l: "Gauche" },
@@ -1492,8 +1631,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       onClick={() => updateElementStyle(selectedElement.elId, { textAlign: ta.v })}
                                       className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
                                         selectedElement.styles.textAlign === ta.v
-                                          ? "bg-primary/10 border-primary/30 text-primary font-medium"
-                                          : "border-border hover:bg-muted/50"
+                                          ? "bg-white/20 border-white/40 text-white font-medium"
+                                          : "border-white/10 text-white/50 hover:bg-white/10"
                                       }`}
                                     >
                                       {ta.l}
@@ -1508,18 +1647,70 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           {(selectedElement.elType === "button" || selectedElement.elType === "link") && (
                             <>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Couleur du fond</span>
+                                <span className="text-xs text-white/60">Couleur du fond</span>
                                 <input
                                   type="color"
                                   value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#5D6CDB"}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { backgroundColor: e.target.value })}
-                                  className="w-6 h-6 rounded border cursor-pointer"
+                                  className="w-6 h-6 rounded border border-white/20 cursor-pointer"
                                 />
                               </div>
+
+                              {/* Gradient for button */}
+                              <div>
+                                <span className="text-xs text-white/60 block mb-1">Dégradé</span>
+                                <div className="flex gap-1.5 items-center">
+                                  <input
+                                    type="color"
+                                    defaultValue="#5D6CDB"
+                                    onChange={(e) => {
+                                      const c2 = (document.getElementById("btn-grad-c2") as HTMLInputElement)?.value || "#8B5CF6";
+                                      const angle = (document.getElementById("btn-grad-angle") as HTMLInputElement)?.value || "135";
+                                      updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${e.target.value}, ${c2})` });
+                                    }}
+                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                    title="Couleur 1"
+                                  />
+                                  <input
+                                    id="btn-grad-c2"
+                                    type="color"
+                                    defaultValue="#8B5CF6"
+                                    onChange={(e) => {
+                                      const c1Inputs = e.target.previousElementSibling as HTMLInputElement;
+                                      const c1 = c1Inputs?.value || "#5D6CDB";
+                                      const angle = (document.getElementById("btn-grad-angle") as HTMLInputElement)?.value || "135";
+                                      updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${c1}, ${e.target.value})` });
+                                    }}
+                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                    title="Couleur 2"
+                                  />
+                                  <input
+                                    id="btn-grad-angle"
+                                    type="number"
+                                    defaultValue={135}
+                                    min={0}
+                                    max={360}
+                                    className="w-14 px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                    title="Angle (deg)"
+                                    onChange={(e) => {
+                                      // Re-apply gradient with new angle
+                                    }}
+                                  />
+                                  <span className="text-[9px] text-white/40">deg</span>
+                                  <button
+                                    onClick={() => updateElementStyle(selectedElement.elId, { backgroundImage: "none" })}
+                                    className="p-1 rounded hover:bg-white/10 text-white/40"
+                                    title="Supprimer le dégradé"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-muted-foreground">Arrondi</span>
-                                  <span className="text-[10px] text-muted-foreground">{selectedElement.styles.borderRadius || "0px"}</span>
+                                  <span className="text-xs text-white/60">Arrondi</span>
+                                  <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -1527,17 +1718,40 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   max={50}
                                   value={parseInt(selectedElement.styles.borderRadius) || 0}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { borderRadius: e.target.value + "px" })}
-                                  className="w-full h-1.5 accent-primary"
+                                  className="w-full h-1.5 accent-blue-400"
                                 />
                               </div>
+
+                              {/* Border */}
                               <div>
-                                <span className="text-xs text-muted-foreground block mb-1">Lien (URL)</span>
+                                <span className="text-xs text-white/60 block mb-1">Bordure</span>
+                                <div className="flex gap-1.5 items-center">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={10}
+                                    value={parseInt(selectedElement.styles.borderWidth) || 0}
+                                    onChange={(e) => updateElementStyle(selectedElement.elId, { borderWidth: Number(e.target.value), borderStyle: Number(e.target.value) > 0 ? "solid" : "none" })}
+                                    className="w-12 px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                  />
+                                  <span className="text-[9px] text-white/40">px</span>
+                                  <input
+                                    type="color"
+                                    value={selectedElement.styles.borderColor || "#000000"}
+                                    onChange={(e) => updateElementStyle(selectedElement.elId, { borderColor: e.target.value })}
+                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <span className="text-xs text-white/60 block mb-1">Lien (URL)</span>
                                 <input
                                   type="url"
                                   value={selectedElement.href || ""}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { href: e.target.value })}
                                   placeholder="https://..."
-                                  className="w-full px-2 py-1.5 border rounded-lg text-xs"
+                                  className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white placeholder:text-white/30"
                                 />
                               </div>
                             </>
@@ -1547,7 +1761,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           {selectedElement.elType === "image" && (
                             <>
                               {selectedElement.imgSrc && (
-                                <div className="rounded-lg border overflow-hidden">
+                                <div className="rounded-lg border border-white/20 overflow-hidden">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img src={selectedElement.imgSrc} alt="" className="w-full h-24 object-cover" />
                                 </div>
@@ -1558,15 +1772,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                     triggerImageUploadForIframe(selectedElement.imgId);
                                   }
                                 }}
-                                className="w-full py-2 border border-dashed rounded-lg text-xs text-muted-foreground hover:bg-muted/30 flex items-center justify-center gap-1.5"
+                                className="w-full py-2 border border-dashed border-white/20 rounded-lg text-xs text-white/60 hover:bg-white/10 flex items-center justify-center gap-1.5"
                               >
                                 <Upload className="w-3.5 h-3.5" />
                                 {selectedElement.imgSrc ? "Changer l'image" : "Ajouter une image"}
                               </button>
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-muted-foreground">Arrondi</span>
-                                  <span className="text-[10px] text-muted-foreground">{selectedElement.styles.borderRadius || "0px"}</span>
+                                  <span className="text-xs text-white/60">Arrondi</span>
+                                  <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -1574,7 +1788,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   max={50}
                                   value={parseInt(selectedElement.styles.borderRadius) || 0}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { borderRadius: e.target.value + "px" })}
-                                  className="w-full h-1.5 accent-primary"
+                                  className="w-full h-1.5 accent-blue-400"
                                 />
                               </div>
                             </>
@@ -1584,27 +1798,78 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           {(selectedElement.elType === "section" || selectedElement.elType === "row" || selectedElement.elType === "nav" || selectedElement.elType === "form") && (
                             <>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Arrière-fond</span>
+                                <span className="text-xs text-white/60">Arrière-fond</span>
                                 <input
                                   type="color"
                                   value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#ffffff"}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { backgroundColor: e.target.value })}
-                                  className="w-6 h-6 rounded border cursor-pointer"
+                                  className="w-6 h-6 rounded border border-white/20 cursor-pointer"
                                 />
                               </div>
+
+                              {/* Gradient for section */}
+                              <div>
+                                <span className="text-xs text-white/60 block mb-1">Dégradé de fond</span>
+                                <div className="flex gap-1.5 items-center">
+                                  <input
+                                    type="color"
+                                    defaultValue="#1e3a5f"
+                                    onChange={(e) => {
+                                      const c2 = (document.getElementById("sec-grad-c2-" + selectedElement.elId) as HTMLInputElement)?.value || "#5D6CDB";
+                                      const angle = (document.getElementById("sec-grad-angle-" + selectedElement.elId) as HTMLInputElement)?.value || "135";
+                                      updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${e.target.value}, ${c2})` });
+                                    }}
+                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                    title="Couleur 1"
+                                  />
+                                  <input
+                                    id={"sec-grad-c2-" + selectedElement.elId}
+                                    type="color"
+                                    defaultValue="#5D6CDB"
+                                    onChange={(e) => {
+                                      const prev = e.target.previousElementSibling as HTMLInputElement;
+                                      const c1 = prev?.value || "#1e3a5f";
+                                      const angle = (document.getElementById("sec-grad-angle-" + selectedElement.elId) as HTMLInputElement)?.value || "135";
+                                      updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${c1}, ${e.target.value})` });
+                                    }}
+                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                    title="Couleur 2"
+                                  />
+                                  <input
+                                    id={"sec-grad-angle-" + selectedElement.elId}
+                                    type="number"
+                                    defaultValue={135}
+                                    min={0}
+                                    max={360}
+                                    className="w-14 px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                    title="Angle"
+                                  />
+                                  <span className="text-[9px] text-white/40">°</span>
+                                  <button
+                                    onClick={() => updateElementStyle(selectedElement.elId, { backgroundImage: "none" })}
+                                    className="p-1 rounded hover:bg-white/10 text-white/40"
+                                    title="Supprimer"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Couleur texte</span>
+                                <span className="text-xs text-white/60">Couleur texte</span>
                                 <input
                                   type="color"
                                   value={selectedElement.styles.color || "#1a1a1a"}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { color: e.target.value })}
-                                  className="w-6 h-6 rounded border cursor-pointer"
+                                  className="w-6 h-6 rounded border border-white/20 cursor-pointer"
                                 />
                               </div>
+
+                              {/* Padding */}
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-muted-foreground">Rembourrage V</span>
-                                  <span className="text-[10px] text-muted-foreground">{parseInt(selectedElement.styles.paddingTop) || 0}px</span>
+                                  <span className="text-xs text-white/60">Padding V</span>
+                                  <span className="text-[10px] text-white/40">{parseInt(selectedElement.styles.paddingTop) || 0}px</span>
                                 </div>
                                 <input
                                   type="range"
@@ -1612,13 +1877,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   max={200}
                                   value={parseInt(selectedElement.styles.paddingTop) || 0}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { paddingY: Number(e.target.value) })}
-                                  className="w-full h-1.5 accent-primary"
+                                  className="w-full h-1.5 accent-blue-400"
                                 />
                               </div>
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-muted-foreground">Rembourrage H</span>
-                                  <span className="text-[10px] text-muted-foreground">{parseInt(selectedElement.styles.paddingLeft) || 0}px</span>
+                                  <span className="text-xs text-white/60">Padding H</span>
+                                  <span className="text-[10px] text-white/40">{parseInt(selectedElement.styles.paddingLeft) || 0}px</span>
                                 </div>
                                 <input
                                   type="range"
@@ -1626,11 +1891,81 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   max={120}
                                   value={parseInt(selectedElement.styles.paddingLeft) || 0}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { paddingX: Number(e.target.value) })}
-                                  className="w-full h-1.5 accent-primary"
+                                  className="w-full h-1.5 accent-blue-400"
                                 />
                               </div>
+
+                              {/* Border radius for rows */}
+                              {(selectedElement.elType === "row") && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs text-white/60">Arrondi</span>
+                                    <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={0}
+                                    max={40}
+                                    value={parseInt(selectedElement.styles.borderRadius) || 0}
+                                    onChange={(e) => updateElementStyle(selectedElement.elId, { borderRadius: e.target.value + "px" })}
+                                    className="w-full h-1.5 accent-blue-400"
+                                  />
+                                </div>
+                              )}
                             </>
                           )}
+
+                          {/* ── COMMON: Margin, Border, Animation (all elements) ── */}
+                          <div className="pt-2 border-t border-white/10">
+                            <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wide">Espacement</span>
+                            <div className="grid grid-cols-2 gap-2 mt-1.5">
+                              <div>
+                                <span className="text-[9px] text-white/40">Marge haut</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={200}
+                                  value={parseInt(selectedElement.styles.marginTop) || 0}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { marginTop: Number(e.target.value) })}
+                                  className="w-full px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-white/40">Marge bas</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={200}
+                                  value={parseInt(selectedElement.styles.marginBottom) || 0}
+                                  onChange={(e) => updateElementStyle(selectedElement.elId, { marginBottom: Number(e.target.value) })}
+                                  className="w-full px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Animation */}
+                          <div>
+                            <span className="text-xs text-white/60 block mb-1">Animation</span>
+                            <select
+                              onChange={(e) => updateElementStyle(selectedElement.elId, { animation: e.target.value })}
+                              className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white"
+                              defaultValue="none"
+                            >
+                              {CSS_ANIMATIONS.map(a => <option key={a.value} value={a.value} className="text-gray-900">{a.label}</option>)}
+                            </select>
+                          </div>
+
+                          {/* AI Element Editing */}
+                          <div className="pt-2 border-t border-white/10">
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <Sparkles className="w-3 h-3 text-blue-300" />
+                              <span className="text-xs text-white/60">Modifier avec l&apos;IA</span>
+                            </div>
+                            <p className="text-[10px] text-white/30 mb-1.5">
+                              Ex: &quot;ajoute un dégradé vert-bleu&quot;, &quot;rends-le plus gros&quot;
+                            </p>
+                          </div>
                         </div>
                       </>
                     ) : (
@@ -1638,27 +1973,27 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       <>
                         {/* Sections list */}
                         <div>
-                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Sections</p>
+                          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide mb-2">Sections</p>
                           <div className="space-y-1">
                             {sections.length === 0 && (
-                              <p className="text-[11px] text-muted-foreground/60 py-2">Clique sur un élément dans l&apos;aperçu</p>
+                              <p className="text-[11px] text-white/30 py-2">Clique sur un élément dans l&apos;aperçu</p>
                             )}
                             {sections.map((s) => (
                               <div
                                 key={s.id}
-                                className="group flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-all text-xs hover:bg-muted/50 border border-transparent"
+                                className="group flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-all text-xs hover:bg-white/10 border border-transparent text-white/80"
                                 onClick={() => selectSection(s.id)}
                               >
                                 <MousePointer className="w-3 h-3 shrink-0 opacity-40" />
                                 <span className="flex-1 truncate">{s.label}</span>
                                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }} className="p-0.5 rounded hover:bg-muted" title="Monter">
+                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }} className="p-0.5 rounded hover:bg-white/10" title="Monter">
                                     <ChevronUp className="w-3 h-3" />
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "down"); }} className="p-0.5 rounded hover:bg-muted" title="Descendre">
+                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "down"); }} className="p-0.5 rounded hover:bg-white/10" title="Descendre">
                                     <ChevronDown className="w-3 h-3" />
                                   </button>
-                                  <button onClick={(e) => { e.stopPropagation(); deleteSection(s.id); }} className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500" title="Supprimer">
+                                  <button onClick={(e) => { e.stopPropagation(); deleteSection(s.id); }} className="p-0.5 rounded hover:bg-red-500/20 text-red-400" title="Supprimer">
                                     <Trash2 className="w-3 h-3" />
                                   </button>
                                 </div>
@@ -1668,8 +2003,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         </div>
 
                         {/* Element palette */}
-                        <div className="pt-3 border-t border-border/30">
-                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Ajouter un élément</p>
+                        <div className="pt-3 border-t border-white/10">
+                          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide mb-2">Ajouter un élément</p>
                           <div className="grid grid-cols-3 gap-1.5">
                             {ELEMENT_PALETTE.map((el) => {
                               const Icon = el.icon;
@@ -1677,7 +2012,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 <button
                                   key={el.type}
                                   onClick={() => addElement(el.type)}
-                                  className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-border/50 hover:bg-muted/50 hover:border-primary/30 transition-all text-muted-foreground hover:text-foreground"
+                                  className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all text-white/60 hover:text-white"
                                 >
                                   <Icon className="w-4 h-4" />
                                   <span className="text-[10px]">{el.label}</span>
@@ -1688,15 +2023,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         </div>
 
                         {/* Tip */}
-                        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50">
-                          <span className="text-[10px] text-blue-700 dark:text-blue-300">💡 Clique sur un élément dans l&apos;aperçu pour modifier ses propriétés.</span>
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-white/50">Clique sur un élément dans l&apos;aperçu pour modifier ses propriétés.</span>
                         </div>
                       </>
                     )}
                   </div>
 
                   {/* ──── AI CHAT (bottom of builder tab) ──── */}
-                  <div className="h-[280px] shrink-0 border-t border-border/30">
+                  <div className="h-[180px] shrink-0 border-t border-white/10 bg-[#162d4a]">
                     <PageChatBar
                       pageId={page.id}
                       templateId={page.template_id}
@@ -1716,11 +2051,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 <div className="p-3 space-y-4">
                   {/* URL / Slug */}
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
                       <Link2 className="w-3 h-3" /> URL
                     </label>
-                    <div className="flex items-center gap-1 bg-muted/30 rounded-lg px-2 py-1.5 border text-xs">
-                      <span className="text-muted-foreground whitespace-nowrap">/p/</span>
+                    <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1.5 border border-white/20 text-xs">
+                      <span className="text-white/40 whitespace-nowrap">/p/</span>
                       <input
                         type="text"
                         value={page.slug}
@@ -1728,20 +2063,20 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-");
                           handleSettingUpdate("slug", val);
                         }}
-                        className="flex-1 bg-transparent font-medium focus:outline-none min-w-0"
+                        className="flex-1 bg-transparent font-medium focus:outline-none min-w-0 text-white"
                       />
                     </div>
                   </div>
 
                   {/* SEO */}
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
                       <FileText className="w-3 h-3" /> Description SEO
                     </label>
                     <textarea
                       value={page.meta_description || ""}
                       onChange={(e) => handleSettingUpdate("meta_description", e.target.value)}
-                      className="w-full px-2 py-1.5 border rounded-lg text-xs resize-none"
+                      className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs resize-none text-white placeholder:text-white/30"
                       rows={2}
                       maxLength={160}
                       placeholder="Description pour Google..."
@@ -1750,7 +2085,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                   {/* Systeme.io tag */}
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
                       <Tag className="w-3 h-3" /> Tag Systeme.io
                     </label>
                     <input
@@ -1758,17 +2093,17 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       value={page.sio_capture_tag || ""}
                       onChange={(e) => handleSettingUpdate("sio_capture_tag", e.target.value)}
                       placeholder="capture-ebook"
-                      className="w-full px-2 py-1.5 border rounded-lg text-xs"
+                      className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
                     />
                   </div>
 
                   {/* OG Image */}
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
                       <ImageIcon className="w-3 h-3" /> Image de partage
                     </label>
                     {page.og_image_url ? (
-                      <div className="relative rounded-lg overflow-hidden border">
+                      <div className="relative rounded-lg overflow-hidden border border-white/20">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={page.og_image_url} alt="OG" className="w-full h-20 object-cover" />
                         <button
@@ -1781,7 +2116,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     ) : (
                       <button
                         onClick={handleOgImageUpload}
-                        className="w-full py-4 border border-dashed rounded-lg text-xs text-muted-foreground hover:bg-muted/30 flex flex-col items-center gap-1"
+                        className="w-full py-4 border border-dashed border-white/20 rounded-lg text-xs text-white/40 hover:bg-white/5 flex flex-col items-center gap-1"
                       >
                         <Upload className="w-4 h-4" />
                         Ajouter
@@ -1790,32 +2125,32 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                   </div>
 
                   {/* Tracking */}
-                  <div className="pt-2 border-t border-border/30">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Tracking</p>
+                  <div className="pt-2 border-t border-white/10">
+                    <p className="text-xs font-medium text-white/60 mb-2">Tracking</p>
                     <div className="space-y-2">
                       <input
                         type="text"
                         value={page.facebook_pixel_id || ""}
                         onChange={(e) => handleSettingUpdate("facebook_pixel_id", e.target.value.replace(/[^0-9]/g, ""))}
                         placeholder="Facebook Pixel ID"
-                        className="w-full px-2 py-1.5 border rounded-lg text-xs"
+                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
                       />
                       <input
                         type="text"
                         value={page.google_tag_id || ""}
                         onChange={(e) => handleSettingUpdate("google_tag_id", e.target.value.replace(/[^a-zA-Z0-9-]/g, ""))}
                         placeholder="Google Tag (G-XXXX)"
-                        className="w-full px-2 py-1.5 border rounded-lg text-xs"
+                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
                       />
                     </div>
                   </div>
 
                   {/* Thank-you page (capture only) */}
                   {(page.page_type === "capture" || page.template_kind === "capture") && (
-                    <div className="pt-2 border-t border-border/30">
+                    <div className="pt-2 border-t border-white/10">
                       <button
                         onClick={() => setShowThankYouModal(true)}
-                        className="w-full py-2 border rounded-lg text-xs font-medium hover:bg-muted/30 flex items-center justify-center gap-1.5"
+                        className="w-full py-2 border border-white/20 rounded-lg text-xs font-medium text-white/70 hover:bg-white/10 flex items-center justify-center gap-1.5"
                       >
                         <Check className="w-3 h-3" />
                         Page de remerciement
@@ -1824,35 +2159,35 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                   )}
 
                   {/* Downloads */}
-                  <div className="pt-2 border-t border-border/30">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Exports</p>
+                  <div className="pt-2 border-t border-white/10">
+                    <p className="text-xs font-medium text-white/60 mb-2">Exports</p>
                     <div className="flex gap-2">
-                      <button onClick={downloadHtml} className="flex-1 py-1.5 border rounded-lg text-xs hover:bg-muted/30 flex items-center justify-center gap-1">
+                      <button onClick={downloadHtml} className="flex-1 py-1.5 border border-white/20 rounded-lg text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1">
                         <Download className="w-3 h-3" /> HTML
                       </button>
-                      <button onClick={downloadTextPdf} className="flex-1 py-1.5 border rounded-lg text-xs hover:bg-muted/30 flex items-center justify-center gap-1">
+                      <button onClick={downloadTextPdf} className="flex-1 py-1.5 border border-white/20 rounded-lg text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1">
                         <FileDown className="w-3 h-3" /> PDF
                       </button>
                     </div>
                   </div>
 
                   {/* Stats */}
-                  <div className="pt-2 border-t border-border/30">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Statistiques</p>
+                  <div className="pt-2 border-t border-white/10">
+                    <p className="text-xs font-medium text-white/60 mb-2">Statistiques</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 rounded-lg bg-muted/30 text-center">
-                        <p className="text-lg font-bold">{page.views_count}</p>
-                        <p className="text-[10px] text-muted-foreground">Vues</p>
+                      <div className="p-2 rounded-lg bg-white/10 text-center">
+                        <p className="text-lg font-bold text-white">{page.views_count}</p>
+                        <p className="text-[10px] text-white/40">Vues</p>
                       </div>
-                      <div className="p-2 rounded-lg bg-muted/30 text-center">
-                        <p className="text-lg font-bold">{page.leads_count}</p>
-                        <p className="text-[10px] text-muted-foreground">Leads</p>
+                      <div className="p-2 rounded-lg bg-white/10 text-center">
+                        <p className="text-lg font-bold text-white">{page.leads_count}</p>
+                        <p className="text-[10px] text-white/40">Leads</p>
                       </div>
                     </div>
                     {page.leads_count > 0 && (
                       <button
                         onClick={() => { setShowLeadsModal(true); loadLeads(); }}
-                        className="w-full mt-2 py-1.5 border rounded-lg text-xs hover:bg-muted/30 flex items-center justify-center gap-1"
+                        className="w-full mt-2 py-1.5 border border-white/20 rounded-lg text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1"
                       >
                         <Users className="w-3 h-3" /> Voir les leads
                       </button>
