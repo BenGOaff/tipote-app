@@ -28,6 +28,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   const updates: Record<string, unknown> = {};
+  if (body.name !== undefined) updates.name = String(body.name).trim();
   if (body.status !== undefined) updates.status = body.status;
   if (body.due_date !== undefined) updates.due_date = body.due_date || null;
   if (body.amount_total !== undefined) updates.amount_total = body.amount_total;

@@ -471,6 +471,25 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
     }
   }, []);
 
+  const editProcessItem = useCallback(async (processId: string, itemId: string, title: string) => {
+    setClientProcesses((prev) =>
+      prev.map((p) => {
+        if (p.id !== processId) return p;
+        const items = p.items.map((i) => (i.id === itemId ? { ...i, title } : i));
+        return { ...p, items };
+      }),
+    );
+    try {
+      await fetch(`/api/client-processes/${processId}/items/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+    } catch {
+      // silent
+    }
+  }, []);
+
   function resetTemplateForm() {
     setNewTplName("");
     setNewTplDescription("");
@@ -769,6 +788,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                       onToggleItem={(itemId, isDone) => toggleProcessItem(proc.id, itemId, isDone)}
                       onAddItem={(title) => addProcessItem(proc.id, title)}
                       onDeleteItem={(itemId) => deleteProcessItem(proc.id, itemId)}
+                      onEditItem={(itemId, title) => editProcessItem(proc.id, itemId, title)}
                       onUpdateProcess={(data) => updateProcess(proc.id, data)}
                     />
                   ))}
@@ -1042,6 +1062,7 @@ function ProcessCard({
   onToggleItem,
   onAddItem,
   onDeleteItem,
+  onEditItem,
   onUpdateProcess,
 }: {
   process: ClientProcess;
@@ -1049,10 +1070,16 @@ function ProcessCard({
   onToggleItem: (itemId: string, isDone: boolean) => void;
   onAddItem: (title: string) => void;
   onDeleteItem: (itemId: string) => void;
+  onEditItem: (itemId: string, title: string) => void;
   onUpdateProcess: (data: Record<string, unknown>) => void;
 }) {
   const [newItemTitle, setNewItemTitle] = useState("");
   const [expanded, setExpanded] = useState(true);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemTitle, setEditingItemTitle] = useState("");
+  const [editingHeader, setEditingHeader] = useState(false);
+  const [editName, setEditName] = useState(process.name);
+  const [editDueDate, setEditDueDate] = useState(process.due_date || "");
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [newPayAmount, setNewPayAmount] = useState("");
   const [newPayDate, setNewPayDate] = useState(new Date().toISOString().slice(0, 10));
@@ -1099,29 +1126,76 @@ function ProcessCard({
     }
   };
 
+  const saveHeader = () => {
+    const updates: Record<string, unknown> = {};
+    if (editName.trim() && editName.trim() !== process.name) updates.name = editName.trim();
+    if (editDueDate !== (process.due_date || "")) updates.due_date = editDueDate || null;
+    if (Object.keys(updates).length > 0) onUpdateProcess(updates);
+    setEditingHeader(false);
+  };
+
   return (
     <Card className="p-4">
-      <div
-        className="flex items-center justify-between cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <ListChecks className="h-4 w-4 text-muted-foreground shrink-0" />
-          <h4 className="font-semibold text-sm truncate">{process.name}</h4>
-          <Badge variant="secondary" className="text-xs">
-            {process.done}/{process.total}
-          </Badge>
+      {editingHeader ? (
+        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2">
+            <ListChecks className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="flex-1 font-semibold text-sm border rounded px-2 py-1"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") saveHeader(); if (e.key === "Escape") setEditingHeader(false); }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="date"
+              value={editDueDate}
+              onChange={(e) => setEditDueDate(e.target.value)}
+              className="text-xs border rounded px-2 py-1"
+            />
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => setEditingHeader(false)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1">
+                Annuler
+              </button>
+              <button type="button" onClick={saveHeader} className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded hover:bg-primary/90">
+                OK
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {process.due_date && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {new Date(process.due_date).toLocaleDateString()}
-            </span>
-          )}
-          <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
+      ) : (
+        <div
+          className="flex items-center justify-between cursor-pointer"
+          onClick={() => setExpanded(!expanded)}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <ListChecks className="h-4 w-4 text-muted-foreground shrink-0" />
+            <h4 className="font-semibold text-sm truncate">{process.name}</h4>
+            <Badge variant="secondary" className="text-xs">
+              {process.done}/{process.total}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            {process.due_date && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {new Date(process.due_date).toLocaleDateString()}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setEditingHeader(true); }}
+              className="text-slate-400 hover:text-primary transition-colors"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
+          </div>
         </div>
-      </div>
+      )}
 
       <Progress value={process.progress} className="h-1.5 mt-3" />
 
@@ -1239,13 +1313,45 @@ function ProcessCard({
                   checked={item.is_done}
                   onCheckedChange={(checked) => onToggleItem(item.id, !!checked)}
                 />
-                <span
-                  className={`flex-1 text-sm ${item.is_done ? "line-through text-slate-400" : "text-slate-700"}`}
-                >
-                  {item.title}
-                </span>
+                {editingItemId === item.id ? (
+                  <input
+                    value={editingItemTitle}
+                    onChange={(e) => setEditingItemTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && editingItemTitle.trim()) {
+                        onEditItem(item.id, editingItemTitle.trim());
+                        setEditingItemId(null);
+                      }
+                      if (e.key === "Escape") setEditingItemId(null);
+                    }}
+                    onBlur={() => {
+                      if (editingItemTitle.trim() && editingItemTitle.trim() !== item.title) {
+                        onEditItem(item.id, editingItemTitle.trim());
+                      }
+                      setEditingItemId(null);
+                    }}
+                    className="flex-1 text-sm border rounded px-2 py-0.5 text-slate-700"
+                    autoFocus
+                  />
+                ) : (
+                  <span
+                    className={`flex-1 text-sm cursor-pointer ${item.is_done ? "line-through text-slate-400" : "text-slate-700"}`}
+                    onDoubleClick={() => { setEditingItemId(item.id); setEditingItemTitle(item.title); }}
+                  >
+                    {item.title}
+                  </span>
+                )}
                 {item.due_date && (
                   <span className="text-xs text-muted-foreground">{new Date(item.due_date).toLocaleDateString()}</span>
+                )}
+                {editingItemId !== item.id && (
+                  <button
+                    type="button"
+                    onClick={() => { setEditingItemId(item.id); setEditingItemTitle(item.title); }}
+                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-primary transition-opacity"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
                 )}
                 <button
                   type="button"
