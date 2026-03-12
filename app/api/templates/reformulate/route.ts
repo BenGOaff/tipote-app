@@ -138,7 +138,25 @@ export async function POST(req: Request) {
   const firstPerson = firstPersonLabels[userLocale] || "Je vais";
 
   try {
-    const systemPrompt = [
+    // Build system prompt in the user's language for best results
+    const systemPrompt = userLocale === "fr" ? [
+      "Tu es Tipote, un assistant qui aide à modifier des pages web.",
+      `L'utilisateur travaille sur une ${pageTypeLabel}.`,
+      "Ta tâche : reformule la demande de l'utilisateur en une phrase claire et précise pour confirmer ta compréhension.",
+      "Réponds UNIQUEMENT avec du JSON : { \"reformulation\": \"...\" }",
+      `La reformulation DOIT être en français, courte (1-2 phrases max), à la première personne du singulier ("${firstPerson}...").`,
+      "",
+      "IMPORTANT : Si l'utilisateur demande de changer une image (photo, logo, avatar, illustration), réponds avec :",
+      `{ "reformulation": "", "tip": "click_image" }`,
+      "Cela indique à l'utilisateur de cliquer directement sur l'image dans l'aperçu pour la remplacer.",
+      "",
+      "Exemples :",
+      `- Input: "change le titre" -> { "reformulation": "Je vais modifier le titre principal de ta page." }`,
+      `- Input: "plus d'urgence" -> { "reformulation": "Je vais rendre le ton général plus urgent avec des mots d'action." }`,
+      `- Input: "change la couleur du fond" -> { "reformulation": "Je vais modifier la couleur de fond de ta page." }`,
+      `- Input: "change la photo de l'auteur" -> { "reformulation": "", "tip": "click_image" }`,
+      `- Input: "je veux modifier la photo" -> { "reformulation": "", "tip": "click_image" }`,
+    ].join("\n") : [
       "You are Tipote, an assistant that helps modify web pages.",
       `The user is working on a ${pageTypeLabel}.`,
       "Your task: rephrase the user's request in a clear and precise sentence to confirm understanding.",
@@ -153,7 +171,6 @@ export async function POST(req: Request) {
       `- Input: "change the title" -> { "reformulation": "${firstPerson} modify the main title of your page." }`,
       `- Input: "more urgent" -> { "reformulation": "${firstPerson} make the overall tone more urgent with action words." }`,
       `- Input: "change the author photo" -> { "reformulation": "", "tip": "click_image" }`,
-      `- Input: "je veux modifier la photo" -> { "reformulation": "", "tip": "click_image" }`,
     ].join("\n");
 
     const raw = await callClaude({
@@ -166,8 +183,20 @@ export async function POST(req: Request) {
     let reformulation = instruction;
     let tip: string | null = null;
 
+    // Robust JSON extraction: strip markdown fences if present
+    function extractJSON(text: string): string {
+      const t = text.trim();
+      if (t.startsWith("{")) return t;
+      const fenced = t.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+      if (fenced?.[1]?.trim()) return fenced[1].trim();
+      const first = t.indexOf("{");
+      const last = t.lastIndexOf("}");
+      if (first >= 0 && last > first) return t.slice(first, last + 1);
+      return t;
+    }
+
     try {
-      const parsed = JSON.parse(raw);
+      const parsed = JSON.parse(extractJSON(raw));
       if (parsed.tip) {
         tip = parsed.tip;
       }
