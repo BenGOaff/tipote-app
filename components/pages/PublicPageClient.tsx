@@ -527,65 +527,108 @@ fbq('init','${pid}');fbq('track','PageView');
   return snippets;
 }
 
-// Strip any editor artifacts that may have leaked into html_snapshot.
-// Uses both regex pre-cleaning AND a DOM-based cleanup script that runs
-// inside the iframe to guarantee nothing slips through.
-function sanitizeEditorArtifacts(html: string): string {
-  // ── Regex pre-cleaning (best-effort) ──
+/** Remove a <tag>...</tag> block handling nested tags of the same name. */
+function removeDivBlock(html: string, tagStart: number, tagName: string): string {
+  const closeTag = `</${tagName}>`;
+  const openTag = `<${tagName}`;
+  const firstClose = html.indexOf(">", tagStart);
+  if (firstClose === -1) return html;
+  let depth = 1;
+  let pos = firstClose + 1;
+  while (depth > 0 && pos < html.length) {
+    const nextOpen = html.indexOf(openTag, pos);
+    const nextClose = html.indexOf(closeTag, pos);
+    if (nextClose === -1) break;
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth++;
+      pos = html.indexOf(">", nextOpen) + 1;
+    } else {
+      depth--;
+      if (depth === 0) return html.slice(0, tagStart) + html.slice(nextClose + closeTag.length);
+      pos = nextClose + closeTag.length;
+    }
+  }
+  return html;
+}
 
-  // Remove inline editing script blocks — use index-based removal for robustness
-  // (regex with [\s\S]*? can fail on very long scripts or nested content)
+// Strip any editor artifacts that may have leaked into html_snapshot.
+// Uses server-side sanitization + a DOM-based cleanup script as safety net.
+function sanitizeEditorArtifacts(html: string): string {
+  // ── Import-free server-side cleaning (mirrors lib/sanitizeHtml.ts logic) ──
+
+  // 1. Remove editor script tags by content signatures (NOT just attribute)
+  const SCRIPT_SIGS = [
+    "data-tipote-injected", "tipote-toolbar", "tipote:text-edit",
+    "tipote:sections-list", "tipote:illust-", "tipote:section-click",
+    "tipote:element-select",
+  ];
   let searchFrom = 0;
   while (true) {
     const scriptStart = html.indexOf("<script", searchFrom);
     if (scriptStart === -1) break;
-    const tagEnd = html.indexOf(">", scriptStart);
-    if (tagEnd === -1) break;
-    const tagContent = html.slice(scriptStart, tagEnd + 1);
-    if (tagContent.includes("data-tipote-injected")) {
-      const scriptClose = html.indexOf("</script>", tagEnd);
-      if (scriptClose !== -1) {
-        html = html.slice(0, scriptStart) + html.slice(scriptClose + "</script>".length);
-        continue; // Don't advance searchFrom since we removed content
-      }
+    const scriptClose = html.indexOf("</script>", scriptStart);
+    if (scriptClose === -1) break;
+    const chunk = html.slice(scriptStart, scriptClose + "</script>".length);
+    if (SCRIPT_SIGS.some(s => chunk.includes(s))) {
+      html = html.slice(0, scriptStart) + html.slice(scriptClose + "</script>".length);
+      continue;
     }
-    searchFrom = tagEnd + 1;
+    searchFrom = scriptClose + "</script>".length;
   }
 
-  // Remove data-tp-section-idx attributes (editor tracking)
+  // 2. Remove editor overlay divs by class names and z-index patterns
+  const DIV_SIGS = [
+    'class="tipote-toolbar"', 'class="tipote-illust-overlay"',
+    "z-index: 99999", "z-index: 99998", "z-index: 99990", "z-index: 99989",
+    "z-index:99999", "z-index:99998", "z-index:99990", "z-index:99989",
+    "data-tipote-injected",
+  ];
+  for (const sig of DIV_SIGS) {
+    let pos = 0;
+    while (true) {
+      const idx = html.indexOf(sig, pos);
+      if (idx === -1) break;
+      let tagStart = html.lastIndexOf("<", idx);
+      if (tagStart === -1) { pos = idx + 1; continue; }
+      const tagSlice = html.slice(tagStart, tagStart + 20);
+      const tm = tagSlice.match(/^<(\w+)/);
+      if (!tm) { pos = idx + 1; continue; }
+      const tn = tm[1].toLowerCase();
+      if (tn === "div" || tn === "style") {
+        const before = html.length;
+        html = removeDivBlock(html, tagStart, tn);
+        if (html.length < before) continue;
+      }
+      pos = idx + 1;
+    }
+  }
+
+  // 3. Clean attributes and styles
   html = html.replace(/\s*data-tp-section-idx="[^"]*"/g, "");
-
-  // Remove contenteditable attributes (prevents links from being editable instead of clickable)
   html = html.replace(/\s*contenteditable="[^"]*"/g, "");
-
-  // Remove cursor:text inline style that editor adds
   html = html.replace(/cursor:\s*text;?\s*/g, "");
-
-  // Remove outline:none inline style from editor
   html = html.replace(/outline:\s*none;?\s*/g, "");
-
-  // Clean up empty style attributes left after removing editor styles
   html = html.replace(/\s*style="[\s;]*"/g, "");
 
-  // ── CSS safety net — hides any remaining artifacts ──
-  const safetyCSS = `<style>[data-tipote-injected]{display:none!important}[contenteditable]{-webkit-user-modify:read-only!important}</style>`;
+  // ── CSS safety net ──
+  const safetyCSS = `<style>.tipote-toolbar,.tipote-illust-overlay{display:none!important}[data-tipote-injected]{display:none!important}</style>`;
   const headEnd = html.indexOf("</head>");
   if (headEnd !== -1) {
     html = html.slice(0, headEnd) + safetyCSS + html.slice(headEnd);
   }
 
-  // ── DOM-based cleanup script — runs immediately, before anything else ──
-  // This is the ultimate safety net: even if regex misses something,
-  // this script uses the real DOM API to strip all editor artifacts.
+  // ── DOM-based cleanup script (ultimate safety net) ──
   const cleanupScript = `<script>
 (function(){
   function clean(){
-    document.querySelectorAll('[data-tipote-injected]').forEach(function(el){el.remove()});
+    document.querySelectorAll('.tipote-toolbar,.tipote-illust-overlay,[data-tipote-injected]').forEach(function(el){el.remove()});
+    var allEls=document.querySelectorAll('body>div[style]');
+    allEls.forEach(function(el){var z=el.style.zIndex;if(z==='99999'||z==='99998'||z==='99990'||z==='99989')el.remove()});
     document.querySelectorAll('[data-tp-section-idx]').forEach(function(el){el.removeAttribute('data-tp-section-idx')});
     document.querySelectorAll('[contenteditable]').forEach(function(el){el.removeAttribute('contenteditable');el.style.removeProperty('cursor');el.style.removeProperty('outline')});
+    document.querySelectorAll('script').forEach(function(s){if(s.textContent&&s.textContent.indexOf('tipote:text-edit')!==-1)s.remove()});
   }
   if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',clean)}else{clean()}
-  // Also run after a short delay to catch any dynamically created elements
   setTimeout(clean,100);setTimeout(clean,500);
 })();
 </script>`;

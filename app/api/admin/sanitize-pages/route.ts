@@ -17,6 +17,13 @@ const ARTIFACT_MARKERS = [
   "data-tipote-injected",
   "data-tp-section-idx",
   'contenteditable="',
+  "tipote-toolbar",
+  "tipote:text-edit",
+  "tipote:sections-list",
+  "z-index: 99999",
+  "z-index: 99989",
+  "z-index:99999",
+  "z-index:99989",
 ];
 
 function hasDirtyArtifacts(html: string): boolean {
