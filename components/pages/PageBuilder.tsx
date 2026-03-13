@@ -19,6 +19,7 @@ import {
   Layers, Trash2, ChevronUp, ChevronDown,
   MousePointer, Heading, AlignLeft, Square, Minus,
   Copy as CopyIcon, Columns, Video, LayoutGrid, Sparkles,
+  Undo2, Redo2,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 
@@ -126,6 +127,7 @@ type SectionInfo = {
   tagName: string;
   classes: string;
   top: number;
+  anchorId?: string;
 };
 
 // Elements palette (labels translated inside component)
@@ -274,9 +276,9 @@ const INLINE_EDIT_SCRIPT = `
 
   function detectElType(el) {
     var tag = el.tagName.toLowerCase();
-    if (tag === 'img' || el.hasAttribute('data-tipote-img-id') || el.querySelector('img')) return 'image';
+    if (tag === 'img' || el.hasAttribute('data-tipote-img-id') || (tag !== 'a' && tag !== 'button' && el.querySelector && el.querySelector(':scope > img'))) return 'image';
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') return 'heading';
-    if (tag === 'a' && (el.classList.contains('tp-cta-btn') || el.classList.contains('tp-cta'))) return 'button';
+    if (tag === 'a' && (el.classList.contains('tp-cta-btn') || el.classList.contains('tp-cta') || el.classList.contains('tp-final-btn'))) return 'button';
     if (tag === 'button') return 'button';
     if (tag === 'a') return 'link';
     if (tag === 'ul' || tag === 'ol') return 'list';
@@ -286,12 +288,16 @@ const INLINE_EDIT_SCRIPT = `
     if (tag === 'form') return 'form';
     if (tag === 'nav') return 'nav';
     if (tag === 'p' || tag === 'span' || tag === 'label' || tag === 'figcaption' || tag === 'td' || tag === 'th') return 'text';
-    if (el.style && (el.style.display === 'flex' || el.style.display === 'grid') && el.children.length > 1) return 'row';
-    var cs = getComputedStyle(el);
-    if ((cs.display === 'flex' || cs.display === 'grid') && el.children.length > 1) return 'row';
+    if (tag === 'video' || tag === 'iframe') return 'video';
     // Check if it's a section-level element
     var cls = el.className || '';
     if (cls.indexOf('tp-hero') >= 0 || cls.indexOf('tp-section') >= 0 || cls.indexOf('tp-final-cta') >= 0 || cls.indexOf('tp-footer') >= 0 || cls.indexOf('tp-header-bar') >= 0) return 'section';
+    if (el.style && (el.style.display === 'flex' || el.style.display === 'grid') && el.children.length > 1) return 'row';
+    var cs = getComputedStyle(el);
+    if ((cs.display === 'flex' || cs.display === 'grid') && el.children.length > 1) return 'row';
+    // Check for divs with data-editable or content
+    if (tag === 'div' && el.hasAttribute('data-editable')) return 'text';
+    if (tag === 'section') return 'section';
     return 'unknown';
   }
 
@@ -391,7 +397,7 @@ const INLINE_EDIT_SCRIPT = `
   /* ── Make all text elements editable ── */
   document.querySelectorAll(editableSelectors).forEach(function(el) {
     if (el.closest('script') || el.closest('style') || el.closest('noscript') || el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
-    if (el.children.length > 3) return;
+    if (el.children.length > 3 && !el.hasAttribute('data-editable')) return;
     el.contentEditable = 'true';
     el.style.outline = 'none';
     el.style.cursor = 'text';
@@ -482,9 +488,14 @@ const INLINE_EDIT_SCRIPT = `
     // Find the closest meaningful element (not body/html)
     var meaningful = clicked;
     // If it's a tiny inline element, go up to find something meaningful
-    while (meaningful && meaningful !== document.body) {
+    var maxUp = 8;
+    while (meaningful && meaningful !== document.body && maxUp-- > 0) {
       var mt = detectElType(meaningful);
       if (mt !== 'unknown') break;
+      // Also accept divs with editable content or that look like content blocks
+      if (meaningful.tagName === 'DIV' && meaningful.textContent && meaningful.textContent.trim().length > 0 && meaningful.children.length <= 5) {
+        break;
+      }
       meaningful = meaningful.parentElement;
     }
     if (meaningful && meaningful !== document.body) {
@@ -565,7 +576,8 @@ const INLINE_EDIT_SCRIPT = `
       if (titleText) label = titleText;
     }
 
-    sectionList.push({ id: id, label: label, tagName: el.tagName, classes: cls, top: el.offsetTop, idx: i });
+    var anchorId = el.getAttribute('id') || '';
+    sectionList.push({ id: id, label: label, tagName: el.tagName, classes: cls, top: el.offsetTop, idx: i, anchorId: anchorId });
 
     // Section click detection (only on section background, not on editable content)
     el.addEventListener('click', function(e) {
@@ -628,7 +640,7 @@ const INLINE_EDIT_SCRIPT = `
           var updated = [];
           remaining.forEach(function(el, i) {
             var t = el.querySelector('.tp-section-title, h2, h1');
-            updated.push({ id: el.id, label: t ? (t.textContent || '').trim().substring(0,40) : 'Section', tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i });
+            updated.push({ id: el.id, label: t ? (t.textContent || '').trim().substring(0,40) : 'Section', tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i, anchorId: el.getAttribute('id') || '' });
           });
           parent.postMessage({ type: 'tipote:sections-list', sections: updated }, '*');
         }, 100);
@@ -651,7 +663,7 @@ const INLINE_EDIT_SCRIPT = `
         var updated = [];
         remaining.forEach(function(el, i) {
           var t = el.querySelector('.tp-section-title, h2, h1');
-          updated.push({ id: el.id, label: t ? (t.textContent || '').trim().substring(0,40) : 'Section', tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i });
+          updated.push({ id: el.id, label: t ? (t.textContent || '').trim().substring(0,40) : 'Section', tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i, anchorId: el.getAttribute('id') || '' });
         });
         parent.postMessage({ type: 'tipote:sections-list', sections: updated }, '*');
       }, 100);
@@ -906,6 +918,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [leadsData, setLeadsData] = useState<any[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
 
+  // Undo/Redo history
+  const historyRef = useRef<string[]>([]);
+  const historyIdxRef = useRef(-1);
+  const isUndoRedoRef = useRef(false);
+
   // QR code state
   const [showQrModal, setShowQrModal] = useState(false);
 
@@ -916,6 +933,81 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [thankYouCtaText, setThankYouCtaText] = useState(page.content_data?.thank_you_cta_text || "");
   const [thankYouCtaUrl, setThankYouCtaUrl] = useState(page.content_data?.thank_you_cta_url || "");
   const [savingThankYou, setSavingThankYou] = useState(false);
+
+  // Undo/Redo reactivity
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const pushHistory = useCallback((html: string) => {
+    if (isUndoRedoRef.current) return;
+    const h = historyRef.current;
+    const idx = historyIdxRef.current;
+    // Truncate any forward history
+    historyRef.current = h.slice(0, idx + 1);
+    historyRef.current.push(html);
+    // Keep max 50 entries
+    if (historyRef.current.length > 50) historyRef.current.shift();
+    historyIdxRef.current = historyRef.current.length - 1;
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(false);
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (historyIdxRef.current <= 0) return;
+    isUndoRedoRef.current = true;
+    historyIdxRef.current -= 1;
+    const html = historyRef.current[historyIdxRef.current];
+    setHtmlPreview(html);
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(true);
+    // Save to server
+    fetch(`/api/pages/${page.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html_snapshot: html }),
+    }).catch(() => {});
+    setTimeout(() => { isUndoRedoRef.current = false; }, 500);
+  }, [page.id]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    isUndoRedoRef.current = true;
+    historyIdxRef.current += 1;
+    const html = historyRef.current[historyIdxRef.current];
+    setHtmlPreview(html);
+    setCanUndo(true);
+    setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+    fetch(`/api/pages/${page.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html_snapshot: html }),
+    }).catch(() => {});
+    setTimeout(() => { isUndoRedoRef.current = false; }, 500);
+  }, [page.id]);
+
+  // Initialize history with current HTML
+  useEffect(() => {
+    if (historyRef.current.length === 0 && htmlPreview) {
+      historyRef.current = [htmlPreview];
+      historyIdxRef.current = 0;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keyboard shortcuts for Undo/Redo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleUndo, handleRedo]);
 
   // Google Fonts link tag
   const GOOGLE_FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=${GOOGLE_FONTS.map(f => f.replace(/ /g, "+")+":wght@400;600;700;900").join("&family=")}&display=swap" rel="stylesheet">`;
@@ -1022,6 +1114,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         (window as any).__tipoteSaveTimer = setTimeout(() => {
           const cleanHtml = getCleanIframeHtml();
           pendingHtmlRef.current = cleanHtml;
+          pushHistory(cleanHtml);
           fetch(`/api/pages/${page.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -1347,7 +1440,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     if (updates.paddingX != null) { styleUpdates.paddingLeft = updates.paddingX + "px"; styleUpdates.paddingRight = updates.paddingX + "px"; }
     if (updates.marginTop != null) { styleUpdates.marginTop = updates.marginTop + "px"; }
     if (updates.marginBottom != null) { styleUpdates.marginBottom = updates.marginBottom + "px"; }
-    setSelectedElement((prev) => prev ? { ...prev, styles: { ...prev.styles, ...styleUpdates } } : null);
+    setSelectedElement((prev) => {
+      if (!prev) return null;
+      const next = { ...prev, styles: { ...prev.styles, ...styleUpdates } };
+      if (typeof updates.href === "string") next.href = updates.href;
+      return next;
+    });
   }, []);
 
   const deleteElement = useCallback((elId: string) => {
@@ -1439,6 +1537,26 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 </button>
               );
             })}
+          </div>
+
+          {/* Undo / Redo */}
+          <div className="flex items-center gap-0.5 ml-1">
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Undo"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Redo"
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* Preview button */}
@@ -2098,7 +2216,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 onClick={() => selectSection(s.id)}
                               >
                                 <MousePointer className="w-3 h-3 shrink-0 opacity-40" />
-                                <span className="flex-1 truncate">{s.label}</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="block truncate">{s.label}</span>
+                                  {s.anchorId && s.anchorId.startsWith("sc-") && (
+                                    <span className="block text-[9px] text-blue-300/60 font-mono truncate">#{s.anchorId}</span>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }} className="p-0.5 rounded hover:bg-white/10" title={t("elementActions.moveUp")}>
                                     <ChevronUp className="w-3 h-3" />
