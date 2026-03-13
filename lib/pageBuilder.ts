@@ -889,9 +889,19 @@ a { color: var(--brand); text-decoration: none; }
   }
   /* Ensure images don't overflow */
   img { max-width: 100% !important; height: auto !important; }
-  /* Showcase nav stacks on mobile */
+  /* Showcase nav: show hamburger, hide links */
   .tp-showcase-nav-links { display: none !important; }
+  .tp-nav-burger { display: flex !important; }
+  .tp-nav-mobile-menu.open { display: flex !important; }
 }
+
+/* Hamburger button (hidden on desktop) */
+.tp-nav-burger { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; border: none; background: none; cursor: pointer; padding: 0; }
+.tp-nav-burger svg { width: 22px; height: 22px; stroke: var(--gray-600); }
+/* Mobile dropdown menu (hidden by default) */
+.tp-nav-mobile-menu { display: none; flex-direction: column; gap: 4px; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border-bottom: 1px solid var(--gray-100); padding: 12px 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 99; }
+.tp-nav-mobile-menu a { display: block; padding: 10px 0; font-size: 0.95rem; color: var(--gray-700); text-decoration: none; font-weight: 500; border-bottom: 1px solid var(--gray-50); }
+.tp-nav-mobile-menu a:last-child { border-bottom: none; }
 
 /* Ensure all text in colored rows is readable */
 .tp-header-bar, .tp-header-bar * { color: var(--brand-text); }
@@ -1506,7 +1516,9 @@ function sectionShowcaseNav(d: Record<string, any>): string {
   const ctaText = esc(safe(d.cta_text || "Contact"));
   const ctaUrl = safe(d.cta_url || d.payment_url || "#sc-contact");
 
-  return `<nav style="position:sticky;top:0;z-index:100;background:var(--white);border-bottom:1px solid var(--gray-100);padding:12px 0">
+  const mobileLinks = navItems.map(item => `<a href="#sc-${esc(safe(item)).toLowerCase().replace(/\s+/g, "-")}">${esc(safe(item))}</a>`).join("");
+
+  return `<nav style="position:sticky;top:0;z-index:100;background:var(--white);border-bottom:1px solid var(--gray-100);padding:12px 0;position:sticky;position:-webkit-sticky">
   <div class="tp-container" style="display:flex;align-items:center;justify-content:space-between">
     <div style="display:flex;align-items:center;gap:10px">
       ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" style="height:36px;object-fit:contain" data-tipote-img-id="nav-logo">` : ""}
@@ -1516,9 +1528,13 @@ function sectionShowcaseNav(d: Record<string, any>): string {
       <div class="tp-showcase-nav-links" style="display:flex;align-items:center;gap:24px">
         ${navItems.map(item => `<a href="#sc-${esc(safe(item)).toLowerCase().replace(/\s+/g, "-")}" style="font-size:0.9rem;color:var(--gray-600);text-decoration:none;font-weight:500" data-editable="true">${esc(safe(item))}</a>`).join("")}
       </div>
+      <button class="tp-nav-burger" aria-label="Menu" onclick="var m=this.closest('nav').querySelector('.tp-nav-mobile-menu');m.classList.toggle('open');">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
       <a href="${esc(ctaUrl)}" style="background:var(--brand);color:var(--brand-text);padding:8px 20px;border-radius:var(--radius);font-size:0.9rem;font-weight:600;text-decoration:none" data-editable="true">${ctaText}</a>
     </div>
   </div>
+  <div class="tp-nav-mobile-menu">${mobileLinks}</div>
 </nav>`;
 }
 
