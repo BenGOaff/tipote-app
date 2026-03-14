@@ -546,7 +546,9 @@ export default function CreateLovableClient() {
 
       const jobId = typeof data?.jobId === "string" ? data.jobId.trim() : "";
       if (jobId) {
-        const final = await pollGeneratedContent(jobId);
+        // Offers use 12K tokens + large prompt → need longer polling timeout
+        const pollTimeout = payload.type === "offer" ? 250_000 : 120_000;
+        const final = await pollGeneratedContent(jobId, { timeoutMs: pollTimeout });
         if (!final) {
           toast({
             title: t('generation'),

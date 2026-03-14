@@ -1316,14 +1316,17 @@ async function callClaude(args: {
   user: string;
   maxTokens?: number;
   temperature?: number;
+  timeoutMs?: number;
 }): Promise<string> {
   const model = resolveClaudeModel();
 
-  const timeoutMsRaw = process.env.TIPOTE_CLAUDE_TIMEOUT_MS ?? process.env.CLAUDE_TIMEOUT_MS ?? "";
-  const timeoutMs = (() => {
-    const n = Number(String(timeoutMsRaw).trim() || "NaN");
-    return Number.isFinite(n) ? Math.max(10_000, Math.min(240_000, Math.floor(n))) : 120_000;
+  const envTimeoutRaw = process.env.TIPOTE_CLAUDE_TIMEOUT_MS ?? process.env.CLAUDE_TIMEOUT_MS ?? "";
+  const envTimeout = (() => {
+    const n = Number(String(envTimeoutRaw).trim() || "NaN");
+    return Number.isFinite(n) ? Math.max(10_000, Math.min(300_000, Math.floor(n))) : 0;
   })();
+  // Per-call override > env var > default 120s
+  const timeoutMs = args.timeoutMs ?? (envTimeout || 120_000);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -2394,6 +2397,8 @@ export async function POST(req: Request) {
                   user: baseUserPrompt,
                   maxTokens: type === "article" ? ARTICLE_MAX_TOKENS : (type === "funnel" && safeString((body as any).templateId).trim() ? 8000 : (type === "offer" ? 12000 : 4000)),
                   temperature: 0.7,
+                  // Offers need 12K tokens + large prompt → allow up to 240s
+                  timeoutMs: type === "offer" ? 240_000 : undefined,
                 });
 
           let finalContent = "";
