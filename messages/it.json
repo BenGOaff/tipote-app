@@ -13,6 +13,7 @@
     "pepites": "Gemme",
     "settings": "Impostazioni",
     "widgets": "Widgets",
+    "webinars": "Webinar",
     "support": "Aiuto"
   },
   "sidebar": {
@@ -2559,6 +2560,56 @@
     "processDueDate": "Scadenza (opzionale)",
     "apply": "Applica",
     "deleteTemplateTitle": "Eliminare questo programma?",
-    "deleteTemplateDesc": "Il programma verrà eliminato. I programmi già applicati non saranno interessati."
+    "deleteTemplateDesc": "Il programma verrà eliminato. I programmi già applicati non saranno interessati.",
+    "editTemplate": "Modifica programma",
+    "templateUpdated": "Programma aggiornato",
+    "templateSynced": "Modifiche applicate a {count} cliente/i",
+    "saveAndSync": "Salva e sincronizza"
+  },
+  "webinars": {
+    "title": "Webinar",
+    "subtitle": "Gestisci le tue campagne webinar e monitora i tuoi KPI",
+    "newWebinar": "Nuovo webinar",
+    "editWebinar": "Modifica webinar",
+    "deleteWebinar": "Eliminare questo webinar?",
+    "deleteWebinarDesc": "Questa azione è irreversibile.",
+    "webinarCreated": "Webinar creato",
+    "webinarUpdated": "Webinar aggiornato",
+    "webinarDeleted": "Webinar eliminato",
+    "totalWebinars": "Totale webinar",
+    "completedWebinars": "Completati",
+    "allStatuses": "Tutti",
+    "cancel": "Annulla",
+    "save": "Salva",
+    "delete": "Elimina",
+    "status": {
+      "draft": "Bozza",
+      "scheduled": "Programmato",
+      "live": "In diretta",
+      "completed": "Completato"
+    },
+    "fields": {
+      "title": "Titolo",
+      "topic": "Argomento",
+      "offerName": "Offerta collegata",
+      "date": "Data",
+      "status": "Stato",
+      "notes": "Note"
+    },
+    "kpi": {
+      "registrants": "Iscritti",
+      "attendees": "Presenti",
+      "replayViewers": "Replay",
+      "offersPresented": "Offerte presentate",
+      "salesCount": "Vendite",
+      "revenue": "Ricavi",
+      "attendanceRate": "Tasso di presenza",
+      "replayRate": "Tasso replay",
+      "conversionRate": "Tasso di conversione",
+      "revenuePerRegistrant": "Ricavi / iscritto",
+      "avgOrderValue": "Carrello medio"
+    },
+    "noWebinars": "Nessun webinar al momento.",
+    "noWebinarsHint": "Crea il tuo primo webinar per iniziare a monitorare i tuoi KPI."
   }
 }

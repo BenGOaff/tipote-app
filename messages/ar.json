@@ -13,6 +13,7 @@
     "pepites": "الجواهر",
     "settings": "الإعدادات",
     "widgets": "الأدوات",
+    "webinars": "الندوات",
     "support": "مساعدة"
   },
   "sidebar": {
@@ -2559,6 +2560,56 @@
     "installmentsCount": "عدد الأقساط",
     "paymentInfo": "الدفع",
     "collected": "محصّل",
-    "processUpdated": "تم تحديث البرنامج"
+    "processUpdated": "تم تحديث البرنامج",
+    "editTemplate": "تعديل البرنامج",
+    "templateUpdated": "تم تحديث البرنامج",
+    "templateSynced": "تم تطبيق التغييرات على {count} عميل/عملاء",
+    "saveAndSync": "حفظ ومزامنة"
+  },
+  "webinars": {
+    "title": "الندوات",
+    "subtitle": "إدارة حملات الندوات وتتبع مؤشرات الأداء",
+    "newWebinar": "ندوة جديدة",
+    "editWebinar": "تعديل الندوة",
+    "deleteWebinar": "حذف هذه الندوة؟",
+    "deleteWebinarDesc": "هذا الإجراء لا يمكن التراجع عنه.",
+    "webinarCreated": "تم إنشاء الندوة",
+    "webinarUpdated": "تم تحديث الندوة",
+    "webinarDeleted": "تم حذف الندوة",
+    "totalWebinars": "إجمالي الندوات",
+    "completedWebinars": "مكتملة",
+    "allStatuses": "الكل",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف",
+    "status": {
+      "draft": "مسودة",
+      "scheduled": "مجدولة",
+      "live": "مباشر",
+      "completed": "مكتملة"
+    },
+    "fields": {
+      "title": "العنوان",
+      "topic": "الموضوع",
+      "offerName": "العرض المرتبط",
+      "date": "التاريخ",
+      "status": "الحالة",
+      "notes": "ملاحظات"
+    },
+    "kpi": {
+      "registrants": "المسجلون",
+      "attendees": "الحاضرون",
+      "replayViewers": "إعادة المشاهدة",
+      "offersPresented": "العروض المقدمة",
+      "salesCount": "المبيعات",
+      "revenue": "الإيرادات",
+      "attendanceRate": "معدل الحضور",
+      "replayRate": "معدل إعادة المشاهدة",
+      "conversionRate": "معدل التحويل",
+      "revenuePerRegistrant": "الإيرادات / مسجل",
+      "avgOrderValue": "متوسط قيمة الطلب"
+    },
+    "noWebinars": "لا توجد ندوات حالياً.",
+    "noWebinarsHint": "أنشئ ندوتك الأولى لبدء تتبع مؤشرات الأداء."
   }
 }

@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
         .map((item: any, i: number) => ({
           title: item.title,
           position: i,
+          template_item_id: item.id ?? null,
         }));
     }
   }
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
           process_id: process.id,
           title: item.title,
           position: item.position,
+          template_item_id: (item as any).template_item_id ?? null,
         }));
 
   if (itemRows.length > 0) {

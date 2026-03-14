@@ -13,6 +13,7 @@
     "pepites": "Joyas",
     "settings": "Ajustes",
     "widgets": "Widgets",
+    "webinars": "Webinarios",
     "support": "Ayuda"
   },
   "sidebar": {
@@ -2559,6 +2560,56 @@
     "processDueDate": "Fecha límite (opcional)",
     "apply": "Aplicar",
     "deleteTemplateTitle": "¿Eliminar este programa?",
-    "deleteTemplateDesc": "El programa será eliminado. Los programas ya aplicados no se verán afectados."
+    "deleteTemplateDesc": "El programa será eliminado. Los programas ya aplicados no se verán afectados.",
+    "editTemplate": "Editar programa",
+    "templateUpdated": "Programa actualizado",
+    "templateSynced": "Cambios aplicados a {count} cliente(s)",
+    "saveAndSync": "Guardar y sincronizar"
+  },
+  "webinars": {
+    "title": "Webinarios",
+    "subtitle": "Gestiona tus campañas de webinarios y sigue tus KPIs",
+    "newWebinar": "Nuevo webinario",
+    "editWebinar": "Editar webinario",
+    "deleteWebinar": "¿Eliminar este webinario?",
+    "deleteWebinarDesc": "Esta acción es irreversible.",
+    "webinarCreated": "Webinario creado",
+    "webinarUpdated": "Webinario actualizado",
+    "webinarDeleted": "Webinario eliminado",
+    "totalWebinars": "Total webinarios",
+    "completedWebinars": "Completados",
+    "allStatuses": "Todos",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "status": {
+      "draft": "Borrador",
+      "scheduled": "Programado",
+      "live": "En directo",
+      "completed": "Completado"
+    },
+    "fields": {
+      "title": "Título",
+      "topic": "Tema",
+      "offerName": "Oferta relacionada",
+      "date": "Fecha",
+      "status": "Estado",
+      "notes": "Notas"
+    },
+    "kpi": {
+      "registrants": "Inscritos",
+      "attendees": "Asistentes",
+      "replayViewers": "Replay",
+      "offersPresented": "Ofertas presentadas",
+      "salesCount": "Ventas",
+      "revenue": "Ingresos",
+      "attendanceRate": "Tasa de asistencia",
+      "replayRate": "Tasa de replay",
+      "conversionRate": "Tasa de conversión",
+      "revenuePerRegistrant": "Ingresos / inscrito",
+      "avgOrderValue": "Ticket medio"
+    },
+    "noWebinars": "No hay webinarios por el momento.",
+    "noWebinarsHint": "Crea tu primer webinario para empezar a seguir tus KPIs."
   }
 }
