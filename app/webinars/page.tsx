@@ -3,7 +3,7 @@
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import WebinarsPageClient from "@/components/webinars/WebinarsPageClient";
+import EventsPageClient from "@/components/webinars/EventsPageClient";
 
 export default async function WebinarsPage() {
   const supabase = await getSupabaseServerClient();
@@ -13,5 +13,5 @@ export default async function WebinarsPage() {
 
   if (!session?.user) redirect("/");
 
-  return <WebinarsPageClient />;
+  return <EventsPageClient />;
 }

@@ -62,6 +62,8 @@ export async function POST(req: NextRequest) {
 
     const projectId = await getActiveProjectId(supabase, user.id);
 
+    const eventType = body.event_type === "challenge" ? "challenge" : "webinar";
+
     const { data, error } = await supabase
       .from("webinars")
       .insert({
@@ -70,7 +72,11 @@ export async function POST(req: NextRequest) {
         title: body.title.trim(),
         topic: body.topic?.trim() || null,
         offer_name: body.offer_name?.trim() || null,
+        offer_id: body.offer_id || null,
         webinar_date: body.webinar_date || null,
+        end_date: body.end_date || null,
+        event_type: eventType,
+        program: body.program?.trim() || null,
         status: body.status || "draft",
         notes: body.notes?.trim() || null,
       })

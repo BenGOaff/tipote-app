@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (!body) return NextResponse.json({ ok: false, error: "Invalid body" }, { status: 400 });
 
     const updates: Record<string, unknown> = {};
-    const allowedStrings = ["title", "topic", "offer_name", "status", "notes"];
+    const allowedStrings = ["title", "topic", "offer_name", "status", "notes", "program"];
     for (const key of allowedStrings) {
       if (body[key] !== undefined) {
         updates[key] = typeof body[key] === "string" ? body[key].trim() || null : body[key];
@@ -35,6 +35,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (body.title !== undefined) updates.title = body.title.trim(); // title is required
 
     if (body.webinar_date !== undefined) updates.webinar_date = body.webinar_date || null;
+    if (body.end_date !== undefined) updates.end_date = body.end_date || null;
+    if (body.offer_id !== undefined) updates.offer_id = body.offer_id || null;
+    if (body.event_type !== undefined) {
+      updates.event_type = body.event_type === "challenge" ? "challenge" : "webinar";
+    }
 
     const allowedNumbers = [
       "registrants", "attendees", "replay_viewers",

@@ -103,6 +103,8 @@ const InputSchema = z.object({
   pageType: z.enum(["capture", "sales", "showcase"]),
   // Optional: user can specify a template, otherwise Tipote picks the best one
   templateId: z.string().optional(),
+  // Optional: create page from an existing event (webinar/challenge)
+  eventId: z.string().uuid().optional(),
   // User's offer info (optional - will use profile data if not provided)
   offerName: z.string().optional(),
   offerPromise: z.string().optional(),
@@ -283,6 +285,30 @@ export async function POST(req: NextRequest) {
             .limit(10);
           userTestimonials = testimonials || [];
         } catch { /* fail-open */ }
+
+        // If creating from an event, load event data and enrich input
+        if (input.eventId) {
+          try {
+            const { data: ev } = await supabaseAdmin
+              .from("webinars")
+              .select("*")
+              .eq("id", input.eventId)
+              .eq("user_id", userId)
+              .maybeSingle();
+            if (ev) {
+              if (!input.offerName && ev.title) input.offerName = ev.title;
+              if (!input.offerDescription && ev.description) input.offerDescription = ev.description;
+              if (!input.offerUrgency && ev.webinar_date) {
+                const d = new Date(ev.webinar_date);
+                const fmtDate = (dt: Date) => dt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+                input.offerUrgency = ev.event_type === "challenge" && ev.end_date
+                  ? `Du ${fmtDate(d)} au ${fmtDate(new Date(ev.end_date))}`
+                  : fmtDate(d);
+              }
+              if (!input.offerPromise && ev.offer_name) input.offerPromise = ev.offer_name;
+            }
+          } catch { /* fail-open */ }
+        }
 
         await wait(600);
         send("step", { id: "profile", label: "J'analyse ton profil et ton activité...", progress: 10, done: true });
