@@ -22,7 +22,7 @@ import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 
 import { buildPromptByType } from "@/lib/prompts/content";
 import { buildSocialPostPrompt } from "@/lib/prompts/content/socialPost";
-import { buildVideoScriptPrompt } from "@/lib/prompts/content/video";
+import { buildVideoScriptPrompt, type VideoDurationId, type VideoPlatform } from "@/lib/prompts/content/video";
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
 import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
@@ -1931,20 +1931,20 @@ export async function POST(req: Request) {
       }
 
       if (type === "video") {
-        const duration = (safeString(body.duration).trim() || "60s") as any;
-        const theme = safeString(body.theme).trim();
-        const subject = safeString(body.subject).trim();
+        const duration = (safeString(body.duration).trim() || "60s") as VideoDurationId;
+        const subject = safeString(body.subject).trim() || safeString(body.theme).trim() || prompt || "Vidéo";
+        const platform = (safeString(body.platform).trim() || "youtube_long") as VideoPlatform;
         const tone = safeString(body.tone).trim();
 
         return buildVideoScriptPrompt({
+          platform,
+          subject,
           duration,
-          theme: theme || subject || prompt || "Vidéo",
           tone: tone || undefined,
           targetWordCount: typeof body.targetWordCount === "number" ? body.targetWordCount : undefined,
-          offerLink: safeString(body.offerLink).trim() || undefined,
           language: contentLocale,
           formality: profileAddressForm,
-        } as any);
+        });
       }
 
       if (type === "email") {
@@ -2246,6 +2246,42 @@ export async function POST(req: Request) {
     userContextLines.push("Business plan (si disponible) :");
     userContextLines.push(planJson ? JSON.stringify(planJson) : "Aucun plan.");
 
+    // Project Sources injection (user-provided context documents)
+    try {
+      let sourcesQuery = supabase
+        .from("project_sources")
+        .select("title, content_text")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(10);
+
+      if (projectId) {
+        sourcesQuery = sourcesQuery.eq("project_id", projectId);
+      } else {
+        sourcesQuery = sourcesQuery.is("project_id", null);
+      }
+
+      const { data: projectSources } = await sourcesQuery;
+
+      if (projectSources && projectSources.length > 0) {
+        const SOURCE_BUDGET = 12_000;
+        let totalChars = 0;
+
+        userContextLines.push("");
+        userContextLines.push("Sources de contexte du projet (documents et notes fournis par l'utilisateur — à utiliser pour personnaliser le contenu) :");
+        for (const src of projectSources) {
+          const remaining = SOURCE_BUDGET - totalChars;
+          if (remaining <= 0) break;
+          const text = src.content_text.slice(0, Math.min(3000, remaining));
+          userContextLines.push(`\n--- ${src.title} ---`);
+          userContextLines.push(text);
+          totalChars += text.length;
+        }
+      }
+    } catch {
+      // fail-open: sources are optional enrichment
+    }
+
     // Tipote Knowledge injection
     try {
       const knowledgeSnippets = await getKnowledgeSnippets({ type, prompt: matchPrompt || effectivePrompt, tags });
@@ -2461,7 +2497,7 @@ export async function POST(req: Request) {
 
             // For social posts: extract the first line as the title/hook
             // The first line IS the hook (accroche) — it's what appears in scroll feeds
-            if (type === "post" && txt.trim()) {
+            if ((type === "post" || type === "video") && txt.trim()) {
               const firstLine = txt.trim().split(/\n/)[0]?.trim();
               if (firstLine && firstLine.length > 3) {
                 title = firstLine;

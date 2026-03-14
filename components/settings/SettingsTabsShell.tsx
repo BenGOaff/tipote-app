@@ -38,6 +38,7 @@ import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
 import BrandingSettings from "@/components/settings/BrandingSettings";
 import type { BrandingData } from "@/components/settings/BrandingSettings";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
+import ProjectSourcesSection from "@/components/settings/ProjectSourcesSection";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 import SocialConnections from "@/components/settings/SocialConnections";
 import LegalDocGenerator from "@/components/settings/legal/LegalDocGenerator";
@@ -74,7 +75,7 @@ function PinterestIcon({ className }: { className?: string }) {
   );
 }
 
-type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "ai" | "pricing";
+type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "ai" | "pricing";
 
 type Props = {
   userEmail: string;
@@ -83,7 +84,7 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "ai") return s;
+  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources" || s === "ai") return s;
   // compat ancien: tab=billing
   if (s === "billing" || s === "pricing") return "pricing";
   return "profile";
@@ -1065,6 +1066,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <TabsTrigger value="branding" className="gap-2">
           <Paintbrush className="w-4 h-4" />
           {tSettings("tabs.branding")}
+        </TabsTrigger>
+        <TabsTrigger value="sources" className="gap-2">
+          <BookOpen className="w-4 h-4" />
+          Sources
         </TabsTrigger>
         <TabsTrigger value="ai" className="gap-2">
           <Brain className="w-4 h-4" />
@@ -2144,6 +2149,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             setInitialProfile((prev) => ({ ...prev, ...data }));
           }}
         />
+      </TabsContent>
+
+      {/* SOURCES DE CONTEXTE */}
+      <TabsContent value="sources" className="space-y-6">
+        <ProjectSourcesSection />
       </TabsContent>
 
       {/* IA & CRÉDITS */}
