@@ -67,8 +67,8 @@ export default async function OnboardingPage() {
     }
   }
 
-  // Fallback: check by user_id only (compat for beta users)
-  if (!isCompleted && !firstName) {
+  // Fallback: check by user_id only (compat for beta users WITHOUT active project)
+  if (!isCompleted && !firstName && !activeProjectId) {
     const { data } = await supabase
       .from("business_profiles")
       .select("onboarding_completed, first_name")
