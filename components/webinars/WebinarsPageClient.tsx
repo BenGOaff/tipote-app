@@ -248,9 +248,14 @@ export default function WebinarsPageClient() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <main className="flex-1 overflow-auto bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-          <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+        <PageHeader
+          left={
+            <h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>
+          }
+        />
+        <div className="max-w-5xl mx-auto px-4 py-8 space-y-6 w-full">
+          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
