@@ -15,7 +15,7 @@ import { PageBanner } from "@/components/PageBanner";
 import SettingsTabsShell from "@/components/settings/SettingsTabsShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "ai" | "pricing";
+type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "pricing";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -23,9 +23,9 @@ type Props = {
 
 function normalizeTab(v: string | undefined): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "ai") return s;
-  // compat ancien: tab=billing
-  if (s === "billing" || s === "pricing") return "pricing";
+  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources") return s;
+  // compat ancien: tab=billing, tab=ai
+  if (s === "billing" || s === "pricing" || s === "ai") return "pricing";
   return "profile";
 }
 
