@@ -497,6 +497,58 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
     setNewTplItems([""]);
   }
 
+  // ─── Template editing ─────────────────────────────
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [editTplName, setEditTplName] = useState("");
+  const [editTplDescription, setEditTplDescription] = useState("");
+  const [editTplColor, setEditTplColor] = useState("#6366f1");
+  const [editTplItems, setEditTplItems] = useState<Array<{ id?: string; title: string }>>([]);
+
+  function openEditTemplate(tpl: Template) {
+    setEditingTemplate(tpl);
+    setEditTplName(tpl.name);
+    setEditTplDescription(tpl.description || "");
+    setEditTplColor(tpl.color);
+    setEditTplItems(tpl.items.map((i) => ({ id: i.id, title: i.title })));
+  }
+
+  const updateTemplate = useCallback(async (sync: boolean) => {
+    if (!editingTemplate || !editTplName.trim()) return;
+    setLoading(true);
+    try {
+      const items = editTplItems
+        .filter((it) => it.title.trim())
+        .map((it) => ({ id: it.id, title: it.title.trim() }));
+      const res = await fetch(`/api/client-templates/${editingTemplate.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editTplName.trim(),
+          description: editTplDescription.trim() || null,
+          color: editTplColor,
+          items,
+          sync,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || "Error");
+      const tpl = json.template;
+      tpl.items = (tpl.client_template_items ?? []).sort(
+        (a: any, b: any) => (a.position ?? 0) - (b.position ?? 0),
+      );
+      setTemplates((prev) => prev.map((t) => (t.id === tpl.id ? tpl : t)));
+      setEditingTemplate(null);
+      const msg = sync && json.synced > 0
+        ? t("templateSynced", { count: json.synced })
+        : t("templateUpdated");
+      toast({ title: msg });
+    } catch (e: any) {
+      toast({ title: t("error"), description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [editingTemplate, editTplName, editTplDescription, editTplColor, editTplItems, t, toast]);
+
   // ─── Render ────────────────────────────────────────
   return (
     <SidebarProvider>
@@ -831,25 +883,35 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                           />
                           <h4 className="font-semibold text-sm">{tpl.name}</h4>
                         </div>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>{t("deleteTemplateTitle")}</AlertDialogTitle>
-                              <AlertDialogDescription>{t("deleteTemplateDesc")}</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteTemplate(tpl.id)}>
-                                {t("delete")}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-slate-400 hover:text-blue-500"
+                            onClick={() => openEditTemplate(tpl)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("deleteTemplateTitle")}</AlertDialogTitle>
+                                <AlertDialogDescription>{t("deleteTemplateDesc")}</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteTemplate(tpl.id)}>
+                                  {t("delete")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
                       {tpl.description && (
                         <p className="text-xs text-muted-foreground mb-2">{tpl.description}</p>
@@ -1035,6 +1097,103 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               <Button size="sm" onClick={createTemplate} disabled={loading || !newTplName.trim()}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
                 {t("save")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Dialog: Edit Template ──────────────────── */}
+      <Dialog open={!!editingTemplate} onOpenChange={(open) => { if (!open) setEditingTemplate(null); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("editTemplate")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-500">{t("templateName")} *</label>
+              <Input
+                value={editTplName}
+                onChange={(e) => setEditTplName(e.target.value)}
+                placeholder={t("templateNamePlaceholder")}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-500">{t("templateDescription")}</label>
+              <Input
+                value={editTplDescription}
+                onChange={(e) => setEditTplDescription(e.target.value)}
+                placeholder={t("templateDescPlaceholder")}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-500">{t("templateColor")}</label>
+              <div className="flex gap-2">
+                {TEMPLATE_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`w-7 h-7 rounded-full transition-all ${editTplColor === c ? "ring-2 ring-offset-2 ring-slate-400" : ""}`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setEditTplColor(c)}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-slate-500">{t("templateStepsLabel")}</label>
+              {editTplItems.map((item, i) => (
+                <div key={item.id ?? `new-${i}`} className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
+                  <Input
+                    value={item.title}
+                    onChange={(e) => {
+                      const copy = [...editTplItems];
+                      copy[i] = { ...copy[i], title: e.target.value };
+                      setEditTplItems(copy);
+                    }}
+                    placeholder={t("stepPlaceholder")}
+                    className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        setEditTplItems([...editTplItems, { title: "" }]);
+                      }
+                    }}
+                  />
+                  {editTplItems.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-slate-400 hover:text-red-500"
+                      onClick={() => setEditTplItems(editTplItems.filter((_, j) => j !== i))}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => setEditTplItems([...editTplItems, { title: "" }])}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                {t("addStep")}
+              </Button>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setEditingTemplate(null)}>
+                {t("cancel")}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => updateTemplate(false)} disabled={loading || !editTplName.trim()}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                {t("save")}
+              </Button>
+              <Button size="sm" onClick={() => updateTemplate(true)} disabled={loading || !editTplName.trim()}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ListChecks className="h-4 w-4 mr-1" />}
+                {t("saveAndSync")}
               </Button>
             </div>
           </div>

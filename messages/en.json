@@ -13,6 +13,7 @@
     "pepites": "Gems",
     "settings": "Settings",
     "widgets": "Widgets",
+    "webinars": "Webinars",
     "support": "Help"
   },
   "sidebar": {
@@ -2610,6 +2611,56 @@
     "installmentsCount": "Number of installments",
     "paymentInfo": "Payment",
     "collected": "collected",
-    "processUpdated": "Program updated"
+    "processUpdated": "Program updated",
+    "editTemplate": "Edit program",
+    "templateUpdated": "Program updated",
+    "templateSynced": "Changes applied to {count} client(s)",
+    "saveAndSync": "Save and sync"
+  },
+  "webinars": {
+    "title": "Webinars",
+    "subtitle": "Manage your webinar campaigns and track your KPIs",
+    "newWebinar": "New webinar",
+    "editWebinar": "Edit webinar",
+    "deleteWebinar": "Delete this webinar?",
+    "deleteWebinarDesc": "This action cannot be undone.",
+    "webinarCreated": "Webinar created",
+    "webinarUpdated": "Webinar updated",
+    "webinarDeleted": "Webinar deleted",
+    "totalWebinars": "Total webinars",
+    "completedWebinars": "Completed",
+    "allStatuses": "All",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "status": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "live": "Live",
+      "completed": "Completed"
+    },
+    "fields": {
+      "title": "Title",
+      "topic": "Topic",
+      "offerName": "Related offer",
+      "date": "Date",
+      "status": "Status",
+      "notes": "Notes"
+    },
+    "kpi": {
+      "registrants": "Registrants",
+      "attendees": "Attendees",
+      "replayViewers": "Replay",
+      "offersPresented": "Offers presented",
+      "salesCount": "Sales",
+      "revenue": "Revenue",
+      "attendanceRate": "Attendance rate",
+      "replayRate": "Replay rate",
+      "conversionRate": "Conversion rate",
+      "revenuePerRegistrant": "Revenue / registrant",
+      "avgOrderValue": "Avg. order value"
+    },
+    "noWebinars": "No webinars yet.",
+    "noWebinarsHint": "Create your first webinar to start tracking your KPIs."
   }
 }

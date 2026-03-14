@@ -13,6 +13,7 @@
     "pepites": "Pépites",
     "settings": "Paramètres",
     "widgets": "Widgets",
+    "webinars": "Webinaires",
     "support": "Aide"
   },
   "sidebar": {
@@ -2607,6 +2608,56 @@
     "installmentsCount": "Nombre de tranches",
     "paymentInfo": "Paiement",
     "collected": "encaissé",
-    "processUpdated": "Accompagnement mis à jour"
+    "processUpdated": "Accompagnement mis à jour",
+    "editTemplate": "Modifier l'accompagnement",
+    "templateUpdated": "Accompagnement mis à jour",
+    "templateSynced": "Modifications appliquées à {count} client(s)",
+    "saveAndSync": "Enregistrer et synchroniser"
+  },
+  "webinars": {
+    "title": "Webinaires",
+    "subtitle": "Gérez vos campagnes webinaires et suivez vos KPIs",
+    "newWebinar": "Nouveau webinaire",
+    "editWebinar": "Modifier le webinaire",
+    "deleteWebinar": "Supprimer ce webinaire ?",
+    "deleteWebinarDesc": "Cette action est irréversible.",
+    "webinarCreated": "Webinaire créé",
+    "webinarUpdated": "Webinaire mis à jour",
+    "webinarDeleted": "Webinaire supprimé",
+    "totalWebinars": "Total webinaires",
+    "completedWebinars": "Terminés",
+    "allStatuses": "Tous",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "status": {
+      "draft": "Brouillon",
+      "scheduled": "Planifié",
+      "live": "En direct",
+      "completed": "Terminé"
+    },
+    "fields": {
+      "title": "Titre",
+      "topic": "Sujet",
+      "offerName": "Offre liée",
+      "date": "Date",
+      "status": "Statut",
+      "notes": "Notes"
+    },
+    "kpi": {
+      "registrants": "Inscrits",
+      "attendees": "Présents",
+      "replayViewers": "Replay",
+      "offersPresented": "Offres présentées",
+      "salesCount": "Ventes",
+      "revenue": "Revenu",
+      "attendanceRate": "Taux de présence",
+      "replayRate": "Taux replay",
+      "conversionRate": "Taux de conversion",
+      "revenuePerRegistrant": "Revenu / inscrit",
+      "avgOrderValue": "Panier moyen"
+    },
+    "noWebinars": "Aucun webinaire pour le moment.",
+    "noWebinarsHint": "Créez votre premier webinaire pour commencer à suivre vos KPIs."
   }
 }

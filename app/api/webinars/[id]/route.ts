@@ -1,0 +1,94 @@
+// app/api/webinars/[id]/route.ts
+// PATCH  — update webinar (info + KPIs)
+// DELETE — delete webinar
+
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function PATCH(req: NextRequest, ctx: Ctx) {
+  try {
+    const { id } = await ctx.params;
+    const supabase = await getSupabaseServerClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json().catch(() => null);
+    if (!body) return NextResponse.json({ ok: false, error: "Invalid body" }, { status: 400 });
+
+    const updates: Record<string, unknown> = {};
+    const allowedStrings = ["title", "topic", "offer_name", "status", "notes"];
+    for (const key of allowedStrings) {
+      if (body[key] !== undefined) {
+        updates[key] = typeof body[key] === "string" ? body[key].trim() || null : body[key];
+      }
+    }
+    if (body.title !== undefined) updates.title = body.title.trim(); // title is required
+
+    if (body.webinar_date !== undefined) updates.webinar_date = body.webinar_date || null;
+
+    const allowedNumbers = [
+      "registrants", "attendees", "replay_viewers",
+      "offers_presented", "sales_count", "revenue",
+    ];
+    for (const key of allowedNumbers) {
+      if (body[key] !== undefined) {
+        const val = Number(body[key]);
+        updates[key] = Number.isFinite(val) ? val : 0;
+      }
+    }
+
+    updates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("webinars")
+      .update(updates)
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+
+    return NextResponse.json({ ok: true, webinar: data });
+  } catch (e: any) {
+    console.error("[webinars/[id]] PATCH error:", e);
+    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  try {
+    const { id } = await ctx.params;
+    const supabase = await getSupabaseServerClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { error } = await supabase
+      .from("webinars")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    console.error("[webinars/[id]] DELETE error:", e);
+    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 500 });
+  }
+}
