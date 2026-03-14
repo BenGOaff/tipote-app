@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   User,
   Globe,
-  Brain,
   CreditCard,
   Save,
   Linkedin,
@@ -34,7 +33,6 @@ import {
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import AiCreditsPanel from "@/components/settings/AiCreditsPanel";
 import BrandingSettings from "@/components/settings/BrandingSettings";
 import type { BrandingData } from "@/components/settings/BrandingSettings";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
@@ -75,7 +73,7 @@ function PinterestIcon({ className }: { className?: string }) {
   );
 }
 
-type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "ai" | "pricing";
+type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "pricing";
 
 type Props = {
   userEmail: string;
@@ -84,9 +82,9 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources" || s === "ai") return s;
-  // compat ancien: tab=billing
-  if (s === "billing" || s === "pricing") return "pricing";
+  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources") return s;
+  // compat ancien: tab=billing, tab=ai
+  if (s === "billing" || s === "pricing" || s === "ai") return "pricing";
   return "profile";
 }
 
@@ -1071,11 +1069,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <BookOpen className="w-4 h-4" />
           Sources
         </TabsTrigger>
-        <TabsTrigger value="ai" className="gap-2">
-          <Brain className="w-4 h-4" />
-          {tSettings("tabs.ai")}
-        </TabsTrigger>
-        <TabsTrigger value="pricing" className="gap-2">
+<TabsTrigger value="pricing" className="gap-2">
           <CreditCard className="w-4 h-4" />
           {tSettings("tabs.pricing")}
         </TabsTrigger>
@@ -2156,12 +2150,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <ProjectSourcesSection />
       </TabsContent>
 
-      {/* IA & CRÉDITS */}
-      <TabsContent value="ai" className="space-y-6">
-        <AiCreditsPanel />
-      </TabsContent>
-
-      {/* ABONNEMENT */}
+{/* ABONNEMENT */}
       <TabsContent value="pricing" className="space-y-6">
         <BillingSection email={userEmail} />
       </TabsContent>

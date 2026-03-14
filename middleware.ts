@@ -58,6 +58,8 @@ const PROTECTED_PREFIXES = [
   "/automations",
   "/widgets",
   "/clients",
+  "/webinars",
+  "/leads",
 ];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
@@ -157,10 +159,20 @@ export async function middleware(req: NextRequest) {
       try {
         const { data: bp, error } = await supabase
           .from("business_profiles")
-          .select("onboarding_completed")
+          .select("onboarding_completed, ui_locale")
           .eq("user_id", user.id)
           .eq("project_id", activeProjectId)
           .maybeSingle();
+
+        // Cross-device locale sync
+        const dbLocale = (bp as any)?.ui_locale;
+        if (dbLocale && SUPPORTED_LOCALES.includes(dbLocale)) {
+          res.cookies.set(UI_LOCALE_COOKIE, dbLocale, {
+            path: "/",
+            maxAge: 365 * 24 * 60 * 60,
+            sameSite: "lax",
+          });
+        }
 
         if (!error && bp) {
           if (!bp.onboarding_completed) {
@@ -170,13 +182,16 @@ export async function middleware(req: NextRequest) {
           }
           return res;
         }
-        // Si pas de résultat avec project_id (migration pas encore faite), fallback ci-dessous
+        // Pas de row business_profiles pour ce projet → onboarding nécessaire
+        const url = req.nextUrl.clone();
+        url.pathname = "/onboarding";
+        return NextResponse.redirect(url);
       } catch {
-        // fail-open
+        return res; // fail-open
       }
     }
 
-    // Fallback : vérifier par user_id seul (ancien comportement / compat)
+    // Fallback : vérifier par user_id seul (beta users sans cookie projet)
     const { data: bp, error } = await supabase
       .from("business_profiles")
       .select("onboarding_completed, ui_locale")
@@ -225,5 +240,7 @@ export const config = {
     // which must be served publicly for cross-origin embedding on external blogs.
     "/widgets",
     "/clients/:path*",
+    "/webinars/:path*",
+    "/leads/:path*",
   ],
 };
