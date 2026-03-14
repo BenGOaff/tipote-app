@@ -13,7 +13,7 @@
     "pepites": "Pépites",
     "settings": "Paramètres",
     "widgets": "Widgets",
-    "webinars": "Webinaires",
+    "webinars": "Événements live",
     "support": "Aide"
   },
   "sidebar": {
@@ -2175,6 +2175,9 @@
     "step2Desc": "Tipote utilise automatiquement ton branding, ton ton de voix et tes mentions légales.",
     "existingOffer": "Offre existante",
     "existingOfferDesc": "Les infos sont déjà prêtes",
+    "fromEvent": "À partir d'un événement",
+    "fromEventDesc": "Webinaire ou challenge existant",
+    "noEvents": "Aucun événement à venir. Crée d'abord un événement dans 'Événements live'.",
     "fromScratch": "De zéro",
     "fromScratchDesc": "Je donne les infos moi-même",
     "paymentLinkOptional": "Lien de paiement (optionnel)",
@@ -2615,21 +2618,26 @@
     "saveAndSync": "Enregistrer et synchroniser"
   },
   "webinars": {
-    "title": "Webinaires",
-    "subtitle": "Gérez vos campagnes webinaires et suivez vos KPIs",
-    "newWebinar": "Nouveau webinaire",
-    "editWebinar": "Modifier le webinaire",
-    "deleteWebinar": "Supprimer ce webinaire ?",
-    "deleteWebinarDesc": "Cette action est irréversible.",
-    "webinarCreated": "Webinaire créé",
-    "webinarUpdated": "Webinaire mis à jour",
-    "webinarDeleted": "Webinaire supprimé",
-    "totalWebinars": "Total webinaires",
+    "title": "Mes événements live",
+    "subtitle": "Organise tes webinaires et challenges, suis tes KPIs et convertis tes inscrits.",
+    "newEvent": "Nouvel événement",
+    "editEvent": "Modifier l'événement",
+    "deleteEvent": "Supprimer cet événement ?",
+    "deleteEventDesc": "Cette action est irréversible.",
+    "eventCreated": "Événement créé",
+    "eventUpdated": "Événement mis à jour",
+    "eventDeleted": "Événement supprimé",
+    "totalEvents": "Total événements",
     "completedWebinars": "Terminés",
     "allStatuses": "Tous",
+    "allTypes": "Tous",
     "cancel": "Annuler",
     "save": "Enregistrer",
     "delete": "Supprimer",
+    "eventType": {
+      "webinar": "Webinaire",
+      "challenge": "Challenge"
+    },
     "status": {
       "draft": "Brouillon",
       "scheduled": "Planifié",
@@ -2639,10 +2647,16 @@
     "fields": {
       "title": "Titre",
       "topic": "Sujet",
+      "eventType": "Type d'événement",
       "offerName": "Offre liée",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
       "date": "Date",
       "status": "Statut",
-      "notes": "Notes"
+      "notes": "Notes",
+      "program": "Programme du challenge",
+      "offerOther": "Autre : préciser",
+      "noOffer": "Aucune offre liée"
     },
     "kpi": {
       "registrants": "Inscrits",
@@ -2657,7 +2671,8 @@
       "revenuePerRegistrant": "Revenu / inscrit",
       "avgOrderValue": "Panier moyen"
     },
-    "noWebinars": "Aucun webinaire pour le moment.",
-    "noWebinarsHint": "Créez votre premier webinaire pour commencer à suivre vos KPIs."
+    "noEvents": "Aucun événement pour le moment.",
+    "noEventsHint": "Crée ton premier webinaire ou challenge pour commencer à suivre tes KPIs.",
+    "programTitle": "Programme du challenge"
   }
 }

@@ -13,7 +13,7 @@
     "pepites": "Gems",
     "settings": "Settings",
     "widgets": "Widgets",
-    "webinars": "Webinars",
+    "webinars": "Live events",
     "support": "Help"
   },
   "sidebar": {
@@ -2178,6 +2178,9 @@
     "step2Desc": "Tipote automatically uses your branding, tone of voice and legal mentions.",
     "existingOffer": "Existing offer",
     "existingOfferDesc": "Info is already set up",
+    "fromEvent": "From an event",
+    "fromEventDesc": "Existing webinar or challenge",
+    "noEvents": "No upcoming events. Create one in 'Live events' first.",
     "fromScratch": "From scratch",
     "fromScratchDesc": "I'll provide the info myself",
     "paymentLinkOptional": "Payment link (optional)",
@@ -2618,21 +2621,26 @@
     "saveAndSync": "Save and sync"
   },
   "webinars": {
-    "title": "Webinars",
-    "subtitle": "Manage your webinar campaigns and track your KPIs",
-    "newWebinar": "New webinar",
-    "editWebinar": "Edit webinar",
-    "deleteWebinar": "Delete this webinar?",
-    "deleteWebinarDesc": "This action cannot be undone.",
-    "webinarCreated": "Webinar created",
-    "webinarUpdated": "Webinar updated",
-    "webinarDeleted": "Webinar deleted",
-    "totalWebinars": "Total webinars",
+    "title": "My live events",
+    "subtitle": "Organize your webinars and challenges, track your KPIs and convert your registrants.",
+    "newEvent": "New event",
+    "editEvent": "Edit event",
+    "deleteEvent": "Delete this event?",
+    "deleteEventDesc": "This action cannot be undone.",
+    "eventCreated": "Event created",
+    "eventUpdated": "Event updated",
+    "eventDeleted": "Event deleted",
+    "totalEvents": "Total events",
     "completedWebinars": "Completed",
     "allStatuses": "All",
+    "allTypes": "All",
     "cancel": "Cancel",
     "save": "Save",
     "delete": "Delete",
+    "eventType": {
+      "webinar": "Webinar",
+      "challenge": "Challenge"
+    },
     "status": {
       "draft": "Draft",
       "scheduled": "Scheduled",
@@ -2642,10 +2650,16 @@
     "fields": {
       "title": "Title",
       "topic": "Topic",
+      "eventType": "Event type",
       "offerName": "Related offer",
+      "startDate": "Start date",
+      "endDate": "End date",
       "date": "Date",
       "status": "Status",
-      "notes": "Notes"
+      "notes": "Notes",
+      "program": "Challenge program",
+      "offerOther": "Other: specify",
+      "noOffer": "No related offer"
     },
     "kpi": {
       "registrants": "Registrants",
@@ -2660,7 +2674,8 @@
       "revenuePerRegistrant": "Revenue / registrant",
       "avgOrderValue": "Avg. order value"
     },
-    "noWebinars": "No webinars yet.",
-    "noWebinarsHint": "Create your first webinar to start tracking your KPIs."
+    "noEvents": "No events yet.",
+    "noEventsHint": "Create your first webinar or challenge to start tracking your KPIs.",
+    "programTitle": "Challenge program"
   }
 }

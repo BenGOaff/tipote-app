@@ -49,7 +49,32 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, metrics: data ?? [] });
+  // Enrich metrics with event revenue (from webinars linked via offer_id)
+  let eventRevenue: Record<string, number> = {};
+  try {
+    let evQuery = supabase
+      .from("webinars")
+      .select("offer_id, revenue")
+      .eq("user_id", user.id)
+      .not("offer_id", "is", null)
+      .gt("revenue", 0);
+    if (projectId) evQuery = evQuery.eq("project_id", projectId);
+    const { data: evData } = await evQuery;
+    if (evData) {
+      for (const ev of evData) {
+        if (ev.offer_id) {
+          eventRevenue[ev.offer_id] = (eventRevenue[ev.offer_id] || 0) + (ev.revenue || 0);
+        }
+      }
+    }
+  } catch { /* fail-open */ }
+
+  const metrics = (data ?? []).map((m: any) => ({
+    ...m,
+    event_revenue: eventRevenue[m.offer_name] || 0,
+  }));
+
+  return NextResponse.json({ ok: true, metrics });
 }
 
 // ── POST — upsert offer metrics for a month ────────────────

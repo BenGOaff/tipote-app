@@ -12,7 +12,7 @@ import { useTranslations } from "next-intl";
 import {
   Plus, FileText, ShoppingCart, Trash2, Copy,
   ArrowLeft, ArrowRight, Loader2, Package, PenTool, Check, Globe,
-  Users, Download, X, Eye, MousePointerClick, BarChart3, Link2,
+  Users, Download, X, Eye, MousePointerClick, BarChart3, Link2, Video,
 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -62,10 +62,15 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
   const [createType, setCreateType] = useState<"capture" | "sales" | "showcase">("capture");
 
   // Step 2: offer source
-  const [offerSource, setOfferSource] = useState<"existing" | "scratch">("existing");
+  const [offerSource, setOfferSource] = useState<"existing" | "scratch" | "event">("existing");
   const [offers, setOffers] = useState<OfferOption[]>([]);
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [offersLoading, setOffersLoading] = useState(false);
+
+  // Event source
+  const [events, setEvents] = useState<any[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // Scratch fields
   const [offerName, setOfferName] = useState("");
@@ -134,6 +139,25 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
     }
   }, [supabase]);
 
+  // Load events when "event" source is selected
+  const loadEvents = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      const res = await fetch("/api/webinars");
+      const data = await res.json();
+      if (data.ok) {
+        // Only show upcoming/scheduled events
+        const upcoming = (data.webinars || []).filter(
+          (e: any) => e.status === "scheduled" || e.status === "draft"
+        );
+        setEvents(upcoming);
+        if (upcoming.length > 0) setSelectedEventId(upcoming[0].id);
+      }
+    } catch { /* ignore */ } finally {
+      setEventsLoading(false);
+    }
+  }, []);
+
   // Reset create form
   const resetCreate = useCallback(() => {
     setOfferName("");
@@ -148,6 +172,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
     setUrgencyType("none");
     setUrgencyDetail("");
     setSelectedOfferId(null);
+    setSelectedEventId(null);
     setHasLogo(null);
     setLogoFile(null);
     setLogoPreviewUrl("");
@@ -169,7 +194,23 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
     // Build payload from offer source
     const payload: Record<string, any> = { pageType: createType };
 
-    if (offerSource === "existing" && selectedOfferId) {
+    if (offerSource === "event" && selectedEventId) {
+      const ev = events.find((e) => e.id === selectedEventId);
+      if (ev) {
+        payload.eventId = ev.id;
+        payload.offerName = ev.title || "";
+        payload.offerDescription = ev.description || "";
+        if (ev.offer_name) payload.offerPromise = ev.offer_name;
+        // Inject date as urgency
+        if (ev.webinar_date) {
+          const d = new Date(ev.webinar_date);
+          const dateStr = d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+          payload.offerUrgency = ev.event_type === "challenge" && ev.end_date
+            ? `Du ${dateStr} au ${new Date(ev.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
+            : dateStr;
+        }
+      }
+    } else if (offerSource === "existing" && selectedOfferId) {
       const offer = offers.find((o) => o.id === selectedOfferId);
       if (offer) {
         payload.offerName = offer.name;
@@ -285,7 +326,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
     } catch (err: any) {
       setGenError(err?.message || "Erreur réseau");
     }
-  }, [createType, offerSource, selectedOfferId, offers, offerName, offerPromise, offerTarget, offerPrice, offerGuarantees, offerUrgency, offerBenefits, paymentUrl]);
+  }, [createType, offerSource, selectedOfferId, offers, selectedEventId, events, offerName, offerPromise, offerTarget, offerPrice, offerGuarantees, offerUrgency, offerBenefits, paymentUrl]);
 
   // Open editor
   const handleEdit = useCallback(async (pageId: string) => {
@@ -477,8 +518,8 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                     ) : (
                       <>
                         {/* Source toggle */}
-                        {offers.length > 0 && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                        <div className={`grid grid-cols-1 ${offers.length > 0 ? "sm:grid-cols-3" : "sm:grid-cols-2"} gap-3 mb-6`}>
+                          {offers.length > 0 && (
                             <button
                               onClick={() => setOfferSource("existing")}
                               className={`p-4 rounded-xl border-2 text-left transition-all ${
@@ -489,18 +530,28 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                               <h3 className="font-semibold text-sm">{t("existingOffer")}</h3>
                               <p className="text-xs text-muted-foreground mt-0.5">{t("existingOfferDesc")}</p>
                             </button>
-                            <button
-                              onClick={() => setOfferSource("scratch")}
-                              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                                offerSource === "scratch" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                              }`}
-                            >
-                              <PenTool className="w-5 h-5 mb-1.5 text-primary" />
-                              <h3 className="font-semibold text-sm">{t("fromScratch")}</h3>
-                              <p className="text-xs text-muted-foreground mt-0.5">{t("fromScratchDesc")}</p>
-                            </button>
-                          </div>
-                        )}
+                          )}
+                          <button
+                            onClick={() => { setOfferSource("event"); loadEvents(); }}
+                            className={`p-4 rounded-xl border-2 text-left transition-all ${
+                              offerSource === "event" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <Video className="w-5 h-5 mb-1.5 text-primary" />
+                            <h3 className="font-semibold text-sm">{t("fromEvent")}</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t("fromEventDesc")}</p>
+                          </button>
+                          <button
+                            onClick={() => setOfferSource("scratch")}
+                            className={`p-4 rounded-xl border-2 text-left transition-all ${
+                              offerSource === "scratch" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <PenTool className="w-5 h-5 mb-1.5 text-primary" />
+                            <h3 className="font-semibold text-sm">{t("fromScratch")}</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t("fromScratchDesc")}</p>
+                          </button>
+                        </div>
 
                         {/* Existing offer selector */}
                         {offerSource === "existing" && offers.length > 0 && (
@@ -542,6 +593,47 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                                   className="w-full px-3 py-2.5 border rounded-lg text-sm"
                                 />
                               </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Event selector */}
+                        {offerSource === "event" && (
+                          <div className="space-y-3 mb-6">
+                            {eventsLoading ? (
+                              <div className="flex items-center justify-center py-8">
+                                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : events.length === 0 ? (
+                              <div className="text-center py-8 text-sm text-muted-foreground">
+                                {t("noEvents")}
+                              </div>
+                            ) : (
+                              events.map((ev) => (
+                                <button
+                                  key={ev.id}
+                                  onClick={() => setSelectedEventId(ev.id)}
+                                  className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                                    selectedEventId === ev.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <h4 className="font-medium text-sm">{ev.title}</h4>
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        {ev.event_type === "challenge" ? "Challenge" : "Webinaire"}
+                                        {ev.webinar_date && ` · ${new Date(ev.webinar_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`}
+                                        {ev.event_type === "challenge" && ev.end_date && ` → ${new Date(ev.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`}
+                                      </p>
+                                    </div>
+                                    {selectedEventId === ev.id && (
+                                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                        <Check className="w-3 h-3 text-primary-foreground" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </button>
+                              ))
                             )}
                           </div>
                         )}
@@ -746,7 +838,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                         {/* Generate button */}
                         <button
                           onClick={handleGenerate}
-                          disabled={offerSource === "scratch" && !offerName.trim()}
+                          disabled={(offerSource === "scratch" && !offerName.trim()) || (offerSource === "event" && !selectedEventId)}
                           className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {t("createPage")} ({createType === "capture" ? t("credits5") : t("credits6")})
