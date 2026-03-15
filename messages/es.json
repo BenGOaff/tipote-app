@@ -716,6 +716,7 @@
     "loading": "Cargando...",
     "objectiveLabel": "Tu objetivo ahora",
     "thisWeek": "Esta semana",
+    "encouragement": "¡Genial, terminaste « {task} »! Sigue así, cada paso te acerca a tus objetivos.",
     "progressionTitle": "Tu progreso",
     "progressionSub": "Tus resultados concretos",
     "contentsCreated": "Contenidos creados",

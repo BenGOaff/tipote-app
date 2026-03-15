@@ -692,6 +692,7 @@
     "loading": "Loading...",
     "objectiveLabel": "Your current goal",
     "thisWeek": "This week",
+    "encouragement": "Great job finishing \"{task}\" — keep going, every step brings you closer to your goals!",
     "progressionTitle": "Your progress",
     "progressionSub": "Your concrete results",
     "contentsCreated": "Content created",

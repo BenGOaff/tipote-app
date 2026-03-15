@@ -692,6 +692,7 @@
     "loading": "Chargement...",
     "objectiveLabel": "Ton objectif en ce moment",
     "thisWeek": "Cette semaine",
+    "encouragement": "C'est top, tu as terminé « {task} » — continue comme ça, chaque étape te rapproche de tes objectifs !",
     "progressionTitle": "Ta progression",
     "progressionSub": "Tes résultats concrets",
     "contentsCreated": "Contenus créés",
