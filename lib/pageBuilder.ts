@@ -119,6 +119,100 @@ function readableSubtextColor(bgHex: string): string {
   return bgLum > 0.4 ? "#475569" : "rgba(255,255,255,0.7)";
 }
 
+// ─────────────── Page i18n ───────────────
+
+type PageStrings = {
+  firstNamePlaceholder: string;
+  emailPlaceholder: string;
+  privacyConsent: string;
+  privacyPolicy: string;
+  defaultCtaCapture: string;
+  defaultCtaSales: string;
+  benefitsTitle: string;
+  contactTitle: string;
+  contactCta: string;
+  discover: string;
+  imageHint: string;
+  footerPrivacy: string;
+};
+
+const PAGE_I18N: Record<string, PageStrings> = {
+  fr: {
+    firstNamePlaceholder: "Ton pr&#233;nom",
+    emailPlaceholder: "Ton adresse email",
+    privacyConsent: "J&#039;accepte la <a href=\"{url}\" target=\"_blank\" rel=\"noopener\">politique de confidentialit&#233;</a> et de recevoir des emails.",
+    privacyPolicy: "Politique de confidentialit&#233;",
+    defaultCtaCapture: "Je m&#039;inscris !",
+    defaultCtaSales: "Je rejoins maintenant",
+    benefitsTitle: "Ce que vous allez obtenir",
+    contactTitle: "Contactez-nous",
+    contactCta: "Envoyer",
+    discover: "D&#233;couvrir",
+    imageHint: "Cliquez pour changer l&#8217;image",
+    footerPrivacy: "Politique de confidentialit&#233;",
+  },
+  en: {
+    firstNamePlaceholder: "Your first name",
+    emailPlaceholder: "Your email address",
+    privacyConsent: "I agree to the <a href=\"{url}\" target=\"_blank\" rel=\"noopener\">privacy policy</a> and to receive emails.",
+    privacyPolicy: "Privacy Policy",
+    defaultCtaCapture: "Sign up now!",
+    defaultCtaSales: "Join now",
+    benefitsTitle: "What you&#039;ll get",
+    contactTitle: "Contact us",
+    contactCta: "Send",
+    discover: "Discover",
+    imageHint: "Click to change the image",
+    footerPrivacy: "Privacy Policy",
+  },
+  es: {
+    firstNamePlaceholder: "Tu nombre",
+    emailPlaceholder: "Tu correo electr&#243;nico",
+    privacyConsent: "Acepto la <a href=\"{url}\" target=\"_blank\" rel=\"noopener\">pol&#237;tica de privacidad</a> y recibir emails.",
+    privacyPolicy: "Pol&#237;tica de privacidad",
+    defaultCtaCapture: "&#161;Quiero inscribirme!",
+    defaultCtaSales: "Unirme ahora",
+    benefitsTitle: "Lo que vas a obtener",
+    contactTitle: "Cont&#225;ctanos",
+    contactCta: "Enviar",
+    discover: "Descubrir",
+    imageHint: "Haz clic para cambiar la imagen",
+    footerPrivacy: "Pol&#237;tica de privacidad",
+  },
+  it: {
+    firstNamePlaceholder: "Il tuo nome",
+    emailPlaceholder: "La tua email",
+    privacyConsent: "Accetto la <a href=\"{url}\" target=\"_blank\" rel=\"noopener\">privacy policy</a> e di ricevere email.",
+    privacyPolicy: "Privacy Policy",
+    defaultCtaCapture: "Iscriviti ora!",
+    defaultCtaSales: "Unisciti ora",
+    benefitsTitle: "Cosa otterrai",
+    contactTitle: "Contattaci",
+    contactCta: "Invia",
+    discover: "Scopri",
+    imageHint: "Clicca per cambiare l&#039;immagine",
+    footerPrivacy: "Privacy Policy",
+  },
+  ar: {
+    firstNamePlaceholder: "&#1575;&#1587;&#1605;&#1603; &#1575;&#1604;&#1571;&#1608;&#1604;",
+    emailPlaceholder: "&#1576;&#1585;&#1610;&#1583;&#1603; &#1575;&#1604;&#1573;&#1604;&#1603;&#1578;&#1585;&#1608;&#1606;&#1610;",
+    privacyConsent: "&#1571;&#1608;&#1575;&#1601;&#1602; &#1593;&#1604;&#1609; <a href=\"{url}\" target=\"_blank\" rel=\"noopener\">&#1587;&#1610;&#1575;&#1587;&#1577; &#1575;&#1604;&#1582;&#1589;&#1608;&#1589;&#1610;&#1577;</a> &#1608;&#1578;&#1604;&#1602;&#1610; &#1575;&#1604;&#1585;&#1587;&#1575;&#1574;&#1604;.",
+    privacyPolicy: "&#1587;&#1610;&#1575;&#1587;&#1577; &#1575;&#1604;&#1582;&#1589;&#1608;&#1589;&#1610;&#1577;",
+    defaultCtaCapture: "!&#1587;&#1580;&#1604; &#1575;&#1604;&#1570;&#1606;",
+    defaultCtaSales: "&#1575;&#1606;&#1590;&#1605; &#1575;&#1604;&#1570;&#1606;",
+    benefitsTitle: "&#1605;&#1575; &#1587;&#1578;&#1581;&#1589;&#1604; &#1593;&#1604;&#1610;&#1607;",
+    contactTitle: "&#1575;&#1578;&#1589;&#1604; &#1576;&#1606;&#1575;",
+    contactCta: "&#1573;&#1585;&#1587;&#1575;&#1604;",
+    discover: "&#1575;&#1603;&#1578;&#1588;&#1601;",
+    imageHint: "&#1575;&#1606;&#1602;&#1585; &#1604;&#1578;&#1594;&#1610;&#1610;&#1585; &#1575;&#1604;&#1589;&#1608;&#1585;&#1577;",
+    footerPrivacy: "&#1587;&#1610;&#1575;&#1587;&#1577; &#1575;&#1604;&#1582;&#1589;&#1608;&#1589;&#1610;&#1577;",
+  },
+};
+
+function getPageStrings(lang: string): PageStrings {
+  return PAGE_I18N[lang] || PAGE_I18N.fr;
+}
+
 // ─────────────── CSS Generation ───────────────
 
 function buildCSS(primary: string, accent: string, font: string, heroBg?: string, sectionBg?: string): string {
@@ -861,6 +955,14 @@ a { color: var(--brand); text-decoration: none; }
     max-width: 100% !important;
   }
 }
+/* ─── SHOWCASE NAV: tablet + mobile breakpoint ─── */
+@media (max-width: 768px) {
+  .tp-showcase-nav-links { display: none !important; }
+  .tp-showcase-nav-cta { display: none !important; }
+  .tp-nav-burger { display: flex !important; }
+  .tp-nav-mobile-menu.open { display: flex !important; }
+  .tp-showcase-nav-right { gap: 12px !important; }
+}
 @media (max-width: 520px) {
   .tp-hero h1 { font-size: 1.5rem !important; }
   .tp-hero h2 { font-size: 1.2rem !important; }
@@ -889,18 +991,14 @@ a { color: var(--brand); text-decoration: none; }
   }
   /* Ensure images don't overflow */
   img { max-width: 100% !important; height: auto !important; }
-  /* Showcase nav: show hamburger, hide links */
-  .tp-showcase-nav-links { display: none !important; }
-  .tp-nav-burger { display: flex !important; }
-  .tp-nav-mobile-menu.open { display: flex !important; }
 }
 
 /* Hamburger button (hidden on desktop) */
-.tp-nav-burger { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; border: none; background: none; cursor: pointer; padding: 0; }
+.tp-nav-burger { display: none; align-items: center; justify-content: center; width: 40px; height: 40px; border: none; background: none; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; }
 .tp-nav-burger svg { width: 22px; height: 22px; stroke: var(--gray-600); }
 /* Mobile dropdown menu (hidden by default) */
-.tp-nav-mobile-menu { display: none; flex-direction: column; gap: 4px; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border-bottom: 1px solid var(--gray-100); padding: 12px 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 99; }
-.tp-nav-mobile-menu a { display: block; padding: 10px 0; font-size: 0.95rem; color: var(--gray-700); text-decoration: none; font-weight: 500; border-bottom: 1px solid var(--gray-50); }
+.tp-nav-mobile-menu { display: none; flex-direction: column; gap: 4px; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border-bottom: 1px solid var(--gray-100); padding: 16px 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 99; }
+.tp-nav-mobile-menu a { display: block; padding: 12px 0; font-size: 1rem; color: var(--gray-700); text-decoration: none; font-weight: 500; border-bottom: 1px solid var(--gray-100); }
 .tp-nav-mobile-menu a:last-child { border-bottom: none; }
 
 /* Ensure all text in colored rows is readable */
@@ -1129,11 +1227,11 @@ function svgStatsVisual(metrics: Array<{ label: string; pct: number }>): string 
 
 // ─────────────── Section Builders ───────────────
 
-function sectionHero(d: Record<string, any>): string {
+function sectionHero(d: Record<string, any>, t: PageStrings): string {
   const title = esc(safe(d.hero_title || d.headline || ""));
   const subtitle = esc(safe(d.hero_subtitle || ""));
   const benefits: string[] = Array.isArray(d.benefits) ? d.benefits.filter((b: any) => typeof b === "string" && b.trim()) : [];
-  const ctaText = esc(safe(d.cta_text || "Je m&#039;inscris !"));
+  const ctaText = esc(safe(d.cta_text || t.defaultCtaCapture));
   const ctaSub = esc(safe(d.cta_subtitle || ""));
   const privacyUrl = safe(d.legal_privacy_url || "");
   const socialProof = esc(safe(d.social_proof_text || ""));
@@ -1156,11 +1254,11 @@ function sectionHero(d: Record<string, any>): string {
       <div class="tp-hero-left">
         ${bullets ? `<ul class="tp-hero-bullets">${bullets}</ul>` : ""}
         <form id="tipote-capture-form" class="tp-form">
-          <input type="text" name="first_name" placeholder="Ton pr&#233;nom">
-          <input type="email" name="email" placeholder="Ton adresse email" required>
+          <input type="text" name="first_name" placeholder="${t.firstNamePlaceholder}">
+          <input type="email" name="email" placeholder="${t.emailPlaceholder}" required>
           <label class="tp-form-legal">
             <input type="checkbox" required>
-            <span>J&#039;accepte la <a href="${privacyUrl || "#"}" target="_blank" rel="noopener">politique de confidentialit&#233;</a> et de recevoir des emails.</span>
+            <span>${t.privacyConsent.replace("{url}", privacyUrl || "#")}</span>
           </label>
           <button type="submit" class="tp-cta-btn">${ctaText}</button>
           ${ctaSub ? `<p class="tp-cta-sub">${ctaSub}</p>` : ""}
@@ -1173,12 +1271,12 @@ function sectionHero(d: Record<string, any>): string {
 </section>`;
 }
 
-function sectionHeroSales(d: Record<string, any>): string {
+function sectionHeroSales(d: Record<string, any>, t?: PageStrings): string {
   const title = esc(safe(d.hero_title || d.headline || ""));
   const subtitle = esc(safe(d.hero_subtitle || ""));
   const desc = esc(safe(d.hero_description || ""));
   const eyebrow = esc(safe(d.hero_eyebrow || ""));
-  const ctaText = esc(safe(d.cta_text || "Je rejoins maintenant"));
+  const ctaText = esc(safe(d.cta_text || (t || PAGE_I18N.fr).defaultCtaSales));
   const ctaSub = esc(safe(d.cta_subtitle || ""));
   const payUrl = safe(d.payment_url || d.cta_url || "#");
 
@@ -1194,8 +1292,8 @@ function sectionHeroSales(d: Record<string, any>): string {
 </section>`;
 }
 
-function sectionBenefits(d: Record<string, any>, isSales: boolean): string {
-  const title = esc(safe(d.benefits_title || (isSales ? "Ce que vous allez obtenir" : "")));
+function sectionBenefits(d: Record<string, any>, isSales: boolean, t?: PageStrings): string {
+  const title = esc(safe(d.benefits_title || (isSales ? (t || PAGE_I18N.fr).benefitsTitle : "")));
   const items: string[] = Array.isArray(d.benefits) ? d.benefits.filter((b: any) => typeof b === "string" && b.trim()) : [];
   if (items.length === 0 && !title) return "";
 
@@ -1285,7 +1383,7 @@ function sectionSolution(d: Record<string, any>): string {
 </section>`;
 }
 
-function sectionAbout(d: Record<string, any>): string {
+function sectionAbout(d: Record<string, any>, t?: PageStrings): string {
   const title = esc(safe(d.about_title || ""));
   const name = esc(safe(d.about_name || ""));
   const bio = esc(safe(d.about_description || ""));
@@ -1429,10 +1527,11 @@ function sectionFaq(d: Record<string, any>): string {
 </section>`;
 }
 
-function sectionFinalCta(d: Record<string, any>, isCapture: boolean): string {
+function sectionFinalCta(d: Record<string, any>, isCapture: boolean, t?: PageStrings): string {
+  const strings = t || PAGE_I18N.fr;
   const title = esc(safe(d.final_title || ""));
   const desc = esc(safe(d.final_description || ""));
-  const ctaText = esc(safe(d.cta_text || (isCapture ? "Je m&#039;inscris !" : "Je rejoins maintenant")));
+  const ctaText = esc(safe(d.cta_text || (isCapture ? strings.defaultCtaCapture : strings.defaultCtaSales)));
   if (!title && !desc) return "";
 
   // For capture: button scrolls to hero form. For sales: links to payment.
@@ -1451,7 +1550,8 @@ function buildHeader(d: Record<string, any>): string {
   return `<div class="tp-header-bar"><span data-editable="true">${esc(text)}</span></div>`;
 }
 
-function buildFooter(d: Record<string, any>): string {
+function buildFooter(d: Record<string, any>, t?: PageStrings): string {
+  const strings = t || PAGE_I18N.fr;
   const logoUrl = safe(d.logo_image_url || "");
   const logoText = safe(d.logo_text || "");
   const footerText = safe(d.footer_text || "");
@@ -1459,7 +1559,7 @@ function buildFooter(d: Record<string, any>): string {
 
   if (d.legal_mentions_url) links.push(`<a href="${esc(safe(d.legal_mentions_url))}" target="_blank" rel="noopener">Mentions l&#233;gales</a>`);
   if (d.legal_cgv_url) links.push(`<a href="${esc(safe(d.legal_cgv_url))}" target="_blank" rel="noopener">CGV</a>`);
-  if (d.legal_privacy_url) links.push(`<a href="${esc(safe(d.legal_privacy_url))}" target="_blank" rel="noopener">Politique de confidentialit&#233;</a>`);
+  if (d.legal_privacy_url) links.push(`<a href="${esc(safe(d.legal_privacy_url))}" target="_blank" rel="noopener">${strings.footerPrivacy}</a>`);
 
   return `<footer class="tp-footer">
   ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" class="tp-footer-logo" data-tipote-img-id="footer-logo">` : (logoText ? `<div class="tp-footer-brand">${esc(logoText)}</div>` : "")}
@@ -1509,7 +1609,7 @@ function buildFontImport(font: string): string {
 
 // ─────────────── Showcase Sections ───────────────
 
-function sectionShowcaseNav(d: Record<string, any>): string {
+function sectionShowcaseNav(d: Record<string, any>, t?: PageStrings): string {
   const logoUrl = safe(d.logo_image_url || "");
   const logoText = esc(safe(d.logo_text || ""));
   const navItems: string[] = Array.isArray(d.nav_links) ? d.nav_links.filter((s: any) => typeof s === "string" && s.trim()) : [];
@@ -1518,32 +1618,36 @@ function sectionShowcaseNav(d: Record<string, any>): string {
 
   const mobileLinks = navItems.map(item => `<a href="#sc-${esc(safe(item)).toLowerCase().replace(/\s+/g, "-")}">${esc(safe(item))}</a>`).join("");
 
-  return `<nav style="position:sticky;top:0;z-index:100;background:var(--white);border-bottom:1px solid var(--gray-100);padding:12px 0;position:sticky;position:-webkit-sticky">
+  return `<nav style="position:sticky;position:-webkit-sticky;top:0;z-index:100;background:var(--white);border-bottom:1px solid var(--gray-100);padding:12px 0;position:relative">
   <div class="tp-container" style="display:flex;align-items:center;justify-content:space-between">
     <div style="display:flex;align-items:center;gap:10px">
       ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" style="height:36px;object-fit:contain" data-tipote-img-id="nav-logo">` : ""}
       ${logoText ? `<span style="font-family:var(--heading-font);font-weight:700;font-size:1.2rem;color:var(--gray-900)">${logoText}</span>` : ""}
     </div>
-    <div style="display:flex;align-items:center;gap:24px">
+    <div class="tp-showcase-nav-right" style="display:flex;align-items:center;gap:24px">
       <div class="tp-showcase-nav-links" style="display:flex;align-items:center;gap:24px">
         ${navItems.map(item => `<a href="#sc-${esc(safe(item)).toLowerCase().replace(/\s+/g, "-")}" style="font-size:0.9rem;color:var(--gray-600);text-decoration:none;font-weight:500" data-editable="true">${esc(safe(item))}</a>`).join("")}
       </div>
       <button class="tp-nav-burger" aria-label="Menu" onclick="var m=this.closest('nav').querySelector('.tp-nav-mobile-menu');m.classList.toggle('open');">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <a href="${esc(ctaUrl)}" style="background:var(--brand);color:var(--brand-text);padding:8px 20px;border-radius:var(--radius);font-size:0.9rem;font-weight:600;text-decoration:none" data-editable="true">${ctaText}</a>
+      <a href="${esc(ctaUrl)}" class="tp-showcase-nav-cta" style="background:var(--brand);color:var(--brand-text);padding:8px 20px;border-radius:var(--radius);font-size:0.9rem;font-weight:600;text-decoration:none;white-space:nowrap" data-editable="true">${ctaText}</a>
     </div>
   </div>
-  <div class="tp-nav-mobile-menu">${mobileLinks}</div>
+  <div class="tp-nav-mobile-menu">
+    ${mobileLinks}
+    <a href="${esc(ctaUrl)}" style="display:block;text-align:center;background:var(--brand);color:var(--brand-text);padding:12px 20px;border-radius:var(--radius);font-size:0.95rem;font-weight:600;text-decoration:none;margin-top:8px">${ctaText}</a>
+  </div>
 </nav>`;
 }
 
-function sectionShowcaseHero(d: Record<string, any>): string {
+function sectionShowcaseHero(d: Record<string, any>, t?: PageStrings): string {
+  const strings = t || PAGE_I18N.fr;
   const eyebrow = esc(safe(d.hero_eyebrow || ""));
   const title = esc(safe(d.hero_title || ""));
   const subtitle = esc(safe(d.hero_subtitle || ""));
   const desc = esc(safe(d.hero_description || ""));
-  const ctaText = esc(safe(d.cta_text || "Découvrir"));
+  const ctaText = esc(safe(d.cta_text || strings.discover));
   const ctaUrl = safe(d.cta_url || d.payment_url || "#sc-services");
   const secondaryCtaText = esc(safe(d.secondary_cta_text || ""));
   const secondaryCtaUrl = safe(d.secondary_cta_url || "#sc-contact");
@@ -1607,10 +1711,11 @@ function sectionKeyNumbers(d: Record<string, any>): string {
 </section>`;
 }
 
-function sectionContact(d: Record<string, any>): string {
+function sectionContact(d: Record<string, any>, t?: PageStrings): string {
+  const strings = t || PAGE_I18N.fr;
   const title = esc(safe(d.contact_title || ""));
   const desc = esc(safe(d.contact_description || ""));
-  const ctaText = esc(safe(d.contact_cta_text || d.cta_text || "Prendre rendez-vous"));
+  const ctaText = esc(safe(d.contact_cta_text || d.cta_text || strings.contactCta));
   const ctaUrl = safe(d.contact_cta_url || d.cta_url || d.payment_url || "#");
   const email = esc(safe(d.contact_email || ""));
   const phone = esc(safe(d.contact_phone || ""));
@@ -1640,16 +1745,33 @@ function sectionContact(d: Record<string, any>): string {
 
 export function buildPage(params: PageParams): string {
   const { pageType, contentData: d, brandTokens, locale } = params;
-  // Support both legacy ("colors-primary") and Chat IA ("primary") key formats
-  const primary = brandTokens?.primary || brandTokens?.["colors-primary"] || "#2563eb";
-  const accent = brandTokens?.accent || brandTokens?.["colors-accent"] || primary;
-  const font = brandTokens?.headingFont || brandTokens?.["typography-heading"] || "";
+  // Normalize brand tokens — support ALL key formats:
+  //   1. Flat:   { primary: "#abc" }                  (Chat IA iterate)
+  //   2. Legacy: { "colors-primary": "#abc" }          (generate route)
+  //   3. Nested: { colors: { primary: "#abc" } }       (FunnelForm preview)
+  const primary =
+    brandTokens?.primary ||
+    brandTokens?.["colors-primary"] ||
+    (brandTokens?.colors as any)?.primary ||
+    "#2563eb";
+  const accent =
+    brandTokens?.accent ||
+    brandTokens?.["colors-accent"] ||
+    (brandTokens?.colors as any)?.accent ||
+    primary;
+  const font =
+    brandTokens?.headingFont ||
+    brandTokens?.["typography-heading"] ||
+    (brandTokens?.typography as any)?.heading ||
+    (brandTokens?.typography as any)?.fontFamily?.replace(/^'|'.*$/g, "") ||
+    "";
   const heroBg = brandTokens?.heroBg || "";
   const sectionBg = brandTokens?.sectionBg || "";
   const isCapture = pageType === "capture";
   const isShowcase = pageType === "showcase";
   const lang = (locale || "fr").slice(0, 2);
 
+  const t = getPageStrings(lang);
   const css = buildCSS(primary, accent, font, heroBg, sectionBg);
   const fonts = buildFontImport(font);
   const header = isShowcase ? "" : buildHeader(d);
@@ -1658,42 +1780,42 @@ export function buildPage(params: PageParams): string {
 
   if (isShowcase) {
     // Showcase / site vitrine structure
-    sections += sectionShowcaseNav(d);
-    sections += sectionShowcaseHero(d);
+    sections += sectionShowcaseNav(d, t);
+    sections += sectionShowcaseHero(d, t);
     sections += sectionServices(d);
     sections += sectionKeyNumbers(d);
-    sections += sectionBenefits(d, true);
+    sections += sectionBenefits(d, true, t);
     sections += sectionProgram(d);
-    sections += sectionAbout(d);
+    sections += sectionAbout(d, t);
     sections += sectionTestimonials(d);
     sections += sectionPricing(d);
     sections += sectionFaq(d);
-    sections += sectionContact(d);
+    sections += sectionContact(d, t);
   } else if (isCapture) {
-    sections += sectionHero(d);
+    sections += sectionHero(d, t);
     // Benefits are already shown as bullet points in the hero section,
     // so skip the separate benefits section to avoid duplication.
     // Only show program section if it has distinct content from benefits.
     sections += sectionProgram(d);
-    sections += sectionAbout(d);
+    sections += sectionAbout(d, t);
     sections += sectionTestimonials(d);
-    sections += sectionFinalCta(d, true);
+    sections += sectionFinalCta(d, true, t);
   } else {
     // Sales page structure
-    sections += sectionHeroSales(d);
+    sections += sectionHeroSales(d, t);
     sections += sectionProblem(d);
     sections += sectionSolution(d);
-    sections += sectionBenefits(d, true);
+    sections += sectionBenefits(d, true, t);
     sections += sectionProgram(d);
-    sections += sectionAbout(d);
+    sections += sectionAbout(d, t);
     sections += sectionTestimonials(d);
     sections += sectionGuarantee(d);
     sections += sectionPricing(d);
     sections += sectionFaq(d);
-    sections += sectionFinalCta(d, false);
+    sections += sectionFinalCta(d, false, t);
   }
 
-  const footer = buildFooter(d);
+  const footer = buildFooter(d, t);
   const scripts = buildScripts();
 
   return `<!doctype html>

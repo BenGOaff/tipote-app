@@ -586,6 +586,7 @@ export async function POST(req: NextRequest) {
           content_data: contentData,
           brand_tokens: brandTokens,
           html_snapshot: renderedHtml,
+          locale: contentLocale,
           video_embed_url: input.videoEmbedUrl || "",
           payment_url: input.paymentUrl || "",
           payment_button_text: input.paymentButtonText || "",

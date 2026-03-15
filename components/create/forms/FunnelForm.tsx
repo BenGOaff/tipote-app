@@ -225,16 +225,12 @@ export function FunnelForm({
       }
 
       // Auto-generate brandTokens from branding settings (colors & font)
+      // ✅ Use flat key format consistent with Chat IA and buildPage expectations
       if (bp?.brand_color_base || bp?.brand_color_accent || bp?.brand_font) {
         const autoTokens: Record<string, any> = {};
-        if (bp.brand_color_base || bp.brand_color_accent) {
-          autoTokens.colors = {};
-          if (bp.brand_color_base) autoTokens.colors.primary = bp.brand_color_base;
-          if (bp.brand_color_accent) autoTokens.colors.accent = bp.brand_color_accent;
-        }
-        if (bp.brand_font) {
-          autoTokens.typography = { fontFamily: `'${bp.brand_font}', sans-serif` };
-        }
+        if (bp.brand_color_base) autoTokens.primary = bp.brand_color_base;
+        if (bp.brand_color_accent) autoTokens.accent = bp.brand_color_accent;
+        if (bp.brand_font) autoTokens.headingFont = bp.brand_font;
         setBrandTokens(autoTokens);
       }
     } catch {
