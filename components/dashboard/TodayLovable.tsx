@@ -412,67 +412,57 @@ function buildStrategicObjective(
 /*  Progression summary                                               */
 /* ------------------------------------------------------------------ */
 
-function buildProgressionSummary(p: ProgressionData): string | null {
+type ProgressionLine = { label: string; value: string; trend?: "up" | "down" | "stable" };
+
+function buildProgressionSummary(p: ProgressionData): { headline: string | null; lines: ProgressionLine[] } | null {
   if (!p.hasMetrics) return null;
 
   const hasPrev =
     p.prevRevenue !== null || p.prevNewSubscribers !== null || p.prevConversionRate !== null;
 
-  const trends: string[] = [];
-  const neutrals: string[] = [];
+  const lines: ProgressionLine[] = [];
+  let hasPositive = false;
+  let hasNegative = false;
 
   if (p.revenue !== null) {
     if (hasPrev && p.prevRevenue !== null && p.prevRevenue > 0) {
       const pct = Math.round(((p.revenue - p.prevRevenue) / p.prevRevenue) * 100);
-      if (pct >= 5) trends.push(`CA +${pct}% 📈`);
-      else if (pct <= -5) trends.push(`CA ${pct}% ⚠️`);
-      else neutrals.push(`CA ${p.revenue.toLocaleString("fr-FR")}€ (stable)`);
+      if (pct >= 5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€ (+${pct}%)`, trend: "up" }); hasPositive = true; }
+      else if (pct <= -5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€ (${pct}%)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€`, trend: "stable" });
     } else {
-      neutrals.push(`${p.revenue.toLocaleString("fr-FR")}€ de CA`);
+      lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€` });
     }
   }
 
   if (p.newSubscribers !== null) {
     if (hasPrev && p.prevNewSubscribers !== null && p.prevNewSubscribers > 0) {
       const pct = Math.round(((p.newSubscribers - p.prevNewSubscribers) / p.prevNewSubscribers) * 100);
-      if (pct >= 10) trends.push(`visibilité +${pct}% 🚀`);
-      else if (pct <= -10) trends.push(`inscriptions ${pct}%`);
-      else neutrals.push(`${p.newSubscribers} inscrits (stable)`);
+      if (pct >= 10) { lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers} (+${pct}%)`, trend: "up" }); hasPositive = true; }
+      else if (pct <= -10) { lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers} (${pct}%)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers}`, trend: "stable" });
     } else {
-      neutrals.push(`${p.newSubscribers} nouveaux inscrits`);
+      lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers}` });
     }
   }
 
   if (p.conversionRate !== null) {
     if (hasPrev && p.prevConversionRate !== null) {
       const diff = +(p.conversionRate - p.prevConversionRate).toFixed(1);
-      if (diff >= 0.5) trends.push(`conversion +${diff}pts ✅`);
-      else if (diff <= -0.5) trends.push(`conversion ${diff}pts — revoir tes CTA ?`);
-      else neutrals.push(`conversion ${p.conversionRate.toFixed(1)}% (stable)`);
+      if (diff >= 0.5) { lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}% (+${diff}pts)`, trend: "up" }); hasPositive = true; }
+      else if (diff <= -0.5) { lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}% (${diff}pts)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}%`, trend: "stable" });
     } else {
-      neutrals.push(`conversion ${p.conversionRate.toFixed(1)}%`);
+      lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}%` });
     }
   }
 
-  // Positive trends → bonne nouvelle
-  const positiveTrends = trends.filter((t) => t.includes("+") || t.includes("📈") || t.includes("🚀") || t.includes("✅"));
-  const negativeTrends = trends.filter((t) => !positiveTrends.includes(t));
+  let headline: string | null = null;
+  if (hasPositive && !hasNegative) headline = "Super dynamique ce mois-ci !";
+  else if (hasNegative && !hasPositive) headline = "Attention, quelques indicateurs baissent.";
+  else if (hasNegative && hasPositive) headline = "Résultats mitigés ce mois-ci.";
 
-  if (positiveTrends.length > 0 && negativeTrends.length === 0) {
-    return `Super dynamique ! ${positiveTrends.join(" · ")}${neutrals.length ? ` · ${neutrals.join(", ")}` : ""}.`;
-  }
-
-  if (negativeTrends.length > 0) {
-    const positiveStr = positiveTrends.length ? ` ${positiveTrends.join(" · ")} ·` : "";
-    return `Attention :${positiveStr} ${negativeTrends.join(" · ")}.`;
-  }
-
-  // Pas assez de recul (1 seul mois ou tout stable)
-  if (!hasPrev) {
-    return `📊 Ce mois : ${neutrals.join(", ")}.`;
-  }
-
-  return `📊 Résultats stables : ${neutrals.join(", ")}.`;
+  return { headline, lines };
 }
 
 /* ------------------------------------------------------------------ */
@@ -952,26 +942,6 @@ export default function TodayLovable() {
                     </p>
 
                     <div className="space-y-3 flex-1 flex flex-col">
-                      {/* Positive summary (based on completed task categories) */}
-                      {positiveText ? (
-                        <p className="text-sm text-foreground font-medium leading-relaxed">{positiveText}</p>
-                      ) : null}
-
-                      {/* Dernière tâche réalisée */}
-                      {lastDoneTask ? (
-                        <div className="flex items-start gap-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 p-4">
-                          <span className="text-green-600 dark:text-green-400 text-base shrink-0 mt-0.5">✓</span>
-                          <div>
-                            <p className="text-xs font-medium text-green-700 dark:text-green-400 uppercase tracking-wide mb-0.5">
-                              Dernière action
-                            </p>
-                            <p className="text-sm font-medium text-foreground leading-snug">
-                              {lastDoneTask}
-                            </p>
-                          </div>
-                        </div>
-                      ) : null}
-
                       {/* Prochaine tâche ou coaching personnalisé */}
                       {nextTask ? (
                         <div className="flex items-start gap-3 rounded-lg bg-primary/5 border border-primary/15 p-4">
@@ -992,6 +962,11 @@ export default function TodayLovable() {
                             {ucFirst(t(`coaching.${coaching.recommendationKey}.recommendation`))} {t(`coaching.${coaching.recommendationKey}.why`)}.
                           </p>
                         </div>
+                      ) : null}
+
+                      {/* Positive summary below next step — encouragement based on completed tasks */}
+                      {positiveText ? (
+                        <p className="text-sm text-muted-foreground leading-relaxed">{positiveText}</p>
                       ) : null}
 
                       <Button asChild variant="default" className="w-full gap-2 mt-auto">
@@ -1017,7 +992,10 @@ export default function TodayLovable() {
                     <div className="space-y-3 flex-1 flex flex-col">
                       {/* Revenue vs Goal */}
                       {(progression.revenueGoal && progression.revenueGoal > 0) ? (() => {
-                        const rev = progression.currentMonthRevenue;
+                        // Use offer_metrics revenue, fallback to metrics.revenue if 0
+                        const rev = progression.currentMonthRevenue > 0
+                          ? progression.currentMonthRevenue
+                          : (progression.revenue ?? 0);
                         const goal = progression.revenueGoal!;
                         const pct = Math.min(100, Math.round((rev / goal) * 100));
                         return (
@@ -1037,9 +1015,22 @@ export default function TodayLovable() {
 
                       {/* Analyse intelligente des stats analytics */}
                       {progression.hasMetrics && progressionSummary ? (
-                        <div className="flex items-start gap-3 rounded-lg bg-muted/40 border border-border/60 p-4">
-                          <BarChart3 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                          <p className="text-sm text-foreground leading-relaxed">{progressionSummary}</p>
+                        <div className="rounded-lg bg-muted/40 border border-border/60 p-4 space-y-2">
+                          {progressionSummary.headline && (
+                            <p className="text-sm font-medium text-foreground">{progressionSummary.headline}</p>
+                          )}
+                          <div className="space-y-1">
+                            {progressionSummary.lines.map((line, i) => (
+                              <div key={i} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{line.label}</span>
+                                <span className={`font-medium ${
+                                  line.trend === "up" ? "text-green-600" :
+                                  line.trend === "down" ? "text-red-500" :
+                                  "text-foreground"
+                                }`}>{line.value}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ) : (
                         <div className="rounded-lg bg-muted/50 border border-border/50 p-4">
