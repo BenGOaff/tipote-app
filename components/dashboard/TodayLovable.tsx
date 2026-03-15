@@ -2,7 +2,7 @@
 // Dashboard "Mode Pilote" — le dashboard choisit pour l'utilisateur et le coache.
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 
 import Link from "next/link";
