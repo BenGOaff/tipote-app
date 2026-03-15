@@ -19,6 +19,15 @@ import { RefineChatPanel } from "@/components/content/RefineChatPanel";
 
 type FormMode = "create" | "improve";
 type OfferType = "lead_magnet" | "paid_training";
+type OfferCategory = "formation" | "prestation" | "produit" | "coaching" | "autre";
+
+const OFFER_CATEGORIES: { value: OfferCategory; label: string }[] = [
+  { value: "formation", label: "Formation" },
+  { value: "prestation", label: "Prestation / Service" },
+  { value: "produit", label: "Produit" },
+  { value: "coaching", label: "Coaching / Accompagnement" },
+  { value: "autre", label: "Autre" },
+];
 
 export type OfferFormProps = {
   onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
@@ -57,6 +66,7 @@ export function OfferForm(props: OfferFormProps) {
 
   const [formMode, setFormMode] = useState<FormMode>("improve");
   const [offerType, setOfferType] = useState<OfferType>("lead_magnet");
+  const [offerCategory, setOfferCategory] = useState<OfferCategory>("formation");
 
   const [title, setTitle] = useState("");
   const [result, setResult] = useState("");
@@ -137,6 +147,7 @@ export function OfferForm(props: OfferFormProps) {
         type: "offer",
         offerMode: "improve",
         offerType: selectedOffer.level?.toLowerCase().includes("lead") ? "lead_magnet" : "paid_training",
+        offerCategory,
         sourceOfferId: selectedOffer.id,
         improvementGoal: improvementGoal.trim() || undefined,
         theme: selectedOffer.name || selectedOffer.promise || "Offre",
@@ -146,6 +157,7 @@ export function OfferForm(props: OfferFormProps) {
         type: "offer",
         offerMode: "from_scratch",
         offerType,
+        offerCategory,
         theme: name || promise || "Offre",
         offerManual: {
           name: name || undefined,
@@ -243,6 +255,23 @@ export function OfferForm(props: OfferFormProps) {
                 <TabsTrigger value="create">Créer à partir de zéro</TabsTrigger>
               </TabsList>
             </Tabs>
+          </div>
+
+          {/* Category selector — shared across both modes */}
+          <div className="space-y-2">
+            <Label>Catégorie</Label>
+            <Select value={offerCategory} onValueChange={(v) => setOfferCategory(v as OfferCategory)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Type d'offre..." />
+              </SelectTrigger>
+              <SelectContent>
+                {OFFER_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {formMode === "improve" ? (

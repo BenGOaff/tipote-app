@@ -8,6 +8,7 @@
 
 export type OfferType = "lead_magnet" | "paid_training";
 export type OfferMode = "from_existing" | "from_scratch" | "improve";
+export type OfferCategory = "formation" | "prestation" | "produit" | "coaching" | "autre";
 
 export type OfferPricingTier = {
   label: string;
@@ -52,6 +53,9 @@ export type OfferPromptParams = {
   // Sales page text content (fetched from offer link URL)
   salesPageText?: string | null;
 
+  // ✅ Catégorie d'offre (formation, prestation, produit, coaching...)
+  offerCategory?: OfferCategory;
+
   // Contexte enrichi (injecté automatiquement par route.ts)
   language?: string; // défaut fr
 };
@@ -85,6 +89,131 @@ function inferOfferNameFromSource(sourceOffer: OfferSourceContext | null): strin
   return "Offre existante";
 }
 
+/**
+ * Structure de livrable adaptée à la catégorie d’offre.
+ */
+function buildDeliverableStructure(cat?: OfferCategory): string {
+  const common = [
+    "1) NOM DE L’OFFRE (clair, orienté transformation)",
+    "2) PROMESSE CENTRALE (résultat final concret + conditions de réussite)",
+    "3) QUI C’EST POUR / QUI C’EST PAS (qualification nette)",
+    "4) PROBLÈME D.U.R + MESSAGES DU MARCHÉ (phrases exactes que le prospect se dit)",
+    "5) MÉCANISME UNIQUE / ANGLE (pourquoi ça marche + en quoi c’est différent)",
+  ];
+
+  const closing = [
+    "10) OBJECTIONS & RÉPONSES",
+    "- au moins 8 objections réalistes + réponses",
+    "11) PRICING & PACKAGING",
+    "- 3 options (ex: Essential / Pro / Elite) + quoi inclure + fourchette de prix",
+    "12) PLAN DE PREUVES",
+    "- quoi mesurer / quoi montrer / mini-cas d’étude type",
+    "13) PLAN DE VENTE (résumé)",
+    "- 1 hook, 1 pitch court, 1 pitch long, 1 CTA",
+  ];
+
+  let middle: string[];
+
+  switch (cat) {
+    case "prestation":
+      middle = [
+        "6) PROCESSUS DE TRAVAIL (la méthode en 3-7 étapes)",
+        "7) DÉTAIL DES LIVRABLES",
+        "- Pour chaque livrable: description, format, valeur ajoutée, délai",
+        "8) RÉSULTATS CONCRETS ATTENDUS",
+        "- indicateurs mesurables, avant/après, exemples concrets",
+        "9) DÉROULEMENT & TIMELINE",
+        "- planning recommandé + jalons + points de validation client",
+      ];
+      break;
+    case "produit":
+      middle = [
+        "6) CARACTÉRISTIQUES CLÉS (les 5-8 features qui font la différence)",
+        "7) BÉNÉFICES CONCRETS",
+        "- Pour chaque caractéristique: bénéfice utilisateur direct",
+        "8) CAS D’USAGE",
+        "- 3-5 scénarios d’utilisation concrets avec résultats",
+        "9) CONTENU INCLUS / COMPOSITION",
+        "- ce qui est inclus, bonus, garanties, support",
+      ];
+      break;
+    case "coaching":
+      middle = [
+        "6) APPROCHE D’ACCOMPAGNEMENT (la méthode en 3-7 étapes)",
+        "7) STRUCTURE DU PARCOURS",
+        "- nombre de sessions, durée, fréquence, suivi entre sessions",
+        "8) OUTILS & SUPPORTS",
+        "- templates, exercices, ressources, accès communauté",
+        "9) PARCOURS DE TRANSFORMATION",
+        "- étapes clés, jalons, résultats attendus à chaque phase",
+      ];
+      break;
+    default: // "formation" ou "autre"
+      middle = [
+        "6) DÉRIVÉE PÉDAGOGIQUE (la méthode en 3-7 étapes)",
+        "7) STRUCTURE DU PROGRAMME (8 à 15 modules)",
+        "- Pour chaque module: objectif, livrable, exercice, résultat attendu",
+        "8) LIVRABLES PREMIUM",
+        "- templates, scripts, checklists, dashboards, prompts, etc.",
+        "9) PARCOURS D’EXÉCUTION",
+        "- planning recommandé (2, 4 ou 8 semaines selon format) + charge de travail",
+      ];
+      break;
+  }
+
+  return ["STRUCTURE ATTENDUE (OBLIGATOIRE) :", ...common, ...middle, ...closing].join("\n");
+}
+
+/**
+ * Labels et vocabulaire adaptés par catégorie d’offre.
+ * Permet au prompt de parler de "prestation" ou "produit" au lieu de "formation" si l’user le demande.
+ */
+function categoryContext(cat?: OfferCategory): {
+  label: string;
+  roleDesc: string;
+  structureNote: string;
+} {
+  switch (cat) {
+    case "prestation":
+      return {
+        label: "prestation de service",
+        roleDesc: "un stratège senior spécialisé dans la conception de prestations de services claires, désirables et actionnables",
+        structureNote:
+          "CATÉGORIE D’OFFRE : PRESTATION DE SERVICE (PAS une formation). " +
+          "Tu DOIS structurer le contenu comme une prestation/service (livrables, processus, résultats) et NON comme une formation (pas de modules, pas de pédagogie, pas de leçons).",
+      };
+    case "produit":
+      return {
+        label: "produit",
+        roleDesc: "un stratège senior spécialisé dans la conception de produits (physiques ou numériques) désirables et actionnables",
+        structureNote:
+          "CATÉGORIE D’OFFRE : PRODUIT (PAS une formation). " +
+          "Tu DOIS structurer le contenu comme un produit (caractéristiques, bénéfices, cas d’usage) et NON comme une formation.",
+      };
+    case "coaching":
+      return {
+        label: "offre de coaching / accompagnement",
+        roleDesc: "un stratège senior spécialisé dans la conception d’offres de coaching et d’accompagnement personnalisé",
+        structureNote:
+          "CATÉGORIE D’OFFRE : COACHING / ACCOMPAGNEMENT. " +
+          "Tu DOIS structurer le contenu comme un accompagnement (sessions, suivi, transformation personnalisée). " +
+          "Tu peux utiliser des éléments de formation si pertinents, mais le cœur est le coaching.",
+      };
+    case "formation":
+      return {
+        label: "formation",
+        roleDesc: "un formateur business senior et un stratège spécialisé dans la création de formations claires, désirables et actionnables",
+        structureNote: "CATÉGORIE D’OFFRE : FORMATION. Tu structures le contenu comme une formation (modules, pédagogie, exercices, livrables).",
+      };
+    default:
+      return {
+        label: "offre",
+        roleDesc: "un stratège business senior spécialisé dans la création d’offres claires, désirables et actionnables",
+        structureNote: "",
+      };
+  }
+}
+
 export function buildOfferPrompt(params: OfferPromptParams): string {
   if (params.offerMode === "improve") {
     return buildOfferImprovementPrompt(params);
@@ -97,16 +226,17 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
   const theme = safe(params.theme);
   const leadMagnetFormat = safe(params.leadMagnetFormat);
   const sourceOffer = params.sourceOffer ?? null;
+  const catCtx = categoryContext(params.offerCategory);
 
-  // ✅ Posture V2 (dynamique par catégorie)
-  // Ici: Création d'offres / structuration business => FORMATEUR & STRATÈGE EXPERT
+  // ✅ Posture V2 (dynamique par catégorie d’offre)
   const roleAndPosture = [
     "RÔLE & POSTURE (V2 — OFFRES / STRUCTURATION BUSINESS) :",
-    "Tu es un formateur business senior et un stratège spécialisé dans la création d’offres claires, désirables et actionnables.",
-    "Tu structures des offres alignées avec la réalité du marché, la maturité de l’audience et les objectifs business.",
+    `Tu es ${catCtx.roleDesc}.`,
+    `Tu structures des ${catCtx.label}s alignées avec la réalité du marché, la maturité de l’audience et les objectifs business.`,
     "Tu vises une valeur perçue exceptionnelle (niveau premium), sans blabla ni remplissage.",
     "Tu ne mentionnes jamais que tu es une IA.",
-  ].join("\n");
+    catCtx.structureNote ? `\n${catCtx.structureNote}` : "",
+  ].filter(Boolean).join("\n");
 
   const outputRules = [
     "CONTRAINTES DE SORTIE :",
@@ -261,20 +391,21 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
   }
 
   /* =========================
-     OFFRE PAYANTE / FORMATION
+     OFFRE PAYANTE (formation / prestation / produit / coaching)
      ========================= */
+  const catLabel = catCtx.label;
   const ptModeInstructions =
     mode === "from_existing"
       ? [
-          "MODE : DÉVELOPPER L'OFFRE PAYANTE À PARTIR D'UNE OFFRE EXISTANTE",
-          "Tu développes l'offre existante à partir des infos fournies (sans réinventer l'offre).",
-          "Tu renforces: promesse, différenciation, contenu, pédagogie, exécution, valeur perçue, pricing, preuves, objections.",
+          `MODE : DÉVELOPPER LA ${catLabel.toUpperCase()} À PARTIR D'UNE OFFRE EXISTANTE`,
+          `Tu développes cette ${catLabel} existante à partir des infos fournies (sans réinventer l'offre).`,
+          "Tu renforces: promesse, différenciation, contenu, exécution, valeur perçue, pricing, preuves, objections.",
         ].join("\n")
       : [
-          "MODE : CRÉER UNE OFFRE PAYANTE À PARTIR DE ZÉRO",
+          `MODE : CRÉER UNE ${catLabel.toUpperCase()} PAYANTE À PARTIR DE ZÉRO`,
           "Tu te bases sur la niche + persona + business plan (fournis par l'API).",
           "Tu dois utiliser le sujet fourni (theme).",
-          "Tu choisis un format cohérent (self-paced, cohort, hybride, coaching…) et tu justifies.",
+          `Tu choisis un format cohérent pour une ${catLabel} et tu justifies.`,
         ].join("\n");
 
   const ptInputs =
@@ -311,32 +442,10 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
     "- Douloureux: le problème doit coûter cher (temps/argent/opportunité/estime).",
     "- Urgent: le prospect veut résoudre maintenant, pas 'un jour'.",
     "- Reconnu: le problème est déjà exprimé en ligne (symptômes, phrases, frustrations).",
-    "- Tu traduis ça en: messages marketing, objections, et structure pédagogique.",
+    "- Tu traduis ça en: messages marketing, objections, et structure de l'offre.",
   ].join("\n");
 
-  const ptDeliverable = [
-    "STRUCTURE ATTENDUE (OBLIGATOIRE) :",
-    "1) NOM DE L'OFFRE (clair, orienté transformation)",
-    "2) PROMESSE CENTRALE (résultat final concret + conditions de réussite)",
-    "3) QUI C'EST POUR / QUI C'EST PAS (qualification nette)",
-    "4) PROBLÈME D.U.R + MESSAGES DU MARCHÉ (phrases exactes que le prospect se dit)",
-    "5) MÉCANISME UNIQUE / ANGLE (pourquoi ça marche + en quoi c'est différent)",
-    "6) DÉRIVÉE PÉDAGOGIQUE (la méthode en 3-7 étapes)",
-    "7) STRUCTURE DU PROGRAMME (8 à 15 modules)",
-    "- Pour chaque module: objectif, livrable, exercice, résultat attendu",
-    "8) LIVRABLES PREMIUM",
-    "- templates, scripts, checklists, dashboards, prompts, etc.",
-    "9) PARCOURS D'EXÉCUTION",
-    "- planning recommandé (2, 4 ou 8 semaines selon format) + charge de travail",
-    "10) OBJECTIONS & RÉPONSES",
-    "- au moins 8 objections réalistes + réponses",
-    "11) PRICING & PACKAGING",
-    "- 3 options (ex: Essential / Pro / Elite) + quoi inclure + fourchette de prix",
-    "12) PLAN DE PREUVES",
-    "- quoi mesurer / quoi montrer / mini-cas d'étude type",
-    "13) PLAN DE VENTE (résumé)",
-    "- 1 hook, 1 pitch court, 1 pitch long, 1 CTA",
-  ].join("\n");
+  const ptDeliverable = buildDeliverableStructure(params.offerCategory);
 
   return [
     roleAndPosture,
@@ -376,6 +485,7 @@ function buildOfferImprovementPrompt(params: OfferPromptParams): string {
   const sourceOffer = params.sourceOffer ?? null;
   const improvementGoal = safe(params.improvementGoal);
   const salesPageText = safe(params.salesPageText ?? "");
+  const catCtx = categoryContext(params.offerCategory);
 
   const salesPageBlock = salesPageText
     ? [
@@ -395,9 +505,10 @@ function buildOfferImprovementPrompt(params: OfferPromptParams): string {
 
   return [
     "RÔLE & POSTURE :",
-    "Tu es un consultant business senior spécialisé en design d'offres à haute valeur perçue.",
-    "Tu analyses UNE SEULE offre existante et proposes des améliorations concrètes et actionnables.",
+    `Tu es un consultant business senior spécialisé en design de ${catCtx.label}s à haute valeur perçue.`,
+    `Tu analyses UNE SEULE ${catCtx.label} existante et proposes des améliorations concrètes et actionnables.`,
     "Tu t'appuies sur le persona client, le business plan, les ressources internes et les meilleures pratiques du marché.",
+    catCtx.structureNote ? catCtx.structureNote : "",
     "Tu ne mentionnes jamais que tu es une IA.",
     "",
     "CONTRAINTES DE SORTIE :",

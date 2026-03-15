@@ -28,7 +28,7 @@ import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
 import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
 import { inferTemplateSchema, schemaToPrompt } from "@/lib/templates/schema";
-import type { OfferMode, OfferSourceContext, OfferType } from "@/lib/prompts/content/offer";
+import type { OfferMode, OfferSourceContext, OfferType, OfferCategory } from "@/lib/prompts/content/offer";
 import { fetchPageText } from "@/lib/fetchPageText";
 // renderTemplateHtml removed — pages now use lib/pageBuilder.ts
 import { pickTitleFromContentData as pickTitleFromCD } from "@/lib/templates/pickTitle";
@@ -94,6 +94,7 @@ type Body = {
   offerMode?: "from_existing" | "from_scratch" | "improve";
   improvementGoal?: string;
   offerType?: "lead_magnet" | "paid_training";
+  offerCategory?: "formation" | "prestation" | "produit" | "coaching" | "autre";
   leadMagnetFormat?: string;
   sourceOfferId?: string;
   target?: string;
@@ -341,6 +342,37 @@ function toPlainTextKeepBold(input: string): string {
   s = s.replace(/^[•●▪︎■]\s+/gm, "- ");
   s = s.replace(/\n{3,}/g, "\n\n").trim();
   return s;
+}
+
+/**
+ * Extract a meaningful title from generated offer text.
+ * Looks for "NOM DE L'OFFRE" section or the first non-empty line.
+ */
+function extractOfferTitle(text: string): string | null {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return null;
+
+  // 1) Try to find the "NOM DE L'OFFRE" or "TITRE" section
+  for (let i = 0; i < Math.min(lines.length, 30); i++) {
+    const line = lines[i];
+    if (/^(?:\d+[\)\.]?\s*)?(?:NOM\s+(?:DE\s+)?L['']OFFRE|TITRE\s+PRINCIPAL)/i.test(line)) {
+      // The actual title is usually on the next line or after ":"
+      const afterColon = line.split(/:\s*/)[1]?.trim();
+      if (afterColon && afterColon.length > 3) return afterColon.slice(0, 120);
+      const next = lines[i + 1]?.trim();
+      if (next && next.length > 3 && !/^[\d\-\*]/.test(next)) return next.slice(0, 120);
+    }
+  }
+
+  // 2) Fallback: first meaningful line (skip very short labels)
+  for (const line of lines.slice(0, 5)) {
+    const clean = line.replace(/^[\d\)\.\-\*\s]+/, "").trim();
+    if (clean.length > 5 && !clean.toUpperCase().startsWith("RÔLE") && !clean.toUpperCase().startsWith("STRUCTURE")) {
+      return clean.slice(0, 120);
+    }
+  }
+
+  return null;
 }
 
 function normalizeBatchCount(raw: unknown): number {
@@ -814,6 +846,16 @@ function normalizeOfferType(raw: unknown): OfferType | null {
   if (s === "paid_training") return "paid_training";
   if (s === "lead_magnet") return "lead_magnet";
   return null;
+}
+
+function normalizeOfferCategory(raw: unknown): OfferCategory | undefined {
+  const s = safeString(raw).trim().toLowerCase();
+  if (s === "formation") return "formation";
+  if (s === "prestation") return "prestation";
+  if (s === "produit") return "produit";
+  if (s === "coaching") return "coaching";
+  if (s === "autre") return "autre";
+  return undefined;
 }
 
 function normalizeFunnelPage(raw: unknown): "capture" | "sales" {
@@ -2070,6 +2112,7 @@ export async function POST(req: Request) {
           sourceOffer: (offerMode === "from_existing" || offerMode === "improve") ? sourceOffer : null,
           improvementGoal: offerMode === "improve" ? safeString(body.improvementGoal).trim() || undefined : undefined,
           salesPageText,
+          offerCategory: normalizeOfferCategory(body.offerCategory),
           language: contentLocale,
         } as any);
       }
@@ -2202,6 +2245,7 @@ export async function POST(req: Request) {
 
     if (type === "offer") {
       if (body.offerType) userContextLines.push(`OfferType: ${safeString(body.offerType).trim()}`);
+      if (body.offerCategory) userContextLines.push(`OfferCategory: ${safeString(body.offerCategory).trim()} — RESPECTE cette catégorie, ne la change PAS en formation si c'est une prestation/produit/coaching.`);
       userContextLines.push(`OfferMode: ${offerMode}`);
       if (offerMode === "from_existing" || offerMode === "improve") {
         userContextLines.push("SourceOffer (JSON) — SEULE offre à analyser :");
@@ -2507,6 +2551,10 @@ export async function POST(req: Request) {
               if (firstLine && firstLine.length > 3) {
                 title = firstLine;
               }
+            } else if (type === "offer" && txt.trim()) {
+              // Auto-extract title from offer content:
+              // Look for "NOM DE L'OFFRE" section or take the first meaningful line
+              title = extractOfferTitle(txt) ?? null;
             } else {
               title = null;
             }
