@@ -715,9 +715,14 @@
     "title": "Panel de control",
     "loading": "Cargando...",
     "objectiveLabel": "Tu objetivo ahora",
+    "nextStep": "Próximo paso",
     "thisWeek": "Esta semana",
-    "encouragement": "¡Genial, terminaste « {task} »! Sigue así, cada paso te acerca a tus objetivos.",
-    "encouragementDefault": "Tu estrategia está lista, marca tus pasos para seguir tu progreso.",
+    "encourageSummary": {
+      "started": "Avanzaste en « {actions} », ¡buen comienzo!",
+      "momentum": "Completaste {done}/{total} pasos, incluyendo « {actions} ». ¡Sigue así!",
+      "halfWay": "Ya llevas {pct}% completado, incluyendo « {actions} ». ¡No pares!",
+      "almostDone": "¡Casi llegas! {pct}% completado, incluyendo « {actions} ». ¡La meta está cerca!"
+    },
     "progressionTitle": "Tu progreso",
     "progressionSub": "Tus resultados concretos",
     "contentsCreated": "Contenidos creados",
@@ -733,7 +738,13 @@
       "labelFoundations": "Fundaciones",
       "labelGrowth": "Crecimiento",
       "labelScale": "Escala",
-      "strategyFocus": "Genera tu estrategia para comenzar tu negocio."
+      "strategyFocus": "Genera tu estrategia para comenzar tu negocio.",
+      "phase": {
+        "startup": "Lanzar tu negocio",
+        "foundations": "Poner las bases",
+        "growth": "Acelerar el crecimiento",
+        "scale": "Escalar tu negocio"
+      }
     },
     "ctas": {
       "seeStrategy": "Ver mi estrategia",

@@ -498,7 +498,8 @@ export default function TodayLovable() {
 
   const [objective, setObjective] = useState<StrategicObjective | null>(null);
   const [coaching, setCoaching] = useState<CoachingInsight | null>(null);
-  const [lastDoneTask, setLastDoneTask] = useState<string | null>(null);
+  const [doneCount, setDoneCount] = useState(0);
+  const [encouragementText, setEncouragementText] = useState("");
   const [nextTask, setNextTask] = useState<string | null>(null);
   const [scheduledToday, setScheduledToday] = useState<{ title: string; channel: string; time: string | null }[]>([]);
   const [progression, setProgression] = useState<ProgressionData>({
@@ -519,21 +520,40 @@ export default function TodayLovable() {
 
   const currentWeekLabel = useMemo(() => weekLabel(INTL_LOCALES[locale] ?? "fr-FR"), [locale]);
 
-  // Resolve translated positive coaching message
-  const positiveText = useMemo(() => {
-    if (!coaching) return "";
-    const { positive } = coaching;
-    if (positive.format === "none") return "";
-    const labels = positive.actionKeys.map((key) => {
-      if (key === "autre") return t(`positive.other`, { label: positive.otherLabel ?? key });
-      return t(`positive.${key}`);
-    });
-    if (positive.format === "one") return t("positive.one", { item: labels[0] });
-    if (positive.format === "two") return t("positive.two", { item1: labels[0], item2: labels[1] });
-    const last = labels[labels.length - 1];
-    const items = labels.slice(0, -1).join(", ");
-    return t("positive.many", { items, last });
-  }, [coaching, t]);
+  // Fetch AI-generated encouragement (cached client-side for 30min)
+  const fetchEncouragement = useCallback(async (currentDoneCount: number) => {
+    if (currentDoneCount === 0) { setEncouragementText(""); return; }
+    // Check cache
+    const cacheKey = "tipote_encouragement";
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { text, doneCount: cachedDone, ts } = JSON.parse(cached);
+        const age = Date.now() - ts;
+        // Use cache if <30min old AND done count hasn't changed
+        if (age < 30 * 60 * 1000 && cachedDone === currentDoneCount && text) {
+          setEncouragementText(text);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const res = await fetch("/api/coach/encouragement");
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.ok && json.text) {
+        setEncouragementText(json.text);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            text: json.text,
+            doneCount: json.doneCount ?? currentDoneCount,
+            ts: Date.now(),
+          }));
+        } catch { /* ignore */ }
+      }
+    } catch { /* fail-open */ }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -704,11 +724,12 @@ export default function TodayLovable() {
           prevConversionRate = typeof p.conversion_rate === "number" ? p.conversion_rate : null;
         }
 
-        // Dernière tâche réalisée + prochaine tâche à faire
+        // Tâches réalisées + prochaine tâche à faire
         const sortedByUpdated = [...tasks].sort(
           (a, b) => new Date(toStr(b.updated_at)).getTime() - new Date(toStr(a.updated_at)).getTime(),
         );
-        const lastDone = sortedByUpdated.find((t) => isDoneStatus(toStr(t.status)));
+        const doneTasks = sortedByUpdated.filter((t) => isDoneStatus(toStr(t.status)));
+        const currentDoneCount = doneTasks.length;
         let nextIncomplete = tasks
           .filter((t) => {
             const s = toStr(t.status).toLowerCase().trim();
@@ -722,7 +743,7 @@ export default function TodayLovable() {
           })[0];
 
         // If project_tasks is empty but plan_json has tasks, extract first task as suggestion
-        if (!nextIncomplete && !lastDone && planJson) {
+        if (!nextIncomplete && currentDoneCount === 0 && planJson) {
           const firstPlanTask = extractFirstTaskFromPlan(planJson);
           if (firstPlanTask) {
             nextIncomplete = { title: firstPlanTask } as AnyRecord;
@@ -780,8 +801,10 @@ export default function TodayLovable() {
         if (!cancelled) {
           setObjective(obj);
           setCoaching(coach);
-          setLastDoneTask(toStr(lastDone?.title) || null);
+          setDoneCount(currentDoneCount);
           setNextTask(toStr(nextIncomplete?.title) || null);
+          // Fetch AI encouragement (async, non-blocking)
+          fetchEncouragement(currentDoneCount);
           setScheduledToday(todayScheduled);
           setProgression({
             hasMetrics,
@@ -849,7 +872,7 @@ export default function TodayLovable() {
       if (debounceTimer) clearTimeout(debounceTimer);
       if (realtimeChannel) supabase.removeChannel(realtimeChannel);
     };
-  }, [supabase]);
+  }, [supabase, fetchEncouragement]);
 
   // Résumé intelligent de la progression analytics
   const progressionSummary = useMemo(() => buildProgressionSummary(progression), [progression]);
@@ -874,8 +897,10 @@ export default function TodayLovable() {
                 {objective && (
                   <PageBanner
                     icon={<Target className="w-5 h-5" />}
-                    title={t("objectiveLabel")}
-                    subtitle={objective.focus || t("objective.strategyFocus")}
+                    title={t(`objective.phase.${objective.phaseKey}`)}
+                    subtitle={objective.focus
+                      ? (objective.focus.length > 80 ? objective.focus.slice(0, 77) + "…" : objective.focus)
+                      : undefined}
                   >
                     <Button asChild variant="secondary" className="gap-2 shrink-0">
                       <Link href={objective.ctaHref}>
@@ -944,39 +969,30 @@ export default function TodayLovable() {
                     </p>
 
                     <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Smart encouragement summary (above next step) */}
+                      {encouragementText ? (
+                        <p className="text-sm text-muted-foreground leading-relaxed">{encouragementText}</p>
+                      ) : null}
+
                       {/* Prochaine tâche ou coaching personnalisé */}
                       {nextTask ? (
                         <div className="flex items-start gap-3 rounded-lg bg-primary/5 border border-primary/15 p-4">
                           <span className="text-primary text-base shrink-0 mt-0.5">→</span>
                           <div>
                             <p className="text-xs font-medium text-primary/70 uppercase tracking-wide mb-0.5">
-                              Prochaine étape
+                              {t("nextStep")}
                             </p>
                             <p className="text-sm font-medium text-foreground leading-snug">
                               {nextTask}
                             </p>
                           </div>
                         </div>
-                      ) : !lastDoneTask && coaching ? (
-                        /* Only show generic coaching when there's nothing personalized to display */
+                      ) : doneCount === 0 && coaching ? (
                         <div className="rounded-lg bg-primary/5 border border-primary/15 p-4">
                           <p className="text-sm text-foreground leading-relaxed">
                             {ucFirst(t(`coaching.${coaching.recommendationKey}.recommendation`))} {t(`coaching.${coaching.recommendationKey}.why`)}.
                           </p>
                         </div>
-                      ) : null}
-
-                      {/* Encouragement: last completed task, positive summary, or default */}
-                      {lastDoneTask ? (
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {t("encouragement", { task: lastDoneTask })}
-                        </p>
-                      ) : positiveText ? (
-                        <p className="text-sm text-muted-foreground leading-relaxed">{positiveText}</p>
-                      ) : nextTask ? (
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {t("encouragementDefault")}
-                        </p>
                       ) : null}
 
                       <Button asChild variant="default" className="w-full gap-2 mt-auto">
