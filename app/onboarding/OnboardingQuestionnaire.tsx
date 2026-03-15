@@ -343,14 +343,35 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
       const shouldShowPyramids = bStatus !== "has_offers" && bStatus !== "affiliation";
 
       // Step 0: Save answers & mark onboarding complete
+      // ✅ CRITICAL: This MUST succeed for the user to not loop.
+      // We retry with multiple fallbacks to ensure onboarding_completed = true.
+      let saveOk = false;
       try {
         await postJSON("/api/onboarding/questionnaire", payload);
+        saveOk = true;
       } catch (err) {
         console.error("questionnaire save error:", err);
-        // fail-open: try to mark complete anyway
+      }
+
+      if (!saveOk) {
+        // Retry 1: try the legacy complete endpoint
         try {
           await postJSON("/api/onboarding/complete", { diagnosticCompleted: true });
-        } catch {/* ignore */}
+          saveOk = true;
+        } catch {
+          console.error("onboarding/complete fallback also failed");
+        }
+      }
+
+      if (!saveOk) {
+        // Retry 2: last resort — wait 2s and retry questionnaire once
+        await new Promise((r) => setTimeout(r, 2000));
+        try {
+          await postJSON("/api/onboarding/questionnaire", payload);
+          saveOk = true;
+        } catch {
+          console.error("questionnaire retry also failed");
+        }
       }
 
       // ─── PYRAMID USERS: redirect to pyramid generation & selection ──────
@@ -363,7 +384,11 @@ export function OnboardingQuestionnaire({ firstName }: OnboardingQuestionnairePr
       // ─── NON-PYRAMID USERS (affiliates, users with offers) ───────────────
       setBootStep(1);
       try {
-        await callStrategySSE({ force: true });
+        // ✅ Timeout the strategy SSE call to prevent infinite hang on "je peaufine ton espace"
+        await Promise.race([
+          callStrategySSE({ force: true }),
+          new Promise((_, r) => setTimeout(() => r(new Error("strategy_timeout")), 60_000)),
+        ]);
       } catch {/* fail-open */}
 
       setBootStep(2);

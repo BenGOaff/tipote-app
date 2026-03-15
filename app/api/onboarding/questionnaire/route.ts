@@ -236,7 +236,16 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, projectId });
+    // ✅ Set active project cookie in response so middleware doesn't loop
+    const response = NextResponse.json({ ok: true, projectId });
+    if (projectId) {
+      response.cookies.set("tipote_active_project", projectId, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+    }
+    return response;
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
