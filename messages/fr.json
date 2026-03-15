@@ -693,6 +693,7 @@
     "objectiveLabel": "Ton objectif en ce moment",
     "thisWeek": "Cette semaine",
     "encouragement": "C'est top, tu as terminé « {task} » — continue comme ça, chaque étape te rapproche de tes objectifs !",
+    "encouragementDefault": "Ta stratégie est en place, coche tes étapes au fur et à mesure pour suivre ta progression !",
     "progressionTitle": "Ta progression",
     "progressionSub": "Tes résultats concrets",
     "contentsCreated": "Contenus créés",

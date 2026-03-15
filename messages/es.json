@@ -717,6 +717,7 @@
     "objectiveLabel": "Tu objetivo ahora",
     "thisWeek": "Esta semana",
     "encouragement": "¡Genial, terminaste « {task} »! Sigue así, cada paso te acerca a tus objetivos.",
+    "encouragementDefault": "Tu estrategia está lista, marca tus pasos para seguir tu progreso.",
     "progressionTitle": "Tu progreso",
     "progressionSub": "Tus resultados concretos",
     "contentsCreated": "Contenidos creados",

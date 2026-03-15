@@ -693,6 +693,7 @@
     "objectiveLabel": "Your current goal",
     "thisWeek": "This week",
     "encouragement": "Great job finishing \"{task}\" — keep going, every step brings you closer to your goals!",
+    "encouragementDefault": "Your strategy is set, check off your steps as you go to track your progress!",
     "progressionTitle": "Your progress",
     "progressionSub": "Your concrete results",
     "contentsCreated": "Content created",
