@@ -316,7 +316,8 @@ export default function EventsPageClient() {
             <h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>
           }
         />
-        <div className="max-w-5xl mx-auto px-4 py-8 space-y-6 w-full">
+        <div className="flex-1 p-4 sm:p-5 lg:p-6">
+        <div className="max-w-[1200px] mx-auto w-full space-y-5">
           <PageBanner
             icon={<Video className="w-5 h-5" />}
             title={t("title")}
@@ -395,7 +396,7 @@ export default function EventsPageClient() {
               <p className="text-xs text-muted-foreground mt-1">{t("noEventsHint") ?? t("noWebinarsHint")}</p>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((w) => {
                 const isExpanded = expandedId === w.id;
                 const sc = STATUS_CONFIG[w.status] ?? STATUS_CONFIG.draft;
@@ -407,50 +408,22 @@ export default function EventsPageClient() {
                 const EventIcon = isChallenge ? Trophy : Video;
 
                 return (
-                  <Card key={w.id} className="overflow-hidden">
-                    {/* Header row */}
-                    <div
-                      className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/40 transition-colors"
-                      onClick={() => setExpandedId(isExpanded ? null : w.id)}
-                    >
-                      <EventIcon className="w-5 h-5 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-sm truncate">{w.title}</p>
-                          <Badge className={`text-[10px] ${ec.color}`}>{ec.label}</Badge>
-                          <Badge className={`text-[10px] ${sc.color}`}>{sc.label}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {isChallenge && w.end_date
-                            ? `Du ${formatDate(w.webinar_date)} \u2192 ${formatDate(w.end_date)}`
-                            : formatDate(w.webinar_date)}
-                          {w.offer_name ? ` \u00b7 ${w.offer_name}` : ""}
-                          {w.registrants > 0 ? ` \u00b7 ${w.registrants} inscrits` : ""}
-                        </p>
+                  <Card
+                    key={w.id}
+                    className="p-4 hover:shadow-md transition-shadow cursor-pointer group flex flex-col"
+                    onClick={() => setExpandedId(isExpanded ? null : w.id)}
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <EventIcon className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <h3 className="font-semibold text-sm truncate">{w.title}</h3>
                       </div>
-
-                      {/* Quick KPIs */}
-                      {w.registrants > 0 && (
-                        <div className="hidden md:flex items-center gap-4 text-xs">
-                          <span className={kpiColor(attendanceRate, 30, 45)}>
-                            {pct(w.attendees, w.registrants)} pr&eacute;sence
-                          </span>
-                          <span className={kpiColor(conversionRate, 5, 10)}>
-                            {pct(w.sales_count, totalViewers)} conv.
-                          </span>
-                          {Number(w.revenue) > 0 && (
-                            <span className="text-green-600 font-medium">
-                              {Number(w.revenue).toLocaleString()}&nbsp;&euro;
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-slate-400 hover:text-blue-500"
+                          className="h-7 w-7 text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => { e.stopPropagation(); openEdit(w); }}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -460,7 +433,7 @@ export default function EventsPageClient() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-slate-400 hover:text-red-500"
+                              className="h-7 w-7 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -479,19 +452,59 @@ export default function EventsPageClient() {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        )}
                       </div>
                     </div>
 
+                    {/* Badges */}
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Badge className={`text-[10px] ${ec.color}`}>{ec.label}</Badge>
+                      <Badge className={`text-[10px] ${sc.color}`}>{sc.label}</Badge>
+                    </div>
+
+                    {/* Date & offer */}
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {isChallenge && w.end_date
+                        ? `Du ${formatDate(w.webinar_date)} \u2192 ${formatDate(w.end_date)}`
+                        : formatDate(w.webinar_date)}
+                      {w.offer_name ? ` \u00b7 ${w.offer_name}` : ""}
+                    </p>
+
+                    {/* Quick KPIs inline */}
+                    {w.registrants > 0 && (
+                      <div className="grid grid-cols-3 gap-2 text-center bg-muted/40 rounded-md p-2 mb-3">
+                        <div>
+                          <p className="text-sm font-bold">{w.registrants}</p>
+                          <p className="text-[10px] text-muted-foreground">{t("kpi.registrants")}</p>
+                        </div>
+                        <div>
+                          <p className={`text-sm font-bold ${kpiColor(attendanceRate, 30, 45)}`}>
+                            {pct(w.attendees, w.registrants)}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">Pr\u00e9sence</p>
+                        </div>
+                        <div>
+                          {Number(w.revenue) > 0 ? (
+                            <>
+                              <p className="text-sm font-bold text-green-600">{Number(w.revenue).toLocaleString()}\u00a0\u20ac</p>
+                              <p className="text-[10px] text-muted-foreground">{t("kpi.revenue")}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className={`text-sm font-bold ${kpiColor(conversionRate, 5, 10)}`}>
+                                {pct(w.sales_count, totalViewers)}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">Conv.</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Expanded KPIs */}
                     {isExpanded && (
-                      <div className="border-t px-4 py-4 space-y-4 bg-muted/20">
+                      <div className="border-t pt-3 mt-auto space-y-3" onClick={(e) => e.stopPropagation()}>
                         {/* KPI Input Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 gap-2">
                           {([
                             { key: "registrants", icon: Users, label: t("kpi.registrants") },
                             { key: "attendees", icon: Eye, label: t("kpi.attendees") },
@@ -513,7 +526,6 @@ export default function EventsPageClient() {
                                 className="h-8 text-sm"
                                 onChange={(e) => {
                                   const val = key === "revenue" ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0;
-                                  // Optimistic update
                                   setWebinars((prev) =>
                                     prev.map((ww) => (ww.id === w.id ? { ...ww, [key]: val } : ww)),
                                   );
@@ -529,37 +541,29 @@ export default function EventsPageClient() {
 
                         {/* Calculated KPIs */}
                         {w.registrants > 0 && (
-                          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                            <Card className="p-3 text-center">
-                              <p className={`text-lg font-bold ${kpiColor(attendanceRate, 30, 45)}`}>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-muted/40 rounded-md p-2 text-center">
+                              <p className={`text-sm font-bold ${kpiColor(attendanceRate, 30, 45)}`}>
                                 {pct(w.attendees, w.registrants)}
                               </p>
                               <p className="text-[10px] text-muted-foreground">{t("kpi.attendanceRate")}</p>
-                              <p className="text-[9px] text-muted-foreground/60">bon &gt;30% / top &gt;45%</p>
-                            </Card>
-                            <Card className="p-3 text-center">
-                              <p className="text-lg font-bold">{pct(w.replay_viewers, w.registrants)}</p>
+                            </div>
+                            <div className="bg-muted/40 rounded-md p-2 text-center">
+                              <p className="text-sm font-bold">{pct(w.replay_viewers, w.registrants)}</p>
                               <p className="text-[10px] text-muted-foreground">{t("kpi.replayRate")}</p>
-                            </Card>
-                            <Card className="p-3 text-center">
-                              <p className={`text-lg font-bold ${kpiColor(conversionRate, 5, 10)}`}>
+                            </div>
+                            <div className="bg-muted/40 rounded-md p-2 text-center">
+                              <p className={`text-sm font-bold ${kpiColor(conversionRate, 5, 10)}`}>
                                 {pct(w.sales_count, totalViewers)}
                               </p>
                               <p className="text-[10px] text-muted-foreground">{t("kpi.conversionRate")}</p>
-                              <p className="text-[9px] text-muted-foreground/60">bon &gt;5% / top &gt;10%</p>
-                            </Card>
-                            <Card className="p-3 text-center">
-                              <p className="text-lg font-bold">
+                            </div>
+                            <div className="bg-muted/40 rounded-md p-2 text-center">
+                              <p className="text-sm font-bold">
                                 {avg(Number(w.revenue), w.registrants)}
                               </p>
                               <p className="text-[10px] text-muted-foreground">{t("kpi.revenuePerRegistrant")}</p>
-                            </Card>
-                            <Card className="p-3 text-center">
-                              <p className="text-lg font-bold">
-                                {avg(Number(w.revenue), w.sales_count)}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground">{t("kpi.avgOrderValue")}</p>
-                            </Card>
+                            </div>
                           </div>
                         )}
 
@@ -580,6 +584,7 @@ export default function EventsPageClient() {
               })}
             </div>
           )}
+        </div>
         </div>
       </main>
 

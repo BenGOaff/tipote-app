@@ -559,25 +559,22 @@ export default function TodayLovable() {
           error: planResRaw.error,
         };
 
-        // ------ Fetch tasks directly (no project_id filter, like strategy page) ------
+        // ------ Fetch tasks via API (uses supabaseAdmin to bypass RLS) ------
         let tasks: AnyRecord[] = [];
         const fetchTasks = async () => {
-          const tasksRes = await supabase
-            .from("project_tasks")
-            .select("id, title, status, priority, source, created_at, updated_at")
-            .eq("user_id", userId)
-            .is("deleted_at", null)
-            .order("created_at", { ascending: true })
-            .limit(500);
-          if (!tasksRes.error && Array.isArray(tasksRes.data)) {
-            tasks = tasksRes.data as AnyRecord[];
+          try {
+            const res = await fetch("/api/tasks");
+            if (res.ok) {
+              const json = await res.json();
+              if (json.ok && Array.isArray(json.tasks)) {
+                tasks = json.tasks as AnyRecord[];
+              }
+            }
+          } catch {
+            // fail-open
           }
         };
-        try {
-          await fetchTasks();
-        } catch {
-          // fail-open
-        }
+        await fetchTasks();
 
         // If no tasks in DB but plan_json exists, trigger sync and re-fetch once
         if (tasks.length === 0 && !planRes.error && planRes.data?.plan_json) {

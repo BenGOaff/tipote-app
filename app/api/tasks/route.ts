@@ -65,7 +65,8 @@ export async function GET() {
 
     const projectId = await getActiveProjectId(supabase, auth.user.id);
 
-    let query = supabase
+    // Use supabaseAdmin to bypass RLS (project_tasks RLS can return [] silently)
+    let query = supabaseAdmin
       .from("project_tasks")
       .select("id, title, status, priority, source, position, created_at, updated_at")
       .eq("user_id", auth.user.id)
