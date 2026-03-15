@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tipote — Le cerveau operationnel de ton business</title>
+<meta name="description" content="Tipote combine strategie, contenu, publication et analytics dans un seul systeme qui memorise ton business. Fini la dispersion. Place aux resultats.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#2E386E;--blue:#5D6CDB;--blue-dark:#4A59C8;--deep:#2E3A6E;
+  --lime:#C1FF6F;--bg:#F6F7FB;--white:#FFFFFF;
+}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--navy);background:var(--white);line-height:1.6;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{text-decoration:none;color:inherit}
+button{border:none;background:none;cursor:pointer;font:inherit}
+
+/* --- ANIMATIONS --- */
+@keyframes shimmer{0%,100%{background-position:0% center}50%{background-position:100% center}}
+@keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-20px)}}
+@keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-20px,30px)}}
+@keyframes growBar{from{height:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .7s cubic-bezier(.25,.46,.45,.94),transform .7s cubic-bezier(.25,.46,.45,.94)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.1s}
+.reveal-delay-2{transition-delay:.2s}
+.reveal-delay-3{transition-delay:.3s}
+.reveal-delay-4{transition-delay:.4s}
+.reveal-delay-5{transition-delay:.5s}
+.stagger-item{opacity:0;transform:translateY(30px);transition:opacity .5s ease,transform .5s ease}
+.stagger-item.visible{opacity:1;transform:translateY(0)}
+
+/* --- GRADIENT TEXT --- */
+.hero-text-gradient{
+  background:linear-gradient(135deg,#5D6CDB 0%,#8B5CF6 50%,#5D6CDB 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;animation:shimmer 4s ease-in-out infinite;
+}
+
+/* --- LAYOUT --- */
+.container{max-width:1152px;margin:0 auto;padding:0 24px}
+.text-center{text-align:center}
+.section{padding:96px 0}
+@media(min-width:640px){.section{padding:128px 0}}
+
+/* --- NAV --- */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:all .3s;height:64px;display:flex;align-items:center}
+.nav.scrolled{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 1px 0 rgba(0,0,0,.05)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:1152px;margin:0 auto;padding:0 24px}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.02em}
+.nav-logo img{width:28px;height:28px;border-radius:6px}
+.nav-links{display:flex;align-items:center;gap:32px}
+.nav-links a{font-size:14px;font-weight:500;color:rgba(46,56,110,.6);transition:color .2s}
+.nav-links a:hover{color:var(--blue)}
+.nav-cta{display:inline-flex;align-items:center;justify-content:center;border-radius:100px;background:var(--blue);color:#fff;font-size:14px;font-weight:600;padding:10px 24px;transition:all .2s;box-shadow:0 4px 12px rgba(93,108,219,.25)}
+.nav-cta:hover{background:var(--blue-dark);box-shadow:0 6px 20px rgba(93,108,219,.3)}
+.nav-mobile-btn{display:none;padding:8px}
+.nav-mobile-btn svg{width:20px;height:20px;color:var(--navy)}
+@media(max-width:768px){
+  .nav-links,.nav-actions{display:none}
+  .nav-mobile-btn{display:block}
+  .mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.05);padding:16px 24px;flex-direction:column;gap:12px}
+  .mobile-menu.open{display:flex}
+  .mobile-menu a{font-size:14px;font-weight:500;color:rgba(46,56,110,.7);padding:8px 0}
+}
+
+/* --- HERO --- */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding-top:64px}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(93,108,219,.06) 0%,transparent 70%),radial-gradient(ellipse 60% 50% at 70% 60%,rgba(193,255,111,.03) 0%,transparent 70%),linear-gradient(to bottom,#fff 0%,#F6F7FB 100%)}
+.hero-grid{position:absolute;inset:0;opacity:.03;background-image:radial-gradient(circle at 1px 1px,#2E386E 1px,transparent 0);background-size:40px 40px}
+.hero-orb-1{position:absolute;top:25%;left:25%;width:400px;height:400px;background:rgba(93,108,219,.1);border-radius:50%;filter:blur(120px);animation:float1 8s ease-in-out infinite}
+.hero-orb-2{position:absolute;bottom:25%;right:25%;width:300px;height:300px;background:rgba(193,255,111,.06);border-radius:50%;filter:blur(100px);animation:float2 10s ease-in-out infinite}
+.hero-content{position:relative;z-index:10;text-align:center;max-width:960px;padding:0 24px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;border-radius:100px;background:rgba(93,108,219,.08);border:1px solid rgba(93,108,219,.15);padding:6px 16px;margin-bottom:32px;animation:fadeUp .6s ease both}
+.hero-badge svg{width:14px;height:14px;color:var(--blue)}
+.hero-badge span{font-size:12px;font-weight:500;color:var(--blue);letter-spacing:.03em}
+.hero h1{font-size:clamp(40px,7vw,72px);font-weight:800;letter-spacing:-.03em;line-height:1.05;margin-bottom:24px;animation:fadeUp .8s ease .15s both}
+.hero-sub{font-size:clamp(16px,2.5vw,20px);color:rgba(46,56,110,.55);max-width:640px;margin:0 auto 40px;line-height:1.7;animation:fadeUp .7s ease .35s both}
+.hero-buttons{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px;animation:fadeUp .6s ease .5s both}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;border-radius:100px;background:var(--blue);color:#fff;font-weight:600;padding:16px 32px;font-size:16px;transition:all .25s;box-shadow:0 8px 24px rgba(93,108,219,.25)}
+.btn-primary:hover{background:var(--blue-dark);box-shadow:0 12px 32px rgba(93,108,219,.3);transform:translateY(-1px)}
+.btn-primary svg{width:16px;height:16px;transition:transform .2s}
+.btn-primary:hover svg{transform:translateX(4px)}
+.btn-secondary{display:inline-flex;align-items:center;gap:8px;border-radius:100px;border:1px solid rgba(46,56,110,.12);color:rgba(46,56,110,.65);font-weight:500;padding:16px 32px;font-size:16px;transition:all .2s}
+.btn-secondary:hover{background:rgba(46,56,110,.04)}
+
+/* --- HERO MOCKUP --- */
+.hero-mockup{margin-top:64px;animation:fadeUp 1s cubic-bezier(.25,.46,.45,.94) .7s both;position:relative}
+@media(min-width:640px){.hero-mockup{margin-top:80px}}
+.mockup-browser{border-radius:16px;border:1px solid rgba(0,0,0,.1);background:#fff;box-shadow:0 25px 60px rgba(93,108,219,.1);overflow:hidden;max-width:896px;margin:0 auto}
+.mockup-titlebar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.05);background:var(--bg)}
+.mockup-dots{display:flex;gap:6px}
+.mockup-dots span{width:12px;height:12px;border-radius:50%}
+.mockup-dots span:nth-child(1){background:#FF5F57}
+.mockup-dots span:nth-child(2){background:#FEBC2E}
+.mockup-dots span:nth-child(3){background:#28C840}
+.mockup-url{flex:1;display:flex;justify-content:center}
+.mockup-url span{border-radius:6px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:4px 48px;font-size:12px;color:rgba(46,56,110,.35)}
+.mockup-body{padding:24px;background:var(--bg)}
+.mockup-grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:640px){.mockup-grid{grid-template-columns:140px 1fr}}
+.mockup-sidebar{display:none}
+@media(min-width:640px){.mockup-sidebar{display:block}}
+.mockup-sidebar-item{border-radius:8px;padding:8px 12px;font-size:12px;font-weight:500;color:rgba(46,56,110,.35);margin-bottom:4px}
+.mockup-sidebar-item.active{background:rgba(93,108,219,.1);color:var(--blue)}
+.mockup-main{display:flex;flex-direction:column;gap:16px}
+.mockup-banner{border-radius:12px;background:linear-gradient(135deg,#5D6CDB,#2E3A6E);padding:16px;color:#fff}
+.mockup-banner-title{font-size:14px;font-weight:600}
+.mockup-banner-sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:4px}
+.mockup-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.mockup-stat{border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:12px}
+.mockup-stat-label{font-size:10px;color:rgba(46,56,110,.45)}
+.mockup-stat-value{font-size:18px;font-weight:700;color:var(--navy);margin-top:4px}
+.mockup-stat-trend{font-size:10px;font-weight:500;color:#10b981}
+.mockup-chart{border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:16px;height:96px;display:flex;align-items:flex-end;gap:4px}
+.mockup-bar{flex:1;border-radius:4px 4px 0 0;background:rgba(93,108,219,.2);animation:growBar .5s ease both}
+
+/* Floating badges */
+.float-badge{position:absolute;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.05);padding:12px;display:flex;align-items:center;gap:8px;display:none}
+@media(min-width:1024px){.float-badge{display:flex}}
+.float-badge-left{left:-16px;top:33%;animation:slideLeft .5s ease 1.5s both}
+.float-badge-right{right:-16px;top:50%;animation:slideRight .5s ease 1.8s both}
+.float-badge-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.float-badge-text{font-size:10px;font-weight:600;color:var(--navy)}
+.float-badge-sub{font-size:9px;color:rgba(46,56,110,.45);margin-top:1px}
+
+.hero-trust{margin-top:40px;font-size:12px;color:rgba(46,56,110,.35);font-weight:500;animation:fadeIn .6s ease 2s both}
+
+/* --- SECTION TITLES --- */
+.section-label{font-size:13px;font-weight:600;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px}
+.section-title{font-size:clamp(28px,5vw,48px);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:24px}
+.section-title .muted{color:rgba(46,56,110,.35)}
+.section-desc{font-size:clamp(16px,2vw,18px);color:rgba(46,56,110,.55);max-width:640px;margin:0 auto;line-height:1.7}
+
+/* --- PROBLEM SECTION --- */
+.problem{background:var(--white)}
+.pain-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:48px}
+@media(min-width:640px){.pain-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.pain-grid{grid-template-columns:repeat(3,1fr)}}
+.pain-card{border-radius:16px;border:1px solid rgba(0,0,0,.05);background:rgba(246,247,251,.5);padding:24px;transition:all .3s}
+.pain-card:hover{background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.06);border-color:rgba(93,108,219,.1)}
+.pain-icon{width:40px;height:40px;border-radius:12px;background:rgba(93,108,219,.08);display:flex;align-items:center;justify-content:center;margin-bottom:16px;transition:background .3s}
+.pain-card:hover .pain-icon{background:rgba(93,108,219,.12)}
+.pain-icon svg{width:20px;height:20px;color:var(--blue)}
+.pain-card h3{font-size:16px;font-weight:600;margin-bottom:8px}
+.pain-card p{font-size:14px;color:rgba(46,56,110,.5);line-height:1.6}
+.quote-block{max-width:768px;margin:64px auto 0;text-center;position:relative}
+.quote-mark{font-size:72px;color:rgba(93,108,219,.08);font-family:serif;line-height:1;margin-bottom:-20px}
+.quote-text{font-size:clamp(18px,3vw,24px);color:rgba(46,56,110,.65);font-style:italic;line-height:1.6}
+.quote-author{font-size:14px;color:rgba(46,56,110,.35);font-weight:500;margin-top:16px}
+
+/* --- SOLUTION SECTION --- */
+.solution{background:var(--bg)}
+.diff-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:48px}
+@media(min-width:640px){.diff-grid{grid-template-columns:repeat(3,1fr)}}
+.diff-card{border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:24px;text-align:center}
+.diff-icon{width:48px;height:48px;border-radius:12px;background:rgba(93,108,219,.08);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.diff-icon svg{width:24px;height:24px;color:var(--blue)}
+.diff-card h3{font-size:16px;font-weight:600;margin-bottom:8px}
+.diff-card p{font-size:14px;color:rgba(46,56,110,.5);line-height:1.6}
+
+/* Pillar tabs */
+.pillar-box{border-radius:24px;background:#fff;border:1px solid rgba(0,0,0,.05);box-shadow:0 8px 32px rgba(0,0,0,.04);overflow:hidden}
+.pillar-tabs{display:flex;border-bottom:1px solid rgba(0,0,0,.05);overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none}
+.pillar-tabs::-webkit-scrollbar{display:none}
+.pillar-tab{flex:1;min-width:140px;display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 24px;font-size:14px;font-weight:500;color:rgba(46,56,110,.35);transition:color .2s;position:relative;white-space:nowrap}
+.pillar-tab.active{color:var(--navy)}
+.pillar-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--blue)}
+.pillar-tab svg{width:16px;height:16px}
+.pillar-content{padding:32px;display:none}
+@media(min-width:640px){.pillar-content{padding:40px}}
+.pillar-content.active{display:grid;grid-template-columns:1fr;gap:40px;align-items:center;animation:fadeUp .3s ease}
+@media(min-width:1024px){.pillar-content.active{grid-template-columns:1fr 1fr}}
+.pillar-icon-big{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.pillar-icon-big svg{width:24px;height:24px}
+.pillar-content h3{font-size:clamp(20px,3vw,28px);font-weight:700;letter-spacing:-.02em;margin-bottom:16px}
+.pillar-content>div>p{font-size:15px;color:rgba(46,56,110,.55);line-height:1.7;margin-bottom:24px}
+.pillar-details{list-style:none;display:flex;flex-direction:column;gap:12px}
+.pillar-details li{display:flex;align-items:flex-start;gap:12px;font-size:14px;color:rgba(46,56,110,.65)}
+.pillar-details li svg{width:16px;height:16px;color:var(--blue);flex-shrink:0;margin-top:2px}
+.pillar-visual{border-radius:16px;background:var(--bg);border:1px solid rgba(0,0,0,.05);padding:24px;min-height:280px;display:flex;align-items:center;justify-content:center}
+.pillar-visual-inner{width:100%}
+
+/* Visual mockups for pillars */
+.pv-card{border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:16px;margin-bottom:12px}
+.pv-label{font-size:11px;font-weight:600;color:rgba(46,56,110,.35);margin-bottom:12px}
+.pv-phase{border-radius:8px;background:rgba(93,108,219,.08);padding:8px 12px;font-size:12px;color:rgba(46,56,110,.65);margin-bottom:8px}
+.pv-li-dot{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(46,56,110,.55);padding:4px 0}
+.pv-li-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0}
+.pv-network-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pv-network{border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:12px;text-align:center}
+.pv-network-icon{width:32px;height:32px;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.pv-network-status{font-size:9px;color:rgba(46,56,110,.35)}
+.pv-bars{display:flex;align-items:flex-end;gap:4px;height:80px}
+.pv-bar{flex:1;border-radius:4px 4px 0 0;transition:height .6s ease}
+.pv-reco{border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:12px}
+.pv-reco-label{font-size:10px;color:rgba(46,56,110,.35);margin-bottom:4px}
+.pv-reco-text{font-size:12px;color:rgba(46,56,110,.65);line-height:1.5}
+
+/* --- HOW IT WORKS --- */
+.how{background:var(--white);overflow:hidden;position:relative}
+.how-glow{position:absolute;top:0;left:50%;transform:translateX(-50%);width:800px;height:800px;background:rgba(93,108,219,.025);border-radius:50%;filter:blur(200px)}
+.steps-grid{display:grid;grid-template-columns:1fr;gap:48px;position:relative}
+@media(min-width:1024px){.steps-grid{grid-template-columns:repeat(3,1fr);gap:32px}}
+.step{text-align:center;position:relative}
+@media(min-width:1024px){.step{text-align:left}}
+.step-number{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#5D6CDB,#2E3A6E);color:#fff;font-weight:700;font-size:18px;box-shadow:0 8px 24px rgba(93,108,219,.2);margin-bottom:24px}
+.step h3{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
+.step p{font-size:14px;color:rgba(46,56,110,.5);line-height:1.6;margin-bottom:16px}
+.step-tag{display:inline-flex;align-items:center;border-radius:100px;background:rgba(93,108,219,.08);padding:4px 12px;font-size:12px;font-weight:500;color:var(--blue)}
+
+/* --- FEATURES CAROUSEL --- */
+.features{background:var(--bg);overflow:hidden}
+.carousel-nav{display:flex;justify-content:flex-end;gap:8px;margin-bottom:24px}
+.carousel-btn{width:40px;height:40px;border-radius:50%;border:1px solid rgba(0,0,0,.1);background:#fff;display:flex;align-items:center;justify-content:center;color:rgba(46,56,110,.5);transition:all .2s}
+.carousel-btn:hover{color:var(--blue);border-color:rgba(93,108,219,.2)}
+.carousel-btn:disabled{opacity:.3;cursor:not-allowed}
+.carousel-btn svg{width:16px;height:16px}
+.carousel-track-wrapper{overflow:hidden}
+.carousel-track{display:flex;transition:transform .4s cubic-bezier(.25,.46,.45,.94)}
+.feature-card-wrapper{flex:0 0 33.333%;padding:0 8px;min-width:300px}
+@media(max-width:1023px){.feature-card-wrapper{flex:0 0 50%;min-width:280px}}
+@media(max-width:639px){.feature-card-wrapper{flex:0 0 100%;min-width:0}}
+.feature-card{border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:24px;height:100%;transition:all .3s}
+.feature-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.06);border-color:rgba(93,108,219,.1)}
+.feature-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.feature-icon{width:40px;height:40px;border-radius:12px;background:rgba(93,108,219,.08);display:flex;align-items:center;justify-content:center;transition:background .3s}
+.feature-card:hover .feature-icon{background:rgba(93,108,219,.12)}
+.feature-icon svg{width:20px;height:20px;color:var(--blue)}
+.feature-tag{font-size:10px;font-weight:500;color:rgba(93,108,219,.55);background:rgba(93,108,219,.05);border-radius:100px;padding:4px 10px}
+.feature-card h3{font-size:16px;font-weight:600;margin-bottom:8px}
+.feature-card p{font-size:14px;color:rgba(46,56,110,.5);line-height:1.6}
+.carousel-dots{display:flex;justify-content:center;gap:6px;margin-top:24px}
+.carousel-dot{height:6px;border-radius:100px;transition:all .3s;background:rgba(46,56,110,.12);border:none;padding:0}
+.carousel-dot{width:6px}
+.carousel-dot.active{width:24px;background:var(--blue)}
+
+/* --- COMPARISON --- */
+.comparison{background:var(--white)}
+.comp-cards{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:48px}
+@media(min-width:640px){.comp-cards{grid-template-columns:repeat(2,1fr)}}
+.comp-card{border-radius:16px;border:1px solid rgba(0,0,0,.05);background:rgba(246,247,251,.5);overflow:hidden}
+.comp-card-header{display:flex;align-items:center;justify-content:space-between;padding:20px;cursor:pointer;transition:background .2s}
+.comp-card-header:hover{background:rgba(246,247,251,.8)}
+.comp-card-header h3{font-size:16px;font-weight:600}
+.comp-card-header span{font-size:12px;color:rgba(46,56,110,.35)}
+.comp-chevron{width:16px;height:16px;color:rgba(46,56,110,.25);transition:transform .3s}
+.comp-card.open .comp-chevron{transform:rotate(180deg)}
+.comp-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.comp-card.open .comp-body{max-height:500px}
+.comp-body-inner{padding:0 20px 20px;display:flex;flex-direction:column;gap:12px}
+.comp-pros-label{font-size:10px;font-weight:600;color:#10b981;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.comp-cons-label{font-size:10px;font-weight:600;color:#f87171;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.comp-list{list-style:none;display:flex;flex-direction:column;gap:4px}
+.comp-list li{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(46,56,110,.55)}
+.comp-list li svg{width:12px;height:12px;flex-shrink:0}
+.comp-result{padding-top:8px;border-top:1px solid rgba(0,0,0,.05);font-size:12px;color:rgba(46,56,110,.45);font-style:italic}
+
+/* Comparison table */
+.comp-table-wrap{border-radius:16px;border:1px solid rgba(0,0,0,.05);background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.03);overflow-x:auto}
+.comp-table{width:100%;border-collapse:collapse;font-size:14px;min-width:600px}
+.comp-table thead{border-bottom:1px solid rgba(0,0,0,.05)}
+.comp-table th{padding:16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:rgba(46,56,110,.3)}
+.comp-table th:first-child{text-align:left;padding-left:20px}
+.comp-table th.tipote-col{color:var(--blue)}
+.comp-table td{padding:12px 16px;text-align:center;border-bottom:1px solid rgba(0,0,0,.03)}
+.comp-table td:first-child{text-align:left;padding-left:20px;color:rgba(46,56,110,.65)}
+.comp-table tr:last-child td{border-bottom:none}
+.status-icon{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.status-yes{background:rgba(16,185,129,.1)}
+.status-yes svg{color:#10b981;width:16px;height:16px}
+.status-partial svg{color:#fbbf24;width:16px;height:16px}
+.status-no svg{color:#fca5a5;width:16px;height:16px}
+
+/* --- TRANSFORMATION --- */
+.transformation{background:var(--bg)}
+.toggle-wrap{display:flex;justify-content:center;margin-bottom:48px}
+.toggle-bar{display:inline-flex;align-items:center;border-radius:100px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:4px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.toggle-btn{border-radius:100px;padding:8px 24px;font-size:14px;font-weight:500;transition:all .2s;color:rgba(46,56,110,.45)}
+.toggle-btn.active-before{background:var(--navy);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.toggle-btn.active-after{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(93,108,219,.2)}
+.ba-grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:640px){.ba-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.ba-grid{grid-template-columns:repeat(3,1fr)}}
+.ba-card{border-radius:16px;border:1px solid rgba(0,0,0,.05);padding:24px;transition:all .4s}
+.ba-card.before{background:rgba(255,255,255,.5)}
+.ba-card.after{background:#fff;border-color:rgba(93,108,219,.1);box-shadow:0 2px 12px rgba(0,0,0,.03)}
+.ba-dot{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.ba-dot-red{background:rgba(248,113,113,.1)}
+.ba-dot-red::after{content:'';width:8px;height:8px;border-radius:50%;background:#f87171}
+.ba-dot-green{background:rgba(16,185,129,.1)}
+.ba-dot-green::after{content:'';width:8px;height:8px;border-radius:50%;background:#10b981}
+.ba-card p{font-size:14px;line-height:1.6}
+.ba-card.before p{color:rgba(46,56,110,.55)}
+.ba-card.after p{color:rgba(46,56,110,.75);font-weight:500}
+
+/* Emotional banner */
+.emo-banner{border-radius:24px;background:linear-gradient(135deg,#5D6CDB,#2E3A6E);padding:32px;text-align:center;color:#fff;margin-top:64px}
+@media(min-width:640px){.emo-banner{padding:48px}}
+.emo-banner h3{font-size:clamp(22px,4vw,32px);font-weight:700;letter-spacing:-.02em;margin-bottom:16px}
+.emo-banner p{font-size:16px;color:rgba(255,255,255,.65);max-width:640px;margin:0 auto;line-height:1.7}
+
+/* --- CTA --- */
+.cta-section{background:var(--white);overflow:hidden;position:relative}
+.cta-grid-bg{position:absolute;inset:0;opacity:.02;background-image:radial-gradient(circle at 1px 1px,#2E386E 1px,transparent 0);background-size:40px 40px}
+.cta-orb{position:absolute;top:33%;right:25%;width:400px;height:400px;background:rgba(93,108,219,.05);border-radius:50%;filter:blur(150px);animation:float1 10s ease-in-out infinite}
+.cta-inner{position:relative;max-width:800px;margin:0 auto;text-align:center}
+.cta-badge{display:inline-flex;align-items:center;gap:8px;border-radius:100px;background:rgba(193,255,111,.12);border:1px solid rgba(193,255,111,.18);padding:6px 16px;margin-bottom:32px}
+.cta-badge svg{width:14px;height:14px;color:var(--blue)}
+.cta-badge span{font-size:12px;font-weight:500;color:rgba(46,56,110,.55);letter-spacing:.03em}
+.btn-big{display:inline-flex;align-items:center;gap:12px;border-radius:100px;background:linear-gradient(135deg,#5D6CDB,#4A59C8);color:#fff;font-weight:600;padding:20px 40px;font-size:18px;transition:all .25s;box-shadow:0 12px 32px rgba(93,108,219,.25)}
+.btn-big:hover{box-shadow:0 16px 40px rgba(93,108,219,.3);transform:translateY(-2px)}
+.btn-big svg{width:20px;height:20px;transition:transform .2s}
+.btn-big:hover svg{transform:translateX(4px)}
+.guarantees{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px 24px;margin-top:32px}
+.guarantee{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(46,56,110,.4);font-weight:500}
+.guarantee svg{width:14px;height:14px;color:#10b981}
+
+/* --- FOOTER --- */
+.footer{border-top:1px solid rgba(0,0,0,.05);background:var(--bg);padding:48px 0}
+.footer-inner{display:flex;flex-direction:column;align-items:center;gap:24px}
+@media(min-width:640px){.footer-inner{flex-direction:row;justify-content:space-between}}
+.footer-logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}
+.footer-logo img{width:24px;height:24px;border-radius:4px}
+.footer-links{display:flex;align-items:center;gap:24px}
+.footer-links a{font-size:12px;color:rgba(46,56,110,.35);transition:color .2s}
+.footer-links a:hover{color:var(--blue)}
+.footer-copy{font-size:12px;color:rgba(46,56,110,.25)}
+
+/* SVG icons inline */
+.icon{display:inline-flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+
+<!-- ========== NAVBAR ========== -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#5D6CDB"/><text x="14" y="19" text-anchor="middle" fill="white" font-size="14" font-weight="700" font-family="Inter,sans-serif">T</text></svg>
+      <span>Tipote</span>
+    </a>
+    <div class="nav-links">
+      <a href="#fonctionnalites">Fonctionnalites</a>
+      <a href="#comment-ca-marche">Comment ca marche</a>
+      <a href="#resultats">Resultats</a>
+    </div>
+    <div class="nav-actions" style="display:flex;align-items:center;gap:12px">
+      <a href="#" style="font-size:14px;font-weight:500;color:rgba(46,56,110,.6);padding:8px 16px">Connexion</a>
+      <a href="#cta" class="nav-cta">Commencer gratuitement</a>
+    </div>
+    <button class="nav-mobile-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#fonctionnalites" onclick="this.parentElement.classList.remove('open')">Fonctionnalites</a>
+  <a href="#comment-ca-marche" onclick="this.parentElement.classList.remove('open')">Comment ca marche</a>
+  <a href="#resultats" onclick="this.parentElement.classList.remove('open')">Resultats</a>
+  <a href="#cta" class="nav-cta" style="text-align:center;margin-top:8px" onclick="this.parentElement.classList.remove('open')">Commencer gratuitement</a>
+</div>
+
+<!-- ========== HERO ========== -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-orb-1"></div>
+  <div class="hero-orb-2"></div>
+  <div class="hero-content">
+    <div class="hero-badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span>Le systeme d'exploitation des solobuilders</span>
+    </div>
+    <h1>Ton business a besoin<br><span class="hero-text-gradient">d'un cerveau.</span></h1>
+    <p class="hero-sub">Tipote memorise ton business, structure ta strategie, genere tes contenus et publie sur 7 reseaux. Un seul endroit pour tout faire tourner.</p>
+    <div class="hero-buttons">
+      <a href="#cta" class="btn-primary">
+        Essayer gratuitement
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <a href="#comment-ca-marche" class="btn-secondary">Voir comment ca marche</a>
+    </div>
+
+    <!-- HERO MOCKUP -->
+    <div class="hero-mockup">
+      <div class="mockup-browser" style="position:relative">
+        <div class="mockup-titlebar">
+          <div class="mockup-dots"><span></span><span></span><span></span></div>
+          <div class="mockup-url"><span>app.tipote.com</span></div>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-grid">
+            <div class="mockup-sidebar">
+              <div class="mockup-sidebar-item active">Dashboard</div>
+              <div class="mockup-sidebar-item">Strategie</div>
+              <div class="mockup-sidebar-item">Contenus</div>
+              <div class="mockup-sidebar-item">Publication</div>
+              <div class="mockup-sidebar-item">Analytics</div>
+            </div>
+            <div class="mockup-main">
+              <div class="mockup-banner">
+                <div class="mockup-banner-title">Bonjour, Marie</div>
+                <div class="mockup-banner-sub">3 taches prioritaires aujourd'hui</div>
+              </div>
+              <div class="mockup-stats">
+                <div class="mockup-stat"><div class="mockup-stat-label">Leads</div><div class="mockup-stat-value">127</div><div class="mockup-stat-trend">+23%</div></div>
+                <div class="mockup-stat"><div class="mockup-stat-label">Contenus</div><div class="mockup-stat-value">48</div><div class="mockup-stat-trend">+12</div></div>
+                <div class="mockup-stat"><div class="mockup-stat-label">Vues</div><div class="mockup-stat-value">3.2k</div><div class="mockup-stat-trend">+18%</div></div>
+              </div>
+              <div class="mockup-chart" id="mockupChart"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Floating badges -->
+        <div class="float-badge float-badge-left">
+          <div class="float-badge-icon" style="background:rgba(193,255,111,.15);color:#5D6CDB">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div><div class="float-badge-text">Contenu genere</div><div class="float-badge-sub">Post LinkedIn pret</div></div>
+        </div>
+        <div class="float-badge float-badge-right">
+          <div class="float-badge-icon" style="background:rgba(16,185,129,.1);color:#10b981">+1</div>
+          <div><div class="float-badge-text">Nouveau lead</div><div class="float-badge-sub">Via page de capture</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="hero-trust">Gratuit pour commencer &middot; Aucune carte requise &middot; Pret en 5 minutes</p>
+  </div>
+</section>
+
+<!-- ========== PROBLEM SECTION ========== -->
+<section class="section problem">
+  <div class="container">
+    <div class="text-center reveal">
+      <p class="section-label">Le vrai probleme</p>
+      <h2 class="section-title">Tu travailles beaucoup.<br><span class="muted">Mais rien ne decolle.</span></h2>
+      <p class="section-desc">Ce n'est pas un probleme de motivation. C'est un probleme de systeme. Tu accumules les outils, les formations et les strategies sans jamais avoir une vision claire de ce qui va fonctionner.</p>
+    </div>
+
+    <div class="pain-grid">
+      <div class="pain-card stagger-item">
+        <div class="pain-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></div>
+        <h3>La dispersion</h3>
+        <p>Tu passes d'une strategie a l'autre sans jamais finir ce que tu commences.</p>
+      </div>
+      <div class="pain-card stagger-item">
+        <div class="pain-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+        <h3>Trop d'outils</h3>
+        <p>8 a 12 abonnements qui ne se parlent pas. Tu geres plus d'outils que de clients.</p>
+      </div>
+      <div class="pain-card stagger-item">
+        <div class="pain-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <h3>L'IA generique</h3>
+        <p>ChatGPT ne connait ni ton business, ni ton audience. Tu repars de zero a chaque fois.</p>
+      </div>
+      <div class="pain-card stagger-item">
+        <div class="pain-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <h3>Le contenu qui prend des heures</h3>
+        <p>3 heures pour un post. 3 likes. Tu merites mieux.</p>
+      </div>
+      <div class="pain-card stagger-item">
+        <div class="pain-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+        <h3>Beaucoup de travail, peu de resultats</h3>
+        <p>Tu travailles autant qu'un salarie. Mais les revenus ne suivent pas.</p>
+      </div>
+      <div class="pain-card stagger-item">
+        <div class="pain-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <h3>12 formations, 0 systeme</h3>
+        <p>Tu sais quoi faire. Mais tu n'as toujours pas de systeme coherent.</p>
+      </div>
+    </div>
+
+    <div class="text-center reveal" style="margin-top:64px">
+      <div class="quote-block">
+        <div class="quote-mark">&ldquo;</div>
+        <p class="quote-text">Pourquoi ca ne decolle pas alors que je travaille autant ?</p>
+        <p class="quote-author">— La question que tu te poses chaque soir</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== SOLUTION SECTION ========== -->
+<section class="section solution" id="fonctionnalites">
+  <div class="container">
+    <div class="text-center reveal">
+      <p class="section-label">La solution</p>
+      <h2 class="section-title">Un seul systeme.<br><span class="hero-text-gradient">Quatre piliers.</span></h2>
+      <p class="section-desc">Les autres outils resolvent un morceau du probleme. Tipote les reunit dans un systeme coherent qui connait ton business.</p>
+    </div>
+
+    <!-- 3 differentiators -->
+    <div class="diff-grid reveal" style="margin-top:48px">
+      <div class="diff-card stagger-item">
+        <div class="diff-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <h3>Memoire business</h3>
+        <p>Tipote se souvient de tout. Ton profil, tes offres, ton audience, ta strategie. Comme un medecin traitant du business.</p>
+      </div>
+      <div class="diff-card stagger-item">
+        <div class="diff-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <h3>Execution integree</h3>
+        <p>Pas juste des conseils. Tipote genere, organise, publie et analyse. Tout est actionnable.</p>
+      </div>
+      <div class="diff-card stagger-item">
+        <div class="diff-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>Anti-complexite</h3>
+        <p>Un seul endroit pour faire tourner ton activite. Plus de jonglage entre 12 outils.</p>
+      </div>
+    </div>
+
+    <!-- Pillar tabs -->
+    <div class="pillar-box reveal" style="margin-top:16px">
+      <div class="pillar-tabs">
+        <button class="pillar-tab active" data-tab="strategie" onclick="switchPillar('strategie')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          Strategie
+        </button>
+        <button class="pillar-tab" data-tab="contenu" onclick="switchPillar('contenu')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+          Contenu
+        </button>
+        <button class="pillar-tab" data-tab="publication" onclick="switchPillar('publication')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Publication
+        </button>
+        <button class="pillar-tab" data-tab="analytics" onclick="switchPillar('analytics')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Analytics
+        </button>
+      </div>
+
+      <!-- Strategie -->
+      <div class="pillar-content active" id="pillar-strategie">
+        <div>
+          <div class="pillar-icon-big" style="background:rgba(93,108,219,.08)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5D6CDB" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+          <h3>Un plan clair, pas une to-do list infinie.</h3>
+          <p>Tipote analyse ton business et genere un plan strategique sur 90 jours. Offres, positionnement, audience, objectifs — tout est structure pour toi.</p>
+          <ul class="pillar-details">
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Diagnostic business complet</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Plan strategique 90 jours personnalise</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Propositions d'offres alignees a ton audience</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Taches prioritaires identifiees automatiquement</li>
+          </ul>
+        </div>
+        <div class="pillar-visual"><div class="pillar-visual-inner">
+          <div class="pv-card"><div class="pv-label">Plan Strategique 90 jours</div>
+            <div class="pv-phase" style="width:60%">Semaine 1-4 : Positionnement</div>
+            <div class="pv-phase" style="width:75%">Semaine 5-8 : Acquisition</div>
+            <div class="pv-phase" style="width:90%">Semaine 9-12 : Monetisation</div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Contenu -->
+      <div class="pillar-content" id="pillar-contenu">
+        <div>
+          <div class="pillar-icon-big" style="background:rgba(139,92,246,.08)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></div>
+          <h3>Des contenus qui te ressemblent. En quelques clics.</h3>
+          <p>L'IA de Tipote connait ton style, ton audience et tes offres. Elle genere des posts, emails, articles et scripts qui parlent vraiment a tes clients.</p>
+          <ul class="pillar-details">
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Posts reseaux sociaux adaptes a chaque plateforme</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Emails et newsletters personnalises</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Articles de blog et scripts video</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Strategie editoriale automatisee</li>
+          </ul>
+        </div>
+        <div class="pillar-visual"><div class="pillar-visual-inner">
+          <div class="pv-card">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div style="width:24px;height:24px;border-radius:50%;background:#0A66C2;display:flex;align-items:center;justify-content:center;color:#fff;font-size:8px;font-weight:700">in</div>
+              <span style="font-size:12px;font-weight:500;color:rgba(46,56,110,.55)">Post LinkedIn</span>
+            </div>
+            <p style="font-size:12px;color:rgba(46,56,110,.45);line-height:1.6">La plupart des solobuilders travaillent 10h/jour...<br>sans systeme clair pour avancer.<br><br>Voici ce que j'ai change dans mon approche<span style="animation:pulse 1s infinite">|</span></p>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <div style="border-radius:8px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:8px 12px;font-size:10px;color:rgba(46,56,110,.45)">Email</div>
+            <div style="border-radius:8px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:8px 12px;font-size:10px;color:rgba(46,56,110,.45)">Blog</div>
+            <div style="border-radius:8px;background:#fff;border:1px solid rgba(0,0,0,.05);padding:8px 12px;font-size:10px;color:rgba(46,56,110,.45)">Script</div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Publication -->
+      <div class="pillar-content" id="pillar-publication">
+        <div>
+          <div class="pillar-icon-big" style="background:rgba(5,150,105,.08)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+          <h3>Publie partout. Depuis un seul endroit.</h3>
+          <p>Connecte tes reseaux et publie en un clic sur LinkedIn, Instagram, Facebook, X, TikTok, Threads et Pinterest. Programme, publie, oublie.</p>
+          <ul class="pillar-details">
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Publication directe sur 7 reseaux sociaux</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Programmation et calendrier editorial</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Auto-commentaires et comment-to-DM</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Images, carousels, videos supportes</li>
+          </ul>
+        </div>
+        <div class="pillar-visual"><div class="pillar-visual-inner">
+          <div class="pv-network-grid">
+            <div class="pv-network"><div class="pv-network-icon" style="background:rgba(10,102,194,.12);color:#0A66C2">Li</div><div class="pv-network-status">Publie</div></div>
+            <div class="pv-network"><div class="pv-network-icon" style="background:rgba(228,64,95,.12);color:#E4405F">Ig</div><div class="pv-network-status">Programme</div></div>
+            <div class="pv-network"><div class="pv-network-icon" style="background:rgba(0,0,0,.08);color:#000">X</div><div class="pv-network-status">Publie</div></div>
+            <div class="pv-network"><div class="pv-network-icon" style="background:rgba(24,119,242,.12);color:#1877F2">Fb</div><div class="pv-network-status">En attente</div></div>
+            <div class="pv-network"><div class="pv-network-icon" style="background:rgba(0,0,0,.08);color:#000">Tk</div><div class="pv-network-status">Publie</div></div>
+            <div class="pv-network"><div class="pv-network-icon" style="background:rgba(0,0,0,.08);color:#000">Th</div><div class="pv-network-status">Programme</div></div>
+            <div class="pv-network"><div class="pv-network-icon" style="background:rgba(189,8,28,.12);color:#BD081C">Pi</div><div class="pv-network-status">Publie</div></div>
+            <div class="pv-network"><div class="pv-network-icon" style="background:rgba(93,108,219,.12);color:#5D6CDB">+</div><div class="pv-network-status"></div></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Analytics -->
+      <div class="pillar-content" id="pillar-analytics">
+        <div>
+          <div class="pillar-icon-big" style="background:rgba(217,119,6,.08)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <h3>Comprends ce qui marche. Amplifie-le.</h3>
+          <p>Tipote analyse tes resultats et te donne des recommandations concretes. Plus besoin de deviner — les donnees parlent pour toi.</p>
+          <ul class="pillar-details">
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Dashboard de performance centralise</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Diagnostic IA de tes resultats</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Suivi des leads et conversions</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Recommandations d'optimisation</li>
+          </ul>
+        </div>
+        <div class="pillar-visual"><div class="pillar-visual-inner">
+          <div class="pv-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:12px;font-weight:500;color:rgba(46,56,110,.55)">Performance</span>
+              <span style="font-size:10px;font-weight:500;color:#10b981">+34% ce mois</span>
+            </div>
+            <div class="pv-bars" id="analyticsBars"></div>
+          </div>
+          <div class="pv-reco" style="margin-top:12px">
+            <div class="pv-reco-label">Recommandation IA</div>
+            <div class="pv-reco-text">Tes posts LinkedIn performent 2x mieux le mardi. Programme tes contenus cles ce jour-la.</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== HOW IT WORKS ========== -->
+<section class="section how" id="comment-ca-marche">
+  <div class="how-glow"></div>
+  <div class="container" style="position:relative">
+    <div class="text-center reveal">
+      <p class="section-label">Comment ca marche</p>
+      <h2 class="section-title">Pret en 3 etapes.<br><span class="muted">Pas 30.</span></h2>
+    </div>
+
+    <div class="steps-grid" style="margin-top:48px">
+      <div class="step stagger-item">
+        <div class="step-number">01</div>
+        <h3>Raconte ton business</h3>
+        <p>En 10 minutes, Tipote capture tout : ton activite, ton audience, tes offres, tes objectifs. Cette memoire alimente chaque action future.</p>
+        <span class="step-tag">Onboarding guide avec IA</span>
+      </div>
+      <div class="step stagger-item">
+        <div class="step-number">02</div>
+        <h3>Tipote construit ton systeme</h3>
+        <p>Strategie 90 jours, contenus personnalises, calendrier editorial — tout est genere automatiquement et adapte a ta situation.</p>
+        <span class="step-tag">Plan + contenus en quelques clics</span>
+      </div>
+      <div class="step stagger-item">
+        <div class="step-number">03</div>
+        <h3>Publie et mesure</h3>
+        <p>Publie sur 7 reseaux en un clic, suis tes resultats et ajuste ta strategie grace aux recommandations IA.</p>
+        <span class="step-tag">Resultats des la premiere semaine</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FEATURES CAROUSEL ========== -->
+<section class="section features">
+  <div class="container">
+    <div class="text-center reveal">
+      <p class="section-label">Et bien plus encore</p>
+      <h2 class="section-title">Tout ce dont tu as besoin.<br><span class="muted">Rien de superflu.</span></h2>
+    </div>
+
+    <div class="reveal" style="margin-top:48px">
+      <div class="carousel-nav">
+        <button class="carousel-btn" id="carouselPrev" onclick="moveCarousel(-1)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button class="carousel-btn" id="carouselNext" onclick="moveCarousel(1)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
+      </div>
+
+      <div class="carousel-track-wrapper">
+        <div class="carousel-track" id="carouselTrack">
+          <div class="feature-card-wrapper"><div class="feature-card">
+            <div class="feature-top"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 12 8 12s8-6 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg></div><span class="feature-tag">Pro & Elite</span></div>
+            <h3>Coach IA contextuel</h3>
+            <p>Un coach disponible 24/7 qui connait ton business, tes blocages et tes objectifs. Il t'aide a debloquer TA situation.</p>
+          </div></div>
+          <div class="feature-card-wrapper"><div class="feature-card">
+            <div class="feature-top"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><span class="feature-tag">Tous les plans</span></div>
+            <h3>Calendrier editorial</h3>
+            <p>Visualise tous tes contenus sur un calendrier. Programme, deplace, reorganise. Ta strategie de contenu, enfin claire.</p>
+          </div></div>
+          <div class="feature-card-wrapper"><div class="feature-card">
+            <div class="feature-top"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><span class="feature-tag">Tous les plans</span></div>
+            <h3>Pages de capture & vente</h3>
+            <p>Cree des pages sans competence technique. Le copywriting est genere par l'IA, adapte a ton audience.</p>
+          </div></div>
+          <div class="feature-card-wrapper"><div class="feature-card">
+            <div class="feature-top"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><span class="feature-tag">Tous les plans</span></div>
+            <h3>Gestion des leads</h3>
+            <p>Capture et gere tes prospects. Chiffrement AES-256 pour la securite. Suis chaque lead jusqu'a la conversion.</p>
+          </div></div>
+          <div class="feature-card-wrapper"><div class="feature-card">
+            <div class="feature-top"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><span class="feature-tag">Pro & Elite</span></div>
+            <h3>Automatisations sociales</h3>
+            <p>Auto-commentaires, comment-to-DM, comment-to-email. Engage ton audience automatiquement.</p>
+          </div></div>
+          <div class="feature-card-wrapper"><div class="feature-card">
+            <div class="feature-top"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg></div><span class="feature-tag">Tous les plans</span></div>
+            <h3>Quiz interactifs</h3>
+            <p>Cree des quiz engageants qui capturent des leads qualifies. L'IA genere les questions adaptees a ta thematique.</p>
+          </div></div>
+          <div class="feature-card-wrapper"><div class="feature-card">
+            <div class="feature-top"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><span class="feature-tag">Pro & Elite</span></div>
+            <h3>Templates Systeme.io</h3>
+            <p>Accede a une bibliotheque de templates pour accelerer la mise en place de tes tunnels de vente.</p>
+          </div></div>
+          <div class="feature-card-wrapper"><div class="feature-card">
+            <div class="feature-top"><div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><span class="feature-tag">Elite</span></div>
+            <h3>Multi-projets</h3>
+            <p>Gere plusieurs activites depuis un seul compte. Chaque projet a sa propre strategie et ses analytics.</p>
+          </div></div>
+        </div>
+      </div>
+
+      <div class="carousel-dots" id="carouselDots"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== COMPARISON ========== -->
+<section class="section comparison">
+  <div class="container">
+    <div class="text-center reveal">
+      <p class="section-label">Pourquoi Tipote</p>
+      <h2 class="section-title">Tu as deja tout essaye.<br><span class="muted">Separement.</span></h2>
+      <p class="section-desc">Formations, outils, IA, coachs — chacun resout un morceau du probleme. Personne ne combine les quatre. Sauf Tipote.</p>
+    </div>
+
+    <div class="comp-cards reveal" style="margin-top:48px">
+      <div class="comp-card" onclick="toggleComp(this)">
+        <div class="comp-card-header"><div><h3>Formations</h3><span>Resolvent : Connaissance</span></div><svg class="comp-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="comp-body"><div class="comp-body-inner">
+          <div><div class="comp-pros-label">Forces</div><ul class="comp-list"><li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Pedagogie</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Cadre strategique</li></ul></div>
+          <div><div class="comp-cons-label">Limites</div><ul class="comp-list"><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Beaucoup de theorie</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pas d'execution</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Depend de ta motivation</li></ul></div>
+          <div class="comp-result">12 formations achetees. 0 systeme coherent.</div>
+        </div></div>
+      </div>
+      <div class="comp-card" onclick="toggleComp(this)">
+        <div class="comp-card-header"><div><h3>Outils SaaS</h3><span>Resolvent : Execution technique</span></div><svg class="comp-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="comp-body"><div class="comp-body-inner">
+          <div><div class="comp-pros-label">Forces</div><ul class="comp-list"><li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Automatisation</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Fonctionnalites specialisees</li></ul></div>
+          <div><div class="comp-cons-label">Limites</div><ul class="comp-list"><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>8-12 outils a gerer</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Ne se parlent pas</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Couteux</li></ul></div>
+          <div class="comp-result">Tu geres plus d'outils que de clients.</div>
+        </div></div>
+      </div>
+      <div class="comp-card" onclick="toggleComp(this)">
+        <div class="comp-card-header"><div><h3>IA generiques</h3><span>Resolvent : Production contenu</span></div><svg class="comp-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="comp-body"><div class="comp-body-inner">
+          <div><div class="comp-pros-label">Forces</div><ul class="comp-list"><li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Rapidite</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Polyvalence</li></ul></div>
+          <div><div class="comp-cons-label">Limites</div><ul class="comp-list"><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Repartent de zero</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Reponses generiques</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Aucune memoire</li></ul></div>
+          <div class="comp-result">Contenu peu differencie, strategie inexistante.</div>
+        </div></div>
+      </div>
+      <div class="comp-card" onclick="toggleComp(this)">
+        <div class="comp-card-header"><div><h3>Coachs business</h3><span>Resolvent : Strategie</span></div><svg class="comp-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="comp-body"><div class="comp-body-inner">
+          <div><div class="comp-pros-label">Forces</div><ul class="comp-list"><li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Vision strategique</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Adaptation humaine</li></ul></div>
+          <div><div class="comp-cons-label">Limites</div><ul class="comp-list"><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>500 a 3000 euros/mois</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Disponibilite limitee</li><li><svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Dependance</li></ul></div>
+          <div class="comp-result">Pas la quand tu bloques a 23h sur ta page de vente.</div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- Comparison table -->
+    <div class="comp-table-wrap reveal">
+      <table class="comp-table">
+        <thead><tr>
+          <th>Fonctionnalite</th>
+          <th class="tipote-col">Tipote</th>
+          <th>Formations</th>
+          <th>Outils</th>
+          <th>IA</th>
+          <th>Coachs</th>
+        </tr></thead>
+        <tbody id="compTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ========== TRANSFORMATION ========== -->
+<section class="section transformation" id="resultats">
+  <div class="container">
+    <div class="text-center reveal">
+      <p class="section-label">La transformation</p>
+      <h2 class="section-title">Avant Tipote.<br><span class="hero-text-gradient">Apres Tipote.</span></h2>
+    </div>
+
+    <div class="toggle-wrap reveal">
+      <div class="toggle-bar">
+        <button class="toggle-btn" id="toggleBefore" onclick="switchBA(false)">Avant</button>
+        <button class="toggle-btn active-after" id="toggleAfter" onclick="switchBA(true)">Apres</button>
+      </div>
+    </div>
+
+    <div class="ba-grid reveal" id="baGrid"></div>
+
+    <div class="emo-banner reveal" style="margin-top:64px">
+      <h3>La clarte. Enfin.</h3>
+      <p>Tu n'as plus l'impression de courir dans toutes les directions. Ton activite a du sens, une direction et une coherence. Tu te sens enfin maitre de ta trajectoire professionnelle.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== CTA ========== -->
+<section class="section cta-section" id="cta">
+  <div class="cta-grid-bg"></div>
+  <div class="cta-orb"></div>
+  <div class="container">
+    <div class="cta-inner reveal">
+      <div class="cta-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Rejoins les solobuilders qui avancent</span>
+      </div>
+      <h2 class="section-title">Arrete de disperser tes efforts.<br><span class="hero-text-gradient">Commence a construire.</span></h2>
+      <p class="section-desc">Tipote est le seul outil qui memorise ton business, structure ta strategie, genere tes contenus et publie sur tes reseaux. Tout, depuis un seul endroit.</p>
+      <div style="margin-top:40px">
+        <a href="#" class="btn-big">
+          Essayer Tipote gratuitement
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </div>
+      <div class="guarantees">
+        <div class="guarantee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Gratuit pour demarrer</div>
+        <div class="guarantee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Aucune carte bancaire requise</div>
+        <div class="guarantee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Pret en 5 minutes</div>
+        <div class="guarantee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Support reactif</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#5D6CDB"/><text x="14" y="19" text-anchor="middle" fill="white" font-size="14" font-weight="700" font-family="Inter,sans-serif">T</text></svg>
+        <span>Tipote</span>
+      </div>
+      <div class="footer-links">
+        <a href="#">Mentions legales</a>
+        <a href="#">CGV</a>
+        <a href="#">Confidentialite</a>
+      </div>
+      <p class="footer-copy">&copy; 2026 Tipote. Tous droits reserves.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ===== SCROLL REVEAL =====
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      // Stagger children
+      const items = entry.target.querySelectorAll('.stagger-item');
+      items.forEach((item, i) => {
+        setTimeout(() => item.classList.add('visible'), i * 120);
+      });
+    }
+  });
+}, { threshold: 0.1, rootMargin: '-60px' });
+
+document.querySelectorAll('.reveal, .stagger-item').forEach(el => {
+  if (!el.closest('.reveal')) observer.observe(el);
+  else if (el.classList.contains('reveal')) observer.observe(el);
+});
+
+// ===== NAVBAR SCROLL =====
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });
+
+// ===== HERO MOCKUP BARS =====
+const barHeights = [30, 45, 35, 60, 50, 75, 65, 80, 70, 90, 85, 95];
+const chart = document.getElementById('mockupChart');
+barHeights.forEach((h, i) => {
+  const bar = document.createElement('div');
+  bar.className = 'mockup-bar';
+  bar.style.animationDelay = (1.2 + i * 0.05) + 's';
+  bar.style.height = h + '%';
+  chart.appendChild(bar);
+});
+
+// ===== ANALYTICS BARS =====
+const abHeights = [25, 35, 30, 45, 40, 55, 50, 65, 60, 75, 70, 85];
+const abEl = document.getElementById('analyticsBars');
+if (abEl) {
+  abHeights.forEach(h => {
+    const bar = document.createElement('div');
+    bar.className = 'pv-bar';
+    bar.style.height = h + '%';
+    bar.style.background = 'rgba(217,119,6,.25)';
+    abEl.appendChild(bar);
+  });
+}
+
+// ===== PILLAR TABS =====
+function switchPillar(id) {
+  document.querySelectorAll('.pillar-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.pillar-content').forEach(c => c.classList.remove('active'));
+  document.querySelector('[data-tab="'+id+'"]').classList.add('active');
+  document.getElementById('pillar-'+id).classList.add('active');
+}
+
+// ===== CAROUSEL =====
+let carouselIndex = 0;
+const track = document.getElementById('carouselTrack');
+const cards = track.children;
+let itemsPerView = 3;
+function getItemsPerView() {
+  if (window.innerWidth < 640) return 1;
+  if (window.innerWidth < 1024) return 2;
+  return 3;
+}
+function updateCarousel() {
+  itemsPerView = getItemsPerView();
+  const maxIdx = Math.max(0, cards.length - itemsPerView);
+  carouselIndex = Math.min(carouselIndex, maxIdx);
+  const pct = (carouselIndex * (100 / itemsPerView));
+  track.style.transform = 'translateX(-' + pct + '%)';
+  document.getElementById('carouselPrev').disabled = carouselIndex <= 0;
+  document.getElementById('carouselNext').disabled = carouselIndex >= maxIdx;
+  // dots
+  const dotsEl = document.getElementById('carouselDots');
+  dotsEl.innerHTML = '';
+  for (let i = 0; i <= maxIdx; i++) {
+    const dot = document.createElement('button');
+    dot.className = 'carousel-dot' + (i === carouselIndex ? ' active' : '');
+    dot.onclick = () => { carouselIndex = i; updateCarousel(); };
+    dotsEl.appendChild(dot);
+  }
+}
+function moveCarousel(dir) {
+  const maxIdx = Math.max(0, cards.length - getItemsPerView());
+  carouselIndex = Math.max(0, Math.min(maxIdx, carouselIndex + dir));
+  updateCarousel();
+}
+window.addEventListener('resize', updateCarousel);
+updateCarousel();
+// Auto-advance
+setInterval(() => {
+  const maxIdx = Math.max(0, cards.length - getItemsPerView());
+  carouselIndex = carouselIndex >= maxIdx ? 0 : carouselIndex + 1;
+  updateCarousel();
+}, 5000);
+
+// ===== COMPARISON CARDS =====
+function toggleComp(card) {
+  card.classList.toggle('open');
+}
+
+// ===== COMPARISON TABLE =====
+const compData = [
+  { label: 'Strategie personnalisee', tipote: 'yes', formations: 'partial', outils: 'no', ia: 'no', coachs: 'yes' },
+  { label: 'Memoire business', tipote: 'yes', formations: 'no', outils: 'no', ia: 'no', coachs: 'partial' },
+  { label: 'Generation de contenu', tipote: 'yes', formations: 'no', outils: 'partial', ia: 'yes', coachs: 'no' },
+  { label: 'Publication directe', tipote: 'yes', formations: 'no', outils: 'partial', ia: 'no', coachs: 'no' },
+  { label: 'Analytics integres', tipote: 'yes', formations: 'no', outils: 'partial', ia: 'no', coachs: 'no' },
+  { label: 'Disponible 24/7', tipote: 'yes', formations: 'yes', outils: 'yes', ia: 'yes', coachs: 'no' },
+  { label: 'Prix accessible', tipote: 'yes', formations: 'partial', outils: 'no', ia: 'yes', coachs: 'no' },
+  { label: 'Systeme tout-en-un', tipote: 'yes', formations: 'no', outils: 'no', ia: 'no', coachs: 'no' },
+];
+function statusSvg(val) {
+  if (val === 'yes') return '<span class="status-icon status-yes"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span>';
+  if (val === 'partial') return '<span class="status-icon status-partial"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>';
+  return '<span class="status-icon status-no"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';
+}
+const tbody = document.getElementById('compTableBody');
+compData.forEach(row => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td>'+row.label+'</td><td>'+statusSvg(row.tipote)+'</td><td>'+statusSvg(row.formations)+'</td><td>'+statusSvg(row.outils)+'</td><td>'+statusSvg(row.ia)+'</td><td>'+statusSvg(row.coachs)+'</td>';
+  tbody.appendChild(tr);
+});
+
+// ===== BEFORE/AFTER =====
+const baData = [
+  { before: '3 heures pour rediger un post. 3 likes.', after: 'Contenus generes en quelques clics. Engagement reel.' },
+  { before: '8 outils qui ne se parlent pas.', after: 'Un seul tableau de bord pour tout piloter.' },
+  { before: 'Strategie floue. Actions dispersees.', after: 'Plan 90 jours clair. Priorites identifiees.' },
+  { before: 'Copier-coller entre les reseaux.', after: 'Publication directe sur 7 plateformes.' },
+  { before: "L'IA ne connait pas ton business.", after: 'Une IA qui memorise et personnalise tout.' },
+  { before: "Blocage a 23h, personne pour t'aider.", after: 'Coach IA disponible 24/7.' },
+];
+let showAfter = true;
+function renderBA() {
+  const grid = document.getElementById('baGrid');
+  grid.innerHTML = '';
+  baData.forEach((item, i) => {
+    const card = document.createElement('div');
+    card.className = 'ba-card ' + (showAfter ? 'after' : 'before');
+    card.style.animation = 'fadeUp .3s ease ' + (i * 0.05) + 's both';
+    if (showAfter) {
+      card.innerHTML = '<div class="ba-dot ba-dot-green"></div><p>'+item.after+'</p>';
+    } else {
+      card.innerHTML = '<div class="ba-dot ba-dot-red"></div><p>'+item.before+'</p>';
+    }
+    grid.appendChild(card);
+  });
+  document.getElementById('toggleBefore').className = 'toggle-btn' + (!showAfter ? ' active-before' : '');
+  document.getElementById('toggleAfter').className = 'toggle-btn' + (showAfter ? ' active-after' : '');
+}
+function switchBA(after) { showAfter = after; renderBA(); }
+renderBA();
+</script>
+</body>
+</html>
