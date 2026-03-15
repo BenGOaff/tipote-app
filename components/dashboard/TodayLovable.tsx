@@ -969,13 +969,17 @@ export default function TodayLovable() {
                         </div>
                       ) : null}
 
-                      {/* Encouragement: last completed task or positive category summary */}
+                      {/* Encouragement: last completed task, positive summary, or default */}
                       {lastDoneTask ? (
                         <p className="text-sm text-muted-foreground leading-relaxed">
                           {t("encouragement", { task: lastDoneTask })}
                         </p>
                       ) : positiveText ? (
                         <p className="text-sm text-muted-foreground leading-relaxed">{positiveText}</p>
+                      ) : nextTask ? (
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {t("encouragementDefault")}
+                        </p>
                       ) : null}
 
                       <Button asChild variant="default" className="w-full gap-2 mt-auto">
