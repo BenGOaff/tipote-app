@@ -237,12 +237,16 @@ export async function POST() {
 
     if (projectId) planQuery = planQuery.eq("project_id", projectId);
 
-    const { data: planRow, error: planErr } = await planQuery
-      .maybeSingle<{ plan_json: unknown }>();
+    // Use .limit(1).single-like approach to avoid maybeSingle error on multiple rows
+    const { data: planRows, error: planErr } = await planQuery
+      .order("created_at", { ascending: false })
+      .limit(1);
 
     if (planErr) {
       return NextResponse.json({ ok: false, error: planErr.message }, { status: 400 });
     }
+
+    const planRow = planRows?.[0] ?? null;
 
     const planJson = planRow?.plan_json ?? null;
     const tasks = extractTasksFromPlan(planJson);
@@ -255,18 +259,22 @@ export async function POST() {
     // ⚠️ On inclut aussi les tâches soft-deleted pour ne pas les recréer
     const sources = Array.from(new Set(tasks.map((t) => t.source))).filter(Boolean);
 
-    let existingQuery = supabaseAdmin
-      .from("project_tasks")
-      .select("id,title,source,priority,status,deleted_at")
-      .eq("user_id", userId)
-      .in("source", sources);
+    let existing: any[] = [];
+    if (sources.length > 0) {
+      let existingQuery = supabaseAdmin
+        .from("project_tasks")
+        .select("id,title,source,priority,status,deleted_at")
+        .eq("user_id", userId)
+        .in("source", sources);
 
-    if (projectId) existingQuery = existingQuery.eq("project_id", projectId);
+      if (projectId) existingQuery = existingQuery.eq("project_id", projectId);
 
-    const { data: existing, error: existingErr } = await existingQuery;
+      const { data: existingRows, error: existingErr } = await existingQuery;
 
-    if (existingErr) {
-      return NextResponse.json({ ok: false, error: existingErr.message }, { status: 500 });
+      if (existingErr) {
+        return NextResponse.json({ ok: false, error: existingErr.message }, { status: 500 });
+      }
+      existing = existingRows ?? [];
     }
 
     const existingIndex = new Map<
