@@ -900,7 +900,7 @@ export default function TodayLovable() {
                     title={t(`objective.phase.${objective.phaseKey}`)}
                     subtitle={objective.focus
                       ? (objective.focus.length > 80 ? objective.focus.slice(0, 77) + "…" : objective.focus)
-                      : undefined}
+                      : ""}
                   >
                     <Button asChild variant="secondary" className="gap-2 shrink-0">
                       <Link href={objective.ctaHref}>
