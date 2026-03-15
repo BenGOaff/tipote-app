@@ -116,8 +116,8 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
 
         out.push({
           title: clampLen(title, 180),
-          priority: null,
-          source: `action_plan_30_90:${k}`,
+          priority: "medium",
+          source: "strategy",
         });
       }
     }
@@ -136,7 +136,7 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
       out.push({
         title: clampLen(qw, 180),
         priority: "high",
-        source: "offer_audit",
+        source: "strategy",
       });
     }
 
@@ -152,7 +152,7 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
       out.push({
         title: clampLen(title, 180),
         priority: "medium",
-        source: "offer_audit",
+        source: "strategy",
       });
     }
   }
@@ -169,7 +169,7 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
       out.push({
         title: clampLen(sc, 180),
         priority: "medium",
-        source: "offer_alternatives",
+        source: "strategy",
       });
     }
 
@@ -179,7 +179,7 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
       out.push({
         title: clampLen(firstTest, 180),
         priority: "high",
-        source: "offer_alternatives",
+        source: "strategy",
       });
     }
   }
@@ -196,7 +196,7 @@ function extractTasksFromPlan(planJson: unknown): TaskFromPlan[] {
       out.push({
         title: clampLen(title, 180),
         priority: normalizePriority((item as any).priority ?? (item as any).importance),
-        source: "tasks",
+        source: "strategy",
       });
     }
   }
@@ -320,7 +320,7 @@ export async function POST() {
         const insertPayload: Record<string, unknown> = {
           user_id: userId,
           title: t.title,
-          priority: t.priority ?? null,
+          priority: t.priority ?? "medium",
           status: "todo" satisfies Status,
           source: t.source,
         };
