@@ -716,6 +716,7 @@
     "loading": "جارٍ التحميل...",
     "objectiveLabel": "هدفك الآن",
     "thisWeek": "هذا الأسبوع",
+    "encouragement": "أحسنت، أنهيت « {task} »! استمر، كل خطوة تقرّبك من أهدافك.",
     "progressionTitle": "تقدّمك",
     "progressionSub": "نتائجك الملموسة",
     "contentsCreated": "المحتوى المُنشأ",
