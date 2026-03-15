@@ -548,11 +548,16 @@ export default function TodayLovable() {
         if (cancelled) return;
 
         // ------ Fetch plan ------
-        const planRes = await supabase
+        const planResRaw = await supabase
           .from("business_plan")
           .select("plan_json, created_at")
           .eq("user_id", userId)
-          .maybeSingle();
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const planRes = {
+          data: planResRaw.data?.[0] ?? null,
+          error: planResRaw.error,
+        };
 
         // ------ Fetch tasks directly (no project_id filter, like strategy page) ------
         let tasks: AnyRecord[] = [];
