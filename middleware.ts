@@ -192,16 +192,22 @@ export async function middleware(req: NextRequest) {
     }
 
     // Fallback : vérifier par user_id seul (beta users sans cookie projet)
-    const { data: bp, error } = await supabase
+    // ✅ Query business_profiles WITH project_id to also auto-set the cookie
+    const { data: bpRows, error: bpError } = await supabase
       .from("business_profiles")
-      .select("onboarding_completed, ui_locale")
+      .select("onboarding_completed, ui_locale, project_id")
       .eq("user_id", user.id)
-      .maybeSingle();
+      .order("onboarding_completed", { ascending: false }) // completed ones first
+      .limit(5);
 
-    if (error) return res; // fail-open DB
+    if (bpError) return res; // fail-open DB
 
-    // Cross-device locale sync: if DB has a saved ui_locale, apply it to cookie.
-    const dbLocale = (bp as any)?.ui_locale;
+    // Find the best profile: prefer completed ones, with project_id
+    const completedBp = (bpRows ?? []).find((r: any) => r.onboarding_completed === true);
+    const anyBp = completedBp ?? (bpRows ?? [])[0] ?? null;
+
+    // Cross-device locale sync
+    const dbLocale = (anyBp as any)?.ui_locale;
     if (dbLocale && SUPPORTED_LOCALES.includes(dbLocale)) {
       res.cookies.set(UI_LOCALE_COOKIE, dbLocale, {
         path: "/",
@@ -210,13 +216,32 @@ export async function middleware(req: NextRequest) {
       });
     }
 
-    if (!bp?.onboarding_completed) {
+    // ✅ Auto-set project cookie for beta users so this fallback doesn't run on every request
+    if (anyBp && (anyBp as any).project_id) {
+      res.cookies.set(ACTIVE_PROJECT_COOKIE, (anyBp as any).project_id, {
+        path: "/",
+        maxAge: 365 * 24 * 60 * 60,
+        sameSite: "lax",
+      });
+    }
+
+    // If we found a completed profile, let the user through
+    if (completedBp) {
+      return res;
+    }
+
+    // No completed profile found
+    if (!anyBp) {
+      // No profile at all — need onboarding
       const url = req.nextUrl.clone();
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);
     }
 
-    return res;
+    // Profile exists but onboarding not completed
+    const url = req.nextUrl.clone();
+    url.pathname = "/onboarding";
+    return NextResponse.redirect(url);
   } catch {
     return res; // fail-open total
   }

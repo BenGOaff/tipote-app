@@ -119,23 +119,27 @@ export async function POST(req: Request) {
 
     // ✅ Validate minimum viable data before allowing completion
     // Without at least niche or main_goal, strategy generation produces empty results
-    try {
-      let bpQuery = supabase.from("business_profiles").select("niche,main_goal,mission").eq("user_id", userId);
-      if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
-      const { data: bpCheck } = await bpQuery.maybeSingle();
+    // ✅ Skip validation if `force` flag is set (emergency fallback from onboarding questionnaire)
+    const forceComplete = !!(body as any)?.force || !!(body as any)?.diagnosticCompleted;
+    if (!forceComplete) {
+      try {
+        let bpQuery = supabase.from("business_profiles").select("niche,main_goal,mission").eq("user_id", userId);
+        if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
+        const { data: bpCheck } = await bpQuery.maybeSingle();
 
-      const hasNiche = typeof bpCheck?.niche === "string" && bpCheck.niche.trim().length > 0;
-      const hasGoal = typeof bpCheck?.main_goal === "string" && bpCheck.main_goal.trim().length > 0;
-      const hasMission = typeof bpCheck?.mission === "string" && bpCheck.mission.trim().length > 0;
+        const hasNiche = typeof bpCheck?.niche === "string" && bpCheck.niche.trim().length > 0;
+        const hasGoal = typeof bpCheck?.main_goal === "string" && bpCheck.main_goal.trim().length > 0;
+        const hasMission = typeof bpCheck?.mission === "string" && bpCheck.mission.trim().length > 0;
 
-      if (!hasNiche && !hasGoal && !hasMission) {
-        return NextResponse.json(
-          { ok: false, error: "insufficient_data", message: "Il manque des informations essentielles pour générer ta stratégie. Reviens au diagnostic pour compléter." },
-          { status: 422 },
-        );
+        if (!hasNiche && !hasGoal && !hasMission) {
+          return NextResponse.json(
+            { ok: false, error: "insufficient_data", message: "Il manque des informations essentielles pour générer ta stratégie. Reviens au diagnostic pour compléter." },
+            { status: 422 },
+          );
+        }
+      } catch {
+        // best-effort: if the check fails, allow completion anyway (fail-open)
       }
-    } catch {
-      // best-effort: if the check fails, allow completion anyway (fail-open)
     }
 
     // 1) business_profiles = source de vérité UI
@@ -187,7 +191,16 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true });
+    // ✅ Set project cookie in response to prevent middleware loop
+    const response = NextResponse.json({ ok: true });
+    if (projectId) {
+      response.cookies.set("tipote_active_project", projectId, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+      });
+    }
+    return response;
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },

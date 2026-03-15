@@ -47,6 +47,19 @@ export default async function OnboardingPage() {
     } catch {
       // fail-open
     }
+
+    // ✅ Persist the active project cookie so middleware doesn't re-trigger onboarding
+    if (activeProjectId) {
+      try {
+        cookieStore.set(ACTIVE_PROJECT_COOKIE, activeProjectId, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: "lax",
+        });
+      } catch {
+        // read-only context — will be set client-side via questionnaire API
+      }
+    }
   }
 
   // Check if onboarding already completed for the active project

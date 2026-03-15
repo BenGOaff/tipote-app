@@ -352,7 +352,11 @@ export default function PyramidSelection() {
       setBootStep(1);
       let fullOk = false;
       try {
-        const result = await callStrategySSE({});
+        // ✅ Timeout the SSE call to prevent infinite hang on "je peaufine ton espace"
+        const result = await Promise.race([
+          callStrategySSE({}),
+          new Promise<never>((_, r) => setTimeout(() => r(new Error("strategy_timeout")), 60_000)),
+        ]);
         fullOk = Boolean(result?.success);
       } catch {
         fullOk = false;
