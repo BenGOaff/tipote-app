@@ -498,8 +498,8 @@ export default function TodayLovable() {
 
   const [objective, setObjective] = useState<StrategicObjective | null>(null);
   const [coaching, setCoaching] = useState<CoachingInsight | null>(null);
-  const [recentDoneTasks, setRecentDoneTasks] = useState<string[]>([]);
-  const [taskProgress, setTaskProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
+  const [doneCount, setDoneCount] = useState(0);
+  const [encouragementText, setEncouragementText] = useState("");
   const [nextTask, setNextTask] = useState<string | null>(null);
   const [scheduledToday, setScheduledToday] = useState<{ title: string; channel: string; time: string | null }[]>([]);
   const [progression, setProgression] = useState<ProgressionData>({
@@ -520,32 +520,40 @@ export default function TodayLovable() {
 
   const currentWeekLabel = useMemo(() => weekLabel(INTL_LOCALES[locale] ?? "fr-FR"), [locale]);
 
-  // Build smart encouragement based on recent done tasks + progress toward objective
-  const encouragementText = useMemo(() => {
-    if (recentDoneTasks.length === 0) return "";
-    const { done, total } = taskProgress;
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  // Fetch AI-generated encouragement (cached client-side for 30min)
+  const fetchEncouragement = useCallback(async (currentDoneCount: number) => {
+    if (currentDoneCount === 0) { setEncouragementText(""); return; }
+    // Check cache
+    const cacheKey = "tipote_encouragement";
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { text, doneCount: cachedDone, ts } = JSON.parse(cached);
+        const age = Date.now() - ts;
+        // Use cache if <30min old AND done count hasn't changed
+        if (age < 30 * 60 * 1000 && cachedDone === currentDoneCount && text) {
+          setEncouragementText(text);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
 
-    // Summarize recent actions (max 2 short titles)
-    const shortTitles = recentDoneTasks.slice(0, 2).map((t) =>
-      t.length > 50 ? t.slice(0, 47) + "…" : t,
-    );
-    const actionsSummary = shortTitles.length === 1
-      ? shortTitles[0]
-      : `${shortTitles[0]} et ${shortTitles[1]}`;
-
-    // Progress-aware encouragement
-    if (pct >= 80) {
-      return t("encourageSummary.almostDone", { actions: actionsSummary, pct: String(pct) });
-    }
-    if (pct >= 50) {
-      return t("encourageSummary.halfWay", { actions: actionsSummary, pct: String(pct) });
-    }
-    if (done >= 2) {
-      return t("encourageSummary.momentum", { actions: actionsSummary, done: String(done), total: String(total) });
-    }
-    return t("encourageSummary.started", { actions: actionsSummary });
-  }, [recentDoneTasks, taskProgress, t]);
+    try {
+      const res = await fetch("/api/coach/encouragement");
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.ok && json.text) {
+        setEncouragementText(json.text);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            text: json.text,
+            doneCount: json.doneCount ?? currentDoneCount,
+            ts: Date.now(),
+          }));
+        } catch { /* ignore */ }
+      }
+    } catch { /* fail-open */ }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -716,17 +724,12 @@ export default function TodayLovable() {
           prevConversionRate = typeof p.conversion_rate === "number" ? p.conversion_rate : null;
         }
 
-        // Tâches réalisées récemment + prochaine tâche à faire
+        // Tâches réalisées + prochaine tâche à faire
         const sortedByUpdated = [...tasks].sort(
           (a, b) => new Date(toStr(b.updated_at)).getTime() - new Date(toStr(a.updated_at)).getTime(),
         );
         const doneTasks = sortedByUpdated.filter((t) => isDoneStatus(toStr(t.status)));
-        const recentDoneNames = doneTasks.slice(0, 3).map((t) => toStr(t.title ?? t.task ?? t.name).trim());
-        const totalTasks = tasks.filter((t) => {
-          const s = toStr(t.status).toLowerCase().trim();
-          return s !== "cancelled" && s !== "annulé";
-        }).length;
-        const doneCount = doneTasks.length;
+        const currentDoneCount = doneTasks.length;
         let nextIncomplete = tasks
           .filter((t) => {
             const s = toStr(t.status).toLowerCase().trim();
@@ -740,7 +743,7 @@ export default function TodayLovable() {
           })[0];
 
         // If project_tasks is empty but plan_json has tasks, extract first task as suggestion
-        if (!nextIncomplete && doneCount === 0 && planJson) {
+        if (!nextIncomplete && currentDoneCount === 0 && planJson) {
           const firstPlanTask = extractFirstTaskFromPlan(planJson);
           if (firstPlanTask) {
             nextIncomplete = { title: firstPlanTask } as AnyRecord;
@@ -798,9 +801,10 @@ export default function TodayLovable() {
         if (!cancelled) {
           setObjective(obj);
           setCoaching(coach);
-          setRecentDoneTasks(recentDoneNames.filter(Boolean));
-          setTaskProgress({ done: doneCount, total: totalTasks });
+          setDoneCount(currentDoneCount);
           setNextTask(toStr(nextIncomplete?.title) || null);
+          // Fetch AI encouragement (async, non-blocking)
+          fetchEncouragement(currentDoneCount);
           setScheduledToday(todayScheduled);
           setProgression({
             hasMetrics,
@@ -868,7 +872,7 @@ export default function TodayLovable() {
       if (debounceTimer) clearTimeout(debounceTimer);
       if (realtimeChannel) supabase.removeChannel(realtimeChannel);
     };
-  }, [supabase]);
+  }, [supabase, fetchEncouragement]);
 
   // Résumé intelligent de la progression analytics
   const progressionSummary = useMemo(() => buildProgressionSummary(progression), [progression]);
@@ -983,7 +987,7 @@ export default function TodayLovable() {
                             </p>
                           </div>
                         </div>
-                      ) : recentDoneTasks.length === 0 && coaching ? (
+                      ) : doneCount === 0 && coaching ? (
                         <div className="rounded-lg bg-primary/5 border border-primary/15 p-4">
                           <p className="text-sm text-foreground leading-relaxed">
                             {ucFirst(t(`coaching.${coaching.recommendationKey}.recommendation`))} {t(`coaching.${coaching.recommendationKey}.why`)}.
