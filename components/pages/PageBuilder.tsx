@@ -172,7 +172,7 @@ const INLINE_EDIT_SCRIPT = `
 <script data-tipote-injected="1">
 (function(){
   var editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, li, a, button, blockquote, figcaption, td, th, label, .hero-title, .hero-subtitle, .cta-text, [data-editable]';
-  var illustSelectors = '.tp-illust, .tp-visual, .tp-mockup, [data-tipote-visual], svg:not(.tp-toolbar-icon), .tp-float, [class*="illustration"], [class*="animation"]';
+  var illustSelectors = '.tp-illust, .tp-visual, .tp-mockup, [data-tipote-visual], svg:not(.tp-toolbar-icon):not(button svg):not(a svg):not(form svg):not(nav svg):not(label svg), .tp-float, [class*="illustration"], [class*="animation"]';
 
   /* ── Toolbar element (shared, moves to focused element) ── */
   var toolbar = document.createElement('div');
@@ -432,6 +432,8 @@ const INLINE_EDIT_SCRIPT = `
   document.querySelectorAll(illustSelectors).forEach(function(el) {
     if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
     if (el.closest(illustSelectors) !== el) return;
+    // ✅ Skip SVGs inside interactive elements (buttons, links, forms, nav)
+    if (el.tagName === 'svg' && el.closest('button, a, form, nav, label, .tp-nav-burger')) return;
 
     el.style.cursor = 'pointer';
     el.addEventListener('click', function(e) {

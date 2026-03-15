@@ -21,6 +21,7 @@ type PublicPageData = {
   slug: string;
   page_type: string;
   html_snapshot: string;
+  locale?: string;
   capture_enabled: boolean;
   capture_heading: string;
   capture_subtitle: string;
@@ -45,9 +46,8 @@ type PublicPageData = {
   google_tag_id?: string;
 };
 
-function pageTexts(addressForm?: string) {
-  const v = addressForm === "vous";
-  return {
+const OVERLAY_I18N: Record<string, (v: boolean) => Record<string, string>> = {
+  fr: (v) => ({
     loading: "Chargement...",
     notFoundTitle: "Page introuvable",
     notFoundDesc: "Cette page n\u2019existe pas ou n\u2019est plus disponible.",
@@ -66,11 +66,80 @@ function pageTexts(addressForm?: string) {
     thanksRedirect: v
       ? "Vous allez \u00eatre redirig\u00e9(e) dans quelques instants..."
       : "Tu vas \u00eatre redirig\u00e9(e) dans quelques instants...",
-    consentLabel: v
-      ? "J\u2019accepte de recevoir des emails."
-      : "J\u2019accepte de recevoir des emails.",
+    consentLabel: "J\u2019accepte de recevoir des emails.",
     defaultHeading: v ? "Acc\u00e9dez gratuitement" : "Acc\u00e8de gratuitement",
-  };
+  }),
+  en: () => ({
+    loading: "Loading...",
+    notFoundTitle: "Page not found",
+    notFoundDesc: "This page doesn\u2019t exist or is no longer available.",
+    firstNamePlaceholder: "Your first name",
+    emailPlaceholder: "Your email",
+    defaultCta: "Let\u2019s go!",
+    dataProtected: "Your data is protected.",
+    dataProtectedLong: "Your data is protected and will never be shared.",
+    privacyPolicy: "Privacy Policy",
+    thanksTitle: "Thank you for signing up!",
+    thanksMessage: "Your registration is confirmed! You\u2019ll receive access by email within the next 10 minutes. Check your spam folder if you don\u2019t see it.",
+    thanksRedirect: "You\u2019ll be redirected in a moment...",
+    consentLabel: "I agree to receive emails.",
+    defaultHeading: "Get free access",
+  }),
+  es: () => ({
+    loading: "Cargando...",
+    notFoundTitle: "P\u00e1gina no encontrada",
+    notFoundDesc: "Esta p\u00e1gina no existe o ya no est\u00e1 disponible.",
+    firstNamePlaceholder: "Tu nombre",
+    emailPlaceholder: "Tu email",
+    defaultCta: "\u00a1Vamos!",
+    dataProtected: "Tus datos est\u00e1n protegidos.",
+    dataProtectedLong: "Tus datos est\u00e1n protegidos y nunca ser\u00e1n compartidos.",
+    privacyPolicy: "Pol\u00edtica de privacidad",
+    thanksTitle: "\u00a1Gracias por inscribirte!",
+    thanksMessage: "\u00a1Tu inscripci\u00f3n est\u00e1 confirmada! Recibir\u00e1s tus accesos por email en los pr\u00f3ximos 10 minutos. Revisa tu carpeta de spam si no lo ves.",
+    thanksRedirect: "Ser\u00e1s redirigido en unos instantes...",
+    consentLabel: "Acepto recibir emails.",
+    defaultHeading: "Accede gratis",
+  }),
+  it: () => ({
+    loading: "Caricamento...",
+    notFoundTitle: "Pagina non trovata",
+    notFoundDesc: "Questa pagina non esiste o non \u00e8 pi\u00f9 disponibile.",
+    firstNamePlaceholder: "Il tuo nome",
+    emailPlaceholder: "La tua email",
+    defaultCta: "Andiamo!",
+    dataProtected: "I tuoi dati sono protetti.",
+    dataProtectedLong: "I tuoi dati sono protetti e non saranno mai condivisi.",
+    privacyPolicy: "Privacy Policy",
+    thanksTitle: "Grazie per l\u2019iscrizione!",
+    thanksMessage: "La tua iscrizione \u00e8 confermata! Riceverai l\u2019accesso via email entro 10 minuti. Controlla la cartella spam se non lo vedi.",
+    thanksRedirect: "Sarai reindirizzato tra pochi istanti...",
+    consentLabel: "Accetto di ricevere email.",
+    defaultHeading: "Accedi gratuitamente",
+  }),
+  ar: () => ({
+    loading: "\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0645\u064a\u0644...",
+    notFoundTitle: "\u0627\u0644\u0635\u0641\u062d\u0629 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f\u0629",
+    notFoundDesc: "\u0647\u0630\u0647 \u0627\u0644\u0635\u0641\u062d\u0629 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f\u0629 \u0623\u0648 \u0644\u0645 \u062a\u0639\u062f \u0645\u062a\u0627\u062d\u0629.",
+    firstNamePlaceholder: "\u0627\u0633\u0645\u0643 \u0627\u0644\u0623\u0648\u0644",
+    emailPlaceholder: "\u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a",
+    defaultCta: "\u0647\u064a\u0627 \u0628\u0646\u0627!",
+    dataProtected: "\u0628\u064a\u0627\u0646\u0627\u062a\u0643 \u0645\u062d\u0645\u064a\u0629.",
+    dataProtectedLong: "\u0628\u064a\u0627\u0646\u0627\u062a\u0643 \u0645\u062d\u0645\u064a\u0629 \u0648\u0644\u0646 \u062a\u062a\u0645 \u0645\u0634\u0627\u0631\u0643\u062a\u0647\u0627 \u0623\u0628\u062f\u064b\u0627.",
+    privacyPolicy: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
+    thanksTitle: "\u0634\u0643\u0631\u064b\u0627 \u0644\u062a\u0633\u062c\u064a\u0644\u0643!",
+    thanksMessage: "\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u062a\u0633\u062c\u064a\u0644\u0643! \u0633\u062a\u062a\u0644\u0642\u0649 \u0631\u0633\u0627\u0644\u0629 \u0628\u0631\u064a\u062f \u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u062e\u0644\u0627\u0644 10 \u062f\u0642\u0627\u0626\u0642. \u062a\u062d\u0642\u0642 \u0645\u0646 \u0645\u062c\u0644\u062f \u0627\u0644\u0628\u0631\u064a\u062f \u063a\u064a\u0631 \u0627\u0644\u0645\u0631\u063a\u0648\u0628.",
+    thanksRedirect: "\u0633\u064a\u062a\u0645 \u0625\u0639\u0627\u062f\u0629 \u062a\u0648\u062c\u064a\u0647\u0643 \u0641\u064a \u0644\u062d\u0638\u0627\u062a...",
+    consentLabel: "\u0623\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u062a\u0644\u0642\u064a \u0627\u0644\u0631\u0633\u0627\u0626\u0644.",
+    defaultHeading: "\u0627\u062d\u0635\u0644 \u0639\u0644\u0649 \u0648\u0635\u0648\u0644 \u0645\u062c\u0627\u0646\u064a",
+  }),
+};
+
+function pageTexts(addressForm?: string, locale?: string) {
+  const lang = (locale || "fr").slice(0, 2);
+  const v = addressForm === "vous";
+  const builder = OVERLAY_I18N[lang] || OVERLAY_I18N.fr;
+  return builder(v);
 }
 
 export default function PublicPageClient({ page: serverPage, slug, toastWidgetId: serverToastId, shareWidgetId: serverShareId }: { page: PublicPageData | null; slug: string; toastWidgetId?: string | null; shareWidgetId?: string | null }) {
@@ -199,7 +268,7 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
     fetch(`/api/pages/${page.id}/views`, { method: "POST" }).catch(() => {});
   }, [page]);
 
-  const txt = pageTexts(page?.address_form);
+  const txt = pageTexts(page?.address_form, page?.locale);
 
   if (loading) {
     return (

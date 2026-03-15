@@ -121,6 +121,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
             pageType,
             contentData,
             brandTokens: Object.keys(brandTokens || {}).length > 0 ? brandTokens : null,
+            locale: (current as any).locale || "fr",
           });
           updates.html_snapshot = html;
         }

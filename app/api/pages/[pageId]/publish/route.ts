@@ -97,6 +97,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
             pageType,
             contentData: current.content_data || {},
             brandTokens: Object.keys(current.brand_tokens || {}).length > 0 ? current.brand_tokens : null,
+            locale: (current as any).locale || "fr",
           });
           updates.html_snapshot = html;
         }
