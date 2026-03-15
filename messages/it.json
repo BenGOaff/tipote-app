@@ -715,9 +715,14 @@
     "title": "Dashboard",
     "loading": "Caricamento...",
     "objectiveLabel": "Il tuo obiettivo attuale",
+    "nextStep": "Prossimo passo",
     "thisWeek": "Questa settimana",
-    "encouragement": "Ottimo, hai completato « {task} »! Continua così, ogni passo ti avvicina ai tuoi obiettivi.",
-    "encouragementDefault": "La tua strategia è pronta, spunta i passaggi man mano per monitorare i tuoi progressi!",
+    "encourageSummary": {
+      "started": "Hai lavorato su « {actions} », buon inizio!",
+      "momentum": "Hai completato {done}/{total} passaggi, tra cui « {actions} ». Continua così!",
+      "halfWay": "Già {pct}% completato, tra cui « {actions} ». Sei sulla buona strada!",
+      "almostDone": "Quasi fatto! {pct}% completato, tra cui « {actions} ». Il traguardo è vicino!"
+    },
     "progressionTitle": "La tua progressione",
     "progressionSub": "I tuoi risultati concreti",
     "contentsCreated": "Contenuti creati",
@@ -733,7 +738,13 @@
       "labelFoundations": "Fondamenta",
       "labelGrowth": "Crescita",
       "labelScale": "Scala",
-      "strategyFocus": "Genera la tua strategia per avviare il tuo business."
+      "strategyFocus": "Genera la tua strategia per avviare il tuo business.",
+      "phase": {
+        "startup": "Lanciare la tua attività",
+        "foundations": "Costruire le fondamenta",
+        "growth": "Accelerare la crescita",
+        "scale": "Scalare il tuo business"
+      }
     },
     "ctas": {
       "seeStrategy": "Vedi la mia strategia",

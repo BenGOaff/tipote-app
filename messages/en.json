@@ -691,9 +691,14 @@
     "title": "Dashboard",
     "loading": "Loading...",
     "objectiveLabel": "Your current goal",
+    "nextStep": "Next step",
     "thisWeek": "This week",
-    "encouragement": "Great job finishing \"{task}\" — keep going, every step brings you closer to your goals!",
-    "encouragementDefault": "Your strategy is set, check off your steps as you go to track your progress!",
+    "encourageSummary": {
+      "started": "You worked on \"{actions}\" — great start!",
+      "momentum": "You've completed {done}/{total} steps, including \"{actions}\". Keep it up!",
+      "halfWay": "Already {pct}% done, including \"{actions}\". You're on a roll!",
+      "almostDone": "Almost there! {pct}% complete, including \"{actions}\". The finish line is close!"
+    },
     "progressionTitle": "Your progress",
     "progressionSub": "Your concrete results",
     "contentsCreated": "Content created",
@@ -709,7 +714,13 @@
       "labelFoundations": "Foundations",
       "labelGrowth": "Growth",
       "labelScale": "Scale",
-      "strategyFocus": "Generate your strategy to kick-start your business."
+      "strategyFocus": "Generate your strategy to kick-start your business.",
+      "phase": {
+        "startup": "Launch your business",
+        "foundations": "Build the foundations",
+        "growth": "Accelerate growth",
+        "scale": "Scale your business"
+      }
     },
     "ctas": {
       "seeStrategy": "View my strategy",

@@ -715,9 +715,14 @@
     "title": "لوحة التحكم",
     "loading": "جارٍ التحميل...",
     "objectiveLabel": "هدفك الآن",
+    "nextStep": "الخطوة التالية",
     "thisWeek": "هذا الأسبوع",
-    "encouragement": "أحسنت، أنهيت « {task} »! استمر، كل خطوة تقرّبك من أهدافك.",
-    "encouragementDefault": "استراتيجيتك جاهزة، أكمل خطواتك واحدة تلو الأخرى لمتابعة تقدّمك!",
+    "encourageSummary": {
+      "started": "عملت على « {actions} »، بداية جيدة!",
+      "momentum": "أكملت {done}/{total} خطوة، بما فيها « {actions} ». استمر!",
+      "halfWay": "أنجزت {pct}% بالفعل، بما فيها « {actions} ». واصل التقدّم!",
+      "almostDone": "شارفت على الانتهاء! {pct}% مكتمل، بما فيها « {actions} ». خط النهاية قريب!"
+    },
     "progressionTitle": "تقدّمك",
     "progressionSub": "نتائجك الملموسة",
     "contentsCreated": "المحتوى المُنشأ",
@@ -733,7 +738,13 @@
       "labelFoundations": "الأسس",
       "labelGrowth": "النمو",
       "labelScale": "التوسّع",
-      "strategyFocus": "أنشئ استراتيجيتك لبدء عملك التجاري."
+      "strategyFocus": "أنشئ استراتيجيتك لبدء عملك التجاري.",
+      "phase": {
+        "startup": "إطلاق نشاطك",
+        "foundations": "بناء الأسس",
+        "growth": "تسريع النمو",
+        "scale": "توسيع نشاطك"
+      }
     },
     "ctas": {
       "seeStrategy": "عرض استراتيجيتي",

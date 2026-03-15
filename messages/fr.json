@@ -691,9 +691,14 @@
     "title": "Tableau de bord",
     "loading": "Chargement...",
     "objectiveLabel": "Ton objectif en ce moment",
+    "nextStep": "Prochaine étape",
     "thisWeek": "Cette semaine",
-    "encouragement": "C'est top, tu as terminé « {task} » — continue comme ça, chaque étape te rapproche de tes objectifs !",
-    "encouragementDefault": "Ta stratégie est en place, coche tes étapes au fur et à mesure pour suivre ta progression !",
+    "encourageSummary": {
+      "started": "Tu as avancé sur « {actions} », bon début !",
+      "momentum": "Tu as terminé {done}/{total} étapes, dont « {actions} ». Tu avances bien !",
+      "halfWay": "Déjà {pct}% de tes étapes complétées, dont « {actions} ». Continue sur ta lancée !",
+      "almostDone": "Tu y es presque ! {pct}% complété, dont « {actions} ». La ligne d'arrivée est proche !"
+    },
     "progressionTitle": "Ta progression",
     "progressionSub": "Tes résultats concrets",
     "contentsCreated": "Contenus créés",
@@ -709,7 +714,13 @@
       "labelFoundations": "Fondations",
       "labelGrowth": "Croissance",
       "labelScale": "Scale",
-      "strategyFocus": "Génère ta stratégie pour démarrer ton business."
+      "strategyFocus": "Génère ta stratégie pour démarrer ton business.",
+      "phase": {
+        "startup": "Lancer ton activité",
+        "foundations": "Poser les fondations",
+        "growth": "Accélérer ta croissance",
+        "scale": "Scaler ton business"
+      }
     },
     "ctas": {
       "seeStrategy": "Voir ma stratégie",
