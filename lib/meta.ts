@@ -353,29 +353,53 @@ export async function exchangeInstagramCodeForToken(
 
 /**
  * Echange un short-lived Instagram token contre un long-lived token (~60 jours).
- * Utilise fb_exchange_token via graph.facebook.com avec les credentials de l'app
- * parente Meta ("Tipote ter" INSTAGRAM_META_APP_ID / INSTAGRAM_META_APP_SECRET).
- * L'ancien endpoint graph.instagram.com/access_token (ig_exchange_token) est déprécié.
- * Doc : https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived/
+ * Essaie ig_exchange_token (doc officielle IG Professional Login) puis fb_exchange_token
+ * en fallback. Retourne null si les deux échouent (le caller décide quoi faire).
  */
 export async function exchangeInstagramForLongLivedToken(shortLivedToken: string): Promise<{
   access_token: string;
   token_type: string;
   expires_in: number;
-}> {
-  const params = new URLSearchParams({
-    grant_type: "fb_exchange_token",
-    client_id: getInstagramMetaAppId(),
-    client_secret: getInstagramMetaAppSecret(),
-    fb_exchange_token: shortLivedToken,
-  });
-
-  const res = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${params.toString()}`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Instagram long-lived token exchange failed (${res.status}): ${text}`);
+} | null> {
+  // Tentative 1 : ig_exchange_token (endpoint officiel IG Professional Login)
+  try {
+    const igParams = new URLSearchParams({
+      grant_type: "ig_exchange_token",
+      client_secret: getInstagramAppSecret(),
+      access_token: shortLivedToken,
+    });
+    const igRes = await fetch(`https://graph.instagram.com/access_token?${igParams}`);
+    if (igRes.ok) {
+      console.log("[Instagram] Long-lived token via ig_exchange_token: OK");
+      return igRes.json();
+    }
+    const igErr = await igRes.text();
+    console.warn(`[Instagram] ig_exchange_token failed (${igRes.status}):`, igErr.slice(0, 200));
+  } catch (err) {
+    console.warn("[Instagram] ig_exchange_token error:", err);
   }
-  return res.json();
+
+  // Tentative 2 : fb_exchange_token via l'app parente Meta
+  try {
+    const fbParams = new URLSearchParams({
+      grant_type: "fb_exchange_token",
+      client_id: getInstagramMetaAppId(),
+      client_secret: getInstagramMetaAppSecret(),
+      fb_exchange_token: shortLivedToken,
+    });
+    const fbRes = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${fbParams}`);
+    if (fbRes.ok) {
+      console.log("[Instagram] Long-lived token via fb_exchange_token: OK");
+      return fbRes.json();
+    }
+    const fbErr = await fbRes.text();
+    console.warn(`[Instagram] fb_exchange_token failed (${fbRes.status}):`, fbErr.slice(0, 200));
+  } catch (err) {
+    console.warn("[Instagram] fb_exchange_token error:", err);
+  }
+
+  console.warn("[Instagram] All long-lived token attempts failed — falling back to short-lived token");
+  return null;
 }
 
 export type InstagramUserInfo = {
