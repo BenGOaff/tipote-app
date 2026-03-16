@@ -353,8 +353,10 @@ export async function exchangeInstagramCodeForToken(
 
 /**
  * Echange un short-lived Instagram token contre un long-lived token (~60 jours).
- * Endpoint : https://graph.instagram.com/access_token (SANS préfixe de version)
- * Doc : https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#long-lived
+ * Essaie plusieurs endpoints/méthodes car Meta change régulièrement le comportement :
+ *   1. GET  graph.instagram.com/access_token (sans version) — doc officielle IG Professional Login
+ *   2. GET  graph.instagram.com/v21.0/access_token (avec version)
+ *   3. POST graph.instagram.com/access_token (sans version)
  */
 export async function exchangeInstagramForLongLivedToken(shortLivedToken: string): Promise<{
   access_token: string;
@@ -367,13 +369,22 @@ export async function exchangeInstagramForLongLivedToken(shortLivedToken: string
     access_token: shortLivedToken,
   });
 
-  // URL sans préfixe de version — l'endpoint /access_token ne supporte pas /v21.0/
-  const res = await fetch(`https://graph.instagram.com/access_token?${params.toString()}`);
-  if (!res.ok) {
+  const attempts: Array<{ url: string; method: string }> = [
+    { url: `https://graph.instagram.com/access_token?${params}`, method: "GET" },
+    { url: `${INSTAGRAM_GRAPH_BASE}/access_token?${params}`, method: "GET" },
+    { url: `https://graph.instagram.com/access_token`, method: "POST" },
+  ];
+
+  let lastError = "";
+  for (const { url, method } of attempts) {
+    const res = await fetch(url, method === "POST" ? { method: "POST", body: params } : undefined);
+    if (res.ok) return res.json();
     const text = await res.text();
-    throw new Error(`Instagram long-lived token exchange failed (${res.status}): ${text}`);
+    lastError = `${method} ${url.split("?")[0]} → (${res.status}): ${text}`;
+    console.warn(`[Instagram] Long-lived token attempt failed: ${lastError}`);
   }
-  return res.json();
+
+  throw new Error(`Instagram long-lived token exchange failed. Last attempt: ${lastError}`);
 }
 
 export type InstagramUserInfo = {
