@@ -345,7 +345,7 @@ export function ArticleForm({
                   disabled={!generatedContent?.trim()}
                 >
                   <Pencil className="w-4 h-4 mr-2" />
-                  {t("copy")}
+                  Modifier
                 </Button>
               </div>
             </div>
