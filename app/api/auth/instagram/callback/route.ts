@@ -105,11 +105,14 @@ export async function GET(req: NextRequest) {
     console.log("[Instagram callback] Short-lived token OK, user_id:", shortLived.user_id);
 
     // Échange short-lived → long-lived (~60 jours)
+    // Si l'échange échoue (endpoint Meta cassé), on utilise le short-lived token
     const longLived = await exchangeInstagramForLongLivedToken(shortLived.access_token);
-    console.log("[Instagram callback] Long-lived token OK, expires_in:", longLived.expires_in);
+    const finalToken = longLived?.access_token ?? shortLived.access_token;
+    const expiresIn = longLived?.expires_in ?? 3600; // 1h si short-lived
+    console.log("[Instagram callback] Token OK, long-lived:", !!longLived, "expires_in:", expiresIn);
 
     // Profil Instagram
-    const igUser = await getInstagramUser(longLived.access_token);
+    const igUser = await getInstagramUser(finalToken);
     console.log("[Instagram callback] IG user:", JSON.stringify(igUser));
 
     // Stockage en base
@@ -117,10 +120,10 @@ export async function GET(req: NextRequest) {
     console.log("[Instagram callback] projectId:", projectId, "userId:", user.id);
 
     const tokenExpiresAt = new Date(
-      Date.now() + (longLived.expires_in ?? 5184000) * 1000
+      Date.now() + expiresIn * 1000
     ).toISOString();
 
-    const tokenEncrypted = encrypt(longLived.access_token);
+    const tokenEncrypted = encrypt(finalToken);
 
     const { data: profileRow } = await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle();
     const limitCheck = await checkSocialConnectionLimit(supabase, user.id, "instagram", projectId, profileRow?.plan);
