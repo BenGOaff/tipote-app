@@ -112,7 +112,7 @@ export function ArticleForm({
       setGeneratedContent(content);
       setArticleStep("write"); // ✅ l'étape suivante attend un plan validé
       if (!title) setTitle(subject || seoKeyword);
-      setShowRawEditor(false);
+      setShowRawEditor(true); // ✅ plan éditable par défaut
     }
     if (genId && !savedContentId) setSavedContentId(genId);
   };
@@ -288,7 +288,7 @@ export function ArticleForm({
             </Button>
           )}
 
-          {/* ✅ Étape 2: validation = clic “Rédiger” */}
+          {/* ✅ Étape 2: validation = clic "Rédiger" */}
           {articleStep === "write" && (
             <Button
               className="w-full"
@@ -350,7 +350,7 @@ export function ArticleForm({
               </div>
             </div>
 
-            {/* ✅ Aperçu “beau” (markdown) par défaut */}
+            {/* ✅ Aperçu "beau" (markdown) par défaut, sauf pour le plan qui est éditable */}
             {!showRawEditor ? (
               <div className="rounded-xl border bg-background p-4">
                 <AIContent
@@ -367,13 +367,21 @@ export function ArticleForm({
                 ) : null}
               </div>
             ) : (
-              <Textarea
-                value={generatedContent}
-                onChange={(e) => setGeneratedContent(e.target.value)}
-                rows={12}
-                placeholder={t("contentPlaceholder")}
-                className="resize-none"
-              />
+              <div className="space-y-1">
+                {articleStep === "write" && !isArticleReady && generatedContent && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Pencil className="w-3 h-3" />
+                    Modifiez le plan ci-dessous avant de lancer la rédaction
+                  </p>
+                )}
+                <Textarea
+                  value={generatedContent}
+                  onChange={(e) => setGeneratedContent(e.target.value)}
+                  rows={16}
+                  placeholder={t("contentPlaceholder")}
+                  className="resize-none font-mono text-sm leading-relaxed"
+                />
+              </div>
             )}
           </div>
 
