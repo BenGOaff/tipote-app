@@ -353,7 +353,9 @@ export async function exchangeInstagramCodeForToken(
 
 /**
  * Echange un short-lived Instagram token contre un long-lived token (~60 jours).
- * Endpoint : https://graph.instagram.com/{version}/access_token
+ * Utilise l'endpoint Facebook OAuth (graph.facebook.com) avec grant_type=fb_exchange_token.
+ * L'ancien endpoint graph.instagram.com/access_token (ig_exchange_token) est déprécié.
+ * Doc : https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived/
  */
 export async function exchangeInstagramForLongLivedToken(shortLivedToken: string): Promise<{
   access_token: string;
@@ -361,16 +363,13 @@ export async function exchangeInstagramForLongLivedToken(shortLivedToken: string
   expires_in: number;
 }> {
   const params = new URLSearchParams({
-    grant_type: "ig_exchange_token",
+    grant_type: "fb_exchange_token",
+    client_id: getInstagramAppId(),
     client_secret: getInstagramAppSecret(),
-    access_token: shortLivedToken,
+    fb_exchange_token: shortLivedToken,
   });
 
-  // POST requis depuis les changements API Meta (GET retourne "Unsupported request - method type: get")
-  const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/access_token`, {
-    method: "POST",
-    body: params,
-  });
+  const res = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${params.toString()}`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Instagram long-lived token exchange failed (${res.status}): ${text}`);
