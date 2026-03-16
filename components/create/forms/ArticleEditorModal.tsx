@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -277,10 +278,10 @@ export function ArticleEditorModal({
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
-            <div className="text-sm text-muted-foreground">
+            <DialogDescription>
               Modifie ton article avec une mise en forme (H1/H2/gras/liens) puis
               copie-le en gardant le rendu.
-            </div>
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">

@@ -646,32 +646,49 @@ export default function CreateLovableClient() {
       }
     };
 
-    // Show generating overlay for content forms that use the shared isGenerating state
-    if (isGenerating && ["post", "email", "article", "video"].includes(selectedType)) {
-      return <AIGeneratingOverlay />;
-    }
+    // ✅ FIX: render overlay ON TOP of the form instead of replacing it,
+    // so the form keeps its local state (generatedContent, articleStep, etc.)
+    const showOverlay = isGenerating && ["post", "email", "article", "video"].includes(selectedType);
 
+    let form: JSX.Element | null = null;
     switch (selectedType) {
       case "post":
-        return <PostForm onGenerate={handleGenerate} onSave={handleSave} onClose={onCloseEdit} isGenerating={isGenerating} isSaving={isSaving} editData={editData} />;
+        form = <PostForm onGenerate={handleGenerate} onSave={handleSave} onClose={onCloseEdit} isGenerating={isGenerating} isSaving={isSaving} editData={editData} />;
+        break;
       case "email":
-        return <EmailForm {...common} />;
+        form = <EmailForm {...common} />;
+        break;
       case "article":
-        return <ArticleForm {...common} />;
+        form = <ArticleForm {...common} />;
+        break;
       case "video":
-        return <VideoForm {...common} />;
+        form = <VideoForm {...common} />;
+        break;
       case "offer":
-        return <OfferForm {...common} />;
+        form = <OfferForm {...common} />;
+        break;
       case "funnel":
         // ✅ FunnelForm accepte existingOffers (dropdown offres existantes)
-        return <FunnelForm {...common} existingOffers={existingOffers} />;
+        form = <FunnelForm {...common} existingOffers={existingOffers} />;
+        break;
       case "quiz":
-        return <QuizForm onClose={common.onClose} />;
+        form = <QuizForm onClose={common.onClose} />;
+        break;
       case "strategy":
-        return <ContentStrategyForm onClose={common.onClose} />;
+        form = <ContentStrategyForm onClose={common.onClose} />;
+        break;
       default:
         return null;
     }
+
+    return (
+      <>
+        {showOverlay && <AIGeneratingOverlay />}
+        <div style={showOverlay ? { visibility: "hidden", height: 0, overflow: "hidden" } : undefined}>
+          {form}
+        </div>
+      </>
+    );
   }, [selectedType, isGenerating, isSaving, existingOffers, sourceLeadMagnet, sourcePaidOffer, editData, editId]);
 
   return (
