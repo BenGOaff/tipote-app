@@ -353,10 +353,10 @@ export async function exchangeInstagramCodeForToken(
 
 /**
  * Echange un short-lived Instagram token contre un long-lived token (~60 jours).
- * Essaie plusieurs endpoints/méthodes car Meta change régulièrement le comportement :
- *   1. GET  graph.instagram.com/access_token (sans version) — doc officielle IG Professional Login
- *   2. GET  graph.instagram.com/v21.0/access_token (avec version)
- *   3. POST graph.instagram.com/access_token (sans version)
+ * Utilise fb_exchange_token via graph.facebook.com avec les credentials de l'app
+ * parente Meta ("Tipote ter" INSTAGRAM_META_APP_ID / INSTAGRAM_META_APP_SECRET).
+ * L'ancien endpoint graph.instagram.com/access_token (ig_exchange_token) est déprécié.
+ * Doc : https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived/
  */
 export async function exchangeInstagramForLongLivedToken(shortLivedToken: string): Promise<{
   access_token: string;
@@ -364,27 +364,18 @@ export async function exchangeInstagramForLongLivedToken(shortLivedToken: string
   expires_in: number;
 }> {
   const params = new URLSearchParams({
-    grant_type: "ig_exchange_token",
-    client_secret: getInstagramAppSecret(),
-    access_token: shortLivedToken,
+    grant_type: "fb_exchange_token",
+    client_id: getInstagramMetaAppId(),
+    client_secret: getInstagramMetaAppSecret(),
+    fb_exchange_token: shortLivedToken,
   });
 
-  const attempts: Array<{ url: string; method: string }> = [
-    { url: `https://graph.instagram.com/access_token?${params}`, method: "GET" },
-    { url: `${INSTAGRAM_GRAPH_BASE}/access_token?${params}`, method: "GET" },
-    { url: `https://graph.instagram.com/access_token`, method: "POST" },
-  ];
-
-  let lastError = "";
-  for (const { url, method } of attempts) {
-    const res = await fetch(url, method === "POST" ? { method: "POST", body: params } : undefined);
-    if (res.ok) return res.json();
+  const res = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${params.toString()}`);
+  if (!res.ok) {
     const text = await res.text();
-    lastError = `${method} ${url.split("?")[0]} → (${res.status}): ${text}`;
-    console.warn(`[Instagram] Long-lived token attempt failed: ${lastError}`);
+    throw new Error(`Instagram long-lived token exchange failed (${res.status}): ${text}`);
   }
-
-  throw new Error(`Instagram long-lived token exchange failed. Last attempt: ${lastError}`);
+  return res.json();
 }
 
 export type InstagramUserInfo = {
