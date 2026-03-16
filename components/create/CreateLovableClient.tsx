@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -650,7 +650,7 @@ export default function CreateLovableClient() {
     // so the form keeps its local state (generatedContent, articleStep, etc.)
     const showOverlay = isGenerating && ["post", "email", "article", "video"].includes(selectedType);
 
-    let form: JSX.Element | null = null;
+    let form: React.ReactElement | null = null;
     switch (selectedType) {
       case "post":
         form = <PostForm onGenerate={handleGenerate} onSave={handleSave} onClose={onCloseEdit} isGenerating={isGenerating} isSaving={isSaving} editData={editData} />;
