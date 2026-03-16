@@ -366,7 +366,11 @@ export async function exchangeInstagramForLongLivedToken(shortLivedToken: string
     access_token: shortLivedToken,
   });
 
-  const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/access_token?${params.toString()}`);
+  // POST requis depuis les changements API Meta (GET retourne "Unsupported request - method type: get")
+  const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/access_token`, {
+    method: "POST",
+    body: params,
+  });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Instagram long-lived token exchange failed (${res.status}): ${text}`);
