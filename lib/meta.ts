@@ -353,9 +353,8 @@ export async function exchangeInstagramCodeForToken(
 
 /**
  * Echange un short-lived Instagram token contre un long-lived token (~60 jours).
- * Utilise l'endpoint Facebook OAuth (graph.facebook.com) avec grant_type=fb_exchange_token.
- * L'ancien endpoint graph.instagram.com/access_token (ig_exchange_token) est déprécié.
- * Doc : https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived/
+ * Endpoint : https://graph.instagram.com/access_token (SANS préfixe de version)
+ * Doc : https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#long-lived
  */
 export async function exchangeInstagramForLongLivedToken(shortLivedToken: string): Promise<{
   access_token: string;
@@ -363,13 +362,13 @@ export async function exchangeInstagramForLongLivedToken(shortLivedToken: string
   expires_in: number;
 }> {
   const params = new URLSearchParams({
-    grant_type: "fb_exchange_token",
-    client_id: getInstagramAppId(),
+    grant_type: "ig_exchange_token",
     client_secret: getInstagramAppSecret(),
-    fb_exchange_token: shortLivedToken,
+    access_token: shortLivedToken,
   });
 
-  const res = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${params.toString()}`);
+  // URL sans préfixe de version — l'endpoint /access_token ne supporte pas /v21.0/
+  const res = await fetch(`https://graph.instagram.com/access_token?${params.toString()}`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Instagram long-lived token exchange failed (${res.status}): ${text}`);
