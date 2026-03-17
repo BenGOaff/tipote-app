@@ -175,7 +175,8 @@ export function VideoUploader({
               setUploadProgress(100);
               resolve(true);
             } else {
-              reject(new Error(`Upload failed: ${xhr.status}`));
+              const detail = xhr.responseText?.slice(0, 200) || "";
+              reject(new Error(`Upload failed (${xhr.status}): ${detail}`));
             }
           };
 
