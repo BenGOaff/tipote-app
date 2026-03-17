@@ -386,17 +386,35 @@ export type InstagramUserInfo = {
 
 /**
  * Recupere le profil Instagram de l'utilisateur connecté.
- * Endpoint : GET /me?fields=id,username,name,profile_picture_url,account_type
+ * Essaie graph.instagram.com puis graph.facebook.com en fallback.
+ * Retourne null si tout échoue (le caller utilise le user_id du code exchange).
  */
-export async function getInstagramUser(userAccessToken: string): Promise<InstagramUserInfo> {
-  const res = await fetch(
-    `${INSTAGRAM_GRAPH_BASE}/me?fields=id,username,name,profile_picture_url,account_type&access_token=${userAccessToken}`
-  );
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Instagram user info failed (${res.status}): ${text}`);
-  }
-  return res.json();
+export async function getInstagramUser(userAccessToken: string): Promise<InstagramUserInfo | null> {
+  const fields = "id,username,name,profile_picture_url,account_type";
+
+  // Tentative 1 : graph.instagram.com (endpoint officiel IG Professional Login)
+  const igUrl = `${INSTAGRAM_GRAPH_BASE}/me?fields=${fields}&access_token=${userAccessToken}`;
+  const igRes = await fetch(igUrl);
+  if (igRes.ok) return igRes.json();
+  const igErr = await igRes.text();
+  console.warn(`[Instagram] graph.instagram.com/me failed (${igRes.status}):`, igErr.slice(0, 200));
+
+  // Tentative 2 : graph.instagram.com SANS version
+  const igNoVerUrl = `https://graph.instagram.com/me?fields=${fields}&access_token=${userAccessToken}`;
+  const igNoVerRes = await fetch(igNoVerUrl);
+  if (igNoVerRes.ok) return igNoVerRes.json();
+  const igNoVerErr = await igNoVerRes.text();
+  console.warn(`[Instagram] graph.instagram.com/me (no ver) failed (${igNoVerRes.status}):`, igNoVerErr.slice(0, 200));
+
+  // Tentative 3 : graph.facebook.com
+  const fbUrl = `${GRAPH_API_BASE}/me?fields=${fields}&access_token=${userAccessToken}`;
+  const fbRes = await fetch(fbUrl);
+  if (fbRes.ok) return fbRes.json();
+  const fbErr = await fbRes.text();
+  console.warn(`[Instagram] graph.facebook.com/me failed (${fbRes.status}):`, fbErr.slice(0, 200));
+
+  console.warn("[Instagram] All user info attempts failed — returning null");
+  return null;
 }
 
 // ----------------------------------------------------------------

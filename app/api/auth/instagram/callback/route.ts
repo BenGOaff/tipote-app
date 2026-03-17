@@ -111,9 +111,14 @@ export async function GET(req: NextRequest) {
     const expiresIn = longLived?.expires_in ?? 3600; // 1h si short-lived
     console.log("[Instagram callback] Token OK, long-lived:", !!longLived, "expires_in:", expiresIn);
 
-    // Profil Instagram
-    const igUser = await getInstagramUser(finalToken);
-    console.log("[Instagram callback] IG user:", JSON.stringify(igUser));
+    // Profil Instagram (fallback sur user_id du code exchange si graph.instagram.com est cassé)
+    const igUserResult = await getInstagramUser(finalToken);
+    const igUser = igUserResult ?? {
+      id: shortLived.user_id,
+      username: undefined,
+      name: undefined,
+    };
+    console.log("[Instagram callback] IG user:", JSON.stringify(igUser), "from_fallback:", !igUserResult);
 
     // Stockage en base
     const projectId = await getActiveProjectId(supabase, user.id);
