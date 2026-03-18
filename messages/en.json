@@ -14,7 +14,8 @@
     "settings": "Settings",
     "widgets": "Widgets",
     "webinars": "Live events",
-    "support": "Help"
+    "support": "Help",
+    "business": "Tipote Business"
   },
   "sidebar": {
     "tagline": "Your smart companion",
@@ -259,19 +260,22 @@
     "tooltipStrategy": "Strategy — your personalised roadmap. 3-phase action plan, offer pyramid and target persona. You can adjust everything.",
     "tooltipCreate": "Create — generate posts, emails, articles, video scripts, offers, pages, quizzes and editorial strategy. Each generation uses AI credits.",
     "tooltipContents": "My Content — everything you've created, organised by type. Editorial calendar, publication scheduling, quiz and page tracking.",
-    "tooltipTemplates": "Templates — ready-to-use Systeme.io models, downloadable in one click. Included in your plan!",
+    "tooltipTemplates": "Templates — ready-to-use Tipote Business templates, downloadable in one click. Included in your plan!",
     "tooltipCredits": "AI Credits — your counter in the top right. Click it to see details or recharge.",
     "tooltipAnalytics": "Analytics — enter your stats regularly so Tipote can refine your strategy and give you a personalised AI diagnosis.",
     "tooltipPepites": "Gems — business tips that appear over time. The red badge means something new!",
     "tooltipSettingsProfile": "Profile — your info, storytelling, offers and links. Access settings via your profile photo in the top right.",
-    "tooltipSettingsConnections": "Connections — connect your social networks to publish directly. Also set up your Systeme.io API key here.",
+    "tooltipSettingsConnections": "Connections — connect your social networks to publish directly. Also set up your Tipote Business API key here.",
     "tooltipSettingsReglages": "Settings — content language and key info about your business. The more complete, the better Tipote understands you!",
     "tooltipSettingsPositioning": "Positioning — THE most important setting! Refine your target, message and positioning after onboarding. This powers all your content.",
     "tooltipSettingsBranding": "Branding — your colours, fonts and logo so generated pages instantly match your brand.",
     "tooltipSettingsAi": "AI & Credits — track your usage and customise the style of your auto-comments.",
     "tooltipSettingsPricing": "Subscription — manage your plan: upgrade, downgrade or cancel independently.",
     "tooltipCoach": "AI Coach — your personal adviser (PRO and ELITE plans). It knows your project and helps you make the right decisions.",
-    "tooltipComplete": "Tour complete! Before creating, go complete your settings: offers, positioning and persona. Click your profile photo in the top right."
+    "tooltipComplete": "Tour complete! Before creating, go complete your settings: offers, positioning and persona. Click your profile photo in the top right.",
+    "tooltipBusiness": "Tipote Business — Your complete sales platform: funnels, emails, pages, payments, courses. Included in your paid plan!",
+    "welcomeStep5": "Discover Tipote Business, your sales platform",
+    "completeTipBusiness": "Tipote Business — explore your sales platform (funnels, emails, pages) via the link in the sidebar"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -364,8 +368,8 @@
     "ariaOpen": "Open gem"
   },
   "templates": {
-    "title": "Systeme.io Templates",
-    "description": "Launch your sales funnel quickly with these customisable templates. One click is all it takes to import a template into your Systeme.io account.",
+    "title": "Tipote Business Templates",
+    "description": "Launch your sales funnel quickly with these customisable templates. One click is all it takes to import a template into your Tipote Business account.",
     "tabs": {
       "all": "All",
       "capture": "Capture",
@@ -589,10 +593,10 @@
       }
     },
     "connections": {
-      "sioTitle": "Systeme.io",
-      "sioDesc": "Connect your Systeme.io account to automatically export leads from your quizzes with tags.",
+      "sioTitle": "Tipote Business",
+      "sioDesc": "Connect your Tipote Business account to automatically export leads from your quizzes with tags.",
       "sioApiHelp": "How do I find my API key?",
-      "sioLabel": "Systeme.io API key",
+      "sioLabel": "Tipote Business API key",
       "sioPlaceholder": "Paste your API key here...",
       "save": "Save",
       "saving": "Saving…"
@@ -640,8 +644,8 @@
       "offerFormatPlaceholder": "e.g. Video, PDF, coaching, ebook...",
       "offerLink": "Sales / payment link",
       "offerLinkHintTitle": "Which link should you use?",
-      "offerLinkHintSio": "You use Systeme.io → paste your Systeme.io order form link (recommended for billing, access & emails)",
-      "offerLinkHintStripe": "You don't use Systeme.io → paste your Stripe payment link directly",
+      "offerLinkHintSio": "You use Tipote Business → paste your Tipote Business order form link (recommended for billing, access & emails)",
+      "offerLinkHintStripe": "You don't use Tipote Business → paste your Stripe payment link directly",
       "pricingTitle": "Pricing",
       "pricingHint": "Have multiple price levels (subscription, plans, installments)? Add pricing tiers below.",
       "tierN": "Tier {n}",
@@ -902,15 +906,18 @@
       },
       "basic": {
         "subtitle": "Get started with small needs",
-        "creditsLabel": "40 AI CREDITS per month"
+        "creditsLabel": "40 AI CREDITS per month",
+        "businessDetail": "+ Business Platform: 10 funnels, 5,000 contacts"
       },
       "pro": {
         "subtitle": "To really kick things up a notch",
-        "creditsLabel": "150 AI CREDITS per month"
+        "creditsLabel": "150 AI CREDITS per month",
+        "businessDetail": "+ Business Platform: 50 funnels, 10,000 contacts, webinars"
       },
       "elite": {
         "subtitle": "For pros managing multiple projects or clients",
-        "creditsLabel": "500 AI CREDITS per month"
+        "creditsLabel": "500 AI CREDITS per month",
+        "businessDetail": "+ Business Platform: everything unlimited"
       }
     },
     "features": {
@@ -932,7 +939,15 @@
       "persona": "Persona enrichment",
       "competition": "Competition analysis",
       "buyCredits": "AI credits purchase",
-      "coach": "Personal AI coach"
+      "coach": "Personal AI coach",
+      "businessPlatform": "Business Platform included",
+      "tunnels": "Sales funnels",
+      "emailContacts": "Email contacts",
+      "emailing": "Emailing & newsletters",
+      "payments": "Payments & checkout",
+      "onlineCourses": "Online courses",
+      "affiliate": "Affiliate program",
+      "webinarsFeature": "Webinars"
     },
     "current": "Current",
     "currentLabel": "Current plan",
@@ -947,8 +962,8 @@
     },
     "manage": {
       "title": "Manage your subscription",
-      "desc": "Edit, upgrade or cancel via Systeme.io",
-      "cta": "Manage on Systeme.io"
+      "desc": "Edit, upgrade or cancel via Tipote Business",
+      "cta": "Manage on Tipote Business"
     },
     "cancelBtn": "Cancel my subscription",
     "cancelError": "Cancellation failed",
@@ -1412,9 +1427,9 @@
       },
       "email": {
         "title": "Auto Email on Comment",
-        "description": "The user comments a keyword, receives a DM asking for their email, then gets the guide delivered to their inbox via systeme.io.",
-        "example": "Comment 'GUIDE' → DM 'Send me your email' → Email sent → Added to systeme.io",
-        "badge": "Instagram + Facebook + systeme.io",
+        "description": "The user comments a keyword, receives a DM asking for their email, then gets the guide delivered to their inbox via Tipote Business.",
+        "example": "Comment 'GUIDE' → DM 'Send me your email' → Email sent → Added to Tipote Business",
+        "badge": "Instagram + Facebook + Tipote Business",
         "defaultMessage": "Hey {{firstname}}! To receive your free guide, reply to this message with your email 👇\n\nReply STOP to unsubscribe.",
         "defaultEmailDm": "Got it! I'm sending your guide to {{email}} within the next few minutes. Check your spam folder if you don't see it 📬"
       }
@@ -1428,7 +1443,7 @@
       "type_comment_to_dm": "Auto DM",
       "type_comment_to_dm_desc": "Send a DM with a link or message",
       "type_comment_to_email": "Auto Email",
-      "type_comment_to_email_desc": "Capture the email and send to systeme.io",
+      "type_comment_to_email_desc": "Capture the email and send to Tipote Business",
       "platforms": "Platforms",
       "keyword": "Trigger keyword",
       "keywordPlaceholder": "E.g.: PDF",
@@ -1438,12 +1453,12 @@
       "dmMessagePlaceholder": "Hey {{firstname}}! Here's your guide: [link]\n\nReply STOP to unsubscribe.",
       "dmMessageHint": "Use {{firstname}} to personalize. STOP will be added automatically if you forget.",
       "emailCapture": "Email capture",
-      "emailCaptureHint": "After the first DM, the bot waits for a reply with the email and sends it to systeme.io",
+      "emailCaptureHint": "After the first DM, the bot waits for a reply with the email and sends it to Tipote Business",
       "emailDmMessage": "DM message to request the email",
       "emailDmPlaceholder": "Reply to this message with your email to receive your guide 📧",
-      "systemeioTag": "systeme.io tag",
+      "systemeioTag": "Tipote Business tag",
       "systemeioTagPlaceholder": "E.g.: lead-pdf-guide",
-      "systemeioTagHint": "This tag will be assigned to the contact in systeme.io to trigger your email automations.",
+      "systemeioTagHint": "This tag will be assigned to the contact in Tipote Business to trigger your email automations.",
       "rgpdNote": "Every DM will automatically include a STOP mention. The user initiated contact by commenting — this is the implicit consent compliant with GDPR and Meta policies.",
       "cancel": "Cancel",
       "save": "Save",
@@ -1871,7 +1886,7 @@
     "source_landing_page": "Landing page",
     "source_website": "Website",
     "source_manual": "Manual",
-    "exported": "Exported to Systeme.io",
+    "exported": "Exported to Tipote Business",
     "thisMonth": "This month",
     "searchPlaceholder": "Search a lead…",
     "allSources": "All sources",
@@ -1897,7 +1912,7 @@
     "info": "Information",
     "origin": "Origin",
     "quizResult": "Quiz result",
-    "exportedSio": "Exported to Systeme.io",
+    "exportedSio": "Exported to Tipote Business",
     "quizAnswers": "Quiz answers",
     "save": "Save",
     "cancel": "Cancel",
@@ -1948,7 +1963,7 @@
     "addMessage": "Add",
     "messagePlaceholder": "E.g.: Sale ends March 15 only!",
     "embedCodes": "Embed codes",
-    "embedCodesHelp": "Copy these codes and paste them into your Systeme.io page settings or your website HTML.",
+    "embedCodesHelp": "Copy these codes and paste them into your Tipote Business page settings or your website HTML.",
     "displayCode": "Capture / sales page (recommended)",
     "displayCodeHelp": "Paste this code on your capture page. It displays notifications AND automatically captures the first name when a visitor signs up.",
     "signupPixel": "Signup pixel (thank-you page — optional)",
@@ -2003,7 +2018,7 @@
       "hashtags": "Hashtags (for X/Twitter)",
       "hashtagsHelp": "Comma-separated, without #. E.g.: tipote,marketing",
       "embedCode": "Embed code",
-      "embedHelp": "Copy this code and paste it into your Systeme.io page or your website HTML."
+      "embedHelp": "Copy this code and paste it into your Tipote Business page or your website HTML."
     }
   },
   "postForm": {
@@ -2262,7 +2277,7 @@
       "description": "Create a lead magnet from A to Z",
       "item_0": "Create the content (ebook, course, quiz…)",
       "item_1": "Create the page (landing page, quiz…)",
-      "item_2": "Create tags in Systeme.io",
+      "item_2": "Create tags in Tipote Business",
       "item_3": "Automate sending bonuses and promised content",
       "item_4": "Create a Know Like Trust email sequence (onboarding) to welcome the new lead",
       "item_5": "Add tag to automations (signup → tag → email sequence → access)",
@@ -2298,7 +2313,7 @@
       "item_0": "Create landing page with promised bonuses for affiliates",
       "item_1": "Create bonuses",
       "item_2": "Automate bonus delivery",
-      "item_3": "Add a Systeme.io tag",
+      "item_3": "Add a Tipote Business tag",
       "item_4": "Prepare promo content (emails, posts, articles, videos)"
     },
     "challenge-webinaire": {

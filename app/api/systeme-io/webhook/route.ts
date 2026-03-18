@@ -132,7 +132,7 @@ const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   "3066719": "beta",
   "3064431": "beta",
 
-  // Offres Basic
+  // Offres Basic (Tipote direct)
   "offer-price-2963851": "basic",
   "offer-price-3134002": "basic",
   "offer-price-3103584": "basic",
@@ -140,17 +140,43 @@ const OFFER_PRICE_PLAN_ID_TO_PLAN: Record<string, StoredPlan> = {
   "3134002": "basic",
   "3103584": "basic",
 
-  // Offres Pro
+  // Offres Pro (Tipote direct)
   "offer-price-3103586": "pro",
   "offer-price-3103591": "pro",
   "3103586": "pro",
   "3103591": "pro",
 
-  // Offres Elite
+  // Offres Elite (Tipote direct)
   "offer-price-3103592": "elite",
   "offer-price-3103593": "elite",
   "3103592": "elite",
   "3103593": "elite",
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Offres Whitelabel "Tipote Business" (Systeme.io rebrandé Tipote)
+  // L'achat d'un plan Tipote ouvre automatiquement les accès à la
+  // plateforme business (tunnels, emails, pages, paiements, formations).
+  // Les IDs ci-dessous correspondent aux offres whitelabel.
+  // ⚠️  REMPLACER par les vrais IDs une fois créés dans Systeme.io Whitelabel.
+  // ──────────────────────────────────────────────────────────────────────
+
+  // Whitelabel Basic mensuel (= Systeme.io Startup rebrandé)
+  // "WL_BASIC_MONTHLY_ID": "basic",
+
+  // Whitelabel Basic annuel
+  // "WL_BASIC_ANNUAL_ID": "basic",
+
+  // Whitelabel Pro mensuel (= Systeme.io Webinar rebrandé)
+  // "WL_PRO_MONTHLY_ID": "pro",
+
+  // Whitelabel Pro annuel
+  // "WL_PRO_ANNUAL_ID": "pro",
+
+  // Whitelabel Elite mensuel (= Systeme.io Illimité rebrandé)
+  // "WL_ELITE_MONTHLY_ID": "elite",
+
+  // Whitelabel Elite annuel
+  // "WL_ELITE_ANNUAL_ID": "elite",
 };
 
 /**

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Rocket, Settings, Target, PenTool, ChevronRight } from "lucide-react";
+import { Sparkles, Rocket, Settings, Target, PenTool, ChevronRight, Briefcase } from "lucide-react";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useTranslations } from "next-intl";
 
@@ -99,6 +99,7 @@ export function WelcomeModal() {
               { icon: Settings, label: t("welcomeStep2") },
               { icon: Target, label: t("welcomeStep3") },
               { icon: PenTool, label: t("welcomeStep4") },
+              { icon: Briefcase, label: t("welcomeStep5") },
             ].map((step, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">

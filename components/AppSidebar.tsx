@@ -17,6 +17,8 @@ import {
   Bell,
   PanelLeftClose,
   HelpCircle,
+  Rocket,
+  ExternalLink,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -246,6 +248,25 @@ export function AppSidebar() {
           <TutorialSpotlight elementId="pepites" tooltipPosition="right" showNextButton>
             <PepitesSidebarItem />
           </TutorialSpotlight>
+        </SidebarMenu>
+
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a
+                href={process.env.NEXT_PUBLIC_TIPOTE_BUSINESS_URL ?? "https://business.tipote.com"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={MENU_ITEM_CLASS}
+              >
+                <Rocket className="w-5 h-5" />
+                <span className="flex items-center gap-1.5">
+                  {t("business") ?? "Tipote Business"}
+                  <ExternalLink className="w-3 h-3 opacity-50" />
+                </span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
 
         <SidebarMenu>

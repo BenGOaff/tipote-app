@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, ExternalLink, Coins, RefreshCcw, AlertTriangle, Star } from "lucide-react";
+import { Plus, X, ExternalLink, Coins, RefreshCcw, AlertTriangle, Star, Rocket } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Card } from "@/components/ui/card";
@@ -137,6 +137,11 @@ const BASIC_FEATURES: Feature[] = [
   { key: "persona", included: true },
   { key: "competition", included: true },
   { key: "buyCredits", included: true },
+  { key: "businessPlatform", included: true, bold: true },
+  { key: "tunnels", included: true },
+  { key: "emailing", included: true },
+  { key: "payments", included: true },
+  { key: "onlineCourses", included: true },
   { key: "multiprofiles", included: false },
   { key: "coach", included: false },
 ];
@@ -154,6 +159,12 @@ const PRO_FEATURES: Feature[] = [
   { key: "competition", included: true },
   { key: "buyCredits", included: true },
   { key: "coach", included: true, bold: true },
+  { key: "businessPlatform", included: true, bold: true },
+  { key: "tunnels", included: true },
+  { key: "emailing", included: true },
+  { key: "payments", included: true },
+  { key: "onlineCourses", included: true },
+  { key: "webinarsFeature", included: true },
   { key: "multiprofiles", included: false },
 ];
 
@@ -171,6 +182,13 @@ const ELITE_FEATURES: Feature[] = [
   { key: "buyCredits", included: true },
   { key: "coach", included: true },
   { key: "multiprofiles", included: true },
+  { key: "businessPlatform", included: true, bold: true },
+  { key: "tunnels", included: true },
+  { key: "emailing", included: true },
+  { key: "payments", included: true },
+  { key: "onlineCourses", included: true },
+  { key: "webinarsFeature", included: true },
+  { key: "affiliate", included: true },
 ];
 
 /* ─── Animated number hook ─── */
@@ -530,6 +548,21 @@ export default function BillingSection({ email }: Props) {
                 ))}
               </ul>
 
+              {/* Tipote Business badge for paid plans */}
+              {plan !== "free" && (
+                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Rocket className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-xs font-bold text-primary uppercase tracking-wide">
+                      Tipote Business
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t(`planCards.${plan}.businessDetail`)}
+                  </p>
+                </div>
+              )}
+
               {/* CTA button */}
               <div className="mt-6">
                 {plan === "free" ? (
@@ -579,7 +612,7 @@ export default function BillingSection({ email }: Props) {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" asChild>
-                <a href="https://systeme.io/dashboard/profile/manage-subscriptions" target="_blank" rel="noopener noreferrer">
+                <a href={process.env.NEXT_PUBLIC_TIPOTE_BUSINESS_URL ? `${process.env.NEXT_PUBLIC_TIPOTE_BUSINESS_URL}/dashboard/profile/manage-subscriptions` : "https://business.tipote.com/dashboard/profile/manage-subscriptions"} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   {t("manage.cta")}
                 </a>

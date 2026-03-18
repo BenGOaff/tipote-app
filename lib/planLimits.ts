@@ -21,6 +21,14 @@ export interface PlanLimits {
   analyseConcurrence: boolean;
   /** Can purchase additional AI credits */
   achatCredits: boolean;
+  /** Has access to Tipote Business (whitelabel Systeme.io) */
+  businessPlatform: boolean;
+  /** Max sales funnels on Tipote Business (Infinity = unlimited) */
+  maxFunnels: number;
+  /** Max email contacts on Tipote Business (Infinity = unlimited) */
+  maxEmailContacts: number;
+  /** Has access to webinars on Tipote Business */
+  webinars: boolean;
 }
 
 const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
@@ -33,6 +41,10 @@ const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     enrichissementPersona: false,
     analyseConcurrence: false,
     achatCredits: false,
+    businessPlatform: false,
+    maxFunnels: 0,
+    maxEmailContacts: 0,
+    webinars: false,
   },
   basic: {
     monthlyCredits: 40,
@@ -43,6 +55,10 @@ const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     enrichissementPersona: true,
     analyseConcurrence: true,
     achatCredits: true,
+    businessPlatform: true,
+    maxFunnels: 10,
+    maxEmailContacts: 5000,
+    webinars: false,
   },
   pro: {
     monthlyCredits: 150,
@@ -53,6 +69,10 @@ const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     enrichissementPersona: true,
     analyseConcurrence: true,
     achatCredits: true,
+    businessPlatform: true,
+    maxFunnels: 50,
+    maxEmailContacts: 10000,
+    webinars: true,
   },
   elite: {
     monthlyCredits: 500,
@@ -63,8 +83,12 @@ const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     enrichissementPersona: true,
     analyseConcurrence: true,
     achatCredits: true,
+    businessPlatform: true,
+    maxFunnels: Infinity,
+    maxEmailContacts: Infinity,
+    webinars: true,
   },
-  // Beta = lifetime access, same features as Pro
+  // Beta = lifetime access, same AI features as Pro, no Tipote Business access
   beta: {
     monthlyCredits: 150,
     maxSocialConnections: 4,
@@ -74,6 +98,10 @@ const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     enrichissementPersona: true,
     analyseConcurrence: true,
     achatCredits: true,
+    businessPlatform: false,
+    maxFunnels: 0,
+    maxEmailContacts: 0,
+    webinars: false,
   },
 };
 

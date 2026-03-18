@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
-import { PartyPopper, Sparkles, Settings, Target, Package, Users } from "lucide-react";
+import { PartyPopper, Sparkles, Settings, Target, Package, Users, Rocket } from "lucide-react";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -79,6 +79,7 @@ export function TourCompleteModal() {
                 { icon: Package, label: t("completeTipOffers") },
                 { icon: Target, label: t("completeTipPositioning") },
                 { icon: Users, label: t("completeTipPersona") },
+                { icon: Rocket, label: t("completeTipBusiness") },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">

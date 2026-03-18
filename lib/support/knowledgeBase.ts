@@ -14,12 +14,17 @@ export function buildSupportKnowledgeBase(locale: string): string {
 
   // ── 1. Product overview ──
   sections.push(`### Tipote — Présentation
-Tipote® est une application web SaaS tout-en-un pour les entrepreneurs. Elle permet de structurer son business, créer du contenu personnalisé avec l'IA, et publier directement sur les réseaux sociaux.
+Tipote® est la plateforme tout-en-un des solopreneurs. Un seul abonnement qui combine :
+- **Tipote App** — IA qui crée du contenu personnalisé, stratégie, publication directe sur les réseaux sociaux
+- **Tipote Business** — Tunnels de vente, emailing, pages web, paiements, formations en ligne, programme d'affiliation (propulsé par Systeme.io en whitelabel)
 
 Contrairement aux outils IA génériques, Tipote mémorise le profil business complet de l'utilisateur (diagnostic, persona, offres, objectifs, storytelling) pour générer du contenu véritablement personnalisé.
 
+De l'idée à la vente, tout est là. Un seul abo, zéro outil à côté.
+
 Disponible en 5 langues : Français, English, Español, Italiano, العربية.
-URL : https://app.tipote.com`);
+URL App : https://app.tipote.com
+URL Business : https://business.tipote.com`);
 
   // ── 2. Features ──
   sections.push(`### Fonctionnalités principales
@@ -86,7 +91,9 @@ URL : https://app.tipote.com`);
     - Free/Basic : limité à 3 messages/mois (mode teaser)
     - Accès au profil business complet pour des réponses contextuelles
 
-12. **Templates Systeme.io** — Bibliothèque de templates téléchargeables et personnalisables.
+12. **Tipote Business (Plateforme Business)** — Tunnels de vente, pages web, emailing & newsletters, paiements & encaissement, formations en ligne, programme d'affiliation, webinaires (Pro/Elite). Accessible via le lien "Tipote Business" dans la sidebar. S'ouvre dans une nouvelle fenêtre.
+
+13. **Templates Tipote Business** — Bibliothèque de templates téléchargeables et personnalisables.
 
 13. **Pépites (insights)** — Tips et insights business avec badge de notification.
 
@@ -103,7 +110,7 @@ URL : https://app.tipote.com`);
 
 18. **Paramètres** — 7 onglets :
     - Profil : nom, mission, niche, storytelling (6 étapes), offres, URLs réseaux sociaux
-    - Connexions : OAuth réseaux sociaux, API Systeme.io, auto-commentaires
+    - Connexions : OAuth réseaux sociaux, API Tipote Business, auto-commentaires
     - Réglages : email, mot de passe, langue
     - Positionnement : concurrents, positionnement marché, niche
     - Branding : police, couleurs, logo, photo auteur, ton de voix
@@ -118,13 +125,22 @@ URL : https://app.tipote.com`);
 | **Prix mensuel** | 0€ | 19€/mois | 49€/mois | 99€/mois |
 | **Prix annuel** | — | 190€/an | 490€/an | 990€/an |
 | **Crédits IA/mois** | 25 (unique, non renouvelable) | 40 | 150 | 500 |
-| **Tous les modules** | Oui | Oui | Oui | Oui |
+| **Tous les modules Tipote** | Oui | Oui | Oui | Oui |
 | **Publication directe** | Oui | Oui | Oui | Oui |
 | **Auto-commentaires** | Non | Oui | Oui | Oui |
 | **Coach IA** | Non | Non | Oui (illimité) | Oui (illimité) |
 | **Multi-projets** | Non | Non | Non | Oui |
+| **Tipote Business** | Non | Oui | Oui | Oui |
+| **Tunnels de vente** | — | 10 | 50 | Illimité |
+| **Contacts email** | — | 5 000 | 10 000 | Illimité |
+| **Emailing & newsletters** | — | Oui | Oui | Oui |
+| **Pages & sites web** | — | Oui | Oui | Oui |
+| **Paiement & encaissement** | — | Oui | Oui | Oui |
+| **Formations en ligne** | — | Oui | Oui | Oui |
+| **Programme d'affiliation** | — | Oui | Oui | Oui |
+| **Webinaires** | — | Non | Oui | Oui |
 
-Il existe aussi un plan "Beta" pour les early adopters lifetime (150 crédits/mois, toutes fonctionnalités).
+Il existe aussi un plan "Beta" pour les early adopters lifetime (150 crédits/mois, toutes fonctionnalités IA, pas d'accès Tipote Business).
 
 **Crédits IA :**
 - 1 crédit ≈ 0.01€ de coûts IA réels
@@ -133,7 +149,7 @@ Il existe aussi un plan "Beta" pour les early adopters lifetime (150 crédits/mo
 - Auto-commentaires : 0.25 crédit par commentaire
 - Le Coach IA (Pro/Elite) ne consomme PAS de crédits
 
-**Packs de crédits supplémentaires (via Systeme.io) :**
+**Packs de crédits supplémentaires (via Tipote Business) :**
 | Pack | Crédits | Prix |
 |---|---|---|
 | Starter | 25 | 3€ |
@@ -150,13 +166,14 @@ Les crédits supplémentaires n'expirent pas et sont consommés après les créd
 - Ma Stratégie (/strategy) — Pyramide d'offres + plan 30/90j + persona
 - Créer (/create) — Hub de création (8 types de contenu)
 - Mes Contenus (/contents) — Liste + calendrier éditorial
-- Templates (/templates) — Templates Systeme.io
+- Templates (/templates) — Templates Tipote Business
 - Automatisations (/automations) — Auto-commentaires et webhooks
 - Mes Leads (/leads) — Gestion des leads capturés
 
 **Section secondaire :**
 - Analytics (/analytics) — KPIs + diagnostic IA
 - Pépites (/pepites) — Insights et pépites
+- Tipote Business (lien externe) — Plateforme business (tunnels, emails, pages, paiements)
 - Aide (/support) — Centre d'aide
 
 **Workflow typique :** Onboarding → Aujourd'hui → Créer → Publier → Mes Contenus → Analytics`);
@@ -187,7 +204,9 @@ L'utilisateur n'a JAMAIS besoin de fournir sa propre clé API.`);
   // ── 7. Integrations ──
   sections.push(`### Intégrations
 
-- **Systeme.io** : facturation (webhooks achat/abonnement/annulation), export de leads avec tags, templates
+- **Tipote Business** (propulsé par Systeme.io) : plateforme business complète incluse dans les plans payants — tunnels de vente, emailing, pages, paiements, formations, affiliation. Accessible via le bouton "Tipote Business" dans la sidebar.
+- **Facturation** : webhooks achat/abonnement/annulation via Tipote Business
+- **Export de leads** : synchronisation automatique des leads avec tags vers Tipote Business
 - **n8n** : webhooks pour automatisations (publication asynchrone, callbacks)
 - **8 réseaux sociaux** : LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok, Pinterest, Reddit (OAuth 2.0)`);
 
