@@ -3,7 +3,7 @@
 // Body : FormData avec champ "file" (vidéo) et optionnel "contentId"
 // Retourne : { ok: true, url: string, path: string, filename, size, type }
 // Stockage : {user_id}/{contentId|"drafts"}/{timestamp}-{filename}
-// Taille max : 500MB
+// Taille max : 50MB
 // Formats : MP4, WebM, MOV
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,7 +12,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (Supabase Free plan limit)
 const ALLOWED_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 const BUCKET = "content-videos";
 
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   if (file.size > MAX_FILE_SIZE) {
     const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
     return NextResponse.json(
-      { error: `Fichier trop volumineux (${sizeMB} MB). Taille max : 500 MB.` },
+      { error: `Fichier trop volumineux (${sizeMB} MB). Taille max : 50 MB.` },
       { status: 400 }
     );
   }

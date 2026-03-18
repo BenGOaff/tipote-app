@@ -32,7 +32,7 @@ const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 const VIDEO_EXTENSIONS = "video/*,.mp4,.webm,.mov";
 const GIF_TYPE = "image/gif";
 const GIF_EXTENSION = ".gif";
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (Supabase Free plan limit)
 
 /**
  * Normalize MIME type: mobile devices sometimes report empty or non-standard types.
@@ -303,7 +303,7 @@ export function VideoUploader({
         </label>
         {video && (
           <span className="text-[11px] text-slate-500">
-            {formatLabel} - max 500 MB
+            {formatLabel} - max 50 MB
           </span>
         )}
       </div>
@@ -380,7 +380,7 @@ export function VideoUploader({
             {t('dropText')}
           </p>
           <p className="text-[11px] text-slate-400">
-            {formatLabel} - max 500 MB
+            {formatLabel} - max 50 MB
           </p>
         </div>
       )}

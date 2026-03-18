@@ -4,6 +4,6 @@
 
 UPDATE storage.buckets
 SET
-  file_size_limit = 524288000, -- 500MB
+  file_size_limit = 52428800, -- 50MB (Supabase Free plan global limit)
   allowed_mime_types = ARRAY['video/mp4', 'video/webm', 'video/quicktime', 'image/gif']
 WHERE id = 'content-videos';
