@@ -460,17 +460,17 @@ export default function BillingSection({ email }: Props) {
             <Card
               key={plan}
               className={`relative flex flex-col p-6 ${
-                highlighted
-                  ? "border-2 border-primary shadow-lg"
+                isCurrent
+                  ? "border-2 border-primary shadow-lg ring-2 ring-primary/50"
                   : ""
-              } ${isCurrent ? "ring-2 ring-primary/50" : ""}`}
+              }`}
             >
-              {/* "Le prefere de tous" badge on PRO */}
-              {highlighted && (
+              {/* Badge "Ton plan actuel" on user's current plan */}
+              {isCurrent && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <Badge className="bg-primary text-primary-foreground px-3 py-1 whitespace-nowrap">
                     <Star className="w-3.5 h-3.5 mr-1 fill-current" />
-                    {t("popular")}
+                    {t("currentLabel")}
                   </Badge>
                 </div>
               )}
@@ -542,8 +542,8 @@ export default function BillingSection({ email }: Props) {
                   </Button>
                 ) : (
                   <Button
-                    variant={highlighted ? "default" : "outline"}
-                    className={`w-full rounded-full ${highlighted ? "bg-primary hover:bg-primary/90" : ""}`}
+                    variant={isCurrent ? "default" : "outline"}
+                    className={`w-full rounded-full ${isCurrent ? "bg-primary hover:bg-primary/90" : ""}`}
                     onClick={() => openOrderForm(plan)}
                     disabled={loading || isCurrent}
                   >
