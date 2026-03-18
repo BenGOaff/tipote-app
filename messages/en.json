@@ -910,7 +910,7 @@
       },
       "elite": {
         "subtitle": "For pros managing multiple projects or clients",
-        "creditsLabel": "350 AI CREDITS per month"
+        "creditsLabel": "500 AI CREDITS per month"
       }
     },
     "features": {
@@ -1539,7 +1539,7 @@
     "unsupportedFormat": "Unsupported format",
     "unsupportedFormatDesc": "\"{name}\" is not a valid {formats} file.",
     "fileTooLarge": "File too large",
-    "fileTooLargeDesc": "\"{name}\" ({size}) exceeds the 500 MB limit.",
+    "fileTooLargeDesc": "\"{name}\" ({size}) exceeds the 50 MB limit.",
     "uploadError": "Upload error",
     "uploadPrepareError": "Unable to prepare the upload.",
     "networkError": "Network error",

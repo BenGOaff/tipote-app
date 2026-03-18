@@ -144,9 +144,33 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // User has a plan in DB but no Systeme.io contact — return profile plan directly
+      if (profile && currentPlan !== "free") {
+        return NextResponse.json(
+          {
+            contactId: null,
+            profile,
+            subscriptions: [],
+            activeSubscription: {
+              status: "active",
+              product_name: `Tipote ${currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}`,
+              offer_price_plan: { name: currentPlan, inner_name: currentPlan },
+            },
+            latestSubscription: null,
+          },
+          { status: 200 },
+        );
+      }
+
       return NextResponse.json(
-        { error: "contactId manquant : fournis sio_contact_id/contactId/contact ou un email déjà connu." },
-        { status: 400 },
+        {
+          contactId: null,
+          profile: profile ?? null,
+          subscriptions: [],
+          activeSubscription: null,
+          latestSubscription: null,
+        },
+        { status: 200 },
       );
     }
 

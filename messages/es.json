@@ -942,7 +942,7 @@
       },
       "elite": {
         "subtitle": "Para los pros que gestionan varios proyectos o clientes",
-        "creditsLabel": "350 CRÉDITOS IA por mes"
+        "creditsLabel": "500 CRÉDITOS IA por mes"
       }
     },
     "features": {
@@ -1568,7 +1568,7 @@
     "unsupportedFormat": "Formato no soportado",
     "unsupportedFormatDesc": "\"{name}\" no es un archivo {formats} válido.",
     "fileTooLarge": "Archivo demasiado grande",
-    "fileTooLargeDesc": "\"{name}\" ({size}) supera el límite de 500 MB.",
+    "fileTooLargeDesc": "\"{name}\" ({size}) supera el límite de 50 MB.",
     "uploadError": "Error de carga",
     "uploadPrepareError": "No se pudo preparar la carga.",
     "networkError": "Error de red",

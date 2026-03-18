@@ -374,7 +374,12 @@ export default function BillingSection({ email }: Props) {
               <Coins className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <p className="font-bold text-base mb-1">{t("credits.title")}</p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="font-bold text-base">{t("credits.title")}</p>
+                <Badge variant="outline" className="text-xs font-semibold uppercase tracking-wide border-primary/40 text-primary">
+                  {currentPlan === "beta" ? "Beta" : currentPlan.toUpperCase()}
+                </Badge>
+              </div>
               <p className="text-sm text-muted-foreground">{t("credits.desc")}</p>
             </div>
           </div>

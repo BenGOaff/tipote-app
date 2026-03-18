@@ -942,7 +942,7 @@
       },
       "elite": {
         "subtitle": "للمحترفين الذين يديرون عدة مشاريع أو عملاء",
-        "creditsLabel": "350 رصيد ذكاء اصطناعي شهرياً"
+        "creditsLabel": "500 رصيد ذكاء اصطناعي شهرياً"
       }
     },
     "features": {
@@ -1568,7 +1568,7 @@
     "unsupportedFormat": "صيغة غير مدعومة",
     "unsupportedFormatDesc": "\"{name}\" ليس ملف {formats} صالحاً.",
     "fileTooLarge": "الملف كبير جداً",
-    "fileTooLargeDesc": "\"{name}\" ({size}) يتجاوز الحد الأقصى 500 ميغابايت.",
+    "fileTooLargeDesc": "\"{name}\" ({size}) يتجاوز الحد الأقصى 50 ميغابايت.",
     "uploadError": "خطأ في التحميل",
     "uploadPrepareError": "تعذر تحضير التحميل.",
     "networkError": "خطأ في الشبكة",
