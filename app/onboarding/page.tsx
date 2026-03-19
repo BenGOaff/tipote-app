@@ -80,17 +80,18 @@ export default async function OnboardingPage() {
     }
   }
 
-  // Fallback: check by user_id only (compat for beta users WITHOUT active project)
-  if (!isCompleted && !firstName && !activeProjectId) {
-    const { data } = await supabase
+  // Fallback: check by user_id only (cookie mismatch, beta users, or project-scoped miss)
+  if (!isCompleted) {
+    const { data: rows } = await supabase
       .from("business_profiles")
       .select("onboarding_completed, first_name")
       .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("onboarding_completed", true)
+      .limit(1);
 
-    if (data) {
-      isCompleted = data.onboarding_completed === true;
-      firstName = data.first_name ?? null;
+    if (rows && rows.length > 0) {
+      isCompleted = true;
+      firstName = firstName ?? rows[0].first_name ?? null;
     }
   }
 

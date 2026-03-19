@@ -182,23 +182,26 @@ export async function middleware(req: NextRequest) {
           }
           return res;
         }
-        // Pas de row business_profiles pour ce projet → onboarding nécessaire
-        const url = req.nextUrl.clone();
-        url.pathname = "/onboarding";
-        return NextResponse.redirect(url);
+        // Pas de row business_profiles pour ce project_id → fall through au check par user_id
+        // (le cookie peut pointer vers un projet sans business_profile encore créé)
       } catch {
         return res; // fail-open
       }
     }
 
-    // Fallback : vérifier par user_id seul (beta users sans cookie projet)
-    const { data: bp, error } = await supabase
+    // Fallback : vérifier par user_id seul (beta users sans cookie projet, ou cookie mismatch)
+    // Utilise .limit(1) au lieu de .maybeSingle() pour éviter l'erreur PGRST116
+    // quand l'utilisateur a plusieurs business_profiles (multi-projets)
+    const { data: bpRows, error } = await supabase
       .from("business_profiles")
       .select("onboarding_completed, ui_locale")
       .eq("user_id", user.id)
-      .maybeSingle();
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
     if (error) return res; // fail-open DB
+
+    const bp = bpRows?.[0] ?? null;
 
     // Cross-device locale sync: if DB has a saved ui_locale, apply it to cookie.
     const dbLocale = (bp as any)?.ui_locale;

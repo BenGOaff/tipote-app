@@ -9,10 +9,13 @@
 // puis redirect vers /app. On garde /app clean (pas de bandeau / nudge post-onboarding).
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 import TodayLovable from "@/components/dashboard/TodayLovable";
 import StrategyAutoBootstrap from "@/components/strategy/StrategyAutoBootstrap";
+
+const ACTIVE_PROJECT_COOKIE = "tipote_active_project";
 
 export default async function TodayPage() {
   const supabase = await getSupabaseServerClient();
@@ -25,15 +28,36 @@ export default async function TodayPage() {
   if (userError || !user) redirect("/");
 
   const userId = user.id;
+  const cookieStore = await cookies();
+  const activeProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value?.trim() ?? "";
 
-  // Onboarding status
-  const { data: profile, error: profileError } = await supabase
-    .from("business_profiles")
-    .select("onboarding_completed")
-    .eq("user_id", userId)
-    .maybeSingle();
+  // Onboarding status — check project-scoped first, then fallback to user_id only
+  let onboardingCompleted = false;
 
-  if (profileError || !profile?.onboarding_completed) redirect("/onboarding");
+  if (activeProjectId) {
+    const { data } = await supabase
+      .from("business_profiles")
+      .select("onboarding_completed")
+      .eq("user_id", userId)
+      .eq("project_id", activeProjectId)
+      .maybeSingle();
+
+    if (data?.onboarding_completed) onboardingCompleted = true;
+  }
+
+  // Fallback: check any business_profiles row for this user (handles cookie mismatch / multiple rows)
+  if (!onboardingCompleted) {
+    const { data: rows } = await supabase
+      .from("business_profiles")
+      .select("onboarding_completed")
+      .eq("user_id", userId)
+      .eq("onboarding_completed", true)
+      .limit(1);
+
+    if (rows && rows.length > 0) onboardingCompleted = true;
+  }
+
+  if (!onboardingCompleted) redirect("/onboarding");
 
   return (
     <>
