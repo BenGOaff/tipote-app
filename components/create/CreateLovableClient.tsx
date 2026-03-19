@@ -648,7 +648,7 @@ export default function CreateLovableClient() {
 
     // ✅ FIX: render overlay ON TOP of the form instead of replacing it,
     // so the form keeps its local state (generatedContent, articleStep, etc.)
-    const showOverlay = isGenerating && ["post", "email", "article", "video"].includes(selectedType);
+    const showOverlay = isGenerating && ["post", "email", "article", "video", "offer", "funnel"].includes(selectedType);
 
     let form: React.ReactElement | null = null;
     switch (selectedType) {
