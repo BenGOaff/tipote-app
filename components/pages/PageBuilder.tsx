@@ -22,6 +22,7 @@ import {
   Undo2, Redo2,
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
+import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 
 // ---------- Types ----------
 
@@ -2326,12 +2327,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
                       <Tag className="w-3 h-3" /> Tag Systeme.io
                     </label>
-                    <input
-                      type="text"
+                    <SioTagPicker
                       value={page.sio_capture_tag || ""}
-                      onChange={(e) => handleSettingUpdate("sio_capture_tag", e.target.value)}
+                      onChange={(v) => handleSettingUpdate("sio_capture_tag", v)}
+                      variant="dark"
                       placeholder="capture-ebook"
-                      className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
                     />
                   </div>
 
@@ -2498,7 +2498,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
                   <Tag className="w-4 h-4 text-muted-foreground" /> {t("publish.captureTag")}
                 </label>
-                <input type="text" value={publishTag} onChange={(e) => setPublishTag(e.target.value)} placeholder="capture-ebook" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                <SioTagPicker
+                  value={publishTag}
+                  onChange={setPublishTag}
+                  variant="light"
+                  placeholder="capture-ebook"
+                />
               </div>
 
               {/* OG Image */}

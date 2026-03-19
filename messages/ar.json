@@ -114,7 +114,16 @@
     "copied": "تم النسخ!",
     "copy": "نسخ",
     "aiGeneratingTitle": "تيبوت يكتب لك الآن…",
-    "aiGeneratingSubtitle": "لن يستغرق الأمر سوى بضع ثوانٍ (لكنه يستحق الانتظار 😉)"
+    "aiGeneratingSubtitle": "لن يستغرق الأمر سوى بضع ثوانٍ (لكنه يستحق الانتظار 😉)",
+    "sioNoApiKey": "مفتاح API لـ Systeme.io غير مُعدّ.",
+    "sioGoToSettings": "إعداده في الإعدادات",
+    "sioTagsError": "تعذّر تحميل العلامات.",
+    "sioRetry": "إعادة المحاولة",
+    "sioNewTagPlaceholder": "اسم العلامة الجديدة",
+    "sioTagsLoading": "جارٍ التحميل…",
+    "sioLoadTags": "تحميل علاماتي",
+    "sioNoTag": "— بدون علامة —",
+    "sioCreateTag": "إنشاء علامة جديدة"
   },
   "auth": {
     "login": "تسجيل الدخول",
