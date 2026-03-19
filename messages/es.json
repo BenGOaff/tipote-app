@@ -114,7 +114,16 @@
     "copied": "¡Copiado!",
     "copy": "Copiar",
     "aiGeneratingTitle": "Tipote está redactando…",
-    "aiGeneratingSubtitle": "Solo tardará unos segundos (pero vale la pena esperar 😉)"
+    "aiGeneratingSubtitle": "Solo tardará unos segundos (pero vale la pena esperar 😉)",
+    "sioNoApiKey": "Clave API de Systeme.io no configurada.",
+    "sioGoToSettings": "Configurar en Ajustes",
+    "sioTagsError": "No se pudieron cargar las etiquetas.",
+    "sioRetry": "Reintentar",
+    "sioNewTagPlaceholder": "Nombre de la nueva etiqueta",
+    "sioTagsLoading": "Cargando…",
+    "sioLoadTags": "Cargar mis etiquetas",
+    "sioNoTag": "— Sin etiqueta —",
+    "sioCreateTag": "Crear una nueva etiqueta"
   },
   "auth": {
     "login": "Iniciar sesión",

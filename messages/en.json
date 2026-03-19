@@ -114,7 +114,16 @@
     "copied": "Copied!",
     "copy": "Copy",
     "aiGeneratingTitle": "Tipote is writing for you…",
-    "aiGeneratingSubtitle": "This should only take a few seconds (but it's worth the wait 😉)"
+    "aiGeneratingSubtitle": "This should only take a few seconds (but it's worth the wait 😉)",
+    "sioNoApiKey": "Systeme.io API key not configured.",
+    "sioGoToSettings": "Configure in Settings",
+    "sioTagsError": "Could not load tags.",
+    "sioRetry": "Retry",
+    "sioNewTagPlaceholder": "New tag name",
+    "sioTagsLoading": "Loading…",
+    "sioLoadTags": "Load my tags",
+    "sioNoTag": "— No tag —",
+    "sioCreateTag": "Create a new tag"
   },
   "auth": {
     "login": "Sign in",

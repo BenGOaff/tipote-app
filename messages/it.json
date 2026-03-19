@@ -114,7 +114,16 @@
     "copied": "Copiato!",
     "copy": "Copia",
     "aiGeneratingTitle": "Tipote sta scrivendo…",
-    "aiGeneratingSubtitle": "Ci vorranno solo pochi secondi (ma vale la pena aspettare 😉)"
+    "aiGeneratingSubtitle": "Ci vorranno solo pochi secondi (ma vale la pena aspettare 😉)",
+    "sioNoApiKey": "Chiave API Systeme.io non configurata.",
+    "sioGoToSettings": "Configura nelle Impostazioni",
+    "sioTagsError": "Impossibile caricare i tag.",
+    "sioRetry": "Riprova",
+    "sioNewTagPlaceholder": "Nome del nuovo tag",
+    "sioTagsLoading": "Caricamento…",
+    "sioLoadTags": "Carica i miei tag",
+    "sioNoTag": "— Nessun tag —",
+    "sioCreateTag": "Crea un nuovo tag"
   },
   "auth": {
     "login": "Accedi",
