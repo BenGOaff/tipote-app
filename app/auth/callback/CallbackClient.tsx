@@ -136,6 +136,9 @@ export default function CallbackClient() {
       return;
     }
 
+    // Reset au projet par défaut à la connexion (le middleware/serveur résoudra le default)
+    document.cookie = "tipote_active_project=;path=/;max-age=0;samesite=lax";
+
     // Ensure the user has a "profiles" row (plan, email, credits).
     // Without this, users whose Systeme.io webhook missed are invisible
     // in the admin dashboard and default to "free".

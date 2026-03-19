@@ -15,6 +15,8 @@ export default function LogoutButton() {
     try {
       setLoading(true);
       const supabase = getSupabaseBrowserClient();
+      // Clear le cookie projet actif pour repartir sur le default à la prochaine connexion
+      document.cookie = "tipote_active_project=;path=/;max-age=0;samesite=lax";
       await supabase.auth.signOut();
       router.push("/");
     } catch (error) {
