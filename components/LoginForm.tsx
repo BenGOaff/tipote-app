@@ -129,6 +129,9 @@ export default function LoginForm() {
         return;
       }
 
+      // Reset au projet par défaut à la connexion (le middleware/serveur résoudra le default)
+      document.cookie = 'tipote_active_project=;path=/;max-age=0;samesite=lax';
+
       router.push('/app');
     } catch (err) {
       console.error('[LoginForm] unexpected error (password login)', err);
