@@ -242,7 +242,8 @@ export default function EventsPageClient() {
         notes: formNotes.trim() || null,
         event_type: formEventType,
         end_date: formEventType === "challenge" ? formEndDate || null : null,
-        offer_id: formOfferId && formOfferId !== "__other__" ? formOfferId : null,
+        // offer_id is UUID in DB — only send real UUIDs (not synthetic IDs like "user:xxx:0")
+        offer_id: formOfferId && formOfferId !== "__other__" && !formOfferId.startsWith("user:") ? formOfferId : null,
         program: formEventType === "challenge" ? formProgram.trim() || null : null,
       };
 
