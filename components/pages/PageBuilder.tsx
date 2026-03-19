@@ -178,10 +178,41 @@ const INLINE_EDIT_SCRIPT = `
   /* ── Toolbar element (shared, moves to focused element) ── */
   var toolbar = document.createElement('div');
   toolbar.className = 'tipote-toolbar';
-  toolbar.style.cssText = 'position:fixed;z-index:99999;display:none;align-items:center;gap:6px;padding:4px 8px;background:#1e293b;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.25);pointer-events:auto;transition:opacity 0.15s;';
+  toolbar.style.cssText = 'position:fixed;z-index:99999;display:none;align-items:center;gap:4px;padding:4px 8px;background:#1e293b;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.25);pointer-events:auto;transition:opacity 0.15s;';
   toolbar.setAttribute('data-tipote-injected', '1');
-  toolbar.innerHTML = '<input type="color" class="tp-color-input" title="{t("controls.textColor")}" style="width:24px;height:24px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
+
+  var btnStyle = 'display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;border-radius:5px;cursor:pointer;background:transparent;color:rgba(255,255,255,0.7);padding:0;transition:background 0.15s,color 0.15s;';
+  var btnHover = 'background:rgba(255,255,255,0.15);color:#fff;';
+  var sepStyle = 'width:1px;height:18px;background:rgba(255,255,255,0.15);flex-shrink:0;';
+
+  toolbar.innerHTML =
+    '<button class="tp-fmt-btn" data-cmd="bold" title="Gras (Ctrl+B)" style="' + btnStyle + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/></svg></button>' +
+    '<button class="tp-fmt-btn" data-cmd="italic" title="Italique (Ctrl+I)" style="' + btnStyle + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>' +
+    '<button class="tp-fmt-btn" data-cmd="underline" title="Souligner (Ctrl+U)" style="' + btnStyle + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a6 6 0 006 6 6 6 0 006-6V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg></button>' +
+    '<div style="' + sepStyle + '"></div>' +
+    '<button class="tp-fmt-btn" data-cmd="insertUnorderedList" title="Liste à puces" style="' + btnStyle + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>' +
+    '<div style="' + sepStyle + '"></div>' +
+    '<input type="color" class="tp-color-input" title="Couleur du texte" style="width:24px;height:24px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
   document.body.appendChild(toolbar);
+
+  /* Formatting button handlers */
+  toolbar.querySelectorAll('.tp-fmt-btn').forEach(function(btn) {
+    btn.addEventListener('mouseenter', function() { btn.style.background = 'rgba(255,255,255,0.15)'; btn.style.color = '#fff'; });
+    btn.addEventListener('mouseleave', function() { btn.style.background = 'transparent'; btn.style.color = 'rgba(255,255,255,0.7)'; });
+    btn.addEventListener('mousedown', function(e) {
+      e.preventDefault(); // preserve text selection
+      e.stopPropagation();
+    });
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var cmd = btn.getAttribute('data-cmd');
+      if (cmd && activeEl) {
+        document.execCommand(cmd, false, null);
+        parent.postMessage({ type: 'tipote:text-edit', tag: activeEl.tagName.toLowerCase(), text: (activeEl.innerText || '').trim(), html: activeEl.innerHTML }, '*');
+      }
+    });
+  });
 
   var colorInput = toolbar.querySelector('.tp-color-input');
   var activeEl = null;
