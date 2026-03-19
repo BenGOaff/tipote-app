@@ -205,11 +205,16 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
 
   // ---- Source 2: business_profiles.offers (user's own/affiliate offers) ----
   try {
-    const { data: profile } = await supabase
+    // Use .limit(1) instead of .maybeSingle() to avoid PGRST116 error
+    // when user has multiple business_profiles rows (multi-project)
+    const { data: profiles } = await supabase
       .from("business_profiles")
       .select("offers")
       .eq("user_id", userId)
-      .maybeSingle();
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    const profile = profiles?.[0] ?? null;
 
     if (profile && Array.isArray(profile.offers)) {
       const existingNames = new Set(allOffers.map((o) => o.name.toLowerCase().trim()));
