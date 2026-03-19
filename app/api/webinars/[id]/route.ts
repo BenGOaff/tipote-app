@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -36,7 +38,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     if (body.webinar_date !== undefined) updates.webinar_date = body.webinar_date || null;
     if (body.end_date !== undefined) updates.end_date = body.end_date || null;
-    if (body.offer_id !== undefined) updates.offer_id = body.offer_id || null;
+    // offer_id must be a valid UUID — reject synthetic IDs like "user:xxx:0"
+    if (body.offer_id !== undefined) {
+      updates.offer_id = body.offer_id && UUID_RE.test(body.offer_id) ? body.offer_id : null;
+    }
     if (body.event_type !== undefined) {
       updates.event_type = body.event_type === "challenge" ? "challenge" : "webinar";
     }

@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -72,7 +74,8 @@ export async function POST(req: NextRequest) {
         title: body.title.trim(),
         topic: body.topic?.trim() || null,
         offer_name: body.offer_name?.trim() || null,
-        offer_id: body.offer_id || null,
+        // offer_id must be a valid UUID — synthetic IDs like "user:xxx:0" from loadAllOffers are rejected
+        offer_id: body.offer_id && UUID_RE.test(body.offer_id) ? body.offer_id : null,
         webinar_date: body.webinar_date || null,
         end_date: body.end_date || null,
         event_type: eventType,
