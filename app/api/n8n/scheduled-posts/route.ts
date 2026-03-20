@@ -407,11 +407,12 @@ export async function GET(req: NextRequest) {
       } catch (err) {
         console.error(`[scheduled-posts] LinkedIn direct publish error for ${post.content_id}:`, err);
         // Reset to scheduled so it can be retried
-        await supabaseAdmin
-          .from("content_item")
-          .update({ status: "scheduled" })
-          .eq("id", post.content_id)
-          .catch(() => {});
+        try {
+          await supabaseAdmin
+            .from("content_item")
+            .update({ status: "scheduled" })
+            .eq("id", post.content_id);
+        } catch { /* ignore */ }
       }
     }
   }
