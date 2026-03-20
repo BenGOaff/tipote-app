@@ -15,6 +15,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { upsertByProject } from "@/lib/projects/upsertByProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -335,12 +336,17 @@ async function persistStrategyRow(params: {
       updated_at: new Date().toISOString(),
     };
 
-    let upsertQuery = supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id");
-    const upsertRes = await upsertQuery.maybeSingle();
-    if (upsertRes?.error) {
-      const insRes = await supabase.from("strategies").insert(payload).select("id").maybeSingle();
-      if (insRes?.error) console.error("persistStrategyRow failed:", insRes.error);
-    }
+    const { error: stratErr } = await upsertByProject({
+      supabase, table: "strategies", userId, projectId: projectId ?? null,
+      data: {
+        ...(businessProfileId ? { business_profile_id: businessProfileId } : {}),
+        title,
+        horizon_days: horizonDays,
+        ...(targetMonthlyRev !== null ? { target_monthly_rev: targetMonthlyRev } : {}),
+        updated_at: new Date().toISOString(),
+      },
+    });
+    if (stratErr) console.error("persistStrategyRow failed:", stratErr);
   } catch (e) {
     console.error("persistStrategyRow unexpected error:", e);
   }
@@ -379,8 +385,17 @@ async function getOrCreateStrategyIdBestEffort(params: {
       updated_at: new Date().toISOString(),
     };
 
-    const upsertRes = await supabase.from("strategies").upsert(payload, { onConflict: "user_id" }).select("id").maybeSingle();
-    if (!upsertRes?.error && upsertRes?.data?.id) return String(upsertRes.data.id);
+    const { data: upserted, error: uErr } = await upsertByProject({
+      supabase, table: "strategies", userId, projectId: projectId ?? null,
+      data: {
+        ...(businessProfileId ? { business_profile_id: businessProfileId } : {}),
+        title,
+        horizon_days: horizonDays,
+        ...(targetMonthlyRev !== null ? { target_monthly_rev: targetMonthlyRev } : {}),
+        updated_at: new Date().toISOString(),
+      },
+    });
+    if (!uErr && upserted?.id) return String(upserted.id);
 
     let selQuery = supabase.from("strategies").select("id").eq("user_id", userId);
     if (projectId) selQuery = selQuery.eq("project_id", projectId);
@@ -449,9 +464,7 @@ async function persistPersonaBestEffort(params: {
 
   const now = new Date().toISOString();
 
-  const payload: AnyRecord = {
-    user_id: userId,
-    ...(projectId ? { project_id: projectId } : {}),
+  const personaData: AnyRecord = {
     ...(strategyId ? { strategy_id: strategyId } : {}),
     role: "client_ideal",
     name: cleanString(persona.title, 240) || null,
@@ -470,26 +483,27 @@ async function persistPersonaBestEffort(params: {
     updated_at: now,
   };
 
+  // Update scoped by user+project+role, then insert if no row matched
   try {
-    const up = await admin.from("personas").upsert(payload, { onConflict: "user_id,role" });
-    if (!up.error) return;
-    console.error("persistPersonaBestEffort upsert error:", up.error);
+    let updQuery = admin.from("personas").update(personaData).eq("user_id", userId).eq("role", "client_ideal");
+    if (projectId) updQuery = updQuery.eq("project_id", projectId);
+    const upd = await updQuery.select("id");
+    if (!upd.error && Array.isArray(upd.data) && upd.data.length > 0) return;
   } catch (e) {
-    console.error("persistPersonaBestEffort upsert failed:", e);
+    console.error("persistPersonaBestEffort update error:", e);
   }
 
   try {
-    const ins = await admin.from("personas").insert({ ...payload, created_at: now });
+    const ins = await admin.from("personas").insert({
+      user_id: userId,
+      ...(projectId ? { project_id: projectId } : {}),
+      ...personaData,
+      created_at: now,
+    });
     if (!ins.error) return;
     console.error("persistPersonaBestEffort insert error:", ins.error);
   } catch (e) {
     console.error("persistPersonaBestEffort insert failed:", e);
-  }
-
-  try {
-    await admin.from("personas").update(payload).eq("user_id", userId).eq("role", "client_ideal");
-  } catch (e) {
-    console.error("persistPersonaBestEffort update fallback failed:", e);
   }
 }
 
@@ -1234,10 +1248,10 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
             updated_at: new Date().toISOString(),
           };
 
-          await supabase.from("business_plan").upsert(
-            { user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: cleaned, updated_at: new Date().toISOString() },
-            { onConflict: "user_id" },
-          );
+          await upsertByProject({
+            supabase, table: "business_plan", userId, projectId,
+            data: { plan_json: cleaned, updated_at: new Date().toISOString() },
+          });
 
           existingPlanJson = cleaned;
         }
@@ -1272,10 +1286,10 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
             updated_at: new Date().toISOString(),
           };
 
-          await supabase.from("business_plan").upsert(
-            { user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() },
-            { onConflict: "user_id" },
-          );
+          await upsertByProject({
+            supabase, table: "business_plan", userId, projectId,
+            data: { plan_json: nextPlan, updated_at: new Date().toISOString() },
+          });
 
           existingPlanJson = nextPlan;
         }
@@ -1516,11 +1530,10 @@ STRUCTURE EXACTE À RENVOYER (JSON strict) :
         console.error("offer_pyramids persistence error:", e);
       }
 
-      const { data: saved, error: saveErr } = await supabase
-        .from("business_plan")
-        .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-        .select("id")
-        .maybeSingle();
+      const { data: saved, error: saveErr } = await upsertByProject({
+        supabase, table: "business_plan", userId, projectId,
+        data: { plan_json, updated_at: new Date().toISOString() },
+      });
 
       if (saveErr) {
         console.error("Error saving business_plan offers:", saveErr);
@@ -1800,11 +1813,10 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
         updated_at: new Date().toISOString(),
       };
 
-      const { data: savedFull, error: fullErr } = await supabase
-        .from("business_plan")
-        .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-        .select("id")
-        .maybeSingle();
+      const { data: savedFull, error: fullErr } = await upsertByProject({
+        supabase, table: "business_plan", userId, projectId,
+        data: { plan_json: nextPlan, updated_at: new Date().toISOString() },
+      });
 
       if (fullErr) {
         console.error("Error saving business_plan full strategy (no offers):", fullErr);
@@ -2075,11 +2087,10 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
       updated_at: new Date().toISOString(),
     };
 
-    const { data: savedFull, error: fullErr } = await supabase
-      .from("business_plan")
-      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-      .select("id")
-      .maybeSingle();
+    const { data: savedFull, error: fullErr } = await upsertByProject({
+      supabase, table: "business_plan", userId, projectId,
+      data: { plan_json: nextPlan, updated_at: new Date().toISOString() },
+    });
 
     if (fullErr) {
       console.error("Error saving business_plan full strategy:", fullErr);

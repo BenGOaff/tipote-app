@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { upsertByProject } from "@/lib/projects/upsertByProject";
 
 export const dynamic = "force-dynamic";
 
@@ -180,42 +181,15 @@ export async function PATCH(req: NextRequest) {
     };
     if (projectId) row.project_id = projectId;
 
-    // Si project_id est présent, update par user_id + project_id
-    // Sinon fallback au upsert par user_id seul (ancien comportement)
-    let data: any = null;
-    let error: any = null;
-
-    if (projectId) {
-      const upd = await supabase
-        .from("business_profiles")
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id)
-        .eq("project_id", projectId)
-        .select("*")
-        .maybeSingle();
-      // If no row matched (legacy profile has project_id=null), fall back to upsert by user_id
-      if (!upd.error && upd.data) {
-        data = upd.data;
-      } else if (!upd.error) {
-        const ups = await supabase
-          .from("business_profiles")
-          .upsert(row, { onConflict: "user_id" })
-          .select("*")
-          .maybeSingle();
-        data = ups.data;
-        error = ups.error;
-      } else {
-        error = upd.error;
-      }
-    } else {
-      const ups = await supabase
-        .from("business_profiles")
-        .upsert(row, { onConflict: "user_id" })
-        .select("*")
-        .maybeSingle();
-      data = ups.data;
-      error = ups.error;
-    }
+    // Update-then-insert scoped by user + project (safe for multi-project)
+    const { data, error } = await upsertByProject({
+      supabase,
+      table: "business_profiles",
+      userId: user.id,
+      projectId,
+      data: { ...patch, updated_at: new Date().toISOString() },
+      select: "*",
+    });
 
     if (error) {
       console.error("[PATCH /api/profile] DB error:", error.message, error.code);

@@ -246,36 +246,37 @@ export function QuizForm({ onClose }: QuizFormProps) {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        // Parse SSE events from buffer
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? ""; // Keep incomplete line in buffer
+        // SSE events are separated by double newlines
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? ""; // Keep incomplete event in buffer
 
-        let eventType = "";
-        for (const line of lines) {
-          if (line.startsWith("event: ")) {
-            eventType = line.slice(7).trim();
-          } else if (line.startsWith("data: ")) {
-            const dataStr = line.slice(6);
-            try {
-              const data = JSON.parse(dataStr);
-              if (eventType === "result" && data.ok) {
-                result = data;
-              } else if (eventType === "error") {
-                if (data.error === "NO_CREDITS") {
-                  toast({
-                    title: "Crédits insuffisants",
-                    description: "La génération de quiz coûte 6 crédits.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                throw new Error(data.error || "Erreur de génération");
+        for (const eventBlock of events) {
+          let eventType = "";
+          let eventData = "";
+          for (const line of eventBlock.split("\n")) {
+            if (line.startsWith("event: ")) eventType = line.slice(7).trim();
+            else if (line.startsWith("data: ")) eventData = line.slice(6);
+          }
+          if (!eventData) continue;
+          try {
+            const data = JSON.parse(eventData);
+            if (eventType === "result" && data.ok) {
+              result = data;
+            } else if (eventType === "error") {
+              if (data.error === "NO_CREDITS") {
+                toast({
+                  title: "Crédits insuffisants",
+                  description: "La génération de quiz coûte 6 crédits.",
+                  variant: "destructive",
+                });
+                return;
               }
-              // heartbeat and progress events are ignored
-            } catch (parseErr) {
-              // Ignore malformed SSE data lines
-              if (eventType === "error" || eventType === "result") throw parseErr;
+              throw new Error(data.error || "Erreur de génération");
             }
+            // heartbeat and progress events are ignored
+          } catch (parseErr) {
+            // Ignore malformed SSE data lines
+            if (eventType === "error" || eventType === "result") throw parseErr;
           }
         }
       }

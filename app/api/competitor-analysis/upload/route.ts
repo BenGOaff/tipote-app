@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getPlanLimits } from "@/lib/planLimits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { upsertByProject } from "@/lib/projects/upsertByProject";
 import { getOwnerOpenAI, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 
 export const runtime = "nodejs";
@@ -173,12 +174,9 @@ export async function POST(req: NextRequest) {
     // Upsert: save extracted competitors + document key points.
     // Full analysis fields are cleared so the user knows they need to run "Lancer l'analyse IA".
     const now = new Date().toISOString();
-    const upsertPayload: Record<string, any> = {
-      user_id: user.id,
+    const upsertData: Record<string, any> = {
       competitors: extractResult.competitors_extracted,
-      // Save rich key points so the main analysis route can use them as context
       uploaded_document_summary: extractResult.document_key_points,
-      // Clear stale analysis data from any previous run
       competitor_details: null,
       summary: null,
       strengths: null,
@@ -189,13 +187,15 @@ export async function POST(req: NextRequest) {
       updated_at: now,
       created_at: now,
     };
-    if (projectId) upsertPayload.project_id = projectId;
 
-    const { data, error } = await supabase
-      .from("competitor_analyses")
-      .upsert(upsertPayload, { onConflict: "user_id" })
-      .select("*")
-      .maybeSingle();
+    const { data, error } = await upsertByProject({
+      supabase,
+      table: "competitor_analyses",
+      userId: user.id,
+      projectId,
+      data: upsertData,
+      select: "*",
+    });
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });

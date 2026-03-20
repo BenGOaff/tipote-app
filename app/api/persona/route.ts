@@ -31,14 +31,18 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Persona is unique per user+role — no project_id filter needed.
+    const projectId = await getActiveProjectId(supabase, auth.user.id);
+
+    // Persona is scoped per user+role+project for multi-project isolation.
     // Note: the personas table has NO 'channels' column — channels are stored
     // in persona_json (jsonb). Only select columns that actually exist.
-    const { data: rows, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("personas")
       .select("name, pains, desires, persona_json, updated_at")
       .eq("user_id", auth.user.id)
-      .eq("role", "client_ideal")
+      .eq("role", "client_ideal");
+    if (projectId) query = query.eq("project_id", projectId);
+    const { data: rows, error } = await query
       .order("updated_at", { ascending: false })
       .limit(1);
 
@@ -121,12 +125,13 @@ export async function PATCH(request: NextRequest) {
     // Only write to columns that actually exist in the schema.
 
     // First, read current persona_json to merge channels into it
-    const { data: currentRows } = await supabaseAdmin
+    let readQuery = supabaseAdmin
       .from("personas")
       .select("persona_json")
       .eq("user_id", auth.user.id)
-      .eq("role", "client_ideal")
-      .limit(1);
+      .eq("role", "client_ideal");
+    if (projectId) readQuery = readQuery.eq("project_id", projectId);
+    const { data: currentRows } = await readQuery.limit(1);
 
     const currentPj = ((currentRows?.[0]?.persona_json ?? {}) as AnyRecord);
 
@@ -155,13 +160,14 @@ export async function PATCH(request: NextRequest) {
       updated_at: now,
     };
 
-    // Tier 1: UPDATE existing persona row(s) for this user+role
-    const { data: updatedRows, error: updateError } = await supabaseAdmin
+    // Tier 1: UPDATE existing persona row(s) for this user+role+project
+    let updateQuery = supabaseAdmin
       .from("personas")
       .update(dataFields)
       .eq("user_id", auth.user.id)
-      .eq("role", "client_ideal")
-      .select("name");
+      .eq("role", "client_ideal");
+    if (projectId) updateQuery = updateQuery.eq("project_id", projectId);
+    const { data: updatedRows, error: updateError } = await updateQuery.select("name");
 
     if (updateError) {
       console.error("Persona update error:", updateError);

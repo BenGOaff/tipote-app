@@ -69,6 +69,11 @@ export async function ensureDefaultProject(userId: string): Promise<string | nul
 async function backfillOrphanData(userId: string, projectId: string) {
   const tables = [
     "business_profiles",
+    "personas",
+    "strategies",
+    "business_plan",
+    "competitor_analyses",
+    "quizzes",
     "social_connections",
     "social_automations",
     "content_item",

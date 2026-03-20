@@ -13,6 +13,7 @@ import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getPlanLimits } from "@/lib/planLimits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { getOwnerOpenAI, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { upsertByProject } from "@/lib/projects/upsertByProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -232,8 +233,7 @@ export async function POST(req: NextRequest) {
         sendSSE("progress", { step: "Sauvegarde des résultats..." });
 
         const now = new Date().toISOString();
-        const row: Record<string, any> = {
-          user_id: userId,
+        const rowData: Record<string, any> = {
           competitors: competitors,
           competitor_details: researchResult.competitor_details,
           summary: researchResult.summary,
@@ -243,14 +243,17 @@ export async function POST(req: NextRequest) {
           positioning_matrix: researchResult.positioning_matrix,
           status: "completed" as const,
           updated_at: now,
+          created_at: now,
         };
-        if (projectId) row.project_id = projectId;
 
-        const { data, error } = await supabase
-          .from("competitor_analyses")
-          .upsert({ ...row, created_at: now }, { onConflict: "user_id" })
-          .select("*")
-          .maybeSingle();
+        const { data, error } = await upsertByProject({
+          supabase,
+          table: "competitor_analyses",
+          userId,
+          projectId,
+          data: rowData,
+          select: "*",
+        });
 
         if (error) {
           sendSSE("error", { ok: false, error: error.message });
@@ -343,13 +346,14 @@ export async function PATCH(req: NextRequest) {
 
     patch.updated_at = new Date().toISOString();
 
-    if (projectId) patch.project_id = projectId;
-
-    const { data, error } = await supabase
-      .from("competitor_analyses")
-      .upsert({ user_id: user.id, ...patch }, { onConflict: "user_id" })
-      .select("*")
-      .maybeSingle();
+    const { data, error } = await upsertByProject({
+      supabase,
+      table: "competitor_analyses",
+      userId: user.id,
+      projectId,
+      data: patch,
+      select: "*",
+    });
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
