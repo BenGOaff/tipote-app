@@ -395,15 +395,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 5. Décider du chemin : n8n ou direct
+  // LinkedIn: toujours en publication directe pour éviter la troncature du contenu
+  // causée par l'interpolation JSON dans les templates n8n (JSON.stringify dans {{ }}).
   const n8nWebhookBase = process.env.N8N_WEBHOOK_BASE_URL;
   const n8nSecret = process.env.N8N_SHARED_SECRET;
 
-  if (n8nWebhookBase && n8nSecret) {
-    // --- Mode n8n : envoyer au webhook ---
+  if (n8nWebhookBase && n8nSecret && platform !== "linkedin") {
+    // --- Mode n8n : envoyer au webhook (toutes plateformes sauf LinkedIn) ---
     try {
-      const webhookPath = platform === "linkedin"
-        ? "linkedin-publish"
-        : platform === "twitter"
+      const webhookPath = platform === "twitter"
           ? "twitter-publish"
           : platform === "tiktok"
             ? "tiktok-publish"
@@ -415,18 +415,6 @@ export async function POST(req: NextRequest) {
       // Résoudre l'image : meta.images[] (nouveau format) ou meta.image_url (legacy)
       const resolvedImageUrl = resolveImageUrl(contentItem.meta);
       console.log(`[publish] ${platform}: image_url=${resolvedImageUrl ?? "none"}, meta.images count=${Array.isArray(contentItem.meta?.images) ? contentItem.meta.images.length : 0}`);
-
-      // Pour LinkedIn : uploader l'image côté app avant d'envoyer à n8n
-      // (n8n ne gère pas le process d'upload en 2 étapes de LinkedIn)
-      let linkedInImageUrn: string | undefined;
-      if (resolvedImageUrl && platform === "linkedin") {
-        try {
-          linkedInImageUrn = await uploadImageToLinkedIn(accessToken, platformUserId, resolvedImageUrl);
-          console.log(`[publish] LinkedIn image uploaded: ${linkedInImageUrn}`);
-        } catch (err) {
-          console.error("[publish] LinkedIn image upload failed, posting without image:", err);
-        }
-      }
 
       const n8nPayload: Record<string, unknown> = {
         content_id: contentId,
@@ -442,11 +430,6 @@ export async function POST(req: NextRequest) {
       // Ajouter l'image pour toutes les plateformes qui la supportent
       if (resolvedImageUrl) {
         n8nPayload.image_url = resolvedImageUrl;
-      }
-
-      // Ajouter l'URN de l'image LinkedIn si uploadée avec succès
-      if (linkedInImageUrn) {
-        n8nPayload.image_urn = linkedInImageUrn;
       }
 
       // Ajouter les settings TikTok pour le workflow n8n
