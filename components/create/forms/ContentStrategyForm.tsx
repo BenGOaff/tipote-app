@@ -711,38 +711,85 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     }
   };
 
-  // ── Download all as text file ──
-  const handleDownloadText = useCallback(() => {
+  // ── Download all as PDF ──
+  const handleDownloadText = useCallback(async () => {
     const doneItems = contents.filter((c) => c.status === "done");
     if (doneItems.length === 0) return;
 
-    const lines: string[] = [];
-    lines.push(strategy?.title || "Stratégie de contenu");
-    lines.push("=".repeat(50));
-    lines.push("");
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-    // Group by day for a nice download
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 20;
+    const marginTop = 25;
+    const marginBottom = 20;
+    const usableWidth = pageWidth - marginX * 2;
+    const bodyLineH = 5.5;
+
+    let y = marginTop;
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed > pageHeight - marginBottom) {
+        doc.addPage();
+        y = marginTop;
+      }
+    };
+
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    const title = strategy?.title || "Stratégie de contenu";
+    const titleWrapped = doc.splitTextToSize(title, usableWidth) as string[];
+    for (const tl of titleWrapped) {
+      ensureSpace(10);
+      doc.text(tl, marginX, y);
+      y += 10;
+    }
+    y += 3;
+
+    // Group by day
     const grouped = groupByDay(doneItems);
     for (const [dayNum, items] of grouped) {
-      lines.push(`═══ Jour ${dayNum} ═══`);
-      lines.push("");
+      // Day header
+      y += 4;
+      ensureSpace(9);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(`Jour ${dayNum}`, marginX, y);
+      y += 9;
+
       for (const item of items) {
         const label = PLATFORM_LABELS[item.platform] || item.platform;
-        lines.push(`── ${label} — ${item.theme} ──`);
-        lines.push("");
-        lines.push(item.content);
-        lines.push("");
+        // Section sub-header
+        ensureSpace(8);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text(`${label} — ${item.theme}`, marginX, y);
+        y += 7;
+
+        // Content body
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        const contentLines = item.content.split("\n");
+        for (const cl of contentLines) {
+          if (cl.trim() === "") {
+            y += bodyLineH * 0.5;
+            continue;
+          }
+          const wrapped = doc.splitTextToSize(cl, usableWidth) as string[];
+          for (const wl of wrapped) {
+            ensureSpace(bodyLineH);
+            doc.text(wl, marginX, y);
+            y += bodyLineH;
+          }
+        }
+        y += 4;
       }
-      lines.push("");
     }
 
-    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `strategie-${(strategy?.title || "contenu").replace(/[^a-zA-Z0-9àéèùâêîôû]/gi, "_")}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = `strategie-${(strategy?.title || "contenu").replace(/[^a-zA-Z0-9àéèùâêîôû]/gi, "_")}.pdf`;
+    doc.save(fileName);
   }, [contents, strategy]);
 
   // ═════════════════════════════════════════════
