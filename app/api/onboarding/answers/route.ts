@@ -23,6 +23,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 const OfferSchema = z.object({
   name: z.string().optional().default(""),
@@ -181,6 +182,7 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = user.id;
+  const projectId = await getActiveProjectId(supabase, userId);
   const nowIso = new Date().toISOString();
 
   const normalizedOffers = (d.offers ?? []).slice(0, 50).map((o) => ({
@@ -333,18 +335,23 @@ export async function POST(req: NextRequest) {
   async function updateThenInsert(row: Record<string, unknown>): Promise<UpdateResult> {
     const rowForUpdate = { ...row };
     delete (rowForUpdate as any).user_id;
+    delete (rowForUpdate as any).project_id;
 
-    const upd = await supabase
+    let updQuery = supabase
       .from("business_profiles")
       .update(rowForUpdate)
-      .eq("user_id", userId)
-      .select("id");
+      .eq("user_id", userId);
+    if (projectId) updQuery = updQuery.eq("project_id", projectId);
+
+    const upd = await updQuery.select("id");
     if (upd.error) return { ok: false, stage: "update", error: upd.error };
     if (Array.isArray(upd.data) && upd.data.length > 0) {
       return { ok: true, stage: "update", id: (upd.data[0] as any)?.id ?? null };
     }
 
-    const ins = await supabase.from("business_profiles").insert(row).select("id");
+    const insertRow = { ...row };
+    if (projectId) (insertRow as any).project_id = projectId;
+    const ins = await supabase.from("business_profiles").insert(insertRow).select("id");
     if (ins.error) return { ok: false, stage: "insert", error: ins.error };
     return { ok: true, stage: "insert", id: (ins.data?.[0] as any)?.id ?? null };
   }
