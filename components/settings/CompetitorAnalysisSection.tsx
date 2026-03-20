@@ -510,17 +510,168 @@ export default function CompetitorAnalysisSection() {
     });
   };
 
-  // Download analysis as markdown
-  const downloadAnalysis = () => {
+  // Download analysis as PDF
+  const downloadAnalysis = async () => {
     if (!analysis) return;
     const md = buildMarkdownExport(analysis);
-    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "analyse-concurrentielle.md";
-    a.click();
-    URL.revokeObjectURL(url);
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 20;
+    const marginTop = 25;
+    const marginBottom = 20;
+    const usableWidth = pageWidth - marginX * 2;
+    const bodyLineH = 5.5;
+    const h1LineH = 10;
+    const h2LineH = 8;
+    const h3LineH = 7;
+
+    let y = marginTop;
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed > pageHeight - marginBottom) {
+        doc.addPage();
+        y = marginTop;
+      }
+    };
+
+    for (const rawLine of md.split("\n")) {
+      const line = rawLine.trimEnd();
+
+      // --- (horizontal rule)
+      if (/^-{3,}$/.test(line.trim())) {
+        y += 3;
+        ensureSpace(bodyLineH);
+        doc.setDrawColor(200, 200, 200);
+        doc.line(marginX, y, pageWidth - marginX, y);
+        y += 4;
+        continue;
+      }
+
+      // # H1
+      if (line.startsWith("# ") && !line.startsWith("## ")) {
+        y += 4;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        const text = line.replace(/^# /, "");
+        const wrapped = doc.splitTextToSize(text, usableWidth) as string[];
+        for (const wl of wrapped) {
+          ensureSpace(h1LineH);
+          doc.text(wl, marginX, y);
+          y += h1LineH;
+        }
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        continue;
+      }
+
+      // ## H2
+      if (line.startsWith("## ")) {
+        y += 3;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        const text = line.replace(/^## /, "");
+        const wrapped = doc.splitTextToSize(text, usableWidth) as string[];
+        for (const wl of wrapped) {
+          ensureSpace(h2LineH);
+          doc.text(wl, marginX, y);
+          y += h2LineH;
+        }
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        continue;
+      }
+
+      // ### H3
+      if (line.startsWith("### ")) {
+        y += 2;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        const text = line.replace(/^### /, "");
+        const wrapped = doc.splitTextToSize(text, usableWidth) as string[];
+        for (const wl of wrapped) {
+          ensureSpace(h3LineH);
+          doc.text(wl, marginX, y);
+          y += h3LineH;
+        }
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        continue;
+      }
+
+      // Empty line
+      if (line.trim() === "") {
+        y += bodyLineH * 0.5;
+        continue;
+      }
+
+      // Bullet point
+      if (line.startsWith("- ")) {
+        doc.setFontSize(10);
+        const text = line.replace(/^- /, "");
+        const wrapped = doc.splitTextToSize(text, usableWidth - 6) as string[];
+        for (let i = 0; i < wrapped.length; i++) {
+          ensureSpace(bodyLineH);
+          if (i === 0) {
+            doc.text("\u2022", marginX, y);
+          }
+          doc.text(wrapped[i], marginX + 6, y);
+          y += bodyLineH;
+        }
+        continue;
+      }
+
+      // **Bold label:** value  (e.g. "**Positionnement :** ...")
+      const boldMatch = line.match(/^\*\*(.+?)\*\*\s*(.*)/);
+      if (boldMatch) {
+        doc.setFontSize(10);
+        const label = boldMatch[1];
+        const rest = boldMatch[2] || "";
+        const fullText = rest ? `${label} ${rest}` : label;
+        // Render label bold, rest normal
+        ensureSpace(bodyLineH);
+        const labelWidth = doc.getStringUnitWidth(label) * 10 / doc.internal.scaleFactor;
+        doc.setFont("helvetica", "bold");
+        doc.text(label, marginX, y);
+        if (rest) {
+          doc.setFont("helvetica", "normal");
+          const wrapped = doc.splitTextToSize(rest, usableWidth - labelWidth - 1) as string[];
+          if (wrapped.length <= 1) {
+            doc.text(` ${rest}`, marginX + labelWidth, y);
+            y += bodyLineH;
+          } else {
+            // First chunk on same line, rest wrapped full-width
+            doc.text(` ${wrapped[0]}`, marginX + labelWidth, y);
+            y += bodyLineH;
+            const remaining = doc.splitTextToSize(wrapped.slice(1).join(" "), usableWidth) as string[];
+            for (const rl of remaining) {
+              ensureSpace(bodyLineH);
+              doc.text(rl, marginX, y);
+              y += bodyLineH;
+            }
+          }
+        } else {
+          y += bodyLineH;
+        }
+        doc.setFont("helvetica", "normal");
+        continue;
+      }
+
+      // Markdown table lines — render as plain text
+      // Regular text
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const wrapped = doc.splitTextToSize(line, usableWidth) as string[];
+      for (const wl of wrapped) {
+        ensureSpace(bodyLineH);
+        doc.text(wl, marginX, y);
+        y += bodyLineH;
+      }
+    }
+
+    doc.save("analyse-concurrentielle.pdf");
   };
 
   if (loading) {
