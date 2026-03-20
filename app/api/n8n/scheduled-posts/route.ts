@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
-import { uploadImageToLinkedIn } from "@/lib/linkedin";
+import { uploadImageToLinkedIn, publishPost } from "@/lib/linkedin";
 
 export const dynamic = "force-dynamic";
 
@@ -361,9 +361,64 @@ export async function GET(req: NextRequest) {
 
   const validPosts = postsWithTokens.filter(Boolean);
 
+  // ── LinkedIn: publication directe (évite la troncature des templates n8n) ──
+  // Les posts LinkedIn sont publiés ici directement au lieu d'être retournés à n8n.
+  const linkedinPosts = validPosts.filter((p: any) => p.platform === "linkedin");
+  const otherPosts = validPosts.filter((p: any) => p.platform !== "linkedin");
+
+  if (linkedinPosts.length > 0) {
+    for (const post of linkedinPosts as any[]) {
+      try {
+        const result = await publishPost(
+          post.access_token,
+          post.platform_user_id,
+          post.commentary,
+          post.image_url, // publishPost gère l'upload d'image en interne
+        );
+
+        // Construire le callback payload comme le ferait n8n
+        const callbackPayload: Record<string, unknown> = {
+          content_id: post.content_id,
+          platform: "linkedin",
+          success: result.ok,
+        };
+        if (result.ok && result.postUrn) {
+          callbackPayload.postUrn = result.postUrn;
+        } else if (!result.ok) {
+          callbackPayload.error = result.error ?? "LinkedIn API error";
+        }
+
+        // Appeler le callback endpoint pour mettre à jour le statut
+        const callbackUrl = post.callback_url;
+        if (callbackUrl) {
+          await fetch(callbackUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-N8N-Secret": process.env.N8N_SHARED_SECRET ?? "",
+            },
+            body: JSON.stringify(callbackPayload),
+          }).catch((err) => {
+            console.error(`[scheduled-posts] LinkedIn callback failed for ${post.content_id}:`, err);
+          });
+        }
+
+        console.log(`[scheduled-posts] LinkedIn direct publish for ${post.content_id}: ok=${result.ok}, postUrn=${result.postUrn ?? "none"}`);
+      } catch (err) {
+        console.error(`[scheduled-posts] LinkedIn direct publish error for ${post.content_id}:`, err);
+        // Reset to scheduled so it can be retried
+        await supabaseAdmin
+          .from("content_item")
+          .update({ status: "scheduled" })
+          .eq("id", post.content_id)
+          .catch(() => {});
+      }
+    }
+  }
+
   // ── Lock: mark returned posts as "publishing" (only if RPC was not used) ──
-  if (!usedAtomicClaim && validPosts.length > 0) {
-    const ids = validPosts.map((p: any) => p.content_id).filter(Boolean);
+  if (!usedAtomicClaim && otherPosts.length > 0) {
+    const ids = otherPosts.map((p: any) => p.content_id).filter(Boolean);
     if (ids.length > 0) {
       // Try EN column first, then FR fallback
       const { error: lockErr } = await supabaseAdmin
@@ -380,11 +435,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  console.log(`[scheduled-posts] platform=${platformFilter ?? "all"} today=${todayStr} now=${nowHHMM} claimed=${(items ?? []).length} due=${duePosts.length} valid=${validPosts.length}`);
+  console.log(`[scheduled-posts] platform=${platformFilter ?? "all"} today=${todayStr} now=${nowHHMM} claimed=${(items ?? []).length} due=${duePosts.length} valid=${validPosts.length} linkedin_direct=${linkedinPosts.length} other_via_n8n=${otherPosts.length}`);
 
+  // Ne retourner que les posts non-LinkedIn (les LinkedIn sont déjà publiés)
   return NextResponse.json({
     ok: true,
-    count: validPosts.length,
-    posts: validPosts,
+    count: otherPosts.length,
+    posts: otherPosts,
   });
 }
