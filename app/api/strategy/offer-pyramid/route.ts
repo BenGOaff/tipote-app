@@ -10,6 +10,7 @@ import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { upsertByProject } from "@/lib/projects/upsertByProject";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -435,11 +436,10 @@ export async function PATCH(req: Request) {
         updated_at: now,
       };
 
-      await supabase
-        .from("business_plan")
-        .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: now }, { onConflict: "user_id" })
-        .select("id")
-        .maybeSingle();
+      await upsertByProject({
+        supabase, table: "business_plan", userId, projectId,
+        data: { plan_json: nextPlan, updated_at: now },
+      });
     }
 
     return NextResponse.json({ success: true });
@@ -495,11 +495,10 @@ export async function DELETE(req: Request) {
 
     nextPlan.updated_at = new Date().toISOString();
 
-    await supabase
-      .from("business_plan")
-      .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json: nextPlan, updated_at: nextPlan.updated_at }, { onConflict: "user_id" })
-      .select("id")
-      .maybeSingle();
+    await upsertByProject({
+      supabase, table: "business_plan", userId, projectId,
+      data: { plan_json: nextPlan, updated_at: nextPlan.updated_at },
+    });
 
     // Also clean offer_pyramids table if clearing all
     if (offerIndex === null) {
@@ -783,11 +782,10 @@ STRUCTURE EXACTE À RENVOYER :
           updated_at: new Date().toISOString(),
         };
 
-        await supabase
-          .from("business_plan")
-          .upsert({ user_id: userId, ...(projectId ? { project_id: projectId } : {}), plan_json, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-          .select("id")
-          .maybeSingle();
+        await upsertByProject({
+          supabase, table: "business_plan", userId, projectId,
+          data: { plan_json, updated_at: new Date().toISOString() },
+        });
 
         sendSSE("result", { success: true, offer_pyramids: normalizedOffers });
       } catch (err) {
