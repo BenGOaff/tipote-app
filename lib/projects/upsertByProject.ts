@@ -38,12 +38,18 @@ export async function upsertByProject({
   data,
   select = "id",
 }: UpsertByProjectOptions): Promise<UpsertResult> {
+  // Safety: if projectId is falsy but user has multiple rows, restrict to rows
+  // with NULL project_id to avoid overwriting other projects' data.
   // 1. Try UPDATE scoped by user + project
   let updQuery = supabase
     .from(table)
     .update(data)
     .eq("user_id", userId);
-  if (projectId) updQuery = updQuery.eq("project_id", projectId);
+  if (projectId) {
+    updQuery = updQuery.eq("project_id", projectId);
+  } else {
+    updQuery = updQuery.is("project_id", null);
+  }
   const upd = await updQuery.select(select);
 
   if (!upd.error && Array.isArray(upd.data) && upd.data.length > 0) {

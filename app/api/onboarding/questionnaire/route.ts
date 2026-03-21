@@ -212,11 +212,13 @@ export async function POST(req: Request) {
         upsertOk = !insErr;
       }
     } else {
-      // No project: update by user_id only
+      // No project: update by user_id only, but restrict to rows with NULL project_id
+      // to avoid overwriting other projects' data
       const { data: updRows, error: updErr } = await supabaseAdmin
         .from("business_profiles")
         .update(patch as any)
         .eq("user_id", userId)
+        .is("project_id", null)
         .select("id");
 
       if (!updErr && Array.isArray(updRows) && updRows.length > 0) {
