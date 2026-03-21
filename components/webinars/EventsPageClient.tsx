@@ -541,7 +541,7 @@ export default function EventsPageClient() {
                           className="text-xs text-muted-foreground"
                           onClick={() => setExpandedId(null)}
                         >
-                          &larr; Retour à la liste
+                          &larr; {t("playbook.backToList")}
                         </Button>
                         {/* Tab toggles */}
                         <div className="flex gap-1 bg-muted/40 rounded-lg p-1">
@@ -554,7 +554,7 @@ export default function EventsPageClient() {
                             onClick={() => setActiveTab("playbook")}
                           >
                             <BookOpen className="w-3.5 h-3.5" />
-                            Playbook
+                            {t("playbook.title")}
                           </button>
                           <button
                             className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -565,7 +565,7 @@ export default function EventsPageClient() {
                             onClick={() => setActiveTab("kpis")}
                           >
                             <BarChart3 className="w-3.5 h-3.5" />
-                            KPIs
+                            {t("playbook.kpis")}
                           </button>
                         </div>
 

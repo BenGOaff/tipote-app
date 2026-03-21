@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Accordion,
   AccordionContent,
@@ -43,13 +44,13 @@ interface PlaybookPhase {
   id: string;
   icon: React.ElementType;
   color: string;
+  tipsKey: string;
   items: PlaybookItem[];
-  tips: string[];
 }
 
 interface PlaybookItem {
   key: string;
-  label: string;
+  labelKey: string;
   generateAction?: {
     type: string;
     promptPrefix: string;
@@ -65,181 +66,117 @@ interface Props {
 // ─── Phase definitions ───────────────────────────────────────────────────────
 
 function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
+  const c = isChallenge;
   return {
     phase1: {
       id: "phase1",
       icon: Package,
       color: "text-pink-600",
-      tips: isChallenge
-        ? [
-            "Offre entre 97€ et 500€ : type formation complète",
-            "Faire le challenge en début ou milieu de mois (sinon les gens sont fauchés !)",
-            "Prévoir 80% de promo pour l'offre spéciale challenge",
-            "Option VIP : coachings supplémentaires + bonus + accès à vie aux replays",
-            "Non VIP : replay disponible d'un jour sur l'autre seulement",
-          ]
-        : [
-            "Choisir une offre entre 97€ et 997€ selon la complexité du sujet",
-            "Faire le webinaire en début ou milieu de mois (meilleur taux de conversion)",
-            "Prévoir une offre limitée dans le temps pour créer l'urgence",
-            "Bonus exclusif réservé aux participants live pour encourager la présence",
-          ],
+      tipsKey: c ? "tips_phase1_challenge" : "tips_phase1_webinar",
       items: [
-        { key: "phase1_offer", label: isChallenge ? "Choisir l'offre à vendre à la fin du challenge" : "Choisir l'offre à vendre à la fin du webinaire" },
-        { key: "phase1_promo", label: "Définir la promo spéciale (réduction, bonus, places limitées...)" },
-        { key: "phase1_date", label: isChallenge ? "Fixer les dates (4 jours consécutifs recommandés)" : "Fixer la date et l'heure" },
-        ...(isChallenge
+        { key: "phase1_offer", labelKey: c ? "phase1_offer_challenge" : "phase1_offer_webinar" },
+        { key: "phase1_promo", labelKey: "phase1_promo" },
+        { key: "phase1_date", labelKey: c ? "phase1_date_challenge" : "phase1_date_webinar" },
+        ...(c
           ? [
-              { key: "phase1_vip", label: "Préparer l'option VIP (coaching + bonus + accès à vie)" },
-              { key: "phase1_nonvip", label: "Définir l'accès non-VIP (replay limité dans le temps)" },
+              { key: "phase1_vip", labelKey: "phase1_vip" },
+              { key: "phase1_nonvip", labelKey: "phase1_nonvip" },
             ]
-          : [
-              { key: "phase1_bonus", label: "Préparer un bonus exclusif pour les participants live" },
-            ]),
+          : [{ key: "phase1_bonus", labelKey: "phase1_bonus" }]),
       ],
     },
     phase2: {
       id: "phase2",
       icon: FileText,
       color: "text-green-600",
-      tips: isChallenge
-        ? [
-            "Prévoir un max de valeur concrète pour démontrer ta crédibilité",
-            "Slides + exemples concrets + exercices journaliers",
-            "Jour 1 : Intro + valeur + exercice / Jour 2 : Approfondissement + exercice",
-            "Jour 3 : Plan d'action + exercice + pitch offre / Jour 4 : Coaching live + vente",
-            "Coaching en direct pour le membre le plus actif = boost d'engagement",
-          ]
-        : [
-            "Prévoir un max de valeur concrète pour démontrer ta crédibilité",
-            "Structure : Accroche → Contenu de valeur → Preuve → Offre → Q&A",
-            "Durée idéale : 45 à 75 minutes (inclus la vente)",
-            "Slides épurées : 1 idée par slide, peu de texte, beaucoup de visuel",
-          ],
+      tipsKey: c ? "tips_phase2_challenge" : "tips_phase2_webinar",
       items: [
-        {
-          key: "phase2_program",
-          label: isChallenge ? "Valider le programme jour par jour" : "Valider le plan du webinaire",
-        },
+        { key: "phase2_program", labelKey: c ? "phase2_program_challenge" : "phase2_program_webinar" },
         {
           key: "phase2_script",
-          label: isChallenge ? "Préparer le contenu de chaque jour" : "Préparer le script / les points clés",
-          generateAction: { type: "video_script", promptPrefix: isChallenge ? "Script pour un challenge" : "Script pour un webinaire" },
+          labelKey: c ? "phase2_script_challenge" : "phase2_script_webinar",
+          generateAction: { type: "video_script", promptPrefix: c ? "Script pour un challenge" : "Script pour un webinaire" },
         },
-        { key: "phase2_slides", label: "Préparer les slides" },
-        ...(isChallenge
-          ? [{ key: "phase2_exercises", label: "Définir les exercices pour chaque jour" }]
-          : [{ key: "phase2_demo", label: "Préparer une démonstration / cas concret" }]),
+        { key: "phase2_slides", labelKey: "phase2_slides" },
+        ...(c
+          ? [{ key: "phase2_exercises", labelKey: "phase2_exercises" }]
+          : [{ key: "phase2_demo", labelKey: "phase2_demo" }]),
       ],
     },
     phase3: {
       id: "phase3",
       icon: Monitor,
       color: "text-violet-600",
-      tips: [
-        "Matériel : un micro correct + une bonne webcam",
-        "Logiciel de live : Zoom, WebinarJam, StreamYard... (prévoir mini 500 participants)",
-        "Prévoir l'enregistrement pour les replays (revente possible ensuite !)",
-        "S'entraîner pour être à l'aise le jour J",
-        "Systeme.io ou équivalent : branding simple (couleurs + photo)",
-        "Connecter les moyens de paiement + tester les automatisations",
-      ],
+      tipsKey: "tips_phase3",
       items: [
-        { key: "phase3_tech", label: "Micro + webcam testés et fonctionnels" },
-        { key: "phase3_platform", label: "Plateforme de live configurée" },
-        { key: "phase3_record", label: "Système d'enregistrement (pour replays) prêt" },
-        { key: "phase3_rehearsal", label: "Répétition faite (au moins 1 fois)" },
+        { key: "phase3_tech", labelKey: "phase3_tech" },
+        { key: "phase3_platform", labelKey: "phase3_platform" },
+        { key: "phase3_record", labelKey: "phase3_record" },
+        { key: "phase3_rehearsal", labelKey: "phase3_rehearsal" },
         {
           key: "phase3_capture",
-          label: "Page de capture + page de remerciement créées",
+          labelKey: "phase3_capture",
           generateAction: { type: "sales_page", promptPrefix: "Page de capture pour" },
         },
-        { key: "phase3_payment", label: "Moyens de paiement connectés et testés" },
-        ...(isChallenge
-          ? [{ key: "phase3_banner", label: "Bannière pour le groupe communautaire créée" }]
-          : []),
+        { key: "phase3_payment", labelKey: "phase3_payment" },
+        ...(c ? [{ key: "phase3_banner", labelKey: "phase3_banner" }] : []),
       ],
     },
     phase4: {
       id: "phase4",
       icon: Megaphone,
       color: "text-blue-600",
-      tips: isChallenge
-        ? [
-            "Créer un groupe privé (Facebook, Telegram, WhatsApp...) dédié au challenge",
-            "Animation du groupe : présentations des participants + vidéo teasing",
-            "Emails : teasing + apport de valeur + curiosité + bénéfices + urgence",
-            "Partager par email + réseaux sociaux (groupes ciblés)",
-            "Partenaires/affiliés : taux de commission minimum 30%",
-            "Leur partager la page de capture bien paramétrée avec lien affilié",
-          ]
-        : [
-            "Emails : teasing + apport de valeur + curiosité + bénéfices + urgence",
-            "Partager par email + réseaux sociaux (groupes ciblés)",
-            "Partenaires/affiliés : taux de commission minimum 30%",
-            "Créer un événement sur les réseaux pour augmenter la visibilité",
-          ],
+      tipsKey: c ? "tips_phase4_challenge" : "tips_phase4_webinar",
       items: [
-        ...(isChallenge
-          ? [{ key: "phase4_group", label: "Groupe privé créé (Facebook, Telegram...)" },
-             { key: "phase4_teasing", label: "Vidéo de teasing / présentation postée" }]
+        ...(c
+          ? [
+              { key: "phase4_group", labelKey: "phase4_group" },
+              { key: "phase4_teasing", labelKey: "phase4_teasing" },
+            ]
           : []),
         {
           key: "phase4_emails_invite",
-          label: "Emails d'annonce et d'invitation envoyés (J-7)",
+          labelKey: "phase4_emails_invite",
           generateAction: { type: "email", promptPrefix: "Email d'invitation pour" },
         },
         {
           key: "phase4_posts",
-          label: "Posts de promotion sur les réseaux sociaux",
+          labelKey: "phase4_posts",
           generateAction: { type: "post", promptPrefix: "Post de promotion pour" },
         },
         {
           key: "phase4_sequence",
-          label: isChallenge ? "Séquence emails de teasing pré-challenge" : "Séquence emails de rappel pré-webinaire",
-          generateAction: { type: "email", promptPrefix: isChallenge ? "Séquence de teasing pour" : "Séquence de rappels pour" },
+          labelKey: c ? "phase4_sequence_challenge" : "phase4_sequence_webinar",
+          generateAction: { type: "email", promptPrefix: c ? "Séquence de teasing pour" : "Séquence de rappels pour" },
         },
-        { key: "phase4_partners", label: "Partenaires / affiliés contactés (commission 30% min)" },
+        { key: "phase4_partners", labelKey: "phase4_partners" },
       ],
     },
     phase5: {
       id: "phase5",
       icon: Flame,
       color: "text-orange-600",
-      tips: isChallenge
-        ? [
-            "Rappels : J-1 + le matin de chaque jour + 1h avant le live",
-            "Poster l'exercice du jour dans le groupe après chaque session",
-            "Post récap + motivation quotidien dans le groupe",
-            "Jour 3 : première mention de l'offre (soft pitch)",
-            "Jour 4 : vente complète + ouverture des paiements en plusieurs fois",
-          ]
-        : [
-            "Rappels : J-7, J-1, le matin même, 1h avant, 15min avant",
-            "Pendant le live : poser des questions pour garder l'audience active",
-            "Présenter l'offre au bon moment : après avoir démontré la valeur",
-            "Ne pas être pushy : montrer la transformation, pas le produit",
-          ],
+      tipsKey: c ? "tips_phase5_challenge" : "tips_phase5_webinar",
       items: [
         {
           key: "phase5_reminder",
-          label: isChallenge ? "Rappels quotidiens envoyés (email + groupe)" : "Rappels envoyés (J-1, H-1)",
+          labelKey: c ? "phase5_reminder_challenge" : "phase5_reminder_webinar",
           generateAction: { type: "email", promptPrefix: "Email de rappel pour" },
         },
-        ...(isChallenge
+        ...(c
           ? [
-              { key: "phase5_exercises", label: "Exercices quotidiens partagés dans le groupe" },
+              { key: "phase5_exercises", labelKey: "phase5_exercises" },
               {
                 key: "phase5_motivation",
-                label: "Posts de motivation et récap quotidiens",
+                labelKey: "phase5_motivation",
                 generateAction: { type: "post", promptPrefix: "Post de motivation jour X du challenge" },
               },
-              { key: "phase5_pitch_j3", label: "Pitch de l'offre présenté (Jour 3)" },
-              { key: "phase5_sale_j4", label: "Vente finale + paiements ouverts (Jour 4)" },
+              { key: "phase5_pitch_j3", labelKey: "phase5_pitch_j3" },
+              { key: "phase5_sale_j4", labelKey: "phase5_sale_j4" },
             ]
           : [
-              { key: "phase5_engagement", label: "Questions d'engagement préparées pour le live" },
-              { key: "phase5_pitch", label: "Offre présentée avec bonus + urgence" },
+              { key: "phase5_engagement", labelKey: "phase5_engagement" },
+              { key: "phase5_pitch", labelKey: "phase5_pitch" },
             ]),
       ],
     },
@@ -247,56 +184,36 @@ function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
       id: "phase6",
       icon: BarChart3,
       color: "text-purple-600",
-      tips: [
-        "Envoyer un email bilan dans les 24h après l'événement",
-        "Relancer sur le groupe + rappel de l'offre avec urgence",
-        "Séquence de relance : J+1, J+2, J+3 (dernière chance)",
-        isChallenge
-          ? "BONUS : relancer le challenge en mode replay pour re-vendre l'offre !"
-          : "BONUS : proposer le replay aux absents avec un lien limité dans le temps !",
-        isChallenge
-          ? "BONUS : re-vendre l'offre spéciale via le replay du challenge"
-          : "BONUS : créer un mini-cours à partir du contenu du webinaire",
-      ],
+      tipsKey: "tips_phase6",
       items: [
         {
           key: "phase6_bilan",
-          label: "Email bilan envoyé",
+          labelKey: "phase6_bilan",
           generateAction: { type: "email", promptPrefix: "Email bilan post-événement pour" },
         },
         {
           key: "phase6_relance",
-          label: "Séquence de relance envoyée (J+1, J+2, J+3)",
+          labelKey: "phase6_relance",
           generateAction: { type: "email", promptPrefix: "Séquence de relance post-événement pour" },
         },
-        { key: "phase6_urgency", label: "Rappel avec urgence (fermeture de l'offre)" },
-        { key: "phase6_kpis", label: "KPIs remplis dans Tipote" },
-        {
-          key: "phase6_replay",
-          label: isChallenge ? "Replay du challenge préparé pour re-vente" : "Replay envoyé aux inscrits absents",
-        },
+        { key: "phase6_urgency", labelKey: "phase6_urgency" },
+        { key: "phase6_kpis", labelKey: "phase6_kpis" },
+        { key: "phase6_replay", labelKey: c ? "phase6_replay_challenge" : "phase6_replay_webinar" },
       ],
     },
   };
 }
-
-const PHASE_LABELS: Record<string, { label: string; labelChallenge?: string }> = {
-  phase1: { label: "Préparer l'offre" },
-  phase2: { label: "Contenu", labelChallenge: "Contenu du challenge" },
-  phase3: { label: "Préparation technique" },
-  phase4: { label: "Acquisition & Communauté" },
-  phase5: { label: "Pendant l'événement", labelChallenge: "Pendant le challenge" },
-  phase6: { label: "Suivi & Réutilisation" },
-};
 
 // ─── AI Titles Generator ─────────────────────────────────────────────────────
 
 function PlaybookAIGenerator({
   webinar,
   onDataUpdate,
+  t,
 }: {
   webinar: Webinar;
   onDataUpdate: (data: Record<string, unknown>) => void;
+  t: (key: string) => string;
 }) {
   const { toast } = useToast();
   const [generating, setGenerating] = useState(false);
@@ -319,17 +236,17 @@ function PlaybookAIGenerator({
         }),
       });
       const data = await res.json();
-      if (!data?.ok) throw new Error(data?.error ?? "Erreur");
+      if (!data?.ok) throw new Error(data?.error ?? t("playbook.error"));
       const newData = { ...playData, titles: data.data?.titles ?? [] };
       onDataUpdate(newData);
-      toast({ title: "Titres générés !" });
+      toast({ title: t("playbook.titlesGenerated") });
     } catch (e: any) {
-      toast({ title: "Erreur", description: e?.message, variant: "destructive" });
+      toast({ title: t("playbook.error"), description: e?.message, variant: "destructive" });
     } finally {
       setGenerating(false);
       setStep("idle");
     }
-  }, [webinar.event_type, playData, onDataUpdate, toast]);
+  }, [webinar.event_type, playData, onDataUpdate, toast, t]);
 
   const selectTitle = useCallback(
     (title: string) => {
@@ -354,26 +271,26 @@ function PlaybookAIGenerator({
         }),
       });
       const data = await res.json();
-      if (!data?.ok) throw new Error(data?.error ?? "Erreur");
+      if (!data?.ok) throw new Error(data?.error ?? t("playbook.error"));
       const newData = { ...playData, program: data.data?.program ?? null };
       onDataUpdate(newData);
-      toast({ title: "Programme généré !" });
+      toast({ title: t("playbook.programGenerated") });
     } catch (e: any) {
-      toast({ title: "Erreur", description: e?.message, variant: "destructive" });
+      toast({ title: t("playbook.error"), description: e?.message, variant: "destructive" });
     } finally {
       setGenerating(false);
       setStep("idle");
     }
-  }, [webinar.event_type, chosenTitle, playData, onDataUpdate, toast]);
+  }, [webinar.event_type, chosenTitle, playData, onDataUpdate, toast, t]);
 
   const isChallenge = webinar.event_type === "challenge";
 
   return (
-    <Card className="p-4 space-y-4 border-dashed border-2 border-primary/20 bg-primary/5">
+    <Card className="p-3 sm:p-4 space-y-4 border-dashed border-2 border-primary/20 bg-primary/5">
       <div className="flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-primary" />
+        <Sparkles className="w-5 h-5 text-primary shrink-0" />
         <h3 className="font-semibold text-sm">
-          Assistant IA — {isChallenge ? "Créer ton challenge" : "Créer ton webinaire"}
+          {t("playbook.aiAssistant")} — {isChallenge ? t("playbook.aiAssistantChallenge") : t("playbook.aiAssistantWebinar")}
         </h3>
       </div>
 
@@ -381,12 +298,11 @@ function PlaybookAIGenerator({
       {titles.length === 0 && !generating && (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            L&apos;IA va utiliser ta niche, ton persona et tes offres pour te proposer des idées de{" "}
-            {isChallenge ? "challenges" : "webinaires"} percutants.
+            {t("playbook.aiIntro")}
           </p>
-          <Button onClick={generateTitles} size="sm">
+          <Button onClick={generateTitles} size="sm" className="w-full sm:w-auto">
             <Sparkles className="w-4 h-4 mr-1" />
-            Générer des idées de titres
+            {t("playbook.generateTitles")}
           </Button>
         </div>
       )}
@@ -396,7 +312,7 @@ function PlaybookAIGenerator({
         <div className="flex items-center gap-2 py-4">
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
           <span className="text-sm text-muted-foreground">
-            {step === "titles" ? "Génération des titres..." : "Génération du programme..."}
+            {step === "titles" ? t("playbook.generatingTitles") : t("playbook.generatingProgram")}
           </span>
         </div>
       )}
@@ -404,23 +320,23 @@ function PlaybookAIGenerator({
       {/* Step 2: Show titles, let user pick */}
       {titles.length > 0 && !chosenTitle && !generating && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Choisis le titre qui te parle le plus :</p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-sm font-medium">{t("playbook.chooseTitlePrompt")}</p>
             <Button variant="ghost" size="sm" onClick={generateTitles}>
               <RefreshCw className="w-3 h-3 mr-1" />
-              Régénérer
+              {t("playbook.regenerate")}
             </Button>
           </div>
           <div className="grid gap-2 max-h-[400px] overflow-y-auto pr-1">
-            {titles.map((t, i) => (
+            {titles.map((titleObj, i) => (
               <button
                 key={i}
-                onClick={() => selectTitle(t.title)}
+                onClick={() => selectTitle(titleObj.title)}
                 className="text-left p-3 rounded-lg border hover:border-primary hover:bg-primary/5 transition-colors"
               >
-                <p className="font-medium text-sm">{t.title}</p>
-                {t.description && (
-                  <p className="text-xs text-muted-foreground mt-1">{t.description}</p>
+                <p className="font-medium text-sm">{titleObj.title}</p>
+                {titleObj.description && (
+                  <p className="text-xs text-muted-foreground mt-1">{titleObj.description}</p>
                 )}
               </button>
             ))}
@@ -432,15 +348,15 @@ function PlaybookAIGenerator({
       {chosenTitle && !program && !generating && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
             <p className="text-sm">
-              Titre choisi : <span className="font-semibold">{chosenTitle}</span>
+              {t("playbook.titleChosen")} <span className="font-semibold">{chosenTitle}</span>
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={generateProgram} size="sm">
               <Sparkles className="w-4 h-4 mr-1" />
-              Générer le programme complet
+              {t("playbook.generateProgram")}
             </Button>
             <Button
               variant="ghost"
@@ -450,7 +366,7 @@ function PlaybookAIGenerator({
                 onDataUpdate(newData);
               }}
             >
-              Changer de titre
+              {t("playbook.changeTitle")}
             </Button>
           </div>
         </div>
@@ -459,14 +375,14 @@ function PlaybookAIGenerator({
       {/* Step 4: Show generated program */}
       {chosenTitle && program && !generating && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
-              <p className="text-sm font-semibold">{chosenTitle}</p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+              <p className="text-sm font-semibold truncate">{chosenTitle}</p>
             </div>
             <Button variant="ghost" size="sm" onClick={generateProgram}>
               <RefreshCw className="w-3 h-3 mr-1" />
-              Régénérer
+              {t("playbook.regenerate")}
             </Button>
           </div>
 
@@ -476,7 +392,7 @@ function PlaybookAIGenerator({
               {((program as any).days as any[]).map((day: any) => (
                 <Card key={day.day} className="p-3 bg-white">
                   <p className="font-semibold text-sm">
-                    Jour {day.day} : {day.theme}
+                    {t("playbook.day")} {day.day} : {day.theme}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">{day.objective}</p>
                   {Array.isArray(day.exercises) && (
@@ -499,24 +415,24 @@ function PlaybookAIGenerator({
             <div className="space-y-3">
               {((program as any).sections as any[]).map((sec: any) => (
                 <Card key={sec.section} className="p-3 bg-white">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold text-sm">{sec.title}</p>
-                    <Badge variant="outline" className="text-[10px]">
-                      {sec.duration_minutes} min
+                    <Badge variant="outline" className="text-[10px] shrink-0">
+                      {sec.duration_minutes} {t("playbook.min")}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{sec.content}</p>
                   {sec.engagement_tip && (
-                    <p className="text-xs text-primary mt-1 flex items-center gap-1">
-                      <Lightbulb className="w-3 h-3" />
-                      {sec.engagement_tip}
+                    <p className="text-xs text-primary mt-1 flex items-start gap-1">
+                      <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
+                      <span>{sec.engagement_tip}</span>
                     </p>
                   )}
                 </Card>
               ))}
               {(program as any).total_duration_minutes && (
                 <p className="text-xs text-muted-foreground text-right">
-                  Durée totale : ~{(program as any).total_duration_minutes} min
+                  {t("playbook.totalDuration")} : ~{(program as any).total_duration_minutes} {t("playbook.min")}
                 </p>
               )}
             </div>
@@ -525,12 +441,14 @@ function PlaybookAIGenerator({
           {/* Bonus ideas */}
           {Array.isArray((program as any).bonus_ideas) && (program as any).bonus_ideas.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Idées de bonus</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {t("playbook.bonusIdeas")}
+              </p>
               <ul className="space-y-1">
                 {((program as any).bonus_ideas as string[]).map((b, i) => (
                   <li key={i} className="text-xs flex items-start gap-1.5">
-                    <span className="text-primary mt-0.5">*</span>
-                    {b}
+                    <span className="text-primary mt-0.5 shrink-0">*</span>
+                    <span>{b}</span>
                   </li>
                 ))}
               </ul>
@@ -541,13 +459,13 @@ function PlaybookAIGenerator({
           {Array.isArray((program as any).offer_pitch_tips) && (
             <div className="space-y-1">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Conseils pour pitcher l&apos;offre
+                {t("playbook.offerPitchTips")}
               </p>
               <ul className="space-y-1">
-                {((program as any).offer_pitch_tips as string[]).map((t, i) => (
+                {((program as any).offer_pitch_tips as string[]).map((tip, i) => (
                   <li key={i} className="text-xs flex items-start gap-1.5">
-                    <span className="text-green-600 mt-0.5">*</span>
-                    {t}
+                    <span className="text-green-600 mt-0.5 shrink-0">*</span>
+                    <span>{tip}</span>
                   </li>
                 ))}
               </ul>
@@ -558,13 +476,13 @@ function PlaybookAIGenerator({
           {Array.isArray((program as any).promo_strategies) && (
             <div className="space-y-1">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Stratégies de promo
+                {t("playbook.promoStrategies")}
               </p>
               <ul className="space-y-1">
                 {((program as any).promo_strategies as string[]).map((s, i) => (
                   <li key={i} className="text-xs flex items-start gap-1.5">
-                    <span className="text-orange-600 mt-0.5">*</span>
-                    {s}
+                    <span className="text-orange-600 mt-0.5 shrink-0">*</span>
+                    <span>{s}</span>
                   </li>
                 ))}
               </ul>
@@ -579,6 +497,7 @@ function PlaybookAIGenerator({
 // ─── Main Playbook Component ─────────────────────────────────────────────────
 
 export default function EventPlaybook({ webinar, onProgressUpdate, onPlaybookDataUpdate }: Props) {
+  const t = useTranslations("webinars");
   const [progress, setProgress] = useState<Record<string, boolean>>(webinar.playbook_progress ?? {});
   const isChallenge = webinar.event_type === "challenge";
   const phases = useMemo(() => getPhases(isChallenge), [isChallenge]);
@@ -612,12 +531,28 @@ export default function EventPlaybook({ webinar, onProgressUpdate, onPlaybookDat
   const totalItems = Object.values(phaseCompletion).reduce((s, p) => s + p.total, 0);
   const overallPct = totalItems > 0 ? Math.round((totalDone / totalItems) * 100) : 0;
 
-  const eventLabel = isChallenge ? "challenge" : "webinaire";
+  // Get tips as array — t.raw returns the raw JSON value
+  function getTips(tipsKey: string): string[] {
+    try {
+      const raw = t.raw(`playbook.${tipsKey}`);
+      if (Array.isArray(raw)) return raw as string[];
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Get bonus tips for phase 6
+  function getPhase6BonusTips(): string[] {
+    const bonusKey1 = isChallenge ? "playbook.tips_phase6_challenge_bonus" : "playbook.tips_phase6_webinar_bonus";
+    const bonusKey2 = isChallenge ? "playbook.tips_phase6_challenge_bonus2" : "playbook.tips_phase6_webinar_bonus2";
+    return [t(bonusKey1), t(bonusKey2)];
+  }
 
   function buildCreateUrl(action: { type: string; promptPrefix: string }) {
     const title = webinar.title || "";
     const topic = webinar.topic || "";
-    const prompt = `${action.promptPrefix} "${title}"${topic ? ` sur le thème : ${topic}` : ""}`;
+    const prompt = `${action.promptPrefix} "${title}"${topic ? ` — ${topic}` : ""}`;
     return `/create/${action.type}?template=event&prompt=${encodeURIComponent(prompt)}`;
   }
 
@@ -627,13 +562,14 @@ export default function EventPlaybook({ webinar, onProgressUpdate, onPlaybookDat
       <PlaybookAIGenerator
         webinar={webinar}
         onDataUpdate={onPlaybookDataUpdate}
+        t={t}
       />
 
       {/* Overall progress */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold">Progression du playbook</p>
-          <Badge variant={overallPct === 100 ? "default" : "outline"}>
+      <Card className="p-3 sm:p-4">
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <p className="text-sm font-semibold">{t("playbook.progress")}</p>
+          <Badge variant={overallPct === 100 ? "default" : "outline"} className="shrink-0">
             {totalDone}/{totalItems} — {overallPct}%
           </Badge>
         </div>
@@ -651,44 +587,51 @@ export default function EventPlaybook({ webinar, onProgressUpdate, onPlaybookDat
           const Icon = phase.icon;
           const comp = phaseCompletion[phaseId];
           const phasePct = comp.total > 0 ? Math.round((comp.done / comp.total) * 100) : 0;
+
+          // Get phase label from i18n
           const phaseLabel = isChallenge
-            ? PHASE_LABELS[phaseId]?.labelChallenge || PHASE_LABELS[phaseId]?.label || phaseId
-            : PHASE_LABELS[phaseId]?.label || phaseId;
+            ? (t.has(`playbook.${phaseId}.labelChallenge`) ? t(`playbook.${phaseId}.labelChallenge`) : t(`playbook.${phaseId}.label`))
+            : t(`playbook.${phaseId}.label`);
+
+          // Get tips
+          const tips = getTips(phase.tipsKey);
+          const bonusTips = phaseId === "phase6" ? getPhase6BonusTips() : [];
+          const allTips = [...tips, ...bonusTips];
 
           return (
             <AccordionItem key={phaseId} value={phaseId} className="border rounded-lg mb-2 px-1">
               <AccordionTrigger className="hover:no-underline py-3">
-                <div className="flex items-center gap-3 flex-1">
-                  <Icon className={`w-5 h-5 ${phase.color}`} />
-                  <span className="font-semibold text-sm">{phaseLabel}</span>
+                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                  <Icon className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${phase.color}`} />
+                  <span className="font-semibold text-xs sm:text-sm truncate">{phaseLabel}</span>
                   <Badge
                     variant={phasePct === 100 ? "default" : "outline"}
-                    className="ml-auto mr-2 text-[10px]"
+                    className="ml-auto mr-2 text-[10px] shrink-0"
                   >
                     {comp.done}/{comp.total}
                   </Badge>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-4 pl-8">
+                <div className="space-y-4 pl-4 sm:pl-8">
                   {/* Tips */}
-                  {phase.tips.length > 0 && (
+                  {allTips.length > 0 && (
                     <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-3 space-y-1.5">
                       <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
-                        <Lightbulb className="w-3 h-3" />
-                        Conseils
+                        <Lightbulb className="w-3 h-3 shrink-0" />
+                        {t("playbook.tips")}
                       </p>
-                      {phase.tips.map((tip, i) => (
+                      {allTips.map((tip, i) => (
                         <p key={i} className="text-xs text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
                           <span className="shrink-0 mt-0.5">-</span>
-                          {tip}
+                          <span>{tip}</span>
                         </p>
                       ))}
                     </div>
                   )}
 
                   {/* Checklist items */}
-                  <div className="space-y-2">
+                  <div className="space-y-2.5 sm:space-y-2">
                     {phase.items.map((item) => (
                       <div
                         key={item.key}
@@ -703,22 +646,22 @@ export default function EventPlaybook({ webinar, onProgressUpdate, onPlaybookDat
                         <div className="flex-1 min-w-0">
                           <label
                             htmlFor={item.key}
-                            className={`text-sm cursor-pointer ${
+                            className={`text-xs sm:text-sm cursor-pointer ${
                               progress[item.key] ? "line-through text-muted-foreground" : ""
                             }`}
                           >
-                            {item.label}
+                            {t(`playbook.items.${item.labelKey}`)}
                           </label>
                           {item.generateAction && (
                             <a
                               href={buildCreateUrl(item.generateAction)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
+                              className="flex items-center gap-1 text-xs text-primary hover:underline mt-0.5 w-fit"
                             >
-                              <Sparkles className="w-3 h-3" />
-                              Générer avec l&apos;IA
-                              <ExternalLink className="w-2.5 h-2.5" />
+                              <Sparkles className="w-3 h-3 shrink-0" />
+                              {t("playbook.generateWithAI")}
+                              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
                             </a>
                           )}
                         </div>
