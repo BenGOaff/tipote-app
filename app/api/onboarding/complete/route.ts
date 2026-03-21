@@ -44,9 +44,11 @@ async function updateThenInsertBusinessProfile(
     .update({ ...patch, updated_at: now } as any)
     .eq("user_id", userId);
 
-  // Si un project_id est fourni, scoper l'update
+  // Toujours scoper par project_id pour éviter d'écraser les données d'autres projets
   if (projectId) {
     updQuery = updQuery.eq("project_id", projectId);
+  } else {
+    updQuery = updQuery.is("project_id", null);
   }
 
   const upd = await updQuery.select("id");

@@ -717,7 +717,11 @@
       "enriching": "Enriqueciendo…",
       "enrichDesc": "El enriquecimiento con IA utiliza tus datos de onboarding, análisis competitivo y conversaciones del coach para mejorar tu persona. Coste: 1 crédito.",
       "formulaPreview": "Ayudo a {cible} a {objectif} con {mecanisme} en {marqueur}",
-      "saved": "Posicionamiento guardado"
+      "saved": "Posicionamiento guardado",
+      "overwriteTitle": "¿Modificar tu posicionamiento?",
+      "overwriteDesc": "Ya tienes un posicionamiento guardado. Al guardar, lo reemplazarás por el nuevo. Tu posicionamiento actual:",
+      "overwriteCancel": "Cancelar",
+      "overwriteConfirm": "Reemplazar"
     }
   },
   "today": {
@@ -2586,7 +2590,10 @@
     "editTemplate": "Editar programa",
     "templateUpdated": "Programa actualizado",
     "templateSynced": "Cambios aplicados a {count} cliente(s)",
-    "saveAndSync": "Guardar y sincronizar"
+    "saveAndSync": "Guardar y sincronizar",
+    "deleteProcessTitle": "¿Eliminar este acompañamiento?",
+    "deleteProcessDesc": "El acompañamiento y todos sus pasos y pagos asociados se eliminarán permanentemente de este cliente.",
+    "processDeleted": "Acompañamiento eliminado"
   },
   "webinars": {
     "title": "Webinarios",

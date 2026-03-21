@@ -693,7 +693,11 @@
       "enriching": "Enriching…",
       "enrichDesc": "AI enrichment uses your onboarding data, competitive analysis, and coach conversations to improve your persona. Cost: 1 credit.",
       "formulaPreview": "I help {cible} to {objectif} with {mecanisme} in {marqueur}",
-      "saved": "Positioning saved"
+      "saved": "Positioning saved",
+      "overwriteTitle": "Change your positioning?",
+      "overwriteDesc": "You already have a saved positioning. Saving will replace it with the new one. Your current positioning:",
+      "overwriteCancel": "Cancel",
+      "overwriteConfirm": "Replace"
     }
   },
   "today": {
@@ -2640,7 +2644,10 @@
     "editTemplate": "Edit program",
     "templateUpdated": "Program updated",
     "templateSynced": "Changes applied to {count} client(s)",
-    "saveAndSync": "Save and sync"
+    "saveAndSync": "Save and sync",
+    "deleteProcessTitle": "Delete this accompaniment?",
+    "deleteProcessDesc": "The accompaniment and all its associated steps and payments will be permanently deleted from this client.",
+    "processDeleted": "Accompaniment deleted"
   },
   "webinars": {
     "title": "My live events",

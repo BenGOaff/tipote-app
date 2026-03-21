@@ -1,4 +1,5 @@
 // PATCH /api/client-processes/[processId] — update process fields (payment, status, due_date)
+// DELETE /api/client-processes/[processId] — remove a process from a client
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -50,4 +51,34 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true, process: data });
+}
+
+export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  const { processId } = await ctx.params;
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Verify ownership via client
+  const { data: proc } = await supabase
+    .from("client_processes")
+    .select("id, client_id, clients!inner(user_id)")
+    .eq("id", processId)
+    .single();
+
+  if (!proc || (proc as any).clients?.user_id !== user.id) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Delete cascades to client_process_items and client_payments via FK constraints
+  const { error } = await supabase
+    .from("client_processes")
+    .delete()
+    .eq("id", processId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
 }

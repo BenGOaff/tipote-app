@@ -341,7 +341,11 @@ export async function POST(req: NextRequest) {
       .from("business_profiles")
       .update(rowForUpdate)
       .eq("user_id", userId);
-    if (projectId) updQuery = updQuery.eq("project_id", projectId);
+    if (projectId) {
+      updQuery = updQuery.eq("project_id", projectId);
+    } else {
+      updQuery = updQuery.is("project_id", null);
+    }
 
     const upd = await updQuery.select("id");
     if (upd.error) return { ok: false, stage: "update", error: upd.error };

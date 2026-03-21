@@ -693,7 +693,11 @@
       "enriching": "Enrichissement…",
       "enrichDesc": "L'enrichissement IA utilise vos données d'onboarding, l'analyse concurrentielle et les conversations avec le coach pour améliorer votre persona. Coût : 1 crédit.",
       "formulaPreview": "J'aide les {cible} à {objectif} avec {mecanisme} en {marqueur}",
-      "saved": "Positionnement enregistré"
+      "saved": "Positionnement enregistré",
+      "overwriteTitle": "Modifier ton positionnement ?",
+      "overwriteDesc": "Tu as déjà un positionnement enregistré. En sauvegardant, tu vas le remplacer par le nouveau. Ton positionnement actuel :",
+      "overwriteCancel": "Annuler",
+      "overwriteConfirm": "Remplacer"
     }
   },
   "today": {
@@ -2637,7 +2641,10 @@
     "editTemplate": "Modifier l'accompagnement",
     "templateUpdated": "Accompagnement mis à jour",
     "templateSynced": "Modifications appliquées à {count} client(s)",
-    "saveAndSync": "Enregistrer et synchroniser"
+    "saveAndSync": "Enregistrer et synchroniser",
+    "deleteProcessTitle": "Supprimer cet accompagnement ?",
+    "deleteProcessDesc": "L'accompagnement et toutes ses étapes et paiements associés seront définitivement supprimés de ce client.",
+    "processDeleted": "Accompagnement supprimé"
   },
   "webinars": {
     "title": "Mes événements live",

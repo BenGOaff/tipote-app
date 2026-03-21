@@ -490,6 +490,21 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
     }
   }, []);
 
+  const deleteProcess = useCallback(async (processId: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/client-processes/${processId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || "Error");
+      setClientProcesses((prev) => prev.filter((p) => p.id !== processId));
+      toast({ title: t("processDeleted") });
+    } catch (e: any) {
+      toast({ title: t("error"), description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [t, toast]);
+
   function resetTemplateForm() {
     setNewTplName("");
     setNewTplDescription("");
@@ -842,6 +857,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                       onDeleteItem={(itemId) => deleteProcessItem(proc.id, itemId)}
                       onEditItem={(itemId, title) => editProcessItem(proc.id, itemId, title)}
                       onUpdateProcess={(data) => updateProcess(proc.id, data)}
+                      onDeleteProcess={() => deleteProcess(proc.id)}
                     />
                   ))}
                 </div>
@@ -1223,6 +1239,7 @@ function ProcessCard({
   onDeleteItem,
   onEditItem,
   onUpdateProcess,
+  onDeleteProcess,
 }: {
   process: ClientProcess;
   t: (key: string, values?: Record<string, string | number | Date>) => string;
@@ -1231,6 +1248,7 @@ function ProcessCard({
   onDeleteItem: (itemId: string) => void;
   onEditItem: (itemId: string, title: string) => void;
   onUpdateProcess: (data: Record<string, unknown>) => void;
+  onDeleteProcess: () => void;
 }) {
   const [newItemTitle, setNewItemTitle] = useState("");
   const [expanded, setExpanded] = useState(true);
@@ -1351,6 +1369,27 @@ function ProcessCard({
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("deleteProcessTitle")}</AlertDialogTitle>
+                  <AlertDialogDescription>{t("deleteProcessDesc")}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDeleteProcess}>{t("delete")}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
           </div>
         </div>
