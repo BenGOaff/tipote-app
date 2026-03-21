@@ -29,6 +29,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const updates: Record<string, unknown> = {};
     const allowedStrings = ["title", "topic", "offer_name", "status", "notes", "program"];
+    // JSONB fields
+    if (body.playbook_progress !== undefined) updates.playbook_progress = body.playbook_progress ?? {};
+    if (body.playbook_data !== undefined) updates.playbook_data = body.playbook_data ?? {};
     for (const key of allowedStrings) {
       if (body[key] !== undefined) {
         updates[key] = typeof body[key] === "string" ? body[key].trim() || null : body[key];

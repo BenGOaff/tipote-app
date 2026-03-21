@@ -45,7 +45,10 @@ import {
   ChevronDown,
   ChevronUp,
   Trophy,
+  BookOpen,
+  BarChart3,
 } from "lucide-react";
+import EventPlaybook from "@/components/webinars/EventPlaybook";
 
 interface Webinar {
   id: string;
@@ -66,6 +69,8 @@ interface Webinar {
   end_date: string | null;
   offer_id: string | null;
   program: string | null;
+  playbook_progress?: Record<string, boolean>;
+  playbook_data?: Record<string, unknown>;
 }
 
 type OfferOption = {
@@ -128,6 +133,7 @@ export default function EventsPageClient() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "webinar" | "challenge">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"kpis" | "playbook">("playbook");
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -306,6 +312,29 @@ export default function EventsPageClient() {
     }
   }, []);
 
+  const updatePlaybookProgress = useCallback(async (id: string, progress: Record<string, boolean>) => {
+    // Optimistic update
+    setWebinars((prev) => prev.map((w) => (w.id === id ? { ...w, playbook_progress: progress } : w)));
+    try {
+      await fetch(`/api/webinars/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playbook_progress: progress }),
+      });
+    } catch { /* silent */ }
+  }, []);
+
+  const updatePlaybookData = useCallback(async (id: string, data: Record<string, unknown>) => {
+    setWebinars((prev) => prev.map((w) => (w.id === id ? { ...w, playbook_data: data } : w)));
+    try {
+      await fetch(`/api/webinars/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playbook_data: data }),
+      });
+    } catch { /* silent */ }
+  }, []);
+
   const selectClassName = "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm";
 
   return (
@@ -397,9 +426,10 @@ export default function EventsPageClient() {
               <p className="text-xs text-muted-foreground mt-1">{t("noEventsHint") ?? t("noWebinarsHint")}</p>
             </Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={expandedId ? "space-y-3" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
               {filtered.map((w) => {
                 const isExpanded = expandedId === w.id;
+                if (expandedId && !isExpanded) return null; // Hide other cards when one is expanded
                 const sc = STATUS_CONFIG[w.status] ?? STATUS_CONFIG.draft;
                 const ec = EVENT_TYPE_CONFIG[w.event_type] ?? EVENT_TYPE_CONFIG.webinar;
                 const attendanceRate = w.registrants > 0 ? (w.attendees / w.registrants) * 100 : 0;
@@ -501,9 +531,56 @@ export default function EventsPageClient() {
                       </div>
                     )}
 
-                    {/* Expanded KPIs */}
+                    {/* Expanded: Playbook + KPIs */}
                     {isExpanded && (
                       <div className="border-t pt-3 mt-auto space-y-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Back to list */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-muted-foreground"
+                          onClick={() => setExpandedId(null)}
+                        >
+                          &larr; Retour à la liste
+                        </Button>
+                        {/* Tab toggles */}
+                        <div className="flex gap-1 bg-muted/40 rounded-lg p-1">
+                          <button
+                            className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                              activeTab === "playbook"
+                                ? "bg-white shadow-sm text-primary"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                            onClick={() => setActiveTab("playbook")}
+                          >
+                            <BookOpen className="w-3.5 h-3.5" />
+                            Playbook
+                          </button>
+                          <button
+                            className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                              activeTab === "kpis"
+                                ? "bg-white shadow-sm text-primary"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                            onClick={() => setActiveTab("kpis")}
+                          >
+                            <BarChart3 className="w-3.5 h-3.5" />
+                            KPIs
+                          </button>
+                        </div>
+
+                        {/* Playbook tab */}
+                        {activeTab === "playbook" && (
+                          <EventPlaybook
+                            webinar={w}
+                            onProgressUpdate={(progress) => updatePlaybookProgress(w.id, progress)}
+                            onPlaybookDataUpdate={(data) => updatePlaybookData(w.id, data)}
+                          />
+                        )}
+
+                        {/* KPIs tab */}
+                        {activeTab === "kpis" && (
+                      <div className="space-y-3">
                         {/* KPI Input Grid */}
                         <div className="grid grid-cols-2 gap-2">
                           {([
@@ -577,6 +654,8 @@ export default function EventsPageClient() {
                             <p className="text-xs font-medium text-muted-foreground">{t("fields.program") ?? "Programme"}</p>
                             <p className="text-xs text-muted-foreground whitespace-pre-wrap">{w.program}</p>
                           </div>
+                        )}
+                      </div>
                         )}
                       </div>
                     )}
