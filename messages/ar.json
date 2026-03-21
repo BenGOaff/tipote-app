@@ -717,7 +717,11 @@
       "enriching": "جاري الإثراء…",
       "enrichDesc": "يستخدم الإثراء بالذكاء الاصطناعي بيانات الإعداد والتحليل التنافسي ومحادثات المدرب لتحسين شخصيتك. التكلفة: 1 رصيد.",
       "formulaPreview": "أساعد {cible} على {objectif} بواسطة {mecanisme} في {marqueur}",
-      "saved": "تم حفظ التموضع"
+      "saved": "تم حفظ التموضع",
+      "overwriteTitle": "تعديل تموضعك؟",
+      "overwriteDesc": "لديك بالفعل تموضع محفوظ. عند الحفظ، سيتم استبداله بالجديد. تموضعك الحالي:",
+      "overwriteCancel": "إلغاء",
+      "overwriteConfirm": "استبدال"
     }
   },
   "today": {
@@ -2586,7 +2590,10 @@
     "editTemplate": "تعديل البرنامج",
     "templateUpdated": "تم تحديث البرنامج",
     "templateSynced": "تم تطبيق التغييرات على {count} عميل/عملاء",
-    "saveAndSync": "حفظ ومزامنة"
+    "saveAndSync": "حفظ ومزامنة",
+    "deleteProcessTitle": "حذف هذه المرافقة؟",
+    "deleteProcessDesc": "سيتم حذف المرافقة وجميع الخطوات والمدفوعات المرتبطة بها نهائيًا من هذا العميل.",
+    "processDeleted": "تم حذف المرافقة"
   },
   "webinars": {
     "title": "الندوات",

@@ -82,7 +82,7 @@ function normalizeScheduledDate(v: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
-const ALLOWED_STATUS = new Set(["draft", "scheduled", "published"]);
+const ALLOWED_STATUS = new Set(["draft", "scheduled", "published", "archived"]);
 function normalizeStatus(v: unknown): string | null {
   if (v === null || typeof v === "undefined") return null;
   const s = typeof v === "string" ? v.trim().toLowerCase() : "";

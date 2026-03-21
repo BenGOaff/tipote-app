@@ -50,6 +50,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
@@ -560,7 +570,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     });
   };
 
-  const savePositioning = () => {
+  const [showPositioningConfirm, setShowPositioningConfirm] = useState(false);
+
+  const doSavePositioning = () => {
     startPositioningTransition(async () => {
       try {
         const body: any = { niche: assembledNiche, mission };
@@ -589,6 +601,16 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         });
       }
     });
+  };
+
+  const savePositioning = () => {
+    // If existing niche is substantially different from new one, confirm before overwriting
+    const existingNiche = (initialProfile?.niche ?? "").trim();
+    if (existingNiche && assembledNiche && existingNiche !== assembledNiche) {
+      setShowPositioningConfirm(true);
+      return;
+    }
+    doSavePositioning();
   };
 
   // -------------------------
@@ -1802,6 +1824,26 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <Save className="w-4 h-4 mr-2" />
             {pendingPositioning ? tSP("positioningTab.saving") : tSP("positioningTab.save")}
           </Button>
+
+          <AlertDialog open={showPositioningConfirm} onOpenChange={setShowPositioningConfirm}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{tSP("positioningTab.overwriteTitle")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {tSP("positioningTab.overwriteDesc")}
+                  <span className="block mt-2 p-2 rounded bg-muted text-xs text-muted-foreground italic">
+                    {initialProfile?.niche}
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{tSP("positioningTab.overwriteCancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={() => { setShowPositioningConfirm(false); doSavePositioning(); }}>
+                  {tSP("positioningTab.overwriteConfirm")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </Card>
 
         {/* Storytelling */}
