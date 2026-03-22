@@ -266,13 +266,12 @@ ${responseFormat}`;
 
     // ── Call AI ──
     const completion = await openai.chat.completions.create({
-      ...cachingParams("playbook"),
+      ...cachingParams("playbook", { temperature: 0.9 }),
       model: OPENAI_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.9,
       response_format: { type: "json_object" },
     });
 
