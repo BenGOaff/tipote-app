@@ -38,10 +38,20 @@ function isReasoningModel(model: string): boolean {
  * Backward-compatible stub that also injects reasoning_effort
  * for GPT-5 family models (gpt-5, gpt-5-mini, gpt-5-nano, etc.)
  * which REQUIRE this parameter.
+ *
+ * Accepts an optional temperature — reasoning models (GPT-5, o-series)
+ * do NOT support temperature, so it is silently dropped for those models.
  */
-export function cachingParams(_feature: string): Record<string, unknown> {
+export function cachingParams(
+  _feature: string,
+  opts?: { temperature?: number },
+): Record<string, unknown> {
   if (isReasoningModel(OPENAI_MODEL)) {
+    // reasoning models ignore temperature — only reasoning_effort is supported
     return { reasoning_effort: "low" };
+  }
+  if (opts?.temperature !== undefined) {
+    return { temperature: opts.temperature };
   }
   return {};
 }
