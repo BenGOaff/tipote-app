@@ -131,6 +131,7 @@ export async function GET(req: NextRequest) {
           connection.id,
           postPlatform,
           connection.refresh_token_encrypted,
+          connection.access_token_encrypted,
         );
         if (!refreshResult.ok || !refreshResult.accessToken) {
           console.error(`[auto-comments/pending] Token refresh failed for ${postPlatform} user ${post.user_id}: ${refreshResult.error}`);

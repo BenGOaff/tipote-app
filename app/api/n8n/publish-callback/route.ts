@@ -237,7 +237,7 @@ async function triggerAfterExecution(
     const REFRESH_BUFFER_MS = 5 * 60 * 1000;
     const isExpired = conn.token_expires_at && new Date(conn.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS);
     if (isExpired) {
-      const refreshResult = await refreshSocialToken(conn.id, platform, conn.refresh_token_encrypted ?? null);
+      const refreshResult = await refreshSocialToken(conn.id, platform, conn.refresh_token_encrypted ?? null, conn.access_token_encrypted);
       if (!refreshResult.ok || !refreshResult.accessToken) {
         console.error("[publish-callback] after-comments: token refresh failed for", platform);
         await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", contentId);

@@ -49,9 +49,10 @@ export async function GET() {
         ? new Date(c.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS)
         : false;
 
-      if (isExpired && c.refresh_token_encrypted) {
+      // Instagram uses access_token for refresh (no separate refresh_token)
+      if (isExpired && (c.refresh_token_encrypted || c.platform === "instagram")) {
         try {
-          const result = await refreshSocialToken(c.id, c.platform, c.refresh_token_encrypted);
+          const result = await refreshSocialToken(c.id, c.platform, c.refresh_token_encrypted, c.access_token_encrypted);
           if (result.ok) {
             // Token refreshed — fetch updated expiry from DB
             const { data: updated } = await supabaseAdmin
