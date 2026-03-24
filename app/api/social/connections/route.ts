@@ -26,7 +26,7 @@ export async function GET() {
   // Récupérer les connexions (avec refresh_token pour pouvoir rafraîchir proactivement)
   let query = supabaseAdmin
     .from("social_connections")
-    .select("id, platform, platform_user_id, platform_username, token_expires_at, refresh_token_encrypted, scopes, created_at, updated_at")
+    .select("id, platform, platform_user_id, platform_username, token_expires_at, refresh_token_encrypted, access_token_encrypted, scopes, created_at, updated_at")
     .eq("user_id", user.id);
 
   if (projectId) {
