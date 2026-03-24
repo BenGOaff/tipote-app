@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
         const isExpired = conn.token_expires_at && new Date(conn.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS);
         if (isExpired) {
           const { refreshSocialToken } = await import("@/lib/refreshSocialToken");
-          const refreshResult = await refreshSocialToken(conn.id, itemPlatform, conn.refresh_token_encrypted ?? null);
+          const refreshResult = await refreshSocialToken(conn.id, itemPlatform, conn.refresh_token_encrypted ?? null, conn.access_token_encrypted);
           if (!refreshResult.ok || !refreshResult.accessToken) {
             console.error("[publish] after-comments: token refresh failed for", itemPlatform);
             await supabaseAdmin.from("content_item").update({ auto_comments_status: "completed" }).eq("id", item.id);
@@ -363,7 +363,8 @@ export async function POST(req: NextRequest) {
     const refreshResult = await refreshSocialToken(
       connection.id,
       platform,
-      connection.refresh_token_encrypted
+      connection.refresh_token_encrypted,
+      connection.access_token_encrypted,
     );
 
     if (!refreshResult.ok || !refreshResult.accessToken) {

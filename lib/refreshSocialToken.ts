@@ -1,12 +1,13 @@
 // lib/refreshSocialToken.ts
 // Shared helper: refresh an expired OAuth token and persist the new tokens in DB.
-// Supports: Twitter/X (rotating refresh tokens), Pinterest, TikTok.
+// Supports: Twitter/X (rotating refresh tokens), Pinterest, TikTok, Instagram.
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { refreshAccessToken as refreshTwitterToken } from "@/lib/twitter";
 import { refreshAccessToken as refreshPinterestToken } from "@/lib/pinterest";
 import { refreshAccessToken as refreshTikTokToken } from "@/lib/tiktok";
+import { refreshInstagramLongLivedToken } from "@/lib/meta";
 
 type RefreshResult = {
   ok: boolean;
@@ -14,29 +15,31 @@ type RefreshResult = {
   error?: string;
 };
 
+const SUPPORTED_PLATFORMS = ["twitter", "pinterest", "tiktok", "instagram"] as const;
+
 /**
  * Attempts to refresh an expired social connection token.
  * On success, updates the DB with the new access_token (and new refresh_token if rotated).
  * Returns the new decrypted access_token.
+ *
+ * Instagram is special: it uses the access_token itself to refresh (no separate refresh_token).
+ * Pass accessTokenEncrypted for Instagram when refreshTokenEncrypted is null.
  */
 export async function refreshSocialToken(
   connectionId: string,
   platform: string,
-  refreshTokenEncrypted: string | null
+  refreshTokenEncrypted: string | null,
+  accessTokenEncrypted?: string | null,
 ): Promise<RefreshResult> {
-  if (!refreshTokenEncrypted) {
+  // Instagram uses the access_token to refresh (no separate refresh_token)
+  const isInstagram = platform === "instagram";
+
+  if (!isInstagram && !refreshTokenEncrypted) {
     return { ok: false, error: "No refresh token available" };
   }
 
-  if (platform !== "twitter" && platform !== "pinterest" && platform !== "tiktok") {
+  if (!SUPPORTED_PLATFORMS.includes(platform as typeof SUPPORTED_PLATFORMS[number])) {
     return { ok: false, error: `Token refresh not supported for ${platform}` };
-  }
-
-  let refreshToken: string;
-  try {
-    refreshToken = decrypt(refreshTokenEncrypted);
-  } catch {
-    return { ok: false, error: "Failed to decrypt refresh token" };
   }
 
   try {
@@ -46,18 +49,45 @@ export async function refreshSocialToken(
       refresh_token?: string;
     };
 
-    if (platform === "twitter") {
-      tokens = await refreshTwitterToken(refreshToken);
-    } else if (platform === "tiktok") {
-      const ttTokens = await refreshTikTokToken(refreshToken);
+    if (isInstagram) {
+      // Instagram: decrypt the current access_token and use it to get a new one
+      const tokenEncrypted = accessTokenEncrypted ?? refreshTokenEncrypted;
+      if (!tokenEncrypted) {
+        return { ok: false, error: "No access token available for Instagram refresh" };
+      }
+      let currentToken: string;
+      try {
+        currentToken = decrypt(tokenEncrypted);
+      } catch {
+        return { ok: false, error: "Failed to decrypt Instagram access token" };
+      }
+      const igTokens = await refreshInstagramLongLivedToken(currentToken);
       tokens = {
-        access_token: ttTokens.access_token,
-        expires_in: ttTokens.expires_in,
-        refresh_token: ttTokens.refresh_token,
+        access_token: igTokens.access_token,
+        expires_in: igTokens.expires_in,
       };
     } else {
-      // Pinterest
-      tokens = await refreshPinterestToken(refreshToken);
+      // Twitter, Pinterest, TikTok: use refresh_token
+      let refreshToken: string;
+      try {
+        refreshToken = decrypt(refreshTokenEncrypted!);
+      } catch {
+        return { ok: false, error: "Failed to decrypt refresh token" };
+      }
+
+      if (platform === "twitter") {
+        tokens = await refreshTwitterToken(refreshToken);
+      } else if (platform === "tiktok") {
+        const ttTokens = await refreshTikTokToken(refreshToken);
+        tokens = {
+          access_token: ttTokens.access_token,
+          expires_in: ttTokens.expires_in,
+          refresh_token: ttTokens.refresh_token,
+        };
+      } else {
+        // Pinterest
+        tokens = await refreshPinterestToken(refreshToken);
+      }
     }
 
     // Persist new tokens to DB

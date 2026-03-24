@@ -271,7 +271,7 @@ function triggerBeforeExecution(opts: {
       const REFRESH_BUFFER_MS = 5 * 60 * 1000;
       const isExpired = conn.token_expires_at && new Date(conn.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS);
       if (isExpired) {
-        const refreshResult = await refreshSocialToken(conn.id, opts.platform, conn.refresh_token_encrypted ?? null);
+        const refreshResult = await refreshSocialToken(conn.id, opts.platform, conn.refresh_token_encrypted ?? null, conn.access_token_encrypted);
         if (!refreshResult.ok || !refreshResult.accessToken) {
           const errMsg = `Token ${opts.platform} expiré et renouvellement échoué: ${refreshResult.error ?? "inconnu"}. Reconnectez votre compte.`;
           console.error("[activate]", errMsg);

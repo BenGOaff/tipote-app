@@ -90,18 +90,25 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      // Vérifier que le token n'est pas expiré
-      if (conn.token_expires_at && new Date(conn.token_expires_at) < new Date()) {
-        debug.push(`User ${userId.slice(0, 8)}…: token expired (${conn.token_expires_at})`);
-        continue;
-      }
-
       let accessToken: string;
-      try {
-        accessToken = decrypt(conn.access_token_encrypted);
-      } catch {
-        debug.push(`User ${userId.slice(0, 8)}…: token decryption failed`);
-        continue;
+
+      // Vérifier que le token n'est pas expiré — tenter un refresh si besoin
+      if (conn.token_expires_at && new Date(conn.token_expires_at) < new Date()) {
+        const { refreshSocialToken } = await import("@/lib/refreshSocialToken");
+        const refreshResult = await refreshSocialToken(conn.id, "instagram", null, conn.access_token_encrypted);
+        if (!refreshResult.ok || !refreshResult.accessToken) {
+          debug.push(`User ${userId.slice(0, 8)}…: token expired and refresh failed (${refreshResult.error})`);
+          continue;
+        }
+        accessToken = refreshResult.accessToken;
+        debug.push(`User ${userId.slice(0, 8)}…: token refreshed OK`);
+      } else {
+        try {
+          accessToken = decrypt(conn.access_token_encrypted);
+        } catch {
+          debug.push(`User ${userId.slice(0, 8)}…: token decryption failed`);
+          continue;
+        }
       }
 
       const igUserId = conn.platform_user_id;

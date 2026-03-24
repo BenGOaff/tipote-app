@@ -263,7 +263,8 @@ export async function GET(req: NextRequest) {
         const refreshResult = await refreshSocialToken(
           conn.id,
           platform,
-          conn.refresh_token_encrypted
+          conn.refresh_token_encrypted,
+          conn.access_token_encrypted,
         );
         if (!refreshResult.ok || !refreshResult.accessToken) {
           console.error(`[scheduled-posts] Token refresh failed for ${platform} user ${post.user_id}: ${refreshResult.error}`);

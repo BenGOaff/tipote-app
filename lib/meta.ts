@@ -376,6 +376,31 @@ export async function exchangeInstagramForLongLivedToken(shortLivedToken: string
   return null;
 }
 
+/**
+ * Rafraîchit un long-lived Instagram token AVANT son expiration (~60 jours).
+ * Doc : https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/long-lived-tokens
+ * Endpoint : GET /refresh_access_token?grant_type=ig_refresh_token&access_token={token}
+ * Retourne un nouveau long-lived token valable ~60 jours.
+ * NB : ne fonctionne PAS si le token est déjà expiré — l'utilisateur devra se reconnecter.
+ */
+export async function refreshInstagramLongLivedToken(currentToken: string): Promise<{
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}> {
+  const params = new URLSearchParams({
+    grant_type: "ig_refresh_token",
+    access_token: currentToken,
+  });
+
+  const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/refresh_access_token?${params}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Instagram token refresh failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
 export type InstagramUserInfo = {
   id: string;
   username?: string;
