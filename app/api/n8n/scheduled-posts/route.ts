@@ -212,22 +212,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── Cleanup: Reset posts stuck in "publishing" for over 30 minutes ──
+  // ── Cleanup: Reset posts stuck in "publishing" for over 10 minutes ──
   // If n8n crashes after claiming a post but before calling the callback,
   // the post stays at "publishing" forever. Reset them to "scheduled".
   try {
-    const thirtyMinAgo = new Date(parisNow.getTime() - 30 * 60 * 1000).toISOString();
+    const tenMinAgo = new Date(parisNow.getTime() - 10 * 60 * 1000).toISOString();
     const { error: stuckErr } = await supabaseAdmin
       .from("content_item")
       .update({ status: "scheduled" })
       .eq("status", "publishing")
-      .lt("updated_at", thirtyMinAgo);
+      .lt("updated_at", tenMinAgo);
     if (stuckErr && isMissingColumn(stuckErr.message)) {
       await supabaseAdmin
         .from("content_item")
         .update({ statut: "scheduled" } as any)
         .eq("statut", "publishing")
-        .lt("updated_at", thirtyMinAgo);
+        .lt("updated_at", tenMinAgo);
     }
   } catch (err) {
     console.warn("[scheduled-posts] Stuck cleanup error:", err);
@@ -391,17 +391,39 @@ export async function GET(req: NextRequest) {
 
         // Appeler le callback endpoint pour mettre à jour le statut
         const callbackUrl = post.callback_url;
+        let callbackOk = false;
         if (callbackUrl) {
-          await fetch(callbackUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-N8N-Secret": process.env.N8N_SHARED_SECRET ?? "",
-            },
-            body: JSON.stringify(callbackPayload),
-          }).catch((err) => {
+          try {
+            const cbRes = await fetch(callbackUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-N8N-Secret": process.env.N8N_SHARED_SECRET ?? "",
+              },
+              body: JSON.stringify(callbackPayload),
+            });
+            callbackOk = cbRes.ok;
+          } catch (err) {
             console.error(`[scheduled-posts] LinkedIn callback failed for ${post.content_id}:`, err);
-          });
+          }
+        }
+
+        // Fallback: if callback failed/unreachable, update status directly
+        if (!callbackOk) {
+          console.warn(`[scheduled-posts] LinkedIn callback unreachable for ${post.content_id}, updating status directly`);
+          if (result.ok) {
+            const meta: Record<string, unknown> = { published_at: new Date().toISOString(), published_platform: "linkedin" };
+            if (result.postUrn) meta.linkedin_post_urn = result.postUrn;
+            await supabaseAdmin
+              .from("content_item")
+              .update({ status: "published", meta } as any)
+              .eq("id", post.content_id);
+          } else {
+            await supabaseAdmin
+              .from("content_item")
+              .update({ status: "scheduled" } as any)
+              .eq("id", post.content_id);
+          }
         }
 
         console.log(`[scheduled-posts] LinkedIn direct publish for ${post.content_id}: ok=${result.ok}, postUrn=${result.postUrn ?? "none"}`);

@@ -19,7 +19,12 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    // Redirect to settings with error instead of returning JSON
+    // (this is a browser navigation, not an API call)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    return NextResponse.redirect(
+      `${appUrl}/settings?tab=connections&instagram_error=${encodeURIComponent("Session expirée. Reconnecte-toi à Tipote et réessaie.")}`
+    );
   }
 
   // Générer un state CSRF et le stocker en cookie HTTP-only
@@ -33,6 +38,19 @@ export async function GET() {
     maxAge: 600, // 10 minutes
   });
 
-  const url = buildInstagramAuthorizationUrl(state);
+  let url: string;
+  try {
+    url = buildInstagramAuthorizationUrl(state);
+  } catch (err) {
+    console.error("[Instagram auth] Failed to build authorization URL:", err);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    return NextResponse.redirect(
+      `${appUrl}/settings?tab=connections&instagram_error=${encodeURIComponent(
+        "Configuration Instagram incomplète. Contacte le support."
+      )}`
+    );
+  }
+
+  console.log("[Instagram auth] Redirecting to Instagram OAuth:", url.slice(0, 100) + "...");
   return NextResponse.redirect(url);
 }
