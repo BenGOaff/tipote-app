@@ -6,7 +6,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
-const FIELDS = ["social_alerts", "credits_alerts", "weekly_digest"] as const;
+const FIELDS = ["social_alerts", "credits_alerts", "weekly_digest", "monthly_report", "milestone_emails"] as const;
 
 export async function GET() {
   const supabase = await getSupabaseServerClient();
@@ -15,7 +15,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from("email_preferences")
-    .select("social_alerts, credits_alerts, weekly_digest")
+    .select("social_alerts, credits_alerts, weekly_digest, monthly_report, milestone_emails")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -24,6 +24,8 @@ export async function GET() {
     social_alerts: data?.social_alerts ?? true,
     credits_alerts: data?.credits_alerts ?? true,
     weekly_digest: data?.weekly_digest ?? true,
+    monthly_report: data?.monthly_report ?? true,
+    milestone_emails: data?.milestone_emails ?? true,
   });
 }
 

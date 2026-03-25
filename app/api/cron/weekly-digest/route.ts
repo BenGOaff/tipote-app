@@ -107,8 +107,23 @@ export async function GET(req: NextRequest) {
       .eq("user_id", user.id)
       .lt("token_expires_at", now.toISOString());
 
+    // 5. Leads captured this week
+    const { count: leadsCount } = await supabaseAdmin
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", weekAgo);
+
+    // 6. Tasks completed this week
+    const { count: tasksCount } = await supabaseAdmin
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "done")
+      .gte("updated_at", weekAgo);
+
     // ── Skip if nothing to report ──
-    if (publishedCount === 0 && (upcomingEvents?.length ?? 0) === 0 && (expiredConns?.length ?? 0) === 0 && creditsRemaining > 10) {
+    if (publishedCount === 0 && (upcomingEvents?.length ?? 0) === 0 && (expiredConns?.length ?? 0) === 0 && (leadsCount ?? 0) === 0 && (tasksCount ?? 0) === 0 && creditsRemaining > 10) {
       skipped++;
       continue;
     }
@@ -149,6 +164,24 @@ export async function GET(req: NextRequest) {
         sections.push(`<strong>🎯 ${upcomingEvents.length} événement${upcomingEvents.length > 1 ? "s" : ""} cette semaine</strong><br/>${evList}`);
       } else {
         sections.push(`<strong>🎯 ${upcomingEvents.length} event${upcomingEvents.length > 1 ? "s" : ""} this week</strong><br/>${evList}`);
+      }
+    }
+
+    // Leads captured
+    if ((leadsCount ?? 0) > 0) {
+      if (locale === "fr") {
+        sections.push(`<strong>🎯 ${leadsCount} lead${(leadsCount ?? 0) > 1 ? "s" : ""} capturé${(leadsCount ?? 0) > 1 ? "s" : ""}</strong>`);
+      } else {
+        sections.push(`<strong>🎯 ${leadsCount} lead${(leadsCount ?? 0) > 1 ? "s" : ""} captured</strong>`);
+      }
+    }
+
+    // Tasks completed
+    if ((tasksCount ?? 0) > 0) {
+      if (locale === "fr") {
+        sections.push(`<strong>✅ ${tasksCount} tâche${(tasksCount ?? 0) > 1 ? "s" : ""} terminée${(tasksCount ?? 0) > 1 ? "s" : ""}</strong>`);
+      } else {
+        sections.push(`<strong>✅ ${tasksCount} task${(tasksCount ?? 0) > 1 ? "s" : ""} completed</strong>`);
       }
     }
 
