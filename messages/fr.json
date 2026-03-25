@@ -595,7 +595,11 @@
         "creditsAlerts": "Alertes crédits IA",
         "creditsAlertsDesc": "Prévenu quand tes crédits sont épuisés.",
         "weeklyDigest": "Résumé hebdomadaire",
-        "weeklyDigestDesc": "Récap chaque lundi : contenus publiés, crédits, événements."
+        "weeklyDigestDesc": "Récap chaque lundi : contenus publiés, crédits, événements.",
+        "monthlyReport": "Rapport mensuel",
+        "monthlyReportDesc": "Ton Tipote en chiffres chaque mois : posts, leads, crédits utilisés.",
+        "milestoneEmails": "Célébrations & étapes",
+        "milestoneEmailsDesc": "Emails de félicitations quand tu franchis une étape importante."
       },
       "logoutTitle": "Déconnexion",
       "logoutDesc": "Te déconnecter de ton compte Tipote sur cet appareil.",

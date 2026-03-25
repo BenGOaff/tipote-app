@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendEmail } from "@/lib/email";
 
 function isMissingColumnError(message: string | null | undefined) {
   const m = (message ?? "").toLowerCase();
@@ -193,6 +194,11 @@ export async function POST(req: Request) {
       }
     }
 
+    // ✅ Send welcome email (best-effort, non-blocking)
+    sendWelcomeEmail(userId).catch((err) =>
+      console.error("[onboarding/complete] Welcome email failed:", err),
+    );
+
     // ✅ Set project cookie in response to prevent middleware loop
     const response = NextResponse.json({ ok: true });
     if (projectId) {
@@ -209,4 +215,94 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+}
+
+// ── Welcome email (best-effort) ──
+
+async function sendWelcomeEmail(userId: string) {
+  const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId);
+  if (!user?.email) return;
+
+  const { data: profile } = await supabaseAdmin
+    .from("business_profiles")
+    .select("first_name, content_locale")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const locale = profile?.content_locale || "fr";
+  const name = profile?.first_name || "";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.tipote.com";
+
+  const greetings: Record<string, string> = {
+    fr: name ? `${name}, bienvenue sur Tipote !` : "Bienvenue sur Tipote !",
+    en: name ? `${name}, welcome to Tipote!` : "Welcome to Tipote!",
+    es: name ? `${name}, bienvenido/a a Tipote!` : "¡Bienvenido/a a Tipote!",
+    it: name ? `${name}, benvenuto/a su Tipote!` : "Benvenuto/a su Tipote!",
+    ar: name ? `${name}، مرحبًا بك في Tipote!` : "!مرحبًا بك في Tipote",
+  };
+
+  const subjects: Record<string, string> = {
+    fr: "🚀 Bienvenue sur Tipote — tes premiers pas",
+    en: "🚀 Welcome to Tipote — your first steps",
+    es: "🚀 Bienvenido/a a Tipote — tus primeros pasos",
+    it: "🚀 Benvenuto/a su Tipote — i tuoi primi passi",
+    ar: "🚀 مرحبًا بك في Tipote — خطواتك الأولى",
+  };
+
+  const bodies: Record<string, string> = {
+    fr: `Ton diagnostic est terminé et ton espace est prêt.<br/><br/>
+Voici tes 3 prochaines étapes pour démarrer du bon pied :<br/><br/>
+<strong>1. Connecte un réseau social</strong><br/>
+Pour programmer tes publications automatiquement.<br/><br/>
+<strong>2. Génère ta stratégie</strong><br/>
+L'IA analyse ton profil et te propose un plan d'action sur 90 jours.<br/><br/>
+<strong>3. Crée ton premier contenu</strong><br/>
+Post, email, page de capture… tout est généré pour toi en quelques clics.<br/><br/>
+On est là pour t'accompagner à chaque étape.`,
+    en: `Your diagnostic is complete and your workspace is ready.<br/><br/>
+Here are your 3 next steps to get started:<br/><br/>
+<strong>1. Connect a social network</strong><br/>
+To schedule your posts automatically.<br/><br/>
+<strong>2. Generate your strategy</strong><br/>
+AI analyzes your profile and suggests a 90-day action plan.<br/><br/>
+<strong>3. Create your first content</strong><br/>
+Post, email, landing page… everything is generated for you in a few clicks.<br/><br/>
+We're here to support you every step of the way.`,
+    es: `Tu diagnóstico está completo y tu espacio está listo.<br/><br/>
+Aquí tienes tus 3 próximos pasos:<br/><br/>
+<strong>1. Conecta una red social</strong><br/>
+<strong>2. Genera tu estrategia</strong><br/>
+<strong>3. Crea tu primer contenido</strong><br/><br/>
+Estamos aquí para acompañarte.`,
+    it: `La tua diagnosi è completa e il tuo spazio è pronto.<br/><br/>
+Ecco i tuoi 3 prossimi passi:<br/><br/>
+<strong>1. Collega un social network</strong><br/>
+<strong>2. Genera la tua strategia</strong><br/>
+<strong>3. Crea il tuo primo contenuto</strong><br/><br/>
+Siamo qui per accompagnarti.`,
+    ar: `تشخيصك مكتمل ومساحتك جاهزة.<br/><br/>
+<strong>1. اربط شبكة اجتماعية</strong><br/>
+<strong>2. أنشئ استراتيجيتك</strong><br/>
+<strong>3. أنشئ أول محتوى لك</strong>`,
+  };
+
+  const ctaLabels: Record<string, string> = {
+    fr: "Commencer maintenant",
+    en: "Get started now",
+    es: "Empezar ahora",
+    it: "Inizia ora",
+    ar: "ابدأ الآن",
+  };
+
+  await sendEmail({
+    to: user.email,
+    subject: subjects[locale] || subjects.fr,
+    greeting: greetings[locale] || greetings.fr,
+    body: bodies[locale] || bodies.fr,
+    ctaLabel: ctaLabels[locale] || ctaLabels.fr,
+    ctaUrl: `${appUrl}/dashboard`,
+    locale,
+  });
 }

@@ -302,6 +302,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [emailPrefSocial, setEmailPrefSocial] = useState(true);
   const [emailPrefCredits, setEmailPrefCredits] = useState(true);
   const [emailPrefDigest, setEmailPrefDigest] = useState(true);
+  const [emailPrefMonthly, setEmailPrefMonthly] = useState(true);
+  const [emailPrefMilestones, setEmailPrefMilestones] = useState(true);
   const [emailPrefsLoaded, setEmailPrefsLoaded] = useState(false);
 
   const [privacyUrl, setPrivacyUrl] = useState("");
@@ -455,6 +457,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           setEmailPrefSocial(data.social_alerts ?? true);
           setEmailPrefCredits(data.credits_alerts ?? true);
           setEmailPrefDigest(data.weekly_digest ?? true);
+          setEmailPrefMonthly(data.monthly_report ?? true);
+          setEmailPrefMilestones(data.milestone_emails ?? true);
           setEmailPrefsLoaded(true);
         }
       })
@@ -1247,6 +1251,36 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 onCheckedChange={(v) => {
                   setEmailPrefDigest(v);
                   toggleEmailPref("weekly_digest", v);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.monthlyReport")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.monthlyReportDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefMonthly}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefMonthly(v);
+                  toggleEmailPref("monthly_report", v);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.milestoneEmails")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.milestoneEmailsDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefMilestones}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefMilestones(v);
+                  toggleEmailPref("milestone_emails", v);
                 }}
               />
             </div>

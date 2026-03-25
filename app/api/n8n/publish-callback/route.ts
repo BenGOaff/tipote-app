@@ -126,6 +126,19 @@ export async function POST(req: NextRequest) {
           action_url: postUrl ?? "/contents",
           action_label: postUrl ? "Voir le post" : "Mes contenus",
         });
+
+        // Milestone: first and 10th content published
+        const { checkMilestone } = await import("@/lib/milestones");
+        const { count } = await supabaseAdmin
+          .from("content_item")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", contentItem.user_id)
+          .or("statut.eq.published,status.eq.published");
+        if (count === 1) {
+          void checkMilestone(contentItem.user_id, "first_content_published", contentItem.project_id);
+        } else if (count === 10) {
+          void checkMilestone(contentItem.user_id, "tenth_content_published", contentItem.project_id);
+        }
       }
     } catch {
       // Non-blocking: don't fail publish callback if notification fails

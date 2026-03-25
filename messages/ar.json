@@ -610,7 +610,11 @@
         "creditsAlerts": "تنبيهات رصيد الذكاء الاصطناعي",
         "creditsAlertsDesc": "يتم إعلامك عند نفاد رصيدك.",
         "weeklyDigest": "ملخص أسبوعي",
-        "weeklyDigestDesc": "ملخص كل يوم اثنين: المحتوى المنشور، الرصيد، الأحداث."
+        "weeklyDigestDesc": "ملخص كل يوم اثنين: المحتوى المنشور، الرصيد، الأحداث.",
+        "monthlyReport": "تقرير شهري",
+        "monthlyReportDesc": "Tipote بالأرقام كل شهر: المنشورات، العملاء المحتملين، الرصيد المستخدم.",
+        "milestoneEmails": "احتفالات وإنجازات",
+        "milestoneEmailsDesc": "رسائل تهنئة عند تحقيق إنجاز مهم."
       },
       "logoutTitle": "تسجيل الخروج",
       "logoutDesc": "تسجيل الخروج من حساب Tipote على هذا الجهاز.",

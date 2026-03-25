@@ -595,7 +595,11 @@
         "creditsAlerts": "AI credits alerts",
         "creditsAlertsDesc": "Get notified when your credits are depleted.",
         "weeklyDigest": "Weekly digest",
-        "weeklyDigestDesc": "Recap every Monday: published content, credits, events."
+        "weeklyDigestDesc": "Recap every Monday: published content, credits, events.",
+        "monthlyReport": "Monthly report",
+        "monthlyReportDesc": "Your Tipote in numbers each month: posts, leads, credits used.",
+        "milestoneEmails": "Celebrations & milestones",
+        "milestoneEmailsDesc": "Congratulations emails when you reach an important milestone."
       },
       "logoutTitle": "Sign out",
       "logoutDesc": "Sign out of your Tipote account on this device.",

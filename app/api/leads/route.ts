@@ -150,6 +150,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
+    // Milestone: first lead captured (non-blocking)
+    import("@/lib/milestones").then(({ checkMilestone }) =>
+      checkMilestone(user.id, "first_lead_captured", projectId).catch(() => {}),
+    ).catch(() => {});
+
     return NextResponse.json({ ok: true, id: data.id });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Server error" }, { status: 500 });

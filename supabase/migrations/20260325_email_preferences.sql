@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS email_preferences (
   social_alerts BOOLEAN NOT NULL DEFAULT true,
   credits_alerts BOOLEAN NOT NULL DEFAULT true,
   weekly_digest BOOLEAN NOT NULL DEFAULT true,
+  monthly_report BOOLEAN NOT NULL DEFAULT true,
+  milestone_emails BOOLEAN NOT NULL DEFAULT true,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

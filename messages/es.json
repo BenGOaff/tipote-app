@@ -610,7 +610,11 @@
         "creditsAlerts": "Alertas de créditos IA",
         "creditsAlertsDesc": "Aviso cuando tus créditos se agotan.",
         "weeklyDigest": "Resumen semanal",
-        "weeklyDigestDesc": "Resumen cada lunes: contenidos publicados, créditos, eventos."
+        "weeklyDigestDesc": "Resumen cada lunes: contenidos publicados, créditos, eventos.",
+        "monthlyReport": "Informe mensual",
+        "monthlyReportDesc": "Tu Tipote en cifras cada mes: posts, leads, créditos utilizados.",
+        "milestoneEmails": "Celebraciones y logros",
+        "milestoneEmailsDesc": "Emails de felicitación cuando alcanzas un hito importante."
       },
       "logoutTitle": "Cerrar sesión",
       "logoutDesc": "Cerrar sesión de tu cuenta Tipote en este dispositivo.",
