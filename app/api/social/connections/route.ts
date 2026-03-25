@@ -49,8 +49,9 @@ export async function GET() {
         ? new Date(c.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS)
         : false;
 
-      // Instagram uses access_token for refresh (no separate refresh_token)
-      if (isExpired && (c.refresh_token_encrypted || c.platform === "instagram")) {
+      // Instagram, Facebook, Threads use access_token for refresh (no separate refresh_token)
+      const usesAccessTokenRefresh = ["instagram", "facebook", "threads"].includes(c.platform);
+      if (isExpired && (c.refresh_token_encrypted || usesAccessTokenRefresh)) {
         try {
           const result = await refreshSocialToken(c.id, c.platform, c.refresh_token_encrypted, c.access_token_encrypted);
           if (result.ok) {

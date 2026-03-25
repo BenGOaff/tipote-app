@@ -8,7 +8,8 @@ import { refreshAccessToken as refreshTwitterToken } from "@/lib/twitter";
 import { refreshAccessToken as refreshPinterestToken } from "@/lib/pinterest";
 import { refreshAccessToken as refreshTikTokToken } from "@/lib/tiktok";
 import { refreshAccessToken as refreshLinkedInToken } from "@/lib/linkedin";
-import { refreshInstagramLongLivedToken } from "@/lib/meta";
+import { refreshAccessToken as refreshRedditToken } from "@/lib/reddit";
+import { refreshInstagramLongLivedToken, refreshFacebookLongLivedToken, refreshThreadsLongLivedToken } from "@/lib/meta";
 
 type RefreshResult = {
   ok: boolean;
@@ -16,7 +17,7 @@ type RefreshResult = {
   error?: string;
 };
 
-const SUPPORTED_PLATFORMS = ["twitter", "pinterest", "tiktok", "instagram", "linkedin"] as const;
+const SUPPORTED_PLATFORMS = ["twitter", "pinterest", "tiktok", "instagram", "linkedin", "facebook", "threads", "reddit"] as const;
 
 /**
  * Attempts to refresh an expired social connection token.
@@ -32,10 +33,10 @@ export async function refreshSocialToken(
   refreshTokenEncrypted: string | null,
   accessTokenEncrypted?: string | null,
 ): Promise<RefreshResult> {
-  // Instagram uses the access_token to refresh (no separate refresh_token)
-  const isInstagram = platform === "instagram";
+  // Instagram, Facebook, Threads use the access_token itself to refresh (no separate refresh_token)
+  const usesAccessTokenRefresh = platform === "instagram" || platform === "facebook" || platform === "threads";
 
-  if (!isInstagram && !refreshTokenEncrypted) {
+  if (!usesAccessTokenRefresh && !refreshTokenEncrypted) {
     return { ok: false, error: "No refresh token available" };
   }
 
@@ -50,23 +51,30 @@ export async function refreshSocialToken(
       refresh_token?: string;
     };
 
-    if (isInstagram) {
-      // Instagram: decrypt the current access_token and use it to get a new one
+    if (usesAccessTokenRefresh) {
+      // Instagram, Facebook, Threads: decrypt the current access_token and use it to get a new one
       const tokenEncrypted = accessTokenEncrypted ?? refreshTokenEncrypted;
       if (!tokenEncrypted) {
-        return { ok: false, error: "No access token available for Instagram refresh" };
+        return { ok: false, error: `No access token available for ${platform} refresh` };
       }
       let currentToken: string;
       try {
         currentToken = decrypt(tokenEncrypted);
       } catch {
-        return { ok: false, error: "Failed to decrypt Instagram access token" };
+        return { ok: false, error: `Failed to decrypt ${platform} access token` };
       }
-      const igTokens = await refreshInstagramLongLivedToken(currentToken);
-      tokens = {
-        access_token: igTokens.access_token,
-        expires_in: igTokens.expires_in,
-      };
+
+      if (platform === "instagram") {
+        const igTokens = await refreshInstagramLongLivedToken(currentToken);
+        tokens = { access_token: igTokens.access_token, expires_in: igTokens.expires_in };
+      } else if (platform === "facebook") {
+        const fbTokens = await refreshFacebookLongLivedToken(currentToken);
+        tokens = { access_token: fbTokens.access_token, expires_in: fbTokens.expires_in };
+      } else {
+        // Threads
+        const thTokens = await refreshThreadsLongLivedToken(currentToken);
+        tokens = { access_token: thTokens.access_token, expires_in: thTokens.expires_in };
+      }
     } else {
       // Twitter, Pinterest, TikTok: use refresh_token
       let refreshToken: string;
@@ -91,6 +99,13 @@ export async function refreshSocialToken(
           access_token: liTokens.access_token,
           expires_in: liTokens.expires_in,
           refresh_token: liTokens.refresh_token,
+        };
+      } else if (platform === "reddit") {
+        const rdTokens = await refreshRedditToken(refreshToken);
+        tokens = {
+          access_token: rdTokens.access_token,
+          expires_in: rdTokens.expires_in,
+          refresh_token: rdTokens.refresh_token,
         };
       } else {
         // Pinterest

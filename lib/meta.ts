@@ -408,6 +408,54 @@ export async function refreshInstagramLongLivedToken(currentToken: string): Prom
   return res.json();
 }
 
+/**
+ * Rafraîchit un long-lived Facebook User token (~60 jours).
+ * Doc : https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived/
+ * Endpoint : GET /oauth/access_token?grant_type=fb_exchange_token&...
+ */
+export async function refreshFacebookLongLivedToken(currentToken: string): Promise<{
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}> {
+  const params = new URLSearchParams({
+    grant_type: "fb_exchange_token",
+    client_id: getAppId(),
+    client_secret: getAppSecret(),
+    fb_exchange_token: currentToken,
+  });
+
+  const res = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${params}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Facebook token refresh failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+/**
+ * Rafraîchit un long-lived Threads token (~60 jours).
+ * Doc : https://developers.facebook.com/docs/threads/
+ * Endpoint : GET /refresh_access_token?grant_type=th_refresh_token&...
+ */
+export async function refreshThreadsLongLivedToken(currentToken: string): Promise<{
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}> {
+  const params = new URLSearchParams({
+    grant_type: "th_refresh_token",
+    access_token: currentToken,
+  });
+
+  const res = await fetch(`${THREADS_API_BASE}/refresh_access_token?${params}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Threads token refresh failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
 export type InstagramUserInfo = {
   id: string;
   username?: string;

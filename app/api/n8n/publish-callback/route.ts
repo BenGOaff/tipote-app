@@ -3,12 +3,18 @@
 // Met a jour le statut du content_item.
 // Body : { content_id, platform?, success, postUrn?, postId?, error? }
 
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 import { createNotification } from "@/lib/notifications";
+
+function timingSafeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export const dynamic = "force-dynamic";
 
@@ -56,9 +62,10 @@ async function updatePublishedStatus(contentId: string, newMetaFields: Record<st
 }
 
 export async function POST(req: NextRequest) {
-  // Auth par header secret
-  const secret = req.headers.get("x-n8n-secret");
-  if (!secret || secret !== process.env.N8N_SHARED_SECRET) {
+  // Auth par header secret (timing-safe comparison)
+  const secret = req.headers.get("x-n8n-secret") ?? "";
+  const expected = process.env.N8N_SHARED_SECRET ?? "";
+  if (!secret || !expected || !timingSafeCompare(secret, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -79,6 +86,20 @@ export async function POST(req: NextRequest) {
   const echoPostId = postId ?? postUrn ?? "";
 
   if (success) {
+    // ── Idempotency: skip if already published (prevents double-publish on retry) ──
+    const { data: existing } = await supabaseAdmin
+      .from("content_item")
+      .select("status, statut, meta")
+      .eq("id", contentId)
+      .single();
+
+    const currentStatus = existing?.status ?? existing?.statut;
+    const currentMeta = (existing?.meta && typeof existing.meta === "object") ? existing.meta as Record<string, unknown> : {};
+    if (currentStatus === "published" || currentMeta.published_at) {
+      console.warn(`[publish-callback] Post ${contentId} already published — skipping duplicate callback`);
+      return NextResponse.json({ ok: true, postId: echoPostId, skipped: "already_published" });
+    }
+
     // Marquer comme publié + stocker les infos du post dans meta
     const meta: Record<string, string> = {
       published_at: new Date().toISOString(),

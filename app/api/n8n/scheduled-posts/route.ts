@@ -12,7 +12,7 @@ import { uploadImageToLinkedIn, publishPost } from "@/lib/linkedin";
 
 export const dynamic = "force-dynamic";
 
-const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads", "twitter", "pinterest", "tiktok"];
+const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "threads", "twitter", "pinterest", "tiktok", "instagram", "reddit"];
 
 /**
  * Résout l'URL de la première image depuis meta.
@@ -258,8 +258,9 @@ export async function GET(req: NextRequest) {
 
       let accessToken: string;
 
-      // If token is expired, try to refresh it
-      if (conn.token_expires_at && new Date(conn.token_expires_at) < parisNow) {
+      // If token is expired or about to expire, try to refresh it (5-min buffer)
+      const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+      if (conn.token_expires_at && new Date(conn.token_expires_at) < new Date(parisNow.getTime() + REFRESH_BUFFER_MS)) {
         const refreshResult = await refreshSocialToken(
           conn.id,
           platform,

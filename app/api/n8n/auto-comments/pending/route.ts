@@ -125,8 +125,9 @@ export async function GET(req: NextRequest) {
 
       let accessToken: string;
 
-      // Check token expiry — try to refresh if expired
-      if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
+      // Check token expiry — try to refresh if expired (5-min buffer)
+      const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+      if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS)) {
         const refreshResult = await refreshSocialToken(
           connection.id,
           postPlatform,

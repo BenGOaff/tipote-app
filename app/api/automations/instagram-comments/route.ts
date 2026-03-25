@@ -92,8 +92,9 @@ export async function GET(req: NextRequest) {
 
       let accessToken: string;
 
-      // Vérifier que le token n'est pas expiré — tenter un refresh si besoin
-      if (conn.token_expires_at && new Date(conn.token_expires_at) < new Date()) {
+      // Vérifier que le token n'est pas expiré — tenter un refresh si besoin (5-min buffer)
+      const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+      if (conn.token_expires_at && new Date(conn.token_expires_at) < new Date(Date.now() + REFRESH_BUFFER_MS)) {
         const { refreshSocialToken } = await import("@/lib/refreshSocialToken");
         const refreshResult = await refreshSocialToken(conn.id, "instagram", null, conn.access_token_encrypted);
         if (!refreshResult.ok || !refreshResult.accessToken) {
