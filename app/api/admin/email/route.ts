@@ -112,14 +112,21 @@ export async function POST(req: NextRequest) {
       if (!u?.email) continue;
       const { data: profile } = await supabaseAdmin
         .from("profiles")
-        .select("first_name, content_locale")
+        .select("first_name")
         .eq("id", uid)
+        .maybeSingle();
+      const { data: bp } = await supabaseAdmin
+        .from("business_profiles")
+        .select("content_locale")
+        .eq("user_id", uid)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       recipients.push({
         id: uid,
         email: u.email,
         first_name: profile?.first_name ?? null,
-        locale: profile?.content_locale ?? "fr",
+        locale: bp?.content_locale ?? "fr",
       });
     }
   } else {
@@ -127,18 +134,27 @@ export async function POST(req: NextRequest) {
     const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 10000 });
     const userList = allUsers?.users ?? [];
 
-    // Get plans for filtering
+    // Get plans + names from profiles table
     const { data: profiles } = await supabaseAdmin
       .from("profiles")
-      .select("id, plan, first_name, content_locale");
+      .select("id, plan, first_name");
 
-    const profileMap = new Map<string, { plan: string; first_name: string | null; locale: string }>();
+    const profileMap = new Map<string, { plan: string; first_name: string | null }>();
     for (const p of profiles ?? []) {
       profileMap.set(p.id, {
         plan: p.plan ?? "free",
         first_name: p.first_name ?? null,
-        locale: p.content_locale ?? "fr",
       });
+    }
+
+    // Get locale from business_profiles (separate table)
+    const { data: bpRows } = await supabaseAdmin
+      .from("business_profiles")
+      .select("user_id, content_locale");
+
+    const localeMap = new Map<string, string>();
+    for (const bp of bpRows ?? []) {
+      localeMap.set(bp.user_id, bp.content_locale ?? "fr");
     }
 
     for (const u of userList) {
@@ -153,7 +169,7 @@ export async function POST(req: NextRequest) {
         id: u.id,
         email: u.email,
         first_name: profile?.first_name ?? null,
-        locale: profile?.locale ?? "fr",
+        locale: localeMap.get(u.id) ?? "fr",
       });
     }
   }
