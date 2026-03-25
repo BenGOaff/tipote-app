@@ -1,12 +1,13 @@
 // lib/refreshSocialToken.ts
 // Shared helper: refresh an expired OAuth token and persist the new tokens in DB.
-// Supports: Twitter/X (rotating refresh tokens), Pinterest, TikTok, Instagram.
+// Supports: Twitter/X (rotating refresh tokens), Pinterest, TikTok, Instagram, LinkedIn.
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { refreshAccessToken as refreshTwitterToken } from "@/lib/twitter";
 import { refreshAccessToken as refreshPinterestToken } from "@/lib/pinterest";
 import { refreshAccessToken as refreshTikTokToken } from "@/lib/tiktok";
+import { refreshAccessToken as refreshLinkedInToken } from "@/lib/linkedin";
 import { refreshInstagramLongLivedToken } from "@/lib/meta";
 
 type RefreshResult = {
@@ -15,7 +16,7 @@ type RefreshResult = {
   error?: string;
 };
 
-const SUPPORTED_PLATFORMS = ["twitter", "pinterest", "tiktok", "instagram"] as const;
+const SUPPORTED_PLATFORMS = ["twitter", "pinterest", "tiktok", "instagram", "linkedin"] as const;
 
 /**
  * Attempts to refresh an expired social connection token.
@@ -83,6 +84,13 @@ export async function refreshSocialToken(
           access_token: ttTokens.access_token,
           expires_in: ttTokens.expires_in,
           refresh_token: ttTokens.refresh_token,
+        };
+      } else if (platform === "linkedin") {
+        const liTokens = await refreshLinkedInToken(refreshToken);
+        tokens = {
+          access_token: liTokens.access_token,
+          expires_in: liTokens.expires_in,
+          refresh_token: liTokens.refresh_token,
         };
       } else {
         // Pinterest
