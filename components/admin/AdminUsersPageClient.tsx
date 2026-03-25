@@ -127,6 +127,19 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
   const [notifActionLabel, setNotifActionLabel] = useState("");
   const [sendingNotif, setSendingNotif] = useState(false);
 
+  // Email marketing state
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailGreeting, setEmailGreeting] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [emailCtaLabel, setEmailCtaLabel] = useState("");
+  const [emailCtaUrl, setEmailCtaUrl] = useState("");
+  const [emailPreheader, setEmailPreheader] = useState("");
+  const [emailSegment, setEmailSegment] = useState<string[]>([]);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailPreviewHtml, setEmailPreviewHtml] = useState<string | null>(null);
+  const [emailResult, setEmailResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
+
   // Plan counts for filter badges
   const planCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -546,6 +559,188 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
           </div>
         )}
       </Card>
+      {/* ─── Email marketing card ─── */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="text-base font-semibold">📧 Email Marketing</div>
+            <div className="text-sm text-muted-foreground">
+              Envoyer un email brandé {selectedIds.size > 0 ? `aux ${selectedIds.size} user(s) sélectionnés` : "segmenté par plan"}.
+            </div>
+          </div>
+          <Button variant="outline" onClick={() => { setShowEmailForm((v) => !v); setEmailPreviewHtml(null); setEmailResult(null); }}>
+            {showEmailForm ? "Fermer" : "Composer un email"}
+          </Button>
+        </div>
+
+        {showEmailForm && (
+          <div className="mt-4 space-y-3">
+            {/* Segment filter (only if no users selected) */}
+            {selectedIds.size === 0 && (
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">Segment (plans ciblés) :</div>
+                <div className="flex flex-wrap gap-2">
+                  {PLANS.map((plan) => (
+                    <label key={plan} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={emailSegment.includes(plan)}
+                        onCheckedChange={(checked) => {
+                          setEmailSegment((prev) =>
+                            checked ? [...prev, plan] : prev.filter((p) => p !== plan),
+                          );
+                        }}
+                      />
+                      <Badge variant="outline" className="text-xs">{plan}</Badge>
+                      <span className="text-xs text-muted-foreground">({planCounts[plan] ?? 0})</span>
+                    </label>
+                  ))}
+                </div>
+                {emailSegment.length === 0 && (
+                  <div className="text-xs text-amber-600">⚠ Aucun segment = envoi à TOUS les users</div>
+                )}
+              </div>
+            )}
+
+            <Input
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              placeholder="Objet de l'email *"
+            />
+            <Input
+              value={emailPreheader}
+              onChange={(e) => setEmailPreheader(e.target.value)}
+              placeholder="Preheader (texte aperçu inbox, optionnel)"
+            />
+            <Input
+              value={emailGreeting}
+              onChange={(e) => setEmailGreeting(e.target.value)}
+              placeholder="Salutation (défaut: prénom de l'user ou 'Bonjour,')"
+            />
+            <textarea
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+              placeholder="Corps de l'email * (HTML supporté : <br/>, <strong>, <a>...)"
+              rows={6}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <div className="flex gap-2">
+              <Input
+                value={emailCtaUrl}
+                onChange={(e) => setEmailCtaUrl(e.target.value)}
+                placeholder="URL du bouton CTA (optionnel)"
+                className="flex-1"
+              />
+              <Input
+                value={emailCtaLabel}
+                onChange={(e) => setEmailCtaLabel(e.target.value)}
+                placeholder="Texte du bouton"
+                className="w-48"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={!emailSubject.trim() || !emailBody.trim() || sendingEmail}
+                onClick={async () => {
+                  setEmailPreviewHtml(null);
+                  const res = await fetch("/api/admin/email", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      subject: emailSubject,
+                      greeting: emailGreeting || undefined,
+                      body: emailBody,
+                      ctaLabel: emailCtaLabel || undefined,
+                      ctaUrl: emailCtaUrl || undefined,
+                      preheader: emailPreheader || undefined,
+                      preview: true,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.html) setEmailPreviewHtml(data.html);
+                }}
+              >
+                👁 Prévisualiser
+              </Button>
+              <Button
+                disabled={!emailSubject.trim() || !emailBody.trim() || sendingEmail}
+                onClick={async () => {
+                  const target = selectedIds.size > 0
+                    ? `${selectedIds.size} user(s) sélectionnés`
+                    : emailSegment.length > 0
+                    ? `tous les users ${emailSegment.join(", ")}`
+                    : "TOUS les users";
+                  if (!confirm(`Envoyer cet email à ${target} ?`)) return;
+
+                  setSendingEmail(true);
+                  setEmailResult(null);
+                  try {
+                    const res = await fetch("/api/admin/email", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        subject: emailSubject,
+                        greeting: emailGreeting || undefined,
+                        body: emailBody,
+                        ctaLabel: emailCtaLabel || undefined,
+                        ctaUrl: emailCtaUrl || undefined,
+                        preheader: emailPreheader || undefined,
+                        segment: emailSegment.length > 0 ? emailSegment : undefined,
+                        user_ids: selectedIds.size > 0 ? Array.from(selectedIds) : undefined,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                      setEmailResult({ sent: data.sent, failed: data.failed, total: data.total });
+                      toast({ title: `✅ ${data.sent}/${data.total} emails envoyés` });
+                    } else {
+                      toast({ title: "Erreur", description: data.error, variant: "destructive" });
+                    }
+                  } catch (err) {
+                    toast({ title: "Erreur d'envoi", variant: "destructive" });
+                  } finally {
+                    setSendingEmail(false);
+                  }
+                }}
+              >
+                {sendingEmail
+                  ? "Envoi en cours..."
+                  : selectedIds.size > 0
+                  ? `📧 Envoyer à ${selectedIds.size} user(s)`
+                  : emailSegment.length > 0
+                  ? `📧 Envoyer aux ${emailSegment.join(", ")}`
+                  : "📧 Envoyer à tous"}
+              </Button>
+            </div>
+
+            {/* Result */}
+            {emailResult && (
+              <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm">
+                ✅ <strong>{emailResult.sent}</strong> envoyé{emailResult.sent > 1 ? "s" : ""} sur {emailResult.total}
+                {emailResult.failed > 0 && <span className="text-red-600 ml-2">({emailResult.failed} échec{emailResult.failed > 1 ? "s" : ""})</span>}
+              </div>
+            )}
+
+            {/* Preview */}
+            {emailPreviewHtml && (
+              <div className="mt-3 space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">Prévisualisation :</div>
+                <div className="border rounded-lg overflow-hidden bg-gray-50">
+                  <iframe
+                    srcDoc={emailPreviewHtml}
+                    title="Email preview"
+                    className="w-full border-0"
+                    style={{ minHeight: 500 }}
+                    sandbox="allow-same-origin"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
       <Card className="p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
