@@ -57,7 +57,10 @@
       "contentReminder": "Don't forget to post {type} \"{title}\" today!",
       "strategyProgress": "Congrats! You completed the {phase} phase, you can move on to the next step!",
       "statsReminder": "You haven't filled in your stats this month, remember to do it!",
-      "statsReminderBody": "Your stats help the AI coach you better. Fill them in before the end of the month."
+      "statsReminderBody": "Your stats help the AI coach you better. Fill them in before the end of the month.",
+      "socialExpiring": "Social connection expiring soon",
+      "creditsLow": "AI credits running low",
+      "eventReminder": "Event reminder"
     }
   },
   "languageSwitcher": {
@@ -584,6 +587,16 @@
       "timezoneLabel": "Time zone",
       "save": "Save",
       "saving": "Saving…",
+      "emailPrefs": {
+        "title": "Email notifications",
+        "desc": "Choose which emails you want to receive. We only send what's useful.",
+        "socialAlerts": "Social media alerts",
+        "socialAlertsDesc": "Get notified when a connection expires and blocks your posts.",
+        "creditsAlerts": "AI credits alerts",
+        "creditsAlertsDesc": "Get notified when your credits are depleted.",
+        "weeklyDigest": "Weekly digest",
+        "weeklyDigestDesc": "Recap every Monday: published content, credits, events."
+      },
       "logoutTitle": "Sign out",
       "logoutDesc": "Sign out of your Tipote account on this device.",
       "danger": {

@@ -602,6 +602,16 @@
       "password": "Contraseña",
       "changePassword": "Cambiar",
       "timezoneLabel": "Zona horaria",
+      "emailPrefs": {
+        "title": "Notificaciones por email",
+        "desc": "Elige qué emails quieres recibir. Solo enviamos lo útil.",
+        "socialAlerts": "Alertas de redes sociales",
+        "socialAlertsDesc": "Aviso cuando una conexión expira y bloquea tus publicaciones.",
+        "creditsAlerts": "Alertas de créditos IA",
+        "creditsAlertsDesc": "Aviso cuando tus créditos se agotan.",
+        "weeklyDigest": "Resumen semanal",
+        "weeklyDigestDesc": "Resumen cada lunes: contenidos publicados, créditos, eventos."
+      },
       "logoutTitle": "Cerrar sesión",
       "logoutDesc": "Cerrar sesión de tu cuenta Tipote en este dispositivo.",
       "danger": {

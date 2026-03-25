@@ -30,6 +30,8 @@ import {
   Eye,
   BookOpen,
   AtSign,
+  Bell,
+  Mail,
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -61,6 +63,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
@@ -293,6 +296,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [pendingProfile, startProfileTransition] = useTransition();
   const [pendingPositioning, startPositioningTransition] = useTransition();
 
+  // -------------------------
+  // Email preferences
+  // -------------------------
+  const [emailPrefSocial, setEmailPrefSocial] = useState(true);
+  const [emailPrefCredits, setEmailPrefCredits] = useState(true);
+  const [emailPrefDigest, setEmailPrefDigest] = useState(true);
+  const [emailPrefsLoaded, setEmailPrefsLoaded] = useState(false);
+
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [termsUrl, setTermsUrl] = useState("");
   const [cgvUrl, setCgvUrl] = useState("");
@@ -434,6 +445,32 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       cancelled = true;
     };
   }, [toast]);
+
+  // Load email preferences
+  useEffect(() => {
+    fetch("/api/email-preferences")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && !data.error) {
+          setEmailPrefSocial(data.social_alerts ?? true);
+          setEmailPrefCredits(data.credits_alerts ?? true);
+          setEmailPrefDigest(data.weekly_digest ?? true);
+          setEmailPrefsLoaded(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function toggleEmailPref(field: string, value: boolean) {
+    const res = await fetch("/api/email-preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    });
+    if (!res.ok) {
+      toast({ title: "Erreur", description: "Impossible de sauvegarder", variant: "destructive" });
+    }
+  }
 
   // Load generated offers from strategy plan
   useEffect(() => {
@@ -1156,6 +1193,64 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <Save className="w-4 h-4 mr-2" />
             {pendingProfile ? tSP("profile.saving") : tSP("profile.save")}
           </Button>
+        </Card>
+
+        {/* Préférences de notification email */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Mail className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold">{tSP("profile.emailPrefs.title")}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-5">
+            {tSP("profile.emailPrefs.desc")}
+          </p>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.socialAlerts")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.socialAlertsDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefSocial}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefSocial(v);
+                  toggleEmailPref("social_alerts", v);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.creditsAlerts")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.creditsAlertsDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefCredits}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefCredits(v);
+                  toggleEmailPref("credits_alerts", v);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.weeklyDigest")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.weeklyDigestDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefDigest}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefDigest(v);
+                  toggleEmailPref("weekly_digest", v);
+                }}
+              />
+            </div>
+          </div>
         </Card>
 
         {/* Déconnexion */}

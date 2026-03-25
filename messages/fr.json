@@ -57,7 +57,10 @@
       "contentReminder": "N'oublie pas de poster {type} \"{title}\" aujourd'hui !",
       "strategyProgress": "Bravo ! Tu as terminé ta phase {phase}, tu peux passer à la suite de ta stratégie !",
       "statsReminder": "Tu n'as pas rempli tes statistiques ce mois-ci, pense à le faire !",
-      "statsReminderBody": "Tes stats aident l'IA à mieux te coacher. Remplis-les avant la fin du mois."
+      "statsReminderBody": "Tes stats aident l'IA à mieux te coacher. Remplis-les avant la fin du mois.",
+      "socialExpiring": "Connexion sociale bientôt expirée",
+      "creditsLow": "Crédits IA bientôt épuisés",
+      "eventReminder": "Rappel événement"
     }
   },
   "languageSwitcher": {
@@ -584,6 +587,16 @@
       "timezoneLabel": "Fuseau horaire",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
+      "emailPrefs": {
+        "title": "Notifications par email",
+        "desc": "Choisis quels emails tu veux recevoir. On t'envoie uniquement ce qui est utile.",
+        "socialAlerts": "Alertes réseaux sociaux",
+        "socialAlertsDesc": "Prévenu quand une connexion expire et bloque tes publications.",
+        "creditsAlerts": "Alertes crédits IA",
+        "creditsAlertsDesc": "Prévenu quand tes crédits sont épuisés.",
+        "weeklyDigest": "Résumé hebdomadaire",
+        "weeklyDigestDesc": "Récap chaque lundi : contenus publiés, crédits, événements."
+      },
       "logoutTitle": "Déconnexion",
       "logoutDesc": "Te déconnecter de ton compte Tipote sur cet appareil.",
       "danger": {
