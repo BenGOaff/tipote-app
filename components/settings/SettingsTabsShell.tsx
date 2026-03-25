@@ -1105,7 +1105,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">{tSP("profile.email")}</Label>
-              <Input id="email" type="email" value={userEmail} disabled />
+              <Input id="email" type="email" value={userEmail} disabled readOnly autoComplete="off" />
             </div>
 
             <div className="space-y-2">
@@ -1116,7 +1116,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-2">
               <Label htmlFor="password">{tSP("profile.password")}</Label>
               <div className="flex gap-2">
-                <Input id="password" type="password" value="••••••••" disabled className="flex-1" />
+                <Input id="password" type="text" value="••••••••" disabled className="flex-1" readOnly autoComplete="off" />
 
                 <Dialog>
                   <DialogTrigger asChild>
@@ -1216,11 +1216,13 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <div className="space-y-2">
             <Label>{tSP("connections.sioLabel")}</Label>
             <Input
-              type="password"
+              type="text"
+              autoComplete="off"
               placeholder={tSP("connections.sioPlaceholder")}
               value={sioApiKey}
               onChange={(e) => setSioApiKey(e.target.value)}
               disabled={profileLoading}
+              className="font-mono tracking-wider"
             />
           </div>
 
