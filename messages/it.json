@@ -602,6 +602,16 @@
       "password": "Password",
       "changePassword": "Cambia",
       "timezoneLabel": "Fuso orario",
+      "emailPrefs": {
+        "title": "Notifiche via email",
+        "desc": "Scegli quali email vuoi ricevere. Inviamo solo ciò che è utile.",
+        "socialAlerts": "Avvisi social media",
+        "socialAlertsDesc": "Avvisato quando una connessione scade e blocca le pubblicazioni.",
+        "creditsAlerts": "Avvisi crediti IA",
+        "creditsAlertsDesc": "Avvisato quando i crediti sono esauriti.",
+        "weeklyDigest": "Riepilogo settimanale",
+        "weeklyDigestDesc": "Riepilogo ogni lunedì: contenuti pubblicati, crediti, eventi."
+      },
       "logoutTitle": "Esci",
       "logoutDesc": "Esci dal tuo account Tipote su questo dispositivo.",
       "danger": {

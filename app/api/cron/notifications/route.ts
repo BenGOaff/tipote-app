@@ -3,7 +3,9 @@
 // 1. Content reminders: manual posts scheduled for today
 // 2. Stats reminders: J-1 before end of month, if user hasn't filled stats
 // 3. Client deadline reminders: processes/items due today
-// 4. Strategy progression: (checked on profile update, not here)
+// 4. Social connections expiring within 24h
+// 5. Credits low (< 5 remaining)
+// 6. Event reminders: J-7 and J-1 for webinars/challenges
 // Auth: internal key
 
 import { NextRequest, NextResponse } from "next/server";
@@ -205,6 +207,160 @@ export async function GET(req: NextRequest) {
     }
   } catch (e) {
     results.push(`client_deadlines: error - ${e instanceof Error ? e.message : "unknown"}`);
+  }
+
+  // ─── 4. Social connections expiring within 24h ───
+  try {
+    const in24h = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const { data: expiring } = await supabaseAdmin
+      .from("social_connections")
+      .select("id, user_id, project_id, platform, token_expires_at")
+      .lt("token_expires_at", in24h);
+
+    if (expiring?.length) {
+      // Deduplicate: check we haven't already notified today
+      const byUser = new Map<string, typeof expiring>();
+      for (const conn of expiring) {
+        if (!byUser.has(conn.user_id)) byUser.set(conn.user_id, []);
+        byUser.get(conn.user_id)!.push(conn);
+      }
+
+      let notified = 0;
+      for (const [userId, conns] of byUser) {
+        // Check if we already sent a social_expiring notification today
+        const { data: existing } = await supabaseAdmin
+          .from("notifications")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("type", "social_expiring")
+          .gte("created_at", today)
+          .limit(1);
+
+        if (existing?.length) continue;
+
+        const platforms = conns.map((c) => c.platform).join(", ");
+        await createNotification({
+          user_id: userId,
+          type: "social_expiring",
+          title: conns.length === 1
+            ? `Ta connexion ${conns[0].platform} expire bientôt`
+            : `${conns.length} connexions sociales expirent bientôt (${platforms})`,
+          body: "Reconnecte-les pour ne pas interrompre tes publications programmées.",
+          icon: "🔗",
+          action_url: "/settings?tab=connections",
+          action_label: "Mes connexions",
+        });
+        notified++;
+      }
+      results.push(`social_expiring: ${expiring.length} connections, ${notified} users notified`);
+    } else {
+      results.push("social_expiring: none");
+    }
+  } catch (e) {
+    results.push(`social_expiring: error - ${e instanceof Error ? e.message : "unknown"}`);
+  }
+
+  // ─── 5. Credits low (< 5 remaining) ───
+  try {
+    const { data: lowCredits } = await supabaseAdmin
+      .from("user_credits")
+      .select("user_id");
+
+    // Filter to users with < 5 total remaining credits
+    const lowUsers: string[] = [];
+    for (const row of lowCredits ?? []) {
+      const { data: snap } = await supabaseAdmin.rpc("ensure_user_credits", { p_user_id: row.user_id });
+      if (!snap) continue;
+      const monthlyRem = Math.max(0, (snap.monthly_credits_total ?? 0) - (snap.monthly_credits_used ?? 0));
+      const bonusRem = Math.max(0, (snap.bonus_credits_total ?? 0) - (snap.bonus_credits_used ?? 0));
+      if (monthlyRem + bonusRem < 5) {
+        lowUsers.push(row.user_id);
+      }
+    }
+
+    let notified = 0;
+    for (const userId of lowUsers) {
+      // Max 1 credits alert per week
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabaseAdmin
+        .from("notifications")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("type", "credits_low")
+        .gte("created_at", weekAgo)
+        .limit(1);
+
+      if (existing?.length) continue;
+
+      await createNotification({
+        user_id: userId,
+        type: "credits_low",
+        title: "Tes crédits IA sont bientôt épuisés",
+        body: "Il te reste moins de 5 crédits. Recharge pour continuer à générer du contenu.",
+        icon: "⚡",
+        action_url: "/settings?tab=pricing",
+        action_label: "Recharger",
+      });
+      notified++;
+    }
+    results.push(`credits_low: ${lowUsers.length} users low, ${notified} notified`);
+  } catch (e) {
+    results.push(`credits_low: error - ${e instanceof Error ? e.message : "unknown"}`);
+  }
+
+  // ─── 6. Event reminders: J-7 and J-1 for webinars/challenges ───
+  try {
+    const todayDate = new Date(today);
+    const in7Days = new Date(todayDate.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const tomorrow = new Date(todayDate.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    // J-7 reminders
+    const { data: eventsJ7 } = await supabaseAdmin
+      .from("webinars")
+      .select("id, user_id, project_id, title, event_type, start_date")
+      .eq("start_date", in7Days);
+
+    let eventNotifs = 0;
+    for (const ev of eventsJ7 ?? []) {
+      const label = ev.event_type === "challenge" ? "challenge" : "webinaire";
+      await createNotification({
+        user_id: ev.user_id,
+        project_id: ev.project_id,
+        type: "event_reminder",
+        title: `Ton ${label} "${ev.title}" commence dans 7 jours`,
+        body: "Vérifie que tout est prêt : programme, offre, promo.",
+        icon: "🎯",
+        action_url: "/events",
+        action_label: "Mes événements",
+        meta: { event_id: ev.id, days_before: 7 },
+      });
+      eventNotifs++;
+    }
+
+    // J-1 reminders
+    const { data: eventsJ1 } = await supabaseAdmin
+      .from("webinars")
+      .select("id, user_id, project_id, title, event_type, start_date")
+      .eq("start_date", tomorrow);
+
+    for (const ev of eventsJ1 ?? []) {
+      const label = ev.event_type === "challenge" ? "challenge" : "webinaire";
+      await createNotification({
+        user_id: ev.user_id,
+        project_id: ev.project_id,
+        type: "event_reminder",
+        title: `Ton ${label} "${ev.title}" est demain !`,
+        body: "Dernière ligne droite — c'est le moment de tout vérifier.",
+        icon: "🔔",
+        action_url: "/events",
+        action_label: "Mes événements",
+        meta: { event_id: ev.id, days_before: 1 },
+      });
+      eventNotifs++;
+    }
+    results.push(`event_reminders: ${eventNotifs} notifications`);
+  } catch (e) {
+    results.push(`event_reminders: error - ${e instanceof Error ? e.message : "unknown"}`);
   }
 
   return NextResponse.json({ ok: true, today, results });
