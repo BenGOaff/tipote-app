@@ -40,14 +40,14 @@ export async function GET(req: NextRequest) {
   for (const user of allUsers?.users ?? []) {
     if (!user.email) continue;
 
-    // Check email preferences
+    // Check email preferences (monthly_report field)
     const { data: prefs } = await supabaseAdmin
       .from("email_preferences")
-      .select("weekly_digest")
+      .select("monthly_report")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (prefs && prefs.weekly_digest === false) {
+    if (prefs && prefs.monthly_report === false) {
       skipped++;
       continue;
     }

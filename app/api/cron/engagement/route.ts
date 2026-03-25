@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createNotification } from "@/lib/notifications";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, canSendEmailToday } from "@/lib/email";
 
 const INTERNAL_KEY = process.env.NOTIFICATIONS_INTERNAL_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
@@ -145,6 +145,9 @@ export async function GET(req: NextRequest) {
 
       // Use weekly_digest pref as proxy (users who opt out of digest probably don't want re-engagement)
       if (prefs && prefs.weekly_digest === false) continue;
+
+      // Global daily rate limit
+      if (!(await canSendEmailToday(user.id, supabaseAdmin))) continue;
 
       // Check dedup: max 1 per type per 14-day window
       const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();

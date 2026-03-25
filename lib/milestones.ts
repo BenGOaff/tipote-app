@@ -203,9 +203,18 @@ export async function checkMilestone(userId: string, type: MilestoneType, projec
     meta: { milestone: type },
   });
 
-  // Send email for major milestones
+  // Send email for major milestones (if user hasn't opted out)
   if (def.sendEmail && def.emailSubjects) {
     try {
+      // Check milestone_emails preference
+      const { data: prefs } = await supabaseAdmin
+        .from("email_preferences")
+        .select("milestone_emails")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (prefs && prefs.milestone_emails === false) return;
+
       const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId);
       if (!user?.email) return;
 

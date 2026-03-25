@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, canSendEmailToday } from "@/lib/email";
 
 const INTERNAL_KEY = process.env.NOTIFICATIONS_INTERNAL_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
@@ -74,6 +74,9 @@ export async function GET(req: NextRequest) {
           .limit(1);
 
         if (recentNotif?.length) continue;
+
+        // Global daily rate limit
+        if (!(await canSendEmailToday(userId, supabaseAdmin))) continue;
 
         // Get user email
         const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId);
@@ -186,6 +189,9 @@ export async function GET(req: NextRequest) {
         .limit(1);
 
       if (recentEmail?.length) continue;
+
+      // Global daily rate limit
+      if (!(await canSendEmailToday(userId, supabaseAdmin))) continue;
 
       // Get user info
       const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId);
