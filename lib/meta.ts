@@ -20,6 +20,9 @@ const THREADS_TOKEN_URL = "https://graph.threads.net/oauth/access_token";
 const INSTAGRAM_AUTH_URL = "https://www.instagram.com/oauth/authorize";
 const INSTAGRAM_TOKEN_URL = "https://api.instagram.com/oauth/access_token";
 const INSTAGRAM_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
+// Token endpoints (exchange + refresh) do NOT accept a version prefix
+// Doc : https://developers.facebook.com/docs/instagram-platform/reference/access_token
+const INSTAGRAM_TOKEN_BASE = "https://graph.instagram.com";
 
 // Facebook Pages scopes (OAuth Facebook Login – app "Tipote" 795320846922979)
 // NOTE: pages_messaging N'EST PAS ici — l'app Tipote n'a pas le produit Messenger.
@@ -366,7 +369,9 @@ export async function exchangeInstagramForLongLivedToken(shortLivedToken: string
     access_token: shortLivedToken,
   });
 
-  const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/access_token?${params}`);
+  // Token exchange endpoint MUST NOT have a version prefix
+  // Doc: https://developers.facebook.com/docs/instagram-platform/reference/access_token
+  const res = await fetch(`${INSTAGRAM_TOKEN_BASE}/access_token?${params}`);
   if (res.ok) {
     console.log("[Instagram] Long-lived token OK");
     return res.json();
@@ -393,7 +398,9 @@ export async function refreshInstagramLongLivedToken(currentToken: string): Prom
     access_token: currentToken,
   });
 
-  const res = await fetch(`${INSTAGRAM_GRAPH_BASE}/refresh_access_token?${params}`);
+  // Refresh endpoint MUST NOT have a version prefix
+  // Doc: https://developers.facebook.com/docs/instagram-platform/reference/refresh_access_token
+  const res = await fetch(`${INSTAGRAM_TOKEN_BASE}/refresh_access_token?${params}`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Instagram token refresh failed (${res.status}): ${text}`);

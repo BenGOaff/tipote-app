@@ -105,11 +105,24 @@ export async function GET(req: NextRequest) {
     console.log("[Instagram callback] Short-lived token OK, user_id:", shortLived.user_id);
 
     // Échange short-lived → long-lived (~60 jours)
-    // Si l'échange échoue (endpoint Meta cassé), on utilise le short-lived token
-    const longLived = await exchangeInstagramForLongLivedToken(shortLived.access_token);
-    const finalToken = longLived?.access_token ?? shortLived.access_token;
-    const expiresIn = longLived?.expires_in ?? 3600; // 1h si short-lived
-    console.log("[Instagram callback] Token OK, long-lived:", !!longLived, "expires_in:", expiresIn);
+    // On tente 2 fois car Meta peut avoir des hiccups transitoires
+    let longLived = await exchangeInstagramForLongLivedToken(shortLived.access_token);
+    if (!longLived) {
+      console.warn("[Instagram callback] Long-lived exchange attempt 1 failed, retrying in 1s...");
+      await new Promise((r) => setTimeout(r, 1000));
+      longLived = await exchangeInstagramForLongLivedToken(shortLived.access_token);
+    }
+    if (!longLived) {
+      console.error("[Instagram callback] Long-lived token exchange failed after 2 attempts — refusing short-lived fallback");
+      return NextResponse.redirect(
+        `${settingsUrl}&instagram_error=${encodeURIComponent(
+          "Impossible d'obtenir un token longue durée Instagram. Réessaie dans quelques minutes. Si le problème persiste, contacte le support."
+        )}`
+      );
+    }
+    const finalToken = longLived.access_token;
+    const expiresIn = longLived.expires_in;
+    console.log("[Instagram callback] Long-lived token OK, expires_in:", expiresIn);
 
     // Profil Instagram (fallback sur user_id du code exchange si graph.instagram.com est cassé)
     const igUserResult = await getInstagramUser(finalToken);
