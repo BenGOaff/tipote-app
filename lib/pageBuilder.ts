@@ -1242,7 +1242,7 @@ function sectionHero(d: Record<string, any>, t: PageStrings): string {
 
   const visual = buildMockup(d);
 
-  return `<section class="tp-hero">
+  return `<section id="sc-hero" class="tp-hero">
   <div style="max-width:var(--container);margin:0 auto;position:relative;z-index:1;width:100%">
     <!-- Main promise ABOVE the two columns -->
     <div style="text-align:center;margin-bottom:48px;animation:tp-fadeUp 0.6s ease backwards">
@@ -1280,7 +1280,7 @@ function sectionHeroSales(d: Record<string, any>, t?: PageStrings): string {
   const ctaSub = esc(safe(d.cta_subtitle || ""));
   const payUrl = safe(d.payment_url || d.cta_url || "#");
 
-  return `<section class="tp-hero">
+  return `<section id="sc-hero" class="tp-hero">
   <div style="max-width:var(--container);margin:0 auto;text-align:center;position:relative;z-index:1;padding:0 40px">
     ${eyebrow ? `<div data-editable="true" style="display:inline-block;padding:6px 16px;background:rgba(255,255,255,0.1);color:#fff;border-radius:20px;font-size:0.8rem;font-weight:600;margin-bottom:20px">${eyebrow}</div>` : ""}
     <h1 style="max-width:720px;margin:0 auto 20px">${title}</h1>
@@ -1297,7 +1297,7 @@ function sectionBenefits(d: Record<string, any>, isSales: boolean, t?: PageStrin
   const items: string[] = Array.isArray(d.benefits) ? d.benefits.filter((b: any) => typeof b === "string" && b.trim()) : [];
   if (items.length === 0 && !title) return "";
 
-  return `<section class="tp-section alt">
+  return `<section id="sc-benefits" class="tp-section alt">
   <div class="tp-container">
     <div class="tp-section-header">
       <div class="tp-accent-line"></div>
@@ -1319,7 +1319,7 @@ function sectionProgram(d: Record<string, any>): string {
   const items: Array<{ label?: string; title?: string; description?: string }> = Array.isArray(d.program_items) ? d.program_items : [];
   if (items.length === 0) return "";
 
-  return `<section class="tp-section">
+  return `<section id="sc-program" class="tp-section">
   <div class="tp-container">
     <div class="tp-section-header">
       <div class="tp-accent-line"></div>
@@ -1344,7 +1344,7 @@ function sectionProblem(d: Record<string, any>): string {
   const bullets: string[] = Array.isArray(d.problem_bullets) ? d.problem_bullets.filter((b: any) => typeof b === "string" && b.trim()) : [];
   if (!title && !desc && bullets.length === 0) return "";
 
-  return `<section class="tp-section dark">
+  return `<section id="sc-problem" class="tp-section dark">
   <div class="tp-container">
     <div class="tp-section-header">
       ${title ? `<h2 class="tp-section-title">${title}</h2>` : ""}
@@ -1366,7 +1366,7 @@ function sectionSolution(d: Record<string, any>): string {
   const bullets: string[] = Array.isArray(d.solution_bullets) ? d.solution_bullets.filter((b: any) => typeof b === "string" && b.trim()) : [];
   if (!title && !desc) return "";
 
-  return `<section class="tp-section">
+  return `<section id="sc-solution" class="tp-section">
   <div class="tp-container">
     <div class="tp-section-header">
       <div class="tp-accent-line"></div>
@@ -1393,7 +1393,7 @@ function sectionAbout(d: Record<string, any>, t?: PageStrings): string {
 
   const hasPhoto = !!photo;
 
-  return `<section class="tp-section dark">
+  return `<section id="sc-about" class="tp-section dark">
   <div class="tp-container">
     ${title ? `<div class="tp-section-header"><h2 class="tp-section-title">${title}</h2></div>` : ""}
     <div class="tp-about"${!hasPhoto ? ' style="grid-template-columns:auto 1fr;text-align:left"' : ""}>
@@ -1415,7 +1415,7 @@ function sectionTestimonials(d: Record<string, any>): string {
   const items: Array<{ content?: string; author_name?: string; author_role?: string }> = Array.isArray(d.testimonials) ? d.testimonials.filter((t: any) => t?.content) : [];
   if (items.length === 0) return "";
 
-  return `<section class="tp-section alt">
+  return `<section id="sc-testimonials" class="tp-section alt">
   <div class="tp-container">
     <div class="tp-section-header">
       <div class="tp-accent-line"></div>
@@ -1446,7 +1446,7 @@ function sectionPricing(d: Record<string, any>): string {
 
   if (tiers.length > 1) {
     const cols = tiers.length <= 3 ? tiers.length : 3;
-    return `<section class="tp-section">
+    return `<section id="sc-pricing" class="tp-section">
   <div class="tp-container">
     <div class="tp-section-header">
       <div class="tp-accent-line"></div>
@@ -1474,7 +1474,7 @@ function sectionPricing(d: Record<string, any>): string {
 
   // Single price fallback
   if (!amount) return "";
-  return `<section class="tp-section">
+  return `<section id="sc-pricing" class="tp-section">
   <div class="tp-container">
     <div class="tp-section-header">
       <div class="tp-accent-line"></div>
@@ -1495,7 +1495,7 @@ function sectionGuarantee(d: Record<string, any>): string {
   const text = esc(safe(d.guarantee_text || ""));
   if (!title && !text) return "";
 
-  return `<section class="tp-section alt">
+  return `<section id="sc-guarantee" class="tp-section alt">
   <div class="tp-container">
     <div class="tp-guarantee-box">
       <div class="tp-guarantee-icon">&#128170;</div>
@@ -1511,7 +1511,7 @@ function sectionFaq(d: Record<string, any>): string {
   const items: Array<{ question?: string; answer?: string }> = Array.isArray(d.faqs) ? d.faqs.filter((f: any) => f?.question && f?.answer) : [];
   if (items.length === 0) return "";
 
-  return `<section class="tp-section">
+  return `<section id="sc-faq" class="tp-section">
   <div class="tp-container">
     <div class="tp-section-header">
       <div class="tp-accent-line"></div>
@@ -1537,7 +1537,7 @@ function sectionFinalCta(d: Record<string, any>, isCapture: boolean, t?: PageStr
   // For capture: button scrolls to hero form. For sales: links to payment.
   const href = isCapture ? "#tipote-capture-form" : safe(d.payment_url || d.cta_url || "#");
 
-  return `<section class="tp-final-cta">
+  return `<section id="sc-final-cta" class="tp-final-cta">
   ${title ? `<h2 data-editable="true">${title}</h2>` : ""}
   ${desc ? `<p data-editable="true">${desc}</p>` : ""}
   <a href="${esc(href)}" class="tp-final-btn" data-editable="true">${ctaText}</a>
@@ -1652,7 +1652,7 @@ function sectionShowcaseHero(d: Record<string, any>, t?: PageStrings): string {
   const secondaryCtaText = esc(safe(d.secondary_cta_text || ""));
   const secondaryCtaUrl = safe(d.secondary_cta_url || "#sc-contact");
 
-  return `<section style="background:linear-gradient(135deg,var(--gray-900) 0%,#0f172a 100%);color:var(--white);padding:100px 0 80px;text-align:center;position:relative;overflow:hidden">
+  return `<section id="sc-hero" style="background:linear-gradient(135deg,var(--gray-900) 0%,#0f172a 100%);color:var(--white);padding:100px 0 80px;text-align:center;position:relative;overflow:hidden">
   <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 0%,var(--brand-25) 0%,transparent 70%);pointer-events:none"></div>
   <div class="tp-container" style="position:relative;z-index:1;max-width:800px">
     ${eyebrow ? `<div style="display:inline-block;background:var(--brand-15);color:var(--brand-on-dark);padding:6px 16px;border-radius:20px;font-size:0.85rem;font-weight:600;margin-bottom:20px" data-editable="true">${eyebrow}</div>` : ""}
@@ -1698,7 +1698,7 @@ function sectionKeyNumbers(d: Record<string, any>): string {
   const items: Array<{ value?: string; label?: string }> = Array.isArray(d.key_numbers) ? d.key_numbers.filter((n: any) => n?.value) : [];
   if (items.length === 0) return "";
 
-  return `<section class="tp-section alt">
+  return `<section id="sc-numbers" class="tp-section alt">
   <div class="tp-container">
     ${title ? `<div class="tp-section-header"><h2 class="tp-section-title">${title}</h2></div>` : ""}
     <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap">

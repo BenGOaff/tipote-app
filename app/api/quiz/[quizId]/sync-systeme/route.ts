@@ -113,7 +113,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // Get quiz leads
     const { data: leads } = await supabase
       .from("quiz_leads")
-      .select("id, email")
+      .select("id, email, first_name, last_name, phone, country")
       .eq("quiz_id", quizId);
 
     if (!leads || leads.length === 0) {
@@ -188,10 +188,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
         if (search.ok && Array.isArray(search.data?.items) && search.data.items.length > 0) {
           contactId = Number(search.data.items[0].id);
         } else {
-          // Create contact
+          // Create contact with all available fields
+          const contactBody: Record<string, unknown> = { email, locale: "fr" };
+          if (lead.first_name) contactBody.firstName = lead.first_name;
+          if (lead.last_name) contactBody.surname = lead.last_name;
+          if (lead.phone) contactBody.phoneNumber = lead.phone;
+          if (lead.country) contactBody.country = lead.country;
           const create = await sioRequest(apiKey, "/contacts", {
             method: "POST",
-            body: { email, locale: "fr" },
+            body: contactBody,
           });
           if (create.ok && create.data?.id) {
             contactId = Number(create.data.id);

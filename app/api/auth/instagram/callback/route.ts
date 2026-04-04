@@ -165,31 +165,40 @@ export async function GET(req: NextRequest) {
     };
 
     // Upsert : update si connexion Instagram existante, sinon insert
-    let findQuery = supabase
+    // Use supabaseAdmin to bypass RLS — the user session cookie can be fragile
+    // after the cross-domain redirect from Instagram.
+    // Search by user_id + platform only (ignore project_id) to avoid duplicates
+    // caused by NULL != NULL in PostgreSQL unique constraints.
+    const { data: existingRows } = await supabaseAdmin
       .from("social_connections")
       .select("id")
       .eq("user_id", user.id)
-      .eq("platform", "instagram");
+      .eq("platform", "instagram")
+      .order("created_at", { ascending: false });
 
-    if (projectId) {
-      findQuery = findQuery.eq("project_id", projectId);
-    } else {
-      findQuery = findQuery.is("project_id", null);
-    }
-
-    const { data: existing } = await findQuery.maybeSingle();
+    const existing = existingRows?.[0] ?? null;
 
     let dbError;
     if (existing) {
       console.log("[Instagram callback] Updating existing connection:", existing.id);
-      const result = await supabase
+      const result = await supabaseAdmin
         .from("social_connections")
         .update(connectionData)
         .eq("id", existing.id);
       dbError = result.error;
+
+      // Clean up any duplicate Instagram connections for this user
+      if (!dbError && existingRows && existingRows.length > 1) {
+        const duplicateIds = existingRows.slice(1).map((r: { id: string }) => r.id);
+        console.log("[Instagram callback] Cleaning up", duplicateIds.length, "duplicate connections");
+        await supabaseAdmin
+          .from("social_connections")
+          .delete()
+          .in("id", duplicateIds);
+      }
     } else {
       console.log("[Instagram callback] Inserting new connection");
-      const result = await supabase
+      const result = await supabaseAdmin
         .from("social_connections")
         .insert(connectionData);
       dbError = result.error;
