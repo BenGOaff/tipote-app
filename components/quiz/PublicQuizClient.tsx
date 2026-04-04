@@ -866,7 +866,7 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
             const ctaUrl = resultProfile?.cta_url || quiz.cta_url;
             const ctaText = resultProfile?.cta_text || quiz.cta_text;
             return ctaText && ctaUrl ? (
-              <Button size="lg" className="w-full h-12 text-base rounded-full whitespace-normal" asChild>
+              <Button size="lg" className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug" asChild>
                 <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
                   {ctaText}
                 </a>

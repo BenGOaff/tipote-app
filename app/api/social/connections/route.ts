@@ -24,13 +24,15 @@ export async function GET() {
   const projectId = await getActiveProjectId(supabase, user.id);
 
   // Récupérer les connexions (avec refresh_token pour pouvoir rafraîchir proactivement)
+  // Include connections for the active project AND those with no project (project_id IS NULL)
+  // to avoid missing connections saved before a project was created or during reconnection.
   let query = supabaseAdmin
     .from("social_connections")
     .select("id, platform, platform_user_id, platform_username, token_expires_at, refresh_token_encrypted, access_token_encrypted, scopes, created_at, updated_at")
     .eq("user_id", user.id);
 
   if (projectId) {
-    query = query.eq("project_id", projectId);
+    query = query.or(`project_id.eq.${projectId},project_id.is.null`);
   }
 
   const { data, error } = await query.order("created_at", { ascending: true });
@@ -92,7 +94,26 @@ export async function GET() {
     })
   );
 
-  return NextResponse.json({ ok: true, connections });
+  // Deduplicate: if multiple connections exist for the same platform (e.g. due to
+  // NULL project_id duplicates), keep only the most recently updated one per platform.
+  const seen = new Map<string, (typeof connections)[number]>();
+  for (const c of connections) {
+    const existing = seen.get(c.platform);
+    if (!existing) {
+      seen.set(c.platform, c);
+    } else {
+      // Prefer non-expired, then most recently updated
+      if (existing.expired && !c.expired) {
+        seen.set(c.platform, c);
+      } else if (existing.expired === c.expired) {
+        const existDate = existing.updated_at ? new Date(existing.updated_at).getTime() : 0;
+        const newDate = c.updated_at ? new Date(c.updated_at).getTime() : 0;
+        if (newDate > existDate) seen.set(c.platform, c);
+      }
+    }
+  }
+
+  return NextResponse.json({ ok: true, connections: Array.from(seen.values()) });
 }
 
 export async function DELETE(req: NextRequest) {
