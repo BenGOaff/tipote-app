@@ -231,7 +231,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // Verify quiz is active
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, title")
+      .select("id, user_id, project_id, title")
       .eq("id", quizId)
       .eq("status", "active")
       .maybeSingle();
@@ -398,7 +398,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // Increment share count on quiz + get share tag
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("shares_count, sio_share_tag_name, user_id")
+      .select("shares_count, sio_share_tag_name, user_id, project_id")
       .eq("id", quizId)
       .maybeSingle();
 
