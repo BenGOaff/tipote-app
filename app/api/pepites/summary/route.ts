@@ -39,12 +39,22 @@ export async function GET() {
   if (due || (hasNeverReceived && !current)) {
     const adminState = await getOrCreatePepitesState(supabaseAdmin, user.id);
 
+    // Get user's content locale for pepite language matching
+    const { data: bp } = await supabaseAdmin
+      .from("business_profiles")
+      .select("content_locale")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const userLocale = (bp?.content_locale as string) || "fr";
+
     // 🔥 force due si jamais reçu (cas import après coup)
     const forcedState = hasNeverReceived
       ? { ...adminState, next_reveal_at: now.toISOString() }
       : adminState;
 
-    const res = await assignNextPepiteIfDue(supabaseAdmin, user.id, forcedState, now);
+    const res = await assignNextPepiteIfDue(supabaseAdmin, user.id, forcedState, now, userLocale);
     current = res.current;
   }
 

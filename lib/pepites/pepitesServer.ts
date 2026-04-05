@@ -6,6 +6,8 @@ export type PepiteRow = {
   title: string;
   body: string;
   created_at: string;
+  locale?: string;
+  group_key?: string;
 };
 
 export type UserPepiteRow = {
@@ -106,6 +108,7 @@ export async function assignNextPepiteIfDue(
   userId: string,
   state: UserPepitesStateRow,
   now: Date,
+  locale: string = "fr",
 ): Promise<{
   state: UserPepitesStateRow;
   current: UserPepiteRow | null;
@@ -127,23 +130,41 @@ export async function assignNextPepiteIfDue(
     return { state, current: cur, assigned: false };
   }
 
-  // 2) Liste des pepites déjà reçues
+  // 2) Liste des pepites déjà reçues (fetch group_key to avoid showing same pepite in different locale)
   const { data: received, error: receivedErr } = await supabase
     .from("user_pepites")
-    .select("pepite_id")
+    .select("pepite_id, pepites(group_key)")
     .eq("user_id", userId);
 
   if (receivedErr) throw new Error(receivedErr.message);
-  const receivedIds = new Set((received ?? []).map((r: { pepite_id: string }) => r.pepite_id));
+  const receivedGroupKeys = new Set(
+    (received ?? []).map((r: any) => {
+      const p = Array.isArray(r.pepites) ? r.pepites[0] : r.pepites;
+      return p?.group_key ?? r.pepite_id;
+    })
+  );
 
-  // 3) Toutes les pepites dispo (doit être appelé avec un supabase qui peut lire pepites)
-  const { data: all, error: allErr } = await supabase
+  // 3) Toutes les pepites dispo dans la locale de l'user (fallback FR si aucune dans sa langue)
+  let { data: all, error: allErr } = await supabase
     .from("pepites")
-    .select("id,title,body,created_at")
+    .select("id,title,body,created_at,locale,group_key")
+    .eq("locale", locale)
     .order("created_at", { ascending: true });
 
   if (allErr) throw new Error(allErr.message);
-  const remaining = (all ?? []).filter((p: PepiteRow) => !receivedIds.has(p.id));
+
+  // Fallback: if no pepites in user's locale, use FR
+  if (!all || all.length === 0) {
+    const fallback = await supabase
+      .from("pepites")
+      .select("id,title,body,created_at,locale,group_key")
+      .eq("locale", "fr")
+      .order("created_at", { ascending: true });
+    if (fallback.error) throw new Error(fallback.error.message);
+    all = fallback.data;
+  }
+
+  const remaining = (all ?? []).filter((p: PepiteRow) => !receivedGroupKeys.has(p.group_key ?? p.id));
 
   if (remaining.length === 0) {
     const next = addDaysIso(now, 365);

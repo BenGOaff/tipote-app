@@ -351,8 +351,10 @@
     "edit": "Modifica"
   },
   "pepites": {
+    "pageTitle": "Gemme",
+    "bannerSubtitle": "Consigli pratici per far crescere il tuo business.",
     "title": "La mia collezione di gemme",
-    "subtitle": "Salva le tue idee migliori, frasi e ispirazioni",
+    "subtitle": "Ogni tanto ne arriva una nuova… e non sai mai esattamente quando 😄",
     "refresh": "Aggiorna",
     "add": "Aggiungi",
     "addTitle": "Aggiungi una gemma",
