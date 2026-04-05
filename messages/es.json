@@ -351,8 +351,10 @@
     "edit": "Editar"
   },
   "pepites": {
+    "pageTitle": "Joyas",
+    "bannerSubtitle": "Consejos prácticos para impulsar tu negocio.",
     "title": "Mi colección de joyas",
-    "subtitle": "Guarda tus mejores ideas, frases e inspiraciones",
+    "subtitle": "De vez en cuando llega una nueva… y nunca sabes exactamente cuándo 😄",
     "refresh": "Actualizar",
     "add": "Añadir",
     "addTitle": "Añadir una joya",
