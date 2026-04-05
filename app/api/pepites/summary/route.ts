@@ -2,11 +2,14 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { cookies } from "next/headers";
 import {
   getOrCreatePepitesState,
   fetchUserPepiteById,
   assignNextPepiteIfDue,
 } from "@/lib/pepites/pepitesServer";
+
+const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar"];
 
 export async function GET() {
   const supabase = await getSupabaseServerClient();
@@ -17,6 +20,11 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
+
+  // Use ui_locale cookie (same source as LanguageSwitcher / next-intl)
+  const cookieStore = await cookies();
+  const rawLocale = cookieStore.get("ui_locale")?.value ?? "fr";
+  const userLocale = SUPPORTED_LOCALES.includes(rawLocale) ? rawLocale : "fr";
 
   const state = await getOrCreatePepitesState(supabase, user.id);
 
@@ -35,16 +43,6 @@ export async function GET() {
     .eq("user_id", user.id);
 
   const hasNeverReceived = !countErr && (receivedCount ?? 0) === 0;
-
-  // Get user's content locale (used for assignment + translation lookup)
-  const { data: bp } = await supabaseAdmin
-    .from("business_profiles")
-    .select("content_locale")
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const userLocale = (bp?.content_locale as string) || "fr";
 
   if (due || (hasNeverReceived && !current)) {
     const adminState = await getOrCreatePepitesState(supabaseAdmin, user.id);
