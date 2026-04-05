@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   // Fetch the page to get user_id and validate it exists
   const { data: page } = await supabase
     .from("hosted_pages")
-    .select("id, user_id, title, sio_capture_tag, status")
+    .select("id, user_id, project_id, title, sio_capture_tag, status")
     .eq("id", pageId)
     .eq("status", "published")
     .single();
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
 
   // Systeme.io sync (non-blocking)
   if (page.sio_capture_tag) {
-    syncLeadToSystemeIo({ pageId, userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase }).catch(() => {});
+    syncLeadToSystemeIo({ pageId, userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase, projectId: page.project_id }).catch(() => {});
   }
 
   return NextResponse.json({ ok: true });
@@ -271,14 +271,16 @@ async function syncLeadToSystemeIo(params: {
   firstName: string;
   tagName: string;
   supabase: any;
+  projectId?: string | null;
 }) {
   try {
-    // Get user's SIO API key
-    const { data: profile } = await params.supabase
+    // Get user's SIO API key (scoped by project)
+    let profileQuery = params.supabase
       .from("business_profiles")
       .select("sio_user_api_key")
-      .eq("user_id", params.userId)
-      .maybeSingle();
+      .eq("user_id", params.userId);
+    if (params.projectId) profileQuery = profileQuery.eq("project_id", params.projectId);
+    const { data: profile } = await profileQuery.maybeSingle();
 
     const apiKey = (profile as any)?.sio_user_api_key;
     if (!apiKey) return;

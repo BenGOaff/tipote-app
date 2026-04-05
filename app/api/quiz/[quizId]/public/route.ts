@@ -130,7 +130,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const admin = supabaseAdmin;
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country").eq("id", quizId).eq("status", "active").maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -332,12 +332,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const tagName = String(result?.sio_tag_name ?? "").trim();
           if (!tagName) return;
 
-          // Get the quiz owner's API key
-          const { data: profile } = await admin
+          // Get the quiz owner's API key (scoped by project)
+          let profileQuery = admin
             .from("business_profiles")
             .select("sio_user_api_key")
-            .eq("user_id", quiz.user_id)
-            .maybeSingle();
+            .eq("user_id", quiz.user_id);
+          if (quiz.project_id) profileQuery = profileQuery.eq("project_id", quiz.project_id);
+          const { data: profile } = await profileQuery.maybeSingle();
 
           const apiKey = String(profile?.sio_user_api_key ?? "").trim();
           if (!apiKey) return;
@@ -412,11 +413,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (shareTagName && quiz.user_id) {
         (async () => {
           try {
-            const { data: profile } = await admin
+            let shareProfileQuery = admin
               .from("business_profiles")
               .select("sio_user_api_key")
-              .eq("user_id", quiz.user_id)
-              .maybeSingle();
+              .eq("user_id", quiz.user_id);
+            if (quiz.project_id) shareProfileQuery = shareProfileQuery.eq("project_id", quiz.project_id);
+            const { data: profile } = await shareProfileQuery.maybeSingle();
 
             const apiKey = String(profile?.sio_user_api_key ?? "").trim();
             if (!apiKey) return;
