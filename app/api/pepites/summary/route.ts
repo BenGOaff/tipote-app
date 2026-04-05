@@ -36,18 +36,18 @@ export async function GET() {
 
   const hasNeverReceived = !countErr && (receivedCount ?? 0) === 0;
 
+  // Get user's content locale (used for assignment + translation lookup)
+  const { data: bp } = await supabaseAdmin
+    .from("business_profiles")
+    .select("content_locale")
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const userLocale = (bp?.content_locale as string) || "fr";
+
   if (due || (hasNeverReceived && !current)) {
     const adminState = await getOrCreatePepitesState(supabaseAdmin, user.id);
-
-    // Get user's content locale for pepite language matching
-    const { data: bp } = await supabaseAdmin
-      .from("business_profiles")
-      .select("content_locale")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const userLocale = (bp?.content_locale as string) || "fr";
 
     // 🔥 force due si jamais reçu (cas import après coup)
     const forcedState = hasNeverReceived
@@ -60,6 +60,23 @@ export async function GET() {
 
   const hasUnread = Boolean(current && !current.seen_at);
 
+  // If user locale != fr, look up translated version of current pepite
+  let pepiteTitle = current?.pepites?.title ?? null;
+  let pepiteBody = current?.pepites?.body ?? null;
+  if (current?.pepites && userLocale !== "fr") {
+    const groupKey = (current.pepites as any).group_key ?? current.pepites.id;
+    const { data: translated } = await supabaseAdmin
+      .from("pepites")
+      .select("title, body")
+      .eq("group_key", groupKey)
+      .eq("locale", userLocale)
+      .maybeSingle();
+    if (translated) {
+      pepiteTitle = translated.title;
+      pepiteBody = translated.body;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     hasUnread,
@@ -69,7 +86,7 @@ export async function GET() {
           assignedAt: current.assigned_at,
           seenAt: current.seen_at,
           pepite: current.pepites
-            ? { id: current.pepites.id, title: current.pepites.title, body: current.pepites.body }
+            ? { id: current.pepites.id, title: pepiteTitle, body: pepiteBody }
             : null,
         }
       : null,

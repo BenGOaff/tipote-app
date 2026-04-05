@@ -94,7 +94,7 @@ export async function fetchUserPepiteById(
 ): Promise<UserPepiteRow | null> {
   const { data, error } = await supabase
     .from("user_pepites")
-    .select("id,user_id,pepite_id,assigned_at,seen_at,pepites(id,title,body,created_at)")
+    .select("id,user_id,pepite_id,assigned_at,seen_at,pepites(id,title,body,created_at,group_key,locale)")
     .eq("id", userPepiteId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -192,7 +192,7 @@ export async function assignNextPepiteIfDue(
       user_id: userId,
       pepite_id: picked.id,
     })
-    .select("id,user_id,pepite_id,assigned_at,seen_at,pepites(id,title,body,created_at)")
+    .select("id,user_id,pepite_id,assigned_at,seen_at,pepites(id,title,body,created_at,group_key,locale)")
     .single();
 
   if (insErr) throw new Error(insErr.message);
