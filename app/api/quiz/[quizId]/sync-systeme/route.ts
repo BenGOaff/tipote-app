@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -75,12 +76,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // Get user's Systeme.io API key
-    const { data: profile } = await supabase
+    // Get user's Systeme.io API key (scoped by active project)
+    const projectId = await getActiveProjectId(supabase, user.id);
+    let profileQuery = supabase
       .from("business_profiles")
       .select("sio_user_api_key")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    if (projectId) profileQuery = profileQuery.eq("project_id", projectId);
+    const { data: profile } = await profileQuery.maybeSingle();
 
     const apiKey = String(profile?.sio_user_api_key ?? "").trim();
     if (!apiKey) {
