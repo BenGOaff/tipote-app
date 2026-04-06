@@ -253,11 +253,11 @@ function NotificationItem({
   const [expanded, setExpanded] = useState(false);
 
   const handleClick = () => {
-    setExpanded((prev) => !prev);
-    // Mark as read on first click
-    if (isUnread) {
+    if (expanded && isUnread) {
+      // Closing an unread notification → mark as read
       onAction("mark_read", n.id);
     }
+    setExpanded((prev) => !prev);
   };
 
   return (
