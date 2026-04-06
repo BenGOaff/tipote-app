@@ -828,10 +828,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           if (finalResult.competitor_insights_markdown) setCompetitorInsightsMarkdown(finalResult.competitor_insights_markdown);
           if (finalResult.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(finalResult.narrative_synthesis_markdown);
           if (finalResult.persona_detailed_markdown) setPersonaDetailTab("detailed");
-          setInitialProfile((prev) => ({
-            ...prev,
-            mission: finalResult.persona_summary || prev?.mission,
-          }));
+          // Don't update initialProfile here — it should only change after an explicit Save.
+          // Updating it here made positioningDirty = false, disabling the Save button.
           setPersonaStale(false);
           toast({ title: "Persona enrichi avec succès" });
         } else {
@@ -859,10 +857,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       if (json.competitor_insights_markdown) setCompetitorInsightsMarkdown(json.competitor_insights_markdown);
       if (json.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(json.narrative_synthesis_markdown);
       if (json.persona_detailed_markdown) setPersonaDetailTab("detailed");
-      setInitialProfile((prev) => ({
-        ...prev,
-        mission: json.persona_summary || prev?.mission,
-      }));
+      // Don't update initialProfile here — keep dirty so Save button stays enabled.
       setPersonaStale(false);
       toast({ title: "Persona enrichi avec succès" });
     } catch (e: any) {
