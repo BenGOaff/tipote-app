@@ -38,39 +38,35 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "missing_title_or_body" }, { status: 400 });
   }
 
-  // Insert the FR original with a group_key
+  // Generate a group_key upfront (UUID) so the NOT NULL constraint is satisfied on insert
+  const groupKey = crypto.randomUUID();
+
+  // Insert the FR original with group_key
   const { data: inserted, error } = await supabaseAdmin
     .from("pepites")
-    .upsert({ title, body: text, locale: "fr" }, { onConflict: "title" })
-    .select("id")
+    .upsert({ title, body: text, locale: "fr", group_key: groupKey }, { onConflict: "title" })
+    .select("id, group_key")
     .single();
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }
 
-  // Set group_key = id for the original (if not already set)
+  // Use the actual group_key (could be the existing one if upsert matched an existing title)
+  const finalGroupKey = inserted?.group_key ?? groupKey;
   const pepiteId = inserted?.id;
-  if (pepiteId) {
-    await supabaseAdmin
-      .from("pepites")
-      .update({ group_key: pepiteId })
-      .eq("id", pepiteId)
-      .is("group_key", null);
-  }
 
   // Auto-translate into other languages (non-blocking)
-  if (pepiteId) {
+  if (finalGroupKey) {
     (async () => {
       try {
         const { translatePepite } = await import("@/lib/pepites/translatePepite");
         const translations = await translatePepite(title, text);
         for (const t of translations) {
-          const groupKey = pepiteId;
           await supabaseAdmin
             .from("pepites")
             .upsert(
-              { title: t.title, body: t.body, locale: t.locale, group_key: groupKey },
+              { title: t.title, body: t.body, locale: t.locale, group_key: finalGroupKey },
               { onConflict: "group_key,locale" },
             );
         }
