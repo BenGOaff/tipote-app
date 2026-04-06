@@ -36,12 +36,13 @@ export async function GET() {
     // Persona is scoped per user+role+project for multi-project isolation.
     // Note: the personas table has NO 'channels' column — channels are stored
     // in persona_json (jsonb). Only select columns that actually exist.
+    // Include project_id IS NULL fallback for legacy rows not yet migrated
     let query = supabaseAdmin
       .from("personas")
       .select("name, pains, desires, persona_json, updated_at")
       .eq("user_id", auth.user.id)
       .eq("role", "client_ideal");
-    if (projectId) query = query.eq("project_id", projectId);
+    if (projectId) query = query.or(`project_id.eq.${projectId},project_id.is.null`);
     const { data: rows, error } = await query
       .order("updated_at", { ascending: false })
       .limit(1);
