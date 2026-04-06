@@ -637,8 +637,11 @@
       "sioTitle": "Systeme.io",
       "sioDesc": "اربط حسابك على Systeme.io لتصدير العملاء المحتملين تلقائياً من اختباراتك مع العلامات.",
       "sioApiHelp": "كيف أجد مفتاح API الخاص بي؟",
+      "sioKeyName": "اسم هذا الاتصال",
+      "sioKeyNamePlaceholder": "مثال: مشروعي، تسويق بالعمولة، عميل 1…",
       "sioLabel": "مفتاح API لـ Systeme.io",
       "sioPlaceholder": "الصق مفتاح API هنا...",
+      "sioSaved": "تم حفظ مفتاح API لـ Systeme.io",
       "save": "حفظ",
       "saving": "جاري الحفظ…"
     },

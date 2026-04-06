@@ -48,6 +48,7 @@ const UpdateSchema = z.object({
   cgv_url: z.string().trim().max(500).optional(),
 
   sio_user_api_key: z.string().trim().max(200).optional(),
+  sio_api_key_name: z.string().trim().max(100).optional(),
 
   content_locale: z.string().trim().max(10).optional(),
   address_form: z.enum(["tu", "vous"]).optional(),
