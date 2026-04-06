@@ -80,6 +80,8 @@ type QuizResult = {
   cta_text: string | null;
   cta_url: string | null;
   sio_tag_name: string | null;
+  sio_course_id: string | null;
+  sio_community_id: string | null;
   sort_order: number;
 };
 
@@ -200,6 +202,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [sioTags, setSioTags] = useState<{ id: number; name: string }[]>([]);
   const [sioTagsLoading, setSioTagsLoading] = useState(false);
   const [sioTagsLoaded, setSioTagsLoaded] = useState(false);
+
+  // Systeme.io courses & communities (for auto-enrollment)
+  const [sioCourses, setSioCourses] = useState<{ id: string; name: string }[]>([]);
+  const [sioCoursesLoaded, setSioCoursesLoaded] = useState(false);
+  const [sioCoursesLoading, setSioCoursesLoading] = useState(false);
+  const [sioCommunities, setSioCommunities] = useState<{ id: string; name: string }[]>([]);
+  const [sioCommunitiesLoaded, setSioCommunitiesLoaded] = useState(false);
+  const [sioCommunitiesLoading, setSioCommunitiesLoading] = useState(false);
   const [sioShareTagName, setSioShareTagName] = useState("");
   // Track which picker is in "create new" mode: "share" | "result-0" | "result-1" etc.
   const [newTagFor, setNewTagFor] = useState<string | null>(null);
@@ -351,6 +361,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             cta_text: ctaPerResult ? r.cta_text : null,
             cta_url: ctaPerResult ? r.cta_url : null,
             sio_tag_name: r.sio_tag_name || null,
+            sio_course_id: r.sio_course_id || null,
+            sio_community_id: r.sio_community_id || null,
             sort_order: i,
           })),
         }),
@@ -527,6 +539,42 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       });
     } finally {
       setSioTagsLoading(false);
+    }
+  };
+
+  const loadSioCourses = async () => {
+    setSioCoursesLoading(true);
+    try {
+      const res = await fetch("/api/systeme-io/courses");
+      const json = await res.json();
+      if (json?.ok && Array.isArray(json.courses)) {
+        setSioCourses(json.courses);
+        setSioCoursesLoaded(true);
+      } else if (json?.error === "NO_API_KEY") {
+        toast({ title: "Clé API manquante", description: "Configure ta clé API Systeme.io dans Réglages.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de charger les formations Systeme.io.", variant: "destructive" });
+    } finally {
+      setSioCoursesLoading(false);
+    }
+  };
+
+  const loadSioCommunities = async () => {
+    setSioCommunitiesLoading(true);
+    try {
+      const res = await fetch("/api/systeme-io/communities");
+      const json = await res.json();
+      if (json?.ok && Array.isArray(json.communities)) {
+        setSioCommunities(json.communities);
+        setSioCommunitiesLoaded(true);
+      } else if (json?.error === "NO_API_KEY") {
+        toast({ title: "Clé API manquante", description: "Configure ta clé API Systeme.io dans Réglages.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de charger les communautés Systeme.io.", variant: "destructive" });
+    } finally {
+      setSioCommunitiesLoading(false);
     }
   };
 
@@ -1030,6 +1078,68 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             Ce tag sera appliqué automatiquement au contact dans Systeme.io quand un visiteur obtient ce profil.
                           </p>
                         </div>
+
+                        {/* SIO Course auto-enrollment */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                            Formation Systeme.io
+                            <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">auto</span>
+                          </Label>
+                          {!sioCoursesLoaded ? (
+                            <Button variant="outline" size="sm" onClick={loadSioCourses} disabled={sioCoursesLoading}>
+                              {sioCoursesLoading ? "Chargement..." : "Charger mes formations"}
+                            </Button>
+                          ) : (
+                            <select
+                              className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm"
+                              value={r.sio_course_id ?? ""}
+                              onChange={(e) => {
+                                const next = [...editResults];
+                                next[ri] = { ...next[ri], sio_course_id: e.target.value || null };
+                                setEditResults(next);
+                              }}
+                            >
+                              <option value="">— Aucune formation —</option>
+                              {sioCourses.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          )}
+                          <p className="text-[10px] text-muted-foreground">
+                            Le contact sera inscrit automatiquement à cette formation Systeme.io.
+                          </p>
+                        </div>
+
+                        {/* SIO Community auto-access */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                            Communauté Systeme.io
+                            <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">auto</span>
+                          </Label>
+                          {!sioCommunitiesLoaded ? (
+                            <Button variant="outline" size="sm" onClick={loadSioCommunities} disabled={sioCommunitiesLoading}>
+                              {sioCommunitiesLoading ? "Chargement..." : "Charger mes communautés"}
+                            </Button>
+                          ) : (
+                            <select
+                              className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm"
+                              value={r.sio_community_id ?? ""}
+                              onChange={(e) => {
+                                const next = [...editResults];
+                                next[ri] = { ...next[ri], sio_community_id: e.target.value || null };
+                                setEditResults(next);
+                              }}
+                            >
+                              <option value="">— Aucune communauté —</option>
+                              {sioCommunities.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          )}
+                          <p className="text-[10px] text-muted-foreground">
+                            Le contact sera ajouté automatiquement à cette communauté Systeme.io.
+                          </p>
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -1050,6 +1160,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           cta_text: null,
                           cta_url: null,
                           sio_tag_name: null,
+                          sio_course_id: null,
+                          sio_community_id: null,
                           sort_order: newProfileIndex,
                         },
                       ]);
