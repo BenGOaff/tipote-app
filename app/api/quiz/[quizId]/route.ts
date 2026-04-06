@@ -148,6 +148,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             cta_text: r.cta_text ?? null,
             cta_url: r.cta_url ?? null,
             sio_tag_name: r.sio_tag_name ?? null,
+            sio_course_id: r.sio_course_id ?? null,
+            sio_community_id: r.sio_community_id ?? null,
             sort_order: i,
           })),
         );

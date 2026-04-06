@@ -110,15 +110,77 @@ async function applyTagToContact(
   email: string,
   tagName: string,
   fields?: { firstName?: string; surname?: string; phoneNumber?: string; country?: string },
-) {
+): Promise<number | null> {
   try {
     const tagId = await ensureSioTag(apiKey, tagName);
-    if (!tagId) return;
+    if (!tagId) return null;
     const contactId = await ensureSioContact(apiKey, email, fields);
-    if (!contactId) return;
+    if (!contactId) return null;
     await sioFetch(apiKey, `/contacts/${contactId}/tags`, { method: "POST", body: { tagId } });
+    return contactId;
   } catch (e) {
     console.error("[Systeme.io auto-tag] Error:", e);
+    return null;
+  }
+}
+
+/**
+ * Enrich SIO contact with quiz result as custom field.
+ */
+async function enrichSioContact(
+  apiKey: string,
+  contactId: number,
+  quizResultTitle: string,
+) {
+  try {
+    await sioFetch(apiKey, `/contacts/${contactId}`, {
+      method: "PATCH",
+      body: {
+        fields: [
+          { slug: "tipote_quiz_result", value: quizResultTitle },
+        ],
+      },
+    });
+  } catch (e) {
+    console.error("[Systeme.io enrich] Error:", e);
+  }
+}
+
+/**
+ * Enroll a SIO contact in a course.
+ */
+async function enrollInSioCourse(apiKey: string, courseId: string, contactId: number) {
+  try {
+    const res = await sioFetch(apiKey, `/school/courses/${courseId}/enrollments`, {
+      method: "POST",
+      body: { contactId },
+    });
+    if (res.ok) {
+      console.log(`[Systeme.io] Enrolled contact ${contactId} in course ${courseId}`);
+    } else {
+      console.warn(`[Systeme.io] Course enrollment failed (${res.status}):`, res.data);
+    }
+  } catch (e) {
+    console.error("[Systeme.io course enrollment] Error:", e);
+  }
+}
+
+/**
+ * Add a SIO contact to a community.
+ */
+async function addToSioCommunity(apiKey: string, communityId: string, contactId: number) {
+  try {
+    const res = await sioFetch(apiKey, `/community/communities/${communityId}/memberships`, {
+      method: "POST",
+      body: { contactId },
+    });
+    if (res.ok) {
+      console.log(`[Systeme.io] Added contact ${contactId} to community ${communityId}`);
+    } else {
+      console.warn(`[Systeme.io] Community add failed (${res.status}):`, res.data);
+    }
+  } catch (e) {
+    console.error("[Systeme.io community add] Error:", e);
   }
 }
 
@@ -317,20 +379,17 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }
     })();
 
-    // ── Auto-send to Systeme.io with result tag (non-blocking) ──
+    // ── Auto-send to Systeme.io: tag + enrich + course + community (non-blocking) ──
     if (resultId) {
       // Fire & forget: don't await so the response is fast
       (async () => {
         try {
-          // Get the result's sio_tag_name
+          // Get the result's SIO config (tag, course, community)
           const { data: result } = await admin
             .from("quiz_results")
-            .select("sio_tag_name")
+            .select("sio_tag_name, sio_course_id, sio_community_id, title")
             .eq("id", resultId)
             .maybeSingle();
-
-          const tagName = String(result?.sio_tag_name ?? "").trim();
-          if (!tagName) return;
 
           // Get the quiz owner's API key (scoped by project)
           let profileQuery = admin
@@ -343,13 +402,47 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const apiKey = String(profile?.sio_user_api_key ?? "").trim();
           if (!apiKey) return;
 
-          await applyTagToContact(apiKey, email, tagName, {
-            firstName: firstName || undefined,
-            surname: lastName || undefined,
-            phoneNumber: phone || undefined,
-            country: country || undefined,
-          });
-          console.log(`[Systeme.io] Tagged ${email} with "${tagName}" for quiz ${quizId}`);
+          const tagName = String(result?.sio_tag_name ?? "").trim();
+          const courseId = String(result?.sio_course_id ?? "").trim();
+          const communityId = String(result?.sio_community_id ?? "").trim();
+          const resultTitle = String(result?.title ?? "").trim();
+
+          // 1. Tag the contact (and get the SIO contact ID back)
+          let sioContactId: number | null = null;
+          if (tagName) {
+            sioContactId = await applyTagToContact(apiKey, email, tagName, {
+              firstName: firstName || undefined,
+              surname: lastName || undefined,
+              phoneNumber: phone || undefined,
+              country: country || undefined,
+            });
+            console.log(`[Systeme.io] Tagged ${email} with "${tagName}" for quiz ${quizId}`);
+          } else {
+            // No tag but we still need the contact ID for other actions
+            sioContactId = await ensureSioContact(apiKey, email, {
+              firstName: firstName || undefined,
+              surname: lastName || undefined,
+              phoneNumber: phone || undefined,
+              country: country || undefined,
+            });
+          }
+
+          if (!sioContactId) return;
+
+          // 2. Enrich contact with quiz result as custom field
+          if (resultTitle) {
+            await enrichSioContact(apiKey, sioContactId, resultTitle);
+          }
+
+          // 3. Auto-enroll in SIO course if configured
+          if (courseId) {
+            await enrollInSioCourse(apiKey, courseId, sioContactId);
+          }
+
+          // 4. Auto-add to SIO community if configured
+          if (communityId) {
+            await addToSioCommunity(apiKey, communityId, sioContactId);
+          }
         } catch (e) {
           console.error("[Systeme.io auto-tag POST] Error:", e);
         }
