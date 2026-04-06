@@ -197,6 +197,29 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
+    // Auto-register SIO webhooks when API key is saved/changed (non-blocking)
+    if (patch.sio_user_api_key !== undefined) {
+      const apiKey = String(patch.sio_user_api_key ?? "").trim();
+      (async () => {
+        try {
+          const { registerSioWebhooks, deregisterSioWebhooks } = await import("@/lib/sio/webhookRegistration");
+          if (apiKey) {
+            // Key saved or changed → register webhooks
+            await deregisterSioWebhooks({ userId: user.id, projectId });
+            const result = await registerSioWebhooks({ userId: user.id, projectId, apiKey });
+            if (result.errors.length > 0) {
+              console.warn("[profile] SIO webhook registration warnings:", result.errors);
+            }
+          } else {
+            // Key cleared → deregister
+            await deregisterSioWebhooks({ userId: user.id, projectId });
+          }
+        } catch (e) {
+          console.error("[profile] SIO webhook auto-registration failed:", e);
+        }
+      })();
+    }
+
     return NextResponse.json({ ok: true, profile: data ?? null }, { status: 200 });
   } catch (e) {
     console.error("[PATCH /api/profile] Unexpected error:", e);

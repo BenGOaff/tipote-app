@@ -1093,7 +1093,16 @@ export async function POST(req: NextRequest) {
         .gte("month", currentMonth),
     );
 
-    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes, personaRes, offerPyramidsRes, revenueRes] = await Promise.all([
+    // Recent SIO sales for richer AI context (last 50 sales)
+    const sioSalesQuery = pf(
+      supabase
+        .from("sio_sales")
+        .select("offer_name, amount, currency, customer_first_name, status, created_at")
+        .eq("user_id", user.id)
+        .eq("status", "completed"),
+    );
+
+    const [businessProfileRes, businessPlanRes, tasksRes, contentsRes, competitorRes, personaRes, offerPyramidsRes, revenueRes, sioSalesRes] = await Promise.all([
       bpQuery.maybeSingle(),
       planQuery.maybeSingle(),
       tasksQuery.order("updated_at", { ascending: false }).limit(30),
@@ -1102,6 +1111,7 @@ export async function POST(req: NextRequest) {
       personaQuery,
       offerPyramidsQuery.order("level", { ascending: true }).limit(10),
       revenueQuery.order("month", { ascending: false }).limit(20),
+      sioSalesQuery.order("created_at", { ascending: false }).limit(50),
     ]);
 
     const personaData = (personaRes.data as any)?.[0] ?? null;
@@ -1169,6 +1179,34 @@ export async function POST(req: NextRequest) {
 
     // Revenue data
     const revenueData = (revenueRes.data ?? []) as any[];
+
+    // Recent SIO sales (real transactions from Systeme.io)
+    const sioSales = (sioSalesRes.data ?? []) as any[];
+    // Inject SIO sales summary into revenue context for the AI
+    if (sioSales.length > 0) {
+      const totalSioRevenue = sioSales.reduce((sum: number, s: any) => sum + (parseFloat(s.amount) || 0), 0);
+      const offerBreakdown: Record<string, { count: number; total: number }> = {};
+      for (const s of sioSales) {
+        const name = s.offer_name || "Offre";
+        if (!offerBreakdown[name]) offerBreakdown[name] = { count: 0, total: 0 };
+        offerBreakdown[name].count++;
+        offerBreakdown[name].total += parseFloat(s.amount) || 0;
+      }
+      // Add to revenueData so the AI sees it naturally
+      revenueData.push({
+        _sio_sales_summary: true,
+        total_sio_revenue: totalSioRevenue,
+        total_sio_sales: sioSales.length,
+        sio_offer_breakdown: offerBreakdown,
+        recent_sales: sioSales.slice(0, 10).map((s: any) => ({
+          offer: s.offer_name,
+          amount: s.amount,
+          currency: s.currency,
+          date: s.created_at,
+        })),
+      });
+    }
+
     const revenueGoalMonthly =
       (businessProfileRes.data as any)?.revenue_goal_monthly ??
       (businessProfileRes.data as any)?.revenueGoalMonthly ??
