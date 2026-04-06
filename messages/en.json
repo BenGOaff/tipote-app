@@ -620,8 +620,11 @@
       "sioTitle": "Systeme.io",
       "sioDesc": "Connect your Systeme.io account to automatically export leads from your quizzes with tags.",
       "sioApiHelp": "How do I find my API key?",
+      "sioKeyName": "Connection name",
+      "sioKeyNamePlaceholder": "E.g.: My project, Affiliate, Client 1…",
       "sioLabel": "Systeme.io API key",
       "sioPlaceholder": "Paste your API key here...",
+      "sioSaved": "Systeme.io API key saved",
       "save": "Save",
       "saving": "Saving…"
     },

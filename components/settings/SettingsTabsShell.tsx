@@ -128,6 +128,7 @@ type ProfileRow = {
   terms_url?: string | null;
   cgv_url?: string | null;
   sio_user_api_key?: string | null;
+  sio_api_key_name?: string | null;
   content_locale?: string | null;
   address_form?: string | null;
   linkedin_url?: string | null;
@@ -314,6 +315,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [legalGenDocType, setLegalGenDocType] = useState<DocType>("mentions");
 
   const [sioApiKey, setSioApiKey] = useState("");
+  const [sioApiKeyName, setSioApiKeyName] = useState("");
   const [pendingSio, startSioTransition] = useTransition();
 
   const [contentLocale, setContentLocale] = useState("fr");
@@ -393,6 +395,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setTermsUrl(row?.terms_url ?? "");
         setCgvUrl(row?.cgv_url ?? "");
         setSioApiKey(row?.sio_user_api_key ?? "");
+        setSioApiKeyName(row?.sio_api_key_name ?? "");
         setContentLocale(row?.content_locale ?? "fr");
         setAddressForm(row?.address_form ?? "tu");
         setLinkedinUrl(row?.linkedin_url ?? "");
@@ -919,8 +922,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   // Systeme.io API Key
   // -------------------------
   const sioDirty = useMemo(() => {
-    return (initialProfile?.sio_user_api_key ?? "") !== sioApiKey;
-  }, [initialProfile, sioApiKey]);
+    return (
+      (initialProfile?.sio_user_api_key ?? "") !== sioApiKey ||
+      (initialProfile?.sio_api_key_name ?? "") !== sioApiKeyName
+    );
+  }, [initialProfile, sioApiKey, sioApiKeyName]);
 
   const saveSioKey = () => {
     startSioTransition(async () => {
@@ -928,7 +934,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const res = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sio_user_api_key: sioApiKey }),
+          body: JSON.stringify({ sio_user_api_key: sioApiKey, sio_api_key_name: sioApiKeyName }),
         });
 
         const json = (await res.json().catch(() => null)) as any;
@@ -937,8 +943,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
         setSioApiKey(row?.sio_user_api_key ?? "");
+        setSioApiKeyName(row?.sio_api_key_name ?? "");
 
-        toast({ title: "Clé API Systeme.io enregistrée" });
+        toast({ title: tSP("connections.sioSaved") });
       } catch (e: any) {
         toast({
           title: "Enregistrement impossible",
@@ -1342,17 +1349,30 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </a>
           </p>
 
-          <div className="space-y-2">
-            <Label>{tSP("connections.sioLabel")}</Label>
-            <Input
-              type="text"
-              autoComplete="off"
-              placeholder={tSP("connections.sioPlaceholder")}
-              value={sioApiKey}
-              onChange={(e) => setSioApiKey(e.target.value)}
-              disabled={profileLoading}
-              className="font-mono tracking-wider"
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>{tSP("connections.sioKeyName")}</Label>
+              <Input
+                type="text"
+                autoComplete="off"
+                placeholder={tSP("connections.sioKeyNamePlaceholder")}
+                value={sioApiKeyName}
+                onChange={(e) => setSioApiKeyName(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{tSP("connections.sioLabel")}</Label>
+              <Input
+                type="text"
+                autoComplete="off"
+                placeholder={tSP("connections.sioPlaceholder")}
+                value={sioApiKey}
+                onChange={(e) => setSioApiKey(e.target.value)}
+                disabled={profileLoading}
+                className="font-mono tracking-wider"
+              />
+            </div>
           </div>
 
           <Button variant="outline" className="mt-4" onClick={saveSioKey} disabled={!sioDirty || pendingSio}>
