@@ -100,23 +100,23 @@ export async function POST() {
         sendSSE("progress", { step: "Collecte des données..." });
 
         // Gather all available data in parallel
-        const bpQ = supabase.from("business_profiles").select("*").eq("user_id", userId);
-        if (projectId) bpQ.eq("project_id", projectId);
+        let bpQ = supabase.from("business_profiles").select("*").eq("user_id", userId);
+        if (projectId) bpQ = bpQ.eq("project_id", projectId);
 
-        const ofQ = supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
-        if (projectId) ofQ.eq("project_id", projectId);
+        let ofQ = supabase.from("onboarding_facts").select("key,value").eq("user_id", userId);
+        if (projectId) ofQ = ofQ.eq("project_id", projectId);
 
-        const caQ = supabase.from("competitor_analyses").select("summary,strengths,weaknesses,opportunities").eq("user_id", userId);
-        if (projectId) caQ.eq("project_id", projectId);
+        let caQ = supabase.from("competitor_analyses").select("summary,strengths,weaknesses,opportunities").eq("user_id", userId);
+        if (projectId) caQ = caQ.eq("project_id", projectId);
 
-        const cmQ = supabase.from("coach_messages").select("content,role").eq("user_id", userId);
-        if (projectId) cmQ.eq("project_id", projectId);
+        let cmQ = supabase.from("coach_messages").select("content,role").eq("user_id", userId);
+        if (projectId) cmQ = cmQ.eq("project_id", projectId);
 
-        const pQ = supabase.from("personas").select("persona_json").eq("user_id", userId).eq("role", "client_ideal");
-        if (projectId) pQ.eq("project_id", projectId);
+        let pQ = supabase.from("personas").select("persona_json").eq("user_id", userId).eq("role", "client_ideal");
+        if (projectId) pQ = pQ.eq("project_id", projectId);
 
-        const plQ = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
-        if (projectId) plQ.eq("project_id", projectId);
+        let plQ = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+        if (projectId) plQ = plQ.eq("project_id", projectId);
 
         const [
           { data: businessProfile },
@@ -358,13 +358,20 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
                 dataFields.objections = JSON.stringify(parsed.persona_classic.objections ?? []);
               }
 
+              // Ensure project_id is set on the row (backfill for legacy rows)
+              if (projectId) dataFields.project_id = projectId;
+
               // Try UPDATE first (avoids strategy_id NOT NULL issue on INSERT)
-              const { data: updatedRows, error: updateErr } = await admin
+              // Match by user_id + role; include rows with NULL project_id (legacy)
+              let personaUpdateQ = admin
                 .from("personas")
                 .update(dataFields)
                 .eq("user_id", userId)
-                .eq("role", "client_ideal")
-                .select("id");
+                .eq("role", "client_ideal");
+              if (projectId) {
+                personaUpdateQ = personaUpdateQ.or(`project_id.eq.${projectId},project_id.is.null`);
+              }
+              const { data: updatedRows, error: updateErr } = await personaUpdateQ.select("id");
 
               if (updateErr) {
                 console.error("[persona/enrich] Persona update failed:", updateErr.message);
