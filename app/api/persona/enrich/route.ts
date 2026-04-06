@@ -309,36 +309,54 @@ Rappel : le persona décrit LA CIBLE (le client idéal), pas le propriétaire du
         }
         // Niche formula: NEVER overwrite — the user's exact onboarding sentence is the source of truth.
 
-        const bpUpdateQ = supabase.from("business_profiles").update(profilePatch).eq("user_id", userId);
-        if (projectId) bpUpdateQ.eq("project_id", projectId);
-        await bpUpdateQ;
+        let bpUpdateQ = supabase.from("business_profiles").update(profilePatch).eq("user_id", userId);
+        if (projectId) bpUpdateQ = bpUpdateQ.eq("project_id", projectId);
+        const { error: bpErr } = await bpUpdateQ;
+        if (bpErr) {
+          console.error("[persona/enrich] business_profiles update failed:", bpErr.message);
+        }
 
         // Update personas table with enriched data
-        if (parsed.persona_classic) {
+        // Always save markdowns even if persona_classic is missing
+        {
           try {
             const admin = await import("@/lib/supabaseAdmin").then((m) => m.supabaseAdmin).catch(() => null);
             if (admin) {
               // Build persona_json with all detailed data (including triggers, channels, etc.)
-              const fullPersonaJson = {
-                ...parsed.persona_classic,
-                detailed: parsed.persona_detailed,
-                narrative_synthesis: parsed.narrative_synthesis,
-                persona_detailed_markdown: parsed.persona_detailed_markdown ?? null,
-                competitor_insights_markdown: parsed.competitor_insights_markdown ?? null,
-                narrative_synthesis_markdown: parsed.narrative_synthesis_markdown ?? null,
-              };
+              const fullPersonaJson: AnyRecord = {};
+              if (parsed.persona_classic) {
+                Object.assign(fullPersonaJson, parsed.persona_classic);
+                fullPersonaJson.detailed = parsed.persona_detailed;
+              }
+              fullPersonaJson.narrative_synthesis = parsed.narrative_synthesis;
+              fullPersonaJson.persona_detailed_markdown = parsed.persona_detailed_markdown ?? null;
+              fullPersonaJson.competitor_insights_markdown = parsed.competitor_insights_markdown ?? null;
+              fullPersonaJson.narrative_synthesis_markdown = parsed.narrative_synthesis_markdown ?? null;
 
               // Only include columns that exist in the personas table schema.
               // Extra fields (triggers, exact_phrases, channels) are stored inside persona_json.
+              // Fetch existing persona_json to merge (preserve data not returned by this enrichment)
+              const { data: existingPersona } = await admin
+                .from("personas")
+                .select("persona_json")
+                .eq("user_id", userId)
+                .eq("role", "client_ideal")
+                .maybeSingle();
+
+              const mergedJson = { ...(existingPersona?.persona_json ?? {}), ...fullPersonaJson };
+
               const dataFields: AnyRecord = {
-                name: cleanString(parsed.persona_classic?.title, 240) || "Client idéal",
-                description: cleanString(parsed.persona_classic?.description ?? parsed.persona_summary, 500) || null,
-                pains: JSON.stringify(parsed.persona_classic?.pains ?? []),
-                desires: JSON.stringify(parsed.persona_classic?.desires ?? []),
-                objections: JSON.stringify(parsed.persona_classic?.objections ?? []),
-                persona_json: fullPersonaJson,
+                persona_json: mergedJson,
                 updated_at: now,
               };
+              // Only overwrite structured fields if persona_classic was returned
+              if (parsed.persona_classic) {
+                dataFields.name = cleanString(parsed.persona_classic.title, 240) || "Client idéal";
+                dataFields.description = cleanString(parsed.persona_classic.description ?? parsed.persona_summary, 500) || null;
+                dataFields.pains = JSON.stringify(parsed.persona_classic.pains ?? []);
+                dataFields.desires = JSON.stringify(parsed.persona_classic.desires ?? []);
+                dataFields.objections = JSON.stringify(parsed.persona_classic.objections ?? []);
+              }
 
               // Try UPDATE first (avoids strategy_id NOT NULL issue on INSERT)
               const { data: updatedRows, error: updateErr } = await admin
