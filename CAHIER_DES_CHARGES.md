@@ -1,4 +1,4 @@
-# CAHIER DES CHARGES Tipote — Version Mars 2026 (État actuel du produit)
+# CAHIER DES CHARGES Tipote — Version Avril 2026 (État actuel du produit)
 
 Application Web SaaS multilingue (FR/EN/ES/IT/AR) pour analyse business, planification stratégique, génération de contenus IA et publication automatisée sur les réseaux sociaux.
 
@@ -34,10 +34,12 @@ La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storyte
 - Suivi des tâches et progression  
 - Analytics avec diagnostic IA  
 - Coach IA contextuel (plans Pro/Elite)  
-- Système de pépites (insights)  
+- Système de pépites multilingues (insights traduits automatiquement en 5 langues)
 - Didacticiel interactif pas-à-pas  
-- Notifications en temps réel  
-- Multi-projets  
+- Notifications en temps réel (clic pour lire, marquage lu automatique)
+- Multi-projets (chaque projet avec sa propre clé API Systeme.io nommée)
+- **Intégration Systeme.io avancée** : webhooks temps réel (ventes, annulations, contacts), auto-inscription cours/communautés, enrichissement contacts, preuve sociale
+- **Systeme.io disponible en whitelabel** sur la plateforme Tipote
 - 5 langues (FR, EN, ES, IT, AR)
 
 ---
@@ -448,7 +450,20 @@ Suivi des performances business.
 
 ### 4.12. Page « Pépites » (/pepites)
 
-Repository d'insights et de pépites business. Notifications de nouvelles pépites avec badge compteur dans la sidebar.
+Repository d'insights et de pépites business multilingues.
+
+**Fonctionnalités :**
+
+- Collection de pépites délivrées progressivement (intervalle 2-4 jours)
+- **Traduction automatique** : chaque pépite ajoutée par l'admin est traduite automatiquement en EN, ES, IT, AR via GPT-4o-mini
+- Affichage dans la langue de l'interface utilisateur (cookie `ui_locale`)
+- Fallback sur FR si la traduction n'existe pas
+- Assignation par `group_key` (un user ne reçoit pas la même pépite dans deux langues)
+- Notifications de nouvelles pépites avec badge compteur dans la sidebar
+- Interface admin pour ajouter des pépites (auto-traduit en arrière-plan)
+- Script de backfill (`scripts/translate-pepites.cjs`) pour traduction en masse
+
+**Tables :** `pepites` (avec `locale` + `group_key`), `user_pepites`, `user_pepites_state`
 
 ### 4.13. Page « Paramètres » (/settings)
 
@@ -474,7 +489,8 @@ Repository d'insights et de pépites business. Notifications de nouvelles pépit
 **Onglet Connexions :**
 
 - Connexion OAuth des réseaux sociaux (7 plateformes)
-- Configuration API Systeme.io  
+- Configuration API Systeme.io avec **nom de connexion personnalisé** (ex : "Mon projet", "Affiliation", "Client 1") — chaque projet a sa propre clé API indépendante
+- Enregistrement automatique des webhooks SIO à la sauvegarde de la clé (transparent pour l'user)
 - Configuration auto-commentaires  
 - Gestion des tokens et rafraîchissement
 
@@ -572,6 +588,7 @@ Layout : barre supérieure (logo + responsive toggle + actions) + sidebar gauche
 **Gestion des sections :**
 
 - Liste des sections dans la sidebar avec labels auto-détectés
+- **ID ancre sur chaque section** (`id="sc-hero"`, `sc-benefits"`, `sc-program"`, `sc-about"`, `sc-testimonials"`, `sc-pricing"`, `sc-faq"`, `sc-services"`, `sc-contact"`, etc.) pour ciblage via liens et menus
 - Réorganisation (monter/descendre)
 - Suppression de section
 - Sélection de section par clic
@@ -629,10 +646,15 @@ Constructeur de quiz interactifs pour capture de leads.
 **Fonctionnalités :**
 
 - Éditeur de questions/réponses
-- Page publique de quiz (`/q/[quizId]`)
-- Capture d'email \+ prénom
-- Résultats personnalisés avec CTA
-- Sync leads vers Systeme.io
+- Page publique de quiz (`/q/[quizId]`) — **bouton CTA adaptatif** (hauteur auto, plus de troncature)
+- Capture d'email + prénom + nom + téléphone + pays (configurable)
+- Résultats personnalisés avec CTA par résultat
+- **Automations Systeme.io par résultat** (3 actions configurables en un clic) :
+  - Tag SIO auto-appliqué
+  - Inscription auto dans une **formation SIO** (`sio_course_id`)
+  - Ajout auto à une **communauté SIO** (`sio_community_id`)
+- **Enrichissement contact SIO** : le résultat du quiz est stocké comme champ personnalisé sur le contact
+- Sync leads vers Systeme.io (**avec prénom, nom, téléphone, pays** — corrigé)
 - Stats : vues, partages, leads capturés
 
 ### 4.16. Coach IA
@@ -695,12 +717,15 @@ Système de tutorial guidé pas-à-pas pour les nouveaux utilisateurs.
 - Auto (déclenchées par le système)  
 - Admin broadcast (envoyées par l'admin à tous)  
 - Personnelles
+- **Ventes SIO temps réel** (type `sale` / `sale_canceled`) — messages traduits dans les 5 langues
 
 **Interface :**
 
 - Cloche dans le header avec compteur d'unread  
 - Panel de notifications avec deep-linking  
-- Marquage lu/archivé
+- **Clic pour ouvrir** : le body s'étend pour afficher le texte complet
+- **Marquage lu automatique** à la fermeture (pas à l'ouverture, pour laisser le temps de lire)
+- Marquage lu/archivé manuel via icônes
 
 ### 4.19. Page « Widgets » (/widgets)
 
@@ -822,6 +847,11 @@ Accès restreint aux emails admin.
 | Montant encaissé mis à jour | MAJ résumé financier accompagnement | Update inline |
 | Commentaire détecté (automation) | Auto-reply \+ log \+ consommation crédit | Webhook \+ Claude |
 | Analytics renseignés | Diagnostic IA | Trigger analyse |
+| Clé API SIO sauvegardée | Enregistrement auto 3 webhooks SIO | Fire-and-forget async |
+| Vente SIO (webhook) | Insert sio\_sales \+ MAJ offer\_metrics \+ toast\_event \+ notification | Webhook receiver |
+| Annulation SIO (webhook) | MAJ sio\_sales \+ décrémentation offer\_metrics \+ notification | Webhook receiver |
+| Contact SIO créé (webhook) | Upsert leads | Webhook receiver |
+| Quiz résultat obtenu | Tag SIO \+ enrichissement contact \+ inscription formation \+ ajout communauté | Fire-and-forget async |
 
 ### 5.2. Flux de données
 
@@ -836,6 +866,9 @@ Onboarding → business\_profiles → personas
                 → analytics
 
 Quiz/Pages → leads (chiffré) → export CSV / Systeme.io
+    Quiz résultat → tag SIO + enrichissement contact + inscription formation + communauté
+
+Systeme.io (webhooks user) → sio\_sales → offer\_metrics + toast\_events + notifications → coach IA
 
 Automatisations → auto\_comment\_logs → webhook\_logs
 
@@ -915,12 +948,17 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Analytics :**
 
-- `offer_metrics` — métriques par offre par mois  
+- `offer_metrics` — métriques par offre par mois (alimenté auto par webhooks SIO NEW_SALE)
 - `analytics_entries` — données analytics manuelles
+
+**Systeme.io (utilisateur) :**
+
+- `sio_sales` — ventes SIO de l'user (montant, client, offre, statut, payload brut)
+- `sio_webhook_registrations` — webhooks enregistrés par user (event_type, secret_token, statut, last_received_at)
 
 **Notifications :**
 
-- `notifications` — auto, admin broadcast, personnelles
+- `notifications` — auto, admin broadcast, personnelles, ventes SIO temps réel
 
 **Widgets :**
 
@@ -996,6 +1034,13 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 - POST /api/automations/{linkedin,instagram,twitter,tiktok}-comments  
 - POST /api/automations/webhook — Webhook Meta  
 - POST /api/n8n/{linkedin, publish-callback, scheduled-posts}
+
+**Systeme.io (utilisateur) :**
+
+- POST /api/systeme-io/user-webhook — Réception webhooks SIO (NEW\_SALE, SALE\_CANCELED, CONTACT\_CREATED)
+- GET /api/systeme-io/tags — Tags SIO de l'user
+- GET /api/systeme-io/courses — Formations SIO de l'user
+- GET /api/systeme-io/communities — Communautés SIO de l'user
 
 **Billing :**
 
@@ -1124,22 +1169,62 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 ## 9\. INTÉGRATION SYSTEME.IO
 
-### 9.1. Webhook achat/abonnement
+**Note :** Systeme.io est également disponible en whitelabel sur la plateforme Tipote.
+
+### 9.1. Webhook plateforme (abonnements Tipote)
 
 - Réception du payload (email, plan, product\_id, sio\_contact\_id)  
 - Création de compte si inexistant  
 - Upgrade plan \+ attribution crédits  
 - Email de bienvenue
+- Webhook annulation → rétrogradation vers plan Free (conservation données 90 jours)
 
-### 9.2. Webhook annulation
+### 9.2. Clé API utilisateur (multi-projet)
 
-- Rétrogradation vers plan Free  
-- Conservation des données 90 jours
+- Chaque projet Tipote a sa propre clé API SIO, indépendante
+- Nom de connexion personnalisable (ex: "Mon projet", "Affiliation", "Client 1")
+- La même clé API peut être utilisée dans plusieurs projets
+- Stockage dans `business_profiles.sio_user_api_key` + `sio_api_key_name`
 
-### 9.3. Sync leads
+### 9.3. Webhooks utilisateur (automatiques, transparents)
 
-- Export leads de quiz vers Systeme.io  
-- Tags de capture configurables par page
+À la sauvegarde de la clé API, Tipote enregistre automatiquement 3 webhooks sur le compte SIO de l'user :
+
+| Événement SIO | Action Tipote |
+| :---- | :---- |
+| **NEW_SALE** | Insert `sio_sales` + MAJ `offer_metrics` (CA + ventes) + toast widget (preuve sociale) + notification i18n |
+| **SALE_CANCELED** | MAJ statut `sio_sales` + décrémentation `offer_metrics` + notification |
+| **CONTACT_CREATED** | Upsert dans `leads` (source: systeme_io) |
+
+**Architecture :** Chaque user a un secret token unique dans l'URL du webhook (`/api/systeme-io/user-webhook?token=<secret>`). Les webhooks plateforme (`/api/systeme-io/webhook`) et utilisateur sont séparés.
+
+### 9.4. Sync leads quiz/pages → SIO
+
+- Export leads de quiz vers Systeme.io (avec prénom, nom, téléphone, pays)
+- Tags de capture configurables par page et par résultat de quiz
+- **Enrichissement contact** : le résultat du quiz est ajouté comme champ personnalisé `tipote_quiz_result`
+
+### 9.5. Automations quiz → SIO (par résultat)
+
+Chaque résultat de quiz peut déclencher 3 actions SIO configurables :
+
+- **Tag** : appliqué automatiquement au contact
+- **Formation** : inscription auto dans un cours SIO (`POST /school/courses/{id}/enrollments`)
+- **Communauté** : ajout auto à une communauté SIO (`POST /community/communities/{id}/memberships`)
+
+Les cours et communautés disponibles sont récupérés via l'API SIO (`GET /api/systeme-io/courses`, `GET /api/systeme-io/communities`).
+
+### 9.6. Alimentation du coach IA
+
+Les 50 dernières ventes SIO sont injectées dans le contexte du coach IA :
+- CA total, nombre de ventes, ventilation par offre
+- 10 dernières transactions détaillées
+- Combiné avec `offer_metrics` pour une analyse stratégique basée sur les vrais chiffres
+
+### 9.7. Tables SIO
+
+- `sio_sales` — historique des ventes (montant, client, offre, statut)
+- `sio_webhook_registrations` — webhooks enregistrés par user (event_type, secret_token, statut)
 
 ---
 
