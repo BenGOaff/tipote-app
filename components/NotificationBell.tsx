@@ -250,12 +250,22 @@ function NotificationItem({
 }) {
   const t = useTranslations("notifications");
   const isUnread = !n.read_at;
+  const [expanded, setExpanded] = useState(false);
+
+  const handleClick = () => {
+    setExpanded((prev) => !prev);
+    // Mark as read on first click
+    if (isUnread) {
+      onAction("mark_read", n.id);
+    }
+  };
 
   return (
     <div
-      className={`px-4 py-3 hover:bg-muted/40 transition-colors relative group ${
+      className={`px-4 py-3 hover:bg-muted/40 transition-colors relative group cursor-pointer ${
         isUnread ? "bg-primary/[0.03]" : ""
       }`}
+      onClick={handleClick}
     >
       {/* Unread dot */}
       {isUnread && (
@@ -273,7 +283,7 @@ function NotificationItem({
             {n.title}
           </p>
           {n.body && (
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+            <p className={`text-xs text-muted-foreground mt-0.5 whitespace-pre-line ${expanded ? "" : "line-clamp-2"}`}>
               {n.body}
             </p>
           )}
@@ -285,6 +295,7 @@ function NotificationItem({
           {n.action_url && n.action_label && (
             <a
               href={n.action_url}
+              onClick={(e) => e.stopPropagation()}
               className="inline-block mt-1.5 text-xs font-semibold text-primary-foreground bg-primary rounded-full px-3 py-1 hover:bg-primary/90 transition-colors"
             >
               {n.action_label}
@@ -298,7 +309,7 @@ function NotificationItem({
             <>
               {isUnread ? (
                 <button
-                  onClick={() => onAction("mark_read", n.id)}
+                  onClick={(e) => { e.stopPropagation(); onAction("mark_read", n.id); }}
                   className="p-1.5 rounded hover:bg-accent"
                   title={t("markRead")}
                 >
@@ -306,7 +317,7 @@ function NotificationItem({
                 </button>
               ) : (
                 <button
-                  onClick={() => onAction("mark_unread", n.id)}
+                  onClick={(e) => { e.stopPropagation(); onAction("mark_unread", n.id); }}
                   className="p-1.5 rounded hover:bg-accent"
                   title={t("markUnread")}
                 >
@@ -314,7 +325,7 @@ function NotificationItem({
                 </button>
               )}
               <button
-                onClick={() => onAction("archive", n.id)}
+                onClick={(e) => { e.stopPropagation(); onAction("archive", n.id); }}
                 className="p-1.5 rounded hover:bg-accent"
                 title={t("archive")}
               >
