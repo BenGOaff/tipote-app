@@ -174,10 +174,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Re-subscribe page-level (via MESSENGER_PAGE_ACCESS_TOKEN)
+    // Re-subscribe page-level
     try {
       const params = new URLSearchParams({
-        access_token: pageToken,
+        access_token: pageToken ?? "",
         subscribed_fields: "feed,messages",
       });
       const res = await fetch(`${GRAPH}/${pageId}/subscribed_apps`, {
