@@ -1122,26 +1122,19 @@ export function ContentEditor({ initialItem }: Props) {
           </Card>
         )}
 
-        {/* Programmation pour les contenus non-sociaux (email, article, newsletter, etc.) */}
+        {/* Actions pour les contenus non-sociaux (email, article, newsletter, etc.) */}
         {!isSocialPost && (
           <Card className="p-4">
-            <ScheduleModal
-              open={nonSocialScheduleOpen}
-              onOpenChange={setNonSocialScheduleOpen}
-              platformLabel="le calendrier"
-              onConfirm={handleScheduleFromButtons}
-              defaultDate={scheduledDate || undefined}
-            />
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2">
                 <Button
-                  onClick={() => setNonSocialScheduleOpen(true)}
-                  disabled={saving || deleting}
+                  onClick={save}
+                  disabled={!dirty || saving || deleting}
                   size="sm"
                   variant="outline"
                 >
-                  <CalendarDays className="h-4 w-4 mr-1.5" />
-                  Programmer
+                  <Save className="h-4 w-4 mr-1.5" />
+                  {saving ? "Enregistrement…" : "Sauvegarder"}
                 </Button>
 
                 <Button

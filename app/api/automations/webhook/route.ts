@@ -473,7 +473,7 @@ async function processComment(params: {
       if (messengerToken) {
         try {
           const checkRes = await fetch(
-            `https://graph.facebook.com/v21.0/me?fields=id,name,category&access_token=${messengerToken}`
+            `https://graph.facebook.com/v22.0/me?fields=id,name,category&access_token=${messengerToken}`
           );
           const checkData = await checkRes.json();
           if (checkData.error) {
@@ -743,7 +743,7 @@ async function sendInstagramPrivateReply(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     // Tentative 1 : Instagram Graph API
-    const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+    const res = await fetch(`https://graph.instagram.com/v22.0/${igAccountId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -759,7 +759,7 @@ async function sendInstagramPrivateReply(
     console.warn(`[webhook] IG Private Reply failed (${res.status}):`, errBody.slice(0, 200));
 
     // Tentative 2 : Messenger Platform (utiliser /{igAccountId}/messages au lieu de /me/messages)
-    const fbRes = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/messages`, {
+    const fbRes = await fetch(`https://graph.facebook.com/v22.0/${igAccountId}/messages`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -790,7 +790,7 @@ async function sendInstagramDMById(
   text: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+    const res = await fetch(`https://graph.instagram.com/v22.0/${igAccountId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -845,8 +845,8 @@ async function sendFacebookPrivateReply(
   // Déterminer l'endpoint messages. Utiliser /{pageId}/messages si possible
   // car /me/messages échoue quand le token est un User Token.
   const messagesEndpoint = pageId
-    ? `https://graph.facebook.com/v21.0/${pageId}/messages`
-    : "https://graph.facebook.com/v21.0/me/messages";
+    ? `https://graph.facebook.com/v22.0/${pageId}/messages`
+    : "https://graph.facebook.com/v22.0/me/messages";
 
   console.log("[webhook] DM Private Reply - formats à essayer:", {
     commentIdFull, commentIdStripped, tokenPrefix: accessToken.slice(0, 10),
@@ -858,7 +858,7 @@ async function sendFacebookPrivateReply(
 
     // ── Méthode A : POST /{comment_id}/private_replies (endpoint dédié Graph API) ──
     try {
-      const url = `https://graph.facebook.com/v21.0/${cId}/private_replies`;
+      const url = `https://graph.facebook.com/v22.0/${cId}/private_replies`;
       console.log(`[webhook] DM tentative A(${idLabel}): POST /${cId}/private_replies`);
       const res = await fetch(url, {
         method: "POST",
@@ -928,8 +928,8 @@ async function sendMetaDM(
   // /{pageId}/messages est plus robuste.
   const targetPageId = pageId ?? process.env.FACEBOOK_PAGE_ID;
   const messagesEndpoint = targetPageId
-    ? `https://graph.facebook.com/v21.0/${targetPageId}/messages`
-    : "https://graph.facebook.com/v21.0/me/messages";
+    ? `https://graph.facebook.com/v22.0/${targetPageId}/messages`
+    : "https://graph.facebook.com/v22.0/me/messages";
 
   try {
     const res = await fetch(messagesEndpoint, {
@@ -957,7 +957,7 @@ async function sendMetaDM(
 }
 
 async function replyToInstagramComment(igAccessToken: string, commentId: string, text: string): Promise<void> {
-  const res = await fetch(`https://graph.instagram.com/v21.0/${commentId}/replies`, {
+  const res = await fetch(`https://graph.instagram.com/v22.0/${commentId}/replies`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: text, access_token: igAccessToken }),
@@ -979,7 +979,7 @@ async function fetchCommentFromGraphAPI(
   commentId: string,
 ): Promise<{ message: string; fromId: string; fromName: string } | null> {
   try {
-    const url = `https://graph.facebook.com/v21.0/${commentId}?fields=message,from&access_token=${accessToken}`;
+    const url = `https://graph.facebook.com/v22.0/${commentId}?fields=message,from&access_token=${accessToken}`;
     const res = await fetch(url);
     if (!res.ok) {
       const errBody = await res.text();
@@ -1009,7 +1009,7 @@ async function fetchCommentFromGraphAPI(
 }
 
 async function replyToComment(pageAccessToken: string, commentId: string, text: string): Promise<void> {
-  const res = await fetch(`https://graph.facebook.com/v21.0/${commentId}/comments`, {
+  const res = await fetch(`https://graph.facebook.com/v22.0/${commentId}/comments`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

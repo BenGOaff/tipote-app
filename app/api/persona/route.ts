@@ -109,6 +109,48 @@ export async function PATCH(request: NextRequest) {
     }
 
     const input = body as AnyRecord;
+
+    // Support two modes:
+    // 1. Full persona save (title + pains + desires + channels)
+    // 2. Markdown-only save (persona_detailed_markdown + narrative_synthesis_markdown)
+    const isMarkdownOnly = !input.title && (input.persona_detailed_markdown !== undefined || input.narrative_synthesis_markdown !== undefined);
+
+    if (isMarkdownOnly) {
+      // Save only the markdown fields into persona_json
+      const now = new Date().toISOString();
+
+      let readQuery = supabaseAdmin
+        .from("personas")
+        .select("persona_json")
+        .eq("user_id", auth.user.id)
+        .eq("role", "client_ideal");
+      if (projectId) readQuery = readQuery.or(`project_id.eq.${projectId},project_id.is.null`);
+      const { data: currentRows } = await readQuery.limit(1);
+
+      const currentPj = ((currentRows?.[0]?.persona_json ?? {}) as AnyRecord);
+      const updatedPj: AnyRecord = { ...currentPj };
+      if (input.persona_detailed_markdown !== undefined) updatedPj.persona_detailed_markdown = input.persona_detailed_markdown;
+      if (input.narrative_synthesis_markdown !== undefined) updatedPj.narrative_synthesis_markdown = input.narrative_synthesis_markdown;
+
+      const dataFields: AnyRecord = { persona_json: updatedPj, updated_at: now };
+      if (projectId) dataFields.project_id = projectId;
+
+      let updateQuery = supabaseAdmin
+        .from("personas")
+        .update(dataFields)
+        .eq("user_id", auth.user.id)
+        .eq("role", "client_ideal");
+      if (projectId) updateQuery = updateQuery.or(`project_id.eq.${projectId},project_id.is.null`);
+      const { error: updateError } = await updateQuery;
+
+      if (updateError) {
+        console.error("Persona markdown update error:", updateError);
+        return NextResponse.json({ ok: false, error: updateError.message }, { status: 400 });
+      }
+
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
+
     const title = cleanString(input.title, 240);
     const pains = cleanStringArray(input.pains);
     const desires = cleanStringArray(input.desires);
