@@ -1093,7 +1093,11 @@ export async function subscribePageToWebhooks(
   // B. Page-level subscription
   // Use the user's own pageAccessToken (from OAuth) — auto-refreshed, per-user.
   // MESSENGER_PAGE_ACCESS_TOKEN is only a legacy fallback (expires, requires manual renewal).
-  const pageToken = pageAccessToken || process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+  const pageToken = pageAccessToken || process.env.MESSENGER_PAGE_ACCESS_TOKEN || "";
+  if (!pageToken) {
+    errors.push("No page token available (neither OAuth nor MESSENGER_PAGE_ACCESS_TOKEN)");
+    return { appOk, pageOk, errors };
+  }
   try {
     const pageParams = new URLSearchParams({
       access_token: pageToken,
