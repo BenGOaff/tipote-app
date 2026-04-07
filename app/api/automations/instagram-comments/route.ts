@@ -18,8 +18,8 @@ import { decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
-const IG_GRAPH = "https://graph.instagram.com/v21.0";
-const FB_GRAPH = "https://graph.facebook.com/v21.0";
+const IG_GRAPH = "https://graph.instagram.com/v22.0";
+const FB_GRAPH = "https://graph.facebook.com/v22.0";
 
 export async function GET(req: NextRequest) {
   // Auth par header secret (n8n ou cron)
@@ -450,7 +450,7 @@ async function sendInstagramPrivateReply(
 
   // Tentative 2 : Messenger Platform (graph.facebook.com/me/messages)
   try {
-    const fbRes = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+    const fbRes = await fetch("https://graph.facebook.com/v22.0/me/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

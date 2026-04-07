@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
   if (platform === "instagram") {
     // Vérifier que le token est valide et que instagram_business_manage_messages est accordé
     const [meRes, permRes] = await Promise.all([
-      fetch(`https://graph.instagram.com/v21.0/me?access_token=${accessToken}`),
-      fetch(`https://graph.instagram.com/v21.0/me/permissions?access_token=${accessToken}`),
+      fetch(`https://graph.instagram.com/v22.0/me?access_token=${accessToken}`),
+      fetch(`https://graph.instagram.com/v22.0/me/permissions?access_token=${accessToken}`),
     ]);
 
     if (!meRes.ok) {
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     }
 
     const debugRes = await fetch(
-      `https://graph.facebook.com/v21.0/debug_token?input_token=${accessToken}&access_token=${appId}|${appSecret}`
+      `https://graph.facebook.com/v22.0/debug_token?input_token=${accessToken}&access_token=${appId}|${appSecret}`
     );
 
     if (!debugRes.ok) {

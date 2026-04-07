@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 
   // Fetch recent posts from the Facebook Page
   const fbRes = await fetch(
-    `https://graph.facebook.com/v21.0/${pageId}/posts?fields=id,message,story,created_time,permalink_url&limit=30&access_token=${pageAccessToken}`,
+    `https://graph.facebook.com/v22.0/${pageId}/posts?fields=id,message,story,created_time,permalink_url&limit=30&access_token=${pageAccessToken}`,
     { cache: "no-store" }
   );
 
