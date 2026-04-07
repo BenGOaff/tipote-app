@@ -246,15 +246,8 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
       let senderName = val.from?.name ?? "";
 
       if ((!commentText || !senderId) && val.comment_id) {
-        // Use pageAccessToken (OAuth, has pages_read_user_content) to read the comment.
-        // MESSENGER_PAGE_ACCESS_TOKEN is for sending DMs (pages_messaging), not reading.
-        // Try pageAccessToken first, then MESSENGER token as fallback.
-        const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+        // Use user's pageAccessToken to read the comment.
         let fetched = await fetchCommentFromGraphAPI(pageAccessToken, val.comment_id);
-        if (!fetched && messengerToken && messengerToken !== pageAccessToken) {
-          await logWebhook("graph_api_fetch_retry", { pageId, payload: { commentId: val.comment_id, retryWith: "MESSENGER_PAGE_ACCESS_TOKEN" } });
-          fetched = await fetchCommentFromGraphAPI(messengerToken, val.comment_id);
-        }
         if (fetched) {
           await logWebhook("graph_api_fetch_ok", { pageId, payload: { commentId: val.comment_id, fetchedMessage: fetched.message?.slice(0, 80), fetchedFromId: fetched.fromId } });
           if (!commentText && fetched.message) commentText = fetched.message;
@@ -431,21 +424,7 @@ async function processComment(params: {
         console.log(`[webhook] Comment reply sent for ${comment_id}`);
       } catch (err) {
         console.error(`[webhook] Comment reply FAILED for ${comment_id}:`, err);
-        // Pour Facebook, essayer avec MESSENGER_PAGE_ACCESS_TOKEN en fallback
-        // (le token OAuth n'a peut-être pas pages_manage_engagement)
-        if (platform === "facebook" && process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
-          try {
-            await replyToComment(process.env.MESSENGER_PAGE_ACCESS_TOKEN, comment_id, replyText);
-            commentReplyOk = true;
-            console.log(`[webhook] Comment reply sent with MESSENGER token for ${comment_id}`);
-          } catch (err2) {
-            const errMsg = String(err2).slice(0, 200);
-            console.error(`[webhook] Comment reply FAILED with MESSENGER token too:`, errMsg);
-            await logWebhook("comment_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error1: String(err).slice(0, 200), error2: errMsg } });
-          }
-        } else {
-          await logWebhook("comment_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: String(err).slice(0, 200) } });
-        }
+        await logWebhook("comment_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: String(err).slice(0, 200) } });
       }
     }
 
@@ -464,54 +443,32 @@ async function processComment(params: {
       }
     } else if (platform === "facebook" && comment_id) {
       // Facebook Private Reply : envoyer un DM lié au commentaire.
-      // Essayer d'abord avec MESSENGER_PAGE_ACCESS_TOKEN (Tipote ter, pages_messaging).
-      // Si ça échoue, essayer aussi avec le token OAuth (Tipote) au cas où.
-      const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
-
-      // Vérifier le type du MESSENGER token (Page vs User) pour diagnostic
-      let messengerTokenType = "unknown";
-      if (messengerToken) {
-        try {
-          const checkRes = await fetch(
-            `https://graph.facebook.com/v22.0/me?fields=id,name,category&access_token=${messengerToken}`
-          );
-          const checkData = await checkRes.json();
-          if (checkData.error) {
-            messengerTokenType = `error: ${checkData.error.message?.slice(0, 80)}`;
-          } else if (checkData.category) {
-            // Les Pages ont un champ "category", les Users non
-            messengerTokenType = `page_token (page: ${checkData.name}, id: ${checkData.id})`;
-          } else {
-            messengerTokenType = `user_token (user: ${checkData.name}, id: ${checkData.id}) ⚠️ WRONG TOKEN TYPE`;
-          }
-        } catch (e) {
-          messengerTokenType = `check_failed: ${String(e).slice(0, 80)}`;
-        }
-      }
+      // Utiliser le token OAuth de l'user (page_access_token) en priorité.
+      // MESSENGER_PAGE_ACCESS_TOKEN en fallback optionnel uniquement.
 
       await logWebhook("dm_attempt_start", { pageId: page_id, payload: {
         commentId: comment_id, senderId: sender_id,
-        hasMessengerToken: !!messengerToken,
-        messengerTokenPrefix: messengerToken?.slice(0, 10),
-        messengerTokenType,
         oauthTokenPrefix: page_access_token.slice(0, 10),
       }});
 
-      if (messengerToken) {
-        // Tentative 1 : Private Reply avec MESSENGER token (3 méthodes en cascade)
-        dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText, page_id);
-        if (!dmResult.ok) {
-          await logWebhook("dm_private_reply_fail_messenger", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+      // Tentative 1 : Private Reply avec token OAuth de l'user
+      dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
+      if (!dmResult.ok) {
+        await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
 
-          // Tentative 2 : Private Reply avec token OAuth (Tipote)
-          // Le token OAuth peut "voir" le commentaire et peut-être aussi envoyer le Private Reply
-          dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
+        // Tentative 2 : MESSENGER_PAGE_ACCESS_TOKEN en fallback (si configuré et différent)
+        const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+        if (messengerToken && messengerToken !== page_access_token) {
+          dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText, page_id);
           if (!dmResult.ok) {
-            await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
-
-            // Tentative 3 : recipient.id (ne marche que si conversation déjà ouverte)
-            dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
+            await logWebhook("dm_private_reply_fail_messenger", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
           }
+        }
+
+        // Tentative 3 : recipient.id (ne marche que si conversation déjà ouverte)
+        if (!dmResult.ok) {
+          dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
+        }
         }
       } else {
         // Pas de MESSENGER token — essayer avec OAuth + fallback recipient.id
@@ -919,9 +876,9 @@ async function sendMetaDM(
   text: string,
   pageId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  // Préférer le token Messenger (Tipote ter, qui a pages_messaging)
-  // au token OAuth Facebook (Tipote, qui n'a pas Messenger)
-  const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN ?? pageAccessToken;
+  // Use the user's page access token directly.
+  // MESSENGER_PAGE_ACCESS_TOKEN is only a fallback for legacy setups.
+  const token = pageAccessToken || process.env.MESSENGER_PAGE_ACCESS_TOKEN;
 
   // Utiliser /{pageId}/messages au lieu de /me/messages.
   // /me/messages échoue si le token est un User Token ("Object with ID 'me' does not exist").
@@ -936,7 +893,7 @@ async function sendMetaDM(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${messengerToken}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         recipient: { id: recipientId },
