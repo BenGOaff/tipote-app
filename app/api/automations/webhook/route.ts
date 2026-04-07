@@ -451,23 +451,29 @@ async function processComment(params: {
         oauthTokenPrefix: page_access_token.slice(0, 10),
       }});
 
-      // Tentative 1 : Private Reply avec token OAuth de l'user
-      dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
-      if (!dmResult.ok) {
-        await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+      // L'app Tipote OAuth n'a PAS pages_messaging — les DMs doivent passer par
+      // MESSENGER_PAGE_ACCESS_TOKEN (app Tipote ter qui a le produit Messenger).
+      // Le token OAuth de l'user sert pour les webhooks et la lecture des commentaires,
+      // mais PAS pour l'envoi de DMs.
+      const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+      const dmToken = messengerToken || page_access_token;
 
-        // Tentative 2 : MESSENGER_PAGE_ACCESS_TOKEN en fallback (si configuré et différent)
-        const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
-        if (messengerToken && messengerToken !== page_access_token) {
-          dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText, page_id);
+      // Tentative 1 : Private Reply avec le token DM (MESSENGER ou fallback OAuth)
+      dmResult = await sendFacebookPrivateReply(dmToken, comment_id, dmText, page_id);
+      if (!dmResult.ok) {
+        await logWebhook("dm_private_reply_fail", { pageId: page_id, payload: { commentId: comment_id, usedMessenger: !!messengerToken, error: dmResult.error?.slice(0, 500) } });
+
+        // Tentative 2 : si on a utilisé MESSENGER, essayer avec OAuth en fallback
+        if (messengerToken && page_access_token !== messengerToken) {
+          dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
           if (!dmResult.ok) {
-            await logWebhook("dm_private_reply_fail_messenger", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+            await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
           }
         }
 
         // Tentative 3 : recipient.id (ne marche que si conversation déjà ouverte)
         if (!dmResult.ok) {
-          dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
+          dmResult = await sendMetaDM(dmToken, sender_id, dmText, page_id);
         }
       }
     } else {
