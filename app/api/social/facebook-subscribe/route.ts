@@ -75,16 +75,12 @@ export async function POST(_req: NextRequest) {
     }, { status: appSubOk ? 200 : 502 });
   }
 
-  // Préférer le token Messenger (Tipote ter) pour la subscription Page
+  // Use the user's own OAuth token (per-user, auto-refreshed) for page subscription
   let pageToken: string;
-  if (process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
-    pageToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
-  } else {
-    try {
-      pageToken = decrypt(conn.access_token_encrypted);
-    } catch {
-      return NextResponse.json({ error: "Token illisible" }, { status: 500 });
-    }
+  try {
+    pageToken = decrypt(conn.access_token_encrypted);
+  } catch {
+    return NextResponse.json({ error: "Token illisible" }, { status: 500 });
   }
 
   let pageSubOk = false;

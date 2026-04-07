@@ -1091,9 +1091,9 @@ export async function subscribePageToWebhooks(
   }
 
   // B. Page-level subscription
-  // Utiliser le MESSENGER_PAGE_ACCESS_TOKEN (token Page via Tipote ter) s'il existe,
-  // sinon le token OAuth Facebook (Tipote) en fallback
-  const pageToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN ?? pageAccessToken;
+  // Use the user's own pageAccessToken (from OAuth) — auto-refreshed, per-user.
+  // MESSENGER_PAGE_ACCESS_TOKEN is only a legacy fallback (expires, requires manual renewal).
+  const pageToken = pageAccessToken || process.env.MESSENGER_PAGE_ACCESS_TOKEN;
   try {
     const pageParams = new URLSearchParams({
       access_token: pageToken,

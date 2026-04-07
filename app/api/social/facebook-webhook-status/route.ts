@@ -57,9 +57,9 @@ export async function GET(req: NextRequest) {
   // INSTAGRAM_META_APP_ID = Tipote ter parent (2408789919563484)
   const webhookAppId = process.env.INSTAGRAM_META_APP_ID ?? process.env.INSTAGRAM_APP_ID ?? process.env.META_APP_ID;
   const webhookAppSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
-  // Token Page via Tipote ter (pour page-level subscription)
+  // Use user's OAuth token for page-level subscription (per-user, auto-refreshed)
   const messengerPageToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
-  const pageToken = messengerPageToken ?? oauthToken;
+  const pageToken = oauthToken || messengerPageToken;
 
   const result: Record<string, unknown> = {
     pageId,
