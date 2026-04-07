@@ -9,7 +9,7 @@ import { decrypt } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
-const INSTAGRAM_GRAPH_BASE = "https://graph.instagram.com/v21.0";
+const INSTAGRAM_GRAPH_BASE = "https://graph.instagram.com/v22.0";
 
 export async function GET(req: NextRequest) {
   const cookieStore = await cookies();

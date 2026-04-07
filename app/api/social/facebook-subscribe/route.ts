@@ -37,7 +37,7 @@ export async function POST(_req: NextRequest) {
       access_token: appToken,
     });
     const appRes = await fetch(
-      `https://graph.facebook.com/v21.0/${appId}/subscriptions`,
+      `https://graph.facebook.com/v22.0/${appId}/subscriptions`,
       { method: "POST", body: params }
     );
     const appJson = await appRes.json();
@@ -95,7 +95,7 @@ export async function POST(_req: NextRequest) {
       subscribed_fields: "feed,messages",
     });
     const pageRes = await fetch(
-      `https://graph.facebook.com/v21.0/${conn.platform_user_id}/subscribed_apps`,
+      `https://graph.facebook.com/v22.0/${conn.platform_user_id}/subscribed_apps`,
       { method: "POST", body: params }
     );
     const pageJson = await pageRes.json();

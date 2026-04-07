@@ -230,7 +230,7 @@ export async function GET(req: NextRequest) {
           access_token: `${appId}|${appSecret}`,
         });
         const subRes = await fetch(
-          `https://graph.facebook.com/v21.0/${appId}/subscriptions`,
+          `https://graph.facebook.com/v22.0/${appId}/subscriptions`,
           { method: "POST", body: subParams }
         );
         const subJson = await subRes.json();
@@ -439,7 +439,7 @@ async function sendInstagramPrivateReply(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     // Tentative 1 : Instagram Graph API
-    const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+    const res = await fetch(`https://graph.instagram.com/v22.0/${igAccountId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -455,7 +455,7 @@ async function sendInstagramPrivateReply(
     console.warn(`[Instagram webhook] IG Private Reply failed (${res.status}):`, errBody.slice(0, 200));
 
     // Tentative 2 : Messenger Platform
-    const fbRes = await fetch("https://graph.facebook.com/v21.0/me/messages", {
+    const fbRes = await fetch("https://graph.facebook.com/v22.0/me/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -483,7 +483,7 @@ async function sendInstagramDM(
   text: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+    const res = await fetch(`https://graph.instagram.com/v22.0/${igAccountId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -509,7 +509,7 @@ async function replyToInstagramComment(
   commentId: string,
   text: string,
 ): Promise<void> {
-  const res = await fetch(`https://graph.instagram.com/v21.0/${commentId}/replies`, {
+  const res = await fetch(`https://graph.instagram.com/v22.0/${commentId}/replies`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: text, access_token: igAccessToken }),

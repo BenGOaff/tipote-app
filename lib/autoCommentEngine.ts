@@ -455,7 +455,7 @@ export async function threadsReplyToPost(
 
 // ─── Instagram API Functions ─────────────────────────────────────────────────
 
-const IG_GRAPH_BASE = "https://graph.facebook.com/v21.0";
+const IG_GRAPH_BASE = "https://graph.facebook.com/v22.0";
 
 /**
  * Search Instagram posts via the Hashtag Search API.

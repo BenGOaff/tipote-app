@@ -949,7 +949,7 @@ export async function publishToInstagram(
   imageUrl: string
 ): Promise<MetaPostResult> {
   // Utilise l'Instagram Graph API (Professional Login)
-  // Endpoint : https://graph.instagram.com/v21.0/{ig-user-id}/media
+  // Endpoint : https://graph.instagram.com/v22.0/{ig-user-id}/media
   // Etape 1 : Creer le container media
   const createRes = await fetch(`${INSTAGRAM_GRAPH_BASE}/${igUserId}/media`, {
     method: "POST",

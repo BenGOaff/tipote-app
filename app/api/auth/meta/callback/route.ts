@@ -99,8 +99,8 @@ export async function GET(req: NextRequest) {
       // a) Identite et permissions
       try {
         const [permRes, meRes] = await Promise.all([
-          fetch(`https://graph.facebook.com/v21.0/me/permissions?access_token=${longLivedToken}`),
-          fetch(`https://graph.facebook.com/v21.0/me?fields=id,name&access_token=${longLivedToken}`),
+          fetch(`https://graph.facebook.com/v22.0/me/permissions?access_token=${longLivedToken}`),
+          fetch(`https://graph.facebook.com/v22.0/me?fields=id,name&access_token=${longLivedToken}`),
         ]);
         const permJson = await permRes.json();
         const meJson = await meRes.json();
@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
         const appId = process.env.META_APP_ID!;
         const appSecret = process.env.META_APP_SECRET!;
         const debugRes = await fetch(
-          `https://graph.facebook.com/v21.0/debug_token?input_token=${shortLived.access_token}&access_token=${appId}|${appSecret}`
+          `https://graph.facebook.com/v22.0/debug_token?input_token=${shortLived.access_token}&access_token=${appId}|${appSecret}`
         );
         const debugJson = await debugRes.json();
         console.log("[Facebook callback] Debug Token (short-lived):", JSON.stringify(debugJson));
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
             for (const pid of pageIds) {
               try {
                 const pageRes = await fetch(
-                  `https://graph.facebook.com/v21.0/${pid}?fields=id,name,access_token,category&access_token=${longLivedToken}`
+                  `https://graph.facebook.com/v22.0/${pid}?fields=id,name,access_token,category&access_token=${longLivedToken}`
                 );
                 const pageJson = await pageRes.json();
                 console.log(`[Facebook callback] Direct page fetch ${pid}:`, JSON.stringify(pageJson));
