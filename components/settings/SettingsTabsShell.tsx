@@ -745,11 +745,41 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   // -------------------------
   const [enriching, setEnriching] = useState(false);
   const [personaDetailedMarkdown, setPersonaDetailedMarkdown] = useState<string | null>(null);
+  const [initialPersonaDetailedMarkdown, setInitialPersonaDetailedMarkdown] = useState<string | null>(null);
   const [competitorInsightsMarkdown, setCompetitorInsightsMarkdown] = useState<string | null>(null);
   const [narrativeSynthesisMarkdown, setNarrativeSynthesisMarkdown] = useState<string | null>(null);
+  const [initialNarrativeSynthesisMarkdown, setInitialNarrativeSynthesisMarkdown] = useState<string | null>(null);
   const [personaDetailTab, setPersonaDetailTab] = useState<"summary" | "detailed" | "synthesis">("summary");
   const [summaryEditMode, setSummaryEditMode] = useState(false);
   const [personaStale, setPersonaStale] = useState(false);
+  const [savingPersonaMarkdown, startSavingPersonaMarkdown] = useTransition();
+
+  const personaMarkdownDirty = useMemo(() => {
+    return (personaDetailedMarkdown ?? "") !== (initialPersonaDetailedMarkdown ?? "")
+      || (narrativeSynthesisMarkdown ?? "") !== (initialNarrativeSynthesisMarkdown ?? "");
+  }, [personaDetailedMarkdown, initialPersonaDetailedMarkdown, narrativeSynthesisMarkdown, initialNarrativeSynthesisMarkdown]);
+
+  const savePersonaMarkdown = () => {
+    startSavingPersonaMarkdown(async () => {
+      try {
+        const res = await fetch("/api/persona", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            persona_detailed_markdown: personaDetailedMarkdown,
+            narrative_synthesis_markdown: narrativeSynthesisMarkdown,
+          }),
+        });
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        setInitialPersonaDetailedMarkdown(personaDetailedMarkdown);
+        setInitialNarrativeSynthesisMarkdown(narrativeSynthesisMarkdown);
+        toast({ title: "Persona enregistré" });
+      } catch (e: any) {
+        toast({ title: "Enregistrement impossible", description: e?.message ?? "Erreur inconnue", variant: "destructive" });
+      }
+    });
+  };
 
   // Load existing persona detailed data on mount
   useEffect(() => {
@@ -759,9 +789,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const res = await fetch("/api/persona", { method: "GET" });
         const json = (await res.json().catch(() => null)) as any;
         if (cancelled || !json?.ok || !json?.persona) return;
-        if (json.persona.persona_detailed_markdown) setPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
+        if (json.persona.persona_detailed_markdown) {
+          setPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
+          setInitialPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
+        }
         if (json.persona.competitor_insights_markdown) setCompetitorInsightsMarkdown(json.persona.competitor_insights_markdown);
-        if (json.persona.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
+        if (json.persona.narrative_synthesis_markdown) {
+          setNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
+          setInitialNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
+        }
         if (json.persona.persona_summary_modified) setPersonaStale(true);
       } catch {
         // non-blocking
@@ -2229,14 +2265,21 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   </Button>
                 </div>
               )}
-              {personaDetailedMarkdown ? (
-                <AIContent
-                  content={personaDetailedMarkdown}
-                  mode="markdown"
-                  scroll
-                  maxHeight="70vh"
-                  className="p-5"
-                />
+              {personaDetailedMarkdown !== null ? (
+                <div className="p-4 space-y-3">
+                  <textarea
+                    value={personaDetailedMarkdown}
+                    onChange={(e) => setPersonaDetailedMarkdown(e.target.value)}
+                    className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
+                    placeholder="Persona détaillé..."
+                  />
+                  <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
@@ -2274,14 +2317,21 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   </div>
                 </div>
               )}
-              {narrativeSynthesisMarkdown ? (
-                <AIContent
-                  content={narrativeSynthesisMarkdown}
-                  mode="markdown"
-                  scroll
-                  maxHeight="70vh"
-                  className="p-5"
-                />
+              {narrativeSynthesisMarkdown !== null ? (
+                <div className="p-4 space-y-3">
+                  <textarea
+                    value={narrativeSynthesisMarkdown}
+                    onChange={(e) => setNarrativeSynthesisMarkdown(e.target.value)}
+                    className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
+                    placeholder="Synthèse narrative..."
+                  />
+                  <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />

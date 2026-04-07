@@ -78,7 +78,21 @@ async function ensureSioContact(
 ): Promise<number | null> {
   const search = await sioFetch(apiKey, `/contacts?email=${encodeURIComponent(email)}&limit=10`);
   if (search.ok && Array.isArray(search.data?.items) && search.data.items.length > 0) {
-    return Number(search.data.items[0].id);
+    const existingId = Number(search.data.items[0].id);
+    // Update existing contact with any new fields (phone, country, name)
+    if (fields && Object.values(fields).some(Boolean)) {
+      const patchBody: Record<string, unknown> = {};
+      if (fields.firstName) patchBody.firstName = fields.firstName;
+      const patchFields: { slug: string; value: string }[] = [];
+      if (fields.surname) patchFields.push({ slug: "surname", value: fields.surname });
+      if (fields.phoneNumber) patchFields.push({ slug: "phone_number", value: fields.phoneNumber });
+      if (fields.country) patchFields.push({ slug: "country", value: fields.country });
+      if (patchFields.length > 0) patchBody.fields = patchFields;
+      if (Object.keys(patchBody).length > 0) {
+        await sioFetch(apiKey, `/contacts/${existingId}`, { method: "PATCH", body: patchBody });
+      }
+    }
+    return existingId;
   }
   const contactBody: Record<string, unknown> = { email, locale: "fr" };
   if (fields?.firstName) contactBody.firstName = fields.firstName;
