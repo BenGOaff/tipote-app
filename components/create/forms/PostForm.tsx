@@ -905,6 +905,7 @@ function QuickCreateAutomationModal({
         .insert({
           user_id: userData.user.id,
           name,
+          type: "comment_to_dm",
           trigger_keyword: keyword.trim(),
           dm_message: dmMessage.trim(),
           platforms: [platform],
