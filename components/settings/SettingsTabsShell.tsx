@@ -751,6 +751,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [initialNarrativeSynthesisMarkdown, setInitialNarrativeSynthesisMarkdown] = useState<string | null>(null);
   const [personaDetailTab, setPersonaDetailTab] = useState<"summary" | "detailed" | "synthesis">("summary");
   const [summaryEditMode, setSummaryEditMode] = useState(false);
+  const [detailedEditMode, setDetailedEditMode] = useState(false);
+  const [synthesisEditMode, setSynthesisEditMode] = useState(false);
   const [personaStale, setPersonaStale] = useState(false);
   const [savingPersonaMarkdown, startSavingPersonaMarkdown] = useTransition();
 
@@ -2197,37 +2199,30 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
           {personaDetailTab === "summary" && (
             <div className="space-y-3">
-              <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => setSummaryEditMode((v) => !v)}
-                >
-                  {summaryEditMode ? (
-                    <>
+              {summaryEditMode ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={mission}
+                    onChange={(e) => setMission(e.target.value)}
+                    rows={12}
+                    className="resize-y min-h-[300px] font-mono text-sm"
+                    disabled={profileLoading}
+                    placeholder={tSP("positioningTab.personaPlaceholder")}
+                    autoFocus
+                  />
+                  <div className="flex justify-end">
+                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setSummaryEditMode(false)}>
                       <Eye className="w-3.5 h-3.5" />
                       Aperçu
-                    </>
-                  ) : (
-                    <>
-                      <Pencil className="w-3.5 h-3.5" />
-                      Modifier
-                    </>
-                  )}
-                </Button>
-              </div>
-              {summaryEditMode ? (
-                <Textarea
-                  value={mission}
-                  onChange={(e) => setMission(e.target.value)}
-                  rows={12}
-                  className="resize-y min-h-[300px] font-mono text-sm"
-                  disabled={profileLoading}
-                  placeholder={tSP("positioningTab.personaPlaceholder")}
-                />
+                    </Button>
+                  </div>
+                </div>
               ) : mission ? (
-                <div className="rounded-lg border bg-background">
+                <div
+                  className="rounded-lg border bg-background cursor-text hover:ring-2 hover:ring-primary/20 transition-all"
+                  onClick={() => setSummaryEditMode(true)}
+                  title="Cliquer pour modifier"
+                >
                   <AIContent
                     content={formatPersonaSummary(mission)}
                     mode="markdown"
@@ -2266,20 +2261,51 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 </div>
               )}
               {personaDetailedMarkdown !== null ? (
-                <div className="p-4 space-y-3">
-                  <textarea
-                    value={personaDetailedMarkdown}
-                    onChange={(e) => setPersonaDetailedMarkdown(e.target.value)}
-                    className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
-                    placeholder="Persona détaillé..."
-                  />
-                  <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
-                      <Save className="w-4 h-4 mr-2" />
-                      {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
-                    </Button>
+                detailedEditMode ? (
+                  <div className="p-4 space-y-2">
+                    <textarea
+                      value={personaDetailedMarkdown}
+                      onChange={(e) => setPersonaDetailedMarkdown(e.target.value)}
+                      className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
+                      placeholder="Persona détaillé..."
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setDetailedEditMode(false)}>
+                        <Eye className="w-3.5 h-3.5" />
+                        Aperçu
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div
+                      className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
+                      onClick={() => setDetailedEditMode(true)}
+                      title="Cliquer pour modifier"
+                    >
+                      <AIContent
+                        content={personaDetailedMarkdown}
+                        mode="markdown"
+                        scroll
+                        maxHeight="70vh"
+                        className="p-5"
+                      />
+                    </div>
+                    {personaMarkdownDirty && (
+                      <div className="flex justify-end px-4 pb-3">
+                        <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={savingPersonaMarkdown}>
+                          <Save className="w-4 h-4 mr-2" />
+                          {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
@@ -2318,20 +2344,51 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 </div>
               )}
               {narrativeSynthesisMarkdown !== null ? (
-                <div className="p-4 space-y-3">
-                  <textarea
-                    value={narrativeSynthesisMarkdown}
-                    onChange={(e) => setNarrativeSynthesisMarkdown(e.target.value)}
-                    className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
-                    placeholder="Synthèse narrative..."
-                  />
-                  <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
-                      <Save className="w-4 h-4 mr-2" />
-                      {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
-                    </Button>
+                synthesisEditMode ? (
+                  <div className="p-4 space-y-2">
+                    <textarea
+                      value={narrativeSynthesisMarkdown}
+                      onChange={(e) => setNarrativeSynthesisMarkdown(e.target.value)}
+                      className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
+                      placeholder="Synthèse narrative..."
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setSynthesisEditMode(false)}>
+                        <Eye className="w-3.5 h-3.5" />
+                        Aperçu
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div
+                      className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
+                      onClick={() => setSynthesisEditMode(true)}
+                      title="Cliquer pour modifier"
+                    >
+                      <AIContent
+                        content={narrativeSynthesisMarkdown}
+                        mode="markdown"
+                        scroll
+                        maxHeight="70vh"
+                        className="p-5"
+                      />
+                    </div>
+                    {personaMarkdownDirty && (
+                      <div className="flex justify-end px-4 pb-3">
+                        <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={savingPersonaMarkdown}>
+                          <Save className="w-4 h-4 mr-2" />
+                          {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
