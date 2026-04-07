@@ -36,16 +36,35 @@ export async function GET() {
     // Persona is scoped per user+role+project for multi-project isolation.
     // Note: the personas table has NO 'channels' column — channels are stored
     // in persona_json (jsonb). Only select columns that actually exist.
-    // Include project_id IS NULL fallback for legacy rows not yet migrated
-    let query = supabaseAdmin
-      .from("personas")
-      .select("name, pains, desires, persona_json, updated_at")
-      .eq("user_id", auth.user.id)
-      .eq("role", "client_ideal");
-    if (projectId) query = query.or(`project_id.eq.${projectId},project_id.is.null`);
-    const { data: rows, error } = await query
-      .order("updated_at", { ascending: false })
-      .limit(1);
+    // Fetch persona: try project-scoped first, then fallback to any row for this user
+    let rows: any[] | null = null;
+    let error: any = null;
+
+    if (projectId) {
+      const res = await supabaseAdmin
+        .from("personas")
+        .select("name, pains, desires, persona_json, updated_at")
+        .eq("user_id", auth.user.id)
+        .eq("role", "client_ideal")
+        .eq("project_id", projectId)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      rows = res.data;
+      error = res.error;
+    }
+
+    // Fallback: no project match → try rows with NULL project_id or any row
+    if (!error && (!rows || rows.length === 0)) {
+      const res = await supabaseAdmin
+        .from("personas")
+        .select("name, pains, desires, persona_json, updated_at")
+        .eq("user_id", auth.user.id)
+        .eq("role", "client_ideal")
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      rows = res.data;
+      error = res.error;
+    }
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
@@ -121,31 +140,60 @@ export async function PATCH(request: NextRequest) {
 
       let readQuery = supabaseAdmin
         .from("personas")
-        .select("persona_json")
+        .select("id, persona_json, project_id")
         .eq("user_id", auth.user.id)
         .eq("role", "client_ideal");
       if (projectId) readQuery = readQuery.or(`project_id.eq.${projectId},project_id.is.null`);
-      const { data: currentRows } = await readQuery.limit(1);
+      const { data: currentRows } = await readQuery.order("updated_at", { ascending: false }).limit(1);
 
-      const currentPj = ((currentRows?.[0]?.persona_json ?? {}) as AnyRecord);
+      const existingRow = currentRows?.[0] ?? null;
+      const currentPj = ((existingRow?.persona_json ?? {}) as AnyRecord);
       const updatedPj: AnyRecord = { ...currentPj };
       if (input.persona_detailed_markdown !== undefined) updatedPj.persona_detailed_markdown = input.persona_detailed_markdown;
       if (input.narrative_synthesis_markdown !== undefined) updatedPj.narrative_synthesis_markdown = input.narrative_synthesis_markdown;
 
-      const dataFields: AnyRecord = { persona_json: updatedPj, updated_at: now };
-      if (projectId) dataFields.project_id = projectId;
+      if (existingRow) {
+        // UPDATE existing row + backfill project_id if missing
+        const dataFields: AnyRecord = { persona_json: updatedPj, updated_at: now };
+        if (projectId && !existingRow.project_id) dataFields.project_id = projectId;
 
-      let updateQuery = supabaseAdmin
-        .from("personas")
-        .update(dataFields)
-        .eq("user_id", auth.user.id)
-        .eq("role", "client_ideal");
-      if (projectId) updateQuery = updateQuery.or(`project_id.eq.${projectId},project_id.is.null`);
-      const { error: updateError } = await updateQuery;
+        const { error: updateError } = await supabaseAdmin
+          .from("personas")
+          .update(dataFields)
+          .eq("id", existingRow.id);
 
-      if (updateError) {
-        console.error("Persona markdown update error:", updateError);
-        return NextResponse.json({ ok: false, error: updateError.message }, { status: 400 });
+        if (updateError) {
+          console.error("Persona markdown update error:", updateError);
+          return NextResponse.json({ ok: false, error: updateError.message }, { status: 400 });
+        }
+      } else {
+        // No persona row exists at all — INSERT one
+        // Need strategy_id (required by schema)
+        const { data: stratRow } = await supabaseAdmin
+          .from("strategies")
+          .select("id")
+          .eq("user_id", auth.user.id)
+          .limit(1);
+        const strategyId = stratRow?.[0]?.id ?? null;
+
+        const insertData: AnyRecord = {
+          user_id: auth.user.id,
+          role: "client_ideal",
+          name: "Client idéal",
+          persona_json: updatedPj,
+          updated_at: now,
+        };
+        if (projectId) insertData.project_id = projectId;
+        if (strategyId) insertData.strategy_id = strategyId;
+
+        const { error: insertError } = await supabaseAdmin
+          .from("personas")
+          .insert(insertData);
+
+        if (insertError) {
+          console.error("Persona markdown insert error:", insertError);
+          return NextResponse.json({ ok: false, error: insertError.message }, { status: 400 });
+        }
       }
 
       return NextResponse.json({ ok: true }, { status: 200 });
