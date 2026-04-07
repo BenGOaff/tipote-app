@@ -2301,7 +2301,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                   </div>
 
                   {/* ──── AI CHAT (bottom of builder tab) ──── */}
-                  <div className="h-[180px] shrink-0 border-t border-white/10 bg-[#162d4a]">
+                  <div className="h-[280px] shrink-0 border-t border-white/10 bg-[#162d4a]">
                     <PageChatBar
                       pageId={page.id}
                       templateId={page.template_id}
