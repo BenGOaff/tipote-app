@@ -469,13 +469,6 @@ async function processComment(params: {
         if (!dmResult.ok) {
           dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
         }
-        }
-      } else {
-        // Pas de MESSENGER token — essayer avec OAuth + fallback recipient.id
-        dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
-        if (!dmResult.ok) {
-          dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
-        }
       }
     } else {
       dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
