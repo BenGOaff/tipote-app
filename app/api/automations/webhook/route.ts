@@ -451,20 +451,41 @@ async function processComment(params: {
         oauthTokenPrefix: page_access_token.slice(0, 10),
       }});
 
-      // L'app Tipote OAuth n'a PAS pages_messaging — les DMs doivent passer par
-      // MESSENGER_PAGE_ACCESS_TOKEN (app Tipote ter qui a le produit Messenger).
-      // Le token OAuth de l'user sert pour les webhooks et la lecture des commentaires,
-      // mais PAS pour l'envoi de DMs.
-      const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
-      const dmToken = messengerToken || page_access_token;
+      // DM Facebook : utiliser le token Messenger per-user (facebook_messenger dans social_connections)
+      // qui a pages_messaging via l'app Tipote ter.
+      // Fallback: MESSENGER_PAGE_ACCESS_TOKEN env var, puis page_access_token OAuth.
+      let dmToken = page_access_token;
 
-      // Tentative 1 : Private Reply avec le token DM (MESSENGER ou fallback OAuth)
+      // Chercher le token messenger per-user dans social_connections
+      try {
+        const { data: messengerConn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted")
+          .eq("user_id", user_id ?? connUserId)
+          .eq("platform", "facebook_messenger")
+          .maybeSingle();
+
+        if (messengerConn?.access_token_encrypted) {
+          dmToken = decrypt(messengerConn.access_token_encrypted);
+          await logWebhook("dm_using_per_user_messenger_token", { pageId: page_id });
+        } else if (process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
+          dmToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+          await logWebhook("dm_using_env_messenger_token", { pageId: page_id });
+        }
+      } catch (e) {
+        console.warn("[webhook] Failed to get per-user messenger token:", e);
+        if (process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
+          dmToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+        }
+      }
+
+      // Tentative 1 : Private Reply avec le token DM (per-user messenger ou fallback)
       dmResult = await sendFacebookPrivateReply(dmToken, comment_id, dmText, page_id);
       if (!dmResult.ok) {
-        await logWebhook("dm_private_reply_fail", { pageId: page_id, payload: { commentId: comment_id, usedMessenger: !!messengerToken, error: dmResult.error?.slice(0, 500) } });
+        await logWebhook("dm_private_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
 
-        // Tentative 2 : si on a utilisé MESSENGER, essayer avec OAuth en fallback
-        if (messengerToken && page_access_token !== messengerToken) {
+        // Tentative 2 : essayer avec OAuth si différent
+        if (page_access_token !== dmToken) {
           dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
           if (!dmResult.ok) {
             await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
