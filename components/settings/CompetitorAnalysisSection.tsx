@@ -24,6 +24,8 @@ import {
   CheckCircle2,
   XCircle,
   Download,
+  Pencil,
+  X,
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
@@ -333,6 +335,25 @@ export default function CompetitorAnalysisSection() {
   const [editedSummary, setEditedSummary] = useState("");
   const [savingSummary, startSummarySave] = useTransition();
 
+  // Editable list states for SWOT
+  const [editingStrengths, setEditingStrengths] = useState(false);
+  const [editedStrengths, setEditedStrengths] = useState<string[]>([]);
+  const [editingWeaknesses, setEditingWeaknesses] = useState(false);
+  const [editedWeaknesses, setEditedWeaknesses] = useState<string[]>([]);
+  const [editingOpportunities, setEditingOpportunities] = useState(false);
+  const [editedOpportunities, setEditedOpportunities] = useState<string[]>([]);
+  const [savingSwot, startSwotSave] = useTransition();
+
+  // Editable positioning matrix
+  const [editingMatrix, setEditingMatrix] = useState(false);
+  const [editedMatrix, setEditedMatrix] = useState("");
+  const [savingMatrix, startMatrixSave] = useTransition();
+
+  // Editable competitor details
+  const [editingDetail, setEditingDetail] = useState<string | null>(null);
+  const [editedDetail, setEditedDetail] = useState<CompetitorDetail>({});
+  const [savingDetail, startDetailSave] = useTransition();
+
   // Load existing analysis
   useEffect(() => {
     let cancelled = false;
@@ -504,6 +525,70 @@ export default function CompetitorAnalysisSection() {
         setAnalysis((prev) => (prev ? { ...prev, summary: editedSummary } : prev));
         setEditingSummary(false);
         toast({ title: "Résumé mis à jour" });
+      } catch (e: any) {
+        toast({ title: "Erreur", description: e?.message ?? "Impossible de sauvegarder", variant: "destructive" });
+      }
+    });
+  };
+
+  // Save SWOT field
+  const saveSwotField = (field: "strengths" | "weaknesses" | "opportunities", items: string[]) => {
+    const cleaned = items.filter((s) => s.trim());
+    startSwotSave(async () => {
+      try {
+        const res = await fetch("/api/competitor-analysis", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [field]: cleaned }),
+        });
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        setAnalysis((prev) => (prev ? { ...prev, [field]: cleaned } : prev));
+        if (field === "strengths") setEditingStrengths(false);
+        if (field === "weaknesses") setEditingWeaknesses(false);
+        if (field === "opportunities") setEditingOpportunities(false);
+        toast({ title: "Mis à jour" });
+      } catch (e: any) {
+        toast({ title: "Erreur", description: e?.message ?? "Impossible de sauvegarder", variant: "destructive" });
+      }
+    });
+  };
+
+  // Save positioning matrix
+  const saveMatrix = () => {
+    startMatrixSave(async () => {
+      try {
+        const res = await fetch("/api/competitor-analysis", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ positioning_matrix: editedMatrix }),
+        });
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        setAnalysis((prev) => (prev ? { ...prev, positioning_matrix: editedMatrix } : prev));
+        setEditingMatrix(false);
+        toast({ title: "Matrice mise à jour" });
+      } catch (e: any) {
+        toast({ title: "Erreur", description: e?.message ?? "Impossible de sauvegarder", variant: "destructive" });
+      }
+    });
+  };
+
+  // Save competitor detail
+  const saveCompetitorDetail = (name: string) => {
+    startDetailSave(async () => {
+      try {
+        const updatedDetails = { ...analysis?.competitor_details, [name]: editedDetail };
+        const res = await fetch("/api/competitor-analysis", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ competitor_details: updatedDetails }),
+        });
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        setAnalysis((prev) => (prev ? { ...prev, competitor_details: updatedDetails } : prev));
+        setEditingDetail(null);
+        toast({ title: `${name} mis à jour` });
       } catch (e: any) {
         toast({ title: "Erreur", description: e?.message ?? "Impossible de sauvegarder", variant: "destructive" });
       }
@@ -923,75 +1008,214 @@ export default function CompetitorAnalysisSection() {
             )}
           </Card>
 
-          {/* SWOT-style cards */}
+          {/* SWOT-style cards — editable */}
           <div className="grid md:grid-cols-3 gap-4">
             {analysis.strengths && analysis.strengths.length > 0 && (
               <Card className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-4 h-4 text-green-600" />
-                  <h4 className="font-semibold text-green-700">Tes forces</h4>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                    <h4 className="font-semibold text-green-700">Tes forces</h4>
+                  </div>
+                  {!editingStrengths && (
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedStrengths([...analysis.strengths!]); setEditingStrengths(true); }}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                 </div>
-                <ul className="space-y-2">
-                  {analysis.strengths.map((s, i) => (
-                    <li key={i} className="text-sm flex gap-2">
-                      <span className="text-green-500 mt-0.5 flex-shrink-0">+</span>
-                      <span>{s}</span>
-                    </li>
-                  ))}
-                </ul>
+                {editingStrengths ? (
+                  <div className="space-y-2">
+                    {editedStrengths.map((s, i) => (
+                      <div key={i} className="flex gap-1.5 items-center">
+                        <Input value={s} onChange={(e) => setEditedStrengths((prev) => prev.map((v, j) => j === i ? e.target.value : v))} className="text-sm h-8" />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => setEditedStrengths((prev) => prev.filter((_, j) => j !== i))}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => setEditedStrengths((prev) => [...prev, ""])}>
+                      <Plus className="w-3 h-3" /> Ajouter
+                    </Button>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" className="h-7 text-xs" onClick={() => saveSwotField("strengths", editedStrengths)} disabled={savingSwot}>
+                        <Save className="w-3 h-3 mr-1" />{savingSwot ? "..." : "Sauver"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingStrengths(false)}>Annuler</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {analysis.strengths.map((s, i) => (
+                      <li key={i} className="text-sm flex gap-2">
+                        <span className="text-green-500 mt-0.5 flex-shrink-0">+</span>
+                        <span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </Card>
             )}
 
             {analysis.weaknesses && analysis.weaknesses.length > 0 && (
               <Card className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingDown className="w-4 h-4 text-orange-600" />
-                  <h4 className="font-semibold text-orange-700">À améliorer</h4>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="w-4 h-4 text-orange-600" />
+                    <h4 className="font-semibold text-orange-700">À améliorer</h4>
+                  </div>
+                  {!editingWeaknesses && (
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedWeaknesses([...analysis.weaknesses!]); setEditingWeaknesses(true); }}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                 </div>
-                <ul className="space-y-2">
-                  {analysis.weaknesses.map((w, i) => (
-                    <li key={i} className="text-sm flex gap-2">
-                      <span className="text-orange-500 mt-0.5 flex-shrink-0">-</span>
-                      <span>{w}</span>
-                    </li>
-                  ))}
-                </ul>
+                {editingWeaknesses ? (
+                  <div className="space-y-2">
+                    {editedWeaknesses.map((w, i) => (
+                      <div key={i} className="flex gap-1.5 items-center">
+                        <Input value={w} onChange={(e) => setEditedWeaknesses((prev) => prev.map((v, j) => j === i ? e.target.value : v))} className="text-sm h-8" />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => setEditedWeaknesses((prev) => prev.filter((_, j) => j !== i))}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => setEditedWeaknesses((prev) => [...prev, ""])}>
+                      <Plus className="w-3 h-3" /> Ajouter
+                    </Button>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" className="h-7 text-xs" onClick={() => saveSwotField("weaknesses", editedWeaknesses)} disabled={savingSwot}>
+                        <Save className="w-3 h-3 mr-1" />{savingSwot ? "..." : "Sauver"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingWeaknesses(false)}>Annuler</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {analysis.weaknesses.map((w, i) => (
+                      <li key={i} className="text-sm flex gap-2">
+                        <span className="text-orange-500 mt-0.5 flex-shrink-0">-</span>
+                        <span>{w}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </Card>
             )}
 
             {analysis.opportunities && analysis.opportunities.length > 0 && (
               <Card className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Lightbulb className="w-4 h-4 text-blue-600" />
-                  <h4 className="font-semibold text-blue-700">Opportunités</h4>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-blue-600" />
+                    <h4 className="font-semibold text-blue-700">Opportunités</h4>
+                  </div>
+                  {!editingOpportunities && (
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedOpportunities([...analysis.opportunities!]); setEditingOpportunities(true); }}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                 </div>
-                <ul className="space-y-2">
-                  {analysis.opportunities.map((o, i) => (
-                    <li key={i} className="text-sm flex gap-2">
-                      <span className="text-blue-500 mt-0.5 flex-shrink-0">*</span>
-                      <span>{o}</span>
-                    </li>
-                  ))}
-                </ul>
+                {editingOpportunities ? (
+                  <div className="space-y-2">
+                    {editedOpportunities.map((o, i) => (
+                      <div key={i} className="flex gap-1.5 items-center">
+                        <Input value={o} onChange={(e) => setEditedOpportunities((prev) => prev.map((v, j) => j === i ? e.target.value : v))} className="text-sm h-8" />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => setEditedOpportunities((prev) => prev.filter((_, j) => j !== i))}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => setEditedOpportunities((prev) => [...prev, ""])}>
+                      <Plus className="w-3 h-3" /> Ajouter
+                    </Button>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" className="h-7 text-xs" onClick={() => saveSwotField("opportunities", editedOpportunities)} disabled={savingSwot}>
+                        <Save className="w-3 h-3 mr-1" />{savingSwot ? "..." : "Sauver"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingOpportunities(false)}>Annuler</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {analysis.opportunities.map((o, i) => (
+                      <li key={i} className="text-sm flex gap-2">
+                        <span className="text-blue-500 mt-0.5 flex-shrink-0">*</span>
+                        <span>{o}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </Card>
             )}
           </div>
 
-          {/* Positioning Matrix */}
+          {/* Positioning Matrix — editable */}
           {analysis.positioning_matrix && (
             <Card className="p-6">
-              <h4 className="font-semibold mb-3">Matrice de positionnement</h4>
-              {renderMarkdown(formatPositioningMatrix(analysis.positioning_matrix))}
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold">Matrice de positionnement</h4>
+                {!editingMatrix && (
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedMatrix(analysis.positioning_matrix!); setEditingMatrix(true); }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+              {editingMatrix ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={editedMatrix}
+                    onChange={(e) => setEditedMatrix(e.target.value)}
+                    rows={12}
+                    className="resize-y font-mono text-sm min-h-[200px]"
+                    placeholder="Markdown table ou texte..."
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveMatrix} disabled={savingMatrix}>
+                      <Save className="w-4 h-4 mr-1" />
+                      {savingMatrix ? "Sauvegarde..." : "Sauvegarder"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingMatrix(false)}>Annuler</Button>
+                  </div>
+                </div>
+              ) : (
+                renderMarkdown(formatPositioningMatrix(analysis.positioning_matrix))
+              )}
             </Card>
           )}
 
-          {/* Per-Competitor Detail Cards */}
+          {/* Per-Competitor Detail Cards — editable */}
           {analysis.competitor_details && Object.keys(analysis.competitor_details).length > 0 && (
             <div className="space-y-4">
               <h4 className="font-semibold text-base px-1">Analyse par concurrent</h4>
               {Object.entries(analysis.competitor_details).map(([name, detail]) => {
                 const d = detail as CompetitorDetail;
                 const isExpanded = expandedCompetitor === name;
+                const isEditing = editingDetail === name;
+                const ed = isEditing ? editedDetail : d;
+
+                const updateDetailField = (field: keyof CompetitorDetail, value: any) => {
+                  setEditedDetail((prev) => ({ ...prev, [field]: value }));
+                };
+                const updateDetailListItem = (field: keyof CompetitorDetail, idx: number, value: string) => {
+                  setEditedDetail((prev) => {
+                    const arr = [...((prev[field] as string[]) || [])];
+                    arr[idx] = value;
+                    return { ...prev, [field]: arr };
+                  });
+                };
+                const removeDetailListItem = (field: keyof CompetitorDetail, idx: number) => {
+                  setEditedDetail((prev) => {
+                    const arr = ((prev[field] as string[]) || []).filter((_: any, i: number) => i !== idx);
+                    return { ...prev, [field]: arr };
+                  });
+                };
+                const addDetailListItem = (field: keyof CompetitorDetail) => {
+                  setEditedDetail((prev) => {
+                    const arr = [...((prev[field] as string[]) || []), ""];
+                    return { ...prev, [field]: arr };
+                  });
+                };
+
                 return (
                   <Card key={name} className="overflow-hidden">
                     <button
@@ -1026,6 +1250,22 @@ export default function CompetitorAnalysisSection() {
 
                     {isExpanded && (
                       <div className="border-t">
+                        {/* Edit / Save bar */}
+                        <div className="flex justify-end gap-2 px-5 pt-3">
+                          {isEditing ? (
+                            <>
+                              <Button size="sm" className="h-7 text-xs gap-1" onClick={() => saveCompetitorDetail(name)} disabled={savingDetail}>
+                                <Save className="w-3 h-3" />{savingDetail ? "..." : "Sauvegarder"}
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingDetail(null)}>Annuler</Button>
+                            </>
+                          ) : (
+                            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={(e) => { e.stopPropagation(); setEditedDetail({ ...d }); setEditingDetail(name); }}>
+                              <Pencil className="w-3 h-3" /> Modifier
+                            </Button>
+                          )}
+                        </div>
+
                         {/* Section 1 — Leur profil */}
                         <div className="p-5 space-y-4">
                           <div className="flex items-center gap-2 mb-1">
@@ -1034,81 +1274,148 @@ export default function CompetitorAnalysisSection() {
                               Leur profil
                             </h5>
                           </div>
-                          {d.positioning && (
+                          {(ed.positioning || isEditing) && (
                             <div>
                               <Label className="text-xs text-muted-foreground">Positionnement</Label>
-                              <p className="text-sm mt-1">{d.positioning}</p>
+                              {isEditing ? (
+                                <Textarea value={ed.positioning || ""} onChange={(e) => updateDetailField("positioning", e.target.value)} rows={2} className="mt-1 text-sm resize-y" />
+                              ) : (
+                                <p className="text-sm mt-1">{d.positioning}</p>
+                              )}
                             </div>
                           )}
-                          {d.value_proposition && (
+                          {(ed.value_proposition || isEditing) && (
                             <div>
                               <Label className="text-xs text-muted-foreground">Proposition de valeur</Label>
-                              <p className="text-sm mt-1">{d.value_proposition}</p>
+                              {isEditing ? (
+                                <Textarea value={ed.value_proposition || ""} onChange={(e) => updateDetailField("value_proposition", e.target.value)} rows={2} className="mt-1 text-sm resize-y" />
+                              ) : (
+                                <p className="text-sm mt-1">{d.value_proposition}</p>
+                              )}
                             </div>
                           )}
-                          {d.main_offers && d.main_offers.length > 0 && (
+                          {(ed.target_audience || isEditing) && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Audience cible</Label>
+                              {isEditing ? (
+                                <Input value={ed.target_audience || ""} onChange={(e) => updateDetailField("target_audience", e.target.value)} className="mt-1 text-sm h-8" />
+                              ) : (
+                                <p className="text-sm mt-1">{d.target_audience}</p>
+                              )}
+                            </div>
+                          )}
+                          {((ed.main_offers && ed.main_offers.length > 0) || isEditing) && (
                             <div>
                               <Label className="text-xs text-muted-foreground">Offres principales</Label>
-                              <div className="space-y-1.5 mt-1">
-                                {d.main_offers.map((offer, i) => (
-                                  <div key={i} className="text-sm flex items-start gap-2">
-                                    <Badge variant="outline" className="text-xs mt-0.5 flex-shrink-0">
-                                      {offer.price || "?"}
-                                    </Badge>
-                                    <div>
-                                      <span className="font-medium">{offer.name}</span>
-                                      {offer.description && (
-                                        <span className="text-muted-foreground"> — {offer.description}</span>
-                                      )}
+                              {isEditing ? (
+                                <div className="space-y-2 mt-1">
+                                  {(ed.main_offers || []).map((offer, i) => (
+                                    <div key={i} className="flex gap-1.5 items-center">
+                                      <Input value={offer.name} placeholder="Nom" onChange={(e) => { const arr = [...(ed.main_offers || [])]; arr[i] = { ...arr[i], name: e.target.value }; updateDetailField("main_offers", arr); }} className="text-sm h-8 flex-1" />
+                                      <Input value={offer.price} placeholder="Prix" onChange={(e) => { const arr = [...(ed.main_offers || [])]; arr[i] = { ...arr[i], price: e.target.value }; updateDetailField("main_offers", arr); }} className="text-sm h-8 w-24" />
+                                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => { const arr = (ed.main_offers || []).filter((_: any, j: number) => j !== i); updateDetailField("main_offers", arr); }}>
+                                        <X className="w-3.5 h-3.5" />
+                                      </Button>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
+                                  ))}
+                                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => updateDetailField("main_offers", [...(ed.main_offers || []), { name: "", price: "", description: "" }])}>
+                                    <Plus className="w-3 h-3" /> Ajouter une offre
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="space-y-1.5 mt-1">
+                                  {d.main_offers!.map((offer, i) => (
+                                    <div key={i} className="text-sm flex items-start gap-2">
+                                      <Badge variant="outline" className="text-xs mt-0.5 flex-shrink-0">{offer.price || "?"}</Badge>
+                                      <div>
+                                        <span className="font-medium">{offer.name}</span>
+                                        {offer.description && <span className="text-muted-foreground"> — {offer.description}</span>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                           <div className="grid sm:grid-cols-2 gap-4">
-                            {d.strengths && d.strengths.length > 0 && (
+                            {((ed.strengths && ed.strengths.length > 0) || isEditing) && (
                               <div>
                                 <Label className="text-xs text-green-600">Points forts</Label>
-                                <ul className="text-sm space-y-1 mt-1">
-                                  {d.strengths.map((s, i) => (
-                                    <li key={i} className="flex gap-1.5">
-                                      <span className="text-green-500 flex-shrink-0">+</span><span>{s}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                                {isEditing ? (
+                                  <div className="space-y-1 mt-1">
+                                    {(ed.strengths || []).map((s, i) => (
+                                      <div key={i} className="flex gap-1 items-center">
+                                        <Input value={s} onChange={(e) => updateDetailListItem("strengths", i, e.target.value)} className="text-sm h-7" />
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => removeDetailListItem("strengths", i)}><X className="w-3 h-3" /></Button>
+                                      </div>
+                                    ))}
+                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("strengths")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                  </div>
+                                ) : (
+                                  <ul className="text-sm space-y-1 mt-1">
+                                    {d.strengths!.map((s, i) => (
+                                      <li key={i} className="flex gap-1.5"><span className="text-green-500 flex-shrink-0">+</span><span>{s}</span></li>
+                                    ))}
+                                  </ul>
+                                )}
                               </div>
                             )}
-                            {d.weaknesses && d.weaknesses.length > 0 && (
+                            {((ed.weaknesses && ed.weaknesses.length > 0) || isEditing) && (
                               <div>
                                 <Label className="text-xs text-orange-600">Points faibles</Label>
-                                <ul className="text-sm space-y-1 mt-1">
-                                  {d.weaknesses.map((w, i) => (
-                                    <li key={i} className="flex gap-1.5">
-                                      <span className="text-orange-500 flex-shrink-0">-</span><span>{w}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                                {isEditing ? (
+                                  <div className="space-y-1 mt-1">
+                                    {(ed.weaknesses || []).map((w, i) => (
+                                      <div key={i} className="flex gap-1 items-center">
+                                        <Input value={w} onChange={(e) => updateDetailListItem("weaknesses", i, e.target.value)} className="text-sm h-7" />
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => removeDetailListItem("weaknesses", i)}><X className="w-3 h-3" /></Button>
+                                      </div>
+                                    ))}
+                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("weaknesses")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                  </div>
+                                ) : (
+                                  <ul className="text-sm space-y-1 mt-1">
+                                    {d.weaknesses!.map((w, i) => (
+                                      <li key={i} className="flex gap-1.5"><span className="text-orange-500 flex-shrink-0">-</span><span>{w}</span></li>
+                                    ))}
+                                  </ul>
+                                )}
                               </div>
                             )}
                           </div>
-                          {d.channels && d.channels.length > 0 && (
+                          {((ed.channels && ed.channels.length > 0) || isEditing) && (
                             <div>
                               <Label className="text-xs text-muted-foreground">Canaux</Label>
-                              <div className="flex flex-wrap gap-1.5 mt-1">
-                                {d.channels.map((ch, i) => (
-                                  <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
-                                ))}
-                              </div>
+                              {isEditing ? (
+                                <div className="space-y-1 mt-1">
+                                  {(ed.channels || []).map((ch, i) => (
+                                    <div key={i} className="flex gap-1 items-center">
+                                      <Input value={ch} onChange={(e) => updateDetailListItem("channels", i, e.target.value)} className="text-sm h-7" />
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => removeDetailListItem("channels", i)}><X className="w-3 h-3" /></Button>
+                                    </div>
+                                  ))}
+                                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("channels")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                </div>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                  {d.channels!.map((ch, i) => (
+                                    <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
-                          {d.content_strategy && (
+                          {(ed.content_strategy || isEditing) && (
                             <div>
                               <Label className="text-xs text-muted-foreground">Stratégie de contenu</Label>
-                              <p className="text-sm mt-1">{d.content_strategy}</p>
+                              {isEditing ? (
+                                <Textarea value={ed.content_strategy || ""} onChange={(e) => updateDetailField("content_strategy", e.target.value)} rows={2} className="mt-1 text-sm resize-y" />
+                              ) : (
+                                <p className="text-sm mt-1">{d.content_strategy}</p>
+                              )}
                             </div>
                           )}
-                          {d.missing_info && d.missing_info.length > 0 && (
+                          {d.missing_info && d.missing_info.length > 0 && !isEditing && (
                             <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                               <div className="flex items-center gap-1.5 mb-1">
                                 <AlertCircle className="w-3.5 h-3.5 text-yellow-600" />
@@ -1127,7 +1434,7 @@ export default function CompetitorAnalysisSection() {
                         </div>
 
                         {/* Section 2 — Face-à-face */}
-                        {(d.user_advantages?.length || d.user_disadvantages?.length || d.key_differences_summary) && (
+                        {(ed.user_advantages?.length || ed.user_disadvantages?.length || ed.key_differences_summary || isEditing) && (
                           <div className="p-5 space-y-4 border-t bg-slate-50/50 dark:bg-slate-900/30">
                             <div className="flex items-center gap-2 mb-1">
                               <TrendingUp className="w-4 h-4 text-primary" />
@@ -1135,40 +1442,71 @@ export default function CompetitorAnalysisSection() {
                                 Face-à-face vs toi
                               </h5>
                             </div>
-                            {d.key_differences_summary && (
-                              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border text-sm leading-relaxed">
-                                {d.key_differences_summary}
-                              </div>
+                            {(ed.key_differences_summary || isEditing) && (
+                              isEditing ? (
+                                <div>
+                                  <Label className="text-xs text-muted-foreground">Résumé des différences</Label>
+                                  <Textarea value={ed.key_differences_summary || ""} onChange={(e) => updateDetailField("key_differences_summary", e.target.value)} rows={3} className="mt-1 text-sm resize-y" />
+                                </div>
+                              ) : d.key_differences_summary ? (
+                                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border text-sm leading-relaxed">
+                                  {d.key_differences_summary}
+                                </div>
+                              ) : null
                             )}
                             <div className="grid sm:grid-cols-2 gap-4">
-                              {d.user_advantages && d.user_advantages.length > 0 && (
+                              {((ed.user_advantages && ed.user_advantages.length > 0) || isEditing) && (
                                 <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                                   <div className="flex items-center gap-1.5 mb-2">
                                     <CheckCircle2 className="w-4 h-4 text-green-600" />
                                     <Label className="text-xs font-semibold text-green-700 dark:text-green-400">Tu fais mieux</Label>
                                   </div>
-                                  <ul className="space-y-1.5">
-                                    {d.user_advantages.map((adv, i) => (
-                                      <li key={i} className="text-sm text-green-800 dark:text-green-300 flex gap-1.5">
-                                        <span className="flex-shrink-0 mt-0.5">✓</span><span>{adv}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  {isEditing ? (
+                                    <div className="space-y-1">
+                                      {(ed.user_advantages || []).map((adv, i) => (
+                                        <div key={i} className="flex gap-1 items-center">
+                                          <Input value={adv} onChange={(e) => updateDetailListItem("user_advantages", i, e.target.value)} className="text-sm h-7" />
+                                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeDetailListItem("user_advantages", i)}><X className="w-3 h-3" /></Button>
+                                        </div>
+                                      ))}
+                                      <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("user_advantages")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                    </div>
+                                  ) : (
+                                    <ul className="space-y-1.5">
+                                      {(d.user_advantages || []).map((adv, i) => (
+                                        <li key={i} className="text-sm text-green-800 dark:text-green-300 flex gap-1.5">
+                                          <span className="flex-shrink-0 mt-0.5">✓</span><span>{adv}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                 </div>
                               )}
-                              {d.user_disadvantages && d.user_disadvantages.length > 0 && (
+                              {((ed.user_disadvantages && ed.user_disadvantages.length > 0) || isEditing) && (
                                 <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
                                   <div className="flex items-center gap-1.5 mb-2">
                                     <XCircle className="w-4 h-4 text-orange-600" />
                                     <Label className="text-xs font-semibold text-orange-700 dark:text-orange-400">Ils font mieux</Label>
                                   </div>
-                                  <ul className="space-y-1.5">
-                                    {d.user_disadvantages.map((dis, i) => (
-                                      <li key={i} className="text-sm text-orange-800 dark:text-orange-300 flex gap-1.5">
-                                        <span className="flex-shrink-0 mt-0.5">!</span><span>{dis}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  {isEditing ? (
+                                    <div className="space-y-1">
+                                      {(ed.user_disadvantages || []).map((dis, i) => (
+                                        <div key={i} className="flex gap-1 items-center">
+                                          <Input value={dis} onChange={(e) => updateDetailListItem("user_disadvantages", i, e.target.value)} className="text-sm h-7" />
+                                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeDetailListItem("user_disadvantages", i)}><X className="w-3 h-3" /></Button>
+                                        </div>
+                                      ))}
+                                      <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("user_disadvantages")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                    </div>
+                                  ) : (
+                                    <ul className="space-y-1.5">
+                                      {(d.user_disadvantages || []).map((dis, i) => (
+                                        <li key={i} className="text-sm text-orange-800 dark:text-orange-300 flex gap-1.5">
+                                          <span className="flex-shrink-0 mt-0.5">!</span><span>{dis}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1176,53 +1514,91 @@ export default function CompetitorAnalysisSection() {
                         )}
 
                         {/* Section 3 — Mes actions */}
-                        {(d.differentiation_strategy || d.communication_focus?.length || d.offer_improvements?.length) && (
+                        {(ed.differentiation_strategy || ed.communication_focus?.length || ed.offer_improvements?.length || isEditing) && (
                           <div className="p-5 space-y-4 border-t bg-primary/5">
                             <div className="flex items-center gap-2 mb-1">
                               <Zap className="w-4 h-4 text-primary" />
                               <h5 className="font-semibold text-sm text-primary uppercase tracking-wide">Mes actions</h5>
                             </div>
-                            {d.differentiation_strategy && (
+                            {(ed.differentiation_strategy || isEditing) && (
                               <div>
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                   <Target className="w-3.5 h-3.5 text-primary" />
                                   <Label className="text-xs font-semibold text-primary">Stratégie de différenciation</Label>
                                 </div>
-                                <p className="text-sm leading-relaxed">{d.differentiation_strategy}</p>
+                                {isEditing ? (
+                                  <Textarea value={ed.differentiation_strategy || ""} onChange={(e) => updateDetailField("differentiation_strategy", e.target.value)} rows={3} className="text-sm resize-y" />
+                                ) : (
+                                  <p className="text-sm leading-relaxed">{d.differentiation_strategy}</p>
+                                )}
                               </div>
                             )}
-                            {d.communication_focus && d.communication_focus.length > 0 && (
+                            {((ed.communication_focus && ed.communication_focus.length > 0) || isEditing) && (
                               <div>
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                   <MessageSquare className="w-3.5 h-3.5 text-primary" />
                                   <Label className="text-xs font-semibold text-primary">Ce que je dois mettre en avant</Label>
                                 </div>
-                                <ul className="space-y-1.5">
-                                  {d.communication_focus.map((msg, i) => (
-                                    <li key={i} className="text-sm flex gap-2 p-2 bg-white dark:bg-slate-900 rounded border">
-                                      <span className="text-primary font-bold flex-shrink-0">{i + 1}.</span>
-                                      <span>{msg}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                                {isEditing ? (
+                                  <div className="space-y-1">
+                                    {(ed.communication_focus || []).map((msg, i) => (
+                                      <div key={i} className="flex gap-1 items-center">
+                                        <Input value={msg} onChange={(e) => updateDetailListItem("communication_focus", i, e.target.value)} className="text-sm h-7" />
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeDetailListItem("communication_focus", i)}><X className="w-3 h-3" /></Button>
+                                      </div>
+                                    ))}
+                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("communication_focus")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                  </div>
+                                ) : (
+                                  <ul className="space-y-1.5">
+                                    {(d.communication_focus || []).map((msg, i) => (
+                                      <li key={i} className="text-sm flex gap-2 p-2 bg-white dark:bg-slate-900 rounded border">
+                                        <span className="text-primary font-bold flex-shrink-0">{i + 1}.</span>
+                                        <span>{msg}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
                               </div>
                             )}
-                            {d.offer_improvements && d.offer_improvements.length > 0 && (
+                            {((ed.offer_improvements && ed.offer_improvements.length > 0) || isEditing) && (
                               <div>
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                   <ShoppingBag className="w-3.5 h-3.5 text-primary" />
                                   <Label className="text-xs font-semibold text-primary">Améliorations à apporter à mon offre</Label>
                                 </div>
-                                <ul className="space-y-1.5">
-                                  {d.offer_improvements.map((imp, i) => (
-                                    <li key={i} className="text-sm flex gap-2">
-                                      <span className="text-primary flex-shrink-0 mt-0.5">→</span>
-                                      <span>{imp}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                                {isEditing ? (
+                                  <div className="space-y-1">
+                                    {(ed.offer_improvements || []).map((imp, i) => (
+                                      <div key={i} className="flex gap-1 items-center">
+                                        <Input value={imp} onChange={(e) => updateDetailListItem("offer_improvements", i, e.target.value)} className="text-sm h-7" />
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeDetailListItem("offer_improvements", i)}><X className="w-3 h-3" /></Button>
+                                      </div>
+                                    ))}
+                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("offer_improvements")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                  </div>
+                                ) : (
+                                  <ul className="space-y-1.5">
+                                    {(d.offer_improvements || []).map((imp, i) => (
+                                      <li key={i} className="text-sm flex gap-2">
+                                        <span className="text-primary flex-shrink-0 mt-0.5">→</span>
+                                        <span>{imp}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {/* Bottom save bar when editing */}
+                        {isEditing && (
+                          <div className="flex justify-end gap-2 px-5 py-3 border-t bg-muted/30">
+                            <Button size="sm" className="gap-1" onClick={() => saveCompetitorDetail(name)} disabled={savingDetail}>
+                              <Save className="w-3.5 h-3.5" />{savingDetail ? "Sauvegarde..." : "Sauvegarder"}
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingDetail(null)}>Annuler</Button>
                           </div>
                         )}
                       </div>
