@@ -179,10 +179,17 @@ async function handleMetaNativePayload(req: NextRequest, signature: string | nul
     await logWebhook("entry_detail", { pageId, payload: entryShape });
 
     // Messaging events (DMs) arrive in entry.messaging[], not entry.changes[]
-    // We must acknowledge them (return 200) or Meta will disable the webhook.
+    // Process incoming messages to detect email replies for Systeme.io sync.
     if (entry.messaging?.length) {
       console.log("[webhook] 📨 Messaging event received for page:", pageId, "count:", entry.messaging.length);
       await logWebhook("messaging_event", { pageId, payload: { count: entry.messaging.length } });
+
+      for (const msg of entry.messaging) {
+        // Only process user-sent messages (not echoes of our own messages)
+        if (msg.message?.text && msg.sender?.id && msg.sender.id !== pageId) {
+          await handleIncomingDM(pageId, msg.sender.id, msg.message.text);
+        }
+      }
       continue;
     }
 
@@ -531,6 +538,28 @@ async function processComment(params: {
       await logWebhook("dm_fail_final", { pageId: page_id, payload: { commentId: comment_id, senderId: sender_id, error: dmResult.error?.slice(0, 200) } });
     }
 
+    // 2b. If DM sent + automation has systemeio_tag → register email capture
+    // so when the user replies with their email, we can sync to Systeme.io.
+    if (dmResult.ok && matched.systemeio_tag && user_id) {
+      try {
+        await supabaseAdmin.from("dm_email_captures").upsert(
+          {
+            page_id,
+            sender_id,
+            sender_name,
+            automation_id: matched.id,
+            user_id,
+            platform,
+            status: "pending",
+          },
+          { onConflict: "page_id,sender_id,automation_id" },
+        );
+        console.log(`[webhook] Email capture registered for sender ${sender_id} → automation ${matched.id}`);
+      } catch (err) {
+        console.warn("[webhook] Failed to register email capture:", err);
+      }
+    }
+
     await logWebhook("processed", { pageId: page_id, userId: user_id, payload: { automationId: matched.id, commentReplyOk, dmSent: dmResult.ok, dmError: dmResult.error?.slice(0, 200) } });
 
     // 3. Update stats only (meta already saved above)
@@ -673,6 +702,121 @@ async function handleInstagramNativePayload(payload: MetaNativePayload): Promise
   }
 
   return NextResponse.json({ ok: true, ...results });
+}
+
+/* ─── Incoming DM handler (email capture) ─── */
+
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+
+async function handleIncomingDM(pageId: string, senderId: string, messageText: string) {
+  const email = messageText.match(EMAIL_REGEX)?.[0]?.toLowerCase();
+
+  await logWebhook("dm_incoming", {
+    pageId,
+    payload: {
+      senderId,
+      messagePreview: messageText.slice(0, 80),
+      emailDetected: email ?? null,
+    },
+  });
+
+  if (!email) {
+    console.log(`[webhook] DM from ${senderId}: no email detected in "${messageText.slice(0, 50)}"`);
+    return;
+  }
+
+  // Find the pending email capture for this sender on this page
+  const { data: capture } = await supabaseAdmin
+    .from("dm_email_captures")
+    .select("id, automation_id, user_id, sender_name")
+    .eq("page_id", pageId)
+    .eq("sender_id", senderId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!capture) {
+    console.log(`[webhook] DM email from ${senderId} but no pending capture found`);
+    await logWebhook("dm_email_no_capture", { pageId, payload: { senderId, email } });
+    return;
+  }
+
+  // Get the automation config (systemeio_tag, email_dm_message)
+  const { data: automation } = await supabaseAdmin
+    .from("social_automations")
+    .select("systemeio_tag, email_dm_message, name")
+    .eq("id", capture.automation_id)
+    .single();
+
+  if (!automation) {
+    console.warn(`[webhook] Automation ${capture.automation_id} not found for email capture`);
+    return;
+  }
+
+  console.log(`[webhook] ✉️ Email captured: ${email} from ${senderId} → automation "${automation.name}" tag="${automation.systemeio_tag}"`);
+
+  // Mark capture as done
+  await supabaseAdmin
+    .from("dm_email_captures")
+    .update({ status: "captured", email, captured_at: new Date().toISOString() })
+    .eq("id", capture.id);
+
+  // Sync to Systeme.io
+  if (automation.systemeio_tag) {
+    try {
+      const firstName = extractFirstName(capture.sender_name ?? "");
+      await addToSystemeIo({ email, firstName, tag: automation.systemeio_tag });
+      console.log(`[webhook] ✅ Systeme.io sync OK: ${email} → tag "${automation.systemeio_tag}"`);
+      await logWebhook("sio_sync_ok", { pageId, userId: capture.user_id, payload: { email, tag: automation.systemeio_tag, automationId: capture.automation_id } });
+    } catch (err) {
+      console.error("[webhook] Systeme.io sync failed:", err);
+      await logWebhook("sio_sync_fail", { pageId, userId: capture.user_id, payload: { email, error: String(err).slice(0, 200) } });
+    }
+  }
+
+  // Send confirmation DM if configured
+  if (automation.email_dm_message) {
+    try {
+      // Get page token for sending the confirmation DM
+      const { data: messengerConn } = await supabaseAdmin
+        .from("social_connections")
+        .select("access_token_encrypted")
+        .eq("user_id", capture.user_id)
+        .eq("platform", "facebook_messenger")
+        .maybeSingle();
+
+      let dmToken: string | undefined;
+      if (messengerConn?.access_token_encrypted) {
+        dmToken = decrypt(messengerConn.access_token_encrypted);
+      } else {
+        // Fallback to Facebook OAuth token
+        const { data: fbConn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted")
+          .eq("user_id", capture.user_id)
+          .eq("platform", "facebook")
+          .eq("platform_user_id", pageId)
+          .maybeSingle();
+        if (fbConn?.access_token_encrypted) {
+          dmToken = decrypt(fbConn.access_token_encrypted);
+        }
+      }
+
+      if (dmToken) {
+        const firstName = extractFirstName(capture.sender_name ?? "");
+        const confirmText = personalize(automation.email_dm_message, {
+          prenom: firstName,
+          firstname: firstName,
+          email,
+        });
+        await sendMetaDM(dmToken, senderId, confirmText, pageId);
+        console.log(`[webhook] Confirmation DM sent to ${senderId}`);
+      }
+    } catch (err) {
+      console.error("[webhook] Confirmation DM failed:", err);
+    }
+  }
 }
 
 /* ─── Types ─── */
