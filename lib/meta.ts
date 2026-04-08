@@ -170,8 +170,6 @@ const MESSENGER_SCOPES = [
   "pages_messaging",
   "pages_manage_metadata",
   "pages_read_engagement",
-  "pages_manage_engagement",
-  "pages_read_user_content",
 ];
 
 /**
