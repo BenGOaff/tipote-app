@@ -4,7 +4,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Linkedin, Facebook, Instagram, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2, Eye, MessageSquare, Tag, User } from "lucide-react";
+import { Linkedin, Facebook, Instagram, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2, Eye, MessageSquare, MessageCircle, Tag, User } from "lucide-react";
 
 // Icone X (Twitter) - SVG officiel du logo X
 function XIcon({ className }: { className?: string }) {
@@ -223,6 +223,15 @@ const PLATFORMS: PlatformConfig[] = [
     oauthUrl: "/api/auth/meta",
   },
   {
+    key: "facebook_messenger",
+    label: "Messenger",
+    icon: <MessageCircle className="h-5 w-5 text-[#0084FF]" />,
+    color: "bg-[#0084FF]",
+    bgColor: "bg-[#0084FF]/10",
+    hoverColor: "hover:bg-[#0073E6]",
+    oauthUrl: "/api/auth/facebook-messenger",
+  },
+  {
     key: "instagram",
     label: "Instagram",
     icon: <Instagram className="h-5 w-5 text-[#E1306C]" />,
@@ -305,6 +314,20 @@ export default function SocialConnections() {
       toast({
         title: `${t("toast.errorTitle")} Facebook`,
         description: decodeURIComponent(metaError),
+        variant: "destructive",
+      });
+    }
+
+    // Messenger
+    if (searchParams.get("messenger_connected") === "1") {
+      toast({ title: "Messenger connecté", description: "Les automatisations DM Facebook sont maintenant actives." });
+      fetchConnections();
+    }
+    const messengerError = searchParams.get("messenger_error");
+    if (messengerError) {
+      toast({
+        title: `${t("toast.errorTitle")} Messenger`,
+        description: decodeURIComponent(messengerError),
         variant: "destructive",
       });
     }

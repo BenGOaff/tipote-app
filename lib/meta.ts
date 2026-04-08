@@ -161,6 +161,64 @@ export function buildAuthorizationUrl(state: string): string {
 }
 
 // ----------------------------------------------------------------
+// Facebook Messenger OAuth (via Tipote ter app — has Messenger product)
+// Used to get a per-user Page token with pages_messaging permission.
+// ----------------------------------------------------------------
+
+const MESSENGER_SCOPES = [
+  "pages_show_list",
+  "pages_messaging",
+  "pages_manage_metadata",
+  "pages_read_engagement",
+];
+
+/**
+ * Build OAuth URL for Facebook Messenger connection via Tipote ter.
+ * This gives us a token with pages_messaging (which the main Tipote app doesn't have).
+ */
+export function buildMessengerAuthorizationUrl(state: string): string {
+  const appId = getInstagramMetaAppId(); // Tipote ter
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const redirectUri = `${appUrl}/api/auth/facebook-messenger/callback`;
+
+  const params = new URLSearchParams({
+    client_id: appId,
+    redirect_uri: redirectUri,
+    scope: MESSENGER_SCOPES.join(","),
+    response_type: "code",
+    state,
+  });
+  return `${FB_AUTH_URL}?${params.toString()}`;
+}
+
+/**
+ * Exchange OAuth code for token using Tipote ter credentials.
+ */
+export async function exchangeMessengerCodeForToken(code: string): Promise<{
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}> {
+  const appId = getInstagramMetaAppId();
+  const appSecret = getInstagramMetaAppSecret();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const redirectUri = `${appUrl}/api/auth/facebook-messenger/callback`;
+
+  const params = new URLSearchParams({
+    client_id: appId,
+    client_secret: appSecret,
+    redirect_uri: redirectUri,
+    code,
+  });
+  const res = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${params}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Messenger token exchange failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
+// ----------------------------------------------------------------
 // Threads OAuth 2.0 (endpoint separe : threads.net/oauth/authorize)
 // ----------------------------------------------------------------
 

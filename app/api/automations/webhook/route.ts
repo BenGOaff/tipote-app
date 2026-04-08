@@ -451,23 +451,50 @@ async function processComment(params: {
         oauthTokenPrefix: page_access_token.slice(0, 10),
       }});
 
-      // Tentative 1 : Private Reply avec token OAuth de l'user
-      dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
-      if (!dmResult.ok) {
-        await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+      // DM Facebook : utiliser le token Messenger per-user (facebook_messenger dans social_connections)
+      // qui a pages_messaging via l'app Tipote ter.
+      // Fallback: MESSENGER_PAGE_ACCESS_TOKEN env var, puis page_access_token OAuth.
+      let dmToken = page_access_token;
 
-        // Tentative 2 : MESSENGER_PAGE_ACCESS_TOKEN en fallback (si configuré et différent)
-        const messengerToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
-        if (messengerToken && messengerToken !== page_access_token) {
-          dmResult = await sendFacebookPrivateReply(messengerToken, comment_id, dmText, page_id);
+      // Chercher le token messenger per-user dans social_connections
+      try {
+        const { data: messengerConn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted")
+          .eq("user_id", user_id ?? connUserId)
+          .eq("platform", "facebook_messenger")
+          .maybeSingle();
+
+        if (messengerConn?.access_token_encrypted) {
+          dmToken = decrypt(messengerConn.access_token_encrypted);
+          await logWebhook("dm_using_per_user_messenger_token", { pageId: page_id });
+        } else if (process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
+          dmToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+          await logWebhook("dm_using_env_messenger_token", { pageId: page_id });
+        }
+      } catch (e) {
+        console.warn("[webhook] Failed to get per-user messenger token:", e);
+        if (process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
+          dmToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+        }
+      }
+
+      // Tentative 1 : Private Reply avec le token DM (per-user messenger ou fallback)
+      dmResult = await sendFacebookPrivateReply(dmToken, comment_id, dmText, page_id);
+      if (!dmResult.ok) {
+        await logWebhook("dm_private_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+
+        // Tentative 2 : essayer avec OAuth si différent
+        if (page_access_token !== dmToken) {
+          dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
           if (!dmResult.ok) {
-            await logWebhook("dm_private_reply_fail_messenger", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+            await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
           }
         }
 
         // Tentative 3 : recipient.id (ne marche que si conversation déjà ouverte)
         if (!dmResult.ok) {
-          dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
+          dmResult = await sendMetaDM(dmToken, sender_id, dmText, page_id);
         }
       }
     } else {
