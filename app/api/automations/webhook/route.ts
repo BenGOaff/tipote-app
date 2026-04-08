@@ -424,7 +424,32 @@ async function processComment(params: {
         console.log(`[webhook] Comment reply sent for ${comment_id}`);
       } catch (err) {
         console.error(`[webhook] Comment reply FAILED for ${comment_id}:`, err);
-        await logWebhook("comment_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: String(err).slice(0, 200) } });
+        await logWebhook("comment_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: String(err).slice(0, 200), tokenUsed: "oauth" } });
+
+        // Facebook: fallback to per-user Messenger token for comment reply
+        // The OAuth token (Tipote app) may lack pages_manage_engagement;
+        // the Messenger token (Tipote ter) may have it.
+        if (platform === "facebook" && user_id) {
+          try {
+            const { data: messengerConn } = await supabaseAdmin
+              .from("social_connections")
+              .select("access_token_encrypted")
+              .eq("user_id", user_id)
+              .eq("platform", "facebook_messenger")
+              .maybeSingle();
+
+            if (messengerConn?.access_token_encrypted) {
+              const messengerToken = decrypt(messengerConn.access_token_encrypted);
+              await replyToComment(messengerToken, comment_id, replyText);
+              commentReplyOk = true;
+              console.log(`[webhook] Comment reply sent via Messenger token for ${comment_id}`);
+              await logWebhook("comment_reply_ok_messenger_token", { pageId: page_id, payload: { commentId: comment_id } });
+            }
+          } catch (err2) {
+            console.error(`[webhook] Comment reply via Messenger token also FAILED:`, err2);
+            await logWebhook("comment_reply_fail_messenger_token", { pageId: page_id, payload: { commentId: comment_id, error: String(err2).slice(0, 200) } });
+          }
+        }
       }
     }
 
