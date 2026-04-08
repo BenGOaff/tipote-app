@@ -648,7 +648,31 @@ async function handleInstagramNativePayload(payload: MetaNativePayload): Promise
   for (const entry of payload.entry ?? []) {
     const igAccountId = entry.id;
 
+    // Instagram messaging events arrive in entry.messaging[] (same structure as FB)
+    if (entry.messaging?.length) {
+      console.log("[webhook/instagram] 📨 Messaging event received for IG:", igAccountId, "count:", entry.messaging.length);
+      await logWebhook("ig_messaging_event", { pageId: igAccountId, payload: { count: entry.messaging.length } });
+
+      for (const msg of entry.messaging) {
+        if (msg.message?.text && msg.sender?.id && msg.sender.id !== igAccountId) {
+          await handleIncomingDM(igAccountId, msg.sender.id, msg.message.text);
+        }
+      }
+    }
+
     for (const change of entry.changes ?? []) {
+      // Instagram DM messages can also arrive as changes with field "messages"
+      if (change.field === "messages") {
+        const val = change.value as any;
+        const senderId = val?.sender?.id ?? val?.from?.id;
+        const text = val?.message ?? val?.text;
+        if (senderId && text && senderId !== igAccountId) {
+          console.log("[webhook/instagram] 📨 Message change event:", igAccountId);
+          await handleIncomingDM(igAccountId, senderId, text);
+        }
+        continue;
+      }
+
       if (change.field !== "comments") continue;
       const val = change.value;
       // Le payload Instagram comments a "text" (pas "message") et "from.username"
@@ -728,7 +752,7 @@ async function handleIncomingDM(pageId: string, senderId: string, messageText: s
   // Find the pending email capture for this sender on this page
   const { data: capture } = await supabaseAdmin
     .from("dm_email_captures")
-    .select("id, automation_id, user_id, sender_name")
+    .select("id, automation_id, user_id, sender_name, platform")
     .eq("page_id", pageId)
     .eq("sender_id", senderId)
     .eq("status", "pending")
@@ -778,40 +802,67 @@ async function handleIncomingDM(pageId: string, senderId: string, messageText: s
   // Send confirmation DM if configured
   if (automation.email_dm_message) {
     try {
-      // Get page token for sending the confirmation DM
-      const { data: messengerConn } = await supabaseAdmin
-        .from("social_connections")
-        .select("access_token_encrypted")
-        .eq("user_id", capture.user_id)
-        .eq("platform", "facebook_messenger")
-        .maybeSingle();
+      const firstName = extractFirstName(capture.sender_name ?? "");
+      const confirmText = personalize(automation.email_dm_message, {
+        prenom: firstName,
+        firstname: firstName,
+        email,
+      });
 
-      let dmToken: string | undefined;
-      if (messengerConn?.access_token_encrypted) {
-        dmToken = decrypt(messengerConn.access_token_encrypted);
-      } else {
-        // Fallback to Facebook OAuth token
-        const { data: fbConn } = await supabaseAdmin
+      const platform = capture.platform ?? "facebook";
+
+      if (platform === "instagram") {
+        // Instagram: look up the instagram connection token
+        const { data: igConn } = await supabaseAdmin
           .from("social_connections")
           .select("access_token_encrypted")
           .eq("user_id", capture.user_id)
-          .eq("platform", "facebook")
+          .eq("platform", "instagram")
           .eq("platform_user_id", pageId)
           .maybeSingle();
-        if (fbConn?.access_token_encrypted) {
-          dmToken = decrypt(fbConn.access_token_encrypted);
-        }
-      }
 
-      if (dmToken) {
-        const firstName = extractFirstName(capture.sender_name ?? "");
-        const confirmText = personalize(automation.email_dm_message, {
-          prenom: firstName,
-          firstname: firstName,
-          email,
-        });
-        await sendMetaDM(dmToken, senderId, confirmText, pageId);
-        console.log(`[webhook] Confirmation DM sent to ${senderId}`);
+        if (igConn?.access_token_encrypted) {
+          const igToken = decrypt(igConn.access_token_encrypted);
+          const result = await sendInstagramDMById(igToken, pageId, senderId, confirmText);
+          if (result.ok) {
+            console.log(`[webhook] IG confirmation DM sent to ${senderId}`);
+          } else {
+            console.warn(`[webhook] IG confirmation DM failed:`, result.error);
+          }
+        } else {
+          console.warn(`[webhook] No Instagram token found for confirmation DM, user=${capture.user_id} page=${pageId}`);
+        }
+      } else {
+        // Facebook: try Messenger token first, fallback to Facebook OAuth token
+        const { data: messengerConn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted")
+          .eq("user_id", capture.user_id)
+          .eq("platform", "facebook_messenger")
+          .maybeSingle();
+
+        let dmToken: string | undefined;
+        if (messengerConn?.access_token_encrypted) {
+          dmToken = decrypt(messengerConn.access_token_encrypted);
+        } else {
+          const { data: fbConn } = await supabaseAdmin
+            .from("social_connections")
+            .select("access_token_encrypted")
+            .eq("user_id", capture.user_id)
+            .eq("platform", "facebook")
+            .eq("platform_user_id", pageId)
+            .maybeSingle();
+          if (fbConn?.access_token_encrypted) {
+            dmToken = decrypt(fbConn.access_token_encrypted);
+          }
+        }
+
+        if (dmToken) {
+          await sendMetaDM(dmToken, senderId, confirmText, pageId);
+          console.log(`[webhook] FB confirmation DM sent to ${senderId}`);
+        } else {
+          console.warn(`[webhook] No Facebook token found for confirmation DM, user=${capture.user_id} page=${pageId}`);
+        }
       }
     } catch (err) {
       console.error("[webhook] Confirmation DM failed:", err);
