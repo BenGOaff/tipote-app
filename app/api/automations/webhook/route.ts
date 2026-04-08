@@ -461,7 +461,7 @@ async function processComment(params: {
         const { data: messengerConn } = await supabaseAdmin
           .from("social_connections")
           .select("access_token_encrypted")
-          .eq("user_id", user_id ?? connUserId)
+          .eq("user_id", user_id)
           .eq("platform", "facebook_messenger")
           .maybeSingle();
 
