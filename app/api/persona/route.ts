@@ -132,7 +132,7 @@ export async function PATCH(request: NextRequest) {
     // Support two modes:
     // 1. Full persona save (title + pains + desires + channels)
     // 2. Markdown-only save (persona_detailed_markdown + narrative_synthesis_markdown)
-    const isMarkdownOnly = !input.title && (input.persona_detailed_markdown !== undefined || input.narrative_synthesis_markdown !== undefined);
+    const isMarkdownOnly = !input.title && (input.persona_detailed_markdown !== undefined || input.narrative_synthesis_markdown !== undefined || input.competitor_insights_markdown !== undefined);
 
     if (isMarkdownOnly) {
       // Save only the markdown fields into persona_json
@@ -151,6 +151,7 @@ export async function PATCH(request: NextRequest) {
       const updatedPj: AnyRecord = { ...currentPj };
       if (input.persona_detailed_markdown !== undefined) updatedPj.persona_detailed_markdown = input.persona_detailed_markdown;
       if (input.narrative_synthesis_markdown !== undefined) updatedPj.narrative_synthesis_markdown = input.narrative_synthesis_markdown;
+      if (input.competitor_insights_markdown !== undefined) updatedPj.competitor_insights_markdown = input.competitor_insights_markdown;
 
       if (existingRow) {
         // UPDATE existing row + backfill project_id if missing

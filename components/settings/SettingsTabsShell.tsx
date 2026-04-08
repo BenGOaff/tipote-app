@@ -747,6 +747,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [personaDetailedMarkdown, setPersonaDetailedMarkdown] = useState<string | null>(null);
   const [initialPersonaDetailedMarkdown, setInitialPersonaDetailedMarkdown] = useState<string | null>(null);
   const [competitorInsightsMarkdown, setCompetitorInsightsMarkdown] = useState<string | null>(null);
+  const [initialCompetitorInsightsMarkdown, setInitialCompetitorInsightsMarkdown] = useState<string | null>(null);
+  const [insightsEditMode, setInsightsEditMode] = useState(false);
   const [narrativeSynthesisMarkdown, setNarrativeSynthesisMarkdown] = useState<string | null>(null);
   const [initialNarrativeSynthesisMarkdown, setInitialNarrativeSynthesisMarkdown] = useState<string | null>(null);
   const [personaDetailTab, setPersonaDetailTab] = useState<"summary" | "detailed" | "synthesis">("summary");
@@ -758,8 +760,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const personaMarkdownDirty = useMemo(() => {
     return (personaDetailedMarkdown ?? "") !== (initialPersonaDetailedMarkdown ?? "")
-      || (narrativeSynthesisMarkdown ?? "") !== (initialNarrativeSynthesisMarkdown ?? "");
-  }, [personaDetailedMarkdown, initialPersonaDetailedMarkdown, narrativeSynthesisMarkdown, initialNarrativeSynthesisMarkdown]);
+      || (narrativeSynthesisMarkdown ?? "") !== (initialNarrativeSynthesisMarkdown ?? "")
+      || (competitorInsightsMarkdown ?? "") !== (initialCompetitorInsightsMarkdown ?? "");
+  }, [personaDetailedMarkdown, initialPersonaDetailedMarkdown, narrativeSynthesisMarkdown, initialNarrativeSynthesisMarkdown, competitorInsightsMarkdown, initialCompetitorInsightsMarkdown]);
 
   const savePersonaMarkdown = () => {
     startSavingPersonaMarkdown(async () => {
@@ -770,12 +773,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           body: JSON.stringify({
             persona_detailed_markdown: personaDetailedMarkdown,
             narrative_synthesis_markdown: narrativeSynthesisMarkdown,
+            competitor_insights_markdown: competitorInsightsMarkdown,
           }),
         });
         const json = (await res.json().catch(() => null)) as any;
         if (!json?.ok) throw new Error(json?.error || "Erreur");
         setInitialPersonaDetailedMarkdown(personaDetailedMarkdown);
         setInitialNarrativeSynthesisMarkdown(narrativeSynthesisMarkdown);
+        setInitialCompetitorInsightsMarkdown(competitorInsightsMarkdown);
         toast({ title: "Persona enregistré" });
       } catch (e: any) {
         toast({ title: "Enregistrement impossible", description: e?.message ?? "Erreur inconnue", variant: "destructive" });
@@ -795,7 +800,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           setPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
           setInitialPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
         }
-        if (json.persona.competitor_insights_markdown) setCompetitorInsightsMarkdown(json.persona.competitor_insights_markdown);
+        if (json.persona.competitor_insights_markdown) {
+          setCompetitorInsightsMarkdown(json.persona.competitor_insights_markdown);
+          setInitialCompetitorInsightsMarkdown(json.persona.competitor_insights_markdown);
+        }
         if (json.persona.narrative_synthesis_markdown) {
           setNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
           setInitialNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
@@ -2317,11 +2325,47 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 <>
                   <hr className="border-border" />
                   <div className="p-5">
-                    <h4 className="text-base font-bold mb-3">Mécanisme unique &amp; analyse concurrentielle</h4>
-                    <AIContent
-                      content={competitorInsightsMarkdown}
-                      mode="markdown"
-                    />
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-base font-bold">Mécanisme unique &amp; analyse concurrentielle</h4>
+                      {!insightsEditMode && (
+                        <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setInsightsEditMode(true)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                          Modifier
+                        </Button>
+                      )}
+                    </div>
+                    {insightsEditMode ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={competitorInsightsMarkdown}
+                          onChange={(e) => setCompetitorInsightsMarkdown(e.target.value)}
+                          className="w-full min-h-[200px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
+                          placeholder="Mécanisme unique & analyse concurrentielle..."
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setInsightsEditMode(false)}>
+                            <Eye className="w-3.5 h-3.5" />
+                            Aperçu
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
+                            <Save className="w-4 h-4 mr-2" />
+                            {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
+                        onClick={() => setInsightsEditMode(true)}
+                        title="Cliquer pour modifier"
+                      >
+                        <AIContent
+                          content={competitorInsightsMarkdown}
+                          mode="markdown"
+                        />
+                      </div>
+                    )}
                   </div>
                 </>
               )}
