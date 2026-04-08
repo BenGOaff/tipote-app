@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       console.warn("[Messenger callback] Long-lived exchange failed, using short-lived:", e);
     }
 
-    // Get user's Pages (need the Page token with pages_messaging)
+    // Get user's Pages — try me/accounts first, then fallback to direct page ID lookup
     let pages: Array<{ id: string; name: string; access_token: string }> = [];
     try {
       const pagesRes = await fetch(
@@ -93,15 +93,52 @@ export async function GET(req: NextRequest) {
       );
       const pagesData = await pagesRes.json();
       pages = pagesData.data ?? [];
-      console.log("[Messenger callback] Pages found:", pages.length);
+      console.log("[Messenger callback] Pages from me/accounts:", pages.length);
     } catch (e) {
-      console.error("[Messenger callback] Failed to get pages:", e);
+      console.error("[Messenger callback] me/accounts failed:", e);
+    }
+
+    // Fallback: if me/accounts is empty, look up the user's existing Facebook
+    // connection to get the page ID, then fetch the page token directly
+    if (pages.length === 0) {
+      console.log("[Messenger callback] me/accounts empty, trying direct page lookup...");
+      try {
+        const { data: fbConn } = await supabaseAdmin
+          .from("social_connections")
+          .select("platform_user_id, platform_username")
+          .eq("user_id", user.id)
+          .eq("platform", "facebook")
+          .maybeSingle();
+
+        if (fbConn?.platform_user_id) {
+          const pageId = fbConn.platform_user_id;
+          console.log("[Messenger callback] Found existing FB page:", pageId);
+
+          const pageRes = await fetch(
+            `https://graph.facebook.com/v22.0/${pageId}?fields=id,name,access_token&access_token=${longLivedToken}`
+          );
+          const pageData = await pageRes.json();
+
+          if (pageData.access_token) {
+            pages = [{
+              id: pageData.id,
+              name: pageData.name || fbConn.platform_username || "Page",
+              access_token: pageData.access_token,
+            }];
+            console.log("[Messenger callback] Direct page lookup OK:", pageData.name);
+          } else {
+            console.warn("[Messenger callback] Direct page lookup failed:", JSON.stringify(pageData));
+          }
+        }
+      } catch (e) {
+        console.error("[Messenger callback] Direct page lookup error:", e);
+      }
     }
 
     if (pages.length === 0) {
       return NextResponse.redirect(
         `${settingsUrl}&messenger_error=${encodeURIComponent(
-          "Aucune Page Facebook trouvée. Assure-toi d'avoir sélectionné ta Page lors de l'autorisation."
+          "Aucune Page Facebook trouvée. Connecte d'abord Facebook, puis Messenger."
         )}`
       );
     }
