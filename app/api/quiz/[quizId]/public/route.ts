@@ -82,8 +82,8 @@ async function ensureSioContact(
     // Update existing contact with any new fields (phone, country, name)
     if (fields && Object.values(fields).some(Boolean)) {
       const patchBody: Record<string, unknown> = {};
-      if (fields.firstName) patchBody.firstName = fields.firstName;
       const patchFields: { slug: string; value: string }[] = [];
+      if (fields.firstName) patchFields.push({ slug: "first_name", value: fields.firstName });
       if (fields.surname) patchFields.push({ slug: "surname", value: fields.surname });
       if (fields.phoneNumber) patchFields.push({ slug: "phone_number", value: fields.phoneNumber });
       if (fields.country) patchFields.push({ slug: "country", value: fields.country });
@@ -95,15 +95,14 @@ async function ensureSioContact(
     return existingId;
   }
   const contactBody: Record<string, unknown> = { email, locale: "fr" };
-  if (fields?.firstName) contactBody.firstName = fields.firstName;
-  // Systeme.io uses "fields" object for surname, phone_number, country
-  const extraFields: Record<string, string> = {};
-  if (fields?.surname) extraFields.surname = fields.surname;
-  if (fields?.phoneNumber) extraFields.phone_number = fields.phoneNumber;
-  if (fields?.country) extraFields.country = fields.country;
-  if (Object.keys(extraFields).length > 0) contactBody.fields = [
-    ...Object.entries(extraFields).map(([slug, value]) => ({ slug, value })),
-  ];
+  // Systeme.io: ALL contact fields must be in the "fields" array with slugs
+  // (see https://developer.systeme.io/reference/api — POST /contacts example)
+  const sioFields: { slug: string; value: string }[] = [];
+  if (fields?.firstName) sioFields.push({ slug: "first_name", value: fields.firstName });
+  if (fields?.surname) sioFields.push({ slug: "surname", value: fields.surname });
+  if (fields?.phoneNumber) sioFields.push({ slug: "phone_number", value: fields.phoneNumber });
+  if (fields?.country) sioFields.push({ slug: "country", value: fields.country });
+  if (sioFields.length > 0) contactBody.fields = sioFields;
   const create = await sioFetch(apiKey, "/contacts", { method: "POST", body: contactBody });
   if (create.ok && create.data?.id) return Number(create.data.id);
   // 422 = contact already exists

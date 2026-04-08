@@ -191,12 +191,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
         if (search.ok && Array.isArray(search.data?.items) && search.data.items.length > 0) {
           contactId = Number(search.data.items[0].id);
         } else {
-          // Create contact with all available fields
+          // Create contact with all available fields (SIO requires fields array with slugs)
           const contactBody: Record<string, unknown> = { email, locale: "fr" };
-          if (lead.first_name) contactBody.firstName = lead.first_name;
-          if (lead.last_name) contactBody.surname = lead.last_name;
-          if (lead.phone) contactBody.phoneNumber = lead.phone;
-          if (lead.country) contactBody.country = lead.country;
+          const sioFields: { slug: string; value: string }[] = [];
+          if (lead.first_name) sioFields.push({ slug: "first_name", value: lead.first_name });
+          if (lead.last_name) sioFields.push({ slug: "surname", value: lead.last_name });
+          if (lead.phone) sioFields.push({ slug: "phone_number", value: lead.phone });
+          if (lead.country) sioFields.push({ slug: "country", value: lead.country });
+          if (sioFields.length > 0) contactBody.fields = sioFields;
           const create = await sioRequest(apiKey, "/contacts", {
             method: "POST",
             body: contactBody,
