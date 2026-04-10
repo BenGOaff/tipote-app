@@ -273,7 +273,7 @@ export default function LoginForm() {
               <div className="mt-6 pt-6 border-t border-border">
                 <p className="text-center text-sm text-muted-foreground mb-3">{t("noAccount")}</p>
                 <Button variant="outline" className="w-full" asChild>
-                  <Link href="/signup">{t("createAccount")}</Link>
+                  <a href="https://www.tipote.com/" target="_blank" rel="noopener noreferrer">{t("createAccount")}</a>
                 </Button>
               </div>
             )}

@@ -248,6 +248,17 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
+    // ── Check response limit for free plan ──
+    try {
+      const { data: limitResult } = await admin.rpc("increment_response_count", { p_user_id: quiz.user_id });
+      if (limitResult && typeof limitResult === "object" && (limitResult as Record<string, unknown>).allowed === false) {
+        // Still save the lead but mark the quiz owner has hit limit
+        console.warn(`[Tiquiz] Quiz owner ${quiz.user_id} hit response limit`);
+      }
+    } catch {
+      // fail-open: never block quiz visitors
+    }
+
     const resultId = (body.result_id as string) ?? null;
     const firstName = String(body.first_name ?? "").trim().slice(0, 100);
     const lastName = String(body.last_name ?? "").trim().slice(0, 100);

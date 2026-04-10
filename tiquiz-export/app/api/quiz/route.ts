@@ -54,6 +54,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "title is required" }, { status: 400 });
     }
 
+    // Check quiz limit for free plan (1 quiz max)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!profile || (profile as Record<string, unknown>).plan === "free") {
+      const { count } = await supabase
+        .from("quizzes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      if ((count ?? 0) >= 1) {
+        return NextResponse.json(
+          { ok: false, error: "FREE_PLAN_QUIZ_LIMIT", message: "Le plan gratuit est limité à 1 quiz. Passe à un plan payant pour créer plus de quiz." },
+          { status: 403 },
+        );
+      }
+    }
+
     // Insert quiz
     const { data: quiz, error: quizError } = await supabase
       .from("quizzes")
