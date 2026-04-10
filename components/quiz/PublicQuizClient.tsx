@@ -407,6 +407,26 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
 
   const t = getT(quiz?.locale, quiz?.address_form);
 
+  // ─── Funnel tracking (fire & forget, non-blocking) ───
+  const trackedRef = useCallback(() => {
+    // We use a mutable Set to avoid tracking the same event twice per session
+    const s = new Set<string>();
+    return s;
+  }, [])();
+
+  const trackEvent = useCallback(
+    (event: "start" | "complete") => {
+      if (previewData || trackedRef.has(event)) return;
+      trackedRef.add(event);
+      fetch(`/api/quiz/${quizId}/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event }),
+      }).catch(() => {}); // non-blocking
+    },
+    [quizId, previewData, trackedRef],
+  );
+
   useEffect(() => {
     // In preview mode, data is already provided via props
     if (previewData) {
@@ -471,6 +491,8 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
     if (quiz && currentQ < quiz.questions.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
+      // Visitor completed all questions → track funnel event
+      trackEvent("complete");
       setStep("email");
     }
   };
@@ -637,7 +659,7 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
               {totalQ} {t.questions} — ~{Math.max(1, Math.ceil(totalQ * 0.5))} {t.min}
             </p>
 
-            <Button size="lg" className="w-full h-12 text-base rounded-full" onClick={() => setStep("quiz")}>
+            <Button size="lg" className="w-full h-12 text-base rounded-full" onClick={() => { trackEvent("start"); setStep("quiz"); }}>
               {t.start}
             </Button>
           </div>

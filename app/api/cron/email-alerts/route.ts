@@ -254,5 +254,128 @@ export async function GET(req: NextRequest) {
     results.push(`credits_depleted_emails: error - ${e instanceof Error ? e.message : "unknown"}`);
   }
 
+  // ─── 3. Systeme.io API key invalid/expired ───
+  // Users who have a SIO key configured: test it periodically.
+  // If it fails (401/403), send an alert so they can re-enter it before losing leads.
+  try {
+    const { data: profiles } = await supabaseAdmin
+      .from("business_profiles")
+      .select("user_id, project_id, sio_user_api_key")
+      .not("sio_user_api_key", "is", null)
+      .neq("sio_user_api_key", "");
+
+    const uniqueUsers = new Map<string, { apiKey: string; projectId: string | null }>();
+    for (const p of profiles ?? []) {
+      const key = String(p.sio_user_api_key ?? "").trim();
+      if (key && !uniqueUsers.has(p.user_id)) {
+        uniqueUsers.set(p.user_id, { apiKey: key, projectId: p.project_id });
+      }
+    }
+
+    let sioSent = 0;
+    for (const [userId, { apiKey }] of uniqueUsers) {
+      // Quick health check: try listing tags (lightweight endpoint)
+      try {
+        const check = await fetch("https://api.systeme.io/api/tags?limit=1", {
+          headers: { "X-API-Key": apiKey, Accept: "application/json" },
+        });
+
+        // Key is valid — skip
+        if (check.ok) continue;
+        // Only alert on auth failures (401/403), not transient errors
+        if (check.status !== 401 && check.status !== 403) continue;
+      } catch {
+        // Network error — don't alert (transient)
+        continue;
+      }
+
+      // Check email preferences
+      const { data: prefs } = await supabaseAdmin
+        .from("email_preferences")
+        .select("social_alerts")
+        .eq("user_id", userId)
+        .maybeSingle();
+      // Reuse social_alerts preference (integration alerts)
+      if (prefs && prefs.social_alerts === false) continue;
+
+      // Max 1 alert per 3 days
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentNotif } = await supabaseAdmin
+        .from("notifications")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("type", "sio_key_invalid")
+        .gte("created_at", threeDaysAgo)
+        .limit(1);
+      if (recentNotif?.length) continue;
+
+      // Daily rate limit
+      if (!(await canSendEmailToday(userId, supabaseAdmin))) continue;
+
+      // Get user email + locale
+      const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (!user?.email) continue;
+
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("first_name, content_locale")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const locale = profile?.content_locale || "fr";
+      const name = profile?.first_name || "";
+      const greeting = name ? `${name},` : (locale === "fr" ? "Bonjour," : "Hello,");
+
+      const subjects: Record<string, string> = {
+        fr: "🔑 Ta clé API Systeme.io ne fonctionne plus",
+        en: "🔑 Your Systeme.io API key is no longer working",
+        es: "🔑 Tu clave API de Systeme.io ya no funciona",
+        it: "🔑 La tua chiave API Systeme.io non funziona più",
+      };
+
+      const bodies: Record<string, string> = {
+        fr: "Ta clé API Systeme.io enregistrée dans Tipote a expiré ou a été révoquée.<br/><br/><strong>Tes quiz continuent de capturer les emails</strong>, mais les contacts ne sont plus transmis à ton compte Systeme.io tant que la clé n'est pas mise à jour.<br/><br/>Va dans tes réglages pour coller ta nouvelle clé API — ça prend 30 secondes.",
+        en: "The Systeme.io API key stored in Tipote has expired or been revoked.<br/><br/><strong>Your quizzes still capture emails</strong>, but contacts are no longer synced to your Systeme.io account until the key is updated.<br/><br/>Go to your settings to paste your new API key — it takes 30 seconds.",
+        es: "Tu clave API de Systeme.io registrada en Tipote ha expirado o fue revocada.<br/><br/><strong>Tus quizzes siguen capturando emails</strong>, pero los contactos ya no se sincronizan con tu cuenta Systeme.io.<br/><br/>Ve a tus ajustes para pegar tu nueva clave API.",
+        it: "La tua chiave API Systeme.io registrata in Tipote è scaduta o è stata revocata.<br/><br/><strong>I tuoi quiz continuano a catturare le email</strong>, ma i contatti non vengono più sincronizzati con il tuo account Systeme.io.<br/><br/>Vai nelle impostazioni per incollare la nuova chiave API.",
+      };
+
+      const ctaLabels: Record<string, string> = {
+        fr: "Mettre à jour ma clé API",
+        en: "Update my API key",
+        es: "Actualizar mi clave API",
+        it: "Aggiorna la mia chiave API",
+      };
+
+      await sendEmail({
+        to: user.email,
+        subject: subjects[locale] || subjects.fr,
+        greeting,
+        body: bodies[locale] || bodies.fr,
+        ctaLabel: ctaLabels[locale] || ctaLabels.fr,
+        ctaUrl: `${appUrl}/settings?tab=integrations`,
+        locale,
+        preheader: locale === "fr"
+          ? "Les leads de tes quiz ne sont plus transmis à Systeme.io"
+          : "Your quiz leads are no longer syncing to Systeme.io",
+      });
+
+      await supabaseAdmin.from("notifications").insert({
+        user_id: userId,
+        type: "sio_key_invalid",
+        title: locale === "fr" ? "Clé API Systeme.io invalide" : "Systeme.io API key invalid",
+        icon: "🔑",
+        action_url: "/settings?tab=integrations",
+        action_label: ctaLabels[locale] || ctaLabels.fr,
+        meta: { email_sent: true },
+      });
+
+      sioSent++;
+    }
+    results.push(`sio_key_alerts: ${uniqueUsers.size} users with keys, ${sioSent} alerts sent`);
+  } catch (e) {
+    results.push(`sio_key_alerts: error - ${e instanceof Error ? e.message : "unknown"}`);
+  }
+
   return NextResponse.json({ ok: true, results });
 }

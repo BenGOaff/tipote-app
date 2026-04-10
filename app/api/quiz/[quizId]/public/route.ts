@@ -69,7 +69,26 @@ async function ensureSioTag(apiKey: string, tagName: string): Promise<number | n
 }
 
 /**
+ * Build SIO custom fields array from our field map.
+ * `includeCountry` allows retrying without the country slug if SIO rejects it.
+ */
+function buildSioFields(
+  fields: { firstName?: string; surname?: string; phoneNumber?: string; country?: string } | undefined,
+  includeCountry: boolean,
+): { slug: string; value: string }[] {
+  if (!fields) return [];
+  const out: { slug: string; value: string }[] = [];
+  if (fields.firstName) out.push({ slug: "first_name", value: fields.firstName });
+  if (fields.surname) out.push({ slug: "surname", value: fields.surname });
+  if (fields.phoneNumber) out.push({ slug: "phone_number", value: fields.phoneNumber });
+  if (includeCountry && fields.country) out.push({ slug: "country", value: fields.country });
+  return out;
+}
+
+/**
  * Find-or-create a contact in Systeme.io, returns contactId or null.
+ * Handles SIO accounts that don't have a "country" custom field:
+ * if creating/updating with country fails (422), retries WITHOUT country.
  */
 async function ensureSioContact(
   apiKey: string,
@@ -81,35 +100,60 @@ async function ensureSioContact(
     const existingId = Number(search.data.items[0].id);
     // Update existing contact with any new fields (phone, country, name)
     if (fields && Object.values(fields).some(Boolean)) {
-      const patchBody: Record<string, unknown> = {};
-      const patchFields: { slug: string; value: string }[] = [];
-      if (fields.firstName) patchFields.push({ slug: "first_name", value: fields.firstName });
-      if (fields.surname) patchFields.push({ slug: "surname", value: fields.surname });
-      if (fields.phoneNumber) patchFields.push({ slug: "phone_number", value: fields.phoneNumber });
-      if (fields.country) patchFields.push({ slug: "country", value: fields.country });
-      if (patchFields.length > 0) patchBody.fields = patchFields;
-      if (Object.keys(patchBody).length > 0) {
-        await sioFetch(apiKey, `/contacts/${existingId}`, { method: "PATCH", body: patchBody });
+      const patchFields = buildSioFields(fields, true);
+      if (patchFields.length > 0) {
+        const patchRes = await sioFetch(apiKey, `/contacts/${existingId}`, {
+          method: "PATCH",
+          body: { fields: patchFields },
+        });
+        // If PATCH failed (likely invalid "country" slug), retry without country
+        if (!patchRes.ok && fields.country) {
+          const fallbackFields = buildSioFields(fields, false);
+          if (fallbackFields.length > 0) {
+            await sioFetch(apiKey, `/contacts/${existingId}`, {
+              method: "PATCH",
+              body: { fields: fallbackFields },
+            });
+          }
+        }
       }
     }
     return existingId;
   }
+
+  // Contact not found — create it
   const contactBody: Record<string, unknown> = { email, locale: "fr" };
-  // Systeme.io: ALL contact fields must be in the "fields" array with slugs
-  // (see https://developer.systeme.io/reference/api — POST /contacts example)
-  const sioFields: { slug: string; value: string }[] = [];
-  if (fields?.firstName) sioFields.push({ slug: "first_name", value: fields.firstName });
-  if (fields?.surname) sioFields.push({ slug: "surname", value: fields.surname });
-  if (fields?.phoneNumber) sioFields.push({ slug: "phone_number", value: fields.phoneNumber });
-  if (fields?.country) sioFields.push({ slug: "country", value: fields.country });
+  const sioFields = buildSioFields(fields, true);
   if (sioFields.length > 0) contactBody.fields = sioFields;
+
   const create = await sioFetch(apiKey, "/contacts", { method: "POST", body: contactBody });
   if (create.ok && create.data?.id) return Number(create.data.id);
-  // 422 = contact already exists
+
+  // 422 can mean: (a) contact already exists, or (b) invalid field slug (e.g. "country")
   if (create.status === 422) {
-    const retry = await sioFetch(apiKey, `/contacts?email=${encodeURIComponent(email)}&limit=10`);
-    if (retry.ok && Array.isArray(retry.data?.items) && retry.data.items.length > 0) {
-      return Number(retry.data.items[0].id);
+    // First check if the contact actually exists (case a)
+    const retrySearch = await sioFetch(apiKey, `/contacts?email=${encodeURIComponent(email)}&limit=10`);
+    if (retrySearch.ok && Array.isArray(retrySearch.data?.items) && retrySearch.data.items.length > 0) {
+      return Number(retrySearch.data.items[0].id);
+    }
+
+    // Contact doesn't exist — the 422 was likely due to invalid field slug (case b: "country")
+    // Retry creation without country field
+    if (fields?.country) {
+      const fallbackBody: Record<string, unknown> = { email, locale: "fr" };
+      const fallbackFields = buildSioFields(fields, false);
+      if (fallbackFields.length > 0) fallbackBody.fields = fallbackFields;
+
+      const retryCreate = await sioFetch(apiKey, "/contacts", { method: "POST", body: fallbackBody });
+      if (retryCreate.ok && retryCreate.data?.id) return Number(retryCreate.data.id);
+
+      // Still 422? Truly already exists
+      if (retryCreate.status === 422) {
+        const finalSearch = await sioFetch(apiKey, `/contacts?email=${encodeURIComponent(email)}&limit=10`);
+        if (finalSearch.ok && Array.isArray(finalSearch.data?.items) && finalSearch.data.items.length > 0) {
+          return Number(finalSearch.data.items[0].id);
+        }
+      }
     }
   }
   return null;
