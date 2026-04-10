@@ -1,0 +1,111 @@
+// lib/prompts/quiz/system.ts
+// AI prompt builder for quiz lead magnet generation
+
+type QuizPromptParams = {
+  objective: string;
+  target: string;
+  tone?: string;
+  cta?: string;
+  bonus?: string;
+  questionCount?: number;
+  resultCount?: number;
+  locale?: string;
+  addressForm?: "tu" | "vous";
+};
+
+export function buildQuizGenerationPrompt(params: QuizPromptParams): {
+  system: string;
+  user: string;
+} {
+  const {
+    objective,
+    target,
+    tone = "inspirant",
+    cta = "",
+    bonus = "",
+    questionCount = 7,
+    resultCount = 3,
+    locale = "fr",
+    addressForm = "tu",
+  } = params;
+
+  const formality = addressForm === "vous" ? "vous" : "tu";
+
+  const localeLabels: Record<string, string> = {
+    fr: "français",
+    en: "anglais (English)",
+    es: "espagnol (Español)",
+    de: "allemand (Deutsch)",
+    pt: "portugais (Português)",
+    it: "italien (Italiano)",
+    ar: "arabe (العربية)",
+  };
+  const langLabel = localeLabels[locale] || localeLabels.fr;
+
+  const system = `Tu es un expert en marketing digital, copywriting et lead generation.
+Tu crées des quiz viraux à forte conversion pour capturer des emails.
+
+LANGUE : Tout le contenu du quiz (titre, introduction, questions, options, résultats, CTA, share_message) DOIT être rédigé en ${langLabel}.
+
+PRINCIPES :
+- Chaque quiz doit donner une VRAIE valeur (insight, prise de conscience).
+- Les résultats ne sont PAS des jugements mais des profils valorisants et honnêtes.
+- Chaque résultat contient un insight fort, une projection motivante, et un pont naturel vers le CTA.
+- Le quiz doit être engageant, rapide (2-3 min), avec des questions simples et des options claires.
+- Le ton doit être ${tone}, jamais condescendant.
+- TUTOIEMENT/VOUVOIEMENT : Tu dois ${formality === "vous" ? "VOUVOYER" : "TUTOYER"} le lecteur du quiz dans TOUT le contenu. Utilise systématiquement "${formality}" et ses formes associées.
+- Les questions doivent être variées (pas juste des échelles 1-5).
+- Chaque option de réponse est mappée vers un profil résultat (result_index).
+
+FORMAT DE SORTIE : JSON strict, pas de markdown, pas de commentaires.
+{
+  "title": "Titre accrocheur du quiz",
+  "introduction": "Texte d'intro engageant (2-3 phrases max)",
+  "questions": [
+    {
+      "question_text": "La question",
+      "options": [
+        { "text": "Option A", "result_index": 0 },
+        { "text": "Option B", "result_index": 1 },
+        { "text": "Option C", "result_index": 2 }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "title": "Nom du profil",
+      "description": "Description valorisante du profil (2-3 phrases)",
+      "insight": "Prise de conscience forte et spécifique",
+      "projection": "Projection motivante",
+      "cta_text": "Texte du CTA personnalisé pour ce profil"
+    }
+  ],
+  "cta_text": "Texte du CTA principal",
+  "share_message": "Message d'incitation au partage"
+}`;
+
+  const userParts: string[] = [
+    `OBJECTIF DU QUIZ : ${objective}`,
+    `CIBLE : ${target}`,
+    `TON : ${tone}`,
+    `NOMBRE DE QUESTIONS : ${questionCount}`,
+    `NOMBRE DE PROFILS RÉSULTAT : ${resultCount}`,
+  ];
+
+  if (cta) userParts.push(`CTA FINAL SOUHAITÉ : ${cta}`);
+  if (bonus) userParts.push(`BONUS DE PARTAGE : ${bonus}\nGénère aussi un share_message engageant.`);
+
+  userParts.push(`LANGUE : ${langLabel}`);
+  userParts.push(`FORME D'ADRESSE : ${formality === "vous" ? "Vouvoiement (vous)" : "Tutoiement (tu)"}`);
+  userParts.push(
+    `\nIMPORTANT :`,
+    `- Génère exactement ${questionCount} questions avec ${resultCount} options chacune (une par profil).`,
+    `- Génère exactement ${resultCount} profils résultat.`,
+    `- Chaque option doit avoir un result_index entre 0 et ${resultCount - 1}.`,
+    `- Répartis les result_index de façon équilibrée dans les questions.`,
+    `- Tout le contenu DOIT être en ${langLabel}.`,
+    `- Réponds UNIQUEMENT en JSON valide.`,
+  );
+
+  return { system, user: userParts.join("\n") };
+}
