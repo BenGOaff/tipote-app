@@ -202,10 +202,13 @@ export async function middleware(req: NextRequest) {
         return res;
       }
 
-      // Cookie points to un-onboarded project (or no cookie), but another project IS completed
-      // → auto-heal: switch cookie to the completed project and allow through
+      // Cookie points to un-onboarded project (or no cookie), but another project IS completed.
+      // IMPORTANT: do NOT overwrite the cookie here. The user may have intentionally
+      // switched to this project via the project selector. Overwriting would lock them
+      // out of switching projects. Just allow through — the app handles per-project state.
+      // Only set cookie if there is NO cookie at all (e.g. first visit after login).
       if (completedProfile) {
-        if (completedProfile.project_id && completedProfile.project_id !== activeProjectId) {
+        if (!activeProjectId && completedProfile.project_id) {
           res.cookies.set(ACTIVE_PROJECT_COOKIE, completedProfile.project_id, {
             path: "/",
             maxAge: 365 * 24 * 60 * 60,
