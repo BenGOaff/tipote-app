@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { uploadImageToLinkedIn, publishPost } from "@/lib/linkedin";
+import { publishToFacebookPage, publishPhotoToFacebookPage, publishMultiPhotoToFacebookPage, publishVideoToFacebookPage } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
 
@@ -362,81 +363,107 @@ export async function GET(req: NextRequest) {
 
   const validPosts = postsWithTokens.filter(Boolean);
 
-  // ── LinkedIn: publication directe (évite la troncature des templates n8n) ──
-  // Les posts LinkedIn sont publiés ici directement au lieu d'être retournés à n8n.
-  const linkedinPosts = validPosts.filter((p: any) => p.platform === "linkedin");
-  const otherPosts = validPosts.filter((p: any) => p.platform !== "linkedin");
+  // ── Direct publish: LinkedIn + Facebook ──
+  // These platforms are published directly here instead of being returned to n8n.
+  // LinkedIn: avoids content truncation in n8n JSON templates.
+  // Facebook: avoids dependency on n8n meta-publish workflow which may not be configured.
+  const DIRECT_PLATFORMS = ["linkedin", "facebook"];
+  const directPosts = validPosts.filter((p: any) => DIRECT_PLATFORMS.includes(p.platform));
+  const otherPosts = validPosts.filter((p: any) => !DIRECT_PLATFORMS.includes(p.platform));
 
-  if (linkedinPosts.length > 0) {
-    for (const post of linkedinPosts as any[]) {
-      try {
-        const result = await publishPost(
+  for (const post of directPosts as any[]) {
+    const platform = post.platform as string;
+    try {
+      let result: { ok: boolean; postId?: string; postUrn?: string; error?: string };
+
+      if (platform === "linkedin") {
+        result = await publishPost(
           post.access_token,
           post.platform_user_id,
           post.commentary,
-          post.image_url, // publishPost gère l'upload d'image en interne
+          post.image_url,
         );
-
-        // Construire le callback payload comme le ferait n8n
-        const callbackPayload: Record<string, unknown> = {
-          content_id: post.content_id,
-          platform: "linkedin",
-          success: result.ok,
-        };
-        if (result.ok && result.postUrn) {
-          callbackPayload.postUrn = result.postUrn;
-        } else if (!result.ok) {
-          callbackPayload.error = result.error ?? "LinkedIn API error";
+        if (result.postUrn) result.postId = result.postUrn;
+      } else {
+        // Facebook: direct Graph API call
+        const fbVideoUrl = post.video_url;
+        const fbImages: string[] = Array.isArray(post.images) ? post.images : [];
+        if (fbVideoUrl) {
+          result = await publishVideoToFacebookPage(post.access_token, post.platform_user_id, post.commentary, fbVideoUrl);
+        } else if (fbImages.length > 1) {
+          result = await publishMultiPhotoToFacebookPage(post.access_token, post.platform_user_id, post.commentary, fbImages);
+        } else if (post.image_url) {
+          result = await publishPhotoToFacebookPage(post.access_token, post.platform_user_id, post.commentary, post.image_url);
+        } else {
+          result = await publishToFacebookPage(post.access_token, post.platform_user_id, post.commentary);
         }
+      }
 
-        // Appeler le callback endpoint pour mettre à jour le statut
-        const callbackUrl = post.callback_url;
-        let callbackOk = false;
-        if (callbackUrl) {
-          try {
-            const cbRes = await fetch(callbackUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-N8N-Secret": process.env.N8N_SHARED_SECRET ?? "",
-              },
-              body: JSON.stringify(callbackPayload),
-            });
-            callbackOk = cbRes.ok;
-          } catch (err) {
-            console.error(`[scheduled-posts] LinkedIn callback failed for ${post.content_id}:`, err);
-          }
-        }
+      // Build callback payload
+      const callbackPayload: Record<string, unknown> = {
+        content_id: post.content_id,
+        platform,
+        success: result.ok,
+      };
+      const resultId = result.postId ?? result.postUrn;
+      if (result.ok && resultId) {
+        callbackPayload.postId = resultId;
+        if (result.postUrn) callbackPayload.postUrn = result.postUrn;
+      } else if (!result.ok) {
+        callbackPayload.error = result.error ?? `${platform} API error`;
+      }
 
-        // Fallback: if callback failed/unreachable, update status directly
-        if (!callbackOk) {
-          console.warn(`[scheduled-posts] LinkedIn callback unreachable for ${post.content_id}, updating status directly`);
-          if (result.ok) {
-            const meta: Record<string, unknown> = { published_at: new Date().toISOString(), published_platform: "linkedin" };
-            if (result.postUrn) meta.linkedin_post_urn = result.postUrn;
-            await supabaseAdmin
-              .from("content_item")
-              .update({ status: "published", meta } as any)
-              .eq("id", post.content_id);
-          } else {
-            await supabaseAdmin
-              .from("content_item")
-              .update({ status: "scheduled" } as any)
-              .eq("id", post.content_id);
-          }
-        }
-
-        console.log(`[scheduled-posts] LinkedIn direct publish for ${post.content_id}: ok=${result.ok}, postUrn=${result.postUrn ?? "none"}`);
-      } catch (err) {
-        console.error(`[scheduled-posts] LinkedIn direct publish error for ${post.content_id}:`, err);
-        // Reset to scheduled so it can be retried
+      // Call the callback endpoint to update status
+      const callbackUrl = post.callback_url;
+      let callbackOk = false;
+      if (callbackUrl) {
         try {
+          const cbRes = await fetch(callbackUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-N8N-Secret": process.env.N8N_SHARED_SECRET ?? "",
+            },
+            body: JSON.stringify(callbackPayload),
+          });
+          callbackOk = cbRes.ok;
+        } catch (err) {
+          console.error(`[scheduled-posts] ${platform} callback failed for ${post.content_id}:`, err);
+        }
+      }
+
+      // Fallback: update status directly if callback failed
+      if (!callbackOk) {
+        console.warn(`[scheduled-posts] ${platform} callback unreachable for ${post.content_id}, updating status directly`);
+        if (result.ok) {
+          const meta: Record<string, unknown> = { published_at: new Date().toISOString(), published_platform: platform };
+          if (resultId) meta[`${platform}_post_id`] = resultId;
+          if (result.postUrn) meta.linkedin_post_urn = result.postUrn;
+          // Build post URL for Facebook
+          if (platform === "facebook" && resultId) {
+            meta.facebook_post_url = `https://www.facebook.com/${resultId}`;
+          }
           await supabaseAdmin
             .from("content_item")
-            .update({ status: "scheduled" })
+            .update({ status: "published", meta } as any)
             .eq("id", post.content_id);
-        } catch { /* ignore */ }
+        } else {
+          await supabaseAdmin
+            .from("content_item")
+            .update({ status: "scheduled" } as any)
+            .eq("id", post.content_id);
+        }
       }
+
+      console.log(`[scheduled-posts] ${platform} direct publish for ${post.content_id}: ok=${result.ok}, id=${resultId ?? "none"}`);
+    } catch (err) {
+      console.error(`[scheduled-posts] ${platform} direct publish error for ${post.content_id}:`, err);
+      try {
+        await supabaseAdmin
+          .from("content_item")
+          .update({ status: "scheduled" })
+          .eq("id", post.content_id);
+      } catch { /* ignore */ }
     }
   }
 
@@ -459,9 +486,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  console.log(`[scheduled-posts] platform=${platformFilter ?? "all"} today=${todayStr} now=${nowHHMM} claimed=${(items ?? []).length} due=${duePosts.length} valid=${validPosts.length} linkedin_direct=${linkedinPosts.length} other_via_n8n=${otherPosts.length}`);
+  console.log(`[scheduled-posts] platform=${platformFilter ?? "all"} today=${todayStr} now=${nowHHMM} claimed=${(items ?? []).length} due=${duePosts.length} valid=${validPosts.length} direct=${directPosts.length} other_via_n8n=${otherPosts.length}`);
 
-  // Ne retourner que les posts non-LinkedIn (les LinkedIn sont déjà publiés)
+  // Ne retourner que les posts non-direct (les LinkedIn+Facebook sont déjà publiés)
   return NextResponse.json({
     ok: true,
     count: otherPosts.length,

@@ -536,6 +536,38 @@ async function processComment(params: {
     if (!dmResult.ok) {
       console.error("[webhook] DM send failed:", dmResult.error);
       await logWebhook("dm_fail_final", { pageId: page_id, payload: { commentId: comment_id, senderId: sender_id, error: dmResult.error?.slice(0, 200) } });
+
+      // Create in-app notification for the user on first DM failure (max 1 per day per automation)
+      if (user_id) {
+        try {
+          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          const { data: recentNotif } = await supabaseAdmin
+            .from("notifications")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("type", "dm_send_failed")
+            .gte("created_at", oneDayAgo)
+            .limit(1);
+
+          if (!recentNotif?.length) {
+            const detailMsg = platform === "facebook"
+              ? "Le token Messenger est manquant ou invalide. Connecte ta page via « Connecter Messenger » dans Paramètres → Connexions."
+              : "Le token est peut-être expiré. Reconnecte ton compte dans Paramètres → Connexions.";
+            await supabaseAdmin.from("notifications").insert({
+              user_id,
+              type: "dm_send_failed",
+              title: `DM automatique non envoyé (${platform})`,
+              body: `L'automatisation "${matched.name}" a détecté le mot-clé mais n'a pas pu envoyer le DM. ${detailMsg}`,
+              icon: "⚠️",
+              action_url: "/settings?tab=connections",
+              action_label: "Vérifier la connexion",
+              meta: { automation_id: matched.id, platform, error: dmResult.error?.slice(0, 200) },
+            });
+          }
+        } catch (notifErr) {
+          console.warn("[webhook] Failed to create DM failure notification:", notifErr);
+        }
+      }
     }
 
     // 2b. If DM sent + automation has systemeio_tag → register email capture
@@ -563,13 +595,14 @@ async function processComment(params: {
     await logWebhook("processed", { pageId: page_id, userId: user_id, payload: { automationId: matched.id, commentReplyOk, dmSent: dmResult.ok, dmError: dmResult.error?.slice(0, 200) } });
 
     // 3. Update stats only (meta already saved above)
-    const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0 };
+    const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0, dms_failed: 0 };
     await supabaseAdmin
       .from("social_automations")
       .update({
         stats: {
           triggers: (currentStats.triggers ?? 0) + 1,
           dms_sent: (currentStats.dms_sent ?? 0) + (dmResult.ok ? 1 : 0),
+          dms_failed: (currentStats.dms_failed ?? 0) + (dmResult.ok ? 0 : 1),
         },
         updated_at: new Date().toISOString(),
       })

@@ -154,84 +154,72 @@ export async function middleware(req: NextRequest) {
     // Vérif onboarding pour le projet actif (fail-open)
     const activeProjectId = req.cookies.get(ACTIVE_PROJECT_COOKIE)?.value?.trim() ?? "";
 
-    // Si un project_id est défini, vérifier l'onboarding de CE projet
-    if (activeProjectId) {
-      try {
-        const { data: bp, error } = await supabase
-          .from("business_profiles")
-          .select("onboarding_completed, ui_locale")
-          .eq("user_id", user.id)
-          .eq("project_id", activeProjectId)
-          .maybeSingle();
+    // ── Onboarding check: SINGLE query for ALL profiles, then decide ──
+    // ANTI-LOOP: never redirect to /onboarding if at least ONE profile is completed.
+    // The old primary+fallback approach had a bug: the primary path would redirect
+    // immediately when the cookie pointed to an un-onboarded project, without
+    // checking if another project was completed. This caused infinite loops.
+    {
+      type BpRow = { onboarding_completed?: boolean; ui_locale?: string; project_id?: string };
 
-        // Cross-device locale sync
-        const dbLocale = (bp as any)?.ui_locale;
-        if (dbLocale && SUPPORTED_LOCALES.includes(dbLocale)) {
-          res.cookies.set(UI_LOCALE_COOKIE, dbLocale, {
+      let bpRows: BpRow[] | null = null;
+      let bpError: unknown = null;
+
+      try {
+        const { data, error } = await supabase
+          .from("business_profiles")
+          .select("onboarding_completed, ui_locale, project_id")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(10);
+        bpRows = data as BpRow[] | null;
+        bpError = error;
+      } catch {
+        return res; // fail-open: DB error → don't block
+      }
+
+      if (bpError) return res; // fail-open
+
+      // Find the best profile: prefer the one matching the cookie, then any completed one
+      const activeMatch = activeProjectId
+        ? (bpRows ?? []).find((r) => r.project_id === activeProjectId)
+        : null;
+
+      const completedProfile = (bpRows ?? []).find((r) => r.onboarding_completed);
+
+      // Cross-device locale sync
+      const localeSource = activeMatch ?? completedProfile ?? (bpRows ?? [])[0];
+      if (localeSource?.ui_locale && SUPPORTED_LOCALES.includes(localeSource.ui_locale)) {
+        res.cookies.set(UI_LOCALE_COOKIE, localeSource.ui_locale, {
+          path: "/",
+          maxAge: 365 * 24 * 60 * 60,
+          sameSite: "lax",
+        });
+      }
+
+      // Happy path: the cookie points to a completed profile
+      if (activeMatch?.onboarding_completed) {
+        return res;
+      }
+
+      // Cookie points to un-onboarded project (or no cookie), but another project IS completed
+      // → auto-heal: switch cookie to the completed project and allow through
+      if (completedProfile) {
+        if (completedProfile.project_id && completedProfile.project_id !== activeProjectId) {
+          res.cookies.set(ACTIVE_PROJECT_COOKIE, completedProfile.project_id, {
             path: "/",
             maxAge: 365 * 24 * 60 * 60,
             sameSite: "lax",
           });
         }
-
-        if (!error && bp) {
-          if (!bp.onboarding_completed) {
-            const url = req.nextUrl.clone();
-            url.pathname = "/onboarding";
-            return NextResponse.redirect(url);
-          }
-          return res;
-        }
-        // Pas de row business_profiles pour ce project_id → fall through au check par user_id
-        // (le cookie peut pointer vers un projet sans business_profile encore créé)
-      } catch {
-        return res; // fail-open
+        return res;
       }
-    }
 
-    // Fallback : vérifier par user_id seul (beta users sans cookie projet, ou cookie mismatch)
-    // IMPORTANT: priorité aux profils avec onboarding complété pour éviter une boucle infinie
-    // quand le cookie est absent et que l'utilisateur a plusieurs business_profiles.
-    // On cherche d'abord un profil complété, sinon le plus récent.
-    const { data: bpRows, error } = await supabase
-      .from("business_profiles")
-      .select("onboarding_completed, ui_locale, project_id")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(10);
-
-    if (error) return res; // fail-open DB
-
-    // Prefer a completed profile to avoid onboarding redirect loop
-    type BpRow = { onboarding_completed?: boolean; ui_locale?: string; project_id?: string };
-    const bp: BpRow | null = (bpRows as BpRow[] | null)?.find((r) => r.onboarding_completed) ?? (bpRows as BpRow[] | null)?.[0] ?? null;
-
-    // Auto-heal: restore the active project cookie if we found a completed profile
-    if (bp && bp.onboarding_completed && bp.project_id) {
-      res.cookies.set(ACTIVE_PROJECT_COOKIE, bp.project_id, {
-        path: "/",
-        maxAge: 365 * 24 * 60 * 60,
-        sameSite: "lax",
-      });
-    }
-
-    // Cross-device locale sync: if DB has a saved ui_locale, apply it to cookie.
-    const dbLocale = (bp as any)?.ui_locale;
-    if (dbLocale && SUPPORTED_LOCALES.includes(dbLocale)) {
-      res.cookies.set(UI_LOCALE_COOKIE, dbLocale, {
-        path: "/",
-        maxAge: 365 * 24 * 60 * 60,
-        sameSite: "lax",
-      });
-    }
-
-    if (!bp?.onboarding_completed) {
+      // No completed profile at all → redirect to onboarding
       const url = req.nextUrl.clone();
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);
     }
-
-    return res;
   } catch {
     return res; // fail-open total
   }
