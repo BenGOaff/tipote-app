@@ -1554,14 +1554,29 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
               {/* TAB 3: Leads */}
               <TabsContent value="leads" className="space-y-4 mt-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <h3 className="font-bold">Leads ({leadsCount})</h3>
                   {leadsCount > 0 && (
-                    <Button variant="outline" size="sm" onClick={handleExportCSV}>
-                      <Download className="w-4 h-4 mr-1" /> Export CSV
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={handleBulkSync} disabled={syncing}>
+                        {syncing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                        Synchroniser Systeme.io
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                        <Download className="w-4 h-4 mr-1" /> Export CSV
+                      </Button>
+                    </div>
                   )}
                 </div>
+
+                {syncResult && (
+                  <Card className="p-4 border-primary/20 bg-primary/[0.02]">
+                    <p className="text-sm">
+                      <strong>{syncResult.synced}</strong> lead(s) synchronisé(s) sur <strong>{syncResult.total}</strong>
+                      {syncResult.errors > 0 && <span className="text-destructive"> · {syncResult.errors} erreur(s)</span>}
+                    </p>
+                  </Card>
+                )}
 
                 {leadsCount === 0 ? (
                   <Card className="p-6">
