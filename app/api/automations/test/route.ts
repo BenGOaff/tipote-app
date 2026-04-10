@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
     });
 
   } else if (platform === "facebook") {
-    // Facebook — vérifier le token et les permissions de base
+    // Facebook — vérifier le token de base + la capacité d'envoyer des DMs
     const appId = process.env.META_APP_ID;
     const appSecret = process.env.META_APP_SECRET;
 
@@ -196,21 +196,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, step: "token", detail: "Token Facebook invalide ou expiré. Reconnecte le compte Facebook." });
     }
 
-    // Vérifier que MESSENGER_PAGE_ACCESS_TOKEN est configuré (DMs via Tipote ter)
-    const hasMessengerToken = !!process.env.MESSENGER_PAGE_ACCESS_TOKEN;
     const scopes: string[] = tokenData.scopes ?? [];
 
-    if (!hasMessengerToken) {
+    // Check DM capability: per-user facebook_messenger connection OR env token
+    // The main Facebook OAuth (Tipote app) does NOT have pages_messaging.
+    // DMs require either a per-user Messenger connection (Tipote ter) or the env fallback.
+    const { data: messengerConn } = await supabaseAdmin
+      .from("social_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("platform", "facebook_messenger")
+      .maybeSingle();
+
+    const hasPerUserMessenger = !!messengerConn;
+    const hasEnvMessengerToken = !!process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+
+    if (!hasPerUserMessenger && !hasEnvMessengerToken) {
       return NextResponse.json({
         ok: false,
         step: "permissions",
-        detail: "MESSENGER_PAGE_ACCESS_TOKEN manquant. Configure le token Messenger (depuis l'app Tipote ter) dans les variables d'environnement.",
+        detail: "Pour envoyer des DMs Facebook automatiques, connecte ta page via « Connecter Messenger » dans Paramètres → Connexions. Le token Facebook standard ne permet pas l'envoi de messages privés (permission pages_messaging requise via l'app Tipote ter).",
       });
     }
 
+    const messengerStatus = hasPerUserMessenger
+      ? "Token Messenger per-user connecté"
+      : "Token Messenger global (env) configuré — les DMs fonctionneront uniquement pour la page configurée côté serveur";
+
     return NextResponse.json({
       ok: true,
-      detail: `✓ Mot-clé OK · Token Facebook valide · Token Messenger configuré · Permissions : ${scopes.join(", ")}. Le webhook feed est actif, l'automatisation répondra aux commentaires.`,
+      detail: `✓ Mot-clé OK · Token Facebook valide · ${messengerStatus} · Permissions : ${scopes.join(", ")}. Le webhook feed est actif, l'automatisation répondra aux commentaires.`,
     });
 
   } else {
