@@ -190,18 +190,30 @@ export async function middleware(req: NextRequest) {
     }
 
     // Fallback : vérifier par user_id seul (beta users sans cookie projet, ou cookie mismatch)
-    // Utilise .limit(1) au lieu de .maybeSingle() pour éviter l'erreur PGRST116
-    // quand l'utilisateur a plusieurs business_profiles (multi-projets)
+    // IMPORTANT: priorité aux profils avec onboarding complété pour éviter une boucle infinie
+    // quand le cookie est absent et que l'utilisateur a plusieurs business_profiles.
+    // On cherche d'abord un profil complété, sinon le plus récent.
     const { data: bpRows, error } = await supabase
       .from("business_profiles")
-      .select("onboarding_completed, ui_locale")
+      .select("onboarding_completed, ui_locale, project_id")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
-      .limit(1);
+      .limit(10);
 
     if (error) return res; // fail-open DB
 
-    const bp = bpRows?.[0] ?? null;
+    // Prefer a completed profile to avoid onboarding redirect loop
+    type BpRow = { onboarding_completed?: boolean; ui_locale?: string; project_id?: string };
+    const bp: BpRow | null = (bpRows as BpRow[] | null)?.find((r) => r.onboarding_completed) ?? (bpRows as BpRow[] | null)?.[0] ?? null;
+
+    // Auto-heal: restore the active project cookie if we found a completed profile
+    if (bp && bp.onboarding_completed && bp.project_id) {
+      res.cookies.set(ACTIVE_PROJECT_COOKIE, bp.project_id, {
+        path: "/",
+        maxAge: 365 * 24 * 60 * 60,
+        sameSite: "lax",
+      });
+    }
 
     // Cross-device locale sync: if DB has a saved ui_locale, apply it to cookie.
     const dbLocale = (bp as any)?.ui_locale;

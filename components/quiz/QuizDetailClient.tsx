@@ -36,8 +36,10 @@ import { useToast } from "@/hooks/use-toast";
 
 import {
   ArrowLeft,
+  ArrowRight,
   Copy,
   Check,
+  CheckCircle,
   Eye,
   Users,
   Share2,
@@ -121,6 +123,8 @@ type QuizData = {
   status: string;
   sio_share_tag_name: string | null;
   views_count: number;
+  starts_count: number;
+  completions_count: number;
   shares_count: number;
   created_at: string;
   questions: QuizQuestion[];
@@ -758,7 +762,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </div>
             </div>
             {/* Stats row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card className="p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Eye className="w-4 h-4" /> Vues
@@ -767,9 +771,36 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </Card>
               <Card className="p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ArrowRight className="w-4 h-4" /> Démarrés
+                </div>
+                <div className="mt-1 text-2xl font-semibold">{quiz.starts_count ?? 0}</div>
+                <div className="text-xs text-muted-foreground">
+                  {quiz.views_count > 0
+                    ? `${Math.round(((quiz.starts_count ?? 0) / quiz.views_count) * 100)}% des vues`
+                    : "—"}
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle className="w-4 h-4" /> Terminés
+                </div>
+                <div className="mt-1 text-2xl font-semibold">{quiz.completions_count ?? 0}</div>
+                <div className="text-xs text-muted-foreground">
+                  {(quiz.starts_count ?? 0) > 0
+                    ? `${Math.round(((quiz.completions_count ?? 0) / (quiz.starts_count ?? 1)) * 100)}% des démarrés`
+                    : "—"}
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Mail className="w-4 h-4" /> Emails
                 </div>
                 <div className="mt-1 text-2xl font-semibold">{leadsCount}</div>
+                <div className="text-xs text-muted-foreground">
+                  {(quiz.completions_count ?? 0) > 0
+                    ? `${Math.round((leadsCount / (quiz.completions_count ?? 1)) * 100)}% capture`
+                    : "—"}
+                </div>
               </Card>
               <Card className="p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

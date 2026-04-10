@@ -115,15 +115,24 @@ export default function CallbackClient() {
   async function isOnboardingCompleted(supabase: any, userId: string): Promise<boolean> {
     // Source de vérité onboarding = business_profiles.onboarding_completed
     // Fail-open DB : en cas d'erreur schema/RLS, on renvoie true (ne jamais bloquer la connexion).
+    // IMPORTANT: fetch ALL profiles (not .maybeSingle which errors on multi-project users)
+    // and check if ANY has completed onboarding. Also restore the active project cookie.
     try {
-      const { data, error } = await supabase
+      const { data: rows, error } = await supabase
         .from("business_profiles")
-        .select("onboarding_completed")
+        .select("onboarding_completed, project_id")
         .eq("user_id", userId)
-        .maybeSingle();
+        .order("updated_at", { ascending: false })
+        .limit(10);
 
-      if (error) return true;
-      return Boolean((data as any)?.onboarding_completed);
+      if (error) return true; // fail-open
+
+      const completedProfile = (rows ?? []).find((r: any) => r.onboarding_completed);
+      if (completedProfile?.project_id) {
+        // Restore active project cookie so middleware doesn't loop
+        document.cookie = `tipote_active_project=${completedProfile.project_id};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+      }
+      return Boolean(completedProfile);
     } catch {
       return true;
     }
@@ -136,8 +145,9 @@ export default function CallbackClient() {
       return;
     }
 
-    // Reset au projet par défaut à la connexion (le middleware/serveur résoudra le default)
-    document.cookie = "tipote_active_project=;path=/;max-age=0;samesite=lax";
+    // Note: on ne clear plus le cookie tipote_active_project ici.
+    // isOnboardingCompleted() ci-dessous résout le bon projet et restaure le cookie.
+    // L'ancien clear causait une boucle infinie middleware ↔ onboarding.
 
     // Ensure the user has a "profiles" row (plan, email, credits).
     // Without this, users whose Systeme.io webhook missed are invisible

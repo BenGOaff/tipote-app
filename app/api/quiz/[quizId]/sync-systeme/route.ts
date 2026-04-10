@@ -206,13 +206,33 @@ export async function POST(req: NextRequest, context: RouteContext) {
           if (create.ok && create.data?.id) {
             contactId = Number(create.data.id);
           } else if (create.status === 422) {
-            // Contact likely exists already — search again
-            const retry = await sioRequest(
+            // 422 can mean: (a) contact already exists, or (b) invalid field slug ("country")
+            const retrySearch = await sioRequest(
               apiKey,
               `/contacts?email=${encodeURIComponent(email)}&limit=10`,
             );
-            if (retry.ok && Array.isArray(retry.data?.items) && retry.data.items.length > 0) {
-              contactId = Number(retry.data.items[0].id);
+            if (retrySearch.ok && Array.isArray(retrySearch.data?.items) && retrySearch.data.items.length > 0) {
+              contactId = Number(retrySearch.data.items[0].id);
+            } else if (lead.country) {
+              // Contact doesn't exist — 422 was due to invalid "country" slug. Retry without it.
+              const fallbackBody: Record<string, unknown> = { email, locale: "fr" };
+              const fallbackFields: { slug: string; value: string }[] = [];
+              if (lead.first_name) fallbackFields.push({ slug: "first_name", value: lead.first_name });
+              if (lead.last_name) fallbackFields.push({ slug: "surname", value: lead.last_name });
+              if (lead.phone) fallbackFields.push({ slug: "phone_number", value: lead.phone });
+              if (fallbackFields.length > 0) fallbackBody.fields = fallbackFields;
+              const retryCreate = await sioRequest(apiKey, "/contacts", {
+                method: "POST",
+                body: fallbackBody,
+              });
+              if (retryCreate.ok && retryCreate.data?.id) {
+                contactId = Number(retryCreate.data.id);
+              } else if (retryCreate.status === 422) {
+                const finalSearch = await sioRequest(apiKey, `/contacts?email=${encodeURIComponent(email)}&limit=10`);
+                if (finalSearch.ok && Array.isArray(finalSearch.data?.items) && finalSearch.data.items.length > 0) {
+                  contactId = Number(finalSearch.data.items[0].id);
+                }
+              }
             }
           }
         }
