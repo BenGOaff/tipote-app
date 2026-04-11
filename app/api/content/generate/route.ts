@@ -1324,6 +1324,70 @@ async function fetchUserPaidOffer(args: {
 }
 
 /** ---------------------------
+ * User-friendly error messages
+ * -------------------------- */
+
+function humanizeGenerationError(raw: string): { title: string; content: string } {
+  if (raw === "NO_CREDITS") {
+    return {
+      title: "Crédits insuffisants",
+      content: "Erreur: vous n'avez plus assez de crédits pour générer ce contenu. Rechargez vos crédits dans Réglages > Facturation.",
+    };
+  }
+
+  // Claude API timeout
+  if (/timeout/i.test(raw)) {
+    return {
+      title: "Délai dépassé",
+      content: "Erreur: la génération a pris trop de temps. Veuillez réessayer — si le problème persiste, essayez un sujet plus court ou contactez le support.",
+    };
+  }
+
+  // Claude API server errors (500, 502, 503, 529)
+  if (/Claude API error \(5\d{2}\)/i.test(raw) || /internal server error/i.test(raw) || /overloaded/i.test(raw)) {
+    return {
+      title: "Service IA temporairement indisponible",
+      content: "Erreur: le service d'intelligence artificielle est momentanément surchargé ou en maintenance. Veuillez réessayer dans quelques instants.",
+    };
+  }
+
+  // Claude API rate limit (429)
+  if (/Claude API error \(429\)/i.test(raw) || /rate.?limit/i.test(raw)) {
+    return {
+      title: "Trop de requêtes",
+      content: "Erreur: trop de contenus générés en peu de temps. Veuillez patienter quelques secondes puis réessayer.",
+    };
+  }
+
+  // Claude API auth error (401)
+  if (/Claude API error \(401\)/i.test(raw) || /authentication/i.test(raw)) {
+    return {
+      title: "Erreur d'authentification",
+      content: "Erreur: la clé API de génération est invalide ou expirée. Veuillez contacter le support Tipote.",
+    };
+  }
+
+  // Network / fetch errors
+  if (/network|fetch|ECONNREFUSED|ENOTFOUND/i.test(raw)) {
+    return {
+      title: "Erreur réseau",
+      content: "Erreur: impossible de contacter le service de génération. Vérifiez votre connexion et réessayez.",
+    };
+  }
+
+  // Fallback: clean up raw message (strip JSON blobs)
+  const cleaned = raw
+    .replace(/\{[^}]*"type"\s*:\s*"error"[^}]*\}/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return {
+    title: "Erreur de génération",
+    content: `Erreur: ${cleaned || "une erreur inattendue s'est produite. Veuillez réessayer ou contacter le support."}`,
+  };
+}
+
+/** ---------------------------
  * Claude caller (owner key)
  * -------------------------- */
 
@@ -1335,22 +1399,30 @@ function resolveClaudeModel(): string {
     "";
 
   const v = (raw || "").trim();
-  const DEFAULT = "claude-sonnet-4-5-20250929";
+  const DEFAULT = "claude-sonnet-4-6";
 
   if (!v) return DEFAULT;
 
   const s = v.toLowerCase();
 
-  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5") {
+  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5"
+      || s === "sonnet-4.6" || s === "sonnet_4_6" || s === "claude-sonnet-4.6") {
     return DEFAULT;
   }
 
-  if (s === "claude-3-5-sonnet-20240620" || s.includes("claude-3-5-sonnet-20240620")) {
+  // Legacy model IDs → redirect to current default
+  if (s === "claude-3-5-sonnet-20240620" || s.includes("claude-3-5-sonnet-20240620")
+      || s === "claude-sonnet-4-5-20250929" || s.includes("claude-sonnet-4-5-20250929")) {
     return DEFAULT;
   }
 
   return v;
 }
+
+/** Statuses that warrant an automatic retry (transient server-side errors). */
+const RETRYABLE_STATUSES = new Set([500, 502, 503, 529]);
+const MAX_RETRIES = 2;
+const RETRY_BASE_MS = 1_500;
 
 async function callClaude(args: {
   apiKey: string;
@@ -1370,52 +1442,73 @@ async function callClaude(args: {
   // Per-call override > env var > default 120s
   const timeoutMs = args.timeoutMs ?? (envTimeout || 120_000);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const reqBody = JSON.stringify({
+    model,
+    max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
+    temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
+    system: args.system,
+    messages: [{ role: "user", content: args.user }],
+  });
 
-  let res: Response;
-  try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": args.apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
-        temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
-        system: args.system,
-        messages: [{ role: "user", content: args.user }],
-      }),
-    });
-  } catch (e: any) {
-    const name = String(e?.name ?? "");
-    const msg = String(e?.message ?? "");
-    if (name === "AbortError" || /aborted|abort/i.test(msg)) {
-      throw new Error(`Claude API timeout after ${timeoutMs}ms`);
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Wait before retry (exponential backoff: 1.5s, 3s)
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, RETRY_BASE_MS * Math.pow(2, attempt - 1)));
     }
-    throw e;
-  } finally {
-    clearTimeout(timer);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let res: Response;
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": args.apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        signal: controller.signal,
+        body: reqBody,
+      });
+    } catch (e: any) {
+      clearTimeout(timer);
+      const name = String(e?.name ?? "");
+      const msg = String(e?.message ?? "");
+      if (name === "AbortError" || /aborted|abort/i.test(msg)) {
+        throw new Error(`Claude API timeout after ${timeoutMs}ms`);
+      }
+      // Network error — retryable
+      lastError = e instanceof Error ? e : new Error(msg || "Network error");
+      if (attempt < MAX_RETRIES) continue;
+      throw lastError;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      lastError = new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
+      // Only retry on transient server errors
+      if (RETRYABLE_STATUSES.has(res.status) && attempt < MAX_RETRIES) continue;
+      throw lastError;
+    }
+
+    const json = (await res.json()) as any;
+    const parts = Array.isArray(json?.content) ? json.content : [];
+    const text = parts
+      .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+
+    return text || "";
   }
 
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
-  }
-
-  const json = (await res.json()) as any;
-  const parts = Array.isArray(json?.content) ? json.content : [];
-  const text = parts
-    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
-    .filter(Boolean)
-    .join("\n")
-    .trim();
-
-  return text || "";
+  // Should not reach here, but safety net
+  throw lastError ?? new Error("Claude API call failed after retries");
 }
 
 /** ---------------------------
@@ -2627,15 +2720,16 @@ export async function POST(req: Request) {
             }
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : "Unknown error";
+          const rawMsg = err instanceof Error ? err.message : "Unknown error";
+          const { title: errTitle, content: errContent } = humanizeGenerationError(rawMsg);
 
           try {
             if (schema === "en") {
               await updateContentEN({
                 supabase,
                 id: jobId!,
-                title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
-                content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+                title: errTitle,
+                content: errContent,
                 status: "draft",
                 tags,
                 tagsCsv,
@@ -2644,8 +2738,8 @@ export async function POST(req: Request) {
               await updateContentFR({
                 supabase,
                 id: jobId!,
-                title: msg === "NO_CREDITS" ? "Crédits insuffisants" : "Erreur génération",
-                content: msg === "NO_CREDITS" ? "Erreur: NO_CREDITS" : `Erreur: ${msg}`,
+                title: errTitle,
+                content: errContent,
                 status: "draft",
                 tags,
                 tagsCsv,
