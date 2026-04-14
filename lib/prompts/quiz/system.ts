@@ -1,21 +1,6 @@
 // lib/prompts/quiz/system.ts
 // AI prompt builder for quiz lead magnet generation
 
-export const QUIZ_OBJECTIVES: { value: string; labelFr: string }[] = [
-  { value: "capturer_emails", labelFr: "Capturer des emails" },
-  { value: "qualifier_prospects", labelFr: "Qualifier mes prospects" },
-  { value: "vendre_offre", labelFr: "Vendre une offre" },
-  { value: "segmenter_audience", labelFr: "Segmenter mon audience" },
-  { value: "eduquer_audience", labelFr: "Éduquer mon audience" },
-  { value: "creer_viralite", labelFr: "Créer de la viralité" },
-  { value: "lancer_produit", labelFr: "Lancer un produit" },
-  { value: "engager_communaute", labelFr: "Engager ma communauté" },
-  { value: "identifier_probleme", labelFr: "Identifier un problème client" },
-  { value: "generer_curiosite", labelFr: "Générer de la curiosité" },
-  { value: "booster_notoriete", labelFr: "Booster ma notoriété" },
-  { value: "fideliser_clients", labelFr: "Fidéliser mes clients" },
-];
-
 type QuizPromptParams = {
   objective: string;
   target: string;
