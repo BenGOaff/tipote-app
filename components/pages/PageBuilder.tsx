@@ -8,7 +8,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Download, Copy, Check, X,
+  Download, Copy, Check, X, Plus,
   Upload, Smartphone, Tablet, Monitor,
   Globe, Loader2,
   FileText, FileDown,
@@ -962,10 +962,19 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
   // Thank-you page
   const [showThankYouModal, setShowThankYouModal] = useState(false);
-  const [thankYouHeading, setThankYouHeading] = useState(page.content_data?.thank_you_heading || "Merci pour ton inscription !");
-  const [thankYouMessage, setThankYouMessage] = useState(page.content_data?.thank_you_message || "Tu vas recevoir un email de confirmation dans quelques instants. Pense à vérifier tes spams.");
-  const [thankYouCtaText, setThankYouCtaText] = useState(page.content_data?.thank_you_cta_text || "");
-  const [thankYouCtaUrl, setThankYouCtaUrl] = useState(page.content_data?.thank_you_cta_url || "");
+  const [thankYouHeading, setThankYouHeading] = useState(page.content_data?.thank_you_heading || (page as any).thank_you_title || "Merci pour ton inscription !");
+  const [thankYouSubtitle, setThankYouSubtitle] = useState((page as any).thank_you_subtitle || "");
+  const [thankYouMessage, setThankYouMessage] = useState(page.content_data?.thank_you_message || (page as any).thank_you_message || "Tu vas recevoir un email de confirmation dans quelques instants. Pense à vérifier tes spams.");
+  const [thankYouShowEmailHint, setThankYouShowEmailHint] = useState((page as any).thank_you_show_email_hint !== false);
+  const [thankYouCtas, setThankYouCtas] = useState<{ text: string; url: string; style: "primary" | "outline" | "secondary" }[]>(() => {
+    const ctas = (page as any).thank_you_ctas;
+    if (Array.isArray(ctas) && ctas.length > 0) return ctas;
+    // Fallback: migrate legacy single CTA
+    const legacyText = page.content_data?.thank_you_cta_text || (page as any).thank_you_cta_text || "";
+    const legacyUrl = page.content_data?.thank_you_cta_url || (page as any).thank_you_cta_url || "";
+    if (legacyUrl) return [{ text: legacyText || "Continuer", url: legacyUrl, style: "primary" as const }];
+    return [];
+  });
   const [savingThankYou, setSavingThankYou] = useState(false);
 
   // Undo/Redo reactivity
@@ -1392,14 +1401,25 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const saveThankYou = useCallback(async () => {
     setSavingThankYou(true);
     try {
+      // Clean CTAs: remove empty entries
+      const cleanCtas = thankYouCtas.filter(c => c.url.trim());
       await fetch(`/api/pages/${page.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ thank_you_title: thankYouHeading, thank_you_message: thankYouMessage, thank_you_cta_text: thankYouCtaText, thank_you_cta_url: thankYouCtaUrl }),
+        body: JSON.stringify({
+          thank_you_title: thankYouHeading,
+          thank_you_subtitle: thankYouSubtitle,
+          thank_you_message: thankYouMessage,
+          thank_you_ctas: cleanCtas,
+          thank_you_show_email_hint: thankYouShowEmailHint,
+          // Keep legacy fields in sync for backward compatibility
+          thank_you_cta_text: cleanCtas[0]?.text || "",
+          thank_you_cta_url: cleanCtas[0]?.url || "",
+        }),
       });
       setShowThankYouModal(false);
     } catch { /* ignore */ } finally { setSavingThankYou(false); }
-  }, [page.id, thankYouHeading, thankYouMessage, thankYouCtaText, thankYouCtaUrl]);
+  }, [page.id, thankYouHeading, thankYouSubtitle, thankYouMessage, thankYouCtas, thankYouShowEmailHint]);
 
   // Manual save (triggers re-render + persist)
   const handleSave = useCallback(async () => {
@@ -2666,41 +2686,166 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         </div>
       )}
 
-      {/* THANK-YOU MODAL */}
-      {showThankYouModal && (
+      {/* THANK-YOU MODAL — Rich editor with multi-CTA + live preview */}
+      {showThankYouModal && (() => {
+        const brandPrimary = (page as any).brand_tokens?.["colors-primary"] || "#6c3aed";
+        const brandAccent = (page as any).brand_tokens?.["colors-accent"] || brandPrimary;
+        const headingFont = (page as any).brand_tokens?.["typography-heading"] || "'DM Sans', system-ui, sans-serif";
+
+        const addCta = () => setThankYouCtas(prev => [...prev, { text: "", url: "", style: "primary" }]);
+        const removeCta = (idx: number) => setThankYouCtas(prev => prev.filter((_, i) => i !== idx));
+        const updateCta = (idx: number, field: string, value: string) => {
+          setThankYouCtas(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
+        };
+
+        const ctaStyleLabel = (s: string) => s === "outline" ? t("thankYou.styleOutline") : s === "secondary" ? t("thankYou.styleSecondary") : t("thankYou.stylePrimary");
+        const nextStyle = (s: string) => s === "primary" ? "outline" : s === "outline" ? "secondary" : "primary";
+
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowThankYouModal(false)}>
-          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 pb-4 border-b">
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b sticky top-0 bg-background z-10 rounded-t-2xl">
               <div>
                 <h2 className="text-lg font-bold">{t("thankYou.title")}</h2>
                 <p className="text-sm text-muted-foreground">{t("thankYou.subtitle")}</p>
               </div>
               <button onClick={() => setShowThankYouModal(false)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground"><X className="w-4 h-4" /></button>
             </div>
-            <div className="p-6 space-y-5">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">{t("thankYou.heading")}</label>
-                <input type="text" value={thankYouHeading} onChange={(e) => setThankYouHeading(e.target.value)} placeholder={t("thankYou.defaultHeading")} className="w-full px-3 py-2 border rounded-lg text-sm" maxLength={100} />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+              {/* Left: Form fields */}
+              <div className="p-6 space-y-4 border-r">
+                {/* Heading */}
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">{t("thankYou.heading")}</label>
+                  <input type="text" value={thankYouHeading} onChange={(e) => setThankYouHeading(e.target.value)} placeholder={t("thankYou.defaultHeading")} className="w-full px-3 py-2 border rounded-lg text-sm" maxLength={120} />
+                </div>
+
+                {/* Subtitle */}
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">{t("thankYou.subtitleLabel")}</label>
+                  <input type="text" value={thankYouSubtitle} onChange={(e) => setThankYouSubtitle(e.target.value)} placeholder={t("thankYou.subtitlePlaceholder")} className="w-full px-3 py-2 border rounded-lg text-sm" maxLength={150} />
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">{t("thankYou.message")}</label>
+                  <textarea value={thankYouMessage} onChange={(e) => setThankYouMessage(e.target.value)} placeholder={t("thankYou.defaultMessage")} className="w-full px-3 py-2 border rounded-lg text-sm resize-none" rows={3} maxLength={600} />
+                </div>
+
+                {/* Email hint toggle */}
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={thankYouShowEmailHint} onChange={(e) => setThankYouShowEmailHint(e.target.checked)} className="rounded" />
+                  <span className="text-sm">{t("thankYou.showEmailHint")}</span>
+                </label>
+
+                {/* CTAs section */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium">{t("thankYou.ctasLabel")}</label>
+                    {thankYouCtas.length < 4 && (
+                      <button onClick={addCta} className="text-xs text-primary hover:underline flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> {t("thankYou.addCta")}
+                      </button>
+                    )}
+                  </div>
+
+                  {thankYouCtas.length === 0 && (
+                    <button onClick={addCta} className="w-full py-3 border-2 border-dashed rounded-lg text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5" /> {t("thankYou.addFirstCta")}
+                    </button>
+                  )}
+
+                  <div className="space-y-3">
+                    {thankYouCtas.map((cta, idx) => (
+                      <div key={idx} className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">CTA {idx + 1}</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => updateCta(idx, "style", nextStyle(cta.style))}
+                              className="px-2 py-0.5 rounded text-[10px] font-medium border hover:bg-muted"
+                              title={t("thankYou.toggleStyle")}
+                            >
+                              {ctaStyleLabel(cta.style)}
+                            </button>
+                            <button onClick={() => removeCta(idx)} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                        <input type="text" value={cta.text} onChange={(e) => updateCta(idx, "text", e.target.value)} placeholder={t("thankYou.ctaTextPlaceholder")} className="w-full px-2.5 py-1.5 border rounded text-sm" maxLength={60} />
+                        <input type="url" value={cta.url} onChange={(e) => updateCta(idx, "url", e.target.value)} placeholder="https://..." className="w-full px-2.5 py-1.5 border rounded text-sm" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">{t("thankYou.message")}</label>
-                <textarea value={thankYouMessage} onChange={(e) => setThankYouMessage(e.target.value)} placeholder={t("thankYou.defaultMessage")} className="w-full px-3 py-2 border rounded-lg text-sm resize-none" rows={4} maxLength={500} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">{t("thankYou.ctaText")}</label>
-                <input type="text" value={thankYouCtaText} onChange={(e) => setThankYouCtaText(e.target.value)} placeholder="Rejoindre le groupe" className="w-full px-3 py-2 border rounded-lg text-sm mb-2" maxLength={50} />
-                <input type="url" value={thankYouCtaUrl} onChange={(e) => setThankYouCtaUrl(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 border rounded-lg text-sm" />
-              </div>
-              {/* Preview */}
-              <div className="rounded-xl border bg-muted/20 p-6 text-center">
-                <p className="text-xs text-muted-foreground mb-3">{t("actions.preview")}</p>
-                <div className="text-3xl mb-2">&#10003;</div>
-                <h3 className="text-lg font-bold mb-2">{thankYouHeading || "Merci !"}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{thankYouMessage || "..."}</p>
-                {thankYouCtaText && <span className="inline-block px-6 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium">{thankYouCtaText}</span>}
+
+              {/* Right: Live branded preview */}
+              <div className="p-6 bg-muted/10 flex flex-col">
+                <p className="text-xs text-muted-foreground mb-3 text-center">{t("actions.preview")}</p>
+                <div className="flex-1 rounded-xl overflow-hidden border shadow-sm" style={{ background: `linear-gradient(145deg, #fafafa 0%, ${brandPrimary}08 40%, ${brandAccent}12 100%)` }}>
+                  <div className="flex flex-col items-center justify-center p-6 text-center min-h-[340px]">
+                    {/* Preview card */}
+                    <div className="bg-white rounded-2xl p-6 w-full shadow-sm border" style={{ borderColor: `${brandPrimary}12` }}>
+                      {/* Success icon */}
+                      <div className="mx-auto mb-4 w-12 h-12 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${brandPrimary}, ${brandAccent})` }}>
+                        <svg width="24" height="24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="text-base font-bold mb-1" style={{ fontFamily: headingFont, color: "#1c1c1c" }}>
+                        {thankYouHeading || t("thankYou.defaultHeading")}
+                      </h3>
+
+                      {/* Subtitle */}
+                      {thankYouSubtitle && (
+                        <p className="text-sm font-semibold mb-1.5" style={{ color: brandPrimary }}>{thankYouSubtitle}</p>
+                      )}
+
+                      {/* Message */}
+                      <p className="text-xs text-muted-foreground mb-3 leading-relaxed">{thankYouMessage || "..."}</p>
+
+                      {/* Email hint */}
+                      {thankYouShowEmailHint && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg mb-3 text-xs font-semibold" style={{ background: `${brandPrimary}08`, color: brandPrimary, border: `1px solid ${brandPrimary}18` }}>
+                          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+                          {t("thankYou.checkEmail")}
+                        </div>
+                      )}
+
+                      {/* CTA buttons preview */}
+                      {thankYouCtas.length > 0 && (
+                        <div className="flex flex-col items-center gap-2 mt-1">
+                          {thankYouCtas.map((cta, i) => (
+                            <span
+                              key={i}
+                              className="inline-block px-4 py-1.5 rounded-lg text-xs font-semibold"
+                              style={
+                                cta.style === "outline"
+                                  ? { border: `2px solid ${brandPrimary}`, color: brandPrimary, background: "transparent" }
+                                  : cta.style === "secondary"
+                                    ? { background: `${brandPrimary}15`, color: brandPrimary }
+                                    : { background: brandPrimary, color: "#fff", boxShadow: `0 2px 8px ${brandPrimary}40` }
+                              }
+                            >
+                              {cta.text || "CTA " + (i + 1)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="p-6 pt-4 border-t flex items-center justify-end gap-3">
+
+            {/* Footer actions */}
+            <div className="p-6 pt-4 border-t flex items-center justify-end gap-3 sticky bottom-0 bg-background rounded-b-2xl">
               <button onClick={() => setShowThankYouModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium border hover:bg-muted">{t("publish.close")}</button>
               <button onClick={saveThankYou} disabled={savingThankYou} className="px-6 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2">
                 {savingThankYou ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -2709,7 +2854,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

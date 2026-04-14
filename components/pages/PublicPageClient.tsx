@@ -35,9 +35,12 @@ type PublicPageData = {
   address_form?: string;
   // Thank-you page customization (editable by user)
   thank_you_title?: string;
+  thank_you_subtitle?: string;
   thank_you_message?: string;
   thank_you_cta_text?: string;
   thank_you_cta_url?: string;
+  thank_you_ctas?: { text: string; url: string; style: "primary" | "outline" | "secondary" }[];
+  thank_you_show_email_hint?: boolean;
   // Brand tokens for thank-you page styling
   brand_tokens?: Record<string, any> | null;
   content_data?: Record<string, any> | null;
@@ -203,8 +206,9 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
                 }),
               }).then(() => {
                 setCaptureSuccess(true);
-                // Auto-redirect only if no custom CTA
-                if (page.payment_url && !page.thank_you_cta_url) {
+                // Auto-redirect only if no custom CTAs configured
+                const hasCtas = (Array.isArray(page.thank_you_ctas) && page.thank_you_ctas.length > 0) || !!page.thank_you_cta_url;
+                if (page.payment_url && !hasCtas) {
                   setTimeout(() => { window.location.href = page.payment_url; }, 3000);
                 }
               }).catch(() => {});
@@ -236,8 +240,9 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
       setCaptureSuccess(true);
 
       // Auto-redirect to payment URL ONLY if no custom CTA button is configured
-      // (if user set a thank_you_cta_url, they want manual click, not auto-redirect)
-      if (page.payment_url && !page.thank_you_cta_url) {
+      // (if user set CTAs or a thank_you_cta_url, they want manual click, not auto-redirect)
+      const hasCtas = (Array.isArray(page.thank_you_ctas) && page.thank_you_ctas.length > 0) || !!page.thank_you_cta_url;
+      if (page.payment_url && !hasCtas) {
         setTimeout(() => {
           window.location.href = page.payment_url;
         }, 3000);
@@ -415,145 +420,253 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
       {toastWidgetId && <ToastNotificationOverlay widgetId={toastWidgetId} />}
       {shareWidgetId && <SocialShareOverlay widgetId={shareWidgetId} />}
 
-      {/* Thank-you / confirmation page after successful capture */}
+      {/* Thank-you / confirmation full-screen page after successful capture */}
       {captureSuccess && (() => {
         const brandPrimary = (page.brand_tokens as any)?.["colors-primary"] || "#6c3aed";
         const brandAccent = (page.brand_tokens as any)?.["colors-accent"] || brandPrimary;
         const headingFont = (page.brand_tokens as any)?.["typography-heading"] || "'DM Sans', system-ui, sans-serif";
+        const bodyFont = (page.brand_tokens as any)?.["typography-body"] || "'DM Sans', system-ui, sans-serif";
         const logoText = (page.content_data as any)?.logo_text || "";
+        const logoUrl = (page.content_data as any)?.logo_url || "";
         const footerText = (page.content_data as any)?.footer_text || "";
+        const showEmailHint = page.thank_you_show_email_hint !== false;
+
+        // Build CTA list: prefer new multi-CTA array, fallback to legacy single CTA
+        const ctas: { text: string; url: string; style: string }[] =
+          Array.isArray(page.thank_you_ctas) && page.thank_you_ctas.length > 0
+            ? page.thank_you_ctas
+            : page.thank_you_cta_url
+              ? [{ text: page.thank_you_cta_text || "Continuer", url: page.thank_you_cta_url, style: "primary" }]
+              : [];
+        const hasCtas = ctas.length > 0;
+        const hasPaymentRedirect = !!page.payment_url && !hasCtas;
+
+        const ctaStyles = (style: string): React.CSSProperties => {
+          if (style === "outline") return {
+            display: "inline-block",
+            padding: "14px 32px",
+            background: "transparent",
+            color: brandPrimary,
+            border: `2px solid ${brandPrimary}`,
+            borderRadius: 12,
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            textDecoration: "none",
+            cursor: "pointer",
+            transition: "background 0.2s, color 0.2s",
+          };
+          if (style === "secondary") return {
+            display: "inline-block",
+            padding: "14px 32px",
+            background: `${brandPrimary}15`,
+            color: brandPrimary,
+            border: "none",
+            borderRadius: 12,
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            textDecoration: "none",
+            cursor: "pointer",
+            transition: "background 0.2s",
+          };
+          // primary (default)
+          return {
+            display: "inline-block",
+            padding: "14px 32px",
+            background: brandPrimary,
+            color: "#fff",
+            border: "none",
+            borderRadius: 12,
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            textDecoration: "none",
+            cursor: "pointer",
+            boxShadow: `0 4px 16px ${brandPrimary}40`,
+            transition: "transform 0.15s, box-shadow 0.15s",
+          };
+        };
+
         return (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: `linear-gradient(135deg, ${brandPrimary}11 0%, ${brandPrimary}22 50%, ${brandAccent}18 100%)`,
+            background: `linear-gradient(145deg, #fafafa 0%, ${brandPrimary}08 40%, ${brandAccent}12 100%)`,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            zIndex: 9999,
+            fontFamily: `${bodyFont}, 'DM Sans', system-ui, -apple-system, sans-serif`,
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {/* Top bar with logo */}
+          {(logoText || logoUrl) && (
+            <div style={{
+              width: "100%",
+              padding: "20px 32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              borderBottom: `1px solid ${brandPrimary}10`,
+              background: "rgba(255,255,255,0.8)",
+              backdropFilter: "blur(12px)",
+              flexShrink: 0,
+            }}>
+              {logoUrl && <img src={logoUrl} alt="" style={{ height: 32, width: "auto", objectFit: "contain" }} />}
+              {logoText && <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1c1c1c", fontFamily: `${headingFont}, 'DM Sans', system-ui, sans-serif` }}>{logoText}</span>}
+            </div>
+          )}
+
+          {/* Main content area - vertically centered */}
+          <div style={{
+            flex: 1,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 9999,
-            fontFamily: "'DM Sans', system-ui, -apple-system, sans-serif",
-          }}
-        >
-          <div style={{
-            background: "#fff",
-            borderRadius: 24,
-            padding: "48px 40px",
-            textAlign: "center",
-            maxWidth: 500,
-            width: "90%",
-            boxShadow: "0 25px 80px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.04)",
-            border: `1px solid ${brandPrimary}15`,
+            padding: "40px 20px",
+            width: "100%",
+            maxWidth: 640,
+            margin: "0 auto",
           }}>
-            {/* Success icon */}
+            {/* Success card */}
             <div style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              background: brandPrimary,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 24px",
-              boxShadow: `0 8px 30px ${brandPrimary}40`,
+              background: "#fff",
+              borderRadius: 24,
+              padding: "48px 40px",
+              textAlign: "center",
+              width: "100%",
+              boxShadow: "0 25px 80px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.03)",
+              border: `1px solid ${brandPrimary}12`,
             }}>
-              <svg width="36" height="36" fill="none" stroke="#fff" strokeWidth="3" viewBox="0 0 24 24">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-
-            <h2 style={{
-              fontSize: "1.75rem",
-              fontWeight: 800,
-              marginBottom: 16,
-              color: "#1c1c1c",
-              lineHeight: 1.3,
-              fontFamily: `${headingFont}, 'DM Sans', system-ui, sans-serif`,
-            }}>
-              {page.thank_you_title || txt.thanksTitle}
-            </h2>
-
-            <p style={{
-              color: "#555",
-              fontSize: "1.05rem",
-              lineHeight: 1.7,
-              marginBottom: 24,
-              maxWidth: 380,
-              marginLeft: "auto",
-              marginRight: "auto",
-            }}>
-              {page.thank_you_message || txt.thanksMessage}
-            </p>
-
-            {/* Email icon hint */}
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "12px 24px",
-              background: `${brandPrimary}0a`,
-              borderRadius: 12,
-              border: `1px solid ${brandPrimary}20`,
-              marginBottom: 24,
-            }}>
-              <svg width="20" height="20" fill="none" stroke={brandPrimary} strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                <polyline points="22,6 12,13 2,6" />
-              </svg>
-              <span style={{ fontSize: "0.9rem", color: brandPrimary, fontWeight: 600 }}>
-                {page.address_form === "vous" ? "V\u00e9rifiez votre bo\u00eete email" : "V\u00e9rifie ta bo\u00eete email"}
-              </span>
-            </div>
-
-            {/* Optional CTA button (user-configured: link to offer, social, blog, etc.) */}
-            {page.thank_you_cta_url && (
-              <div style={{ marginBottom: 16 }}>
-                <a
-                  href={page.thank_you_cta_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "inline-block",
-                    padding: "14px 32px",
-                    background: brandPrimary,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 12,
-                    fontSize: "1.05rem",
-                    fontWeight: 700,
-                    textDecoration: "none",
-                    cursor: "pointer",
-                    boxShadow: `0 4px 16px ${brandPrimary}40`,
-                    transition: "transform 0.15s, box-shadow 0.15s",
-                  }}
-                >
-                  {page.thank_you_cta_text || "Continuer"}
-                </a>
-              </div>
-            )}
-
-            {/* Redirect notice (auto-redirect to payment URL) */}
-            {page.payment_url && !page.thank_you_cta_url && (
-              <p style={{
-                color: "#999",
-                fontSize: "0.85rem",
-                marginTop: 0,
-                fontStyle: "italic",
+              {/* Animated success icon */}
+              <div style={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                background: `linear-gradient(135deg, ${brandPrimary}, ${brandAccent})`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 28px",
+                boxShadow: `0 12px 40px ${brandPrimary}35`,
               }}>
-                {txt.thanksRedirect}
+                <svg width="40" height="40" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+
+              {/* Title */}
+              <h1 style={{
+                fontSize: "clamp(1.5rem, 4vw, 2rem)",
+                fontWeight: 800,
+                marginBottom: 12,
+                color: "#1c1c1c",
+                lineHeight: 1.3,
+                fontFamily: `${headingFont}, 'DM Sans', system-ui, sans-serif`,
+              }}>
+                {page.thank_you_title || txt.thanksTitle}
+              </h1>
+
+              {/* Subtitle */}
+              {page.thank_you_subtitle && (
+                <p style={{
+                  color: brandPrimary,
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  marginBottom: 16,
+                  lineHeight: 1.5,
+                }}>
+                  {page.thank_you_subtitle}
+                </p>
+              )}
+
+              {/* Message */}
+              <p style={{
+                color: "#555",
+                fontSize: "1.05rem",
+                lineHeight: 1.8,
+                marginBottom: showEmailHint || hasCtas || hasPaymentRedirect ? 28 : 0,
+                maxWidth: 480,
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}>
+                {page.thank_you_message || txt.thanksMessage}
               </p>
-            )}
+
+              {/* Email icon hint */}
+              {showEmailHint && (
+                <div style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "14px 28px",
+                  background: `${brandPrimary}08`,
+                  borderRadius: 14,
+                  border: `1px solid ${brandPrimary}18`,
+                  marginBottom: hasCtas ? 32 : 0,
+                }}>
+                  <svg width="22" height="22" fill="none" stroke={brandPrimary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                  <span style={{ fontSize: "0.95rem", color: brandPrimary, fontWeight: 600 }}>
+                    {page.address_form === "vous" ? "V\u00e9rifiez votre bo\u00eete email" : "V\u00e9rifie ta bo\u00eete email"}
+                  </span>
+                </div>
+              )}
+
+              {/* CTA buttons */}
+              {hasCtas && (
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 14,
+                  marginTop: showEmailHint ? 0 : 4,
+                }}>
+                  {ctas.map((cta, i) => (
+                    <a
+                      key={i}
+                      href={cta.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={ctaStyles(cta.style)}
+                    >
+                      {cta.text}
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {/* Redirect notice (auto-redirect to payment URL when no CTAs) */}
+              {hasPaymentRedirect && (
+                <p style={{
+                  color: "#999",
+                  fontSize: "0.85rem",
+                  marginTop: 20,
+                  fontStyle: "italic",
+                }}>
+                  {txt.thanksRedirect}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Footer matching main page */}
+          {/* Footer */}
           {(logoText || footerText) && (
             <div style={{
-              marginTop: 32,
+              width: "100%",
+              padding: "24px 32px",
               textAlign: "center",
               color: "#888",
               fontSize: "0.82rem",
               lineHeight: 1.6,
+              borderTop: `1px solid ${brandPrimary}08`,
+              background: "rgba(255,255,255,0.5)",
+              flexShrink: 0,
             }}>
               {logoText && <div style={{ fontWeight: 700, marginBottom: 4, color: "#666" }}>{logoText}</div>}
               {footerText && <div>{footerText}</div>}
