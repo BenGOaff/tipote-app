@@ -231,6 +231,25 @@ export const SEED_CATEGORIES: SeedCategory[] = [
       ar: "إشعارات الإثبات الاجتماعي وأزرار المشاركة لتضمينها في مواقعك",
     },
   },
+  {
+    slug: "tiquiz",
+    icon: "ClipboardList",
+    sort_order: 12,
+    title: {
+      fr: "Tiquiz — Quiz & Leads",
+      en: "Tiquiz — Quiz & Leads",
+      es: "Tiquiz — Quiz y Leads",
+      it: "Tiquiz — Quiz e Lead",
+      ar: "Tiquiz — اختبارات وعملاء",
+    },
+    description: {
+      fr: "Créez des quiz interactifs, capturez des leads et synchronisez avec Systeme.io",
+      en: "Create interactive quizzes, capture leads, and sync with Systeme.io",
+      es: "Crea quiz interactivos, captura leads y sincroniza con Systeme.io",
+      it: "Crea quiz interattivi, cattura lead e sincronizza con Systeme.io",
+      ar: "أنشئ اختبارات تفاعلية واجمع عملاء محتملين وزامن مع Systeme.io",
+    },
+  },
 ];
 
 // ─── ARTICLES ────────────────────────────────────────────────────────
@@ -3209,5 +3228,356 @@ In **Impostazioni > Impostazioni** → "Zona pericolosa" → "Elimina il mio acc
     },
     related_slugs: ["manage-subscription", "settings-overview"],
     tags: ["delete", "account", "danger"],
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // CATEGORY: TIQUIZ
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    category_slug: "tiquiz",
+    slug: "what-is-tiquiz",
+    sort_order: 1,
+    title: {
+      fr: "Qu'est-ce que Tiquiz ?",
+      en: "What is Tiquiz?",
+      es: "¿Qué es Tiquiz?",
+      it: "Cos'è Tiquiz?",
+      ar: "ما هو Tiquiz؟",
+    },
+    content: {
+      fr: `## Tiquiz en bref
+
+**Tiquiz** est un outil de création de quiz interactifs conçu pour capturer des leads qualifiés. C'est la version quiz de Tipote : simple côté utilisateur, puissant côté backend.
+
+### Ce que tu peux faire avec Tiquiz
+
+- **Créer des quiz** manuellement ou les **générer avec l'IA** (Claude)
+- **Capturer des leads** (email, prénom, nom, téléphone, pays)
+- **Synchroniser automatiquement** avec Systeme.io (tags, formations, communautés)
+- **Activer la viralité** : tes participants partagent le quiz pour débloquer un bonus
+- **Suivre les performances** : vues, taux de complétion, conversions, partages
+
+### Accès
+
+Tiquiz est accessible sur **quiz.tipote.com**. Disponible en 5 langues : français, anglais, espagnol, italien et arabe.`,
+      en: `## Tiquiz in a nutshell
+
+**Tiquiz** is an interactive quiz creation tool designed to capture qualified leads. It's the quiz-only version of Tipote: simple for users, powerful under the hood.
+
+### What you can do with Tiquiz
+
+- **Create quizzes** manually or **generate them with AI** (Claude)
+- **Capture leads** (email, first name, last name, phone, country)
+- **Auto-sync** with Systeme.io (tags, courses, communities)
+- **Enable virality**: participants share the quiz to unlock a bonus
+- **Track performance**: views, completion rate, conversions, shares
+
+### Access
+
+Tiquiz is available at **quiz.tipote.com**. Available in 5 languages: French, English, Spanish, Italian, and Arabic.`,
+      es: `## Tiquiz en resumen
+
+**Tiquiz** es una herramienta de creación de quiz interactivos para capturar leads cualificados. Es la versión quiz de Tipote: simple para el usuario, potente por detrás.
+
+- Crea quiz manualmente o con IA (Claude)
+- Captura leads (email, nombre, teléfono, país)
+- Sincronización automática con Systeme.io
+- Viralidad: los participantes comparten para desbloquear un bonus
+- Acceso en **quiz.tipote.com** en 5 idiomas`,
+      it: `## Tiquiz in breve
+
+**Tiquiz** è uno strumento per creare quiz interattivi e catturare lead qualificati. È la versione quiz di Tipote: semplice per l'utente, potente nel backend.
+
+- Crea quiz manualmente o con IA (Claude)
+- Cattura lead (email, nome, telefono, paese)
+- Sincronizzazione automatica con Systeme.io
+- Viralità: i partecipanti condividono per sbloccare un bonus
+- Accesso su **quiz.tipote.com** in 5 lingue`,
+      ar: `## Tiquiz باختصار
+
+**Tiquiz** هو أداة لإنشاء اختبارات تفاعلية لجمع عملاء محتملين مؤهلين. هو نسخة الاختبارات من Tipote: بسيط للمستخدم، قوي في الخلفية.
+
+- إنشاء اختبارات يدوياً أو بالذكاء الاصطناعي
+- جمع العملاء المحتملين (بريد، اسم، هاتف، بلد)
+- مزامنة تلقائية مع Systeme.io
+- متاح على **quiz.tipote.com** بخمس لغات`,
+    },
+    related_slugs: ["tiquiz-create-quiz", "tiquiz-plans"],
+    tags: ["tiquiz", "quiz", "leads", "overview"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-create-quiz",
+    sort_order: 2,
+    title: {
+      fr: "Créer un quiz (manuel ou IA)",
+      en: "Create a quiz (manual or AI)",
+      es: "Crear un quiz (manual o IA)",
+      it: "Creare un quiz (manuale o IA)",
+      ar: "إنشاء اختبار (يدوي أو بالذكاء الاصطناعي)",
+    },
+    content: {
+      fr: `## Créer un quiz sur Tiquiz
+
+Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 2 options :
+
+### Option 1 : Manuel
+- Donne un **titre** et une **introduction** à ton quiz
+- Ajoute tes **questions** avec les options de réponse
+- Configure les **résultats** (titre, description, insight, projection, CTA)
+- Associe chaque option à un résultat
+- Configure les **champs de capture** (email, prénom, nom, téléphone, pays)
+
+### Option 2 : Génération IA
+- Choisis un **objectif** parmi 16 objectifs stratégiques
+- Décris ton **public cible** et le **ton** souhaité
+- Choisis le **format** (court : 3-5 questions, long : 6-10)
+- Choisis le type de **segmentation** (par profil ou par niveau)
+- Clique sur **Générer** — l'IA crée tout en temps réel !
+
+> Tu peux toujours modifier le quiz généré par l'IA avant de le publier.`,
+      en: `## Create a quiz on Tiquiz
+
+Go to **Create a quiz** in the sidebar. You have 2 options:
+
+### Option 1: Manual
+- Give your quiz a **title** and **introduction**
+- Add **questions** with answer options
+- Configure **results** (title, description, insight, projection, CTA)
+- Map each option to a result
+- Set up **capture fields** (email, first name, last name, phone, country)
+
+### Option 2: AI Generation
+- Choose an **objective** from 16 strategic objectives
+- Describe your **target audience** and desired **tone**
+- Pick the **format** (short: 3-5 questions, long: 6-10)
+- Choose **segmentation** type (by profile or by level)
+- Click **Generate** — AI creates everything in real time!
+
+> You can always edit the AI-generated quiz before publishing.`,
+      es: `## Crear un quiz en Tiquiz
+
+Ve a **Crear un quiz**. Tienes 2 opciones: **Manual** (añade preguntas y resultados tú mismo) o **IA** (elige un objetivo, público y tono, y la IA genera todo). Puedes editar el quiz generado antes de publicar.`,
+      it: `## Creare un quiz su Tiquiz
+
+Vai su **Crea un quiz**. Hai 2 opzioni: **Manuale** (aggiungi domande e risultati) o **IA** (scegli obiettivo, pubblico e tono, l'IA genera tutto). Puoi modificare il quiz generato prima di pubblicare.`,
+      ar: `## إنشاء اختبار على Tiquiz
+
+اذهب إلى **إنشاء اختبار**. لديك خياران: **يدوي** (أضف الأسئلة والنتائج بنفسك) أو **ذكاء اصطناعي** (اختر الهدف والجمهور والنبرة، والذكاء الاصطناعي يولّد كل شيء). يمكنك تعديل الاختبار قبل النشر.`,
+    },
+    related_slugs: ["what-is-tiquiz", "tiquiz-leads", "tiquiz-systeme-io"],
+    tags: ["tiquiz", "quiz", "create", "ai", "manual"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-leads",
+    sort_order: 3,
+    title: {
+      fr: "Capturer et gérer les leads",
+      en: "Capture and manage leads",
+      es: "Capturar y gestionar leads",
+      it: "Catturare e gestire i lead",
+      ar: "جمع وإدارة العملاء المحتملين",
+    },
+    content: {
+      fr: `## Capture de leads
+
+Quand un participant termine ton quiz, il doit entrer son **email** avant de voir son résultat. Tu peux aussi activer des champs optionnels : **prénom, nom, téléphone, pays**.
+
+### Où retrouver tes leads ?
+
+Dans la page **Mes leads** ou dans l'onglet **Leads** de chaque quiz. Tu y vois : email, prénom, résultat obtenu, date, statut de partage.
+
+### Exporter
+
+Clique sur **Exporter les leads** pour télécharger un fichier CSV avec tous tes contacts.
+
+### Synchronisation Systeme.io
+
+Si ta clé API est configurée, chaque lead est **automatiquement synchronisé** : création du contact, application du tag du résultat, inscription en formation et ajout en communauté (si configurés).`,
+      en: `## Lead capture
+
+When a participant completes your quiz, they must enter their **email** before seeing their result. You can also enable optional fields: **first name, last name, phone, country**.
+
+### Where to find your leads
+
+On the **My Leads** page or in the **Leads** tab of each quiz. You'll see: email, first name, result, date, share status.
+
+### Export
+
+Click **Export leads** to download a CSV file with all your contacts.
+
+### Systeme.io sync
+
+If your API key is configured, each lead is **automatically synced**: contact creation, result tag, course enrollment, and community addition (if configured).`,
+      es: `## Captura de leads
+
+El participante debe ingresar su email antes de ver su resultado. Puedes activar campos opcionales (nombre, teléfono, país). Encuentra tus leads en **Mis leads** o en la pestaña Leads de cada quiz. Exporta en CSV o sincroniza automáticamente con Systeme.io.`,
+      it: `## Cattura lead
+
+Il partecipante deve inserire la sua email prima di vedere il risultato. Puoi attivare campi opzionali (nome, telefono, paese). Trova i tuoi lead in **I miei lead** o nella scheda Lead di ogni quiz. Esporta in CSV o sincronizza con Systeme.io.`,
+      ar: `## جمع العملاء المحتملين
+
+يجب على المشارك إدخال بريده الإلكتروني قبل رؤية نتيجته. يمكنك تفعيل حقول اختيارية (الاسم، الهاتف، البلد). اعثر على عملائك في **عملائي** أو في تبويب العملاء لكل اختبار. صدّر كـ CSV أو زامن مع Systeme.io.`,
+    },
+    related_slugs: ["tiquiz-systeme-io", "tiquiz-create-quiz", "tiquiz-virality"],
+    tags: ["tiquiz", "leads", "capture", "export", "csv"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-systeme-io",
+    sort_order: 4,
+    title: {
+      fr: "Connecter Systeme.io",
+      en: "Connect Systeme.io",
+      es: "Conectar Systeme.io",
+      it: "Collegare Systeme.io",
+      ar: "ربط Systeme.io",
+    },
+    content: {
+      fr: `## Intégration Systeme.io
+
+### Configurer ta clé API
+Va dans **Paramètres** et colle ta **clé API Systeme.io**. Tu peux lui donner un nom pour t'y retrouver.
+
+### Ce qui se passe automatiquement
+Quand un lead soumet ton quiz :
+1. Le contact est **créé ou mis à jour** dans Systeme.io
+2. Le **tag du résultat** est appliqué (ex: "quiz-visionnaire")
+3. Le champ personnalisé **tiquiz_result** est rempli
+4. Si configuré : **inscription en formation** et **ajout en communauté**
+
+### Tag de partage
+Si la viralité est activée et que le participant partage, un **tag dédié** est aussi appliqué.
+
+### Sync en masse
+Dans l'onglet Leads d'un quiz, clique sur **Synchroniser avec Systeme.io** pour forcer la sync de tous les leads en attente.`,
+      en: `## Systeme.io Integration
+
+### Set up your API key
+Go to **Settings** and paste your **Systeme.io API key**.
+
+### What happens automatically
+When a lead submits your quiz:
+1. Contact is **created or updated** in Systeme.io
+2. The **result tag** is applied (e.g., "quiz-visionary")
+3. Custom field **tiquiz_result** is filled
+4. If configured: **course enrollment** and **community addition**
+
+### Bulk sync
+In a quiz's Leads tab, click **Sync with Systeme.io** to force-sync all pending leads.`,
+      es: `## Integración Systeme.io
+
+Configura tu clave API en **Configuración**. Cuando un lead completa tu quiz, el contacto se crea en Systeme.io con el tag del resultado, inscripción en formación y comunidad (si configurado). Usa **Sincronizar con Systeme.io** para sync en masa.`,
+      it: `## Integrazione Systeme.io
+
+Configura la tua chiave API nelle **Impostazioni**. Quando un lead completa il quiz, il contatto viene creato in Systeme.io con il tag del risultato, iscrizione al corso e comunità (se configurato). Usa **Sincronizza con Systeme.io** per il sync in massa.`,
+      ar: `## تكامل Systeme.io
+
+قم بإعداد مفتاح API في **الإعدادات**. عندما يكمل عميل محتمل اختبارك، يتم إنشاء جهة الاتصال في Systeme.io مع وسم النتيجة والتسجيل في الدورة والمجتمع (إذا تم التهيئة).`,
+    },
+    related_slugs: ["tiquiz-leads", "tiquiz-create-quiz", "tiquiz-virality"],
+    tags: ["tiquiz", "systeme.io", "integration", "tags", "sync"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-virality",
+    sort_order: 5,
+    title: {
+      fr: "Activer la viralité (bonus de partage)",
+      en: "Enable virality (share bonus)",
+      es: "Activar la viralidad (bonus de compartir)",
+      it: "Attivare la viralità (bonus condivisione)",
+      ar: "تفعيل الانتشار (مكافأة المشاركة)",
+    },
+    content: {
+      fr: `## Le bonus de partage
+
+Active la **viralité** dans les paramètres de ton quiz pour que chaque participant puisse partager le quiz et débloquer un bonus.
+
+### Comment ça marche
+1. Le participant voit son résultat
+2. Un écran lui propose de **partager le quiz** (lien + message pré-rempli)
+3. S'il partage, il **débloque le bonus** que tu as défini (ex : guide PDF, accès privé…)
+4. Un **tag Systeme.io dédié** est appliqué au contact pour identifier les partageurs
+
+### Configuration
+- **Description du bonus** : ce que le participant reçoit en échange
+- **Message de partage** : le texte pré-rempli pour le partage
+- **Tag SIO share** : le tag appliqué dans Systeme.io aux partageurs`,
+      en: `## Share bonus
+
+Enable **virality** in your quiz settings so participants can share the quiz and unlock a bonus.
+
+### How it works
+1. Participant sees their result
+2. A screen invites them to **share the quiz** (pre-filled link + message)
+3. If they share, they **unlock the bonus** you defined (e.g., PDF guide, private access…)
+4. A **dedicated Systeme.io tag** is applied to identify sharers
+
+### Configuration
+- **Bonus description**: what the participant gets
+- **Share message**: pre-filled sharing text
+- **SIO share tag**: Systeme.io tag for sharers`,
+      es: `## Bonus de compartir\n\nActiva la **viralidad** en los ajustes de tu quiz. Cuando el participante comparte, desbloquea un bonus y recibe un tag dedicado en Systeme.io.`,
+      it: `## Bonus condivisione\n\nAttiva la **viralità** nelle impostazioni del quiz. Quando il partecipante condivide, sblocca un bonus e riceve un tag dedicato in Systeme.io.`,
+      ar: `## مكافأة المشاركة\n\nفعّل **الانتشار** في إعدادات اختبارك. عندما يشارك المشارك، يفتح مكافأة ويحصل على وسم مخصص في Systeme.io.`,
+    },
+    related_slugs: ["tiquiz-leads", "tiquiz-systeme-io"],
+    tags: ["tiquiz", "virality", "share", "bonus"],
+  },
+  {
+    category_slug: "tiquiz",
+    slug: "tiquiz-plans",
+    sort_order: 6,
+    title: {
+      fr: "Plans et tarifs Tiquiz",
+      en: "Tiquiz plans and pricing",
+      es: "Planes y precios Tiquiz",
+      it: "Piani e prezzi Tiquiz",
+      ar: "خطط وأسعار Tiquiz",
+    },
+    content: {
+      fr: `## Les plans Tiquiz
+
+| Plan | Prix | Quiz | Réponses/mois |
+|------|------|------|---------------|
+| **Free** | 0 € | 1 | 10 |
+| **Lifetime** | 57 € (une fois) | Illimité | Illimité |
+| **Monthly** | 9 €/mois | Illimité | Illimité |
+| **Yearly** | 90 €/an | Illimité | Illimité |
+
+### Plan gratuit
+- 1 quiz maximum
+- 10 réponses par mois (reset automatique après 30 jours)
+- Toutes les fonctionnalités de base (IA, SIO, viralité)
+
+### Plans payants
+- Quiz et réponses **illimités**
+- Toutes les intégrations Systeme.io
+- Support prioritaire`,
+      en: `## Tiquiz Plans
+
+| Plan | Price | Quizzes | Responses/month |
+|------|-------|---------|-----------------|
+| **Free** | €0 | 1 | 10 |
+| **Lifetime** | €57 (one-time) | Unlimited | Unlimited |
+| **Monthly** | €9/mo | Unlimited | Unlimited |
+| **Yearly** | €90/yr | Unlimited | Unlimited |
+
+### Free plan
+- 1 quiz max, 10 responses/month (auto-reset after 30 days)
+- All basic features (AI, SIO, virality)
+
+### Paid plans
+- Unlimited quizzes and responses
+- All Systeme.io integrations
+- Priority support`,
+      es: `## Planes Tiquiz\n\n- **Free**: 0€, 1 quiz, 10 respuestas/mes\n- **Lifetime**: 57€ (una vez), ilimitado\n- **Mensual**: 9€/mes, ilimitado\n- **Anual**: 90€/año, ilimitado`,
+      it: `## Piani Tiquiz\n\n- **Free**: 0€, 1 quiz, 10 risposte/mese\n- **Lifetime**: 57€ (una volta), illimitato\n- **Mensile**: 9€/mese, illimitato\n- **Annuale**: 90€/anno, illimitato`,
+      ar: `## خطط Tiquiz\n\n- **مجاني**: 0€، اختبار واحد، 10 ردود/شهر\n- **مدى الحياة**: 57€ (مرة واحدة)، غير محدود\n- **شهري**: 9€/شهر، غير محدود\n- **سنوي**: 90€/سنة، غير محدود`,
+    },
+    related_slugs: ["what-is-tiquiz", "tiquiz-create-quiz"],
+    tags: ["tiquiz", "plans", "pricing", "free", "lifetime"],
   },
 ];
