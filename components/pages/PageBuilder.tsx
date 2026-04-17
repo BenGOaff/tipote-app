@@ -159,9 +159,6 @@ type SectionInfo = {
   classes: string;
   top: number;
   anchorId?: string;
-  /** null = top-level page section; otherwise the id of the flex/grid parent
-   * whose direct children are individually reorderable (e.g. hero-grid). */
-  parentId: string | null;
 };
 
 // One row in the sections list — sortable (drag-and-drop, touch-friendly) with
@@ -191,7 +188,6 @@ function SortableSectionRow({
   labelDrag: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
-  const isSubBlock = section.parentId !== null;
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -203,8 +199,6 @@ function SortableSectionRow({
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all text-xs border text-white/80 ${
-        isSubBlock ? "ml-4 pl-2 border-l-2 border-l-white/15" : ""
-      } ${
         isDragging
           ? "bg-white/15 border-blue-400/50 shadow-lg"
           : "bg-transparent border-transparent hover:bg-white/10"
@@ -712,48 +706,10 @@ const INLINE_EDIT_SCRIPT = `
     return '#' + m.slice(0,3).map(function(x) { return Math.round(parseFloat(x)).toString(16).padStart(2,'0'); }).join('');
   }
 
-  /* ── Section detection: identify all top-level sections + nested sub-blocks
-        that live inside known layout containers (so e.g. the form-left / image-
-        right split of a hero can be reordered independently per viewport). ── */
+  /* ── Section detection: find all top-level page sections so the sidebar can
+        list + reorder them. ── */
   var sectionSelectors = '.tp-header-bar, .tp-hero, .tp-section, .tp-final-cta, .tp-footer, nav, [class*="tp-section"]';
-  /* Parents whose direct children are individually reorderable (grids / columns).
-     The children themselves are reported as "sub-blocks" with parentId pointing
-     to the grid. CSS "order" works on grid/flex children so per-viewport order
-     just works once each child has an id + explicit order value. */
-  var subBlockParentSelectors = '.tp-hero-grid, .tp-columns, .tp-grid, .tp-features-grid';
-
-  /* Helper: collect all reorderable blocks (top-level + sub-blocks of known
-     grid/column parents). Runs fresh each time so it reflects the current DOM
-     after delete/reorder/add operations. Also assigns a stable id to any
-     grid-parent that doesn't have one yet (needed so sub-block's parentId can
-     reference it). */
-  function collectReorderable() {
-    var top = Array.prototype.slice.call(document.querySelectorAll(sectionSelectors));
-    var subs = [];
-    var all = [];
-    // Ensure every grid parent has a stable id — sub-blocks reference it as parentId.
-    Array.prototype.forEach.call(document.querySelectorAll(subBlockParentSelectors), function(gridEl) {
-      if (!gridEl.id) gridEl.id = 'tp-grid-' + Math.random().toString(36).slice(2, 8);
-    });
-    // Walk top-level sections in DOM order; after each, append any sub-blocks
-    // living inside it (so the sidebar shows them grouped right under the parent).
-    top.forEach(function(el) {
-      all.push(el);
-      Array.prototype.forEach.call(el.querySelectorAll(subBlockParentSelectors), function(gridEl) {
-        Array.prototype.forEach.call(gridEl.children, function(child) {
-          if (child.nodeType !== 1) return;
-          subs.push(child);
-          all.push(child);
-        });
-      });
-    });
-    return { top: top, subs: subs, all: all };
-  }
-
-  var initial = collectReorderable();
-  var topLevelEls = initial.top;
-  var subBlockEls = initial.subs;
-  var allSections = initial.all;
+  var allSections = document.querySelectorAll(sectionSelectors);
   var sectionList = [];
   var selectedSectionEl = null;
   var sectionHighlight = document.createElement('div');
@@ -761,17 +717,16 @@ const INLINE_EDIT_SCRIPT = `
   sectionHighlight.setAttribute('data-tipote-injected', '1');
   document.body.appendChild(sectionHighlight);
 
-  /* Helper: human-friendly label + parentId for any reorderable block. Detects
-     sub-blocks dynamically by checking if the element's parent matches one of
-     subBlockParentSelectors. */
-  function describeBlock(el) {
+  // Gather section info and send to parent
+  allSections.forEach(function(el, i) {
+    if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+    var id = el.id || ('tp-auto-section-' + i);
+    if (!el.id) el.id = id;
+    el.setAttribute('data-tp-section-idx', String(i));
+
     var cls = el.className || '';
-    var parent = el.parentElement;
-    var isSubBlock = !!(parent && parent.matches && parent.matches(subBlockParentSelectors));
     var label = 'Section';
     if (cls.indexOf('tp-header-bar') >= 0) label = "Barre d'annonce";
-    else if (cls.indexOf('tp-hero-left') >= 0) label = 'Contenu principal';
-    else if (cls.indexOf('tp-hero-right') >= 0) label = 'Illustration';
     else if (cls.indexOf('tp-hero') >= 0) label = 'Hero';
     else if (cls.indexOf('tp-final-cta') >= 0) label = 'CTA final';
     else if (cls.indexOf('tp-footer') >= 0) label = 'Pied de page';
@@ -783,34 +738,8 @@ const INLINE_EDIT_SCRIPT = `
       var titleText = (titleEl.textContent || '').trim().substring(0, 40);
       if (titleText) label = titleText;
     }
-    var parentId = isSubBlock && parent ? (parent.id || null) : null;
-    return { label: label, parentId: parentId, isSubBlock: isSubBlock };
-  }
-
-  /* Build a fresh section list from the current DOM — used by post-mutation
-     rebuilds (delete / move / reorder). */
-  function buildSectionList() {
-    var scan = collectReorderable();
-    var list = [];
-    scan.all.forEach(function(el, i) {
-      if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
-      if (!el.id) el.id = 'tp-auto-section-' + i;
-      var info = describeBlock(el);
-      list.push({ id: el.id, label: info.label, tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i, anchorId: el.getAttribute('id') || '', parentId: info.parentId });
-    });
-    return list;
-  }
-
-  // Gather section info and send to parent
-  allSections.forEach(function(el, i) {
-    if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
-    var id = el.id || ('tp-auto-section-' + i);
-    if (!el.id) el.id = id;
-    el.setAttribute('data-tp-section-idx', String(i));
-
-    var info = describeBlock(el);
     var anchorId = el.getAttribute('id') || '';
-    sectionList.push({ id: id, label: info.label, tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i, anchorId: anchorId, parentId: info.parentId });
+    sectionList.push({ id: id, label: label, tagName: el.tagName, classes: cls, top: el.offsetTop, idx: i, anchorId: anchorId });
 
     // Section click detection (only on section background, not on editable content)
     el.addEventListener('click', function(e) {
@@ -868,7 +797,22 @@ const INLINE_EDIT_SCRIPT = `
         selectedSectionEl = null;
         parent.postMessage({ type: 'tipote:text-edit', tag: 'section-delete', text: '' }, '*');
         setTimeout(function() {
-          parent.postMessage({ type: 'tipote:sections-list', sections: buildSectionList() }, '*');
+          var remaining = document.querySelectorAll(sectionSelectors);
+          var updated = [];
+          remaining.forEach(function(el, i) {
+            if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+            var cls = el.className || '';
+            var lbl = 'Section';
+            if (cls.indexOf('tp-header-bar') >= 0) lbl = "Barre d'annonce";
+            else if (cls.indexOf('tp-hero') >= 0) lbl = 'Hero';
+            else if (cls.indexOf('tp-final-cta') >= 0) lbl = 'CTA final';
+            else if (cls.indexOf('tp-footer') >= 0) lbl = 'Pied de page';
+            else if (el.tagName === 'NAV') lbl = 'Navigation';
+            var t = el.querySelector('.tp-section-title, h2, h1');
+            if (t) { var tx = (t.textContent || '').trim().substring(0, 40); if (tx) lbl = tx; }
+            updated.push({ id: el.id, label: lbl, tagName: el.tagName, classes: cls, top: el.offsetTop, idx: i, anchorId: el.getAttribute('id') || '' });
+          });
+          parent.postMessage({ type: 'tipote:sections-list', sections: updated }, '*');
         }, 100);
       }
     }
@@ -884,7 +828,22 @@ const INLINE_EDIT_SCRIPT = `
       }
       parent.postMessage({ type: 'tipote:text-edit', tag: 'section-move', text: '' }, '*');
       setTimeout(function() {
-        parent.postMessage({ type: 'tipote:sections-list', sections: buildSectionList() }, '*');
+        var remaining = document.querySelectorAll(sectionSelectors);
+        var updated = [];
+        remaining.forEach(function(el, i) {
+          if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+          var cls = el.className || '';
+          var lbl = 'Section';
+          if (cls.indexOf('tp-header-bar') >= 0) lbl = "Barre d'annonce";
+          else if (cls.indexOf('tp-hero') >= 0) lbl = 'Hero';
+          else if (cls.indexOf('tp-final-cta') >= 0) lbl = 'CTA final';
+          else if (cls.indexOf('tp-footer') >= 0) lbl = 'Pied de page';
+          else if (el.tagName === 'NAV') lbl = 'Navigation';
+          var t = el.querySelector('.tp-section-title, h2, h1');
+          if (t) { var tx = (t.textContent || '').trim().substring(0, 40); if (tx) lbl = tx; }
+          updated.push({ id: el.id, label: lbl, tagName: el.tagName, classes: cls, top: el.offsetTop, idx: i, anchorId: el.getAttribute('id') || '' });
+        });
+        parent.postMessage({ type: 'tipote:sections-list', sections: updated }, '*');
       }, 100);
     }
 
@@ -938,7 +897,22 @@ const INLINE_EDIT_SCRIPT = `
       }
       parent.postMessage({ type: 'tipote:text-edit', tag: 'section-reorder', text: '' }, '*');
       setTimeout(function() {
-        parent.postMessage({ type: 'tipote:sections-list', sections: buildSectionList() }, '*');
+        var remaining = document.querySelectorAll(sectionSelectors);
+        var updated = [];
+        remaining.forEach(function(el, i) {
+          if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
+          var cls = el.className || '';
+          var lbl = 'Section';
+          if (cls.indexOf('tp-header-bar') >= 0) lbl = "Barre d'annonce";
+          else if (cls.indexOf('tp-hero') >= 0) lbl = 'Hero';
+          else if (cls.indexOf('tp-final-cta') >= 0) lbl = 'CTA final';
+          else if (cls.indexOf('tp-footer') >= 0) lbl = 'Pied de page';
+          else if (el.tagName === 'NAV') lbl = 'Navigation';
+          var t = el.querySelector('.tp-section-title, h2, h1');
+          if (t) { var tx = (t.textContent || '').trim().substring(0, 40); if (tx) lbl = tx; }
+          updated.push({ id: el.id, label: lbl, tagName: el.tagName, classes: cls, top: el.offsetTop, idx: i, anchorId: el.getAttribute('id') || '' });
+        });
+        parent.postMessage({ type: 'tipote:sections-list', sections: updated }, '*');
       }, 100);
     }
 
@@ -1800,18 +1774,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     const current = effectiveOrderFor(orderDevice, sections);
     const idx = current.indexOf(sectionId);
     if (idx === -1) return;
-    // Only swap with the nearest neighbor that shares the same parentId —
-    // sub-blocks (e.g. hero-left / hero-right) stay inside their grid, and
-    // top-level sections don't drift into someone else's flex container.
-    const byId = new Map(sections.map((s) => [s.id, s] as const));
-    const myParent = byId.get(sectionId)?.parentId ?? null;
-    const step = direction === "up" ? -1 : 1;
-    let targetIdx = -1;
-    for (let i = idx + step; i >= 0 && i < current.length; i += step) {
-      const candidate = byId.get(current[i]);
-      if (candidate && (candidate.parentId ?? null) === myParent) { targetIdx = i; break; }
-    }
-    if (targetIdx === -1) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= current.length) return;
     const next = [...current];
     [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
     const other: OrderDevice = orderDevice === "mobile" ? "desktop" : "mobile";
@@ -1838,12 +1802,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     const oldIndex = current.indexOf(String(active.id));
     const newIndex = current.indexOf(String(over.id));
     if (oldIndex === -1 || newIndex === -1) return;
-    // Reject cross-parent drops: sub-blocks belong to their grid parent, and
-    // top-level sections can't land inside a grid.
-    const byId = new Map(sections.map((s) => [s.id, s] as const));
-    const sourceParent = byId.get(String(active.id))?.parentId ?? null;
-    const destParent = byId.get(String(over.id))?.parentId ?? null;
-    if (sourceParent !== destParent) return;
     const next = arrayMove(current, oldIndex, newIndex);
     const other: OrderDevice = orderDevice === "mobile" ? "desktop" : "mobile";
     applySectionOrder({
@@ -2640,6 +2598,18 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     ) : (
                       /* ── No element selected: show sections + palette ── */
                       <>
+                        {/* Responsive layout (capture pages) — surfaced here so
+                            Marie-Paule can flip image/form order per viewport
+                            without hunting in the Settings tab. */}
+                        {isCapturePage(page) && (
+                          <div className="pb-3 mb-1 border-b border-white/10">
+                            <LayoutPanel
+                              value={page.layout_config}
+                              onChange={handleLayoutUpdate}
+                            />
+                          </div>
+                        )}
+
                         {/* Sections list — drag-and-drop + always-visible arrows */}
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
