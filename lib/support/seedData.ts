@@ -2263,13 +2263,150 @@ Crea pagine di cattura, vendita o vetrina con il page builder integrato. Pubblic
 
 أنشئ صفحات التقاط أو بيع أو عرض مع المحرر المدمج. انشر على \`tipote.com/p/your-slug\`.`,
     },
-    related_slugs: ["create-quiz", "manage-leads", "branding-settings"],
+    related_slugs: ["create-quiz", "manage-leads", "branding-settings", "ordre-mobile-desktop"],
     tags: ["page", "landing", "sales", "capture", "builder"],
   },
   {
     category_slug: "pages-quiz",
-    slug: "create-quiz",
+    slug: "ordre-mobile-desktop",
     sort_order: 2,
+    title: {
+      fr: "Changer l'ordre des blocs sur mobile (sans toucher au PC)",
+      en: "Change block order on mobile (without affecting desktop)",
+      es: "Cambiar el orden de los bloques en móvil (sin tocar el ordenador)",
+      it: "Cambiare l'ordine dei blocchi su mobile (senza toccare il desktop)",
+      ar: "تغيير ترتيب الكتل على الهاتف (دون المساس بالكمبيوتر)",
+    },
+    content: {
+      fr: `## Le mobile et l'ordinateur peuvent avoir un ordre différent
+
+Sur un téléphone, on voit les choses **l'une en dessous de l'autre**. Sur un ordinateur, on a plus de place : **côte à côte** ou dans un ordre différent. Sur Tipote, tu peux décider d'un ordre **différent pour chaque écran**, sans rien casser.
+
+> **Bonne nouvelle :** tu peux tout faire depuis ton ordinateur. Pas besoin d'éditer depuis ton téléphone pour modifier la version mobile.
+
+### Comment ça marche, en 3 étapes
+
+**1. Ouvre l'éditeur de ta page** sur ton ordinateur.
+
+**2. En haut, tu vois 3 petits boutons :** 📱 Mobile / 📱 Tablette / 🖥️ Ordinateur. Clique sur celui qui correspond à l'écran que tu veux **personnaliser**.
+
+**3. Déplace tes blocs dans la barre de gauche** (glisser-déposer ou flèches ↑ ↓). Une petite étiquette bleue t'indique en temps réel **"Tu modifies l'ordre mobile"** ou **"Tu modifies l'ordre ordinateur"**.
+
+### Exemple concret
+
+Imagine une page avec 3 blocs :
+- 🎨 Illustration
+- 📝 Texte de présentation
+- 📧 Formulaire de capture
+
+#### Sur ordinateur (la version qui a de la place)
+\`\`\`
+┌─────────────────────────┐
+│  🎨 Illustration         │
+├─────────────────────────┤
+│  📝 Texte                │
+├─────────────────────────┤
+│  📧 Formulaire           │
+└─────────────────────────┘
+\`\`\`
+
+#### Sur mobile (tu veux que le formulaire soit plus visible)
+\`\`\`
+┌──────────────┐
+│  📝 Texte     │
+├──────────────┤
+│  📧 Formulaire│
+├──────────────┤
+│  🎨 Illustration│
+└──────────────┘
+\`\`\`
+
+👉 Tu as changé l'ordre **uniquement sur mobile**. Sur ordinateur, rien n'a bougé. Magique !
+
+### À retenir
+
+- ✅ Tu **peux tout faire depuis ton ordinateur** (pas besoin de prendre ton téléphone)
+- ✅ L'ordre mobile et l'ordre ordinateur sont **indépendants**
+- ✅ Pour voir le rendu exact, clique sur 📱 Mobile en haut
+- ⚠️ Si tu veux que les deux ordres restent identiques, ne touche à rien : par défaut ils sont alignés
+
+> **Astuce :** si tu te sens perdue, regarde toujours l'étiquette bleue au-dessus de ta liste de blocs. Elle te dit quel ordre tu es en train de modifier.`,
+      en: `## Mobile and desktop can have different orders
+
+On a phone, things stack **one below the other**. On a desktop, there's more space. Tipote lets you set a **different order for each screen** without breaking anything.
+
+> **Good news:** you can do everything from your computer. No need to edit from your phone to change the mobile version.
+
+### How it works, in 3 steps
+
+**1. Open the page editor** on your computer.
+
+**2. At the top, you'll see 3 small buttons:** 📱 Mobile / 📱 Tablet / 🖥️ Desktop. Click the one for the screen you want to **customize**.
+
+**3. Drag your blocks in the left sidebar** (drag-and-drop or ↑ ↓ arrows). A small blue label tells you in real time **"You're editing the mobile order"** or **"You're editing the desktop order"**.
+
+### Concrete example
+
+A page with 3 blocks: 🎨 Illustration / 📝 Description text / 📧 Capture form
+
+- **Desktop** → Illustration, Text, Form
+- **Mobile** → Text, Form, Illustration (the form is more visible, first thing thumb reaches)
+
+You changed the order **only on mobile**. On desktop, nothing moved.
+
+### To remember
+
+- ✅ You can do everything from your computer
+- ✅ Mobile and desktop orders are **independent**
+- ✅ Click 📱 Mobile at the top to preview the mobile version
+- ⚠️ If you don't touch anything, both orders stay aligned by default`,
+      es: `## Móvil y ordenador pueden tener órdenes diferentes
+
+En el móvil, los bloques se apilan. En el ordenador hay más espacio. Tipote te permite definir un **orden diferente para cada pantalla** sin romper nada.
+
+> **Buena noticia:** puedes hacerlo todo desde tu ordenador.
+
+### Cómo funciona
+
+1. **Abre el editor** en el ordenador.
+2. **Arriba hay 3 botones:** 📱 Móvil / 📱 Tablet / 🖥️ Ordenador. Haz clic en la pantalla que quieres personalizar.
+3. **Arrastra los bloques** en la barra izquierda. Una etiqueta azul indica **"Estás editando el orden móvil"** o **"el orden escritorio"**.
+
+Los órdenes móvil y escritorio son **independientes**. Si no tocas nada, quedan iguales por defecto.`,
+      it: `## Mobile e desktop possono avere ordini diversi
+
+Su mobile i blocchi si impilano. Su desktop c'è più spazio. Tipote ti permette di impostare un **ordine diverso per ogni schermo** senza rompere nulla.
+
+> **Buona notizia:** puoi fare tutto dal computer.
+
+### Come funziona
+
+1. **Apri l'editor** sul computer.
+2. **In alto ci sono 3 pulsanti:** 📱 Mobile / 📱 Tablet / 🖥️ Desktop. Clicca sullo schermo che vuoi personalizzare.
+3. **Trascina i blocchi** nella barra laterale. Un'etichetta blu indica **"Stai modificando l'ordine mobile"** o **"l'ordine desktop"**.
+
+Gli ordini mobile e desktop sono **indipendenti**. Se non tocchi nulla, rimangono allineati di default.`,
+      ar: `## يمكن أن يكون لديك ترتيب مختلف على الهاتف والكمبيوتر
+
+على الهاتف تتراص الكتل. على الكمبيوتر مساحة أكبر. يتيح لك Tipote تعيين **ترتيب مختلف لكل شاشة** دون كسر أي شيء.
+
+> **خبر جيد:** يمكنك فعل كل شيء من الكمبيوتر.
+
+### كيف يعمل
+
+1. **افتح المحرر** على الكمبيوتر.
+2. **في الأعلى توجد 3 أزرار:** 📱 هاتف / 📱 جهاز لوحي / 🖥️ كمبيوتر. انقر على الشاشة التي تريد تخصيصها.
+3. **اسحب الكتل** في الشريط الجانبي الأيسر. تُعلمك ملصقة زرقاء **"أنت تعدل ترتيب الهاتف"** أو **"ترتيب الكمبيوتر"**.
+
+ترتيب الهاتف والكمبيوتر **مستقلان**. إذا لم تلمس شيئًا، فسيبقى الترتيبان متطابقين افتراضيًا.`,
+    },
+    related_slugs: ["create-page", "branding-settings"],
+    tags: ["page", "mobile", "desktop", "ordre", "éditeur", "responsive"],
+  },
+  {
+    category_slug: "pages-quiz",
+    slug: "create-quiz",
+    sort_order: 3,
     title: {
       fr: "Créer un quiz lead magnet",
       en: "Create a lead magnet quiz",

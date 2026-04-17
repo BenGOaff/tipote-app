@@ -2404,7 +2404,13 @@
     },
     "reorder": {
       "hint": "Arrastra para reordenar",
-      "drag": "Arrastra para mover"
+      "drag": "Arrastra para mover",
+      "editingMobileOrder": "Estás editando el orden móvil",
+      "editingDesktopOrder": "Estás editando el orden escritorio",
+      "learnMore": "Saber más",
+      "introTitle": "Tip: orden distinto móvil / escritorio",
+      "introBody": "Pulsa 📱 o 🖥️ arriba para elegir la pantalla y arrastra tus bloques. La otra pantalla no se toca.",
+      "introGotIt": "Entendido"
     },
     "controls": {
       "font": "Fuente",

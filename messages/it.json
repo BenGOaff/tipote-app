@@ -2404,7 +2404,13 @@
     },
     "reorder": {
       "hint": "Trascina per riordinare",
-      "drag": "Trascina per spostare"
+      "drag": "Trascina per spostare",
+      "editingMobileOrder": "Stai modificando l'ordine mobile",
+      "editingDesktopOrder": "Stai modificando l'ordine desktop",
+      "learnMore": "Scopri di più",
+      "introTitle": "Suggerimento: ordine diverso mobile / desktop",
+      "introBody": "Clicca 📱 o 🖥️ in alto per scegliere lo schermo, poi trascina i blocchi. L'altro schermo non cambia.",
+      "introGotIt": "Capito"
     },
     "controls": {
       "font": "Font",

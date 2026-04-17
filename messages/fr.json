@@ -2458,7 +2458,13 @@
     },
     "reorder": {
       "hint": "Glisse pour déplacer",
-      "drag": "Glisse pour déplacer"
+      "drag": "Glisse pour déplacer",
+      "editingMobileOrder": "Tu modifies l'ordre mobile",
+      "editingDesktopOrder": "Tu modifies l'ordre ordinateur",
+      "learnMore": "En savoir plus",
+      "introTitle": "Astuce : ordre différent mobile / ordinateur",
+      "introBody": "Clique sur 📱 ou 🖥️ en haut pour choisir l'écran, puis déplace tes blocs. L'autre écran ne bouge pas.",
+      "introGotIt": "Compris"
     },
     "controls": {
       "font": "Police",

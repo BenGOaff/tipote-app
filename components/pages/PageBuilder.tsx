@@ -20,7 +20,7 @@ import {
   MousePointer, Heading, AlignLeft, Square, Minus,
   Copy as CopyIcon, Columns, Video, LayoutGrid, Sparkles,
   Undo2, Redo2,
-  GripVertical,
+  GripVertical, HelpCircle,
 } from "lucide-react";
 import {
   DndContext,
@@ -80,7 +80,15 @@ type PageData = {
   iteration_count: number;
   locale?: string;
   layout_config?: LayoutConfig | Record<string, unknown> | null;
+  section_order?: { mobile?: string[]; desktop?: string[] } | null;
 };
+
+// Per-viewport section order. Empty arrays = follow DOM order (legacy behavior).
+type SectionOrder = { mobile: string[]; desktop: string[] };
+
+// Which viewport's order is affected by reorder actions right now.
+// Tablet previews share the mobile order (breakpoint is 900px).
+type OrderDevice = "mobile" | "desktop";
 
 type Props = {
   initialPage: PageData;
@@ -825,6 +833,37 @@ const INLINE_EDIT_SCRIPT = `
       }, 100);
     }
 
+    // Per-viewport order: inject <style id="tipote-section-order"> with media
+    // queries. Mobile and desktop orders are independent; the DOM stays
+    // unchanged. Breakpoint (900px) mirrors pageLayout.ts MOBILE_BREAKPOINT_PX.
+    if (e.data && e.data.type === 'tipote:apply-section-order') {
+      var mobileArr = Array.isArray(e.data.mobile) ? e.data.mobile : [];
+      var desktopArr = Array.isArray(e.data.desktop) ? e.data.desktop : [];
+      var styleEl = document.getElementById('tipote-section-order');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'tipote-section-order';
+        document.head.appendChild(styleEl);
+      }
+      if (!mobileArr.length && !desktopArr.length) {
+        styleEl.textContent = '';
+      } else {
+        var css = 'body{display:flex;flex-direction:column;}\n';
+        if (mobileArr.length) {
+          css += '@media (max-width:899px){\n';
+          mobileArr.forEach(function(id, i) { css += '#' + id + '{order:' + (i+1) + ';}\n'; });
+          css += '}\n';
+        }
+        if (desktopArr.length) {
+          css += '@media (min-width:900px){\n';
+          desktopArr.forEach(function(id, i) { css += '#' + id + '{order:' + (i+1) + ';}\n'; });
+          css += '}\n';
+        }
+        styleEl.textContent = css;
+      }
+      parent.postMessage({ type: 'tipote:text-edit', tag: 'section-order', text: '' }, '*');
+    }
+
     // Full reorder (drag-and-drop): receives the new ordered list of section IDs
     if (e.data && e.data.type === 'tipote:reorder-sections' && Array.isArray(e.data.orderedIds)) {
       var ids = e.data.orderedIds;
@@ -1086,6 +1125,29 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   // Section & element selection
   const [sections, setSections] = useState<SectionInfo[]>([]);
 
+  // Per-viewport section order. Loaded from the page, updated whenever the user
+  // reorders — but only for the viewport currently being previewed (mobile or
+  // desktop), so editing the mobile order doesn't affect desktop and vice versa.
+  const initialOrder = (initialPage.section_order || {}) as { mobile?: string[]; desktop?: string[] };
+  const [sectionOrder, setSectionOrder] = useState<SectionOrder>({
+    mobile: Array.isArray(initialOrder.mobile) ? initialOrder.mobile : [],
+    desktop: Array.isArray(initialOrder.desktop) ? initialOrder.desktop : [],
+  });
+
+  // First-time intro: one-shot banner explaining mobile/desktop order.
+  // Persisted in localStorage so it only shows once per browser.
+  const [showOrderIntro, setShowOrderIntro] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (!window.localStorage.getItem("tipote:order-intro-seen")) setShowOrderIntro(true);
+    } catch { /* private mode etc. — just don't show */ }
+  }, []);
+  const dismissOrderIntro = useCallback(() => {
+    setShowOrderIntro(false);
+    try { window.localStorage.setItem("tipote:order-intro-seen", "1"); } catch { /* ignore */ }
+  }, []);
+
   // Drag-and-drop sensors for reordering sections. TouchSensor has a small
   // delay so tapping on the arrow buttons inside a row doesn't start a drag.
   const sortSensors = useSensors(
@@ -1333,6 +1395,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       // Section events
       if (e.data?.type === "tipote:sections-list") {
         setSections(e.data.sections || []);
+        // Re-apply stored per-viewport order once the iframe DOM is ready, so
+        // the CSS <style> block is present even after a page reload.
+        const iframe = iframeRef.current;
+        if (iframe?.contentWindow && (sectionOrder.mobile.length || sectionOrder.desktop.length)) {
+          iframe.contentWindow.postMessage(
+            { type: "tipote:apply-section-order", mobile: sectionOrder.mobile, desktop: sectionOrder.desktop },
+            "*",
+          );
+        }
       }
       if (e.data?.type === "tipote:section-click") {
         setSelectedSectionId(e.data.sectionId);
@@ -1366,7 +1437,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [page.id, handleIframeImageClick, getCleanIframeHtml]);
+  }, [page.id, handleIframeImageClick, getCleanIframeHtml, sectionOrder.mobile, sectionOrder.desktop]);
 
   // Chat update handler
   const handleChatUpdate = useCallback(async (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, _explanation: string) => {
@@ -1635,33 +1706,88 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     setSelectedSectionId(null);
   }, []);
 
-  const moveSection = useCallback((sectionId: string, direction: "up" | "down") => {
-    const iframe = iframeRef.current;
-    if (iframe?.contentWindow) {
-      iframe.contentWindow.postMessage({ type: "tipote:move-section", sectionId, direction }, "*");
-    }
-  }, []);
+  // Reorder device: tablet previews share the mobile order because the editor
+  // breakpoint is 900px (pageLayout.ts) — anything narrower is "mobile".
+  const orderDevice: OrderDevice = device === "desktop" ? "desktop" : "mobile";
 
-  // Reorder sections via drag-and-drop — sends the full new order in one pass
-  const reorderSections = useCallback((orderedIds: string[]) => {
+  // Current effective order for a viewport. If the user has never reordered for
+  // this viewport, fall back to the DOM order emitted by the iframe — that way
+  // mobile and desktop both start from the same visual order.
+  const effectiveOrderFor = useCallback(
+    (dev: OrderDevice, allSections: SectionInfo[]): string[] => {
+      const stored = sectionOrder[dev];
+      if (stored.length) {
+        const domIds = allSections.map((s) => s.id);
+        // Keep stored ids that still exist (filter deletions), then append any new sections.
+        const kept = stored.filter((id) => domIds.includes(id));
+        const extras = domIds.filter((id) => !kept.includes(id));
+        return [...kept, ...extras];
+      }
+      return allSections.map((s) => s.id);
+    },
+    [sectionOrder],
+  );
+
+  // Push the current order to the iframe (injects CSS with media queries) and
+  // persist to the server. Order state is viewport-scoped: changing `mobile`
+  // leaves `desktop` untouched.
+  const applySectionOrder = useCallback((next: SectionOrder) => {
+    setSectionOrder(next);
     const iframe = iframeRef.current;
     if (iframe?.contentWindow) {
-      iframe.contentWindow.postMessage({ type: "tipote:reorder-sections", orderedIds }, "*");
+      iframe.contentWindow.postMessage(
+        { type: "tipote:apply-section-order", mobile: next.mobile, desktop: next.desktop },
+        "*",
+      );
     }
-  }, []);
+    fetch(`/api/pages/${page.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section_order: next }),
+    }).catch(() => {});
+  }, [page.id]);
+
+  const moveSection = useCallback((sectionId: string, direction: "up" | "down") => {
+    const current = effectiveOrderFor(orderDevice, sections);
+    const idx = current.indexOf(sectionId);
+    if (idx === -1) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= current.length) return;
+    const next = [...current];
+    [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
+    // Also seed the other viewport if it's empty so both start from the same baseline.
+    const other: OrderDevice = orderDevice === "mobile" ? "desktop" : "mobile";
+    applySectionOrder({
+      ...sectionOrder,
+      [orderDevice]: next,
+      [other]: sectionOrder[other].length ? sectionOrder[other] : effectiveOrderFor(other, sections),
+    });
+  }, [effectiveOrderFor, orderDevice, sections, sectionOrder, applySectionOrder]);
+
+  // Sort the sections list for display according to the active viewport's
+  // order — this is what the user sees in the sidebar, so "top item" matches
+  // "top of the page on this viewport".
+  const orderedSections = useMemo(() => {
+    const ids = effectiveOrderFor(orderDevice, sections);
+    const byId = new Map(sections.map((s) => [s.id, s] as const));
+    return ids.map((id) => byId.get(id)).filter(Boolean) as SectionInfo[];
+  }, [effectiveOrderFor, orderDevice, sections]);
 
   const handleSectionsDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    setSections((prev) => {
-      const oldIndex = prev.findIndex((s) => s.id === active.id);
-      const newIndex = prev.findIndex((s) => s.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      const next = arrayMove(prev, oldIndex, newIndex);
-      reorderSections(next.map((s) => s.id));
-      return next;
+    const current = effectiveOrderFor(orderDevice, sections);
+    const oldIndex = current.indexOf(String(active.id));
+    const newIndex = current.indexOf(String(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+    const next = arrayMove(current, oldIndex, newIndex);
+    const other: OrderDevice = orderDevice === "mobile" ? "desktop" : "mobile";
+    applySectionOrder({
+      ...sectionOrder,
+      [orderDevice]: next,
+      [other]: sectionOrder[other].length ? sectionOrder[other] : effectiveOrderFor(other, sections),
     });
-  }, [reorderSections]);
+  }, [effectiveOrderFor, orderDevice, sections, sectionOrder, applySectionOrder]);
 
   const addElement = useCallback((elementType: string) => {
     const iframe = iframeRef.current;
@@ -2461,6 +2587,53 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               </span>
                             )}
                           </div>
+                          {/* One-shot intro: first time users land on the editor */}
+                          {showOrderIntro && sections.length > 1 && (
+                            <div className="mb-2 rounded-lg border border-amber-300/30 bg-amber-500/10 p-2.5 text-[11px] text-amber-100">
+                              <div className="flex items-start gap-2">
+                                <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-300" />
+                                <div className="min-w-0">
+                                  <p className="font-semibold mb-0.5">{t("reorder.introTitle")}</p>
+                                  <p className="text-amber-100/80 leading-snug">{t("reorder.introBody")}</p>
+                                  <div className="mt-1.5 flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={dismissOrderIntro}
+                                      className="px-2 py-0.5 rounded-md bg-amber-300/30 hover:bg-amber-300/50 text-amber-50 font-medium"
+                                    >
+                                      {t("reorder.introGotIt")}
+                                    </button>
+                                    <a
+                                      href="/support/article/ordre-mobile-desktop"
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="underline underline-offset-2 text-amber-100/90 hover:text-amber-50"
+                                    >
+                                      {t("reorder.learnMore")}
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* Active-viewport badge: which order is being edited now */}
+                          {sections.length > 1 && (
+                            <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-blue-400/30 bg-blue-500/10 px-2 py-1.5 text-[10px] text-blue-100">
+                              <span className="flex items-center gap-1.5">
+                                {orderDevice === "mobile" ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
+                                <span className="font-medium">{t(orderDevice === "mobile" ? "reorder.editingMobileOrder" : "reorder.editingDesktopOrder")}</span>
+                              </span>
+                              <a
+                                href="/support/article/ordre-mobile-desktop"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1 text-blue-200/80 hover:text-blue-100 underline underline-offset-2"
+                              >
+                                <HelpCircle className="w-3 h-3" />
+                                <span>{t("reorder.learnMore")}</span>
+                              </a>
+                            </div>
+                          )}
                           <div className="space-y-1">
                             {sections.length === 0 && (
                               <p className="text-[11px] text-white/30 py-2">Clique sur un élément dans l&apos;aperçu</p>
@@ -2472,10 +2645,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 onDragEnd={handleSectionsDragEnd}
                               >
                                 <SortableContext
-                                  items={sections.map((s) => s.id)}
+                                  items={orderedSections.map((s) => s.id)}
                                   strategy={verticalListSortingStrategy}
                                 >
-                                  {sections.map((s) => (
+                                  {orderedSections.map((s) => (
                                     <SortableSectionRow
                                       key={s.id}
                                       section={s}

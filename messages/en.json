@@ -2461,7 +2461,13 @@
     },
     "reorder": {
       "hint": "Drag to reorder",
-      "drag": "Drag to move"
+      "drag": "Drag to move",
+      "editingMobileOrder": "You're editing the mobile order",
+      "editingDesktopOrder": "You're editing the desktop order",
+      "learnMore": "Learn more",
+      "introTitle": "Tip: different order on mobile vs desktop",
+      "introBody": "Click 📱 or 🖥️ at the top to pick the screen, then drag your blocks. The other screen stays untouched.",
+      "introGotIt": "Got it"
     },
     "controls": {
       "font": "Font",

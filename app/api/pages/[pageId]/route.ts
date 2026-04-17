@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     "thank_you_ctas", "thank_you_show_email_hint",
     "facebook_pixel_id", "google_tag_id",
     "iteration_count", "locale", "html_snapshot",
-    "layout_config",
+    "layout_config", "section_order",
   ];
 
   const updates: Record<string, any> = {};
@@ -74,6 +74,27 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   // returns a safe, enum-constrained object even if the payload is hostile.
   if ("layout_config" in updates) {
     updates.layout_config = parseLayoutConfig(updates.layout_config);
+  }
+
+  // Validate section_order: only accept { mobile?: string[]; desktop?: string[] }
+  // with short safe id strings. Anything else is coerced to an empty object.
+  if ("section_order" in updates) {
+    const raw = updates.section_order;
+    const cleanArr = (v: unknown): string[] => {
+      if (!Array.isArray(v)) return [];
+      return v
+        .filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 128)
+        .filter((x) => /^[a-zA-Z0-9_-]+$/.test(x));
+    };
+    if (raw && typeof raw === "object") {
+      const obj = raw as Record<string, unknown>;
+      updates.section_order = {
+        mobile: cleanArr(obj.mobile),
+        desktop: cleanArr(obj.desktop),
+      };
+    } else {
+      updates.section_order = {};
+    }
   }
 
   // If content_data, brand_tokens OR layout_config changed, re-render HTML snapshot
