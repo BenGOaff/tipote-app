@@ -862,16 +862,16 @@ const INLINE_EDIT_SCRIPT = `
       if (!mobileArr.length && !desktopArr.length) {
         styleEl.textContent = '';
       } else {
-        var css = 'body{display:flex;flex-direction:column;}\n';
+        var css = 'body{display:flex;flex-direction:column;}';
         if (mobileArr.length) {
-          css += '@media (max-width:899px){\n';
-          mobileArr.forEach(function(id, i) { css += '#' + id + '{order:' + (i+1) + ';}\n'; });
-          css += '}\n';
+          css += '@media (max-width:899px){';
+          mobileArr.forEach(function(id, i) { css += '#' + id + '{order:' + (i+1) + ';}'; });
+          css += '}';
         }
         if (desktopArr.length) {
-          css += '@media (min-width:900px){\n';
-          desktopArr.forEach(function(id, i) { css += '#' + id + '{order:' + (i+1) + ';}\n'; });
-          css += '}\n';
+          css += '@media (min-width:900px){';
+          desktopArr.forEach(function(id, i) { css += '#' + id + '{order:' + (i+1) + ';}'; });
+          css += '}';
         }
         styleEl.textContent = css;
       }
