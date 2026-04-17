@@ -2402,6 +2402,10 @@
       "moveDown": "Bajar",
       "delete": "Eliminar"
     },
+    "reorder": {
+      "hint": "Arrastra para reordenar",
+      "drag": "Arrastra para mover"
+    },
     "controls": {
       "font": "Fuente",
       "default": "Por defecto",

@@ -2456,6 +2456,10 @@
       "moveDown": "Descendre",
       "delete": "Supprimer"
     },
+    "reorder": {
+      "hint": "Glisse pour déplacer",
+      "drag": "Glisse pour déplacer"
+    },
     "controls": {
       "font": "Police",
       "default": "Par défaut",

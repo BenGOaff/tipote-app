@@ -20,7 +20,26 @@ import {
   MousePointer, Heading, AlignLeft, Square, Minus,
   Copy as CopyIcon, Columns, Video, LayoutGrid, Sparkles,
   Undo2, Redo2,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import PageChatBar from "./PageChatBar";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import LayoutPanel, { isCapturePage } from "./LayoutPanel";
@@ -133,6 +152,106 @@ type SectionInfo = {
   top: number;
   anchorId?: string;
 };
+
+// One row in the sections list — sortable (drag-and-drop, touch-friendly) with
+// always-visible up/down arrows so non-technical users on mobile can reorder
+// blocks without needing to hover. Three ways to reorder:
+//   (1) drag the grip handle,          (2) tap the arrow buttons,
+//   (3) keyboard (focus + space/arrows, for accessibility).
+function SortableSectionRow({
+  section,
+  onSelect,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
+  labelMoveUp,
+  labelMoveDown,
+  labelDelete,
+  labelDrag,
+}: {
+  section: SectionInfo;
+  onSelect: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDelete: () => void;
+  labelMoveUp: string;
+  labelMoveDown: string;
+  labelDelete: string;
+  labelDrag: string;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 20 : undefined,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all text-xs border text-white/80 ${
+        isDragging
+          ? "bg-white/15 border-blue-400/50 shadow-lg"
+          : "bg-transparent border-transparent hover:bg-white/10"
+      }`}
+    >
+      {/* Drag handle — always visible, touch-friendly */}
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="shrink-0 p-1 -ml-1 rounded cursor-grab active:cursor-grabbing touch-none text-white/50 hover:text-white/90 hover:bg-white/10"
+        title={labelDrag}
+        aria-label={labelDrag}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="w-3.5 h-3.5" />
+      </button>
+      {/* Label — clicking selects the section */}
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex-1 min-w-0 text-left py-0.5"
+      >
+        <span className="block truncate">{section.label}</span>
+        {section.anchorId && section.anchorId.startsWith("sc-") && (
+          <span className="block text-[9px] text-blue-300/60 font-mono truncate">#{section.anchorId}</span>
+        )}
+      </button>
+      {/* Always-visible controls — critical for mobile / non-technical users */}
+      <div className="flex items-center gap-0.5 shrink-0">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+          className="p-1 rounded hover:bg-white/15 text-white/70 hover:text-white"
+          title={labelMoveUp}
+          aria-label={labelMoveUp}
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+          className="p-1 rounded hover:bg-white/15 text-white/70 hover:text-white"
+          title={labelMoveDown}
+          aria-label={labelMoveDown}
+        >
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
+          title={labelDelete}
+          aria-label={labelDelete}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // Elements palette (labels translated inside component)
 const ELEMENT_PALETTE_KEYS = [
@@ -706,6 +825,35 @@ const INLINE_EDIT_SCRIPT = `
       }, 100);
     }
 
+    // Full reorder (drag-and-drop): receives the new ordered list of section IDs
+    if (e.data && e.data.type === 'tipote:reorder-sections' && Array.isArray(e.data.orderedIds)) {
+      var ids = e.data.orderedIds;
+      var first = document.getElementById(ids[0]);
+      if (!first || !first.parentNode) return;
+      var parentNode = first.parentNode;
+      // Walk the ordered list. For each id after the first, insert it right after
+      // the previously placed element — that way we enforce the requested order
+      // among siblings without assuming the caller knew what was next to what.
+      var prev = first;
+      for (var i = 1; i < ids.length; i++) {
+        var cur = document.getElementById(ids[i]);
+        if (!cur) continue;
+        if (cur.parentNode !== parentNode) continue; // guardrail: don't cross containers
+        parentNode.insertBefore(cur, prev.nextSibling);
+        prev = cur;
+      }
+      parent.postMessage({ type: 'tipote:text-edit', tag: 'section-reorder', text: '' }, '*');
+      setTimeout(function() {
+        var remaining = document.querySelectorAll(sectionSelectors);
+        var updated = [];
+        remaining.forEach(function(el, i) {
+          var t = el.querySelector('.tp-section-title, h2, h1');
+          updated.push({ id: el.id, label: t ? (t.textContent || '').trim().substring(0,40) : 'Section', tagName: el.tagName, classes: el.className || '', top: el.offsetTop, idx: i, anchorId: el.getAttribute('id') || '' });
+        });
+        parent.postMessage({ type: 'tipote:sections-list', sections: updated }, '*');
+      }, 100);
+    }
+
     if (e.data && e.data.type === 'tipote:add-element') {
       var targetSection = selectedSectionEl || document.querySelector('.tp-section');
       if (!targetSection) return;
@@ -937,6 +1085,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
   // Section & element selection
   const [sections, setSections] = useState<SectionInfo[]>([]);
+
+  // Drag-and-drop sensors for reordering sections. TouchSensor has a small
+  // delay so tapping on the arrow buttons inside a row doesn't start a drag.
+  const sortSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<SelectedElementInfo | null>(null);
   const [sectionBgMode, setSectionBgMode] = useState<"color" | "gradient">("color");
@@ -1485,6 +1641,27 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       iframe.contentWindow.postMessage({ type: "tipote:move-section", sectionId, direction }, "*");
     }
   }, []);
+
+  // Reorder sections via drag-and-drop — sends the full new order in one pass
+  const reorderSections = useCallback((orderedIds: string[]) => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:reorder-sections", orderedIds }, "*");
+    }
+  }, []);
+
+  const handleSectionsDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setSections((prev) => {
+      const oldIndex = prev.findIndex((s) => s.id === active.id);
+      const newIndex = prev.findIndex((s) => s.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const next = arrayMove(prev, oldIndex, newIndex);
+      reorderSections(next.map((s) => s.id));
+      return next;
+    });
+  }, [reorderSections]);
 
   const addElement = useCallback((elementType: string) => {
     const iframe = iframeRef.current;
@@ -2273,39 +2450,48 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     ) : (
                       /* ── No element selected: show sections + palette ── */
                       <>
-                        {/* Sections list */}
+                        {/* Sections list — drag-and-drop + always-visible arrows */}
                         <div>
-                          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide mb-2">{t("elementTypes.section")}s</p>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide">{t("elementTypes.section")}s</p>
+                            {sections.length > 1 && (
+                              <span className="flex items-center gap-1 text-[10px] text-white/50">
+                                <GripVertical className="w-3 h-3" />
+                                <span>{t("reorder.hint")}</span>
+                              </span>
+                            )}
+                          </div>
                           <div className="space-y-1">
                             {sections.length === 0 && (
                               <p className="text-[11px] text-white/30 py-2">Clique sur un élément dans l&apos;aperçu</p>
                             )}
-                            {sections.map((s) => (
-                              <div
-                                key={s.id}
-                                className="group flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-all text-xs hover:bg-white/10 border border-transparent text-white/80"
-                                onClick={() => selectSection(s.id)}
+                            {sections.length > 0 && (
+                              <DndContext
+                                sensors={sortSensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleSectionsDragEnd}
                               >
-                                <MousePointer className="w-3 h-3 shrink-0 opacity-40" />
-                                <div className="flex-1 min-w-0">
-                                  <span className="block truncate">{s.label}</span>
-                                  {s.anchorId && s.anchorId.startsWith("sc-") && (
-                                    <span className="block text-[9px] text-blue-300/60 font-mono truncate">#{s.anchorId}</span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "up"); }} className="p-0.5 rounded hover:bg-white/10" title={t("elementActions.moveUp")}>
-                                    <ChevronUp className="w-3 h-3" />
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); moveSection(s.id, "down"); }} className="p-0.5 rounded hover:bg-white/10" title={t("elementActions.moveDown")}>
-                                    <ChevronDown className="w-3 h-3" />
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); deleteSection(s.id); }} className="p-0.5 rounded hover:bg-red-500/20 text-red-400" title={t("elementActions.delete")}>
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
+                                <SortableContext
+                                  items={sections.map((s) => s.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  {sections.map((s) => (
+                                    <SortableSectionRow
+                                      key={s.id}
+                                      section={s}
+                                      onSelect={() => selectSection(s.id)}
+                                      onMoveUp={() => moveSection(s.id, "up")}
+                                      onMoveDown={() => moveSection(s.id, "down")}
+                                      onDelete={() => deleteSection(s.id)}
+                                      labelMoveUp={t("elementActions.moveUp")}
+                                      labelMoveDown={t("elementActions.moveDown")}
+                                      labelDelete={t("elementActions.delete")}
+                                      labelDrag={t("reorder.drag")}
+                                    />
+                                  ))}
+                                </SortableContext>
+                              </DndContext>
+                            )}
                           </div>
                         </div>
 
