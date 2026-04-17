@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import PageChatBar from "./PageChatBar";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
+import LayoutPanel, { isCapturePage } from "./LayoutPanel";
+import type { LayoutConfig } from "@/lib/pageLayout";
 
 // ---------- Types ----------
 
@@ -58,6 +60,7 @@ type PageData = {
   leads_count: number;
   iteration_count: number;
   locale?: string;
+  layout_config?: LayoutConfig | Record<string, unknown> | null;
 };
 
 type Props = {
@@ -1070,10 +1073,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   }, []);
 
   // Re-render HTML when content changes
-  const refreshPreview = useCallback(async (contentData: Record<string, any>, brandTokens: Record<string, any>) => {
-    const html = await renderClient(page.template_kind as any, page.template_id, contentData, brandTokens);
+  const refreshPreview = useCallback(async (contentData: Record<string, any>, brandTokens: Record<string, any>, layoutConfigOverride?: unknown) => {
+    const layoutCfg = layoutConfigOverride !== undefined ? layoutConfigOverride : page.layout_config;
+    const html = await renderClient(page.template_kind as any, page.template_id, contentData, brandTokens, layoutCfg);
     setHtmlPreview(html);
-  }, [page.template_kind, page.template_id]);
+  }, [page.template_kind, page.template_id, page.layout_config]);
 
   // Apply pending HTML edits when content is refreshed
   const applyPendingHtml = useCallback(() => {
@@ -1228,6 +1232,19 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       body: JSON.stringify({ [field]: value }),
     }).catch(() => {});
   }, [page.id]);
+
+  // Layout update: persist + refresh the preview iframe so the user sees the
+  // responsive change live. Refresh is fire-and-forget (non-blocking UI).
+  const handleLayoutUpdate = useCallback(async (next: LayoutConfig) => {
+    setPage((prev) => ({ ...prev, layout_config: next }));
+    // Refresh preview with the new layout without waiting on the server.
+    refreshPreview(page.content_data || {}, page.brand_tokens || {}, next).catch(() => {});
+    fetch(`/api/pages/${page.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layout_config: next }),
+    }).catch(() => {});
+  }, [page.id, page.content_data, page.brand_tokens, refreshPreview]);
 
   // Load leads
   const loadLeads = useCallback(async () => {
@@ -2434,6 +2451,16 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     </div>
                   </div>
 
+                  {/* Responsive layout (capture only) */}
+                  {isCapturePage(page) && (
+                    <div className="pt-2 border-t border-white/10">
+                      <LayoutPanel
+                        value={page.layout_config}
+                        onChange={handleLayoutUpdate}
+                      />
+                    </div>
+                  )}
+
                   {/* Thank-you page (capture only) */}
                   {(page.page_type === "capture" || page.template_kind === "capture") && (
                     <div className="pt-2 border-t border-white/10">
@@ -2861,12 +2888,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 }
 
 // Client-side render helper
-async function renderClient(kind: string, templateId: string, contentData: Record<string, any>, brandTokens: Record<string, any>): Promise<string> {
+async function renderClient(kind: string, templateId: string, contentData: Record<string, any>, brandTokens: Record<string, any>, layoutConfig?: unknown): Promise<string> {
   try {
     const res = await fetch("/api/templates/render", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind, templateId, mode: "preview", contentData, brandTokens }),
+      body: JSON.stringify({ kind, templateId, mode: "preview", contentData, brandTokens, layoutConfig }),
     });
     return await res.text();
   } catch {

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   if (newStatus === "published") {
     const { data: current } = await supabase
       .from("hosted_pages")
-      .select("title, page_type, template_kind, template_id, content_data, brand_tokens, meta_title, meta_description, og_image_url, capture_heading, capture_subtitle, capture_first_name, locale")
+      .select("title, page_type, template_kind, template_id, content_data, brand_tokens, meta_title, meta_description, og_image_url, capture_heading, capture_subtitle, capture_first_name, locale, layout_config")
       .eq("id", pageId)
       .eq("user_id", session.user.id)
       .single();
@@ -98,6 +98,7 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
             contentData: current.content_data || {},
             brandTokens: Object.keys(current.brand_tokens || {}).length > 0 ? current.brand_tokens : null,
             locale: (current as any).locale || "fr",
+            layoutConfig: (current as any).layout_config || null,
           });
           updates.html_snapshot = html;
         }

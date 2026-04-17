@@ -10,6 +10,15 @@
 // - No template/content mismatches
 // - Unique designs that don't look like generic AI output
 
+import { buildLayoutCSS, type LayoutConfig } from "./pageLayout";
+
+/** True when the raw config is empty or missing — means "use legacy hardcoded CSS". */
+function hasExplicitLayout(cfg: unknown): boolean {
+  if (!cfg || typeof cfg !== "object") return false;
+  const o = cfg as Record<string, unknown>;
+  return !!(o.mobile || o.desktop);
+}
+
 // ─────────────── Types ───────────────
 
 type PageParams = {
@@ -17,6 +26,8 @@ type PageParams = {
   contentData: Record<string, any>;
   brandTokens?: Record<string, any> | null;
   locale?: string;
+  /** Optional responsive layout override for the capture hero. */
+  layoutConfig?: LayoutConfig | Record<string, unknown> | null;
 };
 
 // ─────────────── Helpers ───────────────
@@ -1744,7 +1755,7 @@ function sectionContact(d: Record<string, any>, t?: PageStrings): string {
 // ─────────────── Main Build Function ───────────────
 
 export function buildPage(params: PageParams): string {
-  const { pageType, contentData: d, brandTokens, locale } = params;
+  const { pageType, contentData: d, brandTokens, locale, layoutConfig } = params;
   // Normalize brand tokens — support ALL key formats:
   //   1. Flat:   { primary: "#abc" }                  (Chat IA iterate)
   //   2. Legacy: { "colors-primary": "#abc" }          (generate route)
@@ -1773,6 +1784,12 @@ export function buildPage(params: PageParams): string {
 
   const t = getPageStrings(lang);
   const css = buildCSS(primary, accent, font, heroBg, sectionBg);
+  // Responsive layout engine: only emitted when the user has explicitly set
+  // a layout, so existing pages (empty {} layout_config) keep their legacy
+  // hardcoded responsive CSS unchanged. Also no-op for non-capture pages.
+  const layoutCss = isCapture && hasExplicitLayout(layoutConfig)
+    ? buildLayoutCSS(layoutConfig as LayoutConfig)
+    : "";
   const fonts = buildFontImport(font);
   const header = isShowcase ? "" : buildHeader(d);
 
@@ -1825,7 +1842,7 @@ export function buildPage(params: PageParams): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(safe(d.hero_title || "Page"))}</title>
 ${fonts}
-<style>${css}</style>
+<style>${css}${layoutCss ? "\n" + layoutCss : ""}</style>
 </head>
 <body>
 ${header}

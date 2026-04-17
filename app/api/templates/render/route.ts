@@ -2,6 +2,7 @@
 // Render endpoint — now uses the programmatic page builder instead of template files.
 import { NextResponse } from "next/server";
 import { buildPage } from "@/lib/pageBuilder";
+import { parseLayoutConfig } from "@/lib/pageLayout";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ type Body = {
   variantId?: string | null;
   contentData?: Record<string, any> | null;
   brandTokens?: Record<string, any> | null;
+  layoutConfig?: Record<string, unknown> | null;
 };
 
 export async function POST(req: Request) {
@@ -26,6 +28,7 @@ export async function POST(req: Request) {
       pageType,
       contentData: body?.contentData ?? {},
       brandTokens: body?.brandTokens ?? null,
+      layoutConfig: body?.layoutConfig ? parseLayoutConfig(body.layoutConfig) : null,
     });
 
     return new NextResponse(html, {

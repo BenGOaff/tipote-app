@@ -2563,6 +2563,37 @@
       "defaultHeading": "Thanks for signing up!",
       "defaultMessage": "You will receive a confirmation email..."
     },
+    "layout": {
+      "title": "Photo / form layout",
+      "screenMobile": "Mobile",
+      "screenDesktop": "Desktop",
+      "advanced": "Advanced options",
+      "photoRatio": "Photo aspect ratio",
+      "photoFit": "Fit",
+      "formWidth": "Form width",
+      "gap": "Spacing",
+      "overlay": "Dark overlay",
+      "auto": "Auto",
+      "reset": "Reset",
+      "hint": "Each screen can have its own layout. Changes preview instantly.",
+      "fit": {
+        "cover": "Fill",
+        "contain": "Whole"
+      },
+      "width": {
+        "narrow": "Narrow",
+        "normal": "Normal",
+        "wide": "Wide"
+      },
+      "presets": {
+        "photo-top": "Photo on top",
+        "form-top": "Form on top",
+        "split-form-left": "Form on left",
+        "split-form-right": "Form on right",
+        "photo-bg": "Photo as background",
+        "no-photo": "No photo"
+      }
+    },
     "qrCode": {
       "title": "QR Code",
       "download": "Download QR Code"

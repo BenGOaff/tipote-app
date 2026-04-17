@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { buildPage } from "@/lib/pageBuilder";
 import { buildLinkinbioPage, type LinkinbioPageData } from "@/lib/linkinbioBuilder";
 import { sanitizeHtmlSnapshot } from "@/lib/sanitizeHtml";
+import { parseLayoutConfig } from "@/lib/pageLayout";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +62,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     "thank_you_ctas", "thank_you_show_email_hint",
     "facebook_pixel_id", "google_tag_id",
     "iteration_count", "locale", "html_snapshot",
+    "layout_config",
   ];
 
   const updates: Record<string, any> = {};
@@ -68,12 +70,18 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (key in body) updates[key] = body[key];
   }
 
-  // If content_data or brand_tokens changed, re-render HTML snapshot
-  if (updates.content_data || updates.brand_tokens) {
+  // Strict validation for layout_config: never trust client JSON — the parser
+  // returns a safe, enum-constrained object even if the payload is hostile.
+  if ("layout_config" in updates) {
+    updates.layout_config = parseLayoutConfig(updates.layout_config);
+  }
+
+  // If content_data, brand_tokens OR layout_config changed, re-render HTML snapshot
+  if (updates.content_data || updates.brand_tokens || updates.layout_config) {
     // Fetch current page to get template info
     const { data: current } = await supabase
       .from("hosted_pages")
-      .select("title, page_type, template_kind, template_id, content_data, brand_tokens, capture_heading, capture_subtitle, capture_first_name, meta_title, meta_description, og_image_url, locale")
+      .select("title, page_type, template_kind, template_id, content_data, brand_tokens, capture_heading, capture_subtitle, capture_first_name, meta_title, meta_description, og_image_url, locale, layout_config")
       .eq("id", pageId)
       .eq("user_id", session.user.id)
       .single();
@@ -81,6 +89,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (current) {
       const contentData = updates.content_data || current.content_data;
       const brandTokens = updates.brand_tokens || current.brand_tokens;
+      const layoutCfg = "layout_config" in updates ? updates.layout_config : (current as any).layout_config;
 
       try {
         if ((current as any).page_type === "linkinbio") {
@@ -123,6 +132,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
             contentData,
             brandTokens: Object.keys(brandTokens || {}).length > 0 ? brandTokens : null,
             locale: (current as any).locale || "fr",
+            layoutConfig: layoutCfg || null,
           });
           updates.html_snapshot = html;
         }

@@ -2506,6 +2506,30 @@
       "defaultHeading": "شكراً لتسجيلك!",
       "defaultMessage": "ستتلقى رسالة تأكيد بالبريد الإلكتروني..."
     },
+    "layout": {
+      "title": "تخطيط الصورة / النموذج",
+      "screenMobile": "الجوال",
+      "screenDesktop": "سطح المكتب",
+      "advanced": "خيارات متقدمة",
+      "photoRatio": "نسبة الصورة",
+      "photoFit": "ملاءمة",
+      "formWidth": "عرض النموذج",
+      "gap": "المسافة",
+      "overlay": "طبقة داكنة",
+      "auto": "تلقائي",
+      "reset": "إعادة تعيين",
+      "hint": "كل شاشة قد تحصل على تخطيط مختلف. التغييرات تظهر في المعاينة فورًا.",
+      "fit": { "cover": "ملء", "contain": "كامل" },
+      "width": { "narrow": "ضيق", "normal": "عادي", "wide": "واسع" },
+      "presets": {
+        "photo-top": "الصورة في الأعلى",
+        "form-top": "النموذج في الأعلى",
+        "split-form-left": "النموذج إلى اليسار",
+        "split-form-right": "النموذج إلى اليمين",
+        "photo-bg": "الصورة كخلفية",
+        "no-photo": "بدون صورة"
+      }
+    },
     "qrCode": {
       "title": "رمز QR",
       "download": "تحميل رمز QR"

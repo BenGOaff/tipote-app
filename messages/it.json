@@ -2506,6 +2506,30 @@
       "defaultHeading": "Grazie per la tua iscrizione!",
       "defaultMessage": "Riceverai un'email di conferma..."
     },
+    "layout": {
+      "title": "Disposizione foto / modulo",
+      "screenMobile": "Mobile",
+      "screenDesktop": "Desktop",
+      "advanced": "Opzioni avanzate",
+      "photoRatio": "Formato della foto",
+      "photoFit": "Adattamento",
+      "formWidth": "Larghezza del modulo",
+      "gap": "Spaziatura",
+      "overlay": "Velo scuro",
+      "auto": "Auto",
+      "reset": "Reimposta",
+      "hint": "Ogni schermo può avere il suo layout. Le modifiche si vedono subito nell'anteprima.",
+      "fit": { "cover": "Riempi", "contain": "Intero" },
+      "width": { "narrow": "Stretto", "normal": "Normale", "wide": "Largo" },
+      "presets": {
+        "photo-top": "Foto sopra",
+        "form-top": "Modulo sopra",
+        "split-form-left": "Modulo a sinistra",
+        "split-form-right": "Modulo a destra",
+        "photo-bg": "Foto come sfondo",
+        "no-photo": "Senza foto"
+      }
+    },
     "qrCode": {
       "title": "Codice QR",
       "download": "Scarica codice QR"

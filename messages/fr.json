@@ -2560,6 +2560,37 @@
       "defaultHeading": "Merci pour ton inscription !",
       "defaultMessage": "Tu vas recevoir un email de confirmation..."
     },
+    "layout": {
+      "title": "Disposition photo / formulaire",
+      "screenMobile": "Mobile",
+      "screenDesktop": "Desktop",
+      "advanced": "Options avancées",
+      "photoRatio": "Format de la photo",
+      "photoFit": "Ajustement",
+      "formWidth": "Largeur du formulaire",
+      "gap": "Espacement",
+      "overlay": "Voile sombre",
+      "auto": "Auto",
+      "reset": "Réinitialiser",
+      "hint": "Chaque écran peut avoir une disposition différente. Les modifications s'appliquent en direct dans l'aperçu.",
+      "fit": {
+        "cover": "Remplir",
+        "contain": "Entier"
+      },
+      "width": {
+        "narrow": "Étroit",
+        "normal": "Normal",
+        "wide": "Large"
+      },
+      "presets": {
+        "photo-top": "Photo au-dessus",
+        "form-top": "Formulaire au-dessus",
+        "split-form-left": "Formulaire à gauche",
+        "split-form-right": "Formulaire à droite",
+        "photo-bg": "Photo en fond",
+        "no-photo": "Sans photo"
+      }
+    },
     "qrCode": {
       "title": "QR Code",
       "download": "Télécharger le QR Code"
