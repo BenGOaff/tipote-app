@@ -1134,6 +1134,31 @@ const INLINE_EDIT_SCRIPT = `
       }
     }
 
+    // Move element up/down among its siblings (within the same parent)
+    if (e.data && e.data.type === 'tipote:move-element') {
+      var el = document.getElementById(e.data.elId);
+      if (el && el.parentNode) {
+        var dir = e.data.direction;
+        if (dir === 'up' && el.previousElementSibling) {
+          el.parentNode.insertBefore(el, el.previousElementSibling);
+        } else if (dir === 'down' && el.nextElementSibling) {
+          el.parentNode.insertBefore(el.nextElementSibling, el);
+        }
+        // Reposition the highlight so the user sees the element in its new place
+        setTimeout(function() {
+          var rect = el.getBoundingClientRect();
+          var scrollX = window.scrollX || document.documentElement.scrollLeft;
+          var scrollY = window.scrollY || document.documentElement.scrollTop;
+          elHighlight.style.left = (rect.left + scrollX - 2) + 'px';
+          elHighlight.style.top = (rect.top + scrollY - 2) + 'px';
+          elHighlight.style.width = (rect.width + 4) + 'px';
+          elHighlight.style.height = (rect.height + 4) + 'px';
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 0);
+        parent.postMessage({ type: 'tipote:text-edit', tag: 'element-move', text: '' }, '*');
+      }
+    }
+
     // Delete element
     if (e.data && e.data.type === 'tipote:delete-element') {
       var el = document.getElementById(e.data.elId);
@@ -1518,7 +1543,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       "illust-delete", "illust-color",
       "section-delete", "section-move", "section-order", "section-reorder",
       "section-style", "element-add", "element-delete", "element-duplicate",
-      "element-style", "text-color",
+      "element-move", "element-style", "text-color",
     ]);
 
     const handler = (e: MessageEvent) => {
@@ -1982,6 +2007,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     });
   }, []);
 
+  const moveElement = useCallback((elId: string, direction: "up" | "down") => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "tipote:move-element", elId, direction }, "*");
+    }
+  }, []);
+
   const deleteElement = useCallback((elId: string) => {
     const iframe = iframeRef.current;
     if (iframe?.contentWindow) {
@@ -2265,14 +2297,20 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               <CopyIcon className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => { moveSection(selectedElement.elId, "up"); }}
+                              onClick={() => {
+                                if (selectedElement.elType === "section") moveSection(selectedElement.elId, "up");
+                                else moveElement(selectedElement.elId, "up");
+                              }}
                               className="p-1 rounded hover:bg-white/10 text-white/60"
                               title={t("elementActions.moveUp")}
                             >
                               <ChevronUp className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => { moveSection(selectedElement.elId, "down"); }}
+                              onClick={() => {
+                                if (selectedElement.elType === "section") moveSection(selectedElement.elId, "down");
+                                else moveElement(selectedElement.elId, "down");
+                              }}
                               className="p-1 rounded hover:bg-white/10 text-white/60"
                               title={t("elementActions.moveDown")}
                             >
