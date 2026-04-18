@@ -2525,7 +2525,8 @@
       "columns": "Columns",
       "row": "Row",
       "video": "Video",
-      "link": "Link"
+      "link": "Link",
+      "list": "Bullet list"
     },
     "publish": {
       "title": "Publish page",

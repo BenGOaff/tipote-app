@@ -2522,7 +2522,8 @@
       "columns": "Colonnes",
       "row": "Rangée",
       "video": "Vidéo",
-      "link": "Lien"
+      "link": "Lien",
+      "list": "Liste à puces"
     },
     "publish": {
       "title": "Publier la page",

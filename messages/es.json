@@ -2468,7 +2468,8 @@
       "columns": "Columnas",
       "row": "Fila",
       "video": "Vídeo",
-      "link": "Enlace"
+      "link": "Enlace",
+      "list": "Lista con viñetas"
     },
     "publish": {
       "title": "Publicar página",

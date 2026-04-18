@@ -18,7 +18,7 @@ import {
   Save, LogOut,
   Layers, Trash2, ChevronUp, ChevronDown,
   MousePointer, Heading, AlignLeft, Square, Minus,
-  Copy as CopyIcon, Columns, Video, LayoutGrid, Sparkles,
+  Copy as CopyIcon, Columns, Video, LayoutGrid, Sparkles, List,
   Undo2, Redo2,
   GripVertical, HelpCircle,
 } from "lucide-react";
@@ -44,6 +44,7 @@ import PageChatBar from "./PageChatBar";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import LayoutPanel, { isCapturePage } from "./LayoutPanel";
 import type { LayoutConfig } from "@/lib/pageLayout";
+import { AssetPicker, type AssetChoice } from "./AssetPicker";
 
 // ---------- Types ----------
 
@@ -273,6 +274,7 @@ const ELEMENT_PALETTE_KEYS = [
   { type: "divider", tKey: "addElement.divider", icon: Minus },
   { type: "columns", tKey: "addElement.columns", icon: Columns },
   { type: "link", tKey: "addElement.link", icon: Link2 },
+  { type: "list", tKey: "addElement.list", icon: List },
 ];
 
 // Google Fonts available
@@ -403,7 +405,20 @@ const INLINE_EDIT_SCRIPT = `
   illustDeleteBtn.addEventListener('click', function(e) {
     e.stopPropagation();
     if (!activeIllust) return;
-    activeIllust.style.display = 'none';
+    // Preserve the original content so the user can restore it from the picker
+    // (solves "I deleted my photo and can't find it"). Instead of display:none
+    // — which makes the zone vanish entirely — we swap the content for a
+    // visible, clickable placeholder.
+    if (!activeIllust.getAttribute('data-tipote-original-html')) {
+      activeIllust.setAttribute('data-tipote-original-html', activeIllust.innerHTML);
+    }
+    activeIllust.setAttribute('data-tipote-empty', '1');
+    if (!activeIllust.id) activeIllust.id = 'tipote-illust-' + Date.now();
+    activeIllust.innerHTML =
+      '<div class="tp-illust-placeholder" data-tipote-injected-inner="1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;min-height:140px;padding:24px;border:2px dashed #cbd5e1;border-radius:12px;background:#f8fafc;color:#64748b;font-family:system-ui,sans-serif;font-size:13px;font-weight:500;text-align:center;cursor:pointer;pointer-events:none;">' +
+        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' +
+        '<span>Cliquer pour ajouter une image</span>' +
+      '</div>';
     illustOverlay.style.display = 'none';
     activeIllust = null;
     parent.postMessage({ type: 'tipote:text-edit', tag: 'illust-delete', text: '' }, '*');
@@ -590,6 +605,22 @@ const INLINE_EDIT_SCRIPT = `
     });
   });
 
+  /* ── Legacy rescue: previously-deleted illusts used display:none so the zone
+        disappeared completely (no way to recover). Convert them back into a
+        visible placeholder so Marie-Paule can reopen the asset picker. ── */
+  document.querySelectorAll(illustSelectors).forEach(function(el) {
+    if (el.style && el.style.display === 'none' && !el.getAttribute('data-tipote-empty')) {
+      el.style.display = '';
+      el.setAttribute('data-tipote-empty', '1');
+      if (!el.id) el.id = 'tipote-illust-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      el.innerHTML =
+        '<div class="tp-illust-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;min-height:140px;padding:24px;border:2px dashed #cbd5e1;border-radius:12px;background:#f8fafc;color:#64748b;font-family:system-ui,sans-serif;font-size:13px;font-weight:500;text-align:center;cursor:pointer;pointer-events:none;">' +
+          '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' +
+          '<span>Cliquer pour ajouter une image</span>' +
+        '</div>';
+    }
+  });
+
   /* ── Illustration/SVG hover overlay ── */
   document.querySelectorAll(illustSelectors).forEach(function(el) {
     if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
@@ -601,6 +632,13 @@ const INLINE_EDIT_SCRIPT = `
     el.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
+
+      // Empty placeholder (deleted illust) → open the asset picker directly
+      if (el.getAttribute('data-tipote-empty') === '1') {
+        if (!el.id) el.id = 'tipote-illust-' + Date.now();
+        parent.postMessage({ type: 'tipote:image-click', imgId: el.id, hasImage: false, hasOriginal: !!el.getAttribute('data-tipote-original-html') }, '*');
+        return;
+      }
 
       if (el.hasAttribute('data-tipote-img-id') || el.querySelector('[data-tipote-img-id]')) {
         var imgTarget = el.hasAttribute('data-tipote-img-id') ? el : el.querySelector('[data-tipote-img-id]');
@@ -679,19 +717,44 @@ const INLINE_EDIT_SCRIPT = `
     }
   });
 
-  /* ── Listen for uploaded image from parent ── */
+  /* ── Listen for uploaded image or asset-picker actions from parent ── */
   window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'tipote:image-uploaded') {
       var target = document.querySelector(e.data.selector);
       if (target) {
         if (target.tagName === 'IMG') {
           target.src = e.data.url;
+          target.removeAttribute('data-tipote-empty');
         } else {
-          var newImg = document.createElement('img');
-          newImg.src = e.data.url;
-          newImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;';
-          newImg.setAttribute('data-tipote-img-id', target.getAttribute('data-tipote-img-id') || '');
-          target.replaceWith(newImg);
+          // If it's a placeholder (tp-illust container), replace inner with a
+          // fresh <img> while preserving the container so per-viewport layout
+          // CSS keeps working.
+          if (target.getAttribute('data-tipote-empty') === '1') {
+            target.innerHTML = '<img src="' + e.data.url + '" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" />';
+            target.removeAttribute('data-tipote-empty');
+            target.removeAttribute('data-tipote-original-html');
+            target.style.border = '';
+            target.style.background = '';
+          } else {
+            var newImg = document.createElement('img');
+            newImg.src = e.data.url;
+            newImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;';
+            newImg.setAttribute('data-tipote-img-id', target.getAttribute('data-tipote-img-id') || '');
+            target.replaceWith(newImg);
+          }
+        }
+      }
+    }
+    if (e.data && e.data.type === 'tipote:illust-restore') {
+      var rt = document.querySelector(e.data.selector);
+      if (rt) {
+        var original = rt.getAttribute('data-tipote-original-html');
+        if (original) {
+          rt.innerHTML = original;
+          rt.removeAttribute('data-tipote-empty');
+          rt.removeAttribute('data-tipote-original-html');
+          rt.style.border = '';
+          rt.style.background = '';
         }
       }
     }
@@ -992,6 +1055,11 @@ const INLINE_EDIT_SCRIPT = `
           newEl.contentEditable = 'true';
           newEl.style.cssText = 'outline:none;cursor:text;display:inline-block;color:var(--brand);text-decoration:underline;margin:16px 0;font-size:1rem;';
           newEl.textContent = 'Lien texte';
+          break;
+        case 'list':
+          newEl = document.createElement('ul');
+          newEl.style.cssText = 'margin:16px 0;padding-left:24px;list-style:disc;font-size:1rem;line-height:1.7;';
+          newEl.innerHTML = '<li data-editable="true" contenteditable="true" style="outline:none;cursor:text;margin:8px 0;">Premier élément</li><li data-editable="true" contenteditable="true" style="outline:none;cursor:text;margin:8px 0;">Deuxième élément</li><li data-editable="true" contenteditable="true" style="outline:none;cursor:text;margin:8px 0;">Troisième élément</li>';
           break;
         default: return;
       }
@@ -1328,38 +1396,80 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, []);
 
-  // Handle image click from iframe
-  const handleIframeImageClick = useCallback((imgId: string, _hasImage: boolean) => {
-    triggerImageUploadForIframe(imgId);
+  // Asset picker state: opened when the user clicks any image/illust in the
+  // iframe. Lets them pick an existing asset, upload a new one, or restore the
+  // element they just deleted.
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
+  const [assetPickerTarget, setAssetPickerTarget] = useState<{ imgId: string; hasOriginal: boolean } | null>(null);
+
+  // Returns a selector string that works whether the target is an actual <img>
+  // (uses data-tipote-img-id) or a deleted-illust container (uses its DOM id).
+  function targetSelector(imgId: string): string {
+    // imgId is generated by us (timestamp-based), so no escaping needed.
+    return `[data-tipote-img-id="${imgId}"], [id="${imgId}"]`;
+  }
+
+  // Ref-based save callback so we can reference saveIframeHtml from handlers
+  // defined before it. Populated via useEffect once saveIframeHtml is defined.
+  const saveIframeHtmlRef = useRef<() => void>(() => {});
+
+  const handleIframeImageClick = useCallback((imgId: string, _hasImage: boolean, hasOriginal: boolean) => {
+    setAssetPickerTarget({ imgId, hasOriginal });
+    setAssetPickerOpen(true);
   }, []);
 
-  const triggerImageUploadForIframe = useCallback((imgId: string) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setUploadingImage(true);
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("contentId", `page-${page.id}-img-${imgId}`);
-        const res = await fetch("/api/upload/image", { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.ok && data.url) {
-          const iframe = iframeRef.current;
-          if (iframe?.contentWindow) {
-            iframe.contentWindow.postMessage({ type: "tipote:image-uploaded", selector: `[data-tipote-img-id="${imgId}"]`, url: data.url }, "*");
-            setTimeout(() => saveIframeHtml(), 300);
-          }
-        }
-      } catch { /* ignore */ } finally {
-        setUploadingImage(false);
+  const handleAssetChoice = useCallback(async (choice: AssetChoice) => {
+    if (!assetPickerTarget) return;
+    const { imgId } = assetPickerTarget;
+    const iframe = iframeRef.current;
+
+    if (choice.kind === "restore") {
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage(
+          { type: "tipote:illust-restore", selector: targetSelector(imgId) },
+          "*",
+        );
+        setTimeout(() => saveIframeHtmlRef.current(), 200);
       }
-    };
-    input.click();
-  }, [page.id]);
+      setAssetPickerOpen(false);
+      setAssetPickerTarget(null);
+      return;
+    }
+
+    if (choice.kind === "url") {
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage(
+          { type: "tipote:image-uploaded", selector: targetSelector(imgId), url: choice.url },
+          "*",
+        );
+        setTimeout(() => saveIframeHtmlRef.current(), 200);
+      }
+      setAssetPickerOpen(false);
+      setAssetPickerTarget(null);
+      return;
+    }
+
+    // choice.kind === "upload"
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", choice.file);
+      formData.append("contentId", `page-${page.id}-img-${imgId}`);
+      const res = await fetch("/api/upload/image", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.ok && data.url && iframe?.contentWindow) {
+        iframe.contentWindow.postMessage(
+          { type: "tipote:image-uploaded", selector: targetSelector(imgId), url: data.url },
+          "*",
+        );
+        setTimeout(() => saveIframeHtmlRef.current(), 200);
+      }
+      setAssetPickerOpen(false);
+      setAssetPickerTarget(null);
+    } catch { /* ignore */ } finally {
+      setUploadingImage(false);
+    }
+  }, [assetPickerTarget, page.id]);
 
   // Extract clean HTML from iframe by removing injected editing UI
   const getCleanIframeHtml = useCallback(() => {
@@ -1386,20 +1496,38 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const saveIframeHtml = useCallback(() => {
     const cleanHtml = getCleanIframeHtml();
     // Don't update htmlPreview to avoid iframe reload (iframe already has correct state)
+    pushHistory(cleanHtml);
     fetch(`/api/pages/${page.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ html_snapshot: cleanHtml }),
     }).catch(() => {});
-  }, [page.id, getCleanIframeHtml]);
+  }, [page.id, getCleanIframeHtml, pushHistory]);
+
+  // Keep a ref so asset-picker handlers defined before saveIframeHtml can call it.
+  useEffect(() => {
+    saveIframeHtmlRef.current = saveIframeHtml;
+  }, [saveIframeHtml]);
 
   // Listen for inline edits + section events from iframe
   useEffect(() => {
+    // Actions that permanently alter structure (delete/move/add) must snapshot
+    // history IMMEDIATELY — otherwise a quick Cmd+Z after deletion recovers
+    // nothing (the 2s text-edit debounce hasn't fired yet).
+    const STRUCTURAL_TAGS = new Set([
+      "illust-delete", "illust-color",
+      "section-delete", "section-move", "section-order", "section-reorder",
+      "section-style", "element-add", "element-delete", "element-duplicate",
+      "element-style", "text-color",
+    ]);
+
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "tipote:text-edit") {
+        const tag = String(e.data.tag ?? "");
+        const isStructural = STRUCTURAL_TAGS.has(tag);
         setSaving(true);
         clearTimeout((window as any).__tipoteSaveTimer);
-        (window as any).__tipoteSaveTimer = setTimeout(() => {
+        const commit = () => {
           const cleanHtml = getCleanIframeHtml();
           pendingHtmlRef.current = cleanHtml;
           pushHistory(cleanHtml);
@@ -1410,10 +1538,17 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           }).then(() => {
             setSaving(false);
           }).catch(() => setSaving(false));
-        }, 2000);
+        };
+        if (isStructural) {
+          // Immediate snapshot so undo always works
+          commit();
+        } else {
+          // Text typing: debounce to avoid spamming the server
+          (window as any).__tipoteSaveTimer = setTimeout(commit, 2000);
+        }
       }
       if (e.data?.type === "tipote:image-click") {
-        handleIframeImageClick(e.data.imgId, e.data.hasImage);
+        handleIframeImageClick(e.data.imgId, e.data.hasImage, !!e.data.hasOriginal);
       }
       // Section events
       if (e.data?.type === "tipote:sections-list") {
@@ -1486,6 +1621,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   // Layout update: persist + refresh the preview iframe so the user sees the
   // responsive change live. Refresh is fire-and-forget (non-blocking UI).
   const handleLayoutUpdate = useCallback(async (next: LayoutConfig) => {
+    // Snapshot current HTML before the layout change so Cmd+Z can walk back.
+    const currentHtml = getCleanIframeHtml();
+    if (currentHtml) pushHistory(currentHtml);
     setPage((prev) => ({ ...prev, layout_config: next }));
     // Refresh preview with the new layout without waiting on the server.
     refreshPreview(page.content_data || {}, page.brand_tokens || {}, next).catch(() => {});
@@ -1494,7 +1632,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ layout_config: next }),
     }).catch(() => {});
-  }, [page.id, page.content_data, page.brand_tokens, refreshPreview]);
+  }, [page.id, page.content_data, page.brand_tokens, refreshPreview, getCleanIframeHtml, pushHistory]);
 
   // Load leads
   const loadLeads = useCallback(async () => {
@@ -2378,7 +2516,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               <button
                                 onClick={() => {
                                   if (selectedElement.imgId) {
-                                    triggerImageUploadForIframe(selectedElement.imgId);
+                                    handleIframeImageClick(selectedElement.imgId, !!selectedElement.imgSrc, false);
                                   }
                                 }}
                                 className="w-full py-2 border border-dashed border-white/20 rounded-lg text-xs text-white/60 hover:bg-white/10 flex items-center justify-center gap-1.5"
@@ -3276,6 +3414,18 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         </div>
         );
       })()}
+
+      <AssetPicker
+        open={assetPickerOpen}
+        onOpenChange={(v) => {
+          setAssetPickerOpen(v);
+          if (!v) setAssetPickerTarget(null);
+        }}
+        htmlPreview={htmlPreview}
+        hasOriginal={!!assetPickerTarget?.hasOriginal}
+        uploading={uploadingImage}
+        onChoose={handleAssetChoice}
+      />
     </div>
   );
 }

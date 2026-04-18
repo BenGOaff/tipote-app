@@ -2468,7 +2468,8 @@
       "columns": "Colonne",
       "row": "Riga",
       "video": "Video",
-      "link": "Link"
+      "link": "Link",
+      "list": "Elenco puntato"
     },
     "publish": {
       "title": "Pubblica pagina",
