@@ -27,13 +27,21 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
 
   const newStatus = body?.publish === false ? "draft" : "published";
 
-  // When publishing, re-render html_snapshot from the latest content to ensure freshness
+  // When publishing:
+  //  - linkinbio: always rebuild html_snapshot, since the canonical content
+  //    lives in the linkinbio_links table and html_snapshot is derived;
+  //  - other page types: keep the html_snapshot the editor already wrote.
+  //    The editor's inline-text/image/structural edits go straight into
+  //    html_snapshot without round-tripping through content_data, so a
+  //    rebuild from content_data would silently drop those edits at publish
+  //    time (Marie-Paule, 2026-04). We only rebuild as a fallback when no
+  //    html_snapshot exists yet.
   const updates: Record<string, any> = { status: newStatus };
 
   if (newStatus === "published") {
     const { data: current } = await supabase
       .from("hosted_pages")
-      .select("title, page_type, template_kind, template_id, content_data, brand_tokens, meta_title, meta_description, og_image_url, capture_heading, capture_subtitle, capture_first_name, locale, layout_config")
+      .select("title, page_type, template_kind, template_id, content_data, brand_tokens, html_snapshot, meta_title, meta_description, og_image_url, capture_heading, capture_subtitle, capture_first_name, locale, layout_config")
       .eq("id", pageId)
       .eq("user_id", session.user.id)
       .single();
@@ -92,15 +100,19 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
           };
           updates.html_snapshot = buildLinkinbioPage(pageData);
         } else {
-          const pageType = current.template_kind === "vente" ? "sales" : current.template_kind === "vitrine" ? "showcase" : "capture";
-          const html = buildPage({
-            pageType,
-            contentData: current.content_data || {},
-            brandTokens: Object.keys(current.brand_tokens || {}).length > 0 ? current.brand_tokens : null,
-            locale: (current as any).locale || "fr",
-            layoutConfig: (current as any).layout_config || null,
-          });
-          updates.html_snapshot = html;
+          const existingHtml = (current as any).html_snapshot;
+          const hasExistingHtml = typeof existingHtml === "string" && existingHtml.length > 0;
+          if (!hasExistingHtml) {
+            const pageType = current.template_kind === "vente" ? "sales" : current.template_kind === "vitrine" ? "showcase" : "capture";
+            const html = buildPage({
+              pageType,
+              contentData: current.content_data || {},
+              brandTokens: Object.keys(current.brand_tokens || {}).length > 0 ? current.brand_tokens : null,
+              locale: (current as any).locale || "fr",
+              layoutConfig: (current as any).layout_config || null,
+            });
+            updates.html_snapshot = html;
+          }
         }
       } catch { /* keep existing snapshot */ }
     }

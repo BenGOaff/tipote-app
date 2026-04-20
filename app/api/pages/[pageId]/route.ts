@@ -97,8 +97,16 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     }
   }
 
-  // If content_data, brand_tokens OR layout_config changed, re-render HTML snapshot
-  if (updates.content_data || updates.brand_tokens || updates.layout_config) {
+  // Re-render html_snapshot from content_data — but ONLY when the client did
+  // not provide one. The page editor's inline-text / image / structural edits
+  // mutate the iframe DOM directly without round-tripping through content_data,
+  // and ship the resulting HTML in `html_snapshot`. If we rebuilt regardless,
+  // we'd hand the client back a freshly rendered AI version of the page and
+  // wipe every inline edit they just made (Marie-Paule, 2026-04). Chat-driven
+  // updates and layout-config changes still trigger the rebuild because they
+  // only ship structured fields, not html_snapshot.
+  const clientProvidedHtml = typeof updates.html_snapshot === "string" && updates.html_snapshot.length > 0;
+  if (!clientProvidedHtml && (updates.content_data || updates.brand_tokens || updates.layout_config)) {
     // Fetch current page to get template info
     const { data: current } = await supabase
       .from("hosted_pages")
