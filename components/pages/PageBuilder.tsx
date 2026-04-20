@@ -1298,10 +1298,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [showQrModal, setShowQrModal] = useState(false);
 
   // Thank-you page
+  // The DB column (thank_you_title / thank_you_message) is the source of truth
+  // once the user saves. content_data.* is the legacy key written by the AI generator
+  // and is never refreshed on save — reading it first would stale-override her edits.
   const [showThankYouModal, setShowThankYouModal] = useState(false);
-  const [thankYouHeading, setThankYouHeading] = useState(page.content_data?.thank_you_heading || (page as any).thank_you_title || "Merci pour ton inscription !");
+  const [thankYouHeading, setThankYouHeading] = useState((page as any).thank_you_title || page.content_data?.thank_you_heading || "Merci pour ton inscription !");
   const [thankYouSubtitle, setThankYouSubtitle] = useState((page as any).thank_you_subtitle || "");
-  const [thankYouMessage, setThankYouMessage] = useState(page.content_data?.thank_you_message || (page as any).thank_you_message || "Tu vas recevoir un email de confirmation dans quelques instants. Pense à vérifier tes spams.");
+  const [thankYouMessage, setThankYouMessage] = useState((page as any).thank_you_message || page.content_data?.thank_you_message || "Tu vas recevoir un email de confirmation dans quelques instants. Pense à vérifier tes spams.");
   const [thankYouShowEmailHint, setThankYouShowEmailHint] = useState((page as any).thank_you_show_email_hint !== false);
   const [thankYouCtas, setThankYouCtas] = useState<{ text: string; url: string; style: "primary" | "outline" | "secondary" }[]>(() => {
     const ctas = (page as any).thank_you_ctas;
@@ -1833,22 +1836,36 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     try {
       // Clean CTAs: remove empty entries
       const cleanCtas = thankYouCtas.filter(c => c.url.trim());
-      await fetch(`/api/pages/${page.id}`, {
+      const payload = {
+        thank_you_title: thankYouHeading,
+        thank_you_subtitle: thankYouSubtitle,
+        thank_you_message: thankYouMessage,
+        thank_you_ctas: cleanCtas,
+        thank_you_show_email_hint: thankYouShowEmailHint,
+        // Keep legacy fields in sync for backward compatibility
+        thank_you_cta_text: cleanCtas[0]?.text || "",
+        thank_you_cta_url: cleanCtas[0]?.url || "",
+      };
+      const res = await fetch(`/api/pages/${page.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          thank_you_title: thankYouHeading,
-          thank_you_subtitle: thankYouSubtitle,
-          thank_you_message: thankYouMessage,
-          thank_you_ctas: cleanCtas,
-          thank_you_show_email_hint: thankYouShowEmailHint,
-          // Keep legacy fields in sync for backward compatibility
-          thank_you_cta_text: cleanCtas[0]?.text || "",
-          thank_you_cta_url: cleanCtas[0]?.url || "",
-        }),
+        body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        let serverMsg = "";
+        try { serverMsg = (await res.json())?.error || ""; } catch {}
+        const hint = /column|does not exist|schema/i.test(serverMsg)
+          ? " (une colonne est peut-être manquante — vérifie que les dernières migrations Supabase sont appliquées)"
+          : "";
+        alert(`Impossible d'enregistrer la page de remerciement : ${serverMsg || `erreur ${res.status}`}${hint}`);
+        return;
+      }
+      // Reflect saved values locally so a later modal reopen shows fresh content
+      setPage(prev => ({ ...prev, ...payload } as PageData));
       setShowThankYouModal(false);
-    } catch { /* ignore */ } finally { setSavingThankYou(false); }
+    } catch (err: any) {
+      alert(`Impossible d'enregistrer la page de remerciement : ${err?.message || "erreur réseau"}`);
+    } finally { setSavingThankYou(false); }
   }, [page.id, thankYouHeading, thankYouSubtitle, thankYouMessage, thankYouCtas, thankYouShowEmailHint]);
 
   // Manual save (triggers re-render + persist)

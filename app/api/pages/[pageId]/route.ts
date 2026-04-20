@@ -170,19 +170,38 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from("hosted_pages")
-    .update(updates)
-    .eq("id", pageId)
-    .eq("user_id", session.user.id)
-    .select("id, slug, status, updated_at")
-    .single();
+  // Retry on "column does not exist" by dropping the offending column from the
+  // payload. Without this, a single missing column (e.g. when a Supabase
+  // migration hasn't been deployed yet) silently throws away the whole update,
+  // and the user can't understand why their edits never persist.
+  let attemptUpdates: Record<string, any> = updates;
+  let lastError: { message: string; code?: string } | null = null;
+  for (let i = 0; i < 6; i += 1) {
+    const { data, error } = await supabase
+      .from("hosted_pages")
+      .update(attemptUpdates)
+      .eq("id", pageId)
+      .eq("user_id", session.user.id)
+      .select("id, slug, status, updated_at")
+      .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!error) {
+      return NextResponse.json({ ok: true, page: data });
+    }
+
+    lastError = { message: error.message, code: error.code };
+    const msg = (error.message ?? "").toLowerCase();
+    const isColumnError = msg.includes("does not exist") && msg.includes("column");
+    if (!isColumnError) break;
+    const match = error.message.match(/column ['"]?(?:hosted_pages\.)?([a-zA-Z0-9_]+)['"]?/);
+    const missing = match?.[1];
+    if (!missing || !(missing in attemptUpdates)) break;
+    const { [missing]: _drop, ...rest } = attemptUpdates;
+    if (Object.keys(rest).length === 0) break;
+    attemptUpdates = rest;
   }
 
-  return NextResponse.json({ ok: true, page: data });
+  return NextResponse.json({ error: lastError?.message || "Update failed" }, { status: 500 });
 }
 
 export async function DELETE(_req: NextRequest, ctx: RouteContext) {

@@ -168,6 +168,7 @@ export async function assignNextPepiteIfDue(
 
   if (remaining.length === 0) {
     const next = addDaysIso(now, 365);
+    // Optimistic lock: only move the slot if nobody else raced us first.
     const { data: updated, error: upErr } = await supabase
       .from("user_pepites_state")
       .update({
@@ -175,17 +176,48 @@ export async function assignNextPepiteIfDue(
         current_user_pepite_id: null,
       })
       .eq("user_id", userId)
+      .eq("next_reveal_at", state.next_reveal_at)
       .select("*")
-      .single();
+      .maybeSingle();
 
     if (upErr) throw new Error(upErr.message);
+    if (!updated) {
+      // Lost the race — another concurrent call already advanced the state.
+      const fresh = await getOrCreatePepitesState(supabase, userId);
+      const cur = fresh.current_user_pepite_id
+        ? await fetchUserPepiteById(supabase, fresh.current_user_pepite_id, userId)
+        : null;
+      return { state: fresh, current: cur, assigned: false };
+    }
     return { state: updated as UserPepitesStateRow, current: null, assigned: false };
   }
 
   // 4) Choix random parmi remaining
   const picked = remaining[Math.floor(Math.random() * remaining.length)];
 
-  // 5) Insert user_pepites
+  // 5) Claim the slot BEFORE inserting — optimistic lock against concurrent
+  //    /summary calls (mobile+desktop open, polling, refresh bursts). Only one
+  //    caller can successfully advance next_reveal_at away from its current
+  //    value; the losers bail out without inserting a duplicate user_pepites row.
+  const nextReveal = computeNextRevealIso(now);
+  const { data: claimed, error: claimErr } = await supabase
+    .from("user_pepites_state")
+    .update({ next_reveal_at: nextReveal })
+    .eq("user_id", userId)
+    .eq("next_reveal_at", state.next_reveal_at)
+    .select("*")
+    .maybeSingle();
+
+  if (claimErr) throw new Error(claimErr.message);
+  if (!claimed) {
+    const fresh = await getOrCreatePepitesState(supabase, userId);
+    const cur = fresh.current_user_pepite_id
+      ? await fetchUserPepiteById(supabase, fresh.current_user_pepite_id, userId)
+      : null;
+    return { state: fresh, current: cur, assigned: false };
+  }
+
+  // 6) Insert user_pepites — safe now, we own the slot.
   const { data: inserted, error: insErr } = await supabase
     .from("user_pepites")
     .insert({
@@ -197,22 +229,18 @@ export async function assignNextPepiteIfDue(
 
   if (insErr) throw new Error(insErr.message);
 
-  // 6) Update state
-  const nextReveal = computeNextRevealIso(now);
-  const { data: updated, error: upErr } = await supabase
+  // 7) Attach it to the state.
+  const { data: finalState, error: finalErr } = await supabase
     .from("user_pepites_state")
-    .update({
-      current_user_pepite_id: inserted.id,
-      next_reveal_at: nextReveal,
-    })
+    .update({ current_user_pepite_id: inserted.id })
     .eq("user_id", userId)
     .select("*")
     .single();
 
-  if (upErr) throw new Error(upErr.message);
+  if (finalErr) throw new Error(finalErr.message);
 
   return {
-    state: updated as UserPepitesStateRow,
+    state: finalState as UserPepitesStateRow,
     current: normalizeUserPepiteRow(inserted),
     assigned: true,
   };
