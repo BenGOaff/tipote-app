@@ -22,7 +22,11 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   try { body = await req.json(); } catch { body = {}; }
 
   const email = String(body?.email || "").trim().toLowerCase();
-  if (!email || !email.includes("@")) {
+  // Reject malformed addresses ("foo", "foo@", "@bar", "foo@bar") rather
+  // than storing junk that later fails to sync to Systeme.io / SES / etc.
+  // and pollutes the user's lead list.
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "Email invalide" }, { status: 400 });
   }
 

@@ -1287,6 +1287,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const pendingHtmlRef = useRef<string | null>(null);
+  // True once the user has made any direct edit on the page (inline text,
+  // image replace, section move/delete, style tweak, etc.) since the last
+  // time the page was resynced from `content_data`. Chat iterations regen
+  // the page from content_data and would silently overwrite these edits —
+  // see handleChatUpdate for the confirm guard. Reset in chatBeforeSubmit
+  // when the user has explicitly accepted the overwrite.
+  const hasInlineEditsRef = useRef<boolean>(false);
 
   // Left sidebar
   const [leftTab, setLeftTab] = useState<LeftTab>("builder");
@@ -1627,6 +1634,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       if (e.data?.type === "tipote:text-edit") {
         const tag = String(e.data.tag ?? "");
         const isStructural = STRUCTURAL_TAGS.has(tag);
+        // Mark the page as having inline edits so the next chat iteration
+        // can warn the user before regenerating from content_data.
+        hasInlineEditsRef.current = true;
         setSaving(true);
         clearTimeout((window as any).__tipoteSaveTimer);
         const commit = () => {
@@ -1693,6 +1703,23 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     return () => window.removeEventListener("message", handler);
   }, [page.id, handleIframeImageClick, getCleanIframeHtml, sectionOrder.mobile, sectionOrder.desktop]);
 
+  // Confirm guard: runs BEFORE the chat reformulation / iteration requests.
+  // If the user has made direct edits on the page since the last content_data
+  // sync (inline text edits, section moves, style tweaks, etc.), warn them
+  // that a chat iteration rebuilds the page from content_data and will lose
+  // those edits. Returns false to abort the chat submit — credits not spent.
+  const chatBeforeSubmit = useCallback(async (): Promise<boolean> => {
+    if (!hasInlineEditsRef.current) return true;
+    if (typeof window === "undefined") return true;
+    // eslint-disable-next-line no-alert
+    const ok = window.confirm(
+      "Tu as fait des modifications directes sur la page (texte, images, couleurs, sections) depuis la dernière génération.\n\n" +
+      "L'IA va régénérer la page à partir du modèle et ces modifications directes seront écrasées.\n\n" +
+      "Continuer quand même ?",
+    );
+    return ok;
+  }, []);
+
   // Chat update handler. Before regenerating the iframe from the new
   // content_data, flush any in-flight inline-edit debounce so the user's
   // typing-in-progress is persisted to the server before being overwritten by
@@ -1707,6 +1734,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       brand_tokens: nextBrandTokens,
     }));
     await refreshPreview(nextContentData, nextBrandTokens);
+    // The page is now rebuilt from the new content_data, so any previous
+    // inline edits are effectively overwritten. The user has been warned.
+    hasInlineEditsRef.current = false;
   }, [refreshPreview, applyPendingHtml, flushPendingSave]);
 
   // Browser tab close / refresh: flush any pending debounce so the user's
@@ -3025,6 +3055,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       contentData={page.content_data}
                       brandTokens={page.brand_tokens}
                       onUpdate={handleChatUpdate}
+                      beforeSubmit={chatBeforeSubmit}
                       locale={page.locale}
                       compact
                     />

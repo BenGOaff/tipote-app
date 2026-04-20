@@ -16,6 +16,13 @@ type Props = {
   contentData: Record<string, any>;
   brandTokens: Record<string, any>;
   onUpdate: (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, explanation: string) => void;
+  /**
+   * Called before any network request happens. Return `false` to abort the
+   * submission (e.g. the user clicked "cancel" on a confirm dialog). This
+   * runs BEFORE credit-consuming calls (/reformulate + /iterate) so aborting
+   * here costs the user nothing.
+   */
+  beforeSubmit?: () => boolean | Promise<boolean>;
   disabled?: boolean;
   locale?: string;
   /** Compact mode: renders as a small embedded chat panel (no collapse, no header) */
@@ -40,7 +47,7 @@ type ChatMessage = {
   timestamp: number;
 };
 
-export default function PageChatBar({ pageId, templateId, kind, contentData, brandTokens, onUpdate, disabled, locale, compact }: Props) {
+export default function PageChatBar({ pageId, templateId, kind, contentData, brandTokens, onUpdate, beforeSubmit, disabled, locale, compact }: Props) {
   const [instruction, setInstruction] = useState("");
   const [loading, setLoading] = useState(false);
   const [reformulating, setReformulating] = useState(false);
@@ -65,6 +72,13 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
   const handleSubmit = useCallback(async () => {
     const msg = instruction.trim();
     if (!msg || loading || reformulating) return;
+
+    // Give the parent a chance to warn the user about unsaved inline edits
+    // BEFORE any credit-consuming request leaves. Aborting here costs nothing.
+    if (beforeSubmit) {
+      const allowed = await beforeSubmit();
+      if (!allowed) return;
+    }
 
     addMessage("user", msg);
     setReformulating(true);
@@ -108,7 +122,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
     } finally {
       setReformulating(false);
     }
-  }, [instruction, loading, reformulating, kind]);
+  }, [instruction, loading, reformulating, kind, locale, beforeSubmit]);
 
   // Step 2: accept reformulation and apply
   const handleAcceptReformulation = useCallback(async () => {

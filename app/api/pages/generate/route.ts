@@ -49,12 +49,25 @@ async function callClaude(args: {
   user: string;
   maxTokens?: number;
   temperature?: number;
+  /**
+   * Upstream abort signal (typically `req.signal`) — when the client closes
+   * the SSE connection we cancel the Claude call instead of keeping a 3-min
+   * request running and then charging the user credits for a page they
+   * never received.
+   */
+  upstream?: AbortSignal;
 }): Promise<string> {
   const model = resolveClaudeModel();
   const timeoutMs = 180_000; // 3 minutes for page generation
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // Forward client-disconnect to our controller so the fetch aborts too.
+  const onUpstreamAbort = () => controller.abort();
+  if (args.upstream) {
+    if (args.upstream.aborted) controller.abort();
+    else args.upstream.addEventListener("abort", onUpstreamAbort, { once: true });
+  }
 
   let res: Response;
   try {
@@ -76,11 +89,17 @@ async function callClaude(args: {
     });
   } catch (e: any) {
     if (e?.name === "AbortError" || /aborted|abort/i.test(String(e?.message ?? ""))) {
+      if (args.upstream?.aborted) {
+        // Distinct message so upstream code can recognize client-side cancel
+        // and skip the DB insert + credit consumption.
+        throw new Error("client_aborted");
+      }
       throw new Error(`Claude API timeout après ${timeoutMs}ms`);
     }
     throw e;
   } finally {
     clearTimeout(timer);
+    if (args.upstream) args.upstream.removeEventListener("abort", onUpstreamAbort);
   }
 
   if (!res.ok) {
@@ -407,6 +426,7 @@ export async function POST(req: NextRequest) {
             user: userPrompt,
             maxTokens: 8000,
             temperature: 0.7,
+            upstream: req.signal,
           }),
         );
 
@@ -604,25 +624,54 @@ export async function POST(req: NextRequest) {
           } : {}),
         };
 
-        const { data: page, error: insertError } = await supabaseAdmin
-          .from("hosted_pages")
-          .insert(pageRow)
-          .select("id, slug")
-          .single();
+        // If the user closed the tab / cancelled during the long AI call we
+        // don't want to persist the page or charge credits for something they
+        // will never see. Finally block will close the stream; we just bail.
+        if (req.signal.aborted) {
+          return;
+        }
+
+        // Retry loop for the rare case where two concurrent generations land
+        // on the same 6-char random slug suffix. 23505 = unique_violation.
+        // We regenerate the suffix from the same title and retry up to 3
+        // times before giving up with a clear error.
+        let page: { id: string; slug: string } | null = null;
+        let insertError: any = null;
+        let currentRow = pageRow;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const res = await supabaseAdmin
+            .from("hosted_pages")
+            .insert(currentRow)
+            .select("id, slug")
+            .single();
+          if (!res.error && res.data) {
+            page = res.data as any;
+            insertError = null;
+            break;
+          }
+          insertError = res.error;
+          if ((res.error as any)?.code === "23505" && attempt < 2) {
+            currentRow = { ...currentRow, slug: generateSlug(title) };
+            continue;
+          }
+          break;
+        }
 
         if (insertError || !page) {
           throw new Error(insertError?.message || "Erreur lors de la sauvegarde.");
         }
 
         // Consume credits: 5 for capture, 6 for sales
-        try {
-          await consumeCredits(userId, creditCost, {
-            kind: "page_generate",
-            page_type: input.pageType,
-            template_id: templateId,
-            page_id: page.id,
-          });
-        } catch { /* fail-open for credits */ }
+        if (!req.signal.aborted) {
+          try {
+            await consumeCredits(userId, creditCost, {
+              kind: "page_generate",
+              page_type: input.pageType,
+              template_id: templateId,
+              page_id: page.id,
+            });
+          } catch { /* fail-open for credits */ }
+        }
 
         send("step", { id: "save", label: input.paymentUrl ? "Je mets en place ton lien de paiement..." : "Je sauvegarde ta page...", progress: 100, done: true });
 
@@ -634,7 +683,13 @@ export async function POST(req: NextRequest) {
           title,
         });
       } catch (err: any) {
-        send("error", { message: err?.message || "Erreur inconnue" });
+        // Client disconnected mid-flight — don't bother emitting an error
+        // event (no one is listening) and skip persisting anything.
+        if (err?.message === "client_aborted" || req.signal.aborted) {
+          // no-op: finally block closes the stream
+        } else {
+          send("error", { message: err?.message || "Erreur inconnue" });
+        }
       } finally {
         controller.close();
       }
