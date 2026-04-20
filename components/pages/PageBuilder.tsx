@@ -1851,14 +1851,20 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      const data = await res.json().catch(() => ({} as any));
       if (!res.ok) {
-        let serverMsg = "";
-        try { serverMsg = (await res.json())?.error || ""; } catch {}
+        const serverMsg = data?.error || "";
         const hint = /column|does not exist|schema/i.test(serverMsg)
-          ? " (une colonne est peut-être manquante — vérifie que les dernières migrations Supabase sont appliquées)"
+          ? " (une colonne est peut-être manquante — les dernières migrations Supabase doivent être appliquées)"
           : "";
         alert(`Impossible d'enregistrer la page de remerciement : ${serverMsg || `erreur ${res.status}`}${hint}`);
         return;
+      }
+      // If the server silently dropped columns (missing migration), warn the user
+      // that their save was partial — otherwise they'd never realize that, e.g.,
+      // CTAs or subtitle never reached the DB.
+      if (Array.isArray(data?.dropped) && data.dropped.length > 0) {
+        alert(`Enregistré partiellement. Ces champs n'ont pas pu être sauvegardés car la base n'a pas les colonnes correspondantes : ${data.dropped.join(", ")}. Demande à l'équipe tech de déployer les dernières migrations Supabase.`);
       }
       // Reflect saved values locally so a later modal reopen shows fresh content
       setPage(prev => ({ ...prev, ...payload } as PageData));

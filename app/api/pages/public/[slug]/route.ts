@@ -15,9 +15,29 @@ type RouteContext = { params: Promise<{ slug: string }> };
 const PAGE_SELECT_FULL =
   "id, user_id, title, slug, page_type, html_snapshot, locale, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, thank_you_title, thank_you_subtitle, thank_you_message, thank_you_cta_text, thank_you_cta_url, thank_you_ctas, thank_you_show_email_hint, facebook_pixel_id, google_tag_id, brand_tokens, content_data, status";
 
-// Minimal select — fallback if some columns have not been migrated yet
+// Safe fallback — drops only columns added after 20260302 (thank_you_subtitle,
+// thank_you_ctas, thank_you_show_email_hint from 20260414). Keeps the core
+// thank-you fields (title/message/cta_text/cta_url) so users' saved edits
+// still render even when the latest migration hasn't been deployed yet.
+const PAGE_SELECT_SAFE =
+  "id, user_id, title, slug, page_type, html_snapshot, locale, meta_title, meta_description, og_image_url, capture_enabled, capture_heading, capture_subtitle, capture_first_name, payment_url, payment_button_text, video_embed_url, legal_mentions_url, legal_cgv_url, legal_privacy_url, thank_you_title, thank_you_message, thank_you_cta_text, thank_you_cta_url, facebook_pixel_id, google_tag_id, brand_tokens, content_data, status";
+
+// Minimal — absolute last resort if even SAFE fails (pre-20260302 DB).
 const PAGE_SELECT_MINIMAL =
   "id, user_id, title, slug, page_type, html_snapshot, status";
+
+// Strictly match Postgres "column <name> does not exist" errors. The previous
+// matcher accepted any error whose message contained "column" or "pgrst",
+// which caused every unrelated Supabase error to collapse the response to
+// MINIMAL — stripping the user's thank_you_* / brand_tokens fields and
+// rendering the hardcoded i18n defaults. That silent data loss masked a real
+// migration gap for weeks (missing capture_first_name column on hosted_pages).
+function isMissingColumnError(err: { message?: string | null; code?: string | null } | null): boolean {
+  if (!err) return false;
+  if (err.code === "42703") return true; // Postgres undefined_column
+  const msg = err.message ?? "";
+  return /column\s+["']?[a-zA-Z0-9_.]+["']?\s+does\s+not\s+exist/i.test(msg);
+}
 
 export async function GET(_req: NextRequest, ctx: RouteContext) {
   const { slug } = await ctx.params;
@@ -27,7 +47,10 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   }
 
   try {
-    // Try full select first
+    // Cascade FULL -> SAFE -> MINIMAL. A single missing new column must not
+    // strip user-saved thank-you content (title/message/cta_*) from the
+    // response — Marie-Paule's customized page would otherwise revert to the
+    // hardcoded i18n default (observed bug, reported 2026-04).
     let result = await supabaseAdmin
       .from("hosted_pages")
       .select(PAGE_SELECT_FULL)
@@ -37,21 +60,28 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       .limit(1)
       .maybeSingle();
 
-    // If column error, fallback to minimal select
-    if (result.error) {
-      const msg = (result.error.message ?? "").toLowerCase();
-      const isColumnError = msg.includes("does not exist") || msg.includes("column") || msg.includes("pgrst");
-      if (isColumnError) {
-        console.warn("[public-page-api] Column error, falling back to minimal select:", result.error.message);
-        result = await supabaseAdmin
-          .from("hosted_pages")
-          .select(PAGE_SELECT_MINIMAL)
-          .eq("slug", slug)
-          .eq("status", "published")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-      }
+    if (result.error && isMissingColumnError(result.error)) {
+      console.warn("[public-page-api] FULL select failed (missing column), trying SAFE:", result.error.message, result.error.code);
+      result = await supabaseAdmin
+        .from("hosted_pages")
+        .select(PAGE_SELECT_SAFE)
+        .eq("slug", slug)
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    }
+
+    if (result.error && isMissingColumnError(result.error)) {
+      console.warn("[public-page-api] SAFE select failed (missing column), trying MINIMAL:", result.error.message, result.error.code);
+      result = await supabaseAdmin
+        .from("hosted_pages")
+        .select(PAGE_SELECT_MINIMAL)
+        .eq("slug", slug)
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
     }
 
     if (result.error) {

@@ -174,9 +174,12 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   // payload. Without this, a single missing column (e.g. when a Supabase
   // migration hasn't been deployed yet) silently throws away the whole update,
   // and the user can't understand why their edits never persist.
+  // We surface the dropped columns in the response so the client can warn
+  // the user that part of their save was silently lost.
   let attemptUpdates: Record<string, any> = updates;
   let lastError: { message: string; code?: string } | null = null;
-  for (let i = 0; i < 6; i += 1) {
+  const dropped: string[] = [];
+  for (let i = 0; i < 8; i += 1) {
     const { data, error } = await supabase
       .from("hosted_pages")
       .update(attemptUpdates)
@@ -186,6 +189,14 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       .single();
 
     if (!error) {
+      if (dropped.length > 0) {
+        return NextResponse.json({
+          ok: true,
+          page: data,
+          dropped,
+          warning: `Colonnes manquantes en base, ignorées pendant la sauvegarde : ${dropped.join(", ")}. Déploie les dernières migrations Supabase.`,
+        });
+      }
       return NextResponse.json({ ok: true, page: data });
     }
 
@@ -196,12 +207,13 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     const match = error.message.match(/column ['"]?(?:hosted_pages\.)?([a-zA-Z0-9_]+)['"]?/);
     const missing = match?.[1];
     if (!missing || !(missing in attemptUpdates)) break;
+    dropped.push(missing);
     const { [missing]: _drop, ...rest } = attemptUpdates;
     if (Object.keys(rest).length === 0) break;
     attemptUpdates = rest;
   }
 
-  return NextResponse.json({ error: lastError?.message || "Update failed" }, { status: 500 });
+  return NextResponse.json({ error: lastError?.message || "Update failed", dropped }, { status: 500 });
 }
 
 export async function DELETE(_req: NextRequest, ctx: RouteContext) {
