@@ -162,15 +162,29 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
       setInstruction("");
       onUpdate(data.nextContentData, data.nextBrandTokens, explanation);
 
-      fetch(`/api/pages/${pageId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content_data: data.nextContentData,
-          brand_tokens: data.nextBrandTokens,
-          iteration_count: (history.length + 1),
-        }),
-      }).catch(() => {});
+      // Surface server-side silent column drops so a missing migration can't
+      // make a chat iteration silently fail to persist (Marie-Paule pattern).
+      try {
+        const persistRes = await fetch(`/api/pages/${pageId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content_data: data.nextContentData,
+            brand_tokens: data.nextBrandTokens,
+            iteration_count: (history.length + 1),
+          }),
+        });
+        const persistData = await persistRes.json().catch(() => ({} as any));
+        if (!persistRes.ok) {
+          console.error("[PageChatBar] iteration save failed", persistData);
+          setError(`Modification appliquée mais non sauvegardée : ${persistData?.error || `erreur ${persistRes.status}`}`);
+        } else if (Array.isArray(persistData?.dropped) && persistData.dropped.length > 0) {
+          setError(`Sauvegardé partiellement (colonnes manquantes : ${persistData.dropped.join(", ")}). Demande à l'équipe tech de déployer les dernières migrations.`);
+        }
+      } catch (e: any) {
+        console.error("[PageChatBar] iteration save network error", e);
+        setError("Modification appliquée mais erreur réseau pendant la sauvegarde.");
+      }
     } catch {
       setError("Erreur réseau.");
       addMessage("assistant", "Erreur réseau. Réessaie.");
@@ -195,7 +209,13 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         content_data: last.contentData,
         brand_tokens: last.brandTokens,
       }),
-    }).catch(() => {});
+    }).then(async (r) => {
+      const d = await r.json().catch(() => ({} as any));
+      if (!r.ok) console.error("[PageChatBar] undo save failed", d);
+      else if (Array.isArray(d?.dropped) && d.dropped.length > 0) {
+        setError(`Annulation partielle (colonnes manquantes : ${d.dropped.join(", ")}).`);
+      }
+    }).catch((e) => console.error("[PageChatBar] undo network error", e));
   }, [history, onUpdate, pageId]);
 
   const suggestions = kind === "vitrine" ? [

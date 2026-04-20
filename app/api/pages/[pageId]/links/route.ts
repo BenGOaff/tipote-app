@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { rebuildLinkinbioSnapshot } from "@/lib/linkinbioRebuild";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -94,6 +95,10 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Keep the public html_snapshot in sync with the source of truth
+  // (linkinbio_links). Without this, visitors keep seeing the old page.
+  await rebuildLinkinbioSnapshot(supabase, pageId, session.user.id);
+
   return NextResponse.json({ ok: true, link });
 }
 
@@ -137,6 +142,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  await rebuildLinkinbioSnapshot(supabase, pageId, session.user.id);
+
   return NextResponse.json({ ok: true, link });
 }
 
@@ -167,6 +174,8 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await rebuildLinkinbioSnapshot(supabase, pageId, session.user.id);
 
   return NextResponse.json({ ok: true });
 }

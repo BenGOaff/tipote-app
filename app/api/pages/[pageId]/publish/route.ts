@@ -5,8 +5,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildPage } from "@/lib/pageBuilder";
 import { buildLinkinbioPage, type LinkinbioPageData } from "@/lib/linkinbioBuilder";
+import { checkPublishedSlugAvailable } from "@/lib/hostedPageSlug";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,14 +41,36 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   const updates: Record<string, any> = { status: newStatus };
 
   if (newStatus === "published") {
-    const { data: current } = await supabase
+    // Use select("*") so any single missing column doesn't fail the lookup
+    // and silently skip the rebuild (which would publish a stale snapshot).
+    const { data: current, error: currentErr } = await supabase
       .from("hosted_pages")
-      .select("title, page_type, template_kind, template_id, content_data, brand_tokens, html_snapshot, meta_title, meta_description, og_image_url, capture_heading, capture_subtitle, capture_first_name, locale, layout_config")
+      .select("*")
       .eq("id", pageId)
       .eq("user_id", session.user.id)
       .single();
 
-    if (current) {
+    if (currentErr || !current) {
+      console.error("[pages/publish] page lookup failed", { pageId, error: currentErr?.message });
+      return NextResponse.json({ error: currentErr?.message || "Page introuvable" }, { status: 404 });
+    }
+
+    // Slug-collision guard: another user might have published the same slug
+    // since this page was last saved (per-user uniqueness lets that slip
+    // through). Refuse before flipping status to published so the public URL
+    // doesn't silently route to two different pages depending on created_at.
+    const slugForPublish = (current as any).slug as string;
+    if (slugForPublish) {
+      const slugCheck = await checkPublishedSlugAvailable(supabaseAdmin, slugForPublish, pageId);
+      if (slugCheck.conflict) {
+        return NextResponse.json(
+          { error: `Le slug "${slugForPublish}" est déjà utilisé par une autre page publiée. Renomme cette page avant de publier.` },
+          { status: 409 },
+        );
+      }
+    }
+
+    {
       try {
         if ((current as any).page_type === "linkinbio") {
           // Fetch links and profile for linkinbio rebuild
@@ -114,7 +138,27 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
             updates.html_snapshot = html;
           }
         }
-      } catch { /* keep existing snapshot */ }
+      } catch (err: any) {
+        // For linkinbio, the rebuild is not optional: html_snapshot is
+        // derived from linkinbio_links which is the canonical source. A
+        // failed rebuild = we'd publish whatever stale snapshot was there,
+        // possibly the empty initial placeholder. Hard-fail so the user can
+        // retry rather than silently going live with broken content.
+        if ((current as any).page_type === "linkinbio") {
+          console.error("[pages/publish] linkinbio rebuild failed", { pageId, error: err?.message });
+          return NextResponse.json(
+            { error: `Rebuild de la page link-in-bio échoué : ${err?.message || "erreur inconnue"}. Réessaie ou vérifie tes liens.` },
+            { status: 500 },
+          );
+        }
+        // For sales/capture pages we already kept a valid html_snapshot
+        // since the editor writes it directly; just log and proceed.
+        console.error("[pages/publish] rebuild failed, keeping existing snapshot", {
+          pageId,
+          pageType: (current as any).page_type,
+          error: err?.message,
+        });
+      }
     }
   }
 

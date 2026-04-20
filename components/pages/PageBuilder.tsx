@@ -100,6 +100,60 @@ type Props = {
 
 type Device = "mobile" | "tablet" | "desktop";
 
+// ---------- Save helpers ----------
+//
+// Every PATCH /api/pages/[id] response can return `{ ok: true, dropped: [...] }`
+// when the server's retry-loop had to drop columns the database didn't have
+// (typically a not-yet-deployed Supabase migration). Without surfacing this,
+// the user sees an apparently-successful save but the field is silently lost
+// — exactly the silent-data-loss class of bug that bit Marie-Paule's thank-you
+// page (Apr 2026). All save sites in this file MUST go through `persistPatch`
+// so the warning is shown consistently.
+
+type PatchResult = {
+  ok: boolean;
+  data?: any;
+  error?: string;
+  dropped?: string[];
+};
+
+// Deduplicate alerts so a debounced inline-edit save doesn't fire one alert
+// per keystroke when a column is missing.
+const _droppedAlertedFor = new Set<string>();
+function _alertDroppedOnce(pageId: string, dropped: string[]) {
+  if (!dropped || dropped.length === 0) return;
+  const key = `${pageId}:${[...dropped].sort().join(",")}`;
+  if (_droppedAlertedFor.has(key)) return;
+  _droppedAlertedFor.add(key);
+  if (typeof window === "undefined") return;
+  // eslint-disable-next-line no-alert
+  window.alert(
+    `Sauvegarde partielle : les champs suivants n'ont pas pu être enregistrés (colonnes manquantes en base) — ${dropped.join(", ")}. Demande à l'équipe tech de déployer les dernières migrations Supabase.`,
+  );
+}
+
+async function persistPatch(pageId: string, body: Record<string, any>): Promise<PatchResult> {
+  try {
+    const res = await fetch(`/api/pages/${pageId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({} as any));
+    const dropped = Array.isArray(data?.dropped) ? (data.dropped as string[]) : undefined;
+    if (!res.ok) {
+      // Even on error, log the response so debugging in prod isn't blind.
+      console.error("[persistPatch] save failed", { pageId, status: res.status, error: data?.error, dropped });
+      return { ok: false, error: data?.error || `HTTP ${res.status}`, dropped };
+    }
+    if (dropped && dropped.length > 0) _alertDroppedOnce(pageId, dropped);
+    return { ok: true, data, dropped };
+  } catch (err: any) {
+    console.error("[persistPatch] network error", { pageId, message: err?.message });
+    return { ok: false, error: err?.message || "network error" };
+  }
+}
+
 const DEVICE_WIDTHS: Record<Device, { width: number; icon: typeof Monitor }> = {
   mobile: { width: 375, icon: Smartphone },
   tablet: { width: 768, icon: Tablet },
@@ -1343,12 +1397,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     setHtmlPreview(html);
     setCanUndo(historyIdxRef.current > 0);
     setCanRedo(true);
-    // Save to server
-    fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html_snapshot: html }),
-    }).catch(() => {});
+    persistPatch(page.id, { html_snapshot: html });
     setTimeout(() => { isUndoRedoRef.current = false; }, 500);
   }, [page.id]);
 
@@ -1360,11 +1409,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     setHtmlPreview(html);
     setCanUndo(true);
     setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
-    fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html_snapshot: html }),
-    }).catch(() => {});
+    persistPatch(page.id, { html_snapshot: html });
     setTimeout(() => { isUndoRedoRef.current = false; }, 500);
   }, [page.id]);
 
@@ -1423,6 +1468,39 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       pendingHtmlRef.current = null;
     }
   }, []);
+
+  // Flush any pending text-edit debounce: capture iframe HTML, persist it,
+  // and clear the timer. Used before destructive operations (chat regenerate,
+  // beforeunload, tab switch) so an in-flight inline edit isn't lost.
+  // Returns a promise that resolves once the save round-trip completes.
+  const flushPendingSave = useCallback(async (): Promise<void> => {
+    if (typeof window === "undefined") return;
+    const timer = (window as any).__tipoteSaveTimer;
+    if (!timer) return;
+    clearTimeout(timer);
+    (window as any).__tipoteSaveTimer = null;
+    const iframe = iframeRef.current;
+    if (!iframe?.contentDocument) return;
+    // Inline of the commit() in the message handler — we can't easily expose
+    // that closure but the save shape must match exactly so a chat refresh
+    // doesn't race with a debounced save firing slightly later with stale
+    // HTML and overwriting the chat-regenerated page.
+    const cleanHtml = "<!DOCTYPE html>" + (() => {
+      const clone = iframe.contentDocument!.documentElement.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("[data-tipote-injected]").forEach((el) => el.remove());
+      clone.querySelectorAll("[contenteditable]").forEach((el) => {
+        el.removeAttribute("contenteditable");
+        const h = el as HTMLElement;
+        if (h.style.cursor === "text") h.style.removeProperty("cursor");
+        if (h.style.outline === "none") h.style.removeProperty("outline");
+        if (h.getAttribute("style") === "") h.removeAttribute("style");
+      });
+      clone.querySelectorAll("[data-tp-section-idx]").forEach((el) => el.removeAttribute("data-tp-section-idx"));
+      return clone.outerHTML;
+    })();
+    pendingHtmlRef.current = cleanHtml;
+    await persistPatch(page.id, { html_snapshot: cleanHtml });
+  }, [page.id]);
 
   // Asset picker state: opened when the user clicks any image/illust in the
   // iframe. Lets them pick an existing asset, upload a new one, or restore the
@@ -1525,11 +1603,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     const cleanHtml = getCleanIframeHtml();
     // Don't update htmlPreview to avoid iframe reload (iframe already has correct state)
     pushHistory(cleanHtml);
-    fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html_snapshot: cleanHtml }),
-    }).catch(() => {});
+    persistPatch(page.id, { html_snapshot: cleanHtml });
   }, [page.id, getCleanIframeHtml, pushHistory]);
 
   // Keep a ref so asset-picker handlers defined before saveIframeHtml can call it.
@@ -1559,13 +1633,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           const cleanHtml = getCleanIframeHtml();
           pendingHtmlRef.current = cleanHtml;
           pushHistory(cleanHtml);
-          fetch(`/api/pages/${page.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ html_snapshot: cleanHtml }),
-          }).then(() => {
-            setSaving(false);
-          }).catch(() => setSaving(false));
+          persistPatch(page.id, { html_snapshot: cleanHtml }).then(() => setSaving(false));
         };
         if (isStructural) {
           // Immediate snapshot so undo always works
@@ -1625,8 +1693,13 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     return () => window.removeEventListener("message", handler);
   }, [page.id, handleIframeImageClick, getCleanIframeHtml, sectionOrder.mobile, sectionOrder.desktop]);
 
-  // Chat update handler
+  // Chat update handler. Before regenerating the iframe from the new
+  // content_data, flush any in-flight inline-edit debounce so the user's
+  // typing-in-progress is persisted to the server before being overwritten by
+  // the chat-rendered HTML. Without this, a 2-second window after each
+  // keystroke could lose edits when the user clicks "send" on a chat prompt.
   const handleChatUpdate = useCallback(async (nextContentData: Record<string, any>, nextBrandTokens: Record<string, any>, _explanation: string) => {
+    await flushPendingSave();
     applyPendingHtml();
     setPage((prev) => ({
       ...prev,
@@ -1634,16 +1707,29 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       brand_tokens: nextBrandTokens,
     }));
     await refreshPreview(nextContentData, nextBrandTokens);
-  }, [refreshPreview, applyPendingHtml]);
+  }, [refreshPreview, applyPendingHtml, flushPendingSave]);
+
+  // Browser tab close / refresh: flush any pending debounce so the user's
+  // last typed character isn't lost. Cannot await async work in beforeunload,
+  // but the persistPatch fetch is fire-and-forget so the request still leaves
+  // before unload in practice.
+  useEffect(() => {
+    const onBeforeUnload = () => { void flushPendingSave(); };
+    const onVisibilityHidden = () => {
+      if (document.visibilityState === "hidden") void flushPendingSave();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("visibilitychange", onVisibilityHidden);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("visibilitychange", onVisibilityHidden);
+    };
+  }, [flushPendingSave]);
 
   // Settings update (debounced save)
   const handleSettingUpdate = useCallback(async (field: string, value: any) => {
     setPage((prev) => ({ ...prev, [field]: value }));
-    fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [field]: value }),
-    }).catch(() => {});
+    persistPatch(page.id, { [field]: value });
   }, [page.id]);
 
   // Layout update: persist + refresh the preview iframe so the user sees the
@@ -1655,11 +1741,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     setPage((prev) => ({ ...prev, layout_config: next }));
     // Refresh preview with the new layout without waiting on the server.
     refreshPreview(page.content_data || {}, page.brand_tokens || {}, next).catch(() => {});
-    fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ layout_config: next }),
-    }).catch(() => {});
+    persistPatch(page.id, { layout_config: next });
   }, [page.id, page.content_data, page.brand_tokens, refreshPreview, getCleanIframeHtml, pushHistory]);
 
   // Load leads
@@ -1693,39 +1775,46 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const handlePublish = useCallback(async () => {
     setPublishing(true);
     try {
-      await fetch(`/api/pages/${page.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: publishSlug,
-          sio_capture_tag: publishTag,
-          meta_description: publishMetaDesc,
-          og_image_url: publishOgUrl,
-          facebook_pixel_id: publishFbPixel,
-          google_tag_id: publishGtag,
-        }),
+      // Persist publish-modal fields first (slug, SIO tag, meta, etc.).
+      // If this PATCH errors (e.g. slug taken by another user once the global
+      // unique index is in place), abort publish so the user can fix and retry.
+      const patchRes = await persistPatch(page.id, {
+        slug: publishSlug,
+        sio_capture_tag: publishTag,
+        meta_description: publishMetaDesc,
+        og_image_url: publishOgUrl,
+        facebook_pixel_id: publishFbPixel,
+        google_tag_id: publishGtag,
       });
+      if (!patchRes.ok) {
+        alert(`Impossible de publier : ${patchRes.error || "erreur de sauvegarde"}`);
+        return;
+      }
 
       const res = await fetch(`/api/pages/${page.id}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ publish: true }),
       });
-      const data = await res.json();
-      if (data.ok) {
-        setPage((prev) => ({
-          ...prev,
-          status: data.page.status,
-          slug: publishSlug,
-          sio_capture_tag: publishTag,
-          meta_description: publishMetaDesc,
-          og_image_url: publishOgUrl,
-          facebook_pixel_id: publishFbPixel,
-          google_tag_id: publishGtag,
-        }));
-        setShowPublishModal(false);
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok || !data.ok) {
+        alert(`Publication échouée : ${data?.error || `erreur ${res.status}`}`);
+        return;
       }
-    } catch { /* ignore */ } finally {
+      setPage((prev) => ({
+        ...prev,
+        status: data.page.status,
+        slug: publishSlug,
+        sio_capture_tag: publishTag,
+        meta_description: publishMetaDesc,
+        og_image_url: publishOgUrl,
+        facebook_pixel_id: publishFbPixel,
+        google_tag_id: publishGtag,
+      }));
+      setShowPublishModal(false);
+    } catch (err: any) {
+      alert(`Publication échouée : ${err?.message || "erreur réseau"}`);
+    } finally {
       setPublishing(false);
     }
   }, [page.id, publishSlug, publishTag, publishMetaDesc, publishOgUrl, publishFbPixel, publishGtag]);
@@ -1874,25 +1963,27 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     } finally { setSavingThankYou(false); }
   }, [page.id, thankYouHeading, thankYouSubtitle, thankYouMessage, thankYouCtas, thankYouShowEmailHint]);
 
-  // Manual save (triggers re-render + persist)
+  // Manual save (triggers re-render + persist).
+  // CRITICAL: must use getCleanIframeHtml so editor overlays / contenteditable
+  // attributes / data-tp-section-idx don't get baked into the published HTML.
+  // Server-side sanitizeHtmlSnapshot is a safety net, not a substitute.
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      // If there's pending inline HTML edits, save them
       const iframe = iframeRef.current;
       if (iframe?.contentDocument) {
-        const fullHtml = "<!DOCTYPE html>" + iframe.contentDocument.documentElement.outerHTML;
+        const fullHtml = getCleanIframeHtml();
         pendingHtmlRef.current = fullHtml;
-        await fetch(`/api/pages/${page.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ html_snapshot: fullHtml, content_data: page.content_data, brand_tokens: page.brand_tokens }),
+        await persistPatch(page.id, {
+          html_snapshot: fullHtml,
+          content_data: page.content_data,
+          brand_tokens: page.brand_tokens,
         });
       }
     } catch { /* ignore */ } finally {
       setSaving(false);
     }
-  }, [page.id, page.content_data, page.brand_tokens]);
+  }, [page.id, page.content_data, page.brand_tokens, getCleanIframeHtml]);
 
   // Section operations
   const selectSection = useCallback((sectionId: string | null) => {
@@ -1949,11 +2040,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         "*",
       );
     }
-    fetch(`/api/pages/${page.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section_order: next }),
-    }).catch(() => {});
+    persistPatch(page.id, { section_order: next });
   }, [page.id]);
 
   const moveSection = useCallback((sectionId: string, direction: "up" | "down") => {

@@ -5,10 +5,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildPage } from "@/lib/pageBuilder";
 import { buildLinkinbioPage, type LinkinbioPageData } from "@/lib/linkinbioBuilder";
 import { sanitizeHtmlSnapshot } from "@/lib/sanitizeHtml";
 import { parseLayoutConfig } from "@/lib/pageLayout";
+import { checkPublishedSlugAvailable } from "@/lib/hostedPageSlug";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,6 +78,46 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     updates.layout_config = parseLayoutConfig(updates.layout_config);
   }
 
+  // Slug-change guard: if the user is trying to set a slug that another user
+  // already owns on a published page, refuse. Without this guard the request
+  // succeeds (the per-user unique index doesn't see the conflict) and the
+  // public route would silently start serving the OLDER user's page (or the
+  // newer one — order-by created_at desc), effectively hijacking that URL.
+  // We only block when this page is already published OR when the request is
+  // simultaneously moving it to published; a draft slug can sit on top of an
+  // existing published slug harmlessly until the user attempts to publish.
+  if ("slug" in updates && typeof updates.slug === "string" && updates.slug) {
+    const willBePublished = updates.status === "published";
+    if (willBePublished) {
+      const slugCheck = await checkPublishedSlugAvailable(supabaseAdmin, updates.slug, pageId);
+      if (slugCheck.conflict) {
+        return NextResponse.json(
+          { error: `Le slug "${updates.slug}" est déjà utilisé par une autre page publiée. Choisis-en un différent.` },
+          { status: 409 },
+        );
+      }
+    } else {
+      // Even for drafts: if the page is already published, a slug change must
+      // not collide either, otherwise the live URL silently routes to a
+      // different row. Look up current status first.
+      const { data: currentRow } = await supabase
+        .from("hosted_pages")
+        .select("status")
+        .eq("id", pageId)
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if ((currentRow as any)?.status === "published") {
+        const slugCheck = await checkPublishedSlugAvailable(supabaseAdmin, updates.slug, pageId);
+        if (slugCheck.conflict) {
+          return NextResponse.json(
+            { error: `Le slug "${updates.slug}" est déjà utilisé par une autre page publiée. Choisis-en un différent.` },
+            { status: 409 },
+          );
+        }
+      }
+    }
+  }
+
   // Validate section_order: only accept { mobile?: string[]; desktop?: string[] }
   // with short safe id strings. Anything else is coerced to an empty object.
   if ("section_order" in updates) {
@@ -107,13 +149,21 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   // only ship structured fields, not html_snapshot.
   const clientProvidedHtml = typeof updates.html_snapshot === "string" && updates.html_snapshot.length > 0;
   if (!clientProvidedHtml && (updates.content_data || updates.brand_tokens || updates.layout_config)) {
-    // Fetch current page to get template info
-    const { data: current } = await supabase
+    // Fetch current page to get template info. Use select("*") instead of
+    // enumerating columns: any single missing column would otherwise fail the
+    // query, leave `current` falsy, skip the rebuild, and ship the public
+    // page out of sync with content_data — the same Marie-Paule failure mode
+    // (Apr 2026) but on the rebuild branch instead of the read branch.
+    const { data: current, error: currentErr } = await supabase
       .from("hosted_pages")
-      .select("title, page_type, template_kind, template_id, content_data, brand_tokens, capture_heading, capture_subtitle, capture_first_name, meta_title, meta_description, og_image_url, locale, layout_config")
+      .select("*")
       .eq("id", pageId)
       .eq("user_id", session.user.id)
       .single();
+
+    if (currentErr) {
+      console.error("[pages/PATCH] rebuild lookup failed", { pageId, error: currentErr.message, code: currentErr.code });
+    }
 
     if (current) {
       const contentData = updates.content_data || current.content_data;
@@ -165,7 +215,16 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
           });
           updates.html_snapshot = html;
         }
-      } catch { /* keep existing snapshot */ }
+      } catch (err: any) {
+        // Log instead of swallowing — a builder throw used to silently keep
+        // the previous snapshot, leaving the public page diverged from the
+        // editor without any signal in logs.
+        console.error("[pages/PATCH] rebuild failed, keeping existing snapshot", {
+          pageId,
+          pageType: (current as any).page_type,
+          error: err?.message,
+        });
+      }
     }
   }
 
