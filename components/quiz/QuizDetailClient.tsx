@@ -326,6 +326,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setBrandFont((q as any).brand_font ?? "");
         setBrandColorPrimary((q as any).brand_color_primary ?? "");
         setBrandColorBackground((q as any).brand_color_background ?? "");
+        setSelectedToastWidget((q as any).toast_widget_id ?? "");
+        setSelectedShareWidget((q as any).share_widget_id ?? "");
         setStatus(q.status);
         setSioShareTagName(q.sio_share_tag_name ?? "");
         setEditQuestions(q.questions ?? []);
@@ -396,6 +398,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           brand_font: brandFont || null,
           brand_color_primary: brandColorPrimary || null,
           brand_color_background: brandColorBackground || null,
+          toast_widget_id: selectedToastWidget || null,
+          share_widget_id: selectedShareWidget || null,
           status,
           sio_share_tag_name: sioShareTagName || null,
           questions: editQuestions.map((q, i) => ({

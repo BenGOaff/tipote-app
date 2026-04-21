@@ -275,7 +275,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,project_id,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_image_url,share_message,share_networks,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,result_insight_heading,result_projection_heading,brand_font,brand_color_primary,brand_color_background").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_image_url,share_message,share_networks,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,result_insight_heading,result_projection_heading,brand_font,brand_color_primary,brand_color_background,toast_widget_id,share_widget_id").eq("id", quizId).eq("status", "active").maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -309,38 +309,81 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     // Increment view count (non-blocking)
     admin.from("quizzes").update({ views_count: (quizRes.data.views_count ?? 0) + 1 }).eq("id", quizId).then(() => {});
 
-    // Look up user's enabled widgets (toast + share)
+    // Widget resolution: per-quiz override first, else first enabled widget
+    // of the creator. An override is only honored if it still exists, still
+    // belongs to the creator, and is still enabled (prevents a stale or
+    // disabled widget from silently rendering).
     let toastWidgetId: string | null = null;
     let shareWidgetId: string | null = null;
     if (quizUserId) {
+      const overrideToast = (quizRes.data as any).toast_widget_id as string | null | undefined;
+      const overrideShare = (quizRes.data as any).share_widget_id as string | null | undefined;
       try {
-        const [twRes, swRes] = await Promise.all([
-          admin
-            .from("toast_widgets")
-            .select("id")
-            .eq("user_id", quizUserId)
-            .eq("enabled", true)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle(),
-          admin
-            .from("social_share_widgets")
-            .select("id")
-            .eq("user_id", quizUserId)
-            .eq("enabled", true)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle(),
+        const [twOverride, swOverride] = await Promise.all([
+          overrideToast
+            ? admin
+                .from("toast_widgets")
+                .select("id")
+                .eq("id", overrideToast)
+                .eq("user_id", quizUserId)
+                .eq("enabled", true)
+                .maybeSingle()
+            : Promise.resolve({ data: null } as any),
+          overrideShare
+            ? admin
+                .from("social_share_widgets")
+                .select("id")
+                .eq("id", overrideShare)
+                .eq("user_id", quizUserId)
+                .eq("enabled", true)
+                .maybeSingle()
+            : Promise.resolve({ data: null } as any),
         ]);
-        toastWidgetId = twRes.data?.id || null;
-        shareWidgetId = swRes.data?.id || null;
+        toastWidgetId = twOverride?.data?.id ?? null;
+        shareWidgetId = swOverride?.data?.id ?? null;
+
+        // Fallback to first-enabled for whichever side wasn't resolved
+        const needToast = !toastWidgetId;
+        const needShare = !shareWidgetId;
+        if (needToast || needShare) {
+          const [twFirst, swFirst] = await Promise.all([
+            needToast
+              ? admin
+                  .from("toast_widgets")
+                  .select("id")
+                  .eq("user_id", quizUserId)
+                  .eq("enabled", true)
+                  .order("created_at", { ascending: true })
+                  .limit(1)
+                  .maybeSingle()
+              : Promise.resolve({ data: null } as any),
+            needShare
+              ? admin
+                  .from("social_share_widgets")
+                  .select("id")
+                  .eq("user_id", quizUserId)
+                  .eq("enabled", true)
+                  .order("created_at", { ascending: true })
+                  .limit(1)
+                  .maybeSingle()
+              : Promise.resolve({ data: null } as any),
+          ]);
+          if (needToast) toastWidgetId = twFirst?.data?.id ?? null;
+          if (needShare) shareWidgetId = swFirst?.data?.id ?? null;
+        }
       } catch {
         // fail-open
       }
     }
 
-    // Strip user_id from public response, inject address_form + fallback privacy_url
-    const { user_id: _uid, ...quizPublic } = quizRes.data as any;
+    // Strip user_id + widget override columns from the public quiz payload —
+    // the resolved widget IDs are already surfaced at the top level.
+    const {
+      user_id: _uid,
+      toast_widget_id: _tw,
+      share_widget_id: _sw,
+      ...quizPublic
+    } = quizRes.data as any;
     const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
 
     return NextResponse.json({
