@@ -1,5 +1,7 @@
 // app/quiz/new/page.tsx
-// Create-a-quiz page (tabbed: Manual / AI / Import), powered by QuizFormClient.
+// Tiquiz-parity: create page with 3 tabs (Manual / AI chat / Import).
+// The AI tab hosts the "Pas d'idée ?" brainstorming chat. On save, the
+// form redirects to /quiz/{id} (the visual WYSIWYG editor).
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import QuizFormClient from "@/components/quiz/QuizFormClient";

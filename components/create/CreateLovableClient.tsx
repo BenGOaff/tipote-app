@@ -23,7 +23,6 @@ import { ArticleForm } from "@/components/create/forms/ArticleForm";
 import { VideoForm } from "@/components/create/forms/VideoForm";
 import { OfferForm } from "@/components/create/forms/OfferForm";
 import { FunnelForm } from "@/components/create/forms/FunnelForm";
-import { QuizForm } from "@/components/quiz/QuizForm";
 import { ContentStrategyForm } from "@/components/create/forms/ContentStrategyForm";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 
@@ -671,9 +670,6 @@ export default function CreateLovableClient() {
         // ✅ FunnelForm accepte existingOffers (dropdown offres existantes)
         form = <FunnelForm {...common} existingOffers={existingOffers} />;
         break;
-      case "quiz":
-        form = <QuizForm onClose={common.onClose} />;
-        break;
       case "strategy":
         form = <ContentStrategyForm onClose={common.onClose} />;
         break;
@@ -719,6 +715,11 @@ export default function CreateLovableClient() {
                       onClick={() => {
                         if (type.id === "funnel") {
                           router.push("/pages");
+                        } else if (type.id === "quiz") {
+                          // Tiquiz-parity: skip the linear form and send the user
+                          // straight into the visual WYSIWYG editor with a blank
+                          // starter quiz (handled server-side by /quiz/new).
+                          router.push("/quiz/new");
                         } else {
                           setSelectedType(type.id);
                         }
