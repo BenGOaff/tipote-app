@@ -294,4 +294,23 @@
   }
 }
 
+/* Rich-text output from the quiz editor (intro + result fields).
+   Keeps images responsive and preserves paragraph spacing. */
+.tipote-quiz-rich img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.5rem auto;
+}
+.tipote-quiz-rich p { margin: 0.5em 0; }
+.tipote-quiz-rich ul, .tipote-quiz-rich ol { padding-left: 1.25rem; margin: 0.5em 0; }
+.tipote-quiz-rich li { margin: 0.25em 0; }
+.tipote-quiz-rich a { color: inherit; text-decoration: underline; }
+.tipote-quiz-rich h1 { font-size: 1.5rem; font-weight: 700; margin: 0.75em 0 0.25em; }
+.tipote-quiz-rich h2 { font-size: 1.25rem; font-weight: 700; margin: 0.75em 0 0.25em; }
+.tipote-quiz-rich h3 { font-size: 1.125rem; font-weight: 600; margin: 0.5em 0 0.25em; }
+.tipote-quiz-rich [style*="text-align: center"] { text-align: center; }
+.tipote-quiz-rich [style*="text-align: right"] { text-align: right; }
+.tipote-quiz-rich [style*="text-align: left"] { text-align: left; }
+
 
