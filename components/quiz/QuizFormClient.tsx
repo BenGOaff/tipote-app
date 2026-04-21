@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, ChevronDown, GripVertical, Save, Globe, Monitor, BarChart3, TrendingUp } from "lucide-react";
 import SortableQuestionList from "@/components/quiz/SortableQuestionList";
 import QuizShareSettings from "@/components/quiz/QuizShareSettings";
@@ -875,6 +878,12 @@ export default function QuizFormClient() {
   // ---------------------------------------------------------------------------
 
   return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">Nouveau quiz</h1>} />
+          <div className="flex-1 p-4 sm:p-5 lg:p-6"><div className="max-w-[1200px] mx-auto w-full">
     <div className="space-y-4">
       {/* Top bar: tabs + save button */}
       <div className="flex items-center justify-between gap-4">
@@ -1096,5 +1105,9 @@ export default function QuizFormClient() {
         onBriefReady={launchFromBrief}
       />
     </div>
+          </div></div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
