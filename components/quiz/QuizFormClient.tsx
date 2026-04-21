@@ -1052,9 +1052,9 @@ export default function QuizFormClient() {
           <CardContent className="space-y-5">
             <p className="text-sm text-muted-foreground">
               Importe un fichier <strong>.txt</strong> contenant tes questions et réponses.
-              L'IA va structurer le contenu en quiz (questions, options, résultats).
+              L&apos;IA va structurer le contenu en quiz (questions, options, résultats).
               <br />
-              <span className="text-xs">Pour les PDF / DOCX, copie le texte dans un fichier .txt avant d'importer.</span>
+              <span className="text-xs">Pour les PDF / DOCX, copie le texte dans un fichier .txt avant d&apos;importer.</span>
             </p>
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
