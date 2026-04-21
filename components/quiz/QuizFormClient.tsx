@@ -882,7 +882,7 @@ export default function QuizFormClient() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">Nouveau quiz</h1>} />
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("createTitle")}</h1>} />
           <div className="flex-1 p-4 sm:p-5 lg:p-6"><div className="max-w-[1200px] mx-auto w-full">
     <div className="space-y-4">
       {/* Top bar: tabs + save button */}
@@ -1000,7 +1000,7 @@ export default function QuizFormClient() {
                     onClick={() => setAiSegmentation("profile")}
                     className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "profile" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
                   >
-                    <Users className="h-4 w-4 text-violet-500 mb-1" />
+                    <Users className="h-4 w-4 text-primary mb-1" />
                     <p className="font-medium text-sm">{t("aiSegProfile")}</p>
                     <p className="text-xs text-muted-foreground">{t("aiSegProfileDesc")}</p>
                   </button>
