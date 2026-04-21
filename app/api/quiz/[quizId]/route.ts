@@ -3,8 +3,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { sanitizeRichText } from "@/lib/richText";
+import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
 
 export const dynamic = "force-dynamic";
+
+// Fields accepting rich-text HTML (bold, italic, links, images, alignment).
+// Sanitized server-side on PATCH as defence-in-depth (the editor already
+// sanitizes client-side before every save).
+const RICH_TEXT_FIELDS = ["introduction"] as const;
 
 type RouteContext = { params: Promise<{ quizId: string }> };
 
@@ -102,14 +109,75 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const allowedFields = [
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
-      "share_message", "status", "sio_share_tag_name", "locale",
-      "og_image_url", "capture_heading", "capture_subtitle", "capture_first_name",
+      "bonus_image_url", "share_message", "status", "sio_share_tag_name",
+      "sio_capture_tag", "locale", "og_image_url", "og_description",
+      "capture_heading", "capture_subtitle", "capture_first_name",
       "capture_last_name", "capture_phone", "capture_country",
+      "start_button_text", "result_insight_heading", "result_projection_heading",
+      "custom_footer_text", "custom_footer_url",
+      "brand_font", "brand_color_primary", "brand_color_background",
     ];
 
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
     for (const key of allowedFields) {
       if (key in body) patch[key] = body[key];
+    }
+
+    // Sanitize rich-text fields server-side (browser already sanitizes).
+    for (const key of RICH_TEXT_FIELDS) {
+      if (key in patch && typeof patch[key] === "string") {
+        patch[key] = sanitizeRichText(patch[key] as string);
+      }
+    }
+
+    // Validate brand_font against whitelist (null = clear).
+    if ("brand_font" in patch) {
+      const val = patch.brand_font;
+      if (val !== null && (typeof val !== "string" || !BRAND_FONT_CHOICES.includes(val as typeof BRAND_FONT_CHOICES[number]))) {
+        patch.brand_font = null;
+      }
+    }
+
+    // Validate hex colors (null = clear, otherwise must be #rgb or #rrggbb).
+    const hexRe = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+    for (const key of ["brand_color_primary", "brand_color_background"] as const) {
+      if (key in patch) {
+        const val = patch[key];
+        if (val !== null && (typeof val !== "string" || !hexRe.test(val))) patch[key] = null;
+      }
+    }
+
+    // Share networks: enum-filter + dedupe.
+    if ("share_networks" in body) {
+      patch.share_networks = sanitizeShareNetworks(body.share_networks);
+    }
+
+    // Slug: sanitize + verify uniqueness (case-insensitive) against other quizzes.
+    if ("slug" in body) {
+      const raw = body.slug;
+      if (raw === null || (typeof raw === "string" && raw.trim() === "")) {
+        patch.slug = null;
+      } else {
+        const cleaned = sanitizeSlug(raw);
+        if (!cleaned) {
+          return NextResponse.json({ ok: false, error: "Invalid slug" }, { status: 400 });
+        }
+        // Block slugs that look like a UUID prefix (would shadow /q/{uuid}).
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleaned)) {
+          return NextResponse.json({ ok: false, error: "Slug cannot look like an ID" }, { status: 400 });
+        }
+        const { data: conflict } = await supabase
+          .from("quizzes")
+          .select("id")
+          .ilike("slug", cleaned)
+          .neq("id", quizId)
+          .limit(1)
+          .maybeSingle();
+        if (conflict) {
+          return NextResponse.json({ ok: false, error: "SLUG_TAKEN" }, { status: 409 });
+        }
+        patch.slug = cleaned;
+      }
     }
 
     const { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
@@ -142,9 +210,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           body.results.map((r: any, i: number) => ({
             quiz_id: quizId,
             title: String(r.title ?? ""),
-            description: r.description ?? null,
-            insight: r.insight ?? null,
-            projection: r.projection ?? null,
+            description: typeof r.description === "string" ? sanitizeRichText(r.description) : null,
+            insight: typeof r.insight === "string" ? sanitizeRichText(r.insight) : null,
+            projection: typeof r.projection === "string" ? sanitizeRichText(r.projection) : null,
             cta_text: r.cta_text ?? null,
             cta_url: r.cta_url ?? null,
             sio_tag_name: r.sio_tag_name ?? null,

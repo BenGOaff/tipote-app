@@ -3456,7 +3456,7 @@ Tiquiz is available at **quiz.tipote.com**. Available in 5 languages: French, En
     content: {
       fr: `## Créer un quiz sur Tiquiz
 
-Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 2 options :
+Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 3 options :
 
 ### Option 1 : Manuel
 - Donne un **titre** et une **introduction** à ton quiz
@@ -3472,10 +3472,16 @@ Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 2 options :
 - Choisis le type de **segmentation** (par profil ou par niveau)
 - Clique sur **Générer** — l'IA crée tout en temps réel !
 
-> Tu peux toujours modifier le quiz généré par l'IA avant de le publier.`,
+### Option 3 : Importer depuis un fichier
+- Tu as déjà un quiz rédigé ailleurs ? Importe-le en **.txt** (max 50 000 caractères).
+- L'IA structure automatiquement ton contenu en questions, options et résultats.
+- **Formats supportés :** .txt uniquement pour l'instant. Pour un PDF ou un DOCX, copie-colle le texte dans un fichier .txt avant d'importer.
+- Astuce : structure ton .txt avec des sections claires (questions numérotées, options A/B/C/D, résultats nommés) → l'IA respectera mieux ta structure.
+
+> Tu peux toujours modifier le quiz généré ou importé avant de le publier.`,
       en: `## Create a quiz on Tiquiz
 
-Go to **Create a quiz** in the sidebar. You have 2 options:
+Go to **Create a quiz** in the sidebar. You have 3 options:
 
 ### Option 1: Manual
 - Give your quiz a **title** and **introduction**
@@ -3491,19 +3497,25 @@ Go to **Create a quiz** in the sidebar. You have 2 options:
 - Choose **segmentation** type (by profile or by level)
 - Click **Generate** — AI creates everything in real time!
 
-> You can always edit the AI-generated quiz before publishing.`,
+### Option 3: Import from a file
+- Already have a quiz drafted elsewhere? Import it as **.txt** (max 10,000 characters).
+- AI auto-structures it into questions, options and results.
+- **Supported formats:** .txt only for now. For PDF/DOCX, copy the text into a .txt file before importing.
+- Tip: structure your .txt with clear sections (numbered questions, A/B/C/D options, named results) so the AI respects your structure.
+
+> You can always edit the generated or imported quiz before publishing.`,
       es: `## Crear un quiz en Tiquiz
 
-Ve a **Crear un quiz**. Tienes 2 opciones: **Manual** (añade preguntas y resultados tú mismo) o **IA** (elige un objetivo, público y tono, y la IA genera todo). Puedes editar el quiz generado antes de publicar.`,
+Ve a **Crear un quiz**. Tienes 3 opciones: **Manual** (añade preguntas y resultados tú mismo), **IA** (elige un objetivo, público y tono, la IA genera todo), o **Importar** un archivo .txt (la IA estructura tu contenido existente). Para PDF/DOCX, copia el texto a .txt antes de importar. Puedes editar el quiz antes de publicar.`,
       it: `## Creare un quiz su Tiquiz
 
-Vai su **Crea un quiz**. Hai 2 opzioni: **Manuale** (aggiungi domande e risultati) o **IA** (scegli obiettivo, pubblico e tono, l'IA genera tutto). Puoi modificare il quiz generato prima di pubblicare.`,
+Vai su **Crea un quiz**. Hai 3 opzioni: **Manuale** (aggiungi domande e risultati), **IA** (scegli obiettivo, pubblico e tono, l'IA genera tutto), o **Importa** un file .txt (l'IA struttura i tuoi contenuti). Per PDF/DOCX, copia il testo in .txt prima dell'import. Puoi modificare il quiz prima di pubblicare.`,
       ar: `## إنشاء اختبار على Tiquiz
 
-اذهب إلى **إنشاء اختبار**. لديك خياران: **يدوي** (أضف الأسئلة والنتائج بنفسك) أو **ذكاء اصطناعي** (اختر الهدف والجمهور والنبرة، والذكاء الاصطناعي يولّد كل شيء). يمكنك تعديل الاختبار قبل النشر.`,
+اذهب إلى **إنشاء اختبار**. لديك 3 خيارات: **يدوي**، **ذكاء اصطناعي**، أو **استيراد** ملف .txt (يقوم الذكاء الاصطناعي بهيكلة محتواك). بالنسبة لـ PDF/DOCX، انسخ النص إلى .txt قبل الاستيراد. يمكنك تعديل الاختبار قبل النشر.`,
     },
     related_slugs: ["what-is-tiquiz", "tiquiz-leads", "tiquiz-systeme-io"],
-    tags: ["tiquiz", "quiz", "create", "ai", "manual"],
+    tags: ["tiquiz", "quiz", "create", "ai", "manual", "import"],
   },
   {
     category_slug: "tiquiz",
@@ -3575,43 +3587,124 @@ Il partecipante deve inserire la sua email prima di vedere il risultato. Puoi at
       fr: `## Intégration Systeme.io
 
 ### Configurer ta clé API
-Va dans **Paramètres** et colle ta **clé API Systeme.io**. Tu peux lui donner un nom pour t'y retrouver.
+Va dans **Paramètres → Systeme.io** et colle ta **clé API Systeme.io** (Systeme.io > Paramètres > API). Donne-lui un nom pour t'y retrouver.
 
-### Ce qui se passe automatiquement
-Quand un lead soumet ton quiz :
+### Ce qui se passe automatiquement quand un lead répond
 1. Le contact est **créé ou mis à jour** dans Systeme.io
-2. Le **tag du résultat** est appliqué (ex: "quiz-visionnaire")
+2. Le **tag du résultat** est appliqué (ex: \`quiz-visionnaire\`)
 3. Le champ personnalisé **tiquiz_result** est rempli
 4. Si configuré : **inscription en formation** et **ajout en communauté**
+5. Si la viralité est activée et que le participant partage : un **tag de partage** est aussi posé
 
-### Tag de partage
-Si la viralité est activée et que le participant partage, un **tag dédié** est aussi appliqué.
+### 🚀 Automatiser la suite (campagnes, formations, communautés…)
+
+Tiquiz pose le **tag**. Ce tag peut déclencher n'importe quelle automatisation Systeme.io.
+
+**Étape 1 — Crée tes tags dans Systeme.io AVANT de créer ton quiz**
+
+Dans Systeme.io > **Contacts > Tags**, crée un tag par résultat : \`quiz-visionnaire\`, \`quiz-strategique\`, \`quiz-partage\`, etc.
+
+Puis, en créant ton quiz dans Tiquiz, associe chaque résultat à son tag dans l'onglet **Systeme.io** du quiz.
+
+**Étape 2 — Crée une règle d'automatisation dans Systeme.io**
+
+Dans Systeme.io > **Automatisations > Règles** → *Créer une règle* :
+
+- **Déclencheur** : \`Tag ajouté à un contact\` → sélectionne ton tag
+- **Actions** (enchaîne-en autant que tu veux) :
+  - Abonner à une **campagne email** (séquence onboarding, newsletter…)
+  - Donner **accès à une formation** de ton école Systeme.io
+  - Donner **accès à une communauté**
+  - **Envoyer un email** unique (bienvenue, bonus…)
+  - Ajouter un autre tag, déclencher un webhook, etc.
+
+**Étape 3 — C'est tout.** Le participant entre son email → Tiquiz pose le tag → Systeme.io déclenche toutes les actions. Zéro clic de ta part.
+
+### ⚠️ Tester ton quiz : retire le tag avant chaque test
+
+Systeme.io **ne redéclenche pas** une règle si le tag est déjà présent sur le contact. Avant chaque nouveau test avec le même email :
+
+1. Va dans Systeme.io > **Contacts**
+2. Ouvre ton contact test
+3. **Retire manuellement le tag** correspondant au résultat
+
+Sinon : le contact sera bien mis à jour mais l'automatisation **ne partira pas** et tu croiras que c'est cassé.
 
 ### Sync en masse
-Dans l'onglet Leads d'un quiz, clique sur **Synchroniser avec Systeme.io** pour forcer la sync de tous les leads en attente.`,
+Dans l'onglet **Leads** d'un quiz, clique sur **Synchroniser avec Systeme.io** pour forcer la sync de tous les leads en attente (retry après erreur API, changement de clé, etc.).
+
+> **En savoir plus :** [Guide officiel Systeme.io — workflows & automatisations](https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio)`,
       en: `## Systeme.io Integration
 
 ### Set up your API key
-Go to **Settings** and paste your **Systeme.io API key**.
+Go to **Settings → Systeme.io** and paste your **Systeme.io API key** (Systeme.io > Settings > API).
 
 ### What happens automatically
 When a lead submits your quiz:
 1. Contact is **created or updated** in Systeme.io
-2. The **result tag** is applied (e.g., "quiz-visionary")
+2. The **result tag** is applied (e.g., \`quiz-visionary\`)
 3. Custom field **tiquiz_result** is filled
 4. If configured: **course enrollment** and **community addition**
 
+### 🚀 Automate the rest (campaigns, courses, communities…)
+
+Tiquiz applies the **tag**. The tag can trigger any Systeme.io automation.
+
+**Step 1** — In Systeme.io > **Contacts > Tags**, create one tag per quiz result *before* creating the quiz. Then map each tag to a result in your quiz's **Systeme.io** tab.
+
+**Step 2** — In Systeme.io > **Automations > Rules** → *Create rule*:
+- **Trigger**: \`Tag added to contact\` → pick your tag
+- **Actions**: subscribe to email campaign, enroll in course, add to community, send an email, add another tag, fire a webhook…
+
+**Step 3** — Done. Lead submits → Tiquiz tags → Systeme.io fires all actions.
+
+### ⚠️ Testing your quiz: remove the tag before each test
+
+Systeme.io **won't re-fire** a rule if the tag is already on the contact. Before each re-test with the same email, go to **Contacts**, open your test contact, and **manually remove the tag** — otherwise the automation won't trigger and you'll think it's broken.
+
 ### Bulk sync
-In a quiz's Leads tab, click **Sync with Systeme.io** to force-sync all pending leads.`,
+In a quiz's **Leads** tab, click **Sync with Systeme.io** to force-sync pending leads.
+
+> **Learn more:** [Systeme.io workflows guide](https://help.systeme.io/)`,
       es: `## Integración Systeme.io
 
-Configura tu clave API en **Configuración**. Cuando un lead completa tu quiz, el contacto se crea en Systeme.io con el tag del resultado, inscripción en formación y comunidad (si configurado). Usa **Sincronizar con Systeme.io** para sync en masa.`,
+Configura tu clave API en **Ajustes → Systeme.io**. Cuando un lead completa tu quiz, Tiquiz crea el contacto y le añade el **tag del resultado**. Ese tag puede disparar cualquier automatización en Systeme.io.
+
+**Flujo recomendado:**
+
+1. Crea tus **tags** en Systeme.io > Contactos > Tags *antes* de crear el quiz
+2. En Systeme.io > Automatizaciones > Reglas, crea una regla: *Trigger: Tag añadido → Acciones: suscribir a campaña, inscribir a curso, añadir a comunidad, enviar email…*
+3. Al responder el quiz, el contacto es taggeado y la automatización se dispara sola
+
+⚠️ **Al testear** con el mismo email, retira el tag manualmente desde Systeme.io > Contactos, sino la regla no se re-dispara.
+
+[Guía oficial Systeme.io](https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio)`,
       it: `## Integrazione Systeme.io
 
-Configura la tua chiave API nelle **Impostazioni**. Quando un lead completa il quiz, il contatto viene creato in Systeme.io con il tag del risultato, iscrizione al corso e comunità (se configurato). Usa **Sincronizza con Systeme.io** per il sync in massa.`,
+Configura la chiave API in **Impostazioni → Systeme.io**. Quando un lead completa il quiz, Tiquiz crea il contatto e applica il **tag del risultato**. Quel tag può attivare qualsiasi automazione Systeme.io.
+
+**Flusso consigliato:**
+
+1. Crea i tuoi **tag** in Systeme.io > Contatti > Tag *prima* di creare il quiz
+2. In Systeme.io > Automazioni > Regole, crea una regola: *Trigger: Tag aggiunto → Azioni: iscrizione a campagna, accesso al corso, comunità, invio email…*
+3. Quando il lead completa il quiz, il contatto viene taggato e l'automazione parte da sola
+
+⚠️ **Per testare** con la stessa email, rimuovi il tag manualmente da Systeme.io > Contatti, altrimenti la regola non si riattiva.
+
+[Guida ufficiale Systeme.io](https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio)`,
       ar: `## تكامل Systeme.io
 
-قم بإعداد مفتاح API في **الإعدادات**. عندما يكمل عميل محتمل اختبارك، يتم إنشاء جهة الاتصال في Systeme.io مع وسم النتيجة والتسجيل في الدورة والمجتمع (إذا تم التهيئة).`,
+قم بإعداد مفتاح API في **الإعدادات ← Systeme.io**. عند إكمال الاختبار، يُنشئ Tiquiz جهة الاتصال ويضيف **وسم النتيجة**. يمكن لهذا الوسم تشغيل أي أتمتة في Systeme.io.
+
+**الخطوات:**
+
+1. أنشئ **الوسوم** في Systeme.io > جهات الاتصال > الوسوم *قبل* إنشاء الاختبار
+2. في Systeme.io > الأتمتة > القواعد، أنشئ قاعدة: *المحفز: إضافة وسم ← الإجراءات: الاشتراك في حملة، الوصول إلى دورة، مجتمع، إرسال بريد…*
+3. عند إجابة الاختبار، يتم وسم جهة الاتصال وتنطلق الأتمتة تلقائيًا
+
+⚠️ **عند الاختبار** بنفس البريد، أزل الوسم يدويًا من Systeme.io > جهات الاتصال، وإلا فلن يعاد تشغيل القاعدة.
+
+[الدليل الرسمي Systeme.io](https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio)`,
     },
     related_slugs: ["tiquiz-leads", "tiquiz-create-quiz", "tiquiz-virality"],
     tags: ["tiquiz", "systeme.io", "integration", "tags", "sync"],

@@ -16,6 +16,27 @@ type RouteContext = { params: Promise<{ quizId: string }> };
 
 const SIO_BASE = "https://api.systeme.io/api";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolves a route parameter to a canonical quiz UUID.
+ *
+ * The public URL `/q/{param}` can be reached with either the quiz UUID (legacy
+ * behaviour) or a user-defined slug. This helper returns the UUID so the rest
+ * of the route can keep assuming it operates on `quizzes.id`.
+ *
+ * Returns null if nothing matches — caller should 404.
+ */
+async function resolveQuizId(param: string): Promise<string | null> {
+  if (UUID_RE.test(param)) return param;
+  const { data } = await supabaseAdmin
+    .from("quizzes")
+    .select("id")
+    .ilike("slug", param)
+    .maybeSingle();
+  return (data as any)?.id ?? null;
+}
+
 // ── Systeme.io helper ──────────────────────────────────────────
 
 async function sioFetch(
@@ -245,11 +266,16 @@ async function addToSioCommunity(apiKey: string, communityId: string, contactId:
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { quizId } = await context.params;
+    const { quizId: param } = await context.params;
     const admin = supabaseAdmin;
 
+    const quizId = await resolveQuizId(param);
+    if (!quizId) {
+      return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
+    }
+
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,project_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_image_url,share_message,share_networks,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,result_insight_heading,result_projection_heading,brand_font,brand_color_primary,brand_color_background").eq("id", quizId).eq("status", "active").maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -258,18 +284,24 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
-    // Fetch creator's address_form + privacy_url fallback from business_profiles
+    // Fetch creator's address_form + privacy_url + branding fallback from business_profiles
     const quizUserId = (quizRes.data as any).user_id as string | undefined;
     let addressForm = "tu";
     let fallbackPrivacyUrl = "";
+    let brandFallback: { brand_font: string | null; brand_color_base: string | null; brand_logo_url: string | null } = { brand_font: null, brand_color_base: null, brand_logo_url: null };
     if (quizUserId) {
       const { data: bp } = await admin
         .from("business_profiles")
-        .select("address_form, privacy_url")
+        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url")
         .eq("user_id", quizUserId)
         .maybeSingle();
       addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
       fallbackPrivacyUrl = String((bp as any)?.privacy_url ?? "").trim();
+      brandFallback = {
+        brand_font: (bp as any)?.brand_font ?? null,
+        brand_color_base: (bp as any)?.brand_color_base ?? null,
+        brand_logo_url: (bp as any)?.brand_logo_url ?? null,
+      };
     }
 
     // Increment view count (non-blocking)
@@ -319,6 +351,9 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         options: q.options as { text: string; result_index: number }[],
       })),
       results: resultsRes.data ?? [],
+      // Creator-level branding fallback — PublicQuizClient resolves the final
+      // look by overlaying per-quiz `brand_*` on top of these.
+      brand_fallback: brandFallback,
     });
   } catch (e) {
     return NextResponse.json(
@@ -332,8 +367,13 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { quizId } = await context.params;
+    const { quizId: param } = await context.params;
     const admin = supabaseAdmin;
+
+    const quizId = await resolveQuizId(param);
+    if (!quizId) {
+      return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
+    }
 
     let body: any;
     try {
@@ -520,8 +560,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { quizId } = await context.params;
+    const { quizId: param } = await context.params;
     const admin = supabaseAdmin;
+
+    const quizId = await resolveQuizId(param);
+    if (!quizId) {
+      return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
+    }
 
     let body: any;
     try {
