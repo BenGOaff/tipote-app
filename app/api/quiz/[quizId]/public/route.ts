@@ -286,15 +286,17 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
     // Fetch creator's address_form + privacy_url + branding fallback from business_profiles
     const quizUserId = (quizRes.data as any).user_id as string | undefined;
+    const quizProjectId = (quizRes.data as any).project_id as string | null | undefined;
     let addressForm = "tu";
     let fallbackPrivacyUrl = "";
     let brandFallback: { brand_font: string | null; brand_color_base: string | null; brand_logo_url: string | null } = { brand_font: null, brand_color_base: null, brand_logo_url: null };
     if (quizUserId) {
-      const { data: bp } = await admin
+      let bpQuery = admin
         .from("business_profiles")
         .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url")
-        .eq("user_id", quizUserId)
-        .maybeSingle();
+        .eq("user_id", quizUserId);
+      if (quizProjectId) bpQuery = bpQuery.eq("project_id", quizProjectId);
+      const { data: bp } = await bpQuery.maybeSingle();
       addressForm = (bp as any)?.address_form === "vous" ? "vous" : "tu";
       fallbackPrivacyUrl = String((bp as any)?.privacy_url ?? "").trim();
       brandFallback = {

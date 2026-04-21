@@ -137,9 +137,10 @@ export const ALLOWED_SHARE_NETWORKS = [
   "facebook",
   "linkedin",
   "x",
+  "whatsapp",
+  "threads",
   "instagram",
   "pinterest",
-  "threads",
   "reddit",
   "email",
 ] as const;

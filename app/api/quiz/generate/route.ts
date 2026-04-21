@@ -1,11 +1,12 @@
 // app/api/quiz/generate/route.ts
-// AI-powered quiz generation using Claude (Anthropic). Costs 4 credits.
+// AI-powered quiz generation using Claude (Anthropic). Costs 6 credits.
+// Supports two modes: "generate" (default, form-driven) and "import" (raw content → structured).
 // Returns SSE stream with heartbeats to prevent proxy/hosting 504 timeouts.
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
-import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
+import { buildQuizGenerationPrompt, buildQuizImportPrompt } from "@/lib/prompts/quiz/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
@@ -68,17 +69,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
     }
 
-    const objective = String(body.objective ?? "").trim();
-    const target = String(body.target ?? "").trim();
+    const mode = String(body.mode ?? "generate").trim();
+    const isImport = mode === "import";
 
-    if (!objective || !target) {
-      return NextResponse.json(
-        { ok: false, error: "objective and target are required" },
-        { status: 400 },
-      );
-    }
-
-    // Check credits
+    // Check credits (same cost for both modes)
     await ensureUserCredits(userId);
     const creditsResult = await consumeCredits(userId, 6, { feature: "quiz_generate" });
     if (creditsResult && typeof creditsResult === "object") {
@@ -89,7 +83,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Get user context for better generation
+    // User context from business_profiles (niche / mission / address_form)
     let bpQuery = supabase
       .from("business_profiles")
       .select("niche, mission, address_form")
@@ -97,23 +91,72 @@ export async function POST(req: NextRequest) {
     if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
     const { data: profile } = await bpQuery.maybeSingle();
 
-    const addressForm = ((profile as any)?.address_form ?? "tu") === "vous" ? "vous" as const : "tu" as const;
+    const profileAddressForm = (profile as any)?.address_form;
+    const resolvedAddressForm: "tu" | "vous" =
+      body.addressForm === "vous" || body.addressForm === "tu"
+        ? body.addressForm
+        : profileAddressForm === "vous"
+          ? "vous"
+          : "tu";
 
-    const prompts = buildQuizGenerationPrompt({
-      objective,
-      target,
-      tone: String(body.tone ?? "inspirant"),
-      cta: String(body.cta ?? ""),
-      bonus: String(body.bonus ?? ""),
-      questionCount: Math.min(10, Math.max(3, Number(body.questionCount) || 7)),
-      resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
-      niche: profile?.niche ?? "",
-      mission: profile?.mission ?? "",
-      locale: String(body.locale ?? "fr"),
-      addressForm,
-    });
-    system = prompts.system;
-    userPrompt = prompts.user;
+    const tone = String(body.tone ?? "inspirant").trim() || "inspirant";
+
+    if (isImport) {
+      const content = String(body.content ?? "").trim();
+      if (!content) {
+        return NextResponse.json(
+          { ok: false, error: "content is required for import mode" },
+          { status: 400 },
+        );
+      }
+      if (content.length > 50_000) {
+        return NextResponse.json(
+          { ok: false, error: "content exceeds 50000 characters" },
+          { status: 400 },
+        );
+      }
+      const prompts = buildQuizImportPrompt({
+        content,
+        locale: String(body.locale ?? "fr"),
+        addressForm: resolvedAddressForm,
+        tone,
+      });
+      system = prompts.system;
+      userPrompt = prompts.user;
+    } else {
+      const objective = String(body.objective ?? "").trim();
+      const target = String(body.target ?? "").trim();
+
+      if (!objective || !target) {
+        return NextResponse.json(
+          { ok: false, error: "objective and target are required" },
+          { status: 400 },
+        );
+      }
+
+      const format = body.format === "short" ? "short" : body.format === "long" ? "long" : "short";
+      const segmentation = body.segmentation === "level" ? "level" : "profile";
+      const defaultQuestionCount = format === "short" ? 5 : 8;
+
+      const prompts = buildQuizGenerationPrompt({
+        objective,
+        target,
+        tone,
+        cta: String(body.cta ?? ""),
+        bonus: String(body.bonus ?? ""),
+        intention: String(body.intention ?? ""),
+        questionCount: Math.min(12, Math.max(3, Number(body.questionCount) || defaultQuestionCount)),
+        resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
+        niche: (profile as any)?.niche ?? "",
+        mission: (profile as any)?.mission ?? "",
+        locale: String(body.locale ?? "fr"),
+        addressForm: resolvedAddressForm,
+        format,
+        segmentation,
+      });
+      system = prompts.system;
+      userPrompt = prompts.user;
+    }
   } catch (e: any) {
     const msg = String(e?.message ?? "").toUpperCase();
     if (msg.includes("NO_CREDITS")) {
@@ -134,7 +177,6 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       }
 
-      // Send heartbeat every 5 seconds to prevent proxy timeout
       const heartbeat = setInterval(() => {
         try {
           sendSSE("heartbeat", { status: "generating" });
@@ -144,9 +186,9 @@ export async function POST(req: NextRequest) {
       try {
         sendSSE("progress", { step: "Génération du quiz en cours..." });
 
-        const timeoutMs = 180_000; // 3 minutes
-        const controller2 = new AbortController();
-        const timer = setTimeout(() => controller2.abort(), timeoutMs);
+        const timeoutMs = 180_000;
+        const abortController = new AbortController();
+        const timer = setTimeout(() => abortController.abort(), timeoutMs);
 
         let res: Response;
         try {
@@ -157,7 +199,7 @@ export async function POST(req: NextRequest) {
               "x-api-key": apiKey,
               "anthropic-version": "2023-06-01",
             },
-            signal: controller2.signal,
+            signal: abortController.signal,
             body: JSON.stringify({
               model: getClaudeModel(),
               max_tokens: 8000,
@@ -180,15 +222,26 @@ export async function POST(req: NextRequest) {
 
         if (!res.ok) {
           const errText = await res.text().catch(() => "");
-          console.error("[quiz/generate] Claude API error:", res.status, errText.slice(0, 300));
-          sendSSE("error", {
-            ok: false,
-            error: `Erreur Claude API (${res.status}). Réessaie.`,
-          });
+          console.error("[quiz/generate] Claude API error:", res.status, errText.slice(0, 500));
+          if (res.status === 401) {
+            sendSSE("error", { ok: false, error: "Clé API Anthropic invalide ou expirée." });
+          } else if (res.status === 429) {
+            sendSSE("error", { ok: false, error: "Trop de requêtes vers Claude. Réessaie dans quelques secondes." });
+          } else {
+            sendSSE("error", { ok: false, error: `Erreur Claude API (${res.status}). Réessaie.` });
+          }
           return;
         }
 
-        const json = (await res.json()) as any;
+        let json: any;
+        try {
+          json = await res.json();
+        } catch (parseErr) {
+          console.error("[quiz/generate] Failed to parse Claude response as JSON:", parseErr);
+          sendSSE("error", { ok: false, error: "Réponse Claude invalide. Réessaie." });
+          return;
+        }
+
         const parts = Array.isArray(json?.content) ? json.content : [];
         const raw = parts
           .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
@@ -196,7 +249,12 @@ export async function POST(req: NextRequest) {
           .join("")
           .trim();
 
-        // Detect truncated output
+        if (!raw) {
+          console.error("[quiz/generate] Empty response from Claude. stop_reason:", json?.stop_reason);
+          sendSSE("error", { ok: false, error: "L'IA a retourné une réponse vide. Réessaie." });
+          return;
+        }
+
         if (json?.stop_reason === "max_tokens") {
           console.error("[quiz/generate] Output truncated (stop_reason=max_tokens). Tokens used:",
             json?.usage?.output_tokens, "/ 8000");
@@ -207,15 +265,12 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        // Robust JSON extraction
         let quiz: any;
         try {
-          // Try markdown code blocks first
           const codeBlockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
           if (codeBlockMatch) {
             quiz = JSON.parse(codeBlockMatch[1].trim());
           } else {
-            // Try outermost { ... }
             const start = raw.indexOf("{");
             const end = raw.lastIndexOf("}");
             if (start !== -1 && end !== -1 && end > start) {
@@ -254,8 +309,8 @@ export async function POST(req: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no", // Prevent nginx proxy buffering
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }
