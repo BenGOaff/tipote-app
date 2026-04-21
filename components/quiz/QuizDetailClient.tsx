@@ -297,8 +297,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
-      setSelectedToastWidget(((q as any).toast_widget_id ?? "") as string);
-      setSelectedShareWidget(((q as any).share_widget_id ?? "") as string);
+      setSelectedToastWidget(((q as Record<string, unknown>).toast_widget_id as string | null) ?? "");
+      setSelectedShareWidget(((q as Record<string, unknown>).share_widget_id as string | null) ?? "");
       // Branding: quiz overrides profile, profile overrides default constants
       const resolvedFont = (BRAND_FONT_CHOICES as readonly string[]).includes(q.brand_font ?? "")
         ? (q.brand_font as BrandFontChoice)
