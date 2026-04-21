@@ -64,6 +64,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { QuizPreviewModal } from "@/components/quiz/QuizPreviewModal";
 import type { PublicQuizData } from "@/components/quiz/PublicQuizClient";
+import AdvancedQuizSection from "@/components/quiz/AdvancedQuizSection";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 
 type QuizQuestion = {
@@ -256,6 +257,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // OG image for social sharing
   const [ogImageUrl, setOgImageUrl] = useState("");
 
+  // Tiquiz-parity fields (ported via migration 20260422_tiquiz_parity.sql).
+  // All are additive and nullable — leaving them empty falls back to
+  // business_profiles branding / translated defaults / previous behavior.
+  const [slug, setSlug] = useState("");
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [startButtonText, setStartButtonText] = useState("");
+  const [bonusImageUrl, setBonusImageUrl] = useState("");
+  const [shareNetworks, setShareNetworks] = useState<string[]>([]);
+  const [ogDescription, setOgDescription] = useState("");
+  const [customFooterText, setCustomFooterText] = useState("");
+  const [customFooterUrl, setCustomFooterUrl] = useState("");
+  const [resultInsightHeading, setResultInsightHeading] = useState("");
+  const [resultProjectionHeading, setResultProjectionHeading] = useState("");
+  const [sioCaptureTag, setSioCaptureTag] = useState("");
+  const [brandFont, setBrandFont] = useState<string>("");
+  const [brandColorPrimary, setBrandColorPrimary] = useState("");
+  const [brandColorBackground, setBrandColorBackground] = useState("");
+
   // Widgets
   const [toastWidgets, setToastWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([]);
   const [shareWidgets, setShareWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([]);
@@ -293,6 +312,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         setBonusDescription(q.bonus_description ?? "");
         setShareMessage(q.share_message ?? "");
         setOgImageUrl((q as any).og_image_url ?? "");
+        // Tiquiz-parity hydration (all optional)
+        setSlug((q as any).slug ?? "");
+        setStartButtonText((q as any).start_button_text ?? "");
+        setBonusImageUrl((q as any).bonus_image_url ?? "");
+        setShareNetworks(Array.isArray((q as any).share_networks) ? (q as any).share_networks : []);
+        setOgDescription((q as any).og_description ?? "");
+        setCustomFooterText((q as any).custom_footer_text ?? "");
+        setCustomFooterUrl((q as any).custom_footer_url ?? "");
+        setResultInsightHeading((q as any).result_insight_heading ?? "");
+        setResultProjectionHeading((q as any).result_projection_heading ?? "");
+        setSioCaptureTag((q as any).sio_capture_tag ?? "");
+        setBrandFont((q as any).brand_font ?? "");
+        setBrandColorPrimary((q as any).brand_color_primary ?? "");
+        setBrandColorBackground((q as any).brand_color_background ?? "");
         setStatus(q.status);
         setSioShareTagName(q.sio_share_tag_name ?? "");
         setEditQuestions(q.questions ?? []);
@@ -350,6 +383,19 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           bonus_description: bonusDescription,
           share_message: shareMessage,
           og_image_url: ogImageUrl || null,
+          og_description: ogDescription || null,
+          slug: slug.trim() || null,
+          start_button_text: startButtonText || null,
+          bonus_image_url: bonusImageUrl || null,
+          share_networks: shareNetworks,
+          custom_footer_text: customFooterText || null,
+          custom_footer_url: customFooterUrl || null,
+          result_insight_heading: resultInsightHeading || null,
+          result_projection_heading: resultProjectionHeading || null,
+          sio_capture_tag: sioCaptureTag || null,
+          brand_font: brandFont || null,
+          brand_color_primary: brandColorPrimary || null,
+          brand_color_background: brandColorBackground || null,
           status,
           sio_share_tag_name: sioShareTagName || null,
           questions: editQuestions.map((q, i) => ({
@@ -1482,6 +1528,39 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </div>
                 </div>
 
+                {/* Tiquiz-parity: advanced customization */}
+                <AdvancedQuizSection
+                  slug={slug}
+                  setSlug={setSlug}
+                  slugError={slugError}
+                  setSlugError={setSlugError}
+                  quizId={quiz.id}
+                  startButtonText={startButtonText}
+                  setStartButtonText={setStartButtonText}
+                  bonusImageUrl={bonusImageUrl}
+                  setBonusImageUrl={setBonusImageUrl}
+                  shareNetworks={shareNetworks}
+                  setShareNetworks={setShareNetworks}
+                  ogDescription={ogDescription}
+                  setOgDescription={setOgDescription}
+                  customFooterText={customFooterText}
+                  setCustomFooterText={setCustomFooterText}
+                  customFooterUrl={customFooterUrl}
+                  setCustomFooterUrl={setCustomFooterUrl}
+                  resultInsightHeading={resultInsightHeading}
+                  setResultInsightHeading={setResultInsightHeading}
+                  resultProjectionHeading={resultProjectionHeading}
+                  setResultProjectionHeading={setResultProjectionHeading}
+                  sioCaptureTag={sioCaptureTag}
+                  setSioCaptureTag={setSioCaptureTag}
+                  brandFont={brandFont}
+                  setBrandFont={setBrandFont}
+                  brandColorPrimary={brandColorPrimary}
+                  setBrandColorPrimary={setBrandColorPrimary}
+                  brandColorBackground={brandColorBackground}
+                  setBrandColorBackground={setBrandColorBackground}
+                />
+
                 <div className="pt-4">
                   <Button
                     variant="destructive"
@@ -1661,7 +1740,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             capture_first_name: captureFirstName,
             virality_enabled: viralityEnabled,
             bonus_description: bonusDescription || null,
+            bonus_image_url: bonusImageUrl || null,
             share_message: shareMessage || null,
+            share_networks: shareNetworks,
+            start_button_text: startButtonText || null,
+            result_insight_heading: resultInsightHeading || null,
+            result_projection_heading: resultProjectionHeading || null,
+            custom_footer_text: customFooterText || null,
+            custom_footer_url: customFooterUrl || null,
             locale: null,
             questions: editQuestions,
             results: editResults,
