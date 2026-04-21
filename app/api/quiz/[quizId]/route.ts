@@ -180,6 +180,32 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
+    // Widget overrides: must be null OR a UUID belonging to the current user.
+    // Invalid/non-owned IDs silently become null (defensive — never leak a
+    // foreign widget onto someone else's quiz).
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const currentUserId = user.id;
+    async function resolveWidgetOverride(
+      table: "toast_widgets" | "social_share_widgets",
+      raw: unknown,
+    ): Promise<string | null> {
+      if (raw === null || raw === "" || raw === undefined) return null;
+      if (typeof raw !== "string" || !uuidRe.test(raw)) return null;
+      const { data } = await supabase
+        .from(table)
+        .select("id")
+        .eq("id", raw)
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+      return data?.id ?? null;
+    }
+    if ("toast_widget_id" in body) {
+      patch.toast_widget_id = await resolveWidgetOverride("toast_widgets", body.toast_widget_id);
+    }
+    if ("share_widget_id" in body) {
+      patch.share_widget_id = await resolveWidgetOverride("social_share_widgets", body.share_widget_id);
+    }
+
     const { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
 
     if (error) {

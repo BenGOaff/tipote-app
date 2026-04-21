@@ -729,10 +729,17 @@ export default function MyContentLovableClient({
                     Retour aux dossiers
                   </button>
 
-                  <h2 className="text-lg font-bold flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5 text-teal-600" />
-                    Mes Quiz
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                      <ClipboardList className="w-5 h-5 text-teal-600" />
+                      Mes Quiz
+                    </h2>
+                    <Button size="sm" asChild>
+                      <Link href="/quiz/new">
+                        <Plus className="w-4 h-4 mr-1" /> Créer un quiz
+                      </Link>
+                    </Button>
+                  </div>
 
                   {quizzes.length === 0 ? (
                     <Card className="p-6">
