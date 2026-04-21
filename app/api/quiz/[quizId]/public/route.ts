@@ -386,6 +386,22 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     } = quizRes.data as any;
     const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
 
+    // Custom footer is a paid-plan feature: if the creator is on free, hide it
+    // at render time too (guards against downgrades where the field is still
+    // stored in DB).
+    if (quizUserId) {
+      const { data: planRow } = await admin
+        .from("profiles")
+        .select("plan")
+        .eq("id", quizUserId)
+        .maybeSingle();
+      const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free").toLowerCase();
+      if (plan === "free") {
+        quizPublic.custom_footer_text = null;
+        quizPublic.custom_footer_url = null;
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       toast_widget_id: toastWidgetId,

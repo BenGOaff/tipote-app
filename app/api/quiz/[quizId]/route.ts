@@ -147,6 +147,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
+    // Custom footer is a paid-plan feature. Force null on free plans so that
+    // the public renderer falls back to the Tipote branding footer.
+    if ("custom_footer_text" in patch || "custom_footer_url" in patch) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", user.id)
+        .maybeSingle();
+      const plan = String((prof as { plan?: string | null } | null)?.plan ?? "free").toLowerCase();
+      const isPaidPlan = plan !== "free";
+      if (!isPaidPlan) {
+        patch.custom_footer_text = null;
+        patch.custom_footer_url = null;
+      }
+    }
+
     // Share networks: enum-filter + dedupe.
     if ("share_networks" in body) {
       patch.share_networks = sanitizeShareNetworks(body.share_networks);
