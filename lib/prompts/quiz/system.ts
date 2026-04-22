@@ -17,6 +17,10 @@ type QuizPromptParams = {
   addressForm?: "tu" | "vous";
   format?: "short" | "long";
   segmentation?: "level" | "profile";
+  /** Quiz asks the visitor for their first name on a pre-quiz screen. */
+  askFirstName?: boolean;
+  /** Quiz asks the visitor for their grammatical gender (m / f / x). */
+  askGender?: boolean;
 };
 
 export const QUIZ_OBJECTIVES = [
@@ -57,6 +61,8 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     addressForm = "tu",
     format = "short",
     segmentation = "profile",
+    askFirstName = false,
+    askGender = false,
   } = params;
 
   const formality = addressForm === "vous" ? "vous" : "tu";
@@ -91,7 +97,24 @@ ${intention ? `\nINTENTION BUSINESS DU CRÉATEUR : ${intention}\nChaque résulta
 FORMAT : ${isShort ? "Quiz COURT (3 à 5 questions) → conversions rapides, légèreté, curiosité maximale." : "Quiz LONG (6 à 10 questions) → plus de valeur, meilleur diagnostic, profondeur d'analyse."}
 
 SEGMENTATION : ${segmentation === "level" ? "Par NIVEAU (débutant, intermédiaire, expert…). Le scoring classe le participant selon son degré de maîtrise." : "Par PROFIL (types de personnalité, styles, archétypes…). Le scoring révèle un profil valorisant et personnalisé."}
+${(askFirstName || askGender) ? `
+PERSONNALISATION DYNAMIQUE — OBLIGATOIRE :
+Le quiz capture ${askFirstName && askGender ? "le prénom ET le genre" : askFirstName ? "le prénom" : "le genre"} du visiteur avant la première question. Tu DOIS produire des textes qui exploitent ces variables dans les questions, options, résultats et CTA.
 
+Syntaxe exacte à utiliser (ne JAMAIS l'échapper, ne JAMAIS la traduire) :
+${askFirstName ? "  • {name} → sera remplacé par le prénom du visiteur (ex : \"Marie\"). Utilise-le dans ~30% des questions et dans TOUS les titres de résultats + CTA pour créer de la proximité. Ne commence pas systématiquement chaque phrase par {name}, varie la position.\n" : ""}${askGender ? `  • {masculin|féminin|inclusif} → 3 variantes séparées par des barres verticales. Le rendu choisit automatiquement la bonne selon le genre choisi (m / f / x).
+    Exemples :
+      - "es-tu {prêt|prête|prêt·e} ?"
+      - "{tu es un entrepreneur aguerri|tu es une entrepreneuse aguerrie|tu es un·e entrepreneur·e aguerri·e}"
+      - FR articles : "{le|la|l·a}" ; EN pronoms : "{he|she|they}" ; ES : "{él|ella|elle}".
+    Toujours écrire les 3 variantes, même si la 3ᵉ (inclusive) est identique à l'une des deux premières.
+    Pour l'arabe, produire les mêmes 3 variantes avec les verbes et adjectifs correctement accordés (ex : "{جاهز|جاهزة|جاهز}").
+` : ""}
+Règles :
+- Le texte doit rester naturel et lisible — pas plus de 1 placeholder de genre par phrase courte.
+- N'utilise JAMAIS la syntaxe pour les placeholders factices (comme \`{choix}\` ou \`{option}\`) — uniquement pour le prénom et les 3 variantes de genre.
+- Les intros, share_message, bonus n'ont pas besoin des variables — focalise-toi sur questions, options, titres + descriptions de résultats, et CTA par résultat.
+` : ""}
 PRINCIPES CRÉATIFS :
 - Chaque quiz doit donner une VRAIE valeur : insight, prise de conscience, révélation.
 - Les résultats ne sont JAMAIS des jugements scolaires ou génériques.

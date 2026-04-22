@@ -153,6 +153,8 @@ export async function POST(req: NextRequest) {
         addressForm: resolvedAddressForm,
         format,
         segmentation,
+        askFirstName: Boolean(body.askFirstName),
+        askGender: Boolean(body.askGender),
       });
       system = prompts.system;
       userPrompt = prompts.user;

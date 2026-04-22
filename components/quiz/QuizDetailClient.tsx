@@ -202,6 +202,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [captureLastName, setCaptureLastName] = useState(false);
   const [capturePhone, setCapturePhone] = useState(false);
   const [captureCountry, setCaptureCountry] = useState(false);
+  const [askFirstName, setAskFirstName] = useState(false);
+  const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
   const [bonusImageUrl, setBonusImageUrl] = useState<string | null>(null);
@@ -289,6 +291,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
+      setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
+      setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
       setBonusImageUrl(q.bonus_image_url ?? null);
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
@@ -420,6 +424,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
           capture_phone: capturePhone, capture_country: captureCountry,
+          ask_first_name: askFirstName, ask_gender: askGender,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
           bonus_image_url: bonusImageUrl,
           share_message: shareMessage, locale: locale || null,
@@ -676,6 +681,30 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <Plus className="w-3.5 h-3.5" /> Ajouter un élément
                     </button>
                   )}
+                </section>
+
+                <Separator />
+
+                {/* ── Personnalisation (prénom + genre) ── */}
+                <section className="space-y-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">Personnalisation du quiz</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Demande le prénom et/ou le genre avant le quiz pour adapter dynamiquement les questions, résultats et CTA. Utilise <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{name}"}</code> pour insérer le prénom et <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{m|f|x}"}</code> pour 3 variantes (masculin|féminin|inclusif).
+                    </p>
+                  </div>
+                  <SettingsToggle
+                    label="Demander le prénom"
+                    hint="Écran avant la 1ʳᵉ question qui demande le prénom. Utilise {name} dans tes textes pour l'insérer."
+                    checked={askFirstName}
+                    onChange={setAskFirstName}
+                  />
+                  <SettingsToggle
+                    label="Demander le genre (il / elle / iel)"
+                    hint="Écran avant la 1ʳᵉ question qui propose 3 options. Utilise {prêt|prête|prêt·e} dans tes textes pour trois variantes."
+                    checked={askGender}
+                    onChange={setAskGender}
+                  />
                 </section>
 
                 <Separator />
