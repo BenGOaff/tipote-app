@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "@/components/ui/use-toast";
 
 import { Card } from "@/components/ui/card";
@@ -88,6 +89,7 @@ function fmtDateShort(value: string | null) {
 }
 
 export default function AdminUsersPageClient({ adminEmail }: { adminEmail: string }) {
+  const t = useTranslations("adminUsers");
   const [q, setQ] = useState("");
   const [planFilter, setPlanFilter] = useState<string>(ALL_PLANS_FILTER);
   const [sortField, setSortField] = useState<SortField>("updated_at");
@@ -520,7 +522,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               <Input
                 value={notifIcon}
                 onChange={(e) => setNotifIcon(e.target.value)}
-                placeholder="Icône (emoji)"
+                placeholder={t("iconPh")}
                 className="w-20"
               />
               <Input
@@ -578,7 +580,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             {/* Segment filter (only if no users selected) */}
             {selectedIds.size === 0 && (
               <div className="space-y-1">
-                <div className="text-xs font-medium text-muted-foreground">Segment (plans ciblés) :</div>
+                <div className="text-xs font-medium text-muted-foreground">{t("segmentLabel")}</div>
                 <div className="flex flex-wrap gap-2">
                   {PLANS.map((plan) => (
                     <label key={plan} className="flex items-center gap-1.5 text-sm cursor-pointer">
@@ -596,7 +598,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                   ))}
                 </div>
                 {emailSegment.length === 0 && (
-                  <div className="text-xs text-amber-600">⚠ Aucun segment = envoi à TOUS les users</div>
+                  <div className="text-xs text-amber-600">{t("segmentWarning")}</div>
                 )}
               </div>
             )}
@@ -609,12 +611,12 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             <Input
               value={emailPreheader}
               onChange={(e) => setEmailPreheader(e.target.value)}
-              placeholder="Preheader (texte aperçu inbox, optionnel)"
+              placeholder={t("preheaderPh")}
             />
             <Input
               value={emailGreeting}
               onChange={(e) => setEmailGreeting(e.target.value)}
-              placeholder="Salutation (défaut: prénom de l'user ou 'Bonjour,')"
+              placeholder={t("greetingPh")}
             />
             <textarea
               value={emailBody}
@@ -725,7 +727,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             {/* Preview */}
             {emailPreviewHtml && (
               <div className="mt-3 space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">Prévisualisation :</div>
+                <div className="text-xs font-medium text-muted-foreground">{t("previewLabel")}</div>
                 <div className="border rounded-lg overflow-hidden bg-gray-50">
                   <iframe
                     srcDoc={emailPreviewHtml}
@@ -795,7 +797,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
 
         {showCreateForm && (
           <div className="mt-4 border-t pt-4 space-y-3">
-            <div className="text-sm font-medium">Créer un utilisateur manuellement</div>
+            <div className="text-sm font-medium">{t("createUserManual")}</div>
             <div className="text-xs text-muted-foreground">
               Crée le compte Supabase + profil + envoie un magic link de connexion.
             </div>
@@ -811,7 +813,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               <Input
                 value={createFirstName}
                 onChange={(e) => setCreateFirstName(e.target.value)}
-                placeholder="Prénom (optionnel)"
+                placeholder={t("firstNamePh")}
               />
               <Input
                 value={createLastName}
@@ -895,7 +897,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                   <Checkbox
                     checked={allFilteredSelected && filteredUsers.length > 0}
                     onCheckedChange={toggleSelectAll}
-                    aria-label="Tout sélectionner"
+                    aria-label={t("selectAllAria")}
                   />
                 </TableHead>
                 <TableHead
@@ -910,7 +912,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 >
                   Plan{sortIndicator("plan")}
                 </TableHead>
-                <TableHead className="min-w-[140px]">Crédits IA</TableHead>
+                <TableHead className="min-w-[140px]">{t("creditsCol")}</TableHead>
                 <TableHead
                   className="min-w-[110px] cursor-pointer select-none hidden sm:table-cell"
                   onClick={() => handleSort("last_sign_in_at")}
@@ -979,7 +981,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                         </Select>
 
                         {dirty ? (
-                          <Badge>modifié</Badge>
+                          <Badge>{t("modifiedBadge")}</Badge>
                         ) : (
                           <Badge variant="secondary">ok</Badge>
                         )}
@@ -1093,7 +1095,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       <Dialog open={bulkDialog === "credits"} onOpenChange={(open) => !open && setBulkDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter des crédits bonus</DialogTitle>
+            <DialogTitle>{t("addBonusTitle")}</DialogTitle>
             <DialogDescription>
               Ajouter des crédits bonus à {selectedIds.size} utilisateur(s) sélectionné(s).
               Ces crédits s&apos;ajoutent au quota mensuel.
@@ -1105,7 +1107,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               min={1}
               value={bulkCredits}
               onChange={(e) => setBulkCredits(e.target.value)}
-              placeholder="Nombre de crédits bonus"
+              placeholder={t("bonusCountPh")}
             />
           </div>
           <DialogFooter>

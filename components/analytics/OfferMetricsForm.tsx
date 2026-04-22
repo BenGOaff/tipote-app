@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,6 +83,7 @@ export const OfferMetricsForm = ({
   initialMonth,
   onMonthConsumed,
 }: OfferMetricsFormProps) => {
+  const t = useTranslations("offerMetrics");
   const quickDates = useMemo(() => getQuickDates(), []);
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM-dd"));
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -220,7 +222,7 @@ export const OfferMetricsForm = ({
       <Card className="p-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
           <div className="space-y-1">
-            <Label className="font-semibold">Date des données</Label>
+            <Label className="font-semibold">{t("dateLabel")}</Label>
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
@@ -478,7 +480,7 @@ export const OfferMetricsForm = ({
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Inscrits :</span>
-                  <span>Tunnels &gt; Statistiques &gt; colonne « Opt-in » (personnes ayant laissé leur email)</span>
+                  <span>{t("optinsHint")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Ventes :</span>
@@ -499,19 +501,19 @@ export const OfferMetricsForm = ({
               <ul className="space-y-1.5 text-muted-foreground ml-4">
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taille liste :</span>
-                  <span>Contacts &gt; nombre total affiché en haut (prends le chiffre en fin de mois)</span>
+                  <span>{t("contactsHint")}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Emails envoyés :</span>
-                  <span>Emails &gt; Newsletters &gt; compte les emails envoyés ce mois (newsletters + broadcasts)</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("sentEmailsLabel")}</span>
+                  <span>{t("sentEmailsHint")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taux ouverture :</span>
-                  <span>Emails &gt; Statistiques &gt; moyenne du taux d&apos;ouverture de tous les emails envoyés ce mois</span>
+                  <span>{t("openRateHint")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taux de clics :</span>
-                  <span>Emails &gt; Statistiques &gt; moyenne du taux de clics de tous les emails envoyés ce mois</span>
+                  <span>{t("clickRateHint")}</span>
                 </li>
               </ul>
             </div>

@@ -358,6 +358,47 @@
     "deletingBtn": "Deleting…",
     "signedInAs": "Signed in as <bold>{email}</bold>"
   },
+  "adminUsers": {
+    "iconPh": "Icon (emoji)",
+    "segmentLabel": "Segment (targeted plans):",
+    "segmentWarning": "⚠ No segment = sent to ALL users",
+    "preheaderPh": "Preheader (inbox preview text, optional)",
+    "greetingPh": "Greeting (default: user's first name or “Hi,”)",
+    "previewLabel": "Preview:",
+    "createUserManual": "Create a user manually",
+    "firstNamePh": "First name (optional)",
+    "selectAllAria": "Select all",
+    "creditsCol": "AI credits",
+    "modifiedBadge": "modified",
+    "addBonusTitle": "Add bonus credits",
+    "bonusCountPh": "Number of bonus credits"
+  },
+  "offerMetrics": {
+    "dateLabel": "Data date",
+    "optinsHint": "Funnels > Statistics > 'Opt-in' column (people who left their email)",
+    "contactsHint": "Contacts > total number shown at the top (take the figure at end of month)",
+    "sentEmailsLabel": "Emails sent:",
+    "sentEmailsHint": "Emails > Newsletters > count emails sent this month (newsletters + broadcasts)",
+    "openRateHint": "Emails > Statistics > average open rate of all emails sent this month",
+    "clickRateHint": "Emails > Statistics > average click rate of all emails sent this month"
+  },
+  "pageChat": {
+    "idleHint": "Ask the AI for a change",
+    "inputPh": "Ask the AI…",
+    "undoTitle": "Undo last change",
+    "minimizeTitle": "Minimize",
+    "descHeader": "Describe what you want to change",
+    "clickHint": "💡 Click directly on text or an image in the preview to edit it.",
+    "describePh": "Describe the change…"
+  },
+  "contentStrategyForm": {
+    "themeLabel": "Theme",
+    "detailTitle": "Content details",
+    "planDurationLabel": "Plan duration",
+    "offerRefLabel": "Reference offer (optional)",
+    "extraContextLabel": "Additional context (optional)",
+    "generating": "Generating…"
+  },
   "settings": {
     "title": "Settings",
     "tabs": {

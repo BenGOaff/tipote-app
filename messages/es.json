@@ -358,6 +358,47 @@
     "deletingBtn": "Eliminando…",
     "signedInAs": "Conectado como <bold>{email}</bold>"
   },
+  "adminUsers": {
+    "iconPh": "Icono (emoji)",
+    "segmentLabel": "Segmento (planes objetivo):",
+    "segmentWarning": "⚠ Sin segmento = envío a TODOS los usuarios",
+    "preheaderPh": "Preheader (texto de vista previa de la bandeja, opcional)",
+    "greetingPh": "Saludo (por defecto: nombre del usuario o «Hola,»)",
+    "previewLabel": "Vista previa:",
+    "createUserManual": "Crear un usuario manualmente",
+    "firstNamePh": "Nombre (opcional)",
+    "selectAllAria": "Seleccionar todo",
+    "creditsCol": "Créditos IA",
+    "modifiedBadge": "modificado",
+    "addBonusTitle": "Añadir créditos bonus",
+    "bonusCountPh": "Número de créditos bonus"
+  },
+  "offerMetrics": {
+    "dateLabel": "Fecha de los datos",
+    "optinsHint": "Embudos > Estadísticas > columna «Opt-in» (personas que dejaron su email)",
+    "contactsHint": "Contactos > número total mostrado arriba (toma la cifra de fin de mes)",
+    "sentEmailsLabel": "Emails enviados:",
+    "sentEmailsHint": "Emails > Newsletters > cuenta los emails enviados este mes (newsletters + broadcasts)",
+    "openRateHint": "Emails > Estadísticas > media de la tasa de apertura de todos los emails enviados este mes",
+    "clickRateHint": "Emails > Estadísticas > media de la tasa de clics de todos los emails enviados este mes"
+  },
+  "pageChat": {
+    "idleHint": "Pide una modificación a la IA",
+    "inputPh": "Pregunta a la IA…",
+    "undoTitle": "Deshacer la última modificación",
+    "minimizeTitle": "Reducir",
+    "descHeader": "Describe lo que quieres modificar",
+    "clickHint": "💡 Haz clic directamente en un texto o una imagen en la vista previa para modificarlo.",
+    "describePh": "Describe la modificación…"
+  },
+  "contentStrategyForm": {
+    "themeLabel": "Tema",
+    "detailTitle": "Detalle del contenido",
+    "planDurationLabel": "Duración del plan",
+    "offerRefLabel": "Oferta de referencia (opcional)",
+    "extraContextLabel": "Contexto adicional (opcional)",
+    "generating": "Generando…"
+  },
   "settings": {
     "title": "Ajustes",
     "tabs": {

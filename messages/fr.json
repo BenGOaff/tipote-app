@@ -358,6 +358,47 @@
     "deletingBtn": "Suppression…",
     "signedInAs": "Connecté en tant que <bold>{email}</bold>"
   },
+  "adminUsers": {
+    "iconPh": "Icône (emoji)",
+    "segmentLabel": "Segment (plans ciblés) :",
+    "segmentWarning": "⚠ Aucun segment = envoi à TOUS les users",
+    "preheaderPh": "Preheader (texte aperçu inbox, optionnel)",
+    "greetingPh": "Salutation (défaut : prénom de l'user ou « Bonjour, »)",
+    "previewLabel": "Prévisualisation :",
+    "createUserManual": "Créer un utilisateur manuellement",
+    "firstNamePh": "Prénom (optionnel)",
+    "selectAllAria": "Tout sélectionner",
+    "creditsCol": "Crédits IA",
+    "modifiedBadge": "modifié",
+    "addBonusTitle": "Ajouter des crédits bonus",
+    "bonusCountPh": "Nombre de crédits bonus"
+  },
+  "offerMetrics": {
+    "dateLabel": "Date des données",
+    "optinsHint": "Tunnels > Statistiques > colonne « Opt-in » (personnes ayant laissé leur email)",
+    "contactsHint": "Contacts > nombre total affiché en haut (prends le chiffre en fin de mois)",
+    "sentEmailsLabel": "Emails envoyés :",
+    "sentEmailsHint": "Emails > Newsletters > compte les emails envoyés ce mois (newsletters + broadcasts)",
+    "openRateHint": "Emails > Statistiques > moyenne du taux d'ouverture de tous les emails envoyés ce mois",
+    "clickRateHint": "Emails > Statistiques > moyenne du taux de clics de tous les emails envoyés ce mois"
+  },
+  "pageChat": {
+    "idleHint": "Demande une modification à l'IA",
+    "inputPh": "Demande à l'IA…",
+    "undoTitle": "Annuler la dernière modification",
+    "minimizeTitle": "Réduire",
+    "descHeader": "Décris ce que tu veux modifier",
+    "clickHint": "💡 Clique directement sur un texte ou une image dans l'aperçu pour le modifier.",
+    "describePh": "Décris la modification…"
+  },
+  "contentStrategyForm": {
+    "themeLabel": "Thème",
+    "detailTitle": "Détail du contenu",
+    "planDurationLabel": "Durée du plan",
+    "offerRefLabel": "Offre de référence (optionnel)",
+    "extraContextLabel": "Contexte supplémentaire (optionnel)",
+    "generating": "Génération en cours…"
+  },
   "settings": {
     "title": "Paramètres",
     "tabs": {

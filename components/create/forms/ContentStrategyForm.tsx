@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -121,6 +122,7 @@ function PlanDayItem({
   showBorder: boolean;
   onUpdate: (updated: Partial<DayPlan>) => void;
 }) {
+  const t = useTranslations("contentStrategyForm");
   const [isEditing, setIsEditing] = useState(false);
   const [theme, setTheme] = useState(post.theme);
   const [hook, setHook] = useState(post.hook);
@@ -157,7 +159,7 @@ function PlanDayItem({
           </Badge>
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">Thème</Label>
+          <Label className="text-xs text-muted-foreground">{t("themeLabel")}</Label>
           <Input
             value={theme}
             onChange={(e) => setTheme(e.target.value)}
@@ -339,6 +341,7 @@ interface ContentStrategyFormProps {
 export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const t = useTranslations("contentStrategyForm");
 
   // Step
   const [step, setStep] = useState<Step>("config");
@@ -861,7 +864,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         ) : contentModalData ? (
           <div className="space-y-4">
             <DialogHeader>
-              <DialogTitle className="sr-only">Détail du contenu</DialogTitle>
+              <DialogTitle className="sr-only">{t("detailTitle")}</DialogTitle>
               <Input
                 value={contentModalData.title}
                 onChange={(e) =>
@@ -1013,7 +1016,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
         <Card className="p-6 space-y-6">
           <div className="space-y-2">
-            <Label>Durée du plan</Label>
+            <Label>{t("planDurationLabel")}</Label>
             <Select value={duration} onValueChange={setDuration}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue />
@@ -1065,7 +1068,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
           {offers.length > 0 && (
             <div className="space-y-2">
-              <Label>Offre de référence (optionnel)</Label>
+              <Label>{t("offerRefLabel")}</Label>
               <Select
                 value={selectedOfferIdx >= 0 ? String(selectedOfferIdx) : "none"}
                 onValueChange={(v) => setSelectedOfferIdx(v === "none" ? -1 : Number(v))}
@@ -1086,7 +1089,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           )}
 
           <div className="space-y-2">
-            <Label>Contexte supplémentaire (optionnel)</Label>
+            <Label>{t("extraContextLabel")}</Label>
             <Textarea
               placeholder="Lancement d'offre prévu, événement à promouvoir, thématique spécifique..."
               value={context}
@@ -1207,7 +1210,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin" />
           <div>
-            <h2 className="text-xl font-bold">Génération en cours...</h2>
+            <h2 className="text-xl font-bold">{t("generating")}</h2>
             <p className="text-sm text-muted-foreground">
               {doneCount}/{totalCount} contenus prêts
             </p>

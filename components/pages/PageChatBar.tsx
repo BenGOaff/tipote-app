@@ -7,6 +7,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Send, Loader2, Undo2, Check, X, MessageCircle, Sparkles, ChevronRight, ChevronLeft } from "lucide-react";
 
 type Props = {
@@ -48,6 +49,7 @@ type ChatMessage = {
 };
 
 export default function PageChatBar({ pageId, templateId, kind, contentData, brandTokens, onUpdate, beforeSubmit, disabled, locale, compact }: Props) {
+  const t = useTranslations("pageChat");
   const [instruction, setInstruction] = useState("");
   const [loading, setLoading] = useState(false);
   const [reformulating, setReformulating] = useState(false);
@@ -276,7 +278,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         {/* Compact messages */}
         <div className="flex-1 overflow-y-auto px-2 py-2 space-y-2 min-h-0">
           {messages.length === 0 && !reformulation && (
-            <p className="text-[11px] text-muted-foreground/60 text-center py-2">Demande une modification à l&apos;IA</p>
+            <p className="text-[11px] text-muted-foreground/60 text-center py-2">{t("idleHint")}</p>
           )}
 
           {messages.map((msg) => (
@@ -325,7 +327,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-              placeholder="Demande à l'IA..."
+              placeholder={t("inputPh")}
               disabled={disabled || loading || reformulating}
               className="flex-1 bg-transparent text-[11px] placeholder:text-muted-foreground focus:outline-none resize-none min-h-[24px] max-h-[60px] py-0.5"
               rows={1}
@@ -374,7 +376,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
             <button
               onClick={handleUndo}
               className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"
-              title="Annuler la dernière modification"
+              title={t("undoTitle")}
             >
               <Undo2 className="w-3.5 h-3.5" />
             </button>
@@ -382,7 +384,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
           <button
             onClick={() => setCollapsed(true)}
             className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"
-            title="Réduire"
+            title={t("minimizeTitle")}
           >
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
@@ -394,7 +396,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         {messages.length === 0 && !reformulation && (
           <div className="text-center py-8">
             <Sparkles className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground mb-1">Décris ce que tu veux modifier</p>
+            <p className="text-sm text-muted-foreground mb-1">{t("descHeader")}</p>
             <p className="text-xs text-muted-foreground/60">Ex: &quot;Change le titre&quot;, &quot;Ajoute de l&apos;urgence&quot;</p>
           </div>
         )}
@@ -461,7 +463,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
       {messages.length === 0 && !loading && !reformulating && !reformulation && (
         <div className="px-3 pb-2 space-y-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-            <span className="text-[11px] text-blue-700 dark:text-blue-300">💡 Clique directement sur un texte ou une image dans l&apos;aperçu pour le modifier.</span>
+            <span className="text-[11px] text-blue-700 dark:text-blue-300">{t("clickHint")}</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {suggestions.map((s) => (
@@ -497,7 +499,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
                 handleSubmit();
               }
             }}
-            placeholder="Décris la modification..."
+            placeholder={t("describePh")}
             disabled={disabled || loading || reformulating}
             className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none resize-none min-h-[36px] max-h-[100px] py-1"
             rows={1}

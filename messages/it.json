@@ -358,6 +358,47 @@
     "deletingBtn": "Eliminazione…",
     "signedInAs": "Connesso come <bold>{email}</bold>"
   },
+  "adminUsers": {
+    "iconPh": "Icona (emoji)",
+    "segmentLabel": "Segmento (piani mirati):",
+    "segmentWarning": "⚠ Nessun segmento = invio a TUTTI gli utenti",
+    "preheaderPh": "Preheader (testo di anteprima inbox, opzionale)",
+    "greetingPh": "Saluto (predefinito: nome dell'utente o «Ciao,»)",
+    "previewLabel": "Anteprima:",
+    "createUserManual": "Crea un utente manualmente",
+    "firstNamePh": "Nome (opzionale)",
+    "selectAllAria": "Seleziona tutto",
+    "creditsCol": "Crediti IA",
+    "modifiedBadge": "modificato",
+    "addBonusTitle": "Aggiungi crediti bonus",
+    "bonusCountPh": "Numero di crediti bonus"
+  },
+  "offerMetrics": {
+    "dateLabel": "Data dei dati",
+    "optinsHint": "Funnel > Statistiche > colonna «Opt-in» (persone che hanno lasciato la loro email)",
+    "contactsHint": "Contatti > numero totale mostrato in alto (prendi la cifra a fine mese)",
+    "sentEmailsLabel": "Email inviate:",
+    "sentEmailsHint": "Email > Newsletter > conta le email inviate questo mese (newsletter + broadcast)",
+    "openRateHint": "Email > Statistiche > media del tasso di apertura di tutte le email inviate questo mese",
+    "clickRateHint": "Email > Statistiche > media del tasso di clic di tutte le email inviate questo mese"
+  },
+  "pageChat": {
+    "idleHint": "Chiedi una modifica all'IA",
+    "inputPh": "Chiedi all'IA…",
+    "undoTitle": "Annulla l'ultima modifica",
+    "minimizeTitle": "Riduci",
+    "descHeader": "Descrivi cosa vuoi modificare",
+    "clickHint": "💡 Clicca direttamente su un testo o un'immagine nell'anteprima per modificarlo.",
+    "describePh": "Descrivi la modifica…"
+  },
+  "contentStrategyForm": {
+    "themeLabel": "Tema",
+    "detailTitle": "Dettaglio del contenuto",
+    "planDurationLabel": "Durata del piano",
+    "offerRefLabel": "Offerta di riferimento (opzionale)",
+    "extraContextLabel": "Contesto aggiuntivo (opzionale)",
+    "generating": "Generazione in corso…"
+  },
   "settings": {
     "title": "Impostazioni",
     "tabs": {
