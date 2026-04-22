@@ -1430,10 +1430,7 @@
     "listTitle": "My automations",
     "empty": {
       "title": "No automations yet",
-      "description": "Create your first automation to automatically reply to comments on Instagram and Facebook.",
-      "ctaDm": "Auto DM on comment",
-      "ctaEmail": "Auto Email on comment",
-      "emailName": "Email capture on comment"
+      "description": "Create your first automation to automatically reply to comments on Instagram and Facebook."
     },
     "templates": {
       "title": "Ready-to-use templates",
