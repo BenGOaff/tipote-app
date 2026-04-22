@@ -6,6 +6,7 @@
 // same sanitizer to keep the public page XSS-safe.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Bold, Italic, Underline as UnderlineIcon,
   AlignLeft, AlignCenter, AlignRight,
@@ -26,6 +27,7 @@ interface RichTextEditProps {
 export function RichTextEdit({
   value, onChange, className, placeholder, style, singleLine,
 }: RichTextEditProps) {
+  const t = useTranslations("richTextEditor");
   const ref = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
 
@@ -76,10 +78,10 @@ export function RichTextEdit({
   };
 
   const onInsertLink = () => {
-    const url = window.prompt("URL du lien (https://…, mailto:…)");
+    const url = window.prompt(t("promptLink"));
     if (!url) return;
     if (!isSafeUrl(url)) {
-      window.alert("URL invalide : seuls https, mailto, tel et chemins relatifs sont autorisés.");
+      window.alert(t("invalidUrlFull"));
       return;
     }
     exec("createLink", url);
@@ -94,10 +96,10 @@ export function RichTextEdit({
   };
 
   const onInsertImage = () => {
-    const url = window.prompt("URL de l'image (https://… ou /chemin)");
+    const url = window.prompt(t("promptImage"));
     if (!url) return;
     if (!isSafeUrl(url)) {
-      window.alert("URL invalide.");
+      window.alert(t("invalidUrl"));
       return;
     }
     exec("insertImage", url);
@@ -116,18 +118,18 @@ export function RichTextEdit({
     return (
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-0.5 rounded-lg border bg-background p-1 shadow-sm sticky top-2 z-20">
-          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("bold"); }} title="Gras"><Bold className="w-3.5 h-3.5" /></ToolbarBtn>
-          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("italic"); }} title="Italique"><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
-          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("underline"); }} title="Souligné"><UnderlineIcon className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("bold"); }} title={t("bold")}><Bold className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("italic"); }} title={t("italic")}><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("underline"); }} title={t("underline")}><UnderlineIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           <span className="w-px h-4 bg-border mx-0.5" />
           {!singleLine && <>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title="Aligner à gauche"><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title="Centrer"><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title="Aligner à droite"><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
+            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("alignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
+            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("alignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
+            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("alignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
             <span className="w-px h-4 bg-border mx-0.5" />
           </>}
-          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title="Ajouter un lien"><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
-          {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title="Insérer une image"><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("addLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
+          {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={t("insertImage")}><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
         </div>
         <div
           ref={ref}

@@ -101,6 +101,20 @@
     "toastDeleted": "Proyecto eliminado",
     "toastDeleteError": "No se pudo eliminar"
   },
+  "richTextEditor": {
+    "bold": "Negrita",
+    "italic": "Cursiva",
+    "underline": "Subrayado",
+    "alignLeft": "Alinear a la izquierda",
+    "alignCenter": "Centrar",
+    "alignRight": "Alinear a la derecha",
+    "addLink": "Añadir un enlace",
+    "insertImage": "Insertar una imagen",
+    "promptLink": "URL del enlace (https://…, mailto:…)",
+    "invalidUrlFull": "URL no válida: solo se permiten https, mailto, tel y rutas relativas.",
+    "promptImage": "URL de la imagen (https://… o /ruta)",
+    "invalidUrl": "URL no válida."
+  },
   "settings": {
     "title": "Ajustes",
     "tabs": {

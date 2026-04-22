@@ -101,6 +101,20 @@
     "toastDeleted": "تم حذف المشروع",
     "toastDeleteError": "تعذّر الحذف"
   },
+  "richTextEditor": {
+    "bold": "غامق",
+    "italic": "مائل",
+    "underline": "تحته خط",
+    "alignLeft": "محاذاة لليسار",
+    "alignCenter": "توسيط",
+    "alignRight": "محاذاة لليمين",
+    "addLink": "إضافة رابط",
+    "insertImage": "إدراج صورة",
+    "promptLink": "رابط الوصلة (https://…، mailto:…)",
+    "invalidUrlFull": "رابط غير صالح: لا يُسمح إلا بـ https وmailto وtel والمسارات النسبية.",
+    "promptImage": "رابط الصورة (https://… أو /مسار)",
+    "invalidUrl": "رابط غير صالح."
+  },
   "settings": {
     "title": "الإعدادات",
     "tabs": {
