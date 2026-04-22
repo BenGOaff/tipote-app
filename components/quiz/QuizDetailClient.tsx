@@ -35,6 +35,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
+import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -52,7 +53,7 @@ import {
 } from "@/lib/quizBranding";
 
 // Types
-type QuizOption = { text: string; result_index: number; sio_tag_name?: string | null };
+type QuizOption = { text: string; result_index: number };
 type QuizQuestion = { id?: string; question_text: string; options: QuizOption[]; sort_order: number };
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index: number }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
@@ -68,7 +69,7 @@ type QuizData = {
   capture_phone: boolean | null; capture_country: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   share_message: string | null; locale: string | null;
-  sio_share_tag_name: string | null; sio_capture_tag: string | null;
+  sio_share_tag_name: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
@@ -201,6 +202,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [captureLastName, setCaptureLastName] = useState(false);
   const [capturePhone, setCapturePhone] = useState(false);
   const [captureCountry, setCaptureCountry] = useState(false);
+  const [askFirstName, setAskFirstName] = useState(false);
+  const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
   const [bonusImageUrl, setBonusImageUrl] = useState<string | null>(null);
@@ -208,7 +211,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [shareMessage, setShareMessage] = useState("");
   const [locale, setLocale] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
-  const [sioCaptureTag, setSioCaptureTag] = useState("");
   const [status, setStatus] = useState("draft");
   const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
@@ -289,10 +291,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
+      setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
+      setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
       setBonusImageUrl(q.bonus_image_url ?? null);
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
-      setSioShareTagName(q.sio_share_tag_name ?? ""); setSioCaptureTag(q.sio_capture_tag ?? ""); setStatus(q.status);
+      setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
       setEditQuestions(q.questions); setEditResults(q.results);
       setSlug(q.slug ?? "");
       setOgDescription(q.og_description ?? "");
@@ -420,10 +424,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
           capture_phone: capturePhone, capture_country: captureCountry,
+          ask_first_name: askFirstName, ask_gender: askGender,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
           bonus_image_url: bonusImageUrl,
           share_message: shareMessage, locale: locale || null,
-          sio_share_tag_name: sioShareTagName || null, sio_capture_tag: sioCaptureTag || null, status,
+          sio_share_tag_name: sioShareTagName || null, status,
           // Branding
           brand_font: fontFamily, brand_color_primary: primaryColor, brand_color_background: bgColor,
           // Share + SEO
@@ -441,7 +446,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             options: q.options.map((o) => ({
               text: o.text,
               result_index: o.result_index,
-              ...(o.sio_tag_name ? { sio_tag_name: o.sio_tag_name } : {}),
             })),
             sort_order: i,
           })),
@@ -488,7 +492,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const updateQ = (i: number, v: string) => setEditQuestions(p => p.map((q, qi) => qi === i ? { ...q, question_text: v } : q));
   const updateOpt = (qi: number, oi: number, v: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, text: v } : o) }));
   const updateOptResult = (qi: number, oi: number, ri: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, result_index: ri } : o) }));
-  const updateOptTag = (qi: number, oi: number, tagName: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, sio_tag_name: tagName || null } : o) }));
   const addOpt = (qi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: [...q.options, { text: "", result_index: 0 }] }));
   const removeOpt = (qi: number, oi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.filter((_, j) => j !== oi) }));
   const addQuestion = () => setEditQuestions(p => [...p, { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }], sort_order: p.length }]);
@@ -517,6 +520,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   return (
     <SidebarProvider>
+     <SioTagsProvider>
       <div className="h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
@@ -681,6 +685,30 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
                 <Separator />
 
+                {/* ── Personnalisation (prénom + genre) ── */}
+                <section className="space-y-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">Personnalisation du quiz</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Demande le prénom et/ou le genre avant le quiz pour adapter dynamiquement les questions, résultats et CTA. Utilise <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{name}"}</code> pour insérer le prénom et <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{m|f|x}"}</code> pour 3 variantes (masculin|féminin|inclusif).
+                    </p>
+                  </div>
+                  <SettingsToggle
+                    label="Demander le prénom"
+                    hint="Écran avant la 1ʳᵉ question qui demande le prénom. Utilise {name} dans tes textes pour l'insérer."
+                    checked={askFirstName}
+                    onChange={setAskFirstName}
+                  />
+                  <SettingsToggle
+                    label="Demander le genre (il / elle / iel)"
+                    hint="Écran avant la 1ʳᵉ question qui propose 3 options. Utilise {prêt|prête|prêt·e} dans tes textes pour trois variantes."
+                    checked={askGender}
+                    onChange={setAskGender}
+                  />
+                </section>
+
+                <Separator />
+
                 {/* ── Options ── */}
                 <section className="space-y-2">
                   <h3 className="text-sm font-semibold">Options</h3>
@@ -827,13 +855,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
                                 </select>
                               </div>
-                              <div className="mt-2.5 pt-2.5 border-t border-border/60">
-                                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Tag Systeme.io</div>
-                                <SioTagPicker
-                                  value={opt.sio_tag_name ?? ""}
-                                  onChange={(v) => updateOptTag(qi, oi, v)}
-                                />
-                              </div>
                               {q.options.length > 2 && <button onClick={() => removeOpt(qi, oi)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 rounded p-0.5"><X className="w-3.5 h-3.5" /></button>}
                             </div>
                           ))}
@@ -850,7 +871,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
                   <InlineEdit value={captureHeading || (quiz?.address_form === "vous" ? "Vos résultats sont prêts" : "Tes résultats sont prêts")} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder="Titre…" />
-                  <InlineEdit value={captureSubtitle || (quiz?.address_form === "vous" ? "Entrez votre email pour découvrir votre profil." : "Entre ton email pour découvrir ton profil.")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base" placeholder="Sous-titre…" />
+                  <InlineEdit multiline value={captureSubtitle || (quiz?.address_form === "vous" ? "Entrez votre email pour découvrir votre profil." : "Entre ton email pour découvrir ton profil.")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base whitespace-pre-line" placeholder={"Sous-titre…\nUne ligne vide crée un paragraphe, un tiret « - » démarre une puce."} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">Prénom</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
@@ -860,14 +881,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     {capturePhone && <div><label className="text-sm text-muted-foreground">Téléphone (optional)</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
                   <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>Accéder aux résultats</button>
-                  <div className="max-w-md mx-auto p-4 rounded-xl bg-muted/40 border border-dashed">
-                    <div className="text-xs font-semibold text-foreground mb-1">Tag Systeme.io à l&apos;inscription</div>
-                    <p className="text-[11px] text-muted-foreground mb-2">Appliqué à chaque lead dès qu&apos;il remplit ce formulaire.</p>
-                    <SioTagPicker
-                      value={sioCaptureTag}
-                      onChange={setSioCaptureTag}
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -957,6 +970,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} className="text-white font-semibold text-center" placeholder="Texte du CTA…" />
                       </button>
                       <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder="URL du CTA (https://…)" />
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
+                      <div className="text-xs font-semibold text-foreground mb-1">Tag Systeme.io pour ce résultat</div>
+                      <p className="text-[11px] text-muted-foreground mb-2">Appliqué au lead qui obtient « {r.title || `Résultat ${ri + 1}`} ». Utilise-le pour segmenter tes automatisations.</p>
+                      <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
                     </div>
                   </div>
                 </div>
@@ -1142,6 +1160,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       )}
         </main>
       </div>
+     </SioTagsProvider>
     </SidebarProvider>
   );
 }

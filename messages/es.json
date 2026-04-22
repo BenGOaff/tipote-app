@@ -2981,7 +2981,11 @@
     "aiChatBriefReady": "¡Tenemos todo lo necesario!",
     "aiChatBriefHint": "Genero tu quiz ahora con esta información.",
     "aiChatUseBrief": "Generar mi quiz",
-    "aiChatBriefApplied": "Generando…"
+    "aiChatBriefApplied": "Generando…",
+    "aiPersonalizeLabel": "Personalización dinámica",
+    "aiPersonalizeHint": "Adapta preguntas, resultados y CTAs al visitante. La IA genera las variantes directamente si activas las opciones.",
+    "aiAskFirstName": "Pedir el nombre (usa {name} en los textos)",
+    "aiAskGender": "Pedir el género (usa {m|f|x} para 3 variantes)"
   },
   "quizDetail": {
     "backToList": "Volver a los quiz",
