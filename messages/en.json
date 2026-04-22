@@ -3050,7 +3050,11 @@
     "aiChatBriefReady": "We have everything we need!",
     "aiChatBriefHint": "I'll generate your quiz now with these details.",
     "aiChatUseBrief": "Generate my quiz",
-    "aiChatBriefApplied": "Generating…"
+    "aiChatBriefApplied": "Generating…",
+    "aiPersonalizeLabel": "Dynamic personalization",
+    "aiPersonalizeHint": "Adapt questions, results and CTAs to the visitor. The AI produces variants directly if you enable the options below.",
+    "aiAskFirstName": "Ask for first name (uses {name} in text)",
+    "aiAskGender": "Ask for gender (uses {m|f|x} for 3 variants)"
   },
   "quizDetail": {
     "backToList": "Back to quizzes",

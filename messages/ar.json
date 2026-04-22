@@ -2981,7 +2981,11 @@
     "aiChatBriefReady": "لدينا كل ما نحتاجه!",
     "aiChatBriefHint": "سأولّد اختبارك الآن بهذه المعلومات.",
     "aiChatUseBrief": "توليد اختباري",
-    "aiChatBriefApplied": "جارٍ التوليد…"
+    "aiChatBriefApplied": "جارٍ التوليد…",
+    "aiPersonalizeLabel": "تخصيص ديناميكي",
+    "aiPersonalizeHint": "تكييف الأسئلة والنتائج و CTA مع الزائر. الذكاء الاصطناعي ينتج المتغيرات مباشرة عند تفعيل الخيارات أدناه.",
+    "aiAskFirstName": "طلب الاسم (استخدم {name} في النصوص)",
+    "aiAskGender": "طلب الجنس (استخدم {m|f|x} لثلاث متغيرات)"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",
