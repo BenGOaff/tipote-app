@@ -399,6 +399,20 @@
     "extraContextLabel": "Contexte supplémentaire (optionnel)",
     "generating": "Génération en cours…"
   },
+  "funnelWizard": {
+    "modeTitle": "Que veux-tu créer ?",
+    "modeReady": "Page prête à l'emploi",
+    "recommended": "Recommandé",
+    "configHeading": "Décris ton offre",
+    "offerPh": "Ex : Formation Instagram pour coachs sportifs – 297 € – Inclut 6 modules vidéo, des templates et un groupe privé…",
+    "guaranteePh": "Ex : Satisfait ou remboursé 14 jours",
+    "generating": "Génération en cours…",
+    "previewTitle": "Aperçu page",
+    "copyGenerated": "Copywriting généré",
+    "templatePreviewTitle": "Aperçu template",
+    "emptyPreview": "Aucun aperçu",
+    "chatPh": "Ex : rends le titre plus direct, ajoute 3 bénéfices, CTA plus urgent…"
+  },
   "settings": {
     "title": "Paramètres",
     "tabs": {
@@ -2444,7 +2458,8 @@
     "toneHumorous": "Humoristique",
     "textExceedsLimit": "Le texte dépasse la limite de {limit} caractères pour {platform}",
     "connectPlatformToPublish": "Connecte {platform} dans les paramètres pour publier ou programmer.",
-    "connectSocialToPublish": "Connecte un réseau social dans les paramètres pour publier ou programmer directement."
+    "connectSocialToPublish": "Connecte un réseau social dans les paramètres pour publier ou programmer directement.",
+    "toastAutoCreated": "Automatisation créée !"
   },
   "articleForm": {
     "generating": "Génération...",
@@ -3415,7 +3430,13 @@
     "stepResults": "Résultats",
     "stepCapture": "Capture",
     "stepVirality": "Viralité",
-    "stepShare": "Partage"
+    "stepShare": "Partage",
+    "newQuizTitle": "Nouveau quiz",
+    "creatingQuiz": "Création de ton quiz en cours…",
+    "dropFileHere": "Glisse ton fichier ici ou clique pour sélectionner",
+    "dropFileHint": ".txt uniquement — max 50 000 caractères",
+    "selectFile": "Sélectionner un fichier",
+    "importedLangLabel": "Langue du quiz importé"
   },
   "quizDetail": {
     "backToList": "Retour aux quiz",

@@ -894,7 +894,7 @@ export default function QuizFormClient() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">Nouveau quiz</h1>} />
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("newQuizTitle")}</h1>} />
           <div className="flex-1 p-4 sm:p-5 lg:p-6"><div className="max-w-[1200px] mx-auto w-full">
     <div className="space-y-4">
       {/* Top bar: tabs + save button */}
@@ -922,7 +922,7 @@ export default function QuizFormClient() {
         <div className="flex items-center justify-center min-h-[40vh]">
           <div className="text-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Création de ton quiz en cours…</p>
+            <p className="text-sm text-muted-foreground">{t("creatingQuiz")}</p>
           </div>
         </div>
       )}
@@ -1103,11 +1103,11 @@ export default function QuizFormClient() {
             </p>
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-              <p className="font-medium mb-2">Glisse ton fichier ici ou clique pour sélectionner</p>
-              <p className="text-xs text-muted-foreground mb-4">.txt uniquement — max 50 000 caractères</p>
+              <p className="font-medium mb-2">{t("dropFileHere")}</p>
+              <p className="text-xs text-muted-foreground mb-4">{t("dropFileHint")}</p>
               <input type="file" accept=".txt,text/plain" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="hidden" id="import-file" />
               <Button variant="outline" asChild>
-                <label htmlFor="import-file" className="cursor-pointer">Sélectionner un fichier</label>
+                <label htmlFor="import-file" className="cursor-pointer">{t("selectFile")}</label>
               </Button>
             </div>
             {importFile && (
@@ -1125,7 +1125,7 @@ export default function QuizFormClient() {
               </div>
             )}
             <div className="space-y-2">
-              <Label>Langue du quiz importé</Label>
+              <Label>{t("importedLangLabel")}</Label>
               <select value={aiLocale} onChange={(e) => setAiLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
                 {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
               </select>

@@ -399,6 +399,20 @@
     "extraContextLabel": "Additional context (optional)",
     "generating": "Generating…"
   },
+  "funnelWizard": {
+    "modeTitle": "What do you want to create?",
+    "modeReady": "Ready-made page",
+    "recommended": "Recommended",
+    "configHeading": "Describe your offer",
+    "offerPh": "E.g.: Instagram course for fitness coaches – €297 – Includes 6 video modules, templates and a private group…",
+    "guaranteePh": "E.g.: 14-day money-back guarantee",
+    "generating": "Generating…",
+    "previewTitle": "Page preview",
+    "copyGenerated": "Generated copy",
+    "templatePreviewTitle": "Template preview",
+    "emptyPreview": "No preview",
+    "chatPh": "E.g.: make the title more direct, add 3 benefits, more urgent CTA…"
+  },
   "settings": {
     "title": "Settings",
     "tabs": {
@@ -2444,7 +2458,8 @@
     "toneHumorous": "Humorous",
     "textExceedsLimit": "Text exceeds the {limit} character limit for {platform}",
     "connectPlatformToPublish": "Connect {platform} in settings to publish or schedule.",
-    "connectSocialToPublish": "Connect a social network in settings to publish or schedule directly."
+    "connectSocialToPublish": "Connect a social network in settings to publish or schedule directly.",
+    "toastAutoCreated": "Automation created!"
   },
   "articleForm": {
     "generating": "Generating...",
@@ -3415,7 +3430,13 @@
     "stepResults": "Results",
     "stepCapture": "Capture",
     "stepVirality": "Virality",
-    "stepShare": "Share"
+    "stepShare": "Share",
+    "newQuizTitle": "New quiz",
+    "creatingQuiz": "Creating your quiz…",
+    "dropFileHere": "Drop your file here or click to select",
+    "dropFileHint": ".txt only — max 50,000 characters",
+    "selectFile": "Select a file",
+    "importedLangLabel": "Imported quiz language"
   },
   "quizDetail": {
     "backToList": "Back to quizzes",

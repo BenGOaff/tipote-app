@@ -916,7 +916,7 @@ function QuickCreateAutomationModal({
 
       if (error || !data) throw new Error(error?.message ?? "Erreur inconnue");
 
-      toast.success("Automatisation créée !");
+      toast.success(t("toastAutoCreated"));
       onCreated(data as QuickAuto);
       onOpenChange(false);
       setKeyword("");

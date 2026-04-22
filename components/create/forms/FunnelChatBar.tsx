@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ export function FunnelChatBar({
   iterationCost = 0.5,
   disabled,
 }: FunnelChatBarProps) {
+  const t = useTranslations("funnelWizard");
   const [value, setValue] = useState("");
 
   const canSend = useMemo(() => {
@@ -63,7 +65,7 @@ export function FunnelChatBar({
 
       <div className="flex gap-2">
         <Input
-          placeholder="Ex: rends le titre plus direct, ajoute 3 bénéfices, CTA plus urgent..."
+          placeholder={t("chatPh")}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           disabled={disabled || isLoading}

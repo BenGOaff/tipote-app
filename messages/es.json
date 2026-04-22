@@ -399,6 +399,20 @@
     "extraContextLabel": "Contexto adicional (opcional)",
     "generating": "Generando…"
   },
+  "funnelWizard": {
+    "modeTitle": "¿Qué quieres crear?",
+    "modeReady": "Página lista para usar",
+    "recommended": "Recomendado",
+    "configHeading": "Describe tu oferta",
+    "offerPh": "Ej.: Formación Instagram para coaches deportivos – 297 € – Incluye 6 módulos en vídeo, plantillas y grupo privado…",
+    "guaranteePh": "Ej.: Satisfecho o te devolvemos el dinero en 14 días",
+    "generating": "Generando…",
+    "previewTitle": "Vista previa de la página",
+    "copyGenerated": "Copywriting generado",
+    "templatePreviewTitle": "Vista previa de la plantilla",
+    "emptyPreview": "Sin vista previa",
+    "chatPh": "Ej.: haz el título más directo, añade 3 beneficios, CTA más urgente…"
+  },
   "settings": {
     "title": "Ajustes",
     "tabs": {
@@ -2488,7 +2502,8 @@
     "toneHumorous": "Humorístico",
     "textExceedsLimit": "El texto supera el límite de {limit} caracteres para {platform}",
     "connectPlatformToPublish": "Conecta {platform} en la configuración para publicar o programar.",
-    "connectSocialToPublish": "Conecta una red social en la configuración para publicar o programar directamente."
+    "connectSocialToPublish": "Conecta una red social en la configuración para publicar o programar directamente.",
+    "toastAutoCreated": "¡Automatización creada!"
   },
   "articleForm": {
     "generating": "Generando...",
@@ -3469,7 +3484,13 @@
     "stepResults": "Resultados",
     "stepCapture": "Captura",
     "stepVirality": "Viralidad",
-    "stepShare": "Compartir"
+    "stepShare": "Compartir",
+    "newQuizTitle": "Nuevo quiz",
+    "creatingQuiz": "Creando tu quiz…",
+    "dropFileHere": "Arrastra tu archivo aquí o haz clic para seleccionar",
+    "dropFileHint": ".txt únicamente — máx. 50 000 caracteres",
+    "selectFile": "Seleccionar un archivo",
+    "importedLangLabel": "Idioma del quiz importado"
   },
   "quizDetail": {
     "backToList": "Volver a los quiz",

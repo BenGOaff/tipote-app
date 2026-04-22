@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -244,6 +245,7 @@ export function FunnelConfigStep({
   onBack,
   creditCost,
 }: FunnelConfigStepProps) {
+  const t = useTranslations("funnelWizard");
   const showVisualExtras = mode === "visual";
 
   // Group template fields by category
@@ -266,7 +268,7 @@ export function FunnelConfigStep({
           Retour
         </Button>
         <div>
-          <h3 className="text-lg font-semibold">Décris ton offre</h3>
+          <h3 className="text-lg font-semibold">{t("configHeading")}</h3>
           <p className="text-sm text-muted-foreground">
             L'IA utilisera ces informations pour personnaliser le contenu.
           </p>
@@ -360,7 +362,7 @@ export function FunnelConfigStep({
             <div className="space-y-2">
               <Label>Ton offre *</Label>
               <Textarea
-                placeholder="Ex: Formation Instagram pour coachs sportifs – 297€ – Inclut 6 modules vidéo, des templates et un groupe privé…"
+                placeholder={t("offerPh")}
                 value={offerPromise}
                 onChange={(e) => setOfferPromise(e.target.value)}
                 rows={3}
@@ -419,7 +421,7 @@ export function FunnelConfigStep({
             <Input
               value={guarantee}
               onChange={(e) => setGuarantee(e.target.value)}
-              placeholder="ex: Satisfait ou remboursé 14 jours"
+              placeholder={t("guaranteePh")}
             />
           </div>
         </div>
@@ -538,7 +540,7 @@ export function FunnelConfigStep({
           size="lg"
         >
           {isGenerating ? (
-            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération en cours...</>
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("generating")}</>
           ) : (
             <><Wand2 className="w-4 h-4 mr-2" />Générer {mode === "visual" ? "la page" : "le copywriting"}</>
           )}

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { LayoutTemplate, FileText } from "lucide-react";
 
@@ -6,10 +7,11 @@ interface FunnelModeStepProps {
 }
 
 export function FunnelModeStep({ onSelectMode }: FunnelModeStepProps) {
+  const t = useTranslations("funnelWizard");
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold">Que veux-tu créer ?</h3>
+        <h3 className="text-lg font-semibold">{t("modeTitle")}</h3>
         <p className="text-sm text-muted-foreground mt-1">
           Choisis le format qui correspond à ton besoin.
         </p>
@@ -23,12 +25,12 @@ export function FunnelModeStep({ onSelectMode }: FunnelModeStepProps) {
           <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
             <LayoutTemplate className="w-6 h-6 text-primary" />
           </div>
-          <h3 className="font-semibold text-lg">Page prête à l'emploi</h3>
+          <h3 className="font-semibold text-lg">{t("modeReady")}</h3>
           <p className="text-sm text-muted-foreground">
             Une page complète avec design + texte. Tu choisis un template, l'IA rédige le contenu
             et tu obtiens un fichier HTML prêt à utiliser.
           </p>
-          <Badge variant="secondary" className="mt-1">Recommandé</Badge>
+          <Badge variant="secondary" className="mt-1">{t("recommended")}</Badge>
         </button>
 
         <button

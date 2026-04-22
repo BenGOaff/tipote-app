@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +96,7 @@ export function FunnelForm({
   existingOffers = [],
 }: FunnelFormProps) {
   const { toast } = useToast();
+  const tFw = useTranslations("funnelWizard");
 
   const [step, setStep] = useState<Step>("mode");
   const [mode, setMode] = useState<Mode>("visual");
@@ -394,7 +396,7 @@ export function FunnelForm({
       }
 
       const html = extractHtmlFromRenderResponse(raw, data);
-      const blob = new Blob([html || "<div style='padding:24px'>Aucun aperçu</div>"], {
+      const blob = new Blob([html || `<div style='padding:24px'>${tFw("emptyPreview")}</div>`], {
         type: "text/html;charset=utf-8",
       });
       const url = URL.createObjectURL(blob);

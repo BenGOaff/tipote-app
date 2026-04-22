@@ -399,6 +399,20 @@
     "extraContextLabel": "سياق إضافي (اختياري)",
     "generating": "جارٍ التوليد…"
   },
+  "funnelWizard": {
+    "modeTitle": "ماذا تريد إنشاء؟",
+    "modeReady": "صفحة جاهزة للاستخدام",
+    "recommended": "موصى به",
+    "configHeading": "صِف عرضك",
+    "offerPh": "مثال: دورة إنستغرام لمدرّبي اللياقة – 297 € – تشمل 6 وحدات فيديو وقوالب ومجموعة خاصّة…",
+    "guaranteePh": "مثال: راضٍ أو نُعيد لك المال خلال 14 يومًا",
+    "generating": "جارٍ التوليد…",
+    "previewTitle": "معاينة الصفحة",
+    "copyGenerated": "الكتابة الإعلانية المُولَّدة",
+    "templatePreviewTitle": "معاينة القالب",
+    "emptyPreview": "لا توجد معاينة",
+    "chatPh": "مثال: اجعل العنوان أكثر مباشرة، أضف 3 فوائد، دعوة للعمل أكثر إلحاحًا…"
+  },
   "settings": {
     "title": "الإعدادات",
     "tabs": {
@@ -2488,7 +2502,8 @@
     "toneHumorous": "فكاهي",
     "textExceedsLimit": "النص يتجاوز حد {limit} حرف لـ {platform}",
     "connectPlatformToPublish": "قم بتوصيل {platform} في الإعدادات للنشر أو الجدولة.",
-    "connectSocialToPublish": "قم بتوصيل شبكة اجتماعية في الإعدادات للنشر أو الجدولة مباشرة."
+    "connectSocialToPublish": "قم بتوصيل شبكة اجتماعية في الإعدادات للنشر أو الجدولة مباشرة.",
+    "toastAutoCreated": "تم إنشاء الأتمتة!"
   },
   "articleForm": {
     "generating": "جاري التوليد...",
@@ -3469,7 +3484,13 @@
     "stepResults": "النتائج",
     "stepCapture": "الالتقاط",
     "stepVirality": "الانتشار الفيروسي",
-    "stepShare": "المشاركة"
+    "stepShare": "المشاركة",
+    "newQuizTitle": "اختبار جديد",
+    "creatingQuiz": "جارٍ إنشاء اختبارك…",
+    "dropFileHere": "أفلِت ملفّك هنا أو انقر للاختيار",
+    "dropFileHint": ".txt فقط — بحد أقصى 50 000 حرف",
+    "selectFile": "اختر ملفًّا",
+    "importedLangLabel": "لغة الاختبار المُستَورَد"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",

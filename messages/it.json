@@ -399,6 +399,20 @@
     "extraContextLabel": "Contesto aggiuntivo (opzionale)",
     "generating": "Generazione in corso…"
   },
+  "funnelWizard": {
+    "modeTitle": "Cosa vuoi creare?",
+    "modeReady": "Pagina pronta all'uso",
+    "recommended": "Consigliato",
+    "configHeading": "Descrivi la tua offerta",
+    "offerPh": "Es.: Corso Instagram per coach sportivi – 297 € – Include 6 moduli video, template e un gruppo privato…",
+    "guaranteePh": "Es.: Soddisfatti o rimborsati entro 14 giorni",
+    "generating": "Generazione in corso…",
+    "previewTitle": "Anteprima pagina",
+    "copyGenerated": "Copywriting generato",
+    "templatePreviewTitle": "Anteprima template",
+    "emptyPreview": "Nessuna anteprima",
+    "chatPh": "Es.: rendi il titolo più diretto, aggiungi 3 benefici, CTA più urgente…"
+  },
   "settings": {
     "title": "Impostazioni",
     "tabs": {
@@ -2488,7 +2502,8 @@
     "toneHumorous": "Umoristico",
     "textExceedsLimit": "Il testo supera il limite di {limit} caratteri per {platform}",
     "connectPlatformToPublish": "Connetti {platform} nelle impostazioni per pubblicare o programmare.",
-    "connectSocialToPublish": "Connetti un social network nelle impostazioni per pubblicare o programmare direttamente."
+    "connectSocialToPublish": "Connetti un social network nelle impostazioni per pubblicare o programmare direttamente.",
+    "toastAutoCreated": "Automazione creata!"
   },
   "articleForm": {
     "generating": "Generazione...",
@@ -3469,7 +3484,13 @@
     "stepResults": "Risultati",
     "stepCapture": "Cattura",
     "stepVirality": "Viralità",
-    "stepShare": "Condivisione"
+    "stepShare": "Condivisione",
+    "newQuizTitle": "Nuovo quiz",
+    "creatingQuiz": "Creazione del tuo quiz in corso…",
+    "dropFileHere": "Trascina il tuo file qui o clicca per selezionare",
+    "dropFileHint": ".txt soltanto — max 50.000 caratteri",
+    "selectFile": "Seleziona un file",
+    "importedLangLabel": "Lingua del quiz importato"
   },
   "quizDetail": {
     "backToList": "Torna ai quiz",

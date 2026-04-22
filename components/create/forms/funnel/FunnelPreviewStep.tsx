@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ export function FunnelPreviewStep({
   disabledChat,
 }: FunnelPreviewStepProps) {
   const { toast } = useToast();
+  const t = useTranslations("funnelWizard");
 
   const handleCopyText = () => {
     const toCopy = markdownText || "";
@@ -146,7 +148,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
             <div className="h-[500px]">
               <iframe
                 srcDoc={renderedHtml}
-                title="Aperçu page"
+                title={t("previewTitle")}
                 className="w-full h-full border-0"
                 sandbox="allow-scripts"
               />
@@ -190,7 +192,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
         /* Text-only preview */
         <Card className="overflow-hidden">
           <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
-            <span className="text-sm font-medium">Copywriting généré</span>
+            <span className="text-sm font-medium">{t("copyGenerated")}</span>
             <div className="flex gap-1">
               <Button variant="ghost" size="sm" onClick={handleCopyText}>
                 <Copy className="w-3.5 h-3.5 mr-1" />

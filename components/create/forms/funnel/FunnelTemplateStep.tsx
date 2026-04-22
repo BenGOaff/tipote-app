@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ function getLayoutPath(t: SystemeTemplate): string {
 }
 
 export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate, preselected }: Props) {
+  const t = useTranslations("funnelWizard");
   const [tab, setTab] = useState<"capture" | "sales">(preselected?.type ?? "capture");
   const [previewTemplate, setPreviewTemplate] = useState<SystemeTemplate | null>(null);
 
@@ -76,7 +78,7 @@ export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate
             <div className="h-[450px]">
               <iframe
                 src={`/api/templates/file/${getLayoutPath(previewTemplate)}`}
-                title="Aperçu template"
+                title={t("templatePreviewTitle")}
                 className="w-full h-full border-0"
                 sandbox="allow-scripts"
               />
