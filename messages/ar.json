@@ -73,6 +73,34 @@
       "ar": "العربية"
     }
   },
+  "projectSwitcher": {
+    "switchTooltip": "تغيير المشروع",
+    "defaultName": "Tipote الخاص بي",
+    "defaultBadge": "افتراضي",
+    "renameTooltip": "إعادة تسمية",
+    "deleteTooltip": "حذف",
+    "emptyHint": "أدِر عدّة أعمال أو عملاء من حساب واحد.",
+    "newProject": "مشروع جديد",
+    "createDesc": "كل مشروع هو Tipote مستقل: الاستراتيجية والمحتوى والمهام… كل شيء يبدأ من جديد. رصيد الذكاء الاصطناعي مُشترَك بين جميع مشاريعك.",
+    "namePlaceholder": "اسم المشروع (مثل: وكالة Dupont، كوتشينغ الصحة…)",
+    "createBtn": "إنشاء",
+    "toastCreated": "تم إنشاء المشروع",
+    "toastCreatedDesc": "«{name}» جاهز.",
+    "toastCreateError": "تعذّر إنشاء المشروع",
+    "upsellTitle": "ميزة Elite",
+    "upsellDesc": "تتيح لك ميزة تعدّد المشاريع إدارة عدّة أعمال أو عملاء من حساب Tipote واحد. كل مشروع مستقل تمامًا، وله استراتيجيته ومحتواه ومهامه الخاصة.",
+    "upsellReserved": "هذه الميزة متاحة فقط لخطة Elite.",
+    "upgradeCta": "الترقية إلى Elite",
+    "renameTitle": "إعادة تسمية المشروع",
+    "renameBtn": "إعادة تسمية",
+    "toastRenamed": "تمّت إعادة تسمية المشروع",
+    "toastRenameError": "تعذّرت إعادة التسمية",
+    "deleteTitle": "حذف المشروع",
+    "deleteDesc": "أنت على وشك حذف «{name}». ستُحذف جميع البيانات المرتبطة (الاستراتيجية، المحتوى، المهام، الاختبارات…) نهائيًا. هذا الإجراء لا يمكن التراجع عنه.",
+    "deleteConfirm": "حذف نهائي",
+    "toastDeleted": "تم حذف المشروع",
+    "toastDeleteError": "تعذّر الحذف"
+  },
   "settings": {
     "title": "الإعدادات",
     "tabs": {

@@ -73,6 +73,34 @@
       "ar": "العربية"
     }
   },
+  "projectSwitcher": {
+    "switchTooltip": "Cambia progetto",
+    "defaultName": "Il mio Tipote",
+    "defaultBadge": "principale",
+    "renameTooltip": "Rinomina",
+    "deleteTooltip": "Elimina",
+    "emptyHint": "Gestisci più attività o clienti da un unico account.",
+    "newProject": "Nuovo progetto",
+    "createDesc": "Ogni progetto è un Tipote indipendente: strategia, contenuti, task... tutto riparte da zero. I crediti IA sono condivisi tra tutti i tuoi progetti.",
+    "namePlaceholder": "Nome del progetto (es.: Agenzia Dupont, Coaching Salute...)",
+    "createBtn": "Crea",
+    "toastCreated": "Progetto creato",
+    "toastCreatedDesc": "«{name}» è pronto.",
+    "toastCreateError": "Impossibile creare il progetto",
+    "upsellTitle": "Funzionalità Elite",
+    "upsellDesc": "Multi-progetto ti permette di gestire più attività o clienti da un unico account Tipote. Ogni progetto è completamente indipendente, con la propria strategia, i propri contenuti e i propri task.",
+    "upsellReserved": "Questa funzionalità è riservata al piano Elite.",
+    "upgradeCta": "Passa a Elite",
+    "renameTitle": "Rinomina il progetto",
+    "renameBtn": "Rinomina",
+    "toastRenamed": "Progetto rinominato",
+    "toastRenameError": "Impossibile rinominare",
+    "deleteTitle": "Elimina il progetto",
+    "deleteDesc": "Stai per eliminare «{name}». Tutti i dati associati (strategia, contenuti, task, quiz...) saranno eliminati definitivamente. Questa azione è irreversibile.",
+    "deleteConfirm": "Elimina definitivamente",
+    "toastDeleted": "Progetto eliminato",
+    "toastDeleteError": "Impossibile eliminare"
+  },
   "settings": {
     "title": "Impostazioni",
     "tabs": {
