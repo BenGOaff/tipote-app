@@ -2361,7 +2361,15 @@
     "regenerate": "Regénérer",
     "copied": "Copié",
     "copy": "Copier",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "themeLabel": "Thème *",
+    "themePlaceholder": "Ex : Débuter en business en ligne sans budget",
+    "ctaPlaceholderObjective": "Ex : Réponds à cet email avec ton objectif",
+    "salesSequence7": "Séquence complète (7 emails)",
+    "offerToSellLabel": "Offre à vendre",
+    "outcomeLabel": "Résultat :",
+    "manualOutcomePlaceholder": "Résultat principal (optionnel)",
+    "leadMagnetUrlPlaceholder": "Ex : https://… (lien du téléchargement)"
   },
   "videoForm": {
     "generating": "Génération...",
@@ -3382,6 +3390,27 @@
     "personnalisationTitle": "Personnalisation du quiz",
     "askGenderLabel": "Demander le genre (il / elle / iel)",
     "optionsTitle": "Options",
-    "shareRequestLabel": "Demande de partage"
+    "shareRequestLabel": "Demande de partage",
+    "accessTitle": "Accès aux résultats",
+    "fontLabel": "Police d'écriture",
+    "previewHint": "Aperçu live dans le panneau de droite.",
+    "resetColors": "Réinitialiser aux couleurs du profil",
+    "sharedBrand": "Partagé avec tous vos quiz (paramètre du profil).",
+    "captureFieldsHint": "Choisis les champs demandés avant l'accès aux résultats.",
+    "bonusHint": "Décris ce que le visiteur reçoit quand il partage.",
+    "shareTextHint": "Texte pré-rempli lorsque le visiteur partage.",
+    "sioShareTagLabel": "Tag Systeme.io après partage",
+    "sioShareTagHint": "Ajouté au contact quand il partage réellement. Déclenche ton automatisation.",
+    "ctaDefault": "CTA par défaut",
+    "addOption": "+ Ajouter une option",
+    "clickToNext": "Un clic sur une option passe à la question suivante.",
+    "accessResults": "Accéder aux résultats",
+    "sioResultTag": "Tag Systeme.io pour ce résultat",
+    "customLinkTitle": "Lien personnalisé",
+    "customLinkDesc": "Choisis une URL courte et mémorable. Lettres minuscules, chiffres et tirets uniquement.",
+    "shareNetworksTitle": "Réseaux de partage proposés",
+    "shareNetworksDesc": "Choisis les réseaux affichés sur la page de résultat.",
+    "seoTitle": "Aperçu sur les réseaux (SEO)",
+    "seoDesc": "Description utilisée quand un visiteur partage le lien."
   }
 }

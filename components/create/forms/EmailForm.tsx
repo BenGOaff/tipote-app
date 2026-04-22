@@ -354,9 +354,9 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
           {emailType === "newsletter" && (
             <>
               <div className="space-y-2">
-                <Label>Thème *</Label>
+                <Label>{t("themeLabel")}</Label>
                 <Input
-                  placeholder="Ex: Débuter en business en ligne sans budget"
+                  placeholder={t("themePlaceholder")}
                   value={newsletterTheme}
                   onChange={(e) => setNewsletterTheme(e.target.value)}
                 />
@@ -365,7 +365,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>CTA *</Label>
                 <Input
-                  placeholder="Ex: Réponds à cet email avec ton objectif"
+                  placeholder={t("ctaPlaceholderObjective")}
                   value={newsletterCta}
                   onChange={(e) => setNewsletterCta(e.target.value)}
                 />
@@ -384,7 +384,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="sequence_7" id="sequence_7" />
-                    <Label htmlFor="sequence_7">Séquence complète (7 emails)</Label>
+                    <Label htmlFor="sequence_7">{t("salesSequence7")}</Label>
                   </div>
                 </RadioGroup>
               </div>
@@ -404,7 +404,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               </div>
 
               <div className="space-y-2">
-                <Label>Offre à vendre</Label>
+                <Label>{t("offerToSellLabel")}</Label>
 
                 <RadioGroup value={offerSource} onValueChange={(v) => setOfferSource(v as "existing" | "manual")} className="flex gap-4">
                   <div className="flex items-center space-x-2">
@@ -467,7 +467,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
                           {selectedSalesOffer.main_outcome && (
                             <div className="text-xs">
-                              <span className="text-muted-foreground">Résultat : </span>
+                              <span className="text-muted-foreground">{t("outcomeLabel")} </span>
                               {selectedSalesOffer.main_outcome}
                             </div>
                           )}
@@ -494,7 +494,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                   <div className="space-y-2">
                     <Input placeholder="Nom de l'offre *" value={offerName} onChange={(e) => setOfferName(e.target.value)} />
                     <Input placeholder="Promesse (optionnel)" value={offerPromise} onChange={(e) => setOfferPromise(e.target.value)} />
-                    <Input placeholder="Résultat principal (optionnel)" value={offerOutcome} onChange={(e) => setOfferOutcome(e.target.value)} />
+                    <Input placeholder={t("manualOutcomePlaceholder")} value={offerOutcome} onChange={(e) => setOfferOutcome(e.target.value)} />
                     <Input placeholder="Prix (optionnel)" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
                     <Textarea
                       value={offerDescription}
@@ -581,7 +581,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
                           {selectedLeadMagnetOffer.main_outcome && (
                             <div className="text-xs">
-                              <span className="text-muted-foreground">Résultat : </span>
+                              <span className="text-muted-foreground">{t("outcomeLabel")} </span>
                               {selectedLeadMagnetOffer.main_outcome}
                             </div>
                           )}
@@ -629,7 +629,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>Lien du lead magnet (ou CTA) *</Label>
                 <Input
-                  placeholder="Ex: https://... (lien du téléchargement)"
+                  placeholder={t("leadMagnetUrlPlaceholder")}
                   value={leadMagnetLink}
                   onChange={(e) => setLeadMagnetLink(e.target.value)}
                 />
@@ -638,7 +638,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>CTA alternatif (optionnel)</Label>
                 <Input
-                  placeholder="Ex: Réponds à cet email avec ton objectif"
+                  placeholder={t("ctaPlaceholderObjective")}
                   value={onboardingCta}
                   onChange={(e) => setOnboardingCta(e.target.value)}
                 />

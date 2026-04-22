@@ -2405,7 +2405,15 @@
     "regenerate": "إعادة التوليد",
     "copied": "تم النسخ",
     "copy": "نسخ",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "themeLabel": "الموضوع *",
+    "themePlaceholder": "مثال: بدء نشاط تجاري عبر الإنترنت بدون ميزانية",
+    "ctaPlaceholderObjective": "مثال: ردّ على هذا البريد بهدفك",
+    "salesSequence7": "تسلسل كامل (7 رسائل)",
+    "offerToSellLabel": "العرض المراد بيعه",
+    "outcomeLabel": "النتيجة:",
+    "manualOutcomePlaceholder": "النتيجة الرئيسية (اختياري)",
+    "leadMagnetUrlPlaceholder": "مثال: https://… (رابط التحميل)"
   },
   "videoForm": {
     "generating": "جاري التوليد...",
@@ -3436,6 +3444,27 @@
     "personnalisationTitle": "تخصيص الاختبار",
     "askGenderLabel": "اطلب الجنس (هو / هي / هم)",
     "optionsTitle": "الخيارات",
-    "shareRequestLabel": "طلب المشاركة"
+    "shareRequestLabel": "طلب المشاركة",
+    "accessTitle": "الوصول إلى النتائج",
+    "fontLabel": "الخط",
+    "previewHint": "معاينة مباشرة في اللوحة اليمنى.",
+    "resetColors": "إعادة ضبط ألوان الملف الشخصي",
+    "sharedBrand": "مُشارَك مع جميع اختباراتك (إعداد الملف الشخصي).",
+    "captureFieldsHint": "اختر الحقول المطلوبة قبل الوصول إلى النتائج.",
+    "bonusHint": "صف ما يتلقّاه الزائر عند المشاركة.",
+    "shareTextHint": "نصّ مُسبَق التعبئة عند مشاركة الزائر.",
+    "sioShareTagLabel": "وسم Systeme.io بعد المشاركة",
+    "sioShareTagHint": "يُضاف إلى جهة الاتصال عند مشاركتها فعليًا. يُفعِّل الأتمتة الخاصّة بك.",
+    "ctaDefault": "الدعوة للعمل الافتراضية",
+    "addOption": "+ إضافة خيار",
+    "clickToNext": "النقر على خيار ينقل إلى السؤال التالي.",
+    "accessResults": "الوصول إلى النتائج",
+    "sioResultTag": "وسم Systeme.io لهذه النتيجة",
+    "customLinkTitle": "رابط مخصَّص",
+    "customLinkDesc": "اختر رابطًا قصيرًا وسهل التذكّر. حروف صغيرة وأرقام وشرطات فقط.",
+    "shareNetworksTitle": "شبكات المشاركة المقترحة",
+    "shareNetworksDesc": "اختر الشبكات المعروضة في صفحة النتيجة.",
+    "seoTitle": "معاينة الشبكات الاجتماعية (SEO)",
+    "seoDesc": "الوصف المستخدم عندما يشارك الزائر الرابط."
   }
 }

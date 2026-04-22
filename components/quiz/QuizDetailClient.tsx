@@ -588,7 +588,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </SortableContext>
                 </DndContext>
                 {/* Accès aux résultats */}
-                <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground pt-2">Accès aux résultats</div>
+                <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground pt-2">{t("accessTitle")}</div>
                 <button onClick={() => scrollToSection("capture")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
                   <span className="text-xs text-muted-foreground mr-2">1</span>Prise d&apos;informations
                 </button>
@@ -610,7 +610,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-xs">Police d&apos;écriture</Label>
+                  <Label className="text-xs">{t("fontLabel")}</Label>
                   <select
                     value={fontFamily}
                     onChange={e => setFontFamily(e.target.value as BrandFontChoice)}
@@ -621,12 +621,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-muted-foreground">Aperçu live dans le panneau de droite.</p>
+                  <p className="text-[10px] text-muted-foreground">{t("previewHint")}</p>
                 </div>
                 <div className="space-y-3"><Label className="text-xs">Couleurs</Label>
                   <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur principale</span></div>
                   <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur de fond</span></div>
-                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">Réinitialiser aux couleurs du profil</button>
+                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">{t("resetColors")}</button>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs">Logo</Label>
@@ -654,7 +654,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     className="hidden"
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
                   />
-                  <p className="text-[10px] text-muted-foreground">Partagé avec tous vos quiz (paramètre du profil).</p>
+                  <p className="text-[10px] text-muted-foreground">{t("sharedBrand")}</p>
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
@@ -662,7 +662,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 <section className="space-y-2.5">
                   <div>
                     <h3 className="text-sm font-semibold">Formulaire de prise de contact</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">Choisis les champs demandés avant l&apos;accès aux résultats.</p>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFieldsHint")}</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <CapturePill label="Adresse email*" active locked />
@@ -731,7 +731,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <section className="space-y-3 bg-muted/30 border rounded-xl p-3">
                     <div>
                       <h4 className="text-xs font-semibold">Bonus offert pour un partage</h4>
-                      <p className="text-[11px] text-muted-foreground leading-snug">Décris ce que le visiteur reçoit quand il partage.</p>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{t("bonusHint")}</p>
                     </div>
                     <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder="Ex. : ma mini-formation exclusive" className="text-xs" />
 
@@ -782,13 +782,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
                     <div>
                       <Label className="text-[11px] font-semibold">Message de partage</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">Texte pré-rempli lorsque le visiteur partage.</p>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareTextHint")}</p>
                       <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={`Je viens de faire le quiz "${title || "…"}" !`} className="text-xs" rows={2} />
                     </div>
 
                     <div>
-                      <Label className="text-[11px] font-semibold">Tag Systeme.io après partage</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">Ajouté au contact quand il partage réellement. Déclenche ton automatisation.</p>
+                      <Label className="text-[11px] font-semibold">{t("sioShareTagLabel")}</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("sioShareTagHint")}</p>
                       <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
                     </div>
                   </section>
@@ -799,7 +799,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {/* ── CTA par défaut ── */}
                 <section className="space-y-1.5">
                   <div>
-                    <h3 className="text-sm font-semibold">CTA par défaut</h3>
+                    <h3 className="text-sm font-semibold">{t("ctaDefault")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">
                       Utilisé seulement pour les résultats qui n&apos;ont pas leur propre CTA. Tu peux en définir un spécifique sur chaque résultat depuis l&apos;onglet Édition.
                     </p>
@@ -866,8 +866,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             </div>
                           ))}
                         </div>
-                        <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>+ Ajouter une option</button>
-                        <p className="text-center text-xs text-muted-foreground pt-4 italic">Un clic sur une option passe à la question suivante.</p>
+                        <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>{t("addOption")}</button>
+                        <p className="text-center text-xs text-muted-foreground pt-4 italic">{t("clickToNext")}</p>
                       </div>
                     </div>
                   </div>
@@ -887,7 +887,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
                     {capturePhone && <div><label className="text-sm text-muted-foreground">{t("phoneOptional")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
-                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>Accéder aux résultats</button>
+                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>{t("accessResults")}</button>
                 </div>
               </div>
 
@@ -979,7 +979,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder="URL du CTA (https://…)" />
                     </div>
                     <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
-                      <div className="text-xs font-semibold text-foreground mb-1">Tag Systeme.io pour ce résultat</div>
+                      <div className="text-xs font-semibold text-foreground mb-1">{t("sioResultTag")}</div>
                       <p className="text-[11px] text-muted-foreground mb-2">Appliqué au lead qui obtient « {r.title || `Résultat ${ri + 1}`} ». Utilise-le pour segmenter tes automatisations.</p>
                       <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
                     </div>
@@ -1009,8 +1009,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         <div className="flex-1 overflow-y-auto p-6"><div className="max-w-3xl mx-auto space-y-4">
           {/* Custom URL slug */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Lien personnalisé</h3>
-            <p className="text-xs text-muted-foreground">Choisis une URL courte et mémorable. Lettres minuscules, chiffres et tirets uniquement.</p>
+            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> {t("customLinkTitle")}</h3>
+            <p className="text-xs text-muted-foreground">{t("customLinkDesc")}</p>
             <div className="flex items-center gap-2">
               <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1">
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap">
@@ -1034,8 +1034,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> Réseaux de partage proposés</h3>
-            <p className="text-xs text-muted-foreground">Choisis les réseaux affichés sur la page de résultat.</p>
+            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> {t("shareNetworksTitle")}</h3>
+            <p className="text-xs text-muted-foreground">{t("shareNetworksDesc")}</p>
             <div className="flex flex-wrap gap-2">
               {ALLOWED_SHARE_NETWORKS.map((n) => {
                 const active = shareNetworks.includes(n);
@@ -1055,8 +1055,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
           {/* SEO / Open Graph description */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold">Aperçu sur les réseaux (SEO)</h3>
-            <p className="text-xs text-muted-foreground">Description utilisée quand un visiteur partage le lien.</p>
+            <h3 className="font-semibold">{t("seoTitle")}</h3>
+            <p className="text-xs text-muted-foreground">{t("seoDesc")}</p>
             <Textarea
               value={ogDescription}
               onChange={(e) => setOgDescription(e.target.value)}

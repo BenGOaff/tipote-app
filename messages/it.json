@@ -2405,7 +2405,15 @@
     "regenerate": "Rigenera",
     "copied": "Copiato",
     "copy": "Copia",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "themeLabel": "Tema *",
+    "themePlaceholder": "Es.: Avviare un business online senza budget",
+    "ctaPlaceholderObjective": "Es.: Rispondi a questa email con il tuo obiettivo",
+    "salesSequence7": "Sequenza completa (7 email)",
+    "offerToSellLabel": "Offerta da vendere",
+    "outcomeLabel": "Risultato:",
+    "manualOutcomePlaceholder": "Risultato principale (opzionale)",
+    "leadMagnetUrlPlaceholder": "Es.: https://… (link di download)"
   },
   "videoForm": {
     "generating": "Generazione...",
@@ -3436,6 +3444,27 @@
     "personnalisationTitle": "Personalizzazione del quiz",
     "askGenderLabel": "Chiedi il genere (lui / lei / loro)",
     "optionsTitle": "Opzioni",
-    "shareRequestLabel": "Richiesta di condivisione"
+    "shareRequestLabel": "Richiesta di condivisione",
+    "accessTitle": "Accesso ai risultati",
+    "fontLabel": "Font",
+    "previewHint": "Anteprima live nel pannello di destra.",
+    "resetColors": "Ripristina i colori del profilo",
+    "sharedBrand": "Condiviso con tutti i tuoi quiz (impostazione del profilo).",
+    "captureFieldsHint": "Scegli i campi richiesti prima dell'accesso ai risultati.",
+    "bonusHint": "Descrivi cosa riceve il visitatore quando condivide.",
+    "shareTextHint": "Testo precompilato quando il visitatore condivide.",
+    "sioShareTagLabel": "Tag Systeme.io dopo la condivisione",
+    "sioShareTagHint": "Aggiunto al contatto quando condivide davvero. Attiva la tua automazione.",
+    "ctaDefault": "CTA predefinita",
+    "addOption": "+ Aggiungi opzione",
+    "clickToNext": "Cliccare un'opzione passa alla domanda successiva.",
+    "accessResults": "Accedi ai risultati",
+    "sioResultTag": "Tag Systeme.io per questo risultato",
+    "customLinkTitle": "Link personalizzato",
+    "customLinkDesc": "Scegli un URL breve e memorabile. Solo minuscole, numeri e trattini.",
+    "shareNetworksTitle": "Reti di condivisione proposte",
+    "shareNetworksDesc": "Scegli le reti mostrate nella pagina del risultato.",
+    "seoTitle": "Anteprima sui social (SEO)",
+    "seoDesc": "Descrizione usata quando un visitatore condivide il link."
   }
 }

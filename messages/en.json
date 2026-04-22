@@ -2361,7 +2361,15 @@
     "regenerate": "Regenerate",
     "copied": "Copied",
     "copy": "Copy",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "themeLabel": "Theme *",
+    "themePlaceholder": "E.g.: Starting an online business on a shoestring",
+    "ctaPlaceholderObjective": "E.g.: Reply to this email with your goal",
+    "salesSequence7": "Full sequence (7 emails)",
+    "offerToSellLabel": "Offer to sell",
+    "outcomeLabel": "Outcome:",
+    "manualOutcomePlaceholder": "Main outcome (optional)",
+    "leadMagnetUrlPlaceholder": "E.g.: https://… (download link)"
   },
   "videoForm": {
     "generating": "Generating...",
@@ -3382,6 +3390,27 @@
     "personnalisationTitle": "Quiz personalization",
     "askGenderLabel": "Ask for gender (he / she / they)",
     "optionsTitle": "Options",
-    "shareRequestLabel": "Share request"
+    "shareRequestLabel": "Share request",
+    "accessTitle": "Access to results",
+    "fontLabel": "Font",
+    "previewHint": "Live preview in the right panel.",
+    "resetColors": "Reset to profile colors",
+    "sharedBrand": "Shared across all your quizzes (profile setting).",
+    "captureFieldsHint": "Choose which fields are asked before access to results.",
+    "bonusHint": "Describe what the visitor receives when they share.",
+    "shareTextHint": "Text pre-filled when the visitor shares.",
+    "sioShareTagLabel": "Systeme.io tag after share",
+    "sioShareTagHint": "Added to the contact when they actually share. Triggers your automation.",
+    "ctaDefault": "Default CTA",
+    "addOption": "+ Add option",
+    "clickToNext": "Clicking an option moves to the next question.",
+    "accessResults": "Access results",
+    "sioResultTag": "Systeme.io tag for this result",
+    "customLinkTitle": "Custom link",
+    "customLinkDesc": "Pick a short, memorable URL. Lowercase letters, digits and dashes only.",
+    "shareNetworksTitle": "Share networks offered",
+    "shareNetworksDesc": "Choose the networks shown on the result page.",
+    "seoTitle": "Social preview (SEO)",
+    "seoDesc": "Description used when a visitor shares the link."
   }
 }
