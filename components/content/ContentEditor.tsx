@@ -109,6 +109,8 @@ function toYmdOrEmpty(v: string | null | undefined) {
 export function ContentEditor({ initialItem }: Props) {
   const router = useRouter();
   const tFilters = useTranslations("contentFilters");
+  const t = useTranslations("contentEditor");
+  const tc = useTranslations("common");
 
   // Baseline local: permet un "dirty" fiable après save,
   // même si le refresh Next met un peu de temps ou renvoie un item équivalent.
@@ -746,9 +748,9 @@ export function ContentEditor({ initialItem }: Props) {
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant={statusBadgeVariant}>{statusLabel}</Badge>
               {dirty ? (
-                <Badge variant="outline">Modifications non enregistrées</Badge>
+                <Badge variant="outline">{t("dirtyBadge")}</Badge>
               ) : (
-                <Badge variant="secondary">À jour</Badge>
+                <Badge variant="secondary">{t("cleanBadge")}</Badge>
               )}
             </div>
 
@@ -764,21 +766,21 @@ export function ContentEditor({ initialItem }: Props) {
 
           <div className="flex gap-2 flex-wrap">
             <Button variant="secondary" onClick={copy} size="sm">
-              <Copy className="w-4 h-4 mr-1" /> Copier
+              <Copy className="w-4 h-4 mr-1" /> {t("copyBtn")}
             </Button>
 
             <Button variant="secondary" onClick={duplicate} size="sm">
-              <CopyPlus className="w-4 h-4 mr-1" /> Dupliquer
+              <CopyPlus className="w-4 h-4 mr-1" /> {t("duplicateBtn")}
             </Button>
 
             <Button onClick={save} disabled={!dirty || saving} size="sm">
               {saving ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Enregistrement…
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" /> {t("savingBtn")}
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-1" /> Enregistrer
+                  <Save className="w-4 h-4 mr-1" /> {t("saveBtn")}
                 </>
               )}
             </Button>
@@ -786,18 +788,18 @@ export function ContentEditor({ initialItem }: Props) {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm" disabled={deleting}>
-                  <Trash2 className="w-4 h-4 mr-1" /> Supprimer
+                  <Trash2 className="w-4 h-4 mr-1" /> {t("deleteBtn")}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Supprimer ce contenu ?</AlertDialogTitle>
-                  <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+                  <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
+                  <AlertDialogDescription>{t("deleteDesc")}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
                   <AlertDialogAction onClick={remove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Confirmer
+                    {t("confirmBtn")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -926,7 +928,7 @@ export function ContentEditor({ initialItem }: Props) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>JSON stocké (lecture seule)</Label>
+                  <Label>{t("jsonLabel")}</Label>
                   <Textarea value={funnelPayloadString} readOnly rows={6} className="font-mono text-xs" />
                 </div>
               </TabsContent>
@@ -942,12 +944,12 @@ export function ContentEditor({ initialItem }: Props) {
                     {isRenderingHtml ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        Rendu…
+                        {t("renderingHtml")}
                       </>
                     ) : (
                       <>
                         <Wand2 className="w-4 h-4 mr-1" />
-                        Générer HTML
+                        {t("generateHtml")}
                       </>
                     )}
                   </Button>
@@ -959,17 +961,17 @@ export function ContentEditor({ initialItem }: Props) {
                     disabled={!htmlPreview}
                   >
                     <Download className="w-4 h-4 mr-1" />
-                    Télécharger preview
+                    {t("downloadPreview")}
                   </Button>
 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => copyToClipboard(htmlPreview, "Preview copiée")}
+                    onClick={() => copyToClipboard(htmlPreview, t("previewCopiedToast"))}
                     disabled={!htmlPreview}
                   >
                     <Copy className="w-4 h-4 mr-1" />
-                    Copier preview
+                    {t("copyPreview")}
                   </Button>
 
                   <Button
@@ -979,24 +981,30 @@ export function ContentEditor({ initialItem }: Props) {
                     disabled={!htmlKit}
                   >
                     <Download className="w-4 h-4 mr-1" />
-                    Télécharger kit
+                    {t("downloadKit")}
                   </Button>
 
-                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(htmlKit, "Kit copié")} disabled={!htmlKit}>
+                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(htmlKit, t("kitCopiedToast"))} disabled={!htmlKit}>
                     <Copy className="w-4 h-4 mr-1" />
-                    Copier kit
+                    {t("copyKit")}
                   </Button>
                 </div>
 
                 {!htmlPreview && !htmlKit ? (
                   <div className="text-sm text-muted-foreground border rounded-lg p-4 bg-muted/30">
-                    Clique sur <span className="font-medium">Générer HTML</span> pour obtenir :
+                    {t.rich("clickGenerateHint", {
+                      bold: (chunks) => <span className="font-medium">{chunks}</span>,
+                    })}
                     <ul className="list-disc pl-5 mt-2 space-y-1">
                       <li>
-                        Une page <span className="font-medium">Preview</span> (projection maximale)
+                        {t.rich("previewBullet", {
+                          bold: (chunks) => <span className="font-medium">{chunks}</span>,
+                        })}
                       </li>
                       <li>
-                        Un <span className="font-medium">Kit Systeme-compatible</span> (blocs + SLOTS)
+                        {t.rich("kitBullet", {
+                          bold: (chunks) => <span className="font-medium">{chunks}</span>,
+                        })}
                       </li>
                     </ul>
                   </div>
@@ -1047,7 +1055,7 @@ export function ContentEditor({ initialItem }: Props) {
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Colle ou écris ton contenu ici…"
+              placeholder={t("contentPlaceholder")}
               rows={22}
             />
           )}
@@ -1078,7 +1086,7 @@ export function ContentEditor({ initialItem }: Props) {
             />
             {isPinterest && (
               <p className="text-xs text-muted-foreground">
-                Pinterest : image requise, recommandée 1000×1500 px (ratio 2:3), max 32 Mo (PNG, JPG, WEBP).
+                {t("pinterestImageHint")}
               </p>
             )}
           </Card>
@@ -1088,9 +1096,9 @@ export function ContentEditor({ initialItem }: Props) {
         {isSocialPost && isPinterest && (
           <Card className="p-4 space-y-4">
             <div>
-              <p className="font-semibold">Paramètres Pinterest</p>
+              <p className="font-semibold">{t("pinterestSection")}</p>
               <p className="text-sm text-muted-foreground">
-                Titre max 100 car. · Description max 500 car. · Image requise
+                {t("pinterestHint")}
               </p>
             </div>
             <PinterestBoardSelector

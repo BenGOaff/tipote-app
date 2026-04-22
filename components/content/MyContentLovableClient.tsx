@@ -11,6 +11,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -276,6 +277,8 @@ export default function MyContentLovableClient({
   error,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("myContent");
+  const tc = useTranslations("common");
 
   const [view, setView] = useState<"list" | "calendar">(initialView);
   const [search, setSearch] = useState("");
@@ -538,7 +541,7 @@ export default function MyContentLovableClient({
 
           <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
             <PageHeader
-              left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
+              left={<h1 className="text-lg font-display font-bold truncate">{t("headerTitle")}</h1>}
             />
 
             <div className="flex-1 p-4 sm:p-5 lg:p-6">
@@ -562,7 +565,7 @@ export default function MyContentLovableClient({
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
           <PageHeader
-            left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
+            left={<h1 className="text-lg font-display font-bold truncate">{t("headerTitle")}</h1>}
           />
 
           {/* Container */}
@@ -570,13 +573,13 @@ export default function MyContentLovableClient({
             <div className="max-w-[1200px] mx-auto w-full space-y-5">
             <PageBanner
               icon={<ClipboardList className="w-5 h-5" />}
-              title="Tous tes contenus"
-              subtitle="Posts, emails, articles, scripts et pages — tout au même endroit."
+              title={t("bannerTitle")}
+              subtitle={t("bannerSubtitle")}
             >
               <Button asChild size="sm" className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground">
                 <Link href="/create">
                   <Plus className="w-4 h-4 mr-1" />
-                  Créer
+                  {t("createBtn")}
                 </Link>
               </Button>
             </PageBanner>
@@ -586,7 +589,7 @@ export default function MyContentLovableClient({
               <div className="relative flex-1 max-w-md w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher..."
+                  placeholder={t("searchPh")}
                   className="pl-9"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -726,24 +729,24 @@ export default function MyContentLovableClient({
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Retour aux dossiers
+                    {t("backToFolders")}
                   </button>
 
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold flex items-center gap-2">
                       <ClipboardList className="w-5 h-5 text-teal-600" />
-                      Mes Quiz
+                      {t("myQuiz")}
                     </h2>
                     <Button size="sm" asChild>
                       <Link href="/quiz/new">
-                        <Plus className="w-4 h-4 mr-1" /> Créer un quiz
+                        <Plus className="w-4 h-4 mr-1" /> {t("createQuizBtn")}
                       </Link>
                     </Button>
                   </div>
 
                   {quizzes.length === 0 ? (
                     <Card className="p-6">
-                      <p className="text-sm text-muted-foreground text-center py-4">Aucun quiz créé.</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("emptyQuiz")}</p>
                     </Card>
                   ) : (
                     <div className="space-y-3">
@@ -759,7 +762,7 @@ export default function MyContentLovableClient({
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
                                     <div className="font-medium truncate">
-                                      {qz.title || "Quiz sans titre"}
+                                      {qz.title || t("untitledQuiz")}
                                     </div>
                                     <Badge
                                       className={
@@ -768,24 +771,24 @@ export default function MyContentLovableClient({
                                           : "bg-muted text-muted-foreground"
                                       }
                                     >
-                                      {isActive ? "Actif" : "Brouillon"}
+                                      {isActive ? t("statusActive") : t("statusDraft")}
                                     </Badge>
                                   </div>
                                   <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                     <span className="inline-flex items-center gap-1">
-                                      <Eye className="h-3.5 w-3.5" /> {qz.views_count} vues
+                                      <Eye className="h-3.5 w-3.5" /> {qz.views_count} {t("viewsLabel")}
                                     </span>
                                     <span className="inline-flex items-center gap-1">
-                                      <Users className="h-3.5 w-3.5" /> {qz.leads_count} emails
+                                      <Users className="h-3.5 w-3.5" /> {qz.leads_count} {t("emailsLabel")}
                                     </span>
                                     <span className="inline-flex items-center gap-1">
-                                      <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} partages
+                                      <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} {t("sharesLabel")}
                                     </span>
                                   </div>
                                 </div>
                               </div>
                               <Button variant="outline" size="sm" asChild>
-                                <Link href={`/quiz/${qz.id}`}>Gérer</Link>
+                                <Link href={`/quiz/${qz.id}`}>{t("manageBtn")}</Link>
                               </Button>
                             </div>
                           </Card>
@@ -802,24 +805,24 @@ export default function MyContentLovableClient({
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Retour aux dossiers
+                    {t("backToFolders")}
                   </button>
 
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold flex items-center gap-2">
                       <Route className="w-5 h-5 text-indigo-600" />
-                      Mes Pages
+                      {t("myPages")}
                     </h2>
                     <Button size="sm" asChild>
                       <Link href="/pages">
-                        <Plus className="w-4 h-4 mr-1" /> Créer une page
+                        <Plus className="w-4 h-4 mr-1" /> {t("createPageBtn")}
                       </Link>
                     </Button>
                   </div>
 
                   {funnels.length === 0 ? (
                     <Card className="p-6">
-                      <p className="text-sm text-muted-foreground text-center py-4">Aucune page créée.</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("emptyPages")}</p>
                     </Card>
                   ) : (
                     <div className="space-y-3">
@@ -918,20 +921,20 @@ export default function MyContentLovableClient({
                     <Dialog open onOpenChange={() => setFunnelLeads(null)}>
                       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                         <DialogHeader>
-                          <DialogTitle>Leads capturés</DialogTitle>
-                          <DialogDescription>{funnelLeads.leads.length} lead(s)</DialogDescription>
+                          <DialogTitle>{t("leadsCapturedTitle")}</DialogTitle>
+                          <DialogDescription>{t("leadsCount", { count: funnelLeads.leads.length })}</DialogDescription>
                         </DialogHeader>
                         {funnelLeads.leads.length === 0 ? (
-                          <p className="text-sm text-muted-foreground py-4 text-center">Aucun lead capturé pour cette page.</p>
+                          <p className="text-sm text-muted-foreground py-4 text-center">{t("emptyLeads")}</p>
                         ) : (
                           <div className="space-y-3">
                             <div className="overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead>
                                   <tr className="border-b text-left">
-                                    <th className="pb-2 font-medium">Email</th>
-                                    <th className="pb-2 font-medium">Prénom</th>
-                                    <th className="pb-2 font-medium">Date</th>
+                                    <th className="pb-2 font-medium">{t("colEmail")}</th>
+                                    <th className="pb-2 font-medium">{t("colFirstName")}</th>
+                                    <th className="pb-2 font-medium">{t("colDate")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -951,7 +954,7 @@ export default function MyContentLovableClient({
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                const csv = ["Email,Prénom,Date"];
+                                const csv = [t("csvHeader")];
                                 for (const l of funnelLeads.leads) {
                                   csv.push(`${l.email ?? ""},${l.first_name ?? ""},${l.created_at ?? ""}`);
                                 }
@@ -964,7 +967,7 @@ export default function MyContentLovableClient({
                                 URL.revokeObjectURL(url);
                               }}
                             >
-                              <Download className="w-4 h-4 mr-2" /> Télécharger en CSV
+                              <Download className="w-4 h-4 mr-2" /> {t("downloadCsv")}
                             </Button>
                           </div>
                         )}
@@ -975,7 +978,7 @@ export default function MyContentLovableClient({
                   {/* Loading leads */}
                   {loadingLeads && (
                     <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" /> Chargement des leads...
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" /> {t("loadingLeads")}
                     </div>
                   )}
 
@@ -984,14 +987,14 @@ export default function MyContentLovableClient({
                     <Dialog open onOpenChange={() => setDeleteFunnelConfirm(null)}>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Supprimer cette page ?</DialogTitle>
+                          <DialogTitle>{t("deletePageTitle")}</DialogTitle>
                           <DialogDescription>
-                            &laquo; {deleteFunnelConfirm.title || "Page sans titre"} &raquo; sera archivé et ne sera plus accessible.
+                            {t("deletePageDesc", { title: deleteFunnelConfirm.title || t("untitledPage") })}
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setDeleteFunnelConfirm(null)}>
-                            Annuler
+                            {tc("cancel")}
                           </Button>
                           <Button
                             variant="destructive"
@@ -1001,11 +1004,11 @@ export default function MyContentLovableClient({
                               try {
                                 await fetch(`/api/pages/${id}`, { method: "DELETE" });
                                 setFunnels((prev) => prev.filter((p) => p.id !== id));
-                                toast({ title: "Page supprimée" });
+                                toast({ title: t("toastPageDeleted") });
                               } catch { /* ignore */ }
                             }}
                           >
-                            Supprimer
+                            {tc("delete")}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -1020,7 +1023,7 @@ export default function MyContentLovableClient({
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Retour aux dossiers
+                    {t("backToFolders")}
                   </button>
 
                   {(() => {
@@ -1179,39 +1182,39 @@ export default function MyContentLovableClient({
             <Dialog open={!!editingContent} onOpenChange={(open) => (!open ? setEditingContent(null) : null)}>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                  <DialogTitle>Modifier le contenu</DialogTitle>
-                  <DialogDescription>Modifiez le titre et le contenu ci-dessous.</DialogDescription>
+                  <DialogTitle>{t("editContentTitle")}</DialogTitle>
+                  <DialogDescription>{t("editContentDesc")}</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-title">Titre</Label>
+                    <Label htmlFor="edit-title">{t("titleLabel")}</Label>
                     <Input
                       id="edit-title"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      placeholder="Titre..."
+                      placeholder={t("titlePh")}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="edit-body">Contenu</Label>
+                    <Label htmlFor="edit-body">{t("bodyLabel")}</Label>
                     <Textarea
                       id="edit-body"
                       value={editBody}
                       onChange={(e) => setEditBody(e.target.value)}
                       rows={12}
-                      placeholder="Contenu..."
+                      placeholder={t("bodyPh")}
                     />
                   </div>
                 </div>
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setEditingContent(null)} disabled={busy === "edit"}>
-                    Annuler
+                    {tc("cancel")}
                   </Button>
                   <Button onClick={handleSaveEdit} disabled={busy === "edit"}>
-                    {busy === "edit" ? "Enregistrement..." : "Enregistrer"}
+                    {busy === "edit" ? t("savingBtn") : tc("save")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1224,13 +1227,13 @@ export default function MyContentLovableClient({
                   <DialogTitle className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5 text-primary" />
                     {planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
-                      ? "Reprogrammer la publication"
-                      : "Planifier la publication"}
+                      ? t("planRescheduleTitle")
+                      : t("planScheduleTitle")}
                   </DialogTitle>
                   <DialogDescription>
                     {planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
-                      ? "Modifie la date et l\u2019heure de publication. Le post sera automatiquement publi\u00e9 via Tipote."
-                      : "Choisis une date et une heure de publication. Le statut passera sur \u00abPlanifi\u00e9\u00bb."}
+                      ? t("planRescheduleDesc")
+                      : t("planScheduleDesc")}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -1238,7 +1241,7 @@ export default function MyContentLovableClient({
                 {planningContent && (
                   <div className="rounded-lg border bg-muted/50 p-3">
                     <p className="text-sm font-medium truncate">
-                      {safeString(planningContent.title) || "Sans titre"}
+                      {safeString(planningContent.title) || t("untitled")}
                     </p>
                     {safeString(planningContent.channel) && (
                       <p className="text-xs text-muted-foreground capitalize mt-0.5">
@@ -1250,7 +1253,7 @@ export default function MyContentLovableClient({
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="plan-date">Date de publication</Label>
+                    <Label htmlFor="plan-date">{t("dateLabel")}</Label>
                     <Input
                       id="plan-date"
                       type="date"
@@ -1261,7 +1264,7 @@ export default function MyContentLovableClient({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="plan-time">Heure de publication</Label>
+                    <Label htmlFor="plan-time">{t("timeLabel")}</Label>
                     <Input
                       id="plan-time"
                       type="time"
@@ -1273,14 +1276,14 @@ export default function MyContentLovableClient({
 
                 <DialogFooter className="gap-2 sm:gap-0">
                   <Button variant="outline" onClick={() => setPlanningContent(null)} disabled={busy === "plan"}>
-                    Annuler
+                    {tc("cancel")}
                   </Button>
                   <Button onClick={handleSavePlan} disabled={busy === "plan" || !planDate}>
                     {busy === "plan"
-                      ? "Enregistrement..."
+                      ? t("savingBtn")
                       : planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
-                        ? "Reprogrammer"
-                        : "Planifier"}
+                        ? t("reprogramBtn")
+                        : t("scheduleBtn")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1290,18 +1293,18 @@ export default function MyContentLovableClient({
             <Dialog open={!!deleteConfirm} onOpenChange={(open) => (!open ? setDeleteConfirm(null) : null)}>
               <DialogContent className="sm:max-w-[520px]">
                 <DialogHeader>
-                  <DialogTitle>Supprimer le contenu</DialogTitle>
+                  <DialogTitle>{t("deleteContentTitle")}</DialogTitle>
                   <DialogDescription>
-                    Cette action est irréversible. Le contenu sera supprimé définitivement.
+                    {t("deleteContentDesc")}
                   </DialogDescription>
                 </DialogHeader>
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={busy === "delete"}>
-                    Annuler
+                    {tc("cancel")}
                   </Button>
                   <Button variant="destructive" onClick={handleDelete} disabled={busy === "delete"}>
-                    {busy === "delete" ? "Suppression..." : "Supprimer"}
+                    {busy === "delete" ? t("deletingBtn") : tc("delete")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1309,7 +1312,10 @@ export default function MyContentLovableClient({
 
             {/* Footer info (email) */}
             <div className="text-xs text-muted-foreground">
-              Connecté en tant que <span className="font-medium">{userEmail}</span>
+              {t.rich("signedInAs", {
+                email: userEmail,
+                bold: (chunks) => <span className="font-medium">{chunks}</span>,
+              })}
             </div>
           </div>
           </div>

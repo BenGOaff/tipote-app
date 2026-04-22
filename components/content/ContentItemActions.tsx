@@ -107,6 +107,7 @@ const PLATFORM_CONFIG: Record<string, { label: string; color: string; icon: Reac
 export function ContentItemActions({ id, title, status, scheduledDate, contentPreview, channel, type }: Props) {
   const router = useRouter();
   const t = useTranslations('contentActions');
+  const tc = useTranslations('common');
   const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | "unplan" | null>(null);
 
   const [planOpen, setPlanOpen] = React.useState(false);
@@ -322,7 +323,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy === "plan"}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy === "plan"}>{tc('cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -457,7 +458,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy === "delete"}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy === "delete"}>{tc('cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
