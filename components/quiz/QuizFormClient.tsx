@@ -348,9 +348,9 @@ export default function QuizFormClient() {
             { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
           ],
           results: [
-            { title: "Résultat 1", description: null },
-            { title: "Résultat 2", description: null },
-            { title: "Résultat 3", description: null },
+            { title: t("resultLabel", { n: 1 }), description: null },
+            { title: t("resultLabel", { n: 2 }), description: null },
+            { title: t("resultLabel", { n: 3 }), description: null },
           ],
         }),
       });
@@ -359,14 +359,14 @@ export default function QuizFormClient() {
         router.push(`/quiz/${data.quizId}`);
       } else {
         if (data.error === "FREE_PLAN_QUIZ_LIMIT") {
-          toast.error("Le plan gratuit est limité à 1 quiz. Passe à un plan payant pour en créer davantage !");
+          toast.error(t("freePlanLimit"));
         } else {
-          toast.error(data.error || "Erreur lors de la création");
+          toast.error(data.error || t("errCreate"));
         }
         setCreatingManual(false);
       }
     } catch {
-      toast.error("Erreur lors de la création");
+      toast.error(t("errCreate"));
       setCreatingManual(false);
     }
   }
@@ -786,12 +786,12 @@ export default function QuizFormClient() {
   const [quizStatus, setQuizStatus] = useState("draft");
 
   const STEPS = [
-    { key: "general", icon: Settings2, label: "Infos générales" },
-    { key: "questions", icon: MessageSquare, label: "Questions" },
-    { key: "results", icon: Award, label: "Résultats" },
-    { key: "capture", icon: Users, label: "Capture" },
-    { key: "virality", icon: Share2, label: "Viralité" },
-    { key: "share", icon: Globe, label: "Partage" },
+    { key: "general", icon: Settings2, label: t("stepGeneral") },
+    { key: "questions", icon: MessageSquare, label: t("stepQuestions") },
+    { key: "results", icon: Award, label: t("stepResults") },
+    { key: "capture", icon: Users, label: t("stepCapture") },
+    { key: "virality", icon: Share2, label: t("stepVirality") },
+    { key: "share", icon: Globe, label: t("stepShare") },
   ];
 
   // Import file handling
@@ -809,7 +809,7 @@ export default function QuizFormClient() {
     const name = importFile.name.toLowerCase();
     const isTxt = name.endsWith(".txt") || importFile.type === "text/plain";
     if (!isTxt) {
-      toast.error("Formats PDF et DOCX bientôt supportés. Pour l'instant, exporte ton contenu en .txt.");
+      toast.error(t("errImportFormat"));
       return;
     }
 
@@ -817,7 +817,7 @@ export default function QuizFormClient() {
     try {
       const text = await importFile.text();
       if (!text.trim()) {
-        toast.error("Fichier vide.");
+        toast.error(t("errImportEmpty"));
         setImporting(false);
         return;
       }
@@ -834,7 +834,7 @@ export default function QuizFormClient() {
 
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        toast.error(`Erreur lors de l'import${errText ? ` : ${errText.slice(0, 150)}` : ""}`);
+        toast.error(errText ? t("errImportPrefix", { msg: errText.slice(0, 150) }) : t("errImport"));
         setImporting(false);
         return;
       }
@@ -869,17 +869,17 @@ export default function QuizFormClient() {
             if (currentEvent === "result" && parsed.ok && parsed.quiz) {
               populateFromQuiz(parsed.quiz as Record<string, unknown>);
             } else if (currentEvent === "error") {
-              toast.error(parsed.error || "Erreur lors de l'import");
+              toast.error(parsed.error || t("errImport"));
             }
           } catch { /* skip */ }
           currentEvent = "";
         }
       }
 
-      toast.success("Quiz importé avec succès !");
+      toast.success(t("importSuccess"));
       setActiveTab("manual");
     } catch {
-      toast.error("Erreur lors de l'import");
+      toast.error(t("errImport"));
     } finally {
       setImporting(false);
     }

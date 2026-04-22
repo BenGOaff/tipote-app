@@ -3189,7 +3189,20 @@
     "aiPersonalizeLabel": "Dynamic personalization",
     "aiPersonalizeHint": "Adapt questions, results and CTAs to the visitor. The AI produces variants directly if you enable the options below.",
     "aiAskFirstName": "Ask for first name (uses {name} in text)",
-    "aiAskGender": "Ask for gender (uses {m|f|x} for 3 variants)"
+    "aiAskGender": "Ask for gender (uses {m|f|x} for 3 variants)",
+    "freePlanLimit": "The free plan is limited to 1 quiz. Upgrade to a paid plan to create more!",
+    "errCreate": "Creation error",
+    "errImportFormat": "PDF and DOCX formats are coming soon. For now, export your content as .txt.",
+    "errImportEmpty": "Empty file.",
+    "errImport": "Import error",
+    "errImportPrefix": "Import error: {msg}",
+    "importSuccess": "Quiz imported successfully!",
+    "stepGeneral": "General info",
+    "stepQuestions": "Questions",
+    "stepResults": "Results",
+    "stepCapture": "Capture",
+    "stepVirality": "Virality",
+    "stepShare": "Share"
   },
   "quizDetail": {
     "backToList": "Back to quizzes",

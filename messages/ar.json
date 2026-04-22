@@ -3243,7 +3243,20 @@
     "aiPersonalizeLabel": "تخصيص ديناميكي",
     "aiPersonalizeHint": "تكييف الأسئلة والنتائج و CTA مع الزائر. الذكاء الاصطناعي ينتج المتغيرات مباشرة عند تفعيل الخيارات أدناه.",
     "aiAskFirstName": "طلب الاسم (استخدم {name} في النصوص)",
-    "aiAskGender": "طلب الجنس (استخدم {m|f|x} لثلاث متغيرات)"
+    "aiAskGender": "طلب الجنس (استخدم {m|f|x} لثلاث متغيرات)",
+    "freePlanLimit": "الخطة المجانية محدودة باختبار واحد. قم بالترقية إلى خطة مدفوعة لإنشاء المزيد!",
+    "errCreate": "خطأ أثناء الإنشاء",
+    "errImportFormat": "سيتمّ دعم صيغتي PDF وDOCX قريبًا. في الوقت الحالي، صدِّر محتواك بصيغة .txt.",
+    "errImportEmpty": "ملف فارغ.",
+    "errImport": "خطأ أثناء الاستيراد",
+    "errImportPrefix": "خطأ أثناء الاستيراد: {msg}",
+    "importSuccess": "تم استيراد الاختبار بنجاح!",
+    "stepGeneral": "معلومات عامّة",
+    "stepQuestions": "الأسئلة",
+    "stepResults": "النتائج",
+    "stepCapture": "الالتقاط",
+    "stepVirality": "الانتشار الفيروسي",
+    "stepShare": "المشاركة"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",

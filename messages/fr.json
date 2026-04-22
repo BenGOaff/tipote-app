@@ -3189,7 +3189,20 @@
     "aiPersonalizeLabel": "Personnalisation dynamique",
     "aiPersonalizeHint": "Adapte questions, résultats et CTA au visiteur. L'IA produit directement les variantes si tu actives les options ci-dessous.",
     "aiAskFirstName": "Demander le prénom (utilise {name} dans les textes)",
-    "aiAskGender": "Demander le genre (utilise {m|f|x} pour 3 variantes)"
+    "aiAskGender": "Demander le genre (utilise {m|f|x} pour 3 variantes)",
+    "freePlanLimit": "Le plan gratuit est limité à 1 quiz. Passe à un plan payant pour en créer davantage !",
+    "errCreate": "Erreur lors de la création",
+    "errImportFormat": "Formats PDF et DOCX bientôt supportés. Pour l'instant, exporte ton contenu en .txt.",
+    "errImportEmpty": "Fichier vide.",
+    "errImport": "Erreur lors de l'import",
+    "errImportPrefix": "Erreur lors de l'import : {msg}",
+    "importSuccess": "Quiz importé avec succès !",
+    "stepGeneral": "Infos générales",
+    "stepQuestions": "Questions",
+    "stepResults": "Résultats",
+    "stepCapture": "Capture",
+    "stepVirality": "Viralité",
+    "stepShare": "Partage"
   },
   "quizDetail": {
     "backToList": "Retour aux quiz",
