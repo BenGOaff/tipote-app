@@ -115,6 +115,33 @@
     "promptImage": "URL dell'immagine (https://… o /percorso)",
     "invalidUrl": "URL non valido."
   },
+  "tasksPage": {
+    "title": "Attività",
+    "heroTitle": "Tieni il ritmo dell'esecuzione",
+    "heroDesc": "Aggiungi, pianifica e spunta le tue attività per non perdere il ritmo.",
+    "completedBadge": "{done}/{total} completate",
+    "totalBadge": "{total} in totale",
+    "seeStrategy": "Vedi la strategia",
+    "createOneClick": "Crea in 1 clic",
+    "listTitle": "Le mie attività",
+    "emptyHint": "Suggerimento: se hai appena generato la tua strategia, clicca su «Sincronizza attività».",
+    "item": {
+      "editAria": "Modifica l'attività",
+      "deleteAria": "Elimina l'attività",
+      "closeEditAria": "Chiudi la modifica",
+      "markTodo": "Segna come da fare",
+      "markDone": "Segna come completata",
+      "titlePlaceholder": "Titolo…",
+      "save": "Salva",
+      "deleteConfirmTitle": "Eliminare questa attività?",
+      "deleteConfirmDesc": "Questa azione è definitiva.",
+      "titleRequired": "Il titolo è obbligatorio",
+      "errDelete": "Errore durante l'eliminazione",
+      "errNetwork": "Errore di rete",
+      "errUpdate": "Errore durante l'aggiornamento",
+      "errSave": "Errore durante il salvataggio"
+    }
+  },
   "settings": {
     "title": "Impostazioni",
     "tabs": {

@@ -115,6 +115,33 @@
     "promptImage": "Image URL (https://… or /path)",
     "invalidUrl": "Invalid URL."
   },
+  "tasksPage": {
+    "title": "Tasks",
+    "heroTitle": "Keep your execution on track",
+    "heroDesc": "Add, plan and check off your tasks to stay in rhythm.",
+    "completedBadge": "{done}/{total} done",
+    "totalBadge": "{total} total",
+    "seeStrategy": "See strategy",
+    "createOneClick": "Create in 1 click",
+    "listTitle": "My tasks",
+    "emptyHint": "Tip: if you just generated your strategy, click “Sync tasks”.",
+    "item": {
+      "editAria": "Edit task",
+      "deleteAria": "Delete task",
+      "closeEditAria": "Close editing",
+      "markTodo": "Mark as to do",
+      "markDone": "Mark as done",
+      "titlePlaceholder": "Title…",
+      "save": "Save",
+      "deleteConfirmTitle": "Delete this task?",
+      "deleteConfirmDesc": "This action is permanent.",
+      "titleRequired": "Title is required",
+      "errDelete": "Error during deletion",
+      "errNetwork": "Network error",
+      "errUpdate": "Error during update",
+      "errSave": "Error during save"
+    }
+  },
   "settings": {
     "title": "Settings",
     "tabs": {

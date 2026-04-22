@@ -115,6 +115,33 @@
     "promptImage": "رابط الصورة (https://… أو /مسار)",
     "invalidUrl": "رابط غير صالح."
   },
+  "tasksPage": {
+    "title": "المهام",
+    "heroTitle": "حافظ على إيقاع التنفيذ",
+    "heroDesc": "أضِف وخطِّط وعلِّم على مهامك للحفاظ على الإيقاع.",
+    "completedBadge": "{done}/{total} مُنجَزة",
+    "totalBadge": "{total} إجمالي",
+    "seeStrategy": "عرض الاستراتيجية",
+    "createOneClick": "إنشاء بنقرة واحدة",
+    "listTitle": "مهامي",
+    "emptyHint": "نصيحة: إذا أنشأت للتوّ استراتيجيتك، اضغط على «مزامنة المهام».",
+    "item": {
+      "editAria": "تعديل المهمّة",
+      "deleteAria": "حذف المهمّة",
+      "closeEditAria": "إغلاق التحرير",
+      "markTodo": "وسم كـ «للإنجاز»",
+      "markDone": "وسم كـ «مُنجَزة»",
+      "titlePlaceholder": "العنوان…",
+      "save": "حفظ",
+      "deleteConfirmTitle": "حذف هذه المهمّة؟",
+      "deleteConfirmDesc": "هذا الإجراء نهائي.",
+      "titleRequired": "العنوان مطلوب",
+      "errDelete": "خطأ أثناء الحذف",
+      "errNetwork": "خطأ في الشبكة",
+      "errUpdate": "خطأ أثناء التحديث",
+      "errSave": "خطأ أثناء الحفظ"
+    }
+  },
   "settings": {
     "title": "الإعدادات",
     "tabs": {

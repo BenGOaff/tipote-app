@@ -115,6 +115,33 @@
     "promptImage": "URL de l'image (https://… ou /chemin)",
     "invalidUrl": "URL invalide."
   },
+  "tasksPage": {
+    "title": "Tâches",
+    "heroTitle": "Gère ton exécution",
+    "heroDesc": "Ajoute, planifie et coche tes tâches pour rester dans le rythme.",
+    "completedBadge": "{done}/{total} terminées",
+    "totalBadge": "{total} au total",
+    "seeStrategy": "Voir la stratégie",
+    "createOneClick": "Créer en 1 clic",
+    "listTitle": "Mes tâches",
+    "emptyHint": "Astuce : si tu viens de générer ta stratégie, clique sur « Sync tâches ».",
+    "item": {
+      "editAria": "Modifier la tâche",
+      "deleteAria": "Supprimer la tâche",
+      "closeEditAria": "Fermer l'édition",
+      "markTodo": "Marquer comme à faire",
+      "markDone": "Marquer comme faite",
+      "titlePlaceholder": "Titre…",
+      "save": "Sauvegarder",
+      "deleteConfirmTitle": "Supprimer cette tâche ?",
+      "deleteConfirmDesc": "Cette action est définitive.",
+      "titleRequired": "Le titre est requis",
+      "errDelete": "Erreur lors de la suppression",
+      "errNetwork": "Erreur réseau",
+      "errUpdate": "Erreur lors de la mise à jour",
+      "errSave": "Erreur lors de la sauvegarde"
+    }
+  },
   "settings": {
     "title": "Paramètres",
     "tabs": {
