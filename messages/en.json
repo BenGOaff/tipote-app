@@ -2337,7 +2337,19 @@
     "regenerate": "Regenerate",
     "copied": "Copied",
     "copy": "Copy",
-    "regenerateArticle": "Regenerate article (from outline)"
+    "regenerateArticle": "Regenerate article (from outline)",
+    "subjectLabel": "Topic or SEO keyword *",
+    "subjectPlaceholder": "E.g.: How to grow organic traffic",
+    "seoLabel": "Main SEO keyword",
+    "seoPlaceholder": "E.g.: organic traffic",
+    "objectiveLabel": "Objective *",
+    "objectivePlaceholder": "Choose an objective",
+    "linksLabel": "Links to place (optional)",
+    "linksPlaceholder": "Paste important URLs (1 per line)",
+    "ctaLabel": "CTA (optional)",
+    "ctaPlaceholder": "E.g.: Download the free guide",
+    "ctaUrlLabel": "CTA link (optional)",
+    "ctaUrlPlaceholder": "E.g.: https://…"
   },
   "emailForm": {
     "generating": "Generating...",
@@ -2363,7 +2375,12 @@
     "regenerate": "Regenerate",
     "copied": "Copied",
     "copy": "Copy",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "heading": "Video script",
+    "durationLabel": "Duration",
+    "subjectPlaceholder": "E.g.: How to sell without being pushy",
+    "resultLabel": "Generated script",
+    "resultPlaceholder": "The script will appear here…"
   },
   "postActions": {
     "publishOn": "Publish on {label}",

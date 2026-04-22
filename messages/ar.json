@@ -2381,7 +2381,19 @@
     "regenerate": "إعادة التوليد",
     "copied": "تم النسخ",
     "copy": "نسخ",
-    "regenerateArticle": "إعادة توليد المقال (من المخطط)"
+    "regenerateArticle": "إعادة توليد المقال (من المخطط)",
+    "subjectLabel": "الموضوع أو الكلمة المفتاحية SEO *",
+    "subjectPlaceholder": "مثال: كيفية زيادة الزيارات العضوية",
+    "seoLabel": "الكلمة المفتاحية SEO الرئيسية",
+    "seoPlaceholder": "مثال: الزيارات العضوية",
+    "objectiveLabel": "الهدف *",
+    "objectivePlaceholder": "اختر هدفًا",
+    "linksLabel": "الروابط المراد إدراجها (اختياري)",
+    "linksPlaceholder": "ألصق الروابط المهمّة (رابط واحد في كل سطر)",
+    "ctaLabel": "الدعوة للعمل (اختياري)",
+    "ctaPlaceholder": "مثال: تنزيل الدليل المجاني",
+    "ctaUrlLabel": "رابط الدعوة للعمل (اختياري)",
+    "ctaUrlPlaceholder": "مثال: https://…"
   },
   "emailForm": {
     "generating": "جاري التوليد...",
@@ -2407,7 +2419,12 @@
     "regenerate": "إعادة التوليد",
     "copied": "تم النسخ",
     "copy": "نسخ",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "heading": "سيناريو الفيديو",
+    "durationLabel": "المدّة",
+    "subjectPlaceholder": "مثال: كيف تبيع دون أن تكون ملحّاً",
+    "resultLabel": "السيناريو المُولَّد",
+    "resultPlaceholder": "سيظهر السيناريو هنا…"
   },
   "postActions": {
     "publishOn": "نشر على {label}",

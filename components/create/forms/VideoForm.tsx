@@ -162,7 +162,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Script Vidéo</h2>
+        <h2 className="text-xl font-bold">{t("heading")}</h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="w-5 h-5" />
         </Button>
@@ -187,7 +187,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
           </div>
 
           <div className="space-y-2">
-            <Label>Durée</Label>
+            <Label>{t("durationLabel")}</Label>
             <Select value={duration} onValueChange={setDuration}>
               <SelectTrigger>
                 <SelectValue />
@@ -204,7 +204,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
           <div className="space-y-2">
             <Label>Sujet *</Label>
-            <Input placeholder="Ex: Comment vendre sans être pushy" value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <Input placeholder={t("subjectPlaceholder")} value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
           <Button className="w-full" onClick={handleGenerate} disabled={!subject || isGenerating}>
@@ -230,7 +230,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <Label>Script généré</Label>
+              <Label>{t("resultLabel")}</Label>
 
               <Button
                 type="button"
@@ -253,7 +253,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                 value={generatedContent}
                 onChange={(e) => setGeneratedContent(e.target.value)}
                 rows={12}
-                placeholder="Le script apparaîtra ici..."
+                placeholder={t("resultPlaceholder")}
                 className="resize-none"
               />
             )}

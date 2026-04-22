@@ -2337,7 +2337,19 @@
     "regenerate": "Regénérer",
     "copied": "Copié",
     "copy": "Copier",
-    "regenerateArticle": "Regénérer l'article (à partir du plan)"
+    "regenerateArticle": "Regénérer l'article (à partir du plan)",
+    "subjectLabel": "Sujet ou mot-clé SEO *",
+    "subjectPlaceholder": "Ex : Comment augmenter son trafic organique",
+    "seoLabel": "Mot-clé SEO principal",
+    "seoPlaceholder": "Ex : trafic organique",
+    "objectiveLabel": "Objectif *",
+    "objectivePlaceholder": "Choisir un objectif",
+    "linksLabel": "Liens à placer (optionnel)",
+    "linksPlaceholder": "Colle les URLs importantes (1 par ligne)",
+    "ctaLabel": "CTA (optionnel)",
+    "ctaPlaceholder": "Ex : Télécharger le guide gratuit",
+    "ctaUrlLabel": "Lien CTA (optionnel)",
+    "ctaUrlPlaceholder": "Ex : https://…"
   },
   "emailForm": {
     "generating": "Génération...",
@@ -2363,7 +2375,12 @@
     "regenerate": "Regénérer",
     "copied": "Copié",
     "copy": "Copier",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "heading": "Script Vidéo",
+    "durationLabel": "Durée",
+    "subjectPlaceholder": "Ex : Comment vendre sans être pushy",
+    "resultLabel": "Script généré",
+    "resultPlaceholder": "Le script apparaîtra ici…"
   },
   "postActions": {
     "publishOn": "Publier sur {label}",
