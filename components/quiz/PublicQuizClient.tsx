@@ -18,6 +18,7 @@ import {
 } from "@/lib/quizBranding";
 import { sanitizeRichText } from "@/lib/richText";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
+import { makeInterpolator, getGenderLabels, type QuizGender } from "@/lib/quizPersonalization";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -69,13 +70,15 @@ type PublicQuizData = {
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
   capture_country?: boolean | null;
+  ask_first_name?: boolean | null;
+  ask_gender?: boolean | null;
   custom_footer_text?: string | null;
   custom_footer_url?: string | null;
   questions: QuizQuestion[];
   results: QuizResult[];
 };
 
-type Step = "intro" | "quiz" | "email" | "result" | "bonus";
+type Step = "intro" | "personalize" | "quiz" | "email" | "result" | "bonus";
 
 interface PublicQuizClientProps {
   quizId: string;
@@ -135,6 +138,13 @@ type QuizTranslations = {
   confirmShareAfterCopy: string;
   confirmShareHint: string;
   sharingTooFast: string;
+  personalizeTitle: string;
+  personalizeSubtitle: string;
+  personalizeFirstName: string;
+  personalizeFirstNamePlaceholder: string;
+  personalizeGender: string;
+  personalizeGenderHint: string;
+  personalizeContinue: string;
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -178,6 +188,13 @@ const translations: Record<string, QuizTranslations> = {
     confirmShareAfterCopy: "J’ai partagé le lien",
     confirmShareHint: "Colle le lien dans le réseau de ton choix puis reviens ici.",
     sharingTooFast: "Hmm, tu as fermé la fenêtre de partage trop vite. Partage vraiment pour recevoir ton bonus.",
+    personalizeTitle: "Personnalisons ton quiz",
+    personalizeSubtitle: "Dis-nous comment on s’adresse à toi pour rendre les questions plus justes.",
+    personalizeFirstName: "Ton prénom",
+    personalizeFirstNamePlaceholder: "Ex : Marie",
+    personalizeGender: "Comment préfères-tu être désigné·e ?",
+    personalizeGenderHint: "On s’en servira pour accorder correctement les questions, les résultats et les CTA.",
+    personalizeContinue: "Commencer le quiz",
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -219,6 +236,13 @@ const translations: Record<string, QuizTranslations> = {
     confirmShareAfterCopy: "J’ai partagé le lien",
     confirmShareHint: "Collez le lien dans le réseau de votre choix puis revenez ici.",
     sharingTooFast: "Hmm, vous avez fermé la fenêtre de partage trop vite. Partagez vraiment pour recevoir votre bonus.",
+    personalizeTitle: "Personnalisons votre quiz",
+    personalizeSubtitle: "Dites-nous comment on s’adresse à vous pour rendre les questions plus justes.",
+    personalizeFirstName: "Votre prénom",
+    personalizeFirstNamePlaceholder: "Ex : Marie",
+    personalizeGender: "Comment préférez-vous être désigné·e ?",
+    personalizeGenderHint: "On s’en servira pour accorder correctement les questions, les résultats et les CTA.",
+    personalizeContinue: "Commencer le quiz",
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -260,6 +284,13 @@ const translations: Record<string, QuizTranslations> = {
     confirmShareAfterCopy: "I shared the link",
     confirmShareHint: "Paste the link on your network of choice, then come back here.",
     sharingTooFast: "Looks like you closed the share window too quickly. Share for real to get your bonus.",
+    personalizeTitle: "Let’s personalize your quiz",
+    personalizeSubtitle: "A couple of quick details so the questions land just right.",
+    personalizeFirstName: "Your first name",
+    personalizeFirstNamePlaceholder: "e.g. Alex",
+    personalizeGender: "How should we refer to you?",
+    personalizeGenderHint: "We’ll use this to pick the right pronouns in questions, results and CTAs.",
+    personalizeContinue: "Start the quiz",
   },
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
@@ -301,6 +332,13 @@ const translations: Record<string, QuizTranslations> = {
     confirmShareAfterCopy: "He compartido el enlace",
     confirmShareHint: "Pega el enlace en la red que quieras y vuelve aquí.",
     sharingTooFast: "Parece que cerraste la ventana demasiado rápido. Comparte de verdad para recibir tu bonus.",
+    personalizeTitle: "Personalicemos tu quiz",
+    personalizeSubtitle: "Cuéntanos cómo hablarte para que las preguntas suenen justo.",
+    personalizeFirstName: "Tu nombre",
+    personalizeFirstNamePlaceholder: "Ej: Ana",
+    personalizeGender: "¿Cómo prefieres que te tratemos?",
+    personalizeGenderHint: "Lo usaremos para ajustar los pronombres en las preguntas, resultados y CTAs.",
+    personalizeContinue: "Empezar el quiz",
   },
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
@@ -342,6 +380,13 @@ const translations: Record<string, QuizTranslations> = {
     confirmShareAfterCopy: "Ich habe den Link geteilt",
     confirmShareHint: "Füge den Link in deinem Netzwerk ein und komm dann hierher zurück.",
     sharingTooFast: "Du hast das Fenster zu schnell geschlossen. Teile wirklich, um deinen Bonus zu erhalten.",
+    personalizeTitle: "Personalisieren wir dein Quiz",
+    personalizeSubtitle: "Kurz zwei Angaben, damit die Fragen besser zu dir passen.",
+    personalizeFirstName: "Dein Vorname",
+    personalizeFirstNamePlaceholder: "z. B. Alex",
+    personalizeGender: "Wie sollen wir dich ansprechen?",
+    personalizeGenderHint: "Wir verwenden das für die richtigen Pronomen in Fragen, Ergebnissen und CTAs.",
+    personalizeContinue: "Quiz starten",
   },
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
@@ -383,6 +428,13 @@ const translations: Record<string, QuizTranslations> = {
     confirmShareAfterCopy: "Eu compartilhei o link",
     confirmShareHint: "Cole o link na rede da sua escolha e depois volte aqui.",
     sharingTooFast: "Parece que você fechou a janela rápido demais. Compartilhe de verdade para receber seu bônus.",
+    personalizeTitle: "Vamos personalizar seu quiz",
+    personalizeSubtitle: "Dois dados rápidos para ajustar as perguntas direitinho.",
+    personalizeFirstName: "Seu nome",
+    personalizeFirstNamePlaceholder: "Ex: Ana",
+    personalizeGender: "Como prefere que te chamemos?",
+    personalizeGenderHint: "Usaremos isso para acertar os pronomes nas perguntas, resultados e CTAs.",
+    personalizeContinue: "Começar o quiz",
   },
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
@@ -424,6 +476,13 @@ const translations: Record<string, QuizTranslations> = {
     confirmShareAfterCopy: "Ho condiviso il link",
     confirmShareHint: "Incolla il link sul social che preferisci e poi torna qui.",
     sharingTooFast: "Hai chiuso la finestra troppo in fretta. Condividi davvero per ricevere il bonus.",
+    personalizeTitle: "Personalizziamo il tuo quiz",
+    personalizeSubtitle: "Due dettagli veloci per rendere le domande più adatte.",
+    personalizeFirstName: "Il tuo nome",
+    personalizeFirstNamePlaceholder: "Es: Anna",
+    personalizeGender: "Come preferisci essere chiamat·a?",
+    personalizeGenderHint: "Useremo questi dati per adattare pronomi e accordi nelle domande, risultati e CTA.",
+    personalizeContinue: "Inizia il quiz",
   },
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
@@ -465,6 +524,13 @@ const translations: Record<string, QuizTranslations> = {
     confirmShareAfterCopy: "لقد شاركت الرابط",
     confirmShareHint: "ألصق الرابط على الشبكة التي تختارها ثم عد إلى هنا.",
     sharingTooFast: "أغلقت نافذة المشاركة بسرعة. شارك فعلاً لتستلم مكافأتك.",
+    personalizeTitle: "هيا نضبط الاختبار",
+    personalizeSubtitle: "تفاصيل سريعة لنجعل الأسئلة أكثر ملاءمة.",
+    personalizeFirstName: "اسمك الأول",
+    personalizeFirstNamePlaceholder: "مثالًا: ياسمين",
+    personalizeGender: "كيف تُفضّل أن نخاطبك؟",
+    personalizeGenderHint: "سنستخدمها لضبط الضمائر في الأسئلة والنتائج.",
+    personalizeContinue: "ابدأ الاختبار",
   },
 };
 
@@ -500,6 +566,7 @@ export default function PublicQuizClient({
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
+  const [gender, setGender] = useState<"m" | "f" | "x" | null>(null);
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -512,6 +579,11 @@ export default function PublicQuizClient({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const t = getT(quiz?.locale, quiz?.address_form);
+
+  const interp = useCallback(
+    (text: string | null | undefined) => makeInterpolator({ name: firstName, gender })(text),
+    [firstName, gender],
+  );
 
   // ─── Dynamic Google Font injection (WYSIWYG with editor preview) ───
   useEffect(() => {
@@ -750,6 +822,7 @@ export default function PublicQuizClient({
             last_name: lastName.trim() || undefined,
             phone: phone.trim() || undefined,
             country: country.trim() || undefined,
+            gender: gender ?? undefined,
             result_id: profile?.id ?? null,
             consent_given: consent,
             answers: answersPayload,
@@ -995,11 +1068,69 @@ export default function PublicQuizClient({
               </>
             )}
 
-            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => { trackEvent("start"); setStep("quiz"); }}>
+            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => { trackEvent("start"); setStep((quiz.ask_first_name || quiz.ask_gender) ? "personalize" : "quiz"); }}>
               {quiz.start_button_text?.trim() || t.start}
             </Button>
         </div>
         <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
+      </div>
+    );
+  }
+
+  // STEP: Personalize (first name + gender) — shown before quiz questions when enabled
+  if (step === "personalize") {
+    const genderLabels = getGenderLabels(quiz.locale);
+    const canContinue = (!quiz.ask_first_name || firstName.trim().length > 0)
+                     && (!quiz.ask_gender || gender !== null);
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16" style={rootStyle}>
+        <div className="max-w-md w-full space-y-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center">{t.personalizeTitle}</h2>
+          <p className="text-muted-foreground text-center">{t.personalizeSubtitle}</p>
+          {quiz.ask_first_name && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">{t.personalizeFirstName}</label>
+              <Input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value.slice(0, 100))}
+                placeholder={t.personalizeFirstNamePlaceholder}
+                className="h-12"
+                autoFocus
+              />
+            </div>
+          )}
+          {quiz.ask_gender && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t.personalizeGender}</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["m", "f", "x"] as QuizGender[]).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGender(g)}
+                    className={`h-12 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      gender === g
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-input hover:border-primary/40"
+                    }`}
+                    style={gender === g ? { borderColor: branding.primary, color: branding.primary, backgroundColor: `${branding.primary}15` } : undefined}
+                  >
+                    {genderLabels[g]}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">{t.personalizeGenderHint}</p>
+            </div>
+          )}
+          <Button
+            size="lg"
+            className="w-full h-12 rounded-full"
+            disabled={!canContinue}
+            onClick={() => setStep("quiz")}
+          >
+            {t.personalizeContinue}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -1026,7 +1157,7 @@ export default function PublicQuizClient({
                 {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
               </p>
 
-              <h2 className="text-2xl sm:text-4xl font-bold leading-tight">{q.question_text}</h2>
+              <h2 className="text-2xl sm:text-4xl font-bold leading-tight">{interp(q.question_text)}</h2>
 
               <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                 {q.options.map((opt, oi) => {
@@ -1041,7 +1172,7 @@ export default function PublicQuizClient({
                           : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
                       }`}
                     >
-                      <span className="text-base font-medium">{opt.text}</span>
+                      <span className="text-base font-medium">{interp(opt.text)}</span>
                     </button>
                   );
                 })}
@@ -1072,11 +1203,11 @@ export default function PublicQuizClient({
         {shareOverlay}
         <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
             <h2 className="text-2xl sm:text-4xl font-bold text-center">
-              {quiz.capture_heading || t.captureHeadingDefault}
+              {interp(quiz.capture_heading) || t.captureHeadingDefault}
             </h2>
             <RichParagraph
               className="text-muted-foreground text-center text-lg"
-              text={quiz.capture_subtitle || t.captureSubtitleDefault}
+              text={interp(quiz.capture_subtitle) || t.captureSubtitleDefault}
             />
 
             <div className="space-y-4">
@@ -1379,53 +1510,60 @@ export default function PublicQuizClient({
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
             <div className="space-y-3">
               <h2 className="text-3xl sm:text-5xl font-bold leading-tight text-primary">
-                {resultProfile?.title ?? t.resultFallback}
+                {interp(resultProfile?.title) || t.resultFallback}
               </h2>
             </div>
 
-            {resultProfile?.description && (
-              isHtml(resultProfile.description) ? (
+            {resultProfile?.description && (() => {
+              const desc = interp(resultProfile.description);
+              return isHtml(desc) ? (
                 <div
                   className="tipote-quiz-rich text-muted-foreground text-base leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(resultProfile.description) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                 />
               ) : (
-                <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{resultProfile.description}</p>
-              )
-            )}
+                <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{desc}</p>
+              );
+            })()}
 
-            {resultProfile?.insight && (
-              <div className="p-4 rounded-xl bg-muted/50 border">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{quiz.result_insight_heading?.trim() || t.insight}</p>
-                {isHtml(resultProfile.insight) ? (
-                  <div
-                    className="tipote-quiz-rich text-sm leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(resultProfile.insight) }}
-                  />
-                ) : (
-                  <p className="text-sm leading-relaxed whitespace-pre-line">{resultProfile.insight}</p>
-                )}
-              </div>
-            )}
+            {resultProfile?.insight && (() => {
+              const ins = interp(resultProfile.insight);
+              return (
+                <div className="p-4 rounded-xl bg-muted/50 border">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{quiz.result_insight_heading?.trim() || t.insight}</p>
+                  {isHtml(ins) ? (
+                    <div
+                      className="tipote-quiz-rich text-sm leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
+                    />
+                  ) : (
+                    <p className="text-sm leading-relaxed whitespace-pre-line">{ins}</p>
+                  )}
+                </div>
+              );
+            })()}
 
-            {resultProfile?.projection && (
-              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{quiz.result_projection_heading?.trim() || t.projection}</p>
-                {isHtml(resultProfile.projection) ? (
-                  <div
-                    className="tipote-quiz-rich text-sm leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(resultProfile.projection) }}
-                  />
-                ) : (
-                  <p className="text-sm leading-relaxed whitespace-pre-line">{resultProfile.projection}</p>
-                )}
-              </div>
-            )}
+            {resultProfile?.projection && (() => {
+              const proj = interp(resultProfile.projection);
+              return (
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                  <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{quiz.result_projection_heading?.trim() || t.projection}</p>
+                  {isHtml(proj) ? (
+                    <div
+                      className="tipote-quiz-rich text-sm leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
+                    />
+                  ) : (
+                    <p className="text-sm leading-relaxed whitespace-pre-line">{proj}</p>
+                  )}
+                </div>
+              );
+            })()}
 
           {/* CTA — per-result URL takes priority over global */}
           {(() => {
             const ctaUrl = resultProfile?.cta_url || quiz.cta_url;
-            const ctaText = resultProfile?.cta_text || quiz.cta_text;
+            const ctaText = interp(resultProfile?.cta_text || quiz.cta_text);
             return ctaText && ctaUrl ? (
               <Button size="lg" className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug" asChild>
                 <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
