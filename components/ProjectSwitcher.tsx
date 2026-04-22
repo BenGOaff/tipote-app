@@ -8,6 +8,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   ChevronDown,
   Plus,
@@ -51,6 +52,8 @@ const ELITE_UPGRADE_URL = "https://www.tipote.com/tipote-elite-mensuel";
 
 export function ProjectSwitcher() {
   const { toast } = useToast();
+  const t = useTranslations("projectSwitcher");
+  const tc = useTranslations("common");
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [plan, setPlan] = useState<string>("free");
@@ -138,18 +141,18 @@ export function ProjectSwitcher() {
           setShowUpsellDialog(true);
           return;
         }
-        throw new Error(json.message || json.error || "Erreur");
+        throw new Error(json.message || json.error || tc("error"));
       }
 
-      toast({ title: "Projet créé", description: `"${trimmed}" est prêt.` });
+      toast({ title: t("toastCreated"), description: t("toastCreatedDesc", { name: trimmed }) });
       setShowCreateDialog(false);
 
       // Switcher vers le nouveau projet (redirige vers onboarding)
       switchProject(json.project.id);
     } catch (e) {
       toast({
-        title: "Impossible de créer le projet",
-        description: e instanceof Error ? e.message : "Erreur",
+        title: t("toastCreateError"),
+        description: e instanceof Error ? e.message : tc("error"),
         variant: "destructive",
       });
     } finally {
@@ -177,17 +180,17 @@ export function ProjectSwitcher() {
         body: JSON.stringify({ id: targetProject.id, name: trimmed }),
       });
       const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "Erreur");
+      if (!json.ok) throw new Error(json.error || tc("error"));
 
       setProjects((prev) =>
         prev.map((p) => (p.id === targetProject.id ? { ...p, name: trimmed } : p)),
       );
-      toast({ title: "Projet renommé" });
+      toast({ title: t("toastRenamed") });
       setShowRenameDialog(false);
     } catch (e) {
       toast({
-        title: "Impossible de renommer",
-        description: e instanceof Error ? e.message : "Erreur",
+        title: t("toastRenameError"),
+        description: e instanceof Error ? e.message : tc("error"),
         variant: "destructive",
       });
     } finally {
@@ -209,9 +212,9 @@ export function ProjectSwitcher() {
         method: "DELETE",
       });
       const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "Erreur");
+      if (!json.ok) throw new Error(json.error || tc("error"));
 
-      toast({ title: "Projet supprimé" });
+      toast({ title: t("toastDeleted") });
       setShowDeleteDialog(false);
 
       // Si on supprime le projet actif, switcher au default
@@ -226,8 +229,8 @@ export function ProjectSwitcher() {
       setProjects((prev) => prev.filter((p) => p.id !== targetProject.id));
     } catch (e) {
       toast({
-        title: "Impossible de supprimer",
-        description: e instanceof Error ? e.message : "Erreur",
+        title: t("toastDeleteError"),
+        description: e instanceof Error ? e.message : tc("error"),
         variant: "destructive",
       });
     } finally {
@@ -255,10 +258,10 @@ export function ProjectSwitcher() {
         <DropdownMenuTrigger asChild>
           <button
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors text-sm font-medium max-w-[220px]"
-            title="Changer de projet"
+            title={t("switchTooltip")}
           >
             <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="truncate">{activeProject?.name ?? "Mon Tipote"}</span>
+            <span className="truncate">{activeProject?.name ?? t("defaultName")}</span>
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
           </button>
         </DropdownMenuTrigger>
@@ -286,7 +289,7 @@ export function ProjectSwitcher() {
                 <span className="truncate">{proj.name}</span>
                 {proj.is_default && (
                   <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded flex-shrink-0">
-                    principal
+                    {t("defaultBadge")}
                   </span>
                 )}
               </div>
@@ -295,7 +298,7 @@ export function ProjectSwitcher() {
                 <button
                   data-action="rename"
                   className="p-1 rounded hover:bg-accent"
-                  title="Renommer"
+                  title={t("renameTooltip")}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRenameClick(proj);
@@ -307,7 +310,7 @@ export function ProjectSwitcher() {
                   <button
                     data-action="delete"
                     className="p-1 rounded hover:bg-destructive/10"
-                    title="Supprimer"
+                    title={t("deleteTooltip")}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteClick(proj);
@@ -322,7 +325,7 @@ export function ProjectSwitcher() {
 
           {!projects.length && (
             <div className="px-2 py-3 text-xs text-muted-foreground text-center">
-              Gère plusieurs business ou clients depuis un seul compte.
+              {t("emptyHint")}
             </div>
           )}
 
@@ -333,7 +336,7 @@ export function ProjectSwitcher() {
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>Nouveau projet</span>
+            <span>{t("newProject")}</span>
             {plan !== "elite" && (
               <Crown className="w-3.5 h-3.5 text-amber-500 ml-auto" />
             )}
@@ -345,15 +348,14 @@ export function ProjectSwitcher() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nouveau projet</DialogTitle>
+            <DialogTitle>{t("newProject")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Chaque projet est un Tipote indépendant : stratégie, contenus, tâches...
-            tout repart de zéro. Les crédits IA sont partagés entre tous tes projets.
+            {t("createDesc")}
           </p>
           <Input
             ref={inputRef}
-            placeholder="Nom du projet (ex : Agence Dupont, Coaching Santé...)"
+            placeholder={t("namePlaceholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
@@ -363,7 +365,7 @@ export function ProjectSwitcher() {
           />
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
+              <Button variant="outline">{tc("cancel")}</Button>
             </DialogClose>
             <Button
               onClick={handleCreateProject}
@@ -374,7 +376,7 @@ export function ProjectSwitcher() {
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              Créer
+              {t("createBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -386,20 +388,18 @@ export function ProjectSwitcher() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-500" />
-              Fonctionnalité Elite
+              {t("upsellTitle")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Le multi-projets te permet de gérer plusieurs business ou clients
-            depuis un seul compte Tipote. Chaque projet est totalement
-            indépendant avec sa propre stratégie, ses contenus et ses tâches.
+            {t("upsellDesc")}
           </p>
           <p className="text-sm font-medium">
-            Cette fonctionnalité est réservée au plan Elite.
+            {t("upsellReserved")}
           </p>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Fermer</Button>
+              <Button variant="outline">{tc("close")}</Button>
             </DialogClose>
             <Button
               variant="hero"
@@ -408,7 +408,7 @@ export function ProjectSwitcher() {
               }}
             >
               <Crown className="w-4 h-4 mr-2" />
-              Passer Elite
+              {t("upgradeCta")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -418,7 +418,7 @@ export function ProjectSwitcher() {
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Renommer le projet</DialogTitle>
+            <DialogTitle>{t("renameTitle")}</DialogTitle>
           </DialogHeader>
           <Input
             ref={inputRef}
@@ -431,11 +431,11 @@ export function ProjectSwitcher() {
           />
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
+              <Button variant="outline">{tc("cancel")}</Button>
             </DialogClose>
             <Button onClick={handleRename} disabled={!newName.trim() || submitting}>
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Renommer
+              {t("renameBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -445,16 +445,14 @@ export function ProjectSwitcher() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Supprimer le projet</DialogTitle>
+            <DialogTitle>{t("deleteTitle")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Tu es sur le point de supprimer <b>&quot;{targetProject?.name}&quot;</b>.
-            Toutes les données associées (stratégie, contenus, tâches, quiz...)
-            seront définitivement supprimées. Cette action est irréversible.
+            {t("deleteDesc", { name: targetProject?.name ?? "" })}
           </p>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
+              <Button variant="outline">{tc("cancel")}</Button>
             </DialogClose>
             <Button
               variant="destructive"
@@ -462,7 +460,7 @@ export function ProjectSwitcher() {
               disabled={submitting}
             >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Supprimer définitivement
+              {t("deleteConfirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

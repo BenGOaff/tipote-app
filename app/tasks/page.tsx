@@ -7,6 +7,7 @@
 
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 
 import AppShell from '@/components/AppShell'
 import { getSupabaseServerClient } from '@/lib/supabaseServer'
@@ -43,6 +44,8 @@ function toTaskItem(row: TaskRow): TaskItem {
 }
 
 export default async function TasksPage() {
+  const t = await getTranslations('tasksPage')
+  const tc = await getTranslations('common')
   const supabase = await getSupabaseServerClient()
 
   const {
@@ -75,10 +78,10 @@ export default async function TasksPage() {
   return (
     <AppShell
       userEmail={userEmail}
-      headerTitle="Tâches"
+      headerTitle={t('title')}
       headerRight={
         <Button asChild variant="secondary" size="sm">
-          <Link href="/strategy">Retour</Link>
+          <Link href="/strategy">{tc('back')}</Link>
         </Button>
       }
     >
@@ -142,9 +145,9 @@ export default async function TasksPage() {
               </div>
 
               <div className="min-w-0">
-                <h1 className="text-lg font-semibold leading-tight">Gère ton exécution</h1>
+                <h1 className="text-lg font-semibold leading-tight">{t('heroTitle')}</h1>
                 <p className="text-sm text-muted-foreground">
-                  Ajoute, planifie et coche tes tâches pour rester dans le rythme.
+                  {t('heroDesc')}
                 </p>
 
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -172,21 +175,21 @@ export default async function TasksPage() {
                       </svg>
                     </span>
                     <span>
-                      {doneCount}/{totalCount} terminées
+                      {t('completedBadge', { done: doneCount, total: totalCount })}
                     </span>
                   </Badge>
 
-                  <Badge variant="secondary">{totalCount} au total</Badge>
+                  <Badge variant="secondary">{t('totalBadge', { total: totalCount })}</Badge>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="secondary" size="sm">
-                <Link href="/strategy">Voir la stratégie</Link>
+                <Link href="/strategy">{t('seeStrategy')}</Link>
               </Button>
               <Button asChild size="sm">
-                <Link href="/create">Créer en 1 clic</Link>
+                <Link href="/create">{t('createOneClick')}</Link>
               </Button>
             </div>
           </div>
@@ -195,7 +198,7 @@ export default async function TasksPage() {
         {/* Liste (tâches actives uniquement) */}
         <Card className="p-6">
           <TaskList
-            title="Mes tâches"
+            title={t('listTitle')}
             tasks={activeTasks}
             showSync
             allowCreate
@@ -210,7 +213,7 @@ export default async function TasksPage() {
 
         {tasks.length === 0 ? (
           <div className="text-sm text-muted-foreground">
-            Astuce : si tu viens de générer ta stratégie, clique sur <span className="font-medium">Sync tâches</span>.
+            {t('emptyHint')}
           </div>
         ) : null}
       </div>

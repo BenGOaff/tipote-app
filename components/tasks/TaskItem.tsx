@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 import { Button } from '@/components/ui/button'
@@ -62,6 +63,8 @@ export default function TaskItem({
   allowDelete = false,
 }: Props) {
   const router = useRouter()
+  const ti = useTranslations('tasksPage.item')
+  const tc = useTranslations('common')
 
   const initialDone = useMemo(() => isDone(status), [status])
   const [optimisticDone, setOptimisticDone] = useState<boolean>(initialDone)
@@ -103,14 +106,14 @@ export default function TaskItem({
 
         if (!res.ok) {
           setOptimisticDone((v) => !v)
-          setInlineError(extractErrorMessage(json, 'Erreur lors de la mise à jour'))
+          setInlineError(extractErrorMessage(json, ti('errUpdate')))
           return
         }
 
         router.refresh()
       } catch {
         setOptimisticDone((v) => !v)
-        setInlineError('Erreur réseau')
+        setInlineError(ti('errNetwork'))
       }
     })
   }
@@ -120,7 +123,7 @@ export default function TaskItem({
 
     const t = cleanString(draftTitle)
     if (!t) {
-      setInlineError('Le titre est requis')
+      setInlineError(ti('titleRequired'))
       return
     }
 
@@ -137,14 +140,14 @@ export default function TaskItem({
         const json: unknown = await res.json().catch(() => null)
 
         if (!res.ok) {
-          setInlineError(extractErrorMessage(json, 'Erreur lors de la sauvegarde'))
+          setInlineError(extractErrorMessage(json, ti('errSave')))
           return
         }
 
         setEditing(false)
         router.refresh()
       } catch {
-        setInlineError('Erreur réseau')
+        setInlineError(ti('errNetwork'))
       }
     })
   }
@@ -159,13 +162,13 @@ export default function TaskItem({
         const json: unknown = await res.json().catch(() => null)
 
         if (!res.ok) {
-          setDeleteError(extractErrorMessage(json, 'Erreur lors de la suppression'))
+          setDeleteError(extractErrorMessage(json, ti('errDelete')))
           return
         }
 
         router.refresh()
       } catch {
-        setDeleteError('Erreur réseau')
+        setDeleteError(ti('errNetwork'))
       }
     })
   }
@@ -184,7 +187,7 @@ export default function TaskItem({
           size="icon"
           onClick={toggleDone}
           disabled={isPending}
-          aria-label={done ? 'Marquer comme à faire' : 'Marquer comme faite'}
+          aria-label={done ? ti('markTodo') : ti('markDone')}
           className={cn('mt-0.5 h-8 w-8 rounded-full', done ? 'border-slate-300' : '')}
         >
           {done ? <Check className="h-4 w-4" /> : null}
@@ -197,7 +200,7 @@ export default function TaskItem({
                 value={draftTitle}
                 onChange={(e) => setDraftTitle(e.target.value)}
                 disabled={isPending}
-                placeholder="Titre…"
+                placeholder={ti('titlePlaceholder')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') saveEdits()
                   if (e.key === 'Escape') {
@@ -210,7 +213,7 @@ export default function TaskItem({
 
               <div className="flex items-center gap-2">
                 <Button type="button" size="sm" onClick={saveEdits} disabled={isPending || !draftTitle.trim()}>
-                  Sauvegarder
+                  {ti('save')}
                 </Button>
                 <Button
                   type="button"
@@ -223,7 +226,7 @@ export default function TaskItem({
                   }}
                   disabled={isPending}
                 >
-                  Annuler
+                  {tc('cancel')}
                 </Button>
               </div>
 
@@ -247,7 +250,7 @@ export default function TaskItem({
                       variant="ghost"
                       size="icon"
                       disabled={isPending}
-                      aria-label="Modifier la tâche"
+                      aria-label={ti('editAria')}
                       onClick={() => {
                         setDeleteError(null)
                         setInlineError(null)
@@ -267,7 +270,7 @@ export default function TaskItem({
                           variant="ghost"
                           size="icon"
                           disabled={isPending}
-                          aria-label="Supprimer la tâche"
+                          aria-label={ti('deleteAria')}
                           onClick={() => {
                             setInlineError(null)
                             setDeleteError(null)
@@ -279,14 +282,14 @@ export default function TaskItem({
 
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Supprimer cette tâche ?</AlertDialogTitle>
-                          <AlertDialogDescription>Cette action est définitive.</AlertDialogDescription>
+                          <AlertDialogTitle>{ti('deleteConfirmTitle')}</AlertDialogTitle>
+                          <AlertDialogDescription>{ti('deleteConfirmDesc')}</AlertDialogDescription>
                         </AlertDialogHeader>
 
                         {deleteError ? <p className="text-sm text-destructive">{deleteError}</p> : null}
 
                         <AlertDialogFooter>
-                          <AlertDialogCancel disabled={isPending}>Annuler</AlertDialogCancel>
+                          <AlertDialogCancel disabled={isPending}>{tc('cancel')}</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={(e) => {
                               e.preventDefault()
@@ -294,7 +297,7 @@ export default function TaskItem({
                             }}
                             disabled={isPending}
                           >
-                            Supprimer
+                            {tc('delete')}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -313,7 +316,7 @@ export default function TaskItem({
             size="icon"
             className="mt-0.5"
             disabled={isPending}
-            aria-label="Fermer l'édition"
+            aria-label={ti('closeEditAria')}
             onClick={() => {
               setDraftTitle(title)
               setInlineError(null)
