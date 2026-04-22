@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Monitor, Tablet, Smartphone } from "lucide-react";
 
@@ -40,6 +41,7 @@ export default function QuizPreview({
   captureFirstName, captureLastName, capturePhone, captureCountry,
   ctaText, brandColorPrimary, brandColorAccent, brandFont, brandLogoUrl,
 }: QuizPreviewProps) {
+  const t = useTranslations("quizPreview");
   const [device, setDevice] = useState<Device>("desktop");
   const [previewStep, setPreviewStep] = useState<"intro" | "question" | "capture" | "result">("intro");
   const [currentQ, setCurrentQ] = useState(0);
@@ -52,12 +54,12 @@ export default function QuizPreview({
     <div className="space-y-4">
       {/* Device toggles */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Aperçu en direct</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("livePreview")}</h3>
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
           {([
-            { key: "desktop" as Device, icon: Monitor, label: "Desktop" },
-            { key: "tablet" as Device, icon: Tablet, label: "Tablette" },
-            { key: "mobile" as Device, icon: Smartphone, label: "Mobile" },
+            { key: "desktop" as Device, icon: Monitor, label: t("deviceDesktop") },
+            { key: "tablet" as Device, icon: Tablet, label: t("deviceTablet") },
+            { key: "mobile" as Device, icon: Smartphone, label: t("deviceMobile") },
           ]).map(({ key, icon: Icon, label }) => (
             <Button
               key={key}
@@ -76,10 +78,10 @@ export default function QuizPreview({
       {/* Preview step selector */}
       <div className="flex gap-2 flex-wrap">
         {([
-          { key: "intro" as const, label: "Intro" },
-          { key: "question" as const, label: `Question ${currentQ + 1}` },
-          { key: "capture" as const, label: "Capture" },
-          { key: "result" as const, label: "Résultat" },
+          { key: "intro" as const, label: t("stepIntro") },
+          { key: "question" as const, label: t("stepQuestion", { n: currentQ + 1 }) },
+          { key: "capture" as const, label: t("stepCapture") },
+          { key: "result" as const, label: t("stepResult") },
         ]).map(({ key, label }) => (
           <button
             key={key}
@@ -116,17 +118,17 @@ export default function QuizPreview({
             {previewStep === "intro" && (
               <>
                 <h1 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: primaryColor }}>
-                  {title || "Titre du quiz"}
+                  {title || t("defaultTitle")}
                 </h1>
                 <p className="text-base text-gray-600 mb-8 max-w-md">
-                  {introduction || "Description du quiz..."}
+                  {introduction || t("defaultIntro")}
                 </p>
                 <button
                   className="px-8 py-3 rounded-xl text-white font-semibold text-base transition-all hover:opacity-90 shadow-md"
                   style={{ backgroundColor: primaryColor }}
                   onClick={() => { setPreviewStep("question"); setCurrentQ(0); }}
                 >
-                  {ctaText || "Commencer"}
+                  {ctaText || t("defaultCta")}
                 </button>
               </>
             )}
@@ -137,7 +139,7 @@ export default function QuizPreview({
                 {/* Progress */}
                 <div className="w-full mb-6">
                   <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Question {currentQ + 1} / {questions.length}</span>
+                    <span>{t("questionProgress", { n: currentQ + 1, total: questions.length })}</span>
                     <span>{Math.round(((currentQ + 1) / questions.length) * 100)}%</span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -152,7 +154,7 @@ export default function QuizPreview({
                 </div>
 
                 <h2 className="text-xl sm:text-2xl font-bold mb-6" style={{ color: primaryColor }}>
-                  {questions[currentQ].question_text || "Texte de la question ?"}
+                  {questions[currentQ].question_text || t("defaultQuestion")}
                 </h2>
 
                 <div className="space-y-3 w-full max-w-md">
@@ -175,7 +177,7 @@ export default function QuizPreview({
                       }}
                     >
                       <span className="font-medium text-xs text-gray-400 mr-2">{String.fromCharCode(65 + i)}</span>
-                      {opt.text || `Option ${i + 1}`}
+                      {opt.text || t("defaultOption", { n: i + 1 })}
                     </button>
                   ))}
                 </div>
@@ -187,7 +189,7 @@ export default function QuizPreview({
                       className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
                       onClick={() => setCurrentQ(currentQ - 1)}
                     >
-                      ← Précédent
+                      {t("prevNav")}
                     </button>
                   )}
                 </div>
@@ -198,25 +200,25 @@ export default function QuizPreview({
             {previewStep === "capture" && (
               <>
                 <h2 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: primaryColor }}>
-                  {captureHeading || "Découvre ton résultat"}
+                  {captureHeading || t("defaultCaptureHeading")}
                 </h2>
                 <p className="text-sm text-gray-500 mb-6">
-                  {captureSubtitle || "Entre tes informations pour voir ton profil personnalisé"}
+                  {captureSubtitle || t("defaultCaptureSubtitle")}
                 </p>
 
                 <div className="space-y-3 w-full max-w-sm">
-                  <input placeholder="Email *" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />
-                  {captureFirstName && <input placeholder="Prénom" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
-                  {captureLastName && <input placeholder="Nom" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
-                  {capturePhone && <input placeholder="Téléphone" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
-                  {captureCountry && <input placeholder="Pays" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
+                  <input placeholder={t("emailPh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />
+                  {captureFirstName && <input placeholder={t("firstNamePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
+                  {captureLastName && <input placeholder={t("lastNamePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
+                  {capturePhone && <input placeholder={t("phonePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
+                  {captureCountry && <input placeholder={t("countryPh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
 
                   <button
                     className="w-full px-6 py-3 rounded-xl text-white font-semibold transition-all"
                     style={{ backgroundColor: primaryColor }}
                     onClick={() => setPreviewStep("result")}
                   >
-                    Voir mon résultat
+                    {t("seeResultBtn")}
                   </button>
                 </div>
               </>
@@ -229,10 +231,10 @@ export default function QuizPreview({
                   <span className="text-2xl">🎯</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold mb-3" style={{ color: primaryColor }}>
-                  {results[0].title || "Ton profil"}
+                  {results[0].title || t("defaultResultTitle")}
                 </h2>
                 <p className="text-sm text-gray-600 mb-6 max-w-md">
-                  {results[0].description || "Description du résultat..."}
+                  {results[0].description || t("defaultResultDesc")}
                 </p>
                 {results[0].cta_text && (
                   <button

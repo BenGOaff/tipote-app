@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -154,6 +155,7 @@ function SettingsToggle({ label, hint, checked, onChange, disabled }: {
 function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelete }: {
   id: string; index: number; label: string; onClick: () => void; onRemove: () => void; canDelete: boolean;
 }) {
+  const t = useTranslations("quizDetail");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -162,7 +164,7 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
   };
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-1 group">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label="Réordonner">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label={t("reorderAria")}>
         <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
       <button onClick={onClick} className="flex-1 text-left px-2 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
@@ -181,6 +183,7 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
 // Main component
 export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const router = useRouter();
+  const t = useTranslations("quizDetail");
 
   const [loading, setLoading] = useState(true);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
@@ -352,7 +355,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Non connecté"); return; }
+      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
       const ext = file.name.split(".").pop() ?? "png";
       const path = `logos/${user.id}/logo.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
@@ -366,7 +369,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         body: JSON.stringify({ brand_logo_url: publicUrl }),
       });
       setBrandLogoUrl(publicUrl);
-      toast.success("Logo chargé");
+      toast.success(t("toastLogoUploaded"));
     } catch (err) {
       console.error("Logo upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
@@ -385,14 +388,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Non connecté"); return; }
+      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
       const ext = file.name.split(".").pop() ?? "png";
       const path = `bonus/${user.id}/${quizId}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setBonusImageUrl(urlData.publicUrl);
-      toast.success("Image du bonus chargée");
+      toast.success(t("toastBonusImgUploaded"));
     } catch (err) {
       console.error("Bonus image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
@@ -454,23 +457,23 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       });
       const json = await res.json();
       if (!json?.ok) {
-        if (res.status === 409 && json?.error === "SLUG_TAKEN") { toast.error("Ce slug est déjà utilisé"); return; }
+        if (res.status === 409 && json?.error === "SLUG_TAKEN") { toast.error(t("toastSlugTaken")); return; }
         throw new Error(json?.error || "Error");
       }
-      toast.success("Sauvegardé !");
+      toast.success(t("toastSaved"));
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Erreur"); } finally { setSaving(false); }
   };
 
   const handleToggleStatus = async () => {
     const ns = status === "active" ? "draft" : "active";
     setStatus(ns);
-    try { await fetch(`/api/quiz/${quizId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) }); toast.success(ns === "active" ? "Quiz publié !" : "Quiz désactivé"); } catch { setStatus(status); }
+    try { await fetch(`/api/quiz/${quizId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) }); toast.success(ns === "active" ? t("toastPublished") : t("toastDeactivated")); } catch { setStatus(status); }
   };
 
   // Public URL — prefer custom slug when set, fall back to UUID
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
-  const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success("Lien copié !"); setTimeout(() => setCopied(false), 2000); }); };
+  const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("toastLinkCopied")); setTimeout(() => setCopied(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
   const dndSensors = useSensors(
@@ -501,7 +504,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const removeResult = (i: number) => { setEditResults(p => p.filter((_, ri) => ri !== i)); setEditQuestions(p => p.map(q => ({ ...q, options: q.options.map(o => ({ ...o, result_index: o.result_index > i ? o.result_index - 1 : o.result_index === i ? 0 : o.result_index })) }))); };
   const handleExportCSV = () => {
     if (!leads.length) return;
-    const csv = ["Email,Prénom,Nom,Résultat,Date", ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", l.result_title ?? "", l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
+    const csv = [[t("csvEmail"), t("csvFirstName"), t("csvLastName"), t("csvResult"), t("csvDate")].join(","), ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", l.result_title ?? "", l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
@@ -533,7 +536,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
           {(["create","share","results"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />Créer</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />Partager</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />Résultats</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
             </button>
           ))}
         </nav>
@@ -545,7 +548,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : "Enregistrer"}
           </Button>
-          <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? "Désactiver" : "Publier"}</Button>
+          <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
         </div>
       </header>
 
@@ -557,7 +560,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             <div className="flex border-b">
               {(["edition","design","settings"] as const).map(tab => (
                 <button key={tab} onClick={() => setLeftTab(tab)} className={`flex-1 px-2 py-2.5 text-xs font-medium ${leftTab === tab ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}>
-                  {tab === "edition" ? "Édition" : tab === "design" ? "Design" : "Paramètres"}
+                  {tab === "edition" ? t("tabEdit") : tab === "design" ? t("subtabDesign") : t("subtabSettings")}
                 </button>
               ))}
             </div>
@@ -595,11 +598,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </button>
                 )}
                 {/* Résultats */}
-                <div className="flex items-center justify-between pt-2"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Résultats</span><button onClick={addResult} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
+                <div className="flex items-center justify-between pt-2"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">{t("resultsSection")}</span><button onClick={addResult} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
                 {editResults.map((r, i) => (
                   <div key={i} className="flex items-center gap-1 group">
                     <button onClick={() => scrollToSection(`r-${i}`)} className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
-                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{r.title || "Résultat vide"}
+                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{r.title || t("emptyResult")}
                     </button>
                     {editResults.length > 1 && <button onClick={() => removeResult(i)} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10"><Trash2 className="w-3 h-3" /></button>}
                   </div>
@@ -663,9 +666,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <CapturePill label="Adresse email*" active locked />
-                    <CapturePill label="Prénom*" active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
+                    <CapturePill label={t("pillFirstName")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
                     <CapturePill label="Nom*" active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
-                    <CapturePill label="Téléphone" active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
+                    <CapturePill label={t("pillPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
                     <CapturePill label="Pays" active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
                   {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
@@ -688,20 +691,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {/* ── Personnalisation (prénom + genre) ── */}
                 <section className="space-y-2.5">
                   <div>
-                    <h3 className="text-sm font-semibold">Personnalisation du quiz</h3>
+                    <h3 className="text-sm font-semibold">{t("personnalisationTitle")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Demande le prénom et/ou le genre avant le quiz pour adapter dynamiquement les questions, résultats et CTA. Utilise <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{name}"}</code> pour insérer le prénom et <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{m|f|x}"}</code> pour 3 variantes (masculin|féminin|inclusif).
+                      {t.rich("preAdaptDesc", {
+                        code: (chunks) => <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{chunks}</code>,
+                        nameVar: "{name}",
+                        genderVar: "{m|f|x}",
+                      })}
                     </p>
                   </div>
                   <SettingsToggle
-                    label="Demander le prénom"
-                    hint="Écran avant la 1ʳᵉ question qui demande le prénom. Utilise {name} dans tes textes pour l'insérer."
+                    label={t("askFirstNameLabel")}
+                    hint={t("askFirstNameHint", { nameVar: "{name}" })}
                     checked={askFirstName}
                     onChange={setAskFirstName}
                   />
                   <SettingsToggle
-                    label="Demander le genre (il / elle / iel)"
-                    hint="Écran avant la 1ʳᵉ question qui propose 3 options. Utilise {prêt|prête|prêt·e} dans tes textes pour trois variantes."
+                    label={t("askGenderLabel")}
+                    hint={t("askGenderHint")}
                     checked={askGender}
                     onChange={setAskGender}
                   />
@@ -711,10 +718,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
                 {/* ── Options ── */}
                 <section className="space-y-2">
-                  <h3 className="text-sm font-semibold">Options</h3>
+                  <h3 className="text-sm font-semibold">{t("optionsTitle")}</h3>
                   <SettingsToggle
-                    label="Demande de partage"
-                    hint="Propose au visiteur de partager le quiz avant de voir ses résultats, en échange du bonus. L'étape apparaît entre la capture d'email et les résultats."
+                    label={t("shareRequestLabel")}
+                    hint={t("viralityHint")}
                     checked={viralityEnabled}
                     onChange={v => setViralityEnabled(v)}
                   />
@@ -870,15 +877,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <InlineEdit value={captureHeading || (quiz?.address_form === "vous" ? "Vos résultats sont prêts" : "Tes résultats sont prêts")} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder="Titre…" />
-                  <InlineEdit multiline value={captureSubtitle || (quiz?.address_form === "vous" ? "Entrez votre email pour découvrir votre profil." : "Entre ton email pour découvrir ton profil.")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base whitespace-pre-line" placeholder={"Sous-titre…\nUne ligne vide crée un paragraphe, un tiret « - » démarre une puce."} />
+                  <InlineEdit value={captureHeading || (quiz?.address_form === "vous" ? t("captureHeadingDefaultFormal") : t("captureHeadingDefault"))} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
+                  <InlineEdit multiline value={captureSubtitle || (quiz?.address_form === "vous" ? t("captureSubtitleDefaultFormal") : t("captureSubtitleDefault"))} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base whitespace-pre-line" placeholder={t("captureSubtitlePlaceholder")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
-                      {captureFirstName && <div><label className="text-sm text-muted-foreground">Prénom</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
-                      {captureLastName && <div><label className="text-sm text-muted-foreground">Nom</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                      {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("csvFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                      {captureLastName && <div><label className="text-sm text-muted-foreground">{t("csvLastName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                     </div>}
                     <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
-                    {capturePhone && <div><label className="text-sm text-muted-foreground">Téléphone (optional)</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                    {capturePhone && <div><label className="text-sm text-muted-foreground">{t("phoneOptional")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
                   <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>Accéder aux résultats</button>
                 </div>
@@ -894,12 +901,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       </div>
                     </div>
                     <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
-                      {quiz?.address_form === "vous" ? "Un petit cadeau avant vos résultats" : "Un petit cadeau avant tes résultats"}
+                      {quiz?.address_form === "vous" ? t("bonusGiftTitleFormal") : t("bonusGiftTitle")}
                     </h2>
                     <p className="text-muted-foreground text-base leading-relaxed">
                       {quiz?.address_form === "vous"
-                        ? "Partagez le quiz pour recevoir en plus de vos résultats :"
-                        : "Partage le quiz pour recevoir en plus de tes résultats :"}
+                        ? t("bonusShareTextFormal")
+                        : t("bonusShareText")}
                     </p>
                     <div className="rounded-xl border p-4 bg-muted/30 space-y-3 text-left">
                       {bonusImageUrl && (
@@ -911,12 +918,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         onChange={setBonusDescription}
                         multiline
                         className="text-sm font-medium"
-                        placeholder="Décris ton bonus ici…"
+                        placeholder={t("bonusDescPlaceholder")}
                       />
                     </div>
                     <div className="space-y-2">
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        {shareNetworks.length > 0 ? "Partage via" : "Active au moins un réseau dans l'onglet Partage"}
+                        {shareNetworks.length > 0 ? t("shareVia") : t("shareActivate")}
                       </p>
                       <div className="flex flex-wrap justify-center gap-2">
                         {shareNetworks.map((n) => (
@@ -940,7 +947,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {editResults.map((r, ri) => (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
-                    <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder="Titre du résultat…" />
+                    <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("resultTitlePlaceholder")} />
                     <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
@@ -1053,7 +1060,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             <Textarea
               value={ogDescription}
               onChange={(e) => setOgDescription(e.target.value)}
-              placeholder="Courte phrase d'accroche affichée sous le titre du lien partagé…"
+              placeholder={t("sharePlaceholder")}
               rows={2}
               maxLength={200}
               className="text-sm"
@@ -1071,7 +1078,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               <p className="text-xs text-muted-foreground">
                 {isPaidPlan
                   ? "Remplace « Ce quiz vous est offert par Tipote » par votre propre signature."
-                  : "Disponible avec un plan payant. Sinon, le footer Tipote reste affiché."}
+                  : t("paidPlanOnly")}
               </p>
               <Input
                 value={customFooterText}
@@ -1108,7 +1115,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <option value="">Automatique (premier actif)</option>
                     {toastWidgets.map((w) => (
                       <option key={w.id} value={w.id} disabled={!w.enabled}>
-                        {w.name}{!w.enabled ? " (désactivé)" : ""}
+                        {w.name}{!w.enabled ? t("widgetDisabled") : ""}
                       </option>
                     ))}
                   </select>
@@ -1123,7 +1130,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <option value="">Automatique (premier actif)</option>
                     {shareWidgets.map((w) => (
                       <option key={w.id} value={w.id} disabled={!w.enabled}>
-                        {w.name}{!w.enabled ? " (désactivé)" : ""}
+                        {w.name}{!w.enabled ? t("widgetDisabled") : ""}
                       </option>
                     ))}
                   </select>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,7 @@ export default function QuizShareSettings({
   onStatusChange, onOgImageChange, onOgDescriptionChange, onSlugChange,
   onShareNetworksChange,
 }: QuizShareSettingsProps) {
+  const t = useTranslations("quizShare");
   const [copied, setCopied] = useState<"link" | "iframe" | null>(null);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -52,7 +54,7 @@ export default function QuizShareSettings({
   function copyText(text: string, type: "link" | "iframe") {
     navigator.clipboard.writeText(text);
     setCopied(type);
-    toast.success(type === "link" ? "Lien copié !" : "Code iframe copié !");
+    toast.success(type === "link" ? t("toastLinkCopied") : t("toastIframeCopied"));
     setTimeout(() => setCopied(null), 2000);
   }
 
@@ -72,20 +74,18 @@ export default function QuizShareSettings({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
-            Publication
+            {t("publicationTitle")}
           </CardTitle>
-          <CardDescription>Active ou désactive l&apos;accès public à ton quiz</CardDescription>
+          <CardDescription>{t("publicationDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Badge variant={status === "active" ? "default" : "secondary"}>
-                {status === "active" ? "Actif" : "Brouillon"}
+                {status === "active" ? t("statusActive") : t("statusDraft")}
               </Badge>
               <span className="text-sm text-muted-foreground">
-                {status === "active"
-                  ? "Ton quiz est accessible publiquement"
-                  : "Ton quiz n'est visible que par toi"}
+                {status === "active" ? t("publicHint") : t("privateHint")}
               </span>
             </div>
             <Button
@@ -93,7 +93,7 @@ export default function QuizShareSettings({
               size="sm"
               onClick={() => onStatusChange(status === "active" ? "draft" : "active")}
             >
-              {status === "active" ? "Désactiver" : "Activer"}
+              {status === "active" ? t("deactivate") : t("activate")}
             </Button>
           </div>
         </CardContent>
@@ -105,9 +105,9 @@ export default function QuizShareSettings({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Link2 className="h-5 w-5 text-primary" />
-              Lien de partage
+              {t("shareLinkTitle")}
             </CardTitle>
-            <CardDescription>URL personnalisable pour partager ton quiz</CardDescription>
+            <CardDescription>{t("shareLinkDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {onSlugChange && (
@@ -142,9 +142,9 @@ export default function QuizShareSettings({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Code className="h-5 w-5 text-primary" />
-              Intégration iframe
+              {t("iframeTitle")}
             </CardTitle>
-            <CardDescription>Copie ce code pour intégrer le quiz dans ton site</CardDescription>
+            <CardDescription>{t("iframeDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="relative">
@@ -158,7 +158,7 @@ export default function QuizShareSettings({
                 onClick={() => copyText(iframeCode, "iframe")}
               >
                 {copied === "iframe" ? <Check className="h-3.5 w-3.5 mr-1 text-green-500" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
-                {copied === "iframe" ? "Copié" : "Copier"}
+                {copied === "iframe" ? t("copiedBtn") : t("copyBtn")}
               </Button>
             </div>
           </CardContent>
@@ -170,9 +170,9 @@ export default function QuizShareSettings({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
-            Réseaux de partage
+            {t("socialsTitle")}
           </CardTitle>
-          <CardDescription>Choisis les réseaux sur lesquels tes visiteurs pourront partager le quiz</CardDescription>
+          <CardDescription>{t("socialsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -207,33 +207,33 @@ export default function QuizShareSettings({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Image className="h-5 w-5 text-primary" />
-            Méta données sociales
+            {t("ogTitle")}
           </CardTitle>
           <CardDescription>
-            Image et description affichées lors du partage sur les réseaux
+            {t("ogDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {ogImageUrl && (
             <div className="rounded-lg border overflow-hidden">
-              <img src={ogImageUrl} alt="OG Preview" className="w-full h-auto max-h-48 object-cover" />
+              <img src={ogImageUrl} alt={t("ogAlt")} className="w-full h-auto max-h-48 object-cover" />
             </div>
           )}
           <div className="space-y-1.5">
-            <Label>Image de partage (1200x630px)</Label>
+            <Label>{t("ogImageLabel")}</Label>
             <Input
               value={ogImageUrl}
               onChange={(e) => onOgImageChange(e.target.value)}
-              placeholder="https://monsite.com/og-image.jpg"
+              placeholder={t("ogImagePlaceholder")}
             />
           </div>
           {onOgDescriptionChange && (
             <div className="space-y-1.5">
-              <Label>Meta description</Label>
+              <Label>{t("ogDescLabel")}</Label>
               <Input
                 value={ogDescription}
                 onChange={(e) => onOgDescriptionChange(e.target.value)}
-                placeholder="Découvre quel profil tu es en répondant à ce quiz !"
+                placeholder={t("ogDescPlaceholder")}
                 maxLength={160}
               />
               <p className="text-xs text-muted-foreground">{ogDescription.length}/160</p>

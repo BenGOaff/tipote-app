@@ -203,31 +203,31 @@ export function ArticleForm({
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Sujet ou mot-clé SEO *</Label>
+            <Label>{t("subjectLabel")}</Label>
             <Input
-              placeholder="Ex: Comment augmenter son trafic organique"
+              placeholder={t("subjectPlaceholder")}
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Mot-clé SEO principal</Label>
+            <Label>{t("seoLabel")}</Label>
             <Input
-              placeholder="Ex: trafic organique"
+              placeholder={t("seoPlaceholder")}
               value={seoKeyword}
               onChange={(e) => setSeoKeyword(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Objectif *</Label>
+            <Label>{t("objectiveLabel")}</Label>
             <Select
               value={objective}
               onValueChange={(v) => setObjective(v as Objective)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Choisir un objectif" />
+                <SelectValue placeholder={t("objectivePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {objectives.map((o) => (
@@ -240,9 +240,9 @@ export function ArticleForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Liens à placer (optionnel)</Label>
+            <Label>{t("linksLabel")}</Label>
             <Textarea
-              placeholder="Collez les URLs importantes (1 par ligne)"
+              placeholder={t("linksPlaceholder")}
               value={links}
               onChange={(e) => setLinks(e.target.value)}
               rows={3}
@@ -250,18 +250,18 @@ export function ArticleForm({
           </div>
 
           <div className="space-y-2">
-            <Label>CTA (optionnel)</Label>
+            <Label>{t("ctaLabel")}</Label>
             <Input
-              placeholder="Ex: Télécharger le guide gratuit"
+              placeholder={t("ctaPlaceholder")}
               value={ctaText}
               onChange={(e) => setCtaText(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Lien CTA (optionnel)</Label>
+            <Label>{t("ctaUrlLabel")}</Label>
             <Input
-              placeholder="Ex: https://..."
+              placeholder={t("ctaUrlPlaceholder")}
               value={ctaLink}
               onChange={(e) => setCtaLink(e.target.value)}
             />

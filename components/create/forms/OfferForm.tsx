@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -21,13 +22,7 @@ type FormMode = "create" | "improve";
 type OfferType = "lead_magnet" | "paid_training";
 type OfferCategory = "formation" | "prestation" | "produit" | "coaching" | "autre";
 
-const OFFER_CATEGORIES: { value: OfferCategory; label: string }[] = [
-  { value: "formation", label: "Formation" },
-  { value: "prestation", label: "Prestation / Service" },
-  { value: "produit", label: "Produit" },
-  { value: "coaching", label: "Coaching / Accompagnement" },
-  { value: "autre", label: "Autre" },
-];
+const OFFER_CATEGORY_KEYS: OfferCategory[] = ["formation", "prestation", "produit", "coaching", "autre"];
 
 export type OfferFormProps = {
   onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
@@ -37,16 +32,16 @@ export type OfferFormProps = {
   isSaving: boolean;
 };
 
-const IMPROVEMENT_CHIPS = [
-  "La rendre plus utile",
-  "La simplifier",
-  "La compléter",
-  "Augmenter sa valeur perçue",
-  "Mieux cibler le persona",
-  "Améliorer le pricing",
-  "Renforcer la promesse",
-  "Ajouter des bonus",
-];
+const IMPROVEMENT_CHIP_KEYS = [
+  "moreUseful",
+  "simplify",
+  "complete",
+  "raiseValue",
+  "betterTarget",
+  "betterPricing",
+  "strongerPromise",
+  "addBonuses",
+] as const;
 
 function parseTasks(text: string): string[] {
   const tasks: string[] = [];
@@ -63,6 +58,7 @@ function parseTasks(text: string): string[] {
 
 export function OfferForm(props: OfferFormProps) {
   const { toast } = useToast();
+  const t = useTranslations("offerForm");
 
   const [formMode, setFormMode] = useState<FormMode>("improve");
   const [offerType, setOfferType] = useState<OfferType>("lead_magnet");
@@ -230,14 +226,12 @@ export function OfferForm(props: OfferFormProps) {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Créer ou améliorer une offre</h2>
+          <h2 className="text-xl font-semibold">{t("title")}</h2>
           <p className="text-sm text-muted-foreground">
-            {formMode === "improve"
-              ? "Analyse une offre existante et obtiens des améliorations concrètes + tâches."
-              : "Crée une offre irrésistible à partir de zéro."}
+            {formMode === "improve" ? t("subtitleImprove") : t("subtitleCreate")}
           </p>
         </div>
-        <Button variant="ghost" onClick={props.onClose}>
+        <Button variant="ghost" onClick={props.onClose} aria-label={t("closeAria")}>
           ✕
         </Button>
       </div>
@@ -245,29 +239,29 @@ export function OfferForm(props: OfferFormProps) {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="p-4 space-y-4">
           <div className="space-y-2">
-            <Label>Que veux-tu faire ?</Label>
+            <Label>{t("actionLabel")}</Label>
             <Tabs value={formMode} onValueChange={(v) => setFormMode(v as FormMode)}>
               <TabsList className="grid grid-cols-2 w-full">
                 <TabsTrigger value="improve" className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Améliorer une offre
+                  {t("modeImprove")}
                 </TabsTrigger>
-                <TabsTrigger value="create">Créer à partir de zéro</TabsTrigger>
+                <TabsTrigger value="create">{t("modeCreate")}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
 
           {/* Category selector — shared across both modes */}
           <div className="space-y-2">
-            <Label>Catégorie</Label>
+            <Label>{t("categoryLabel")}</Label>
             <Select value={offerCategory} onValueChange={(v) => setOfferCategory(v as OfferCategory)}>
               <SelectTrigger>
-                <SelectValue placeholder="Type d'offre..." />
+                <SelectValue placeholder={t("categoryPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                {OFFER_CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
+                {OFFER_CATEGORY_KEYS.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {t(`cat.${key}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -278,16 +272,16 @@ export function OfferForm(props: OfferFormProps) {
             <>
               {/* Offer picker */}
               <div className="space-y-2">
-                <Label>Offre à améliorer</Label>
+                <Label>{t("pickerLabel")}</Label>
                 {offersLoading ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Chargement des offres...
+                    {t("pickerLoading")}
                   </div>
                 ) : offers.length > 0 ? (
                   <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Choisis une offre..." />
+                      <SelectValue placeholder={t("pickerPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {offers.map((o) => (
@@ -303,7 +297,7 @@ export function OfferForm(props: OfferFormProps) {
                   </Select>
                 ) : (
                   <div className="text-sm text-muted-foreground rounded-md border p-3">
-                    Aucune offre trouvée. Ajoute tes offres dans les réglages ou passe en mode "Créer".
+                    {t("pickerEmpty")}
                   </div>
                 )}
               </div>
@@ -311,101 +305,104 @@ export function OfferForm(props: OfferFormProps) {
               {/* Selected offer preview */}
               {selectedOffer && (
                 <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
-                  <div className="font-medium text-xs text-muted-foreground uppercase tracking-wide">Détails de l'offre</div>
-                  <div><span className="font-medium">Nom :</span> {selectedOffer.name}</div>
-                  {selectedOffer.promise && <div><span className="font-medium">Promesse :</span> {selectedOffer.promise}</div>}
+                  <div className="font-medium text-xs text-muted-foreground uppercase tracking-wide">{t("detailsHeader")}</div>
+                  <div><span className="font-medium">{t("detailName")}</span> {selectedOffer.name}</div>
+                  {selectedOffer.promise && <div><span className="font-medium">{t("detailPromise")}</span> {selectedOffer.promise}</div>}
                   {selectedOffer.description && (
-                    <div className="line-clamp-2"><span className="font-medium">Description :</span> {selectedOffer.description}</div>
+                    <div className="line-clamp-2"><span className="font-medium">{t("detailDescription")}</span> {selectedOffer.description}</div>
                   )}
                   {formatPriceRange(selectedOffer) && (
-                    <div><span className="font-medium">Prix :</span> {formatPriceRange(selectedOffer)}</div>
+                    <div><span className="font-medium">{t("detailPrice")}</span> {formatPriceRange(selectedOffer)}</div>
                   )}
-                  {selectedOffer.format && <div><span className="font-medium">Format :</span> {selectedOffer.format}</div>}
+                  {selectedOffer.format && <div><span className="font-medium">{t("detailFormat")}</span> {selectedOffer.format}</div>}
                 </div>
               )}
 
               {/* Improvement direction */}
               <div className="space-y-2">
-                <Label>Que veux-tu améliorer ? <span className="text-muted-foreground font-normal">(optionnel)</span></Label>
+                <Label>{t("improvementLabel")} <span className="text-muted-foreground font-normal">{t("optionalSuffix")}</span></Label>
                 <Textarea
                   value={improvementGoal}
                   onChange={(e) => setImprovementGoal(e.target.value)}
-                  placeholder="Ex: Je veux la rendre plus concrète, ajouter des bonus, simplifier le parcours..."
+                  placeholder={t("improvementPlaceholder")}
                   className="min-h-[80px]"
                 />
                 <div className="flex flex-wrap gap-1.5">
-                  {IMPROVEMENT_CHIPS.map((chip) => (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => handleChipClick(chip)}
-                      className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-accent transition-colors"
-                    >
-                      {chip}
-                    </button>
-                  ))}
+                  {IMPROVEMENT_CHIP_KEYS.map((chipKey) => {
+                    const label = t(`chips.${chipKey}`);
+                    return (
+                      <button
+                        key={chipKey}
+                        type="button"
+                        onClick={() => handleChipClick(label)}
+                        className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-accent transition-colors"
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </>
           ) : (
             <>
               <div className="space-y-2">
-                <Label>Type d'offre</Label>
+                <Label>{t("offerTypeLabel")}</Label>
                 <Tabs value={offerType} onValueChange={(v) => setOfferType(v as OfferType)}>
                   <TabsList className="grid grid-cols-2 w-full">
-                    <TabsTrigger value="lead_magnet">Lead magnet</TabsTrigger>
-                    <TabsTrigger value="paid_training">Offre payante</TabsTrigger>
+                    <TabsTrigger value="lead_magnet">{t("offerTypeLead")}</TabsTrigger>
+                    <TabsTrigger value="paid_training">{t("offerTypePaid")}</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
 
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Nom de l'offre</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Quiz Cash Creator" />
+                  <Label>{t("nameLabel")}</Label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Promesse principale</Label>
-                  <Textarea value={promise} onChange={(e) => setPromise(e.target.value)} placeholder="Ex: ..." />
+                  <Label>{t("promiseLabel")}</Label>
+                  <Textarea value={promise} onChange={(e) => setPromise(e.target.value)} placeholder={t("placeholderGeneric")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Résultat principal</Label>
-                  <Input value={mainOutcome} onChange={(e) => setMainOutcome(e.target.value)} placeholder="Ex: ..." />
+                  <Label>{t("mainOutcomeLabel")}</Label>
+                  <Input value={mainOutcome} onChange={(e) => setMainOutcome(e.target.value)} placeholder={t("placeholderGeneric")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ex: ..." />
+                  <Label>{t("descriptionLabel")}</Label>
+                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("placeholderGeneric")} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Prix (si pertinent)</Label>
-                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ex: 49€" />
+                  <Label>{t("priceLabel")}</Label>
+                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder={t("pricePlaceholder")} />
                 </div>
               </div>
             </>
           )}
 
           <div className="space-y-2">
-            <Label>Titre (pour sauvegarde)</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Amélioration - Mon offre" />
+            <Label>{t("titleForSaveLabel")}</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("titleForSavePlaceholder")} />
           </div>
 
           <div className="flex gap-2">
             <Button onClick={handleGenerate} disabled={props.isGenerating || (formMode === "improve" && !selectedOffer)}>
               {props.isGenerating
-                ? "Génération..."
+                ? t("generating")
                 : formMode === "improve"
-                  ? "Analyser et améliorer"
-                  : "Générer"}
+                  ? t("generateBtnImprove")
+                  : t("generateBtn")}
             </Button>
             <Button variant="secondary" onClick={handleSave} disabled={props.isSaving}>
-              {props.isSaving ? "Sauvegarde..." : "Sauvegarder"}
+              {props.isSaving ? t("saving") : t("saveBtn")}
             </Button>
           </div>
         </Card>
 
         <Card className="p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <Label>Résultat</Label>
+            <Label>{t("resultLabel")}</Label>
 
             <div className="flex items-center gap-2">
               <Button
@@ -415,17 +412,17 @@ export function OfferForm(props: OfferFormProps) {
                 onClick={() => setShowRawEditor((v) => !v)}
                 disabled={!result.trim()}
               >
-                {showRawEditor ? "Aperçu" : "Texte brut"}
+                {showRawEditor ? t("previewBtn") : t("rawBtn")}
               </Button>
 
               <Button variant="outline" size="sm" onClick={handleCopy} disabled={!result.trim()}>
-                Copier
+                {t("copyBtn")}
               </Button>
 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadAsPdf(result, title || "Offre")}
+                onClick={() => downloadAsPdf(result, title || t("defaultFileName"))}
                 disabled={!result.trim()}
               >
                 <FileDown className="w-4 h-4 mr-1" />
@@ -443,7 +440,7 @@ export function OfferForm(props: OfferFormProps) {
               value={result}
               onChange={(e) => setResult(e.target.value)}
               className="min-h-[280px] sm:min-h-[520px]"
-              placeholder="Le texte généré apparaîtra ici..."
+              placeholder={t("resultPlaceholder")}
             />
           )}
 
