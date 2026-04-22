@@ -842,7 +842,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
                   <InlineEdit value={captureHeading || (quiz?.address_form === "vous" ? "Vos résultats sont prêts" : "Tes résultats sont prêts")} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder="Titre…" />
-                  <InlineEdit value={captureSubtitle || (quiz?.address_form === "vous" ? "Entrez votre email pour découvrir votre profil." : "Entre ton email pour découvrir ton profil.")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base" placeholder="Sous-titre…" />
+                  <InlineEdit multiline value={captureSubtitle || (quiz?.address_form === "vous" ? "Entrez votre email pour découvrir votre profil." : "Entre ton email pour découvrir ton profil.")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base whitespace-pre-line" placeholder={"Sous-titre…\nUne ligne vide crée un paragraphe, un tiret « - » démarre une puce."} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">Prénom</label><Input readOnly className="mt-1 bg-muted/20" /></div>}

@@ -17,6 +17,7 @@ import {
   type QuizBranding,
 } from "@/lib/quizBranding";
 import { sanitizeRichText } from "@/lib/richText";
+import { RichParagraph } from "@/components/ui/rich-paragraph";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -1073,9 +1074,10 @@ export default function PublicQuizClient({
             <h2 className="text-2xl sm:text-4xl font-bold text-center">
               {quiz.capture_heading || t.captureHeadingDefault}
             </h2>
-            <p className="text-muted-foreground text-center text-lg">
-              {quiz.capture_subtitle || t.captureSubtitleDefault}
-            </p>
+            <RichParagraph
+              className="text-muted-foreground text-center text-lg"
+              text={quiz.capture_subtitle || t.captureSubtitleDefault}
+            />
 
             <div className="space-y-4">
               {(quiz.capture_first_name || quiz.capture_last_name) && (
