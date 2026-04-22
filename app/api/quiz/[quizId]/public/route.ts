@@ -465,6 +465,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const lastName = String(body.last_name ?? "").trim().slice(0, 100);
     const phone = String(body.phone ?? "").trim().slice(0, 30);
     const country = String(body.country ?? "").trim().slice(0, 50);
+    const rawGender = String(body.gender ?? "").trim().toLowerCase();
+    const gender: "m" | "f" | "x" | null = rawGender === "m" || rawGender === "f" || rawGender === "x" ? rawGender : null;
     const answers = Array.isArray(body.answers) ? body.answers : null;
 
     // Upsert lead (unique on quiz_id + email)
@@ -480,6 +482,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
           country: country || null,
           result_id: resultId,
           consent_given: Boolean(body.consent_given),
+          ...(gender ? { gender } : {}),
           ...(answers ? { answers } : {}),
         },
         { onConflict: "quiz_id,email" },
