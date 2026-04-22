@@ -1113,7 +1113,7 @@ export default function PublicQuizClient({
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-input hover:border-primary/40"
                     }`}
-                    style={gender === g ? { borderColor: branding.primary, color: branding.primary, backgroundColor: `${branding.primary}15` } : undefined}
+                    style={gender === g ? { borderColor: branding.primaryColor, color: branding.primaryColor, backgroundColor: `${branding.primaryColor}15` } : undefined}
                   >
                     {genderLabels[g]}
                   </button>
