@@ -1,14 +1,15 @@
 // components/ui/sio-tag-picker.tsx
 // Composant réutilisable pour sélectionner un tag Systeme.io.
-// Charge les tags depuis /api/systeme-io/tags, affiche un dropdown,
-// et permet de créer de nouveaux tags inline.
-// Affiche un message clair si la clé API n'est pas configurée.
+// - Si enveloppé par <SioTagsProvider>, partage le chargement des tags
+//   (un seul clic sur "Charger mes tags" suffit pour toute la page).
+// - Sinon, fonctionne en mode autonome (backward compatible).
 
 "use client";
 
 import { useState, useCallback } from "react";
 import { Loader2, ChevronDown, Plus, Check, X, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useSioTagsContext } from "@/components/ui/sio-tags-provider";
 
 type SioTag = { id: number; name: string };
 
@@ -22,51 +23,65 @@ type SioTagPickerProps = {
 
 export function SioTagPicker({ value, onChange, variant = "light", placeholder }: SioTagPickerProps) {
   const t = useTranslations("common");
+  const ctx = useSioTagsContext();
 
-  const [tags, setTags] = useState<SioTag[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [noApiKey, setNoApiKey] = useState(false);
-  const [error, setError] = useState(false);
+  // Local fallback state when no provider is present.
+  const [localTags, setLocalTags] = useState<SioTag[]>([]);
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localLoaded, setLocalLoaded] = useState(false);
+  const [localNoApiKey, setLocalNoApiKey] = useState(false);
+  const [localError, setLocalError] = useState(false);
 
-  // New tag inline creation
   const [creatingNew, setCreatingNew] = useState(false);
   const [newTagName, setNewTagName] = useState("");
 
   const isDark = variant === "dark";
 
+  // When a provider is present, read from shared state. Otherwise fall back to local.
+  const tags: SioTag[] = ctx ? (ctx.tags ?? []) : localTags;
+  const loaded = ctx ? ctx.tags !== null : localLoaded;
+  const loading = ctx ? ctx.loading : localLoading;
+  const noApiKey = ctx ? ctx.noApiKey : localNoApiKey;
+  const error = ctx ? ctx.error : localError;
+
   const loadTags = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    setNoApiKey(false);
+    if (ctx) {
+      await ctx.loadTags();
+      return;
+    }
+    setLocalLoading(true);
+    setLocalError(false);
+    setLocalNoApiKey(false);
     try {
       const res = await fetch("/api/systeme-io/tags");
       const json = await res.json();
       if (json?.ok && Array.isArray(json.tags)) {
-        setTags(json.tags);
-        setLoaded(true);
+        setLocalTags(json.tags);
+        setLocalLoaded(true);
       } else if (json?.error === "NO_API_KEY") {
-        setNoApiKey(true);
+        setLocalNoApiKey(true);
       } else {
-        setError(true);
+        setLocalError(true);
       }
     } catch {
-      setError(true);
+      setLocalError(true);
     } finally {
-      setLoading(false);
+      setLocalLoading(false);
     }
-  }, []);
+  }, [ctx]);
 
   const confirmNewTag = useCallback(() => {
     const name = newTagName.trim();
     if (!name) return;
-    if (!tags.find((t) => t.name.toLowerCase() === name.toLowerCase())) {
-      setTags((prev) => [...prev, { id: Date.now(), name }]);
+    if (ctx) {
+      ctx.addTagLocal(name);
+    } else if (!localTags.find((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      setLocalTags((prev) => [...prev, { id: Date.now(), name }]);
     }
     onChange(name);
     setCreatingNew(false);
     setNewTagName("");
-  }, [newTagName, tags, onChange]);
+  }, [newTagName, localTags, onChange, ctx]);
 
   // No API key → message + link to settings
   if (noApiKey) {
@@ -85,7 +100,6 @@ export function SioTagPicker({ value, onChange, variant = "light", placeholder }
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="flex items-center gap-2">
@@ -102,7 +116,6 @@ export function SioTagPicker({ value, onChange, variant = "light", placeholder }
     );
   }
 
-  // Creating new tag inline
   if (creatingNew) {
     return (
       <div className="flex gap-2">
@@ -142,7 +155,6 @@ export function SioTagPicker({ value, onChange, variant = "light", placeholder }
     );
   }
 
-  // Not loaded yet → "Load my tags" button
   if (!loaded) {
     return (
       <button
@@ -160,7 +172,6 @@ export function SioTagPicker({ value, onChange, variant = "light", placeholder }
     );
   }
 
-  // Tags loaded → dropdown + create button
   return (
     <div className="flex gap-2">
       <select
