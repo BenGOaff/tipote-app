@@ -414,7 +414,7 @@ function buildStrategicObjective(
 
 type ProgressionLine = { label: string; value: string; trend?: "up" | "down" | "stable" };
 
-function buildProgressionSummary(p: ProgressionData): { headline: string | null; lines: ProgressionLine[] } | null {
+function buildProgressionSummary(p: ProgressionData, t?: (key: string) => string): { headline: string | null; lines: ProgressionLine[] } | null {
   if (!p.hasMetrics) return null;
 
   const hasPrev =
@@ -458,9 +458,9 @@ function buildProgressionSummary(p: ProgressionData): { headline: string | null;
   }
 
   let headline: string | null = null;
-  if (hasPositive && !hasNegative) headline = "Super dynamique ce mois-ci !";
-  else if (hasNegative && !hasPositive) headline = "Attention, quelques indicateurs baissent.";
-  else if (hasNegative && hasPositive) headline = "Résultats mitigés ce mois-ci.";
+  if (hasPositive && !hasNegative) headline = t ? t("veryDynamic") : "Super dynamique ce mois-ci !";
+  else if (hasNegative && !hasPositive) headline = t ? t("warningDown") : "Attention, quelques indicateurs baissent.";
+  else if (hasNegative && hasPositive) headline = t ? t("mixedResults") : "Résultats mitigés ce mois-ci.";
 
   return { headline, lines };
 }
@@ -875,7 +875,7 @@ export default function TodayLovable() {
   }, [supabase, fetchEncouragement]);
 
   // Résumé intelligent de la progression analytics
-  const progressionSummary = useMemo(() => buildProgressionSummary(progression), [progression]);
+  const progressionSummary = useMemo(() => buildProgressionSummary(progression, t), [progression, t]);
 
   return (
     <SidebarProvider>
@@ -923,8 +923,8 @@ export default function TodayLovable() {
                         <div>
                           <h3 className="text-sm font-semibold text-foreground">
                             {scheduledToday.length === 1
-                              ? "1 contenu programmé aujourd\u2019hui"
-                              : `${scheduledToday.length} contenus programmés aujourd\u2019hui`}
+                              ? t("oneScheduledToday")
+                              : `${scheduledToday.length} ${t("manyScheduledToday")}`}
                           </h3>
                           <p className="text-xs text-muted-foreground">N&apos;oublie pas de les publier !</p>
                         </div>

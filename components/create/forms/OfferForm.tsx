@@ -122,7 +122,7 @@ export function OfferForm(props: OfferFormProps) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(result || "");
-      toast({ title: "Copié", description: "Le texte a été copié dans le presse-papiers." });
+      toast({ title: t("copied"), description: t("copiedDesc") });
     } catch {
       toast({ title: "Erreur", description: "Impossible de copier.", variant: "destructive" });
     }
@@ -136,7 +136,7 @@ export function OfferForm(props: OfferFormProps) {
 
     if (formMode === "improve") {
       if (!selectedOffer) {
-        toast({ title: "Offre requise", description: "Sélectionne une offre à améliorer.", variant: "destructive" });
+        toast({ title: t("offerRequired"), description: t("offerRequiredDesc"), variant: "destructive" });
         return;
       }
       payload = {
@@ -177,7 +177,7 @@ export function OfferForm(props: OfferFormProps) {
       return;
     }
     if (!result.trim()) {
-      toast({ title: "Contenu requis", description: "Génère un contenu avant de sauvegarder.", variant: "destructive" });
+      toast({ title: t("contentRequired"), description: t("contentRequiredDesc"), variant: "destructive" });
       return;
     }
 
@@ -203,11 +203,11 @@ export function OfferForm(props: OfferFormProps) {
         if (res.ok) created++;
       }
       toast({
-        title: `${created} tâche${created > 1 ? "s" : ""} créée${created > 1 ? "s" : ""}`,
-        description: "Les tâches ont été ajoutées à ton plan d'action.",
+        title: t("tasksCreated", { n: created }),
+        description: t("tasksCreatedDesc"),
       });
     } catch {
-      toast({ title: "Erreur", description: "Impossible de créer les tâches.", variant: "destructive" });
+      toast({ title: t("error"), description: t("cannotCreateTasks"), variant: "destructive" });
     } finally {
       setCreatingTasks(false);
     }
@@ -450,7 +450,7 @@ export function OfferForm(props: OfferFormProps) {
               <div className="flex items-center justify-between">
                 <div className="text-sm font-medium flex items-center gap-1.5">
                   <ListTodo className="w-4 h-4" />
-                  {extractedTasks.length} tâche{extractedTasks.length > 1 ? "s" : ""} détectée{extractedTasks.length > 1 ? "s" : ""}
+                  {t("tasksDetected", { n: extractedTasks.length })}
                 </div>
                 <Button
                   size="sm"
@@ -463,7 +463,7 @@ export function OfferForm(props: OfferFormProps) {
                       Création...
                     </>
                   ) : (
-                    "Créer les tâches"
+                    t("createTasks")
                   )}
                 </Button>
               </div>

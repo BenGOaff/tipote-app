@@ -274,7 +274,19 @@
       "betterPricing": "تحسين التسعير",
       "strongerPromise": "تعزيز الوعد",
       "addBonuses": "إضافة مكافآت"
-    }
+    },
+    "copied": "تم النسخ",
+    "copiedDesc": "تم نسخ النص إلى الحافظة.",
+    "offerRequired": "عرض مطلوب",
+    "offerRequiredDesc": "اختر عرضًا لتحسينه.",
+    "contentRequired": "محتوى مطلوب",
+    "contentRequiredDesc": "أنشئ محتوى قبل الحفظ.",
+    "tasksCreated": "{n, plural, one {# مهمة أُنشئت} other {# مهام أُنشئت}}",
+    "tasksCreatedDesc": "تمت إضافة المهام إلى خطة عملك.",
+    "error": "خطأ",
+    "cannotCreateTasks": "تعذّر إنشاء المهام.",
+    "tasksDetected": "{n, plural, one {# مهمة اكتُشفت} other {# مهام اكتُشفت}}",
+    "createTasks": "إنشاء المهام"
   },
   "settings": {
     "title": "الإعدادات",
@@ -1051,7 +1063,13 @@
         "recommendation": "يجب تخطيط وإنشاء محتوياتك القادمة",
         "why": "لتعزيز ظهورك واستقطاب عملاء محتملين جدد"
       }
-    }
+    },
+    "mixedResults": "نتائج متباينة هذا الشهر.",
+    "cancelled": "ملغى",
+    "oneScheduledToday": "محتوى واحد مجدول اليوم",
+    "veryDynamic": "شهر نشط للغاية!",
+    "warningDown": "احذر، بعض المؤشرات تتراجع.",
+    "manyScheduledToday": "محتويات مجدولة اليوم"
   },
   "create": {
     "title": "إنشاء محتوى",
@@ -2902,7 +2920,21 @@
     },
     "noContent": "لا يوجد محتوى نصي متاح.",
     "generatedBy": "تم الإنشاء بواسطة Tipote",
-    "tip": "انقر على عنصر في المعاينة لتعديل خصائصه."
+    "tip": "انقر على عنصر في المعاينة لتعديل خصائصه.",
+    "bulletList": "قائمة نقطية",
+    "pasteVideoUrl": "الصق رابط الفيديو",
+    "listItem1": "العنصر الأول",
+    "listItem2": "العنصر الثاني",
+    "listItem3": "العنصر الثالث",
+    "thankYouDefault": "ستتلقّى بريدًا إلكترونيًا للتأكيد خلال لحظات. تحقّق من مجلد الرسائل غير المرغوب فيها.",
+    "directChangesWarn1": "لقد أجريت تعديلات مباشرة على الصفحة (النص، الصور، الألوان، الأقسام) منذ آخر عملية إنشاء.",
+    "directChangesWarn2": "سيعيد الذكاء الاصطناعي إنشاء الصفحة من القالب وسيتم الكتابة فوق هذه التعديلات المباشرة.",
+    "directChangesConfirm": "المتابعة على أي حال؟",
+    "publishFailed": "فشل النشر: {err}",
+    "networkError": "خطأ شبكة",
+    "missingColumnsHint": " (قد يكون هناك عمود مفقود — يجب تطبيق أحدث ترحيلات Supabase)",
+    "thankYouSaveFailed": "تعذّر حفظ صفحة الشكر: {err}",
+    "liveChanges": "تعديلات مباشرة"
   },
   "clients": {
     "title": "متابعة العملاء",

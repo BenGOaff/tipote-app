@@ -274,7 +274,19 @@
       "betterPricing": "Migliorare il prezzo",
       "strongerPromise": "Rinforzare la promessa",
       "addBonuses": "Aggiungere bonus"
-    }
+    },
+    "copied": "Copiato",
+    "copiedDesc": "Il testo è stato copiato negli appunti.",
+    "offerRequired": "Offerta richiesta",
+    "offerRequiredDesc": "Seleziona un'offerta da migliorare.",
+    "contentRequired": "Contenuto richiesto",
+    "contentRequiredDesc": "Genera un contenuto prima di salvare.",
+    "tasksCreated": "{n, plural, one {# task creato} other {# task creati}}",
+    "tasksCreatedDesc": "I task sono stati aggiunti al tuo piano d'azione.",
+    "error": "Errore",
+    "cannotCreateTasks": "Impossibile creare i task.",
+    "tasksDetected": "{n, plural, one {# task rilevato} other {# task rilevati}}",
+    "createTasks": "Crea i task"
   },
   "settings": {
     "title": "Impostazioni",
@@ -1051,7 +1063,13 @@
         "recommendation": "devi pianificare e creare i tuoi prossimi contenuti",
         "why": "per aumentare la tua visibilità e attrarre nuovi prospect"
       }
-    }
+    },
+    "mixedResults": "Risultati misti questo mese.",
+    "cancelled": "annullato",
+    "oneScheduledToday": "1 contenuto pianificato oggi",
+    "veryDynamic": "Super dinamico questo mese!",
+    "warningDown": "Attenzione, alcuni indicatori stanno calando.",
+    "manyScheduledToday": "contenuti pianificati oggi"
   },
   "create": {
     "title": "Crea contenuto",
@@ -2902,7 +2920,21 @@
     },
     "noContent": "Nessun contenuto di testo disponibile.",
     "generatedBy": "Generato da Tipote",
-    "tip": "Clicca su un elemento nell'anteprima per modificarne le proprietà."
+    "tip": "Clicca su un elemento nell'anteprima per modificarne le proprietà.",
+    "bulletList": "Elenco puntato",
+    "pasteVideoUrl": "Incolla l'URL del video",
+    "listItem1": "Primo elemento",
+    "listItem2": "Secondo elemento",
+    "listItem3": "Terzo elemento",
+    "thankYouDefault": "Riceverai un'email di conferma a breve. Controlla lo spam.",
+    "directChangesWarn1": "Hai fatto modifiche dirette alla pagina (testo, immagini, colori, sezioni) dall'ultima generazione.",
+    "directChangesWarn2": "L'IA rigenererà la pagina dal template e queste modifiche dirette saranno sovrascritte.",
+    "directChangesConfirm": "Continuare comunque?",
+    "publishFailed": "Pubblicazione fallita: {err}",
+    "networkError": "errore di rete",
+    "missingColumnsHint": " (potrebbe mancare una colonna — le ultime migrazioni Supabase devono essere applicate)",
+    "thankYouSaveFailed": "Impossibile salvare la pagina di ringraziamento: {err}",
+    "liveChanges": "Modifiche in tempo reale"
   },
   "clients": {
     "title": "Gestione Clienti",

@@ -274,7 +274,19 @@
       "betterPricing": "Mejorar el precio",
       "strongerPromise": "Reforzar la promesa",
       "addBonuses": "Añadir bonus"
-    }
+    },
+    "copied": "Copiado",
+    "copiedDesc": "El texto se ha copiado al portapapeles.",
+    "offerRequired": "Oferta requerida",
+    "offerRequiredDesc": "Selecciona una oferta a mejorar.",
+    "contentRequired": "Contenido requerido",
+    "contentRequiredDesc": "Genera un contenido antes de guardar.",
+    "tasksCreated": "{n, plural, one {# tarea creada} other {# tareas creadas}}",
+    "tasksCreatedDesc": "Las tareas se han añadido a tu plan de acción.",
+    "error": "Error",
+    "cannotCreateTasks": "No se pudieron crear las tareas.",
+    "tasksDetected": "{n, plural, one {# tarea detectada} other {# tareas detectadas}}",
+    "createTasks": "Crear las tareas"
   },
   "settings": {
     "title": "Ajustes",
@@ -1051,7 +1063,13 @@
         "recommendation": "debes planificar y crear tus próximos contenidos",
         "why": "para aumentar tu visibilidad y atraer nuevos prospectos"
       }
-    }
+    },
+    "mixedResults": "Resultados mixtos este mes.",
+    "cancelled": "cancelado",
+    "oneScheduledToday": "1 contenido programado hoy",
+    "veryDynamic": "¡Súper dinámico este mes!",
+    "warningDown": "Atención, algunos indicadores bajan.",
+    "manyScheduledToday": "contenidos programados hoy"
   },
   "create": {
     "title": "Crear contenido",
@@ -2902,7 +2920,21 @@
     },
     "noContent": "Ningún contenido de texto disponible.",
     "generatedBy": "Generado por Tipote",
-    "tip": "Haz clic en un elemento en la vista previa para editar sus propiedades."
+    "tip": "Haz clic en un elemento en la vista previa para editar sus propiedades.",
+    "bulletList": "Lista con viñetas",
+    "pasteVideoUrl": "Pega la URL del vídeo",
+    "listItem1": "Primer elemento",
+    "listItem2": "Segundo elemento",
+    "listItem3": "Tercer elemento",
+    "thankYouDefault": "Recibirás un email de confirmación en unos instantes. Revisa tu spam.",
+    "directChangesWarn1": "Has hecho cambios directos en la página (texto, imágenes, colores, secciones) desde la última generación.",
+    "directChangesWarn2": "La IA va a regenerar la página desde la plantilla y esos cambios directos se sobrescribirán.",
+    "directChangesConfirm": "¿Continuar de todos modos?",
+    "publishFailed": "Publicación fallida: {err}",
+    "networkError": "error de red",
+    "missingColumnsHint": " (puede faltar una columna — las últimas migraciones de Supabase deben aplicarse)",
+    "thankYouSaveFailed": "No se puede guardar la página de agradecimiento: {err}",
+    "liveChanges": "Cambios en tiempo real"
   },
   "clients": {
     "title": "Seguimiento de Clientes",

@@ -274,7 +274,19 @@
       "betterPricing": "Améliorer le pricing",
       "strongerPromise": "Renforcer la promesse",
       "addBonuses": "Ajouter des bonus"
-    }
+    },
+    "copied": "Copié",
+    "copiedDesc": "Le texte a été copié dans le presse-papiers.",
+    "offerRequired": "Offre requise",
+    "offerRequiredDesc": "Sélectionne une offre à améliorer.",
+    "contentRequired": "Contenu requis",
+    "contentRequiredDesc": "Génère un contenu avant de sauvegarder.",
+    "tasksCreated": "{n, plural, one {# tâche créée} other {# tâches créées}}",
+    "tasksCreatedDesc": "Les tâches ont été ajoutées à ton plan d'action.",
+    "error": "Erreur",
+    "cannotCreateTasks": "Impossible de créer les tâches.",
+    "tasksDetected": "{n, plural, one {# tâche détectée} other {# tâches détectées}}",
+    "createTasks": "Créer les tâches"
   },
   "settings": {
     "title": "Paramètres",
@@ -1051,7 +1063,13 @@
         "recommendation": "tu dois planifier et créer tes prochains contenus",
         "why": "pour booster ta visibilité et attirer de nouveaux prospects"
       }
-    }
+    },
+    "mixedResults": "Résultats mitigés ce mois-ci.",
+    "cancelled": "annulé",
+    "oneScheduledToday": "1 contenu programmé aujourd’hui",
+    "veryDynamic": "Super dynamique ce mois-ci !",
+    "warningDown": "Attention, quelques indicateurs baissent.",
+    "manyScheduledToday": "contenus programmés aujourd’hui"
   },
   "create": {
     "title": "Créer du contenu",
@@ -2902,7 +2920,21 @@
     },
     "noContent": "Aucun contenu texte disponible.",
     "generatedBy": "Genere par Tipote",
-    "tip": "Clique sur un élément dans l'aperçu pour modifier ses propriétés."
+    "tip": "Clique sur un élément dans l'aperçu pour modifier ses propriétés.",
+    "bulletList": "Liste à puces",
+    "pasteVideoUrl": "Coller l'URL de la vidéo",
+    "listItem1": "Premier élément",
+    "listItem2": "Deuxième élément",
+    "listItem3": "Troisième élément",
+    "thankYouDefault": "Tu vas recevoir un email de confirmation dans quelques instants. Pense à vérifier tes spams.",
+    "directChangesWarn1": "Tu as fait des modifications directes sur la page (texte, images, couleurs, sections) depuis la dernière génération.",
+    "directChangesWarn2": "L'IA va régénérer la page à partir du modèle et ces modifications directes seront écrasées.",
+    "directChangesConfirm": "Continuer quand même ?",
+    "publishFailed": "Publication échouée : {err}",
+    "networkError": "erreur réseau",
+    "missingColumnsHint": " (une colonne est peut-être manquante — les dernières migrations Supabase doivent être appliquées)",
+    "thankYouSaveFailed": "Impossible d'enregistrer la page de remerciement : {err}",
+    "liveChanges": "Modifications en temps réel"
   },
   "clients": {
     "title": "Suivi Clients",
