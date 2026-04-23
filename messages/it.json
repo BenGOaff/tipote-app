@@ -4163,5 +4163,49 @@
       "changesApplied": "Modifiche applicate",
       "changesRejected": "Modifiche rifiutate"
     }
+  },
+  "pageChat": {
+    "imageHint": "💡 Per cambiare un'immagine, cliccala direttamente nell'anteprima! Potrai importare la foto che vuoi.",
+    "reformulate": "Riformula la tua richiesta e riprova.",
+    "noCredits": "Crediti insufficienti. Ricarica per continuare.",
+    "applied": "Modifica applicata.",
+    "appliedNetworkError": "Modifica applicata ma errore di rete durante il salvataggio.",
+    "networkError": "Errore di rete.",
+    "networkErrorRetry": "Errore di rete. Riprova.",
+    "cancelled": "Modifica annullata.",
+    "partialUndo": "Annullamento parziale (colonne mancanti: {cols}).",
+    "suggestHeader": "Chiedi una modifica all'IA",
+    "askAi": "Chiedi all'IA...",
+    "undoTitle": "Annulla l'ultima modifica",
+    "collapse": "Riduci",
+    "describeChangeTitle": "Descrivi cosa vuoi modificare",
+    "describeChange": "Descrivi la modifica...",
+    "chatAi": "Chat IA",
+    "suggestions": {
+      "vitrine": [
+        "Cambia il titolo principale",
+        "Cambia il colore principale",
+        "Rendi il CTA più accattivante",
+        "Aggiungi un servizio",
+        "Cambia lo sfondo dell'hero",
+        "Rendi il tono più professionale"
+      ],
+      "vente": [
+        "Cambia il titolo principale",
+        "Rendi il CTA più urgente",
+        "Modifica i benefici",
+        "Cambia il colore principale",
+        "Migliora la sezione garanzia",
+        "Modifica le FAQ"
+      ],
+      "capture": [
+        "Cambia il titolo principale",
+        "Rendi il CTA più urgente",
+        "Aggiungi più benefici",
+        "Cambia il colore principale",
+        "Modifica la descrizione",
+        "Rendi il tono più professionale"
+      ]
+    }
   }
 }

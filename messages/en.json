@@ -4163,5 +4163,49 @@
       "changesApplied": "Changes applied",
       "changesRejected": "Changes rejected"
     }
+  },
+  "pageChat": {
+    "imageHint": "💡 To change an image, click it directly in the preview! You'll be able to import the photo you want.",
+    "reformulate": "Rephrase your request and try again.",
+    "noCredits": "Insufficient credits. Top up to continue.",
+    "applied": "Change applied.",
+    "appliedNetworkError": "Change applied but network error while saving.",
+    "networkError": "Network error.",
+    "networkErrorRetry": "Network error. Try again.",
+    "cancelled": "Change cancelled.",
+    "partialUndo": "Partial undo (missing columns: {cols}).",
+    "suggestHeader": "Ask the AI for a change",
+    "askAi": "Ask the AI...",
+    "undoTitle": "Undo last change",
+    "collapse": "Collapse",
+    "describeChangeTitle": "Describe what you want to change",
+    "describeChange": "Describe the change...",
+    "chatAi": "AI Chat",
+    "suggestions": {
+      "vitrine": [
+        "Change the main title",
+        "Change the primary color",
+        "Make the CTA more catchy",
+        "Add a service",
+        "Change the hero background",
+        "Make the tone more professional"
+      ],
+      "vente": [
+        "Change the main title",
+        "Make the CTA more urgent",
+        "Edit the benefits",
+        "Change the primary color",
+        "Improve the guarantee section",
+        "Edit the FAQ"
+      ],
+      "capture": [
+        "Change the main title",
+        "Make the CTA more urgent",
+        "Add more benefits",
+        "Change the primary color",
+        "Edit the description",
+        "Make the tone more professional"
+      ]
+    }
   }
 }
