@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,16 +62,17 @@ export function FunnelPreviewStep({
   disabledChat,
 }: FunnelPreviewStepProps) {
   const { toast } = useToast();
+  const t = useTranslations("funnelPreview");
 
   const handleCopyText = () => {
     const toCopy = markdownText || "";
     if (!toCopy.trim()) {
       navigator.clipboard.writeText(renderedHtml || "");
-      toast({ title: "HTML copié !" });
+      toast({ title: t("htmlCopied") });
       return;
     }
     navigator.clipboard.writeText(toCopy);
-    toast({ title: "Texte copié !" });
+    toast({ title: t("textCopied") });
   };
 
   const handleDownloadHtml = () => {
@@ -98,7 +100,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
     a.download = kitFileName || `${title || "page"}.html`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "HTML téléchargé !" });
+    toast({ title: t("htmlDownloaded") });
   };
 
   const handlePreviewNewTab = () => {
@@ -116,7 +118,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Titre de la page"
+            placeholder={t("pagePlaceholder")}
             className="font-semibold text-base"
           />
         </div>
@@ -130,23 +132,23 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
             <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
               <span className="text-sm font-medium flex items-center gap-1.5">
                 <Eye className="w-3.5 h-3.5" />
-                Aperçu de ta page
+                {t("previewTitle")}
               </span>
               <div className="flex gap-1">
                 <Button variant="ghost" size="sm" onClick={handlePreviewNewTab}>
                   <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                  Nouvel onglet
+                  {t("newTab")}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleDownloadHtml}>
                   <Download className="w-3.5 h-3.5 mr-1" />
-                  Télécharger HTML
+                  {t("downloadHtml")}
                 </Button>
               </div>
             </div>
             <div className="h-[500px]">
               <iframe
                 srcDoc={renderedHtml}
-                title="Aperçu page"
+                title={t("pageFrame")}
                 className="w-full h-full border-0"
                 sandbox="allow-scripts"
               />
@@ -156,22 +158,20 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
           {/* Instructions */}
           <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-4">
             <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
-              Ta page est prête !
+              {t("pageReady")}
             </p>
             <p className="text-xs text-blue-600 dark:text-blue-400">
-              Télécharge le HTML pour l&apos;importer dans ton outil (Systeme.io, WordPress, etc.).
-              Tu n&apos;as plus qu&apos;à personnaliser les textes, ajouter tes images et ton logo si besoin.
-              Utilise le chat ci-dessous pour ajuster le copywriting avant de télécharger.
+              {t("pageReadyHint")}
             </p>
           </div>
 
           {/* Copywriting section */}
           <Card className="overflow-hidden">
             <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
-              <span className="text-sm font-medium">Copywriting</span>
+              <span className="text-sm font-medium">{t("copywriting")}</span>
               <Button variant="ghost" size="sm" onClick={handleCopyText}>
                 <Copy className="w-3.5 h-3.5 mr-1" />
-                Copier le texte
+                {t("copyText")}
               </Button>
             </div>
             <div className="p-4 max-h-[300px] overflow-auto prose prose-sm max-w-none">
@@ -179,8 +179,7 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
                 <AIContent content={markdownText} mode="auto" />
               ) : (
                 <div className="text-sm text-muted-foreground">
-                  Le template est rendu depuis <code>src/templates</code>. Si tu veux ajuster le copywriting, utilise le
-                  chat d'itération ci-dessous.
+                  {t("templateRendered")}
                 </div>
               )}
             </div>
@@ -190,15 +189,15 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
         /* Text-only preview */
         <Card className="overflow-hidden">
           <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
-            <span className="text-sm font-medium">Copywriting généré</span>
+            <span className="text-sm font-medium">{t("copywritingGenerated")}</span>
             <div className="flex gap-1">
               <Button variant="ghost" size="sm" onClick={handleCopyText}>
                 <Copy className="w-3.5 h-3.5 mr-1" />
-                Copier
+                {t("copy")}
               </Button>
               <Button variant="ghost" size="sm" onClick={handleDownloadHtml}>
                 <Download className="w-3.5 h-3.5 mr-1" />
-                HTML
+                {t("html")}
               </Button>
             </div>
           </div>
@@ -224,11 +223,11 @@ ul{padding-left:1.5rem}li{margin-bottom:0.5rem}
       <div className="flex gap-2 flex-wrap justify-end">
         <Button variant="outline" size="sm" onClick={() => onSave("draft")} disabled={!title}>
           <Save className="w-4 h-4 mr-1" />
-          Enregistrer en brouillon
+          {t("saveDraft")}
         </Button>
         <Button size="sm" onClick={() => onSave("published")} disabled={!title}>
           <Send className="w-4 h-4 mr-1" />
-          Publier
+          {t("publish")}
         </Button>
       </div>
     </div>

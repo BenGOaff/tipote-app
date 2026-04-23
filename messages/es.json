@@ -3829,5 +3829,32 @@
     "syncDone": "Sincronización completada.",
     "syncing": "Sincronizando…",
     "syncButton": "Sincronizar mis tareas"
+  },
+  "pageGen": {
+    "error": "Error",
+    "ready": "¡Tu página está lista!",
+    "creating": "Tipote está creando tu página…",
+    "redirecting": "Redirigiendo al editor...",
+    "fewSeconds": "Solo debería tardar unos segundos (pero vale la pena esperar 😉)"
+  },
+  "funnelPreview": {
+    "htmlCopied": "¡HTML copiado!",
+    "textCopied": "¡Texto copiado!",
+    "htmlDownloaded": "¡HTML descargado!",
+    "pagePlaceholder": "Título de la página",
+    "previewTitle": "Vista previa de tu página",
+    "newTab": "Nueva pestaña",
+    "downloadHtml": "Descargar HTML",
+    "pageFrame": "Vista previa",
+    "pageReady": "¡Tu página está lista!",
+    "pageReadyHint": "Descarga el HTML para importarlo a tu herramienta (Systeme.io, WordPress, etc.). Solo tienes que personalizar los textos y añadir tus imágenes y logo si quieres. Usa el chat de abajo para ajustar el copywriting antes de descargar.",
+    "copywriting": "Copywriting",
+    "copyText": "Copiar el texto",
+    "templateRendered": "La plantilla se renderiza desde src/templates. Para ajustar el copywriting, usa el chat de iteración abajo.",
+    "copywritingGenerated": "Copywriting generado",
+    "copy": "Copiar",
+    "html": "HTML",
+    "saveDraft": "Guardar borrador",
+    "publish": "Publicar"
   }
 }

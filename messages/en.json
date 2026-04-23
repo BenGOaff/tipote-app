@@ -3829,5 +3829,32 @@
     "syncDone": "Sync complete.",
     "syncing": "Syncing…",
     "syncButton": "Sync my tasks"
+  },
+  "pageGen": {
+    "error": "Error",
+    "ready": "Your page is ready!",
+    "creating": "Tipote is building your page…",
+    "redirecting": "Redirecting to the editor...",
+    "fewSeconds": "Should take just a few seconds (but it's worth the wait 😉)"
+  },
+  "funnelPreview": {
+    "htmlCopied": "HTML copied!",
+    "textCopied": "Text copied!",
+    "htmlDownloaded": "HTML downloaded!",
+    "pagePlaceholder": "Page title",
+    "previewTitle": "Your page preview",
+    "newTab": "New tab",
+    "downloadHtml": "Download HTML",
+    "pageFrame": "Page preview",
+    "pageReady": "Your page is ready!",
+    "pageReadyHint": "Download the HTML to import it into your tool (Systeme.io, WordPress, etc.). All you have to do is personalize the texts and add your images and logo if needed. Use the chat below to fine-tune the copy before downloading.",
+    "copywriting": "Copywriting",
+    "copyText": "Copy text",
+    "templateRendered": "The template is rendered from src/templates. To adjust the copy, use the iteration chat below.",
+    "copywritingGenerated": "Generated copy",
+    "copy": "Copy",
+    "html": "HTML",
+    "saveDraft": "Save as draft",
+    "publish": "Publish"
   }
 }

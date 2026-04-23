@@ -3829,5 +3829,32 @@
     "syncDone": "اكتملت المزامنة.",
     "syncing": "جاري المزامنة…",
     "syncButton": "مزامنة مهامي"
+  },
+  "pageGen": {
+    "error": "خطأ",
+    "ready": "صفحتك جاهزة!",
+    "creating": "Tipote يُنشئ صفحتك…",
+    "redirecting": "إعادة التوجيه إلى المحرر...",
+    "fewSeconds": "ينبغي أن يستغرق بضع ثوانٍ فقط (لكن الأمر يستحق الانتظار 😉)"
+  },
+  "funnelPreview": {
+    "htmlCopied": "تم نسخ HTML!",
+    "textCopied": "تم نسخ النص!",
+    "htmlDownloaded": "تم تنزيل HTML!",
+    "pagePlaceholder": "عنوان الصفحة",
+    "previewTitle": "معاينة صفحتك",
+    "newTab": "علامة تبويب جديدة",
+    "downloadHtml": "تنزيل HTML",
+    "pageFrame": "معاينة الصفحة",
+    "pageReady": "صفحتك جاهزة!",
+    "pageReadyHint": "حمّل HTML لاستيراده إلى أداتك (Systeme.io، WordPress، إلخ). ما عليك سوى تخصيص النصوص وإضافة صورك وشعارك إذا لزم. استخدم الدردشة أدناه لضبط النصوص قبل التنزيل.",
+    "copywriting": "النصوص",
+    "copyText": "نسخ النص",
+    "templateRendered": "يتم عرض القالب من src/templates. لتعديل النصوص، استخدم دردشة التكرار أدناه.",
+    "copywritingGenerated": "النصوص المُنشأة",
+    "copy": "نسخ",
+    "html": "HTML",
+    "saveDraft": "حفظ كمسودة",
+    "publish": "نشر"
   }
 }

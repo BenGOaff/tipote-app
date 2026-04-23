@@ -5,6 +5,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
 export type ProgressStep = {
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export default function PageGenerateProgress({ steps, error }: Props) {
+  const t = useTranslations("pageGen");
   const overallProgress = useMemo(() => {
     if (steps.length === 0) return 0;
     return Math.max(...steps.map((s) => s.progress));
@@ -41,10 +43,10 @@ export default function PageGenerateProgress({ steps, error }: Props) {
             )}
           </div>
           <h2 className="text-xl font-semibold mb-1">
-            {error ? "Erreur" : overallProgress >= 100 ? "Ta page est prête !" : "Tipote crée ta page…"}
+            {error ? t("error") : overallProgress >= 100 ? t("ready") : t("creating")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {error || (overallProgress >= 100 ? "Redirection vers l'éditeur..." : "Ça ne devrait prendre que quelques secondes (mais ça vaut le coup d'attendre 😉)")}
+            {error || (overallProgress >= 100 ? t("redirecting") : t("fewSeconds"))}
           </p>
         </div>
 

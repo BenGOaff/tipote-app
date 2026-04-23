@@ -3829,5 +3829,32 @@
     "syncDone": "Synchronisation terminée.",
     "syncing": "Synchronisation…",
     "syncButton": "Synchroniser mes tâches"
+  },
+  "pageGen": {
+    "error": "Erreur",
+    "ready": "Ta page est prête !",
+    "creating": "Tipote crée ta page…",
+    "redirecting": "Redirection vers l'éditeur...",
+    "fewSeconds": "Ça ne devrait prendre que quelques secondes (mais ça vaut le coup d'attendre 😉)"
+  },
+  "funnelPreview": {
+    "htmlCopied": "HTML copié !",
+    "textCopied": "Texte copié !",
+    "htmlDownloaded": "HTML téléchargé !",
+    "pagePlaceholder": "Titre de la page",
+    "previewTitle": "Aperçu de ta page",
+    "newTab": "Nouvel onglet",
+    "downloadHtml": "Télécharger HTML",
+    "pageFrame": "Aperçu page",
+    "pageReady": "Ta page est prête !",
+    "pageReadyHint": "Télécharge le HTML pour l'importer dans ton outil (Systeme.io, WordPress, etc.). Tu n'as plus qu'à personnaliser les textes, ajouter tes images et ton logo si besoin. Utilise le chat ci-dessous pour ajuster le copywriting avant de télécharger.",
+    "copywriting": "Copywriting",
+    "copyText": "Copier le texte",
+    "templateRendered": "Le template est rendu depuis src/templates. Si tu veux ajuster le copywriting, utilise le chat d'itération ci-dessous.",
+    "copywritingGenerated": "Copywriting généré",
+    "copy": "Copier",
+    "html": "HTML",
+    "saveDraft": "Enregistrer en brouillon",
+    "publish": "Publier"
   }
 }
