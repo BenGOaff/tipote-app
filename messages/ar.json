@@ -2415,7 +2415,11 @@
     "toneHumorous": "فكاهي",
     "textExceedsLimit": "النص يتجاوز حد {limit} حرف لـ {platform}",
     "connectPlatformToPublish": "قم بتوصيل {platform} في الإعدادات للنشر أو الجدولة.",
-    "connectSocialToPublish": "قم بتوصيل شبكة اجتماعية في الإعدادات للنشر أو الجدولة مباشرة."
+    "connectSocialToPublish": "قم بتوصيل شبكة اجتماعية في الإعدادات للنشر أو الجدولة مباشرة.",
+    "dmDefault": "إليك رابطك 👉 [رابط قيد الإكمال]\n\nإلى قريب! 🙌",
+    "notAuth": "غير مُوثَّق",
+    "automationCreated": "تم إنشاء الأتمتة!",
+    "cannotCreateAutomation": "تعذّر إنشاء الأتمتة"
   },
   "articleForm": {
     "generating": "جاري التوليد...",
@@ -2455,7 +2459,14 @@
     "regenerate": "إعادة التوليد",
     "copied": "تم النسخ",
     "copy": "نسخ",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "subjectPh": "مثال: بدء عمل عبر الإنترنت دون ميزانية",
+    "ctaPh": "مثال: ردّ على هذا البريد بهدفك",
+    "outcomePh": "النتيجة الرئيسية (اختياري)",
+    "linkPh": "مثال: https://... (رابط التنزيل)",
+    "emailGenerated": "تم إنشاء البريد",
+    "emailsGenerated": "تم إنشاء رسائل البريد ({n})",
+    "emailAppearsHere": "سيظهر البريد هنا..."
   },
   "videoForm": {
     "generating": "جاري التوليد...",

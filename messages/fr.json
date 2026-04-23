@@ -2415,7 +2415,11 @@
     "toneHumorous": "Humoristique",
     "textExceedsLimit": "Le texte dépasse la limite de {limit} caractères pour {platform}",
     "connectPlatformToPublish": "Connecte {platform} dans les paramètres pour publier ou programmer.",
-    "connectSocialToPublish": "Connecte un réseau social dans les paramètres pour publier ou programmer directement."
+    "connectSocialToPublish": "Connecte un réseau social dans les paramètres pour publier ou programmer directement.",
+    "dmDefault": "Voici ton lien 👉 [lien à compléter]\n\nÀ très vite ! 🙌",
+    "notAuth": "Non authentifié",
+    "automationCreated": "Automatisation créée !",
+    "cannotCreateAutomation": "Impossible de créer l'automatisation"
   },
   "articleForm": {
     "generating": "Génération...",
@@ -2455,7 +2459,14 @@
     "regenerate": "Regénérer",
     "copied": "Copié",
     "copy": "Copier",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "subjectPh": "Ex: Débuter en business en ligne sans budget",
+    "ctaPh": "Ex: Réponds à cet email avec ton objectif",
+    "outcomePh": "Résultat principal (optionnel)",
+    "linkPh": "Ex: https://... (lien du téléchargement)",
+    "emailGenerated": "Email généré",
+    "emailsGenerated": "Emails générés ({n})",
+    "emailAppearsHere": "L'email apparaîtra ici..."
   },
   "videoForm": {
     "generating": "Génération...",

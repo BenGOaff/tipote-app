@@ -356,7 +356,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>Thème *</Label>
                 <Input
-                  placeholder="Ex: Débuter en business en ligne sans budget"
+                  placeholder={t("subjectPh")}
                   value={newsletterTheme}
                   onChange={(e) => setNewsletterTheme(e.target.value)}
                 />
@@ -365,7 +365,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>CTA *</Label>
                 <Input
-                  placeholder="Ex: Réponds à cet email avec ton objectif"
+                  placeholder={t("ctaPh")}
                   value={newsletterCta}
                   onChange={(e) => setNewsletterCta(e.target.value)}
                 />
@@ -494,7 +494,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                   <div className="space-y-2">
                     <Input placeholder="Nom de l'offre *" value={offerName} onChange={(e) => setOfferName(e.target.value)} />
                     <Input placeholder="Promesse (optionnel)" value={offerPromise} onChange={(e) => setOfferPromise(e.target.value)} />
-                    <Input placeholder="Résultat principal (optionnel)" value={offerOutcome} onChange={(e) => setOfferOutcome(e.target.value)} />
+                    <Input placeholder={t("outcomePh")} value={offerOutcome} onChange={(e) => setOfferOutcome(e.target.value)} />
                     <Input placeholder="Prix (optionnel)" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
                     <Textarea
                       value={offerDescription}
@@ -629,7 +629,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>Lien du lead magnet (ou CTA) *</Label>
                 <Input
-                  placeholder="Ex: https://... (lien du téléchargement)"
+                  placeholder={t("linkPh")}
                   value={leadMagnetLink}
                   onChange={(e) => setLeadMagnetLink(e.target.value)}
                 />
@@ -638,7 +638,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <div className="space-y-2">
                 <Label>CTA alternatif (optionnel)</Label>
                 <Input
-                  placeholder="Ex: Réponds à cet email avec ton objectif"
+                  placeholder={t("ctaPh")}
                   value={onboardingCta}
                   onChange={(e) => setOnboardingCta(e.target.value)}
                 />
@@ -687,7 +687,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
           <div className="space-y-2">
   <div className="flex items-center justify-between gap-2">
-    <Label>{emails.length <= 1 ? "Email généré" : `Emails générés (${emails.length})`}</Label>
+    <Label>{emails.length <= 1 ? t("emailGenerated") : t("emailsGenerated", { n: emails.length })}</Label>
 
     <Button
       type="button"
@@ -710,7 +710,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
       value={emails[0] ?? ""}
       onChange={(e) => setEmails([e.target.value])}
       rows={12}
-      placeholder="L'email apparaîtra ici..."
+      placeholder={t("emailAppearsHere")}
       className="resize-none"
     />
   ) : (
