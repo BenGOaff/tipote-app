@@ -4,6 +4,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,7 @@ export default function SyncTasksButton({
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("syncTasks");
   const [pending, startTransition] = useTransition();
 
   return (
@@ -41,19 +43,19 @@ export default function SyncTasksButton({
 
             if (!res.ok || !json?.ok) {
               toast({
-                title: "Sync impossible",
-                description: json?.error || "Une erreur est survenue.",
+                title: t("syncImpossible"),
+                description: json?.error || t("genericError"),
                 variant: "destructive",
               });
               return;
             }
 
             toast({
-              title: "Tâches synchronisées",
+              title: t("tasksSynced"),
               description:
                 typeof json.inserted === "number"
-                  ? `${json.inserted} tâche(s) ajoutée(s) depuis votre plan.`
-                  : "Synchronisation terminée.",
+                  ? t("tasksSyncedDesc", { n: json.inserted })
+                  : t("syncDone"),
             });
 
             if (after === "goTasks") {
@@ -64,15 +66,15 @@ export default function SyncTasksButton({
             router.refresh();
           } catch (e) {
             toast({
-              title: "Sync impossible",
-              description: e instanceof Error ? e.message : "Une erreur est survenue.",
+              title: t("syncImpossible"),
+              description: e instanceof Error ? e.message : t("genericError"),
               variant: "destructive",
             });
           }
         });
       }}
     >
-      {pending ? "Synchronisation…" : "Synchroniser mes tâches"}
+      {pending ? t("syncing") : t("syncButton")}
     </Button>
   );
 }

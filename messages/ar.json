@@ -3805,5 +3805,29 @@
         "hint": "مثال: صفحة التقاط، صفحة بيع، موقع من صفحة واحدة."
       }
     }
+  },
+  "strategyPhases": {
+    "fondations": {
+      "title": "المرحلة 1: الأسس",
+      "period": "إرساء الأسس"
+    },
+    "croissance": {
+      "title": "المرحلة 2: النمو",
+      "period": "تطوير جمهورك"
+    },
+    "scale": {
+      "title": "المرحلة 3: التوسع",
+      "period": "الأتمتة والتوسع"
+    },
+    "currentPhaseLabel": "الأسس"
+  },
+  "syncTasks": {
+    "syncImpossible": "تعذّرت المزامنة",
+    "genericError": "حدث خطأ.",
+    "tasksSynced": "تمت مزامنة المهام",
+    "tasksSyncedDesc": "تمت إضافة {n} مهمة من خطتك.",
+    "syncDone": "اكتملت المزامنة.",
+    "syncing": "جاري المزامنة…",
+    "syncButton": "مزامنة مهامي"
   }
 }

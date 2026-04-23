@@ -3,6 +3,7 @@
 // Accessible from /strategy only (no sidebar link).
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -32,17 +33,7 @@ const PHASE_CONFIG: Record<string, { key: "p1" | "p2" | "p3"; index: number; pla
   scale: { key: "p3", index: 2, planKeys: ["d90", "month_3", "weeks_9_12", "phase_3"] },
 };
 
-const PHASE_TITLES: Record<string, string> = {
-  fondations: "Phase 1 : Fondations",
-  croissance: "Phase 2 : Croissance",
-  scale: "Phase 3 : Scale",
-};
-
-const PHASE_PERIODS: Record<string, string> = {
-  fondations: "Poser les bases",
-  croissance: "Développer son audience",
-  scale: "Automatiser et scaler",
-};
+const PHASE_SLUGS = ["fondations", "croissance", "scale"] as const;
 
 export default async function PhaseDetailPage({
   params,
@@ -183,8 +174,10 @@ export default async function PhaseDetailPage({
     };
   });
 
-  const phaseTitle = PHASE_TITLES[phaseSlug] || phaseSlug;
-  const phasePeriod = PHASE_PERIODS[phaseSlug] || "";
+  const t = await getTranslations("strategyPhases");
+  const isKnownPhase = (PHASE_SLUGS as readonly string[]).includes(phaseSlug);
+  const phaseTitle = isKnownPhase ? t(`${phaseSlug}.title` as any) : phaseSlug;
+  const phasePeriod = isKnownPhase ? t(`${phaseSlug}.period` as any) : "";
 
   // Phase description from i18n will be resolved client-side
   // We pass the phaseSlug to let the client component resolve it

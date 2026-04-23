@@ -3805,5 +3805,29 @@
         "hint": "Ej.: página de captura, página de venta, landing one-page."
       }
     }
+  },
+  "strategyPhases": {
+    "fondations": {
+      "title": "Fase 1: Fundamentos",
+      "period": "Sentar las bases"
+    },
+    "croissance": {
+      "title": "Fase 2: Crecimiento",
+      "period": "Desarrollar tu audiencia"
+    },
+    "scale": {
+      "title": "Fase 3: Escala",
+      "period": "Automatizar y escalar"
+    },
+    "currentPhaseLabel": "Fundamentos"
+  },
+  "syncTasks": {
+    "syncImpossible": "Sincronización imposible",
+    "genericError": "Ha ocurrido un error.",
+    "tasksSynced": "Tareas sincronizadas",
+    "tasksSyncedDesc": "{n} tarea(s) añadida(s) desde tu plan.",
+    "syncDone": "Sincronización completada.",
+    "syncing": "Sincronizando…",
+    "syncButton": "Sincronizar mis tareas"
   }
 }

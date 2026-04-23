@@ -3805,5 +3805,29 @@
         "hint": "Ex : page de capture, page de vente, site vitrine one-page."
       }
     }
+  },
+  "strategyPhases": {
+    "fondations": {
+      "title": "Phase 1 : Fondations",
+      "period": "Poser les bases"
+    },
+    "croissance": {
+      "title": "Phase 2 : Croissance",
+      "period": "Développer son audience"
+    },
+    "scale": {
+      "title": "Phase 3 : Scale",
+      "period": "Automatiser et scaler"
+    },
+    "currentPhaseLabel": "Fondations"
+  },
+  "syncTasks": {
+    "syncImpossible": "Sync impossible",
+    "genericError": "Une erreur est survenue.",
+    "tasksSynced": "Tâches synchronisées",
+    "tasksSyncedDesc": "{n} tâche(s) ajoutée(s) depuis votre plan.",
+    "syncDone": "Synchronisation terminée.",
+    "syncing": "Synchronisation…",
+    "syncButton": "Synchroniser mes tâches"
   }
 }

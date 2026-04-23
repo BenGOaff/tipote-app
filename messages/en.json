@@ -3805,5 +3805,29 @@
         "hint": "E.g. capture page, sales page, one-page landing site."
       }
     }
+  },
+  "strategyPhases": {
+    "fondations": {
+      "title": "Phase 1: Foundations",
+      "period": "Lay the groundwork"
+    },
+    "croissance": {
+      "title": "Phase 2: Growth",
+      "period": "Grow your audience"
+    },
+    "scale": {
+      "title": "Phase 3: Scale",
+      "period": "Automate and scale"
+    },
+    "currentPhaseLabel": "Foundations"
+  },
+  "syncTasks": {
+    "syncImpossible": "Sync failed",
+    "genericError": "Something went wrong.",
+    "tasksSynced": "Tasks synced",
+    "tasksSyncedDesc": "{n} task(s) added from your plan.",
+    "syncDone": "Sync complete.",
+    "syncing": "Syncing…",
+    "syncButton": "Sync my tasks"
   }
 }

@@ -4,6 +4,7 @@
 //    au lieu de redirect vers /strategy/pyramids.
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
@@ -156,6 +157,7 @@ type TaskRow = {
 
 export default async function StrategyPage() {
   const supabase = await getSupabaseServerClient();
+  const tPhases = await getTranslations("strategyPhases");
 
   const {
     data: { user },
@@ -254,11 +256,11 @@ export default async function StrategyPage() {
         totalDone={0}
         totalAll={0}
         currentPhase={1}
-        currentPhaseLabel="Fondations"
+        currentPhaseLabel={tPhases("currentPhaseLabel")}
         phases={[
-          { title: "Phase 1 : Fondations", period: "Poser les bases", tasks: [] },
-          { title: "Phase 2 : Croissance", period: "Développer son audience", tasks: [] },
-          { title: "Phase 3 : Scale", period: "Automatiser et scaler", tasks: [] },
+          { title: tPhases("fondations.title"), period: tPhases("fondations.period"), tasks: [] },
+          { title: tPhases("croissance.title"), period: tPhases("croissance.period"), tasks: [] },
+          { title: tPhases("scale.title"), period: tPhases("scale.period"), tasks: [] },
         ]}
         persona={{
           title: "",
@@ -486,7 +488,7 @@ export default async function StrategyPage() {
   const p1Done = byPhase.p1.every((t) => (t.status ?? "").toLowerCase() === "done");
   const p2Done = byPhase.p2.every((t) => (t.status ?? "").toLowerCase() === "done");
   const currentPhase = !p1Done || byPhase.p1.length === 0 ? 1 : !p2Done || byPhase.p2.length === 0 ? 2 : 3;
-  const currentPhaseLabel = currentPhase === 1 ? "Fondations" : currentPhase === 2 ? "Croissance" : "Scale";
+  const currentPhaseLabel = currentPhase === 1 ? tPhases("fondations.title").replace(/^.*?:\s*/, "") : currentPhase === 2 ? tPhases("croissance.title").replace(/^.*?:\s*/, "") : tPhases("scale.title").replace(/^.*?:\s*/, "");
 
   // ✅ Auto-sync côté CLIENT (safe)
   const shouldAutoSync = totalTasks === 0 && planTasksCount > 0;
@@ -504,9 +506,9 @@ export default async function StrategyPage() {
         currentPhase={currentPhase}
         currentPhaseLabel={currentPhaseLabel}
         phases={[
-          { title: "Phase 1 : Fondations", period: "Poser les bases", tasks: byPhase.p1 },
-          { title: "Phase 2 : Croissance", period: "Développer son audience", tasks: byPhase.p2 },
-          { title: "Phase 3 : Scale", period: "Automatiser et scaler", tasks: byPhase.p3 },
+          { title: tPhases("fondations.title"), period: tPhases("fondations.period"), tasks: byPhase.p1 },
+          { title: tPhases("croissance.title"), period: tPhases("croissance.period"), tasks: byPhase.p2 },
+          { title: tPhases("scale.title"), period: tPhases("scale.period"), tasks: byPhase.p3 },
         ]}
         persona={persona}
         offerSets={offerSets}
