@@ -6,6 +6,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +53,7 @@ interface AdvancedQuizSectionProps {
 }
 
 export default function AdvancedQuizSection(props: AdvancedQuizSectionProps) {
+  const t = useTranslations("advancedQuiz");
   const [open, setOpen] = useState(false);
 
   return (
@@ -62,9 +64,9 @@ export default function AdvancedQuizSection(props: AdvancedQuizSectionProps) {
         className="flex items-center gap-2 w-full text-left font-bold"
       >
         {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        Personnalisation avancée
+        {t("header")}
         <span className="text-xs font-normal text-muted-foreground ml-2">
-          branding · URL · footer · partage · Systeme.io
+          {t("headerSub")}
         </span>
       </button>
 
@@ -84,31 +86,32 @@ export default function AdvancedQuizSection(props: AdvancedQuizSectionProps) {
 }
 
 function BrandingBlock({ brandFont, setBrandFont, brandColorPrimary, setBrandColorPrimary, brandColorBackground, setBrandColorBackground }: AdvancedQuizSectionProps) {
+  const t = useTranslations("advancedQuiz");
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold flex items-center gap-2">
-        <Palette className="w-4 h-4" /> Branding du quiz
+        <Palette className="w-4 h-4" /> {t("brandingTitle")}
       </h4>
       <p className="text-xs text-muted-foreground">
-        Laisser vide pour utiliser le branding du profil (fallback automatique).
+        {t("brandingHint")}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="brand-font" className="text-xs">Police</Label>
+          <Label htmlFor="brand-font" className="text-xs">{t("font")}</Label>
           <select
             id="brand-font"
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             value={brandFont}
             onChange={(e) => setBrandFont(e.target.value)}
           >
-            <option value="">(profil / défaut)</option>
+            <option value="">{t("fontDefault")}</option>
             {BRAND_FONT_CHOICES.map((f) => (
               <option key={f} value={f}>{f}</option>
             ))}
           </select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="brand-primary" className="text-xs">Couleur principale</Label>
+          <Label htmlFor="brand-primary" className="text-xs">{t("primaryColor")}</Label>
           <div className="flex items-center gap-2">
             <Input
               id="brand-primary"
@@ -124,7 +127,7 @@ function BrandingBlock({ brandFont, setBrandFont, brandColorPrimary, setBrandCol
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="brand-bg" className="text-xs">Fond de page</Label>
+          <Label htmlFor="brand-bg" className="text-xs">{t("pageBg")}</Label>
           <div className="flex items-center gap-2">
             <Input
               id="brand-bg"
@@ -145,17 +148,18 @@ function BrandingBlock({ brandFont, setBrandFont, brandColorPrimary, setBrandCol
 }
 
 function SlugBlock({ slug, setSlug, slugError, setSlugError, quizId }: AdvancedQuizSectionProps) {
+  const t = useTranslations("advancedQuiz");
   const check = useCallback(async (raw: string) => {
     const cleaned = sanitizeSlug(raw);
     if (!cleaned) {
-      setSlugError(raw.trim() ? "Slug invalide (a-z, 0-9, -, 3-50 caractères)" : null);
+      setSlugError(raw.trim() ? t("slugInvalid") : null);
       return;
     }
     try {
       const res = await fetch(`/api/quiz/${quizId}/slug-available?slug=${encodeURIComponent(cleaned)}`);
       const json = await res.json();
       if (json?.ok && json.available === false) {
-        setSlugError("Ce slug est déjà utilisé");
+        setSlugError(t("slugTaken"));
       } else {
         setSlugError(null);
       }
@@ -163,15 +167,15 @@ function SlugBlock({ slug, setSlug, slugError, setSlugError, quizId }: AdvancedQ
       // Soft fail — the real uniqueness check happens on save.
       setSlugError(null);
     }
-  }, [quizId, setSlugError]);
+  }, [quizId, setSlugError, t]);
 
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold flex items-center gap-2">
-        <Link2 className="w-4 h-4" /> URL personnalisée
+        <Link2 className="w-4 h-4" /> {t("urlTitle")}
       </h4>
       <div className="space-y-1.5">
-        <Label htmlFor="quiz-slug" className="text-xs">Slug</Label>
+        <Label htmlFor="quiz-slug" className="text-xs">{t("slugLabel")}</Label>
         <Input
           id="quiz-slug"
           type="text"
@@ -188,7 +192,7 @@ function SlugBlock({ slug, setSlug, slugError, setSlugError, quizId }: AdvancedQ
           <p className="text-xs text-red-600">{slugError}</p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            {slug ? `/q/${sanitizeSlug(slug) ?? slug}` : `/q/{uuid} (pas de slug)`}
+            {slug ? `/q/${sanitizeSlug(slug) ?? slug}` : t("slugNonePreview", { id: "{uuid}" })}
           </p>
         )}
       </div>
@@ -197,30 +201,31 @@ function SlugBlock({ slug, setSlug, slugError, setSlugError, quizId }: AdvancedQ
 }
 
 function TextsBlock({ startButtonText, setStartButtonText, resultInsightHeading, setResultInsightHeading, resultProjectionHeading, setResultProjectionHeading, ogDescription, setOgDescription }: AdvancedQuizSectionProps) {
+  const t = useTranslations("advancedQuiz");
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold flex items-center gap-2">
-        <Megaphone className="w-4 h-4" /> Textes personnalisés
+        <Megaphone className="w-4 h-4" /> {t("textsTitle")}
       </h4>
       <p className="text-xs text-muted-foreground">
-        Laisser vide pour utiliser les textes traduits par défaut (selon la locale du quiz).
+        {t("textsHint")}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="start-btn" className="text-xs">CTA intro</Label>
-          <Input id="start-btn" type="text" value={startButtonText} onChange={(e) => setStartButtonText(e.target.value)} placeholder="Commencer le test" />
+          <Label htmlFor="start-btn" className="text-xs">{t("ctaIntro")}</Label>
+          <Input id="start-btn" type="text" value={startButtonText} onChange={(e) => setStartButtonText(e.target.value)} placeholder={t("ctaIntroPh")} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="insight-h" className="text-xs">Titre bloc "Prise de conscience"</Label>
-          <Input id="insight-h" type="text" value={resultInsightHeading} onChange={(e) => setResultInsightHeading(e.target.value)} placeholder="Prise de conscience" />
+          <Label htmlFor="insight-h" className="text-xs">{t("insightHeading")}</Label>
+          <Input id="insight-h" type="text" value={resultInsightHeading} onChange={(e) => setResultInsightHeading(e.target.value)} placeholder={t("insightHeadingPh")} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="projection-h" className="text-xs">Titre bloc "Et si..."</Label>
-          <Input id="projection-h" type="text" value={resultProjectionHeading} onChange={(e) => setResultProjectionHeading(e.target.value)} placeholder="Et si..." />
+          <Label htmlFor="projection-h" className="text-xs">{t("projectionHeading")}</Label>
+          <Input id="projection-h" type="text" value={resultProjectionHeading} onChange={(e) => setResultProjectionHeading(e.target.value)} placeholder={t("projectionHeadingPh")} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="og-desc" className="text-xs">Description OG (partages sociaux)</Label>
-          <Textarea id="og-desc" value={ogDescription} onChange={(e) => setOgDescription(e.target.value)} rows={2} placeholder="Utilisée si définie, sinon: intro du quiz" />
+          <Label htmlFor="og-desc" className="text-xs">{t("ogDesc")}</Label>
+          <Textarea id="og-desc" value={ogDescription} onChange={(e) => setOgDescription(e.target.value)} rows={2} placeholder={t("ogDescPh")} />
         </div>
       </div>
     </section>
@@ -228,19 +233,20 @@ function TextsBlock({ startButtonText, setStartButtonText, resultInsightHeading,
 }
 
 function FooterBlock({ customFooterText, setCustomFooterText, customFooterUrl, setCustomFooterUrl }: AdvancedQuizSectionProps) {
+  const t = useTranslations("advancedQuiz");
   return (
     <section className="space-y-3">
-      <h4 className="text-sm font-semibold">Footer personnalisé</h4>
+      <h4 className="text-sm font-semibold">{t("footerTitle")}</h4>
       <p className="text-xs text-muted-foreground">
-        Si rempli, remplace "Ce quiz vous est offert par Tipote" sur la page publique.
+        {t("footerHint")}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="footer-text" className="text-xs">Texte du footer</Label>
-          <Input id="footer-text" type="text" value={customFooterText} onChange={(e) => setCustomFooterText(e.target.value)} placeholder="Propulsé par Mon Business" />
+          <Label htmlFor="footer-text" className="text-xs">{t("footerText")}</Label>
+          <Input id="footer-text" type="text" value={customFooterText} onChange={(e) => setCustomFooterText(e.target.value)} placeholder={t("footerTextPh")} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="footer-url" className="text-xs">URL du footer</Label>
+          <Label htmlFor="footer-url" className="text-xs">{t("footerUrl")}</Label>
           <Input id="footer-url" type="url" value={customFooterUrl} onChange={(e) => setCustomFooterUrl(e.target.value)} placeholder="https://mon-site.com" />
         </div>
       </div>
@@ -249,16 +255,17 @@ function FooterBlock({ customFooterText, setCustomFooterText, customFooterUrl, s
 }
 
 function BonusBlock({ bonusImageUrl, setBonusImageUrl }: AdvancedQuizSectionProps) {
+  const t = useTranslations("advancedQuiz");
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold flex items-center gap-2">
-        <Gift className="w-4 h-4" /> Bonus viralité
+        <Gift className="w-4 h-4" /> {t("bonusTitle")}
       </h4>
       <div className="space-y-1.5">
-        <Label htmlFor="bonus-img" className="text-xs">Image du bonus (URL)</Label>
+        <Label htmlFor="bonus-img" className="text-xs">{t("bonusImg")}</Label>
         <Input id="bonus-img" type="url" value={bonusImageUrl} onChange={(e) => setBonusImageUrl(e.target.value)} placeholder="https://..." />
         <p className="text-xs text-muted-foreground">
-          Affichée sur l'étape "Partage pour débloquer" quand la viralité est active.
+          {t("bonusImgHint")}
         </p>
       </div>
     </section>
@@ -266,6 +273,7 @@ function BonusBlock({ bonusImageUrl, setBonusImageUrl }: AdvancedQuizSectionProp
 }
 
 function ShareNetworksBlock({ shareNetworks, setShareNetworks }: AdvancedQuizSectionProps) {
+  const t = useTranslations("advancedQuiz");
   const toggle = (net: string) => {
     setShareNetworks(
       shareNetworks.includes(net)
@@ -276,10 +284,10 @@ function ShareNetworksBlock({ shareNetworks, setShareNetworks }: AdvancedQuizSec
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold flex items-center gap-2">
-        <Share2 className="w-4 h-4" /> Réseaux de partage autorisés
+        <Share2 className="w-4 h-4" /> {t("shareTitle")}
       </h4>
       <p className="text-xs text-muted-foreground">
-        Si aucune case cochée, tous les réseaux par défaut sont proposés au visiteur.
+        {t("shareHint")}
       </p>
       <div className="flex flex-wrap gap-2">
         {ALLOWED_SHARE_NETWORKS.map((net) => {
@@ -303,16 +311,17 @@ function ShareNetworksBlock({ shareNetworks, setShareNetworks }: AdvancedQuizSec
 }
 
 function SioBlock({ sioCaptureTag, setSioCaptureTag }: AdvancedQuizSectionProps) {
+  const t = useTranslations("advancedQuiz");
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold flex items-center gap-2">
-        <Tag className="w-4 h-4" /> Systeme.io — Tag capture
+        <Tag className="w-4 h-4" /> {t("sioTitle")}
       </h4>
       <div className="space-y-1.5">
-        <Label htmlFor="sio-capture" className="text-xs">Tag appliqué à chaque lead capturé</Label>
+        <Label htmlFor="sio-capture" className="text-xs">{t("sioTag")}</Label>
         <Input id="sio-capture" type="text" value={sioCaptureTag} onChange={(e) => setSioCaptureTag(e.target.value)} placeholder="quiz-x-captured" />
         <p className="text-xs text-muted-foreground">
-          Séparé des tags de résultat : ce tag est appliqué à chaque email (quel que soit le résultat).
+          {t("sioTagHint")}
         </p>
       </div>
     </section>
