@@ -1797,7 +1797,13 @@
     "errors": {
       "tableNotReady": "The Supabase table doesn't exist yet. Follow the setup guide above.",
       "saveFailed": "Failed to save"
-    }
+    },
+    "platformDescDmComment": "Auto DM + comment reply",
+    "platformDescCommentOnly": "Auto comment reply",
+    "platformDescLikeComment": "Auto like + comment reply",
+    "commentReply": "Comment reply",
+    "likeCommentReply": "Like + comment reply",
+    "networkError": "Network error"
   },
   "autoCommentPanel": {
     "title": "Auto-comments",

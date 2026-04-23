@@ -141,7 +141,7 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-blue-500",
     bg: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40",
-    description: "Auto DM + réponse commentaire",
+    descriptionKey: "platformDescDmComment",
   },
   {
     id: "instagram",
@@ -150,7 +150,7 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-pink-500",
     bg: "bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800/40",
-    description: "Auto DM + réponse commentaire",
+    descriptionKey: "platformDescDmComment",
   },
   {
     id: "tiktok",
@@ -159,7 +159,7 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-black dark:text-white",
     bg: "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800/40",
-    description: "Auto réponse commentaire",
+    descriptionKey: "platformDescCommentOnly",
   },
   {
     id: "linkedin",
@@ -168,7 +168,7 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-sky-600",
     bg: "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40",
-    description: "Auto réponse commentaire",
+    descriptionKey: "platformDescCommentOnly",
   },
   {
     id: "twitter",
@@ -177,7 +177,7 @@ const PLATFORM_STATUS = [
     status: "available" as const,
     color: "text-sky-500",
     bg: "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40",
-    description: "Auto like + réponse commentaire",
+    descriptionKey: "platformDescLikeComment",
   },
   {
     id: "pinterest",
@@ -186,7 +186,7 @@ const PLATFORM_STATUS = [
     status: "soon" as const,
     color: "text-red-500",
     bg: "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40",
-    description: "",
+    descriptionKey: "",
   },
   {
     id: "threads",
@@ -195,7 +195,7 @@ const PLATFORM_STATUS = [
     status: "soon" as const,
     color: "text-slate-500",
     bg: "bg-slate-50 dark:bg-slate-950/20 border-slate-200 dark:border-slate-800/40",
-    description: "",
+    descriptionKey: "",
   },
 ];
 
@@ -489,7 +489,7 @@ export default function AutomationsLovableClient() {
                   <p className="text-sm font-medium">{p.label}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {isAvailable
-                      ? p.description
+                      ? t(p.descriptionKey as any)
                       : p.status === "soon"
                       ? t("status.soon")
                       : t("status.unavailable")}
@@ -575,7 +575,7 @@ export default function AutomationsLovableClient() {
             <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
               {form.platforms[0] === "instagram" ? <Instagram className="w-4 h-4 text-pink-500" /> : form.platforms[0] === "tiktok" ? <TikTokIcon className="w-4 h-4 text-black dark:text-white" /> : form.platforms[0] === "linkedin" ? <Linkedin className="w-4 h-4 text-sky-600" /> : form.platforms[0] === "twitter" ? <Twitter className="w-4 h-4 text-sky-500" /> : <Facebook className="w-4 h-4 text-blue-500" />}
               <span className="text-sm font-medium">{platformLabel}</span>
-              {isCommentOnly && <Badge variant="secondary" className="text-xs ml-auto">{form.platforms[0] === "linkedin" ? "Réponse commentaire" : form.platforms[0] === "twitter" ? "Like + réponse commentaire" : t("form.tiktokCommentOnly")}</Badge>}
+              {isCommentOnly && <Badge variant="secondary" className="text-xs ml-auto">{form.platforms[0] === "linkedin" ? t("commentReply") : form.platforms[0] === "twitter" ? t("likeCommentReply") : t("form.tiktokCommentOnly")}</Badge>}
             </div>
 
             {/* Name */}
@@ -820,7 +820,7 @@ function AutomationCard({
       const data = await res.json();
       setTestResult({ ok: data.ok, detail: data.detail ?? data.error ?? "Erreur inconnue" });
     } catch {
-      setTestResult({ ok: false, detail: "Erreur réseau" });
+      setTestResult({ ok: false, detail: t("networkError") });
     } finally {
       setIsTesting(false);
     }

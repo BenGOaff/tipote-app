@@ -1797,7 +1797,13 @@
     "errors": {
       "tableNotReady": "La tabla de Supabase todavía no existe. Sigue la guía de configuración de arriba.",
       "saveFailed": "Error al guardar"
-    }
+    },
+    "platformDescDmComment": "Auto DM + respuesta comentario",
+    "platformDescCommentOnly": "Auto respuesta comentario",
+    "platformDescLikeComment": "Auto like + respuesta comentario",
+    "commentReply": "Respuesta comentario",
+    "likeCommentReply": "Like + respuesta comentario",
+    "networkError": "Error de red"
   },
   "autoCommentPanel": {
     "title": "Auto-comentarios",

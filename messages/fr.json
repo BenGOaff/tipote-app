@@ -1797,7 +1797,13 @@
     "errors": {
       "tableNotReady": "La table Supabase n'est pas encore créée. Suis le guide de configuration ci-dessus.",
       "saveFailed": "Erreur lors de l'enregistrement"
-    }
+    },
+    "platformDescDmComment": "Auto DM + réponse commentaire",
+    "platformDescCommentOnly": "Auto réponse commentaire",
+    "platformDescLikeComment": "Auto like + réponse commentaire",
+    "commentReply": "Réponse commentaire",
+    "likeCommentReply": "Like + réponse commentaire",
+    "networkError": "Erreur réseau"
   },
   "autoCommentPanel": {
     "title": "Auto-commentaires",

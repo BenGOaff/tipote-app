@@ -1797,7 +1797,13 @@
     "errors": {
       "tableNotReady": "جدول Supabase غير موجود بعد. اتبع دليل الإعداد أعلاه.",
       "saveFailed": "فشل الحفظ"
-    }
+    },
+    "platformDescDmComment": "رسالة مباشرة تلقائية + رد على التعليق",
+    "platformDescCommentOnly": "رد تلقائي على التعليق",
+    "platformDescLikeComment": "إعجاب تلقائي + رد على التعليق",
+    "commentReply": "رد على التعليق",
+    "likeCommentReply": "إعجاب + رد على التعليق",
+    "networkError": "خطأ في الشبكة"
   },
   "autoCommentPanel": {
     "title": "التعليقات التلقائية",
