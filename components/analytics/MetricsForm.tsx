@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,7 @@ export const MetricsForm = ({
   isSaving,
   isAnalyzing,
 }: MetricsFormProps) => {
+  const t = useTranslations("small");
   const availableMonths = useMemo(() => getAvailableMonths(), []);
 
   const [formData, setFormData] = useState({
@@ -121,7 +123,7 @@ export const MetricsForm = ({
           <Label>Mois</Label>
           <Select value={formData.month} onValueChange={(value) => setFormData({ ...formData, month: value })}>
             <SelectTrigger>
-              <SelectValue placeholder="Sélectionne un mois" />
+              <SelectValue placeholder={t("selectMonth")} />
             </SelectTrigger>
             <SelectContent>
               {availableMonths.map((m) => (

@@ -3338,7 +3338,8 @@
     "stepResults": "النتائج",
     "stepCapture": "الالتقاط",
     "stepVirality": "الانتشار الفيروسي",
-    "stepShare": "المشاركة"
+    "stepShare": "المشاركة",
+    "reorder": "إعادة الترتيب"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",
@@ -3887,5 +3888,26 @@
       "cannotDelete": "تعذّر الحذف.",
       "genericError": "خطأ"
     }
+  },
+  "small": {
+    "selectMonth": "اختر شهرًا",
+    "templateNoImport": "هذا القالب لا يحتوي بعد على رابط استيراد مُهيأ.",
+    "addTask": "إضافة مهمة…",
+    "deleteTask": "حذف المهمة",
+    "reorder": "إعادة الترتيب",
+    "addTaskBtn": "إضافة مهمة",
+    "addShort": "إضافة"
+  },
+  "funnelChat": {
+    "request": "اطلب تعديلاً على النص أو العنصر المرئي…",
+    "costHint": "كل تعديل عبر الدردشة يكلف {n} رصيد.",
+    "credit": "{n} رصيد",
+    "placeholder": "مثال: اجعل العنوان أكثر مباشرة، أضف 3 مزايا، CTA أكثر إلحاحًا...",
+    "send": "إرسال",
+    "messages": "{n} رسالة",
+    "noMessages": "لا توجد رسائل",
+    "cancel": "إلغاء",
+    "accept": "قبول",
+    "noPending": "لا توجد تعديلات معلقة"
   }
 }

@@ -3338,7 +3338,8 @@
     "stepResults": "Results",
     "stepCapture": "Capture",
     "stepVirality": "Virality",
-    "stepShare": "Share"
+    "stepShare": "Share",
+    "reorder": "Reorder"
   },
   "quizDetail": {
     "backToList": "Back to quizzes",
@@ -3887,5 +3888,26 @@
       "cannotDelete": "Unable to delete.",
       "genericError": "Error"
     }
+  },
+  "small": {
+    "selectMonth": "Select a month",
+    "templateNoImport": "This template doesn't have an import link configured yet.",
+    "addTask": "Add a task…",
+    "deleteTask": "Delete task",
+    "reorder": "Reorder",
+    "addTaskBtn": "Add a task",
+    "addShort": "Add"
+  },
+  "funnelChat": {
+    "request": "Request a change to the copy or the visual…",
+    "costHint": "Each chat change costs {n} credit.",
+    "credit": "{n} credit",
+    "placeholder": "E.g. make the title more direct, add 3 benefits, more urgent CTA...",
+    "send": "Send",
+    "messages": "{n} message(s)",
+    "noMessages": "No messages",
+    "cancel": "Cancel",
+    "accept": "Accept",
+    "noPending": "No pending changes"
   }
 }

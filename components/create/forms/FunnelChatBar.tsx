@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ export function FunnelChatBar({
   iterationCost = 0.5,
   disabled,
 }: FunnelChatBarProps) {
+  const t = useTranslations("funnelChat");
   const [value, setValue] = useState("");
 
   const canSend = useMemo(() => {
@@ -50,20 +52,20 @@ export function FunnelChatBar({
     <Card className="p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="space-y-1">
-          <p className="text-sm font-medium">Demander une modification du texte ou du visuel…</p>
+          <p className="text-sm font-medium">{t("request")}</p>
           <p className="text-xs text-muted-foreground">
-            Chaque changement via chat coûte {iterationCost} crédit.
+            {t("costHint", { n: iterationCost })}
           </p>
         </div>
         <Badge variant="outline" className="gap-1 whitespace-nowrap">
           <Coins className="w-3.5 h-3.5" />
-          {iterationCost} crédit
+          {t("credit", { n: iterationCost })}
         </Badge>
       </div>
 
       <div className="flex gap-2">
         <Input
-          placeholder="Ex: rends le titre plus direct, ajoute 3 bénéfices, CTA plus urgent..."
+          placeholder={t("placeholder")}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           disabled={disabled || isLoading}
@@ -81,31 +83,31 @@ export function FunnelChatBar({
               ...
             </>
           ) : (
-            "Envoyer"
+            t("send")
           )}
         </Button>
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="text-xs text-muted-foreground">
-          {messages.length ? `${messages.length} message(s)` : "Aucun message"}
+          {messages.length ? t("messages", { n: messages.length }) : t("noMessages")}
         </div>
 
         {hasPendingChanges ? (
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={onReject} disabled={isLoading}>
               <RotateCcw className="w-4 h-4 mr-1" />
-              Annuler
+              {t("cancel")}
             </Button>
             <Button size="sm" onClick={onAccept} disabled={isLoading}>
               <Check className="w-4 h-4 mr-1" />
-              Accepter
+              {t("accept")}
             </Button>
           </div>
         ) : (
           <Button size="sm" variant="ghost" disabled className="gap-2">
             <X className="w-4 h-4" />
-            Aucune modification en attente
+            {t("noPending")}
           </Button>
         )}
       </div>

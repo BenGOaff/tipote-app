@@ -3338,7 +3338,8 @@
     "stepResults": "Résultats",
     "stepCapture": "Capture",
     "stepVirality": "Viralité",
-    "stepShare": "Partage"
+    "stepShare": "Partage",
+    "reorder": "Réordonner"
   },
   "quizDetail": {
     "backToList": "Retour aux quiz",
@@ -3887,5 +3888,26 @@
       "cannotDelete": "Impossible de supprimer.",
       "genericError": "Erreur"
     }
+  },
+  "small": {
+    "selectMonth": "Sélectionne un mois",
+    "templateNoImport": "Ce template n'a pas encore de lien d'import configuré.",
+    "addTask": "Ajouter une tâche…",
+    "deleteTask": "Supprimer la tâche",
+    "reorder": "Réordonner",
+    "addTaskBtn": "Ajouter une tâche",
+    "addShort": "Ajouter"
+  },
+  "funnelChat": {
+    "request": "Demander une modification du texte ou du visuel…",
+    "costHint": "Chaque changement via chat coûte {n} crédit.",
+    "credit": "{n} crédit",
+    "placeholder": "Ex: rends le titre plus direct, ajoute 3 bénéfices, CTA plus urgent...",
+    "send": "Envoyer",
+    "messages": "{n} message(s)",
+    "noMessages": "Aucun message",
+    "cancel": "Annuler",
+    "accept": "Accepter",
+    "noPending": "Aucune modification en attente"
   }
 }
