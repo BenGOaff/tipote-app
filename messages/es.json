@@ -479,6 +479,29 @@
     "step6Hint": "El cuadro final positivo. Tu vida hoy, mejor que antes. Y por qué ayudas a los demás ahora.",
     "step6Ph": "Ej.: Hoy vivo de mi pasión, he acompañado a +200 personas y ayudo a [público] a [objetivo] sin [obstáculo]. Mi objetivo: …"
   },
+  "competitorAnalysis": {
+    "competitorPh": "Precio, puntos fuertes, puntos débiles, lo que ya sabes…",
+    "synthesisTitle": "Síntesis competitiva",
+    "noSynthesis": "No hay síntesis disponible.",
+    "importedDocLabel": "Documento importado:",
+    "toastCreditsTitle": "Créditos insuficientes",
+    "toastCreditsAnalysis": "El análisis competitivo cuesta 1 crédito.",
+    "toastCreditsImport": "La importación de un documento cuesta 1 crédito.",
+    "toastAnalysisDone": "Análisis competitivo completado ✓",
+    "toastDocImported": "Documento importado ✓",
+    "toastDocImportedDesc": "Competidores pre-rellenados desde el documento. Lanza el análisis IA para obtener tu informe.",
+    "toastSummaryUpdated": "Resumen actualizado",
+    "toastUpdated": "Actualizado",
+    "toastMatrixUpdated": "Matriz actualizada",
+    "errNoResult": "Ningún resultado recibido",
+    "weaknessesTitle": "A mejorar",
+    "opportunitiesTitle": "Oportunidades",
+    "contentStrategyLabel": "Estrategia de contenido",
+    "differencesSummaryLabel": "Resumen de diferencias",
+    "differentiationLabel": "Estrategia de diferenciación",
+    "offerImprovementsLabel": "Mejoras que aportar a mi oferta",
+    "addCompetitor": "Añadir un competidor"
+  },
   "settings": {
     "title": "Ajustes",
     "tabs": {

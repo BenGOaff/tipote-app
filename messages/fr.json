@@ -479,6 +479,29 @@
     "step6Hint": "Le tableau final positif. Ta vie aujourd'hui, meilleure qu'avant. Et pourquoi tu aides les autres maintenant.",
     "step6Ph": "Ex : Aujourd'hui je vis de ma passion, j'ai accompagné +200 personnes et j'aide les [cible] à [objectif] sans [obstacle]. Mon objectif : …"
   },
+  "competitorAnalysis": {
+    "competitorPh": "Prix, points forts, points faibles, ce que tu sais déjà…",
+    "synthesisTitle": "Synthèse concurrentielle",
+    "noSynthesis": "Aucune synthèse disponible.",
+    "importedDocLabel": "Document importé :",
+    "toastCreditsTitle": "Crédits insuffisants",
+    "toastCreditsAnalysis": "L'analyse concurrentielle coûte 1 crédit.",
+    "toastCreditsImport": "L'import de document coûte 1 crédit.",
+    "toastAnalysisDone": "Analyse concurrentielle terminée ✓",
+    "toastDocImported": "Document importé ✓",
+    "toastDocImportedDesc": "Concurrents pré-remplis depuis le doc. Lance l'analyse IA pour obtenir ton rapport.",
+    "toastSummaryUpdated": "Résumé mis à jour",
+    "toastUpdated": "Mis à jour",
+    "toastMatrixUpdated": "Matrice mise à jour",
+    "errNoResult": "Aucun résultat reçu",
+    "weaknessesTitle": "À améliorer",
+    "opportunitiesTitle": "Opportunités",
+    "contentStrategyLabel": "Stratégie de contenu",
+    "differencesSummaryLabel": "Résumé des différences",
+    "differentiationLabel": "Stratégie de différenciation",
+    "offerImprovementsLabel": "Améliorations à apporter à mon offre",
+    "addCompetitor": "Ajouter un concurrent"
+  },
   "settings": {
     "title": "Paramètres",
     "tabs": {

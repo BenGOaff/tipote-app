@@ -479,6 +479,29 @@
     "step6Hint": "The positive final picture. Your life today, better than before. And why you help others now.",
     "step6Ph": "E.g.: Today I live from my passion, I've helped 200+ people, and I help [target audience] achieve [goal] without [obstacle]. My mission: …"
   },
+  "competitorAnalysis": {
+    "competitorPh": "Price, strengths, weaknesses, what you already know…",
+    "synthesisTitle": "Competitive synthesis",
+    "noSynthesis": "No synthesis available.",
+    "importedDocLabel": "Imported document:",
+    "toastCreditsTitle": "Not enough credits",
+    "toastCreditsAnalysis": "The competitive analysis costs 1 credit.",
+    "toastCreditsImport": "Importing a document costs 1 credit.",
+    "toastAnalysisDone": "Competitive analysis complete ✓",
+    "toastDocImported": "Document imported ✓",
+    "toastDocImportedDesc": "Competitors pre-filled from the doc. Run the AI analysis to get your report.",
+    "toastSummaryUpdated": "Summary updated",
+    "toastUpdated": "Updated",
+    "toastMatrixUpdated": "Matrix updated",
+    "errNoResult": "No result received",
+    "weaknessesTitle": "Needs improvement",
+    "opportunitiesTitle": "Opportunities",
+    "contentStrategyLabel": "Content strategy",
+    "differencesSummaryLabel": "Differences summary",
+    "differentiationLabel": "Differentiation strategy",
+    "offerImprovementsLabel": "Improvements to bring to my offer",
+    "addCompetitor": "Add a competitor"
+  },
   "settings": {
     "title": "Settings",
     "tabs": {

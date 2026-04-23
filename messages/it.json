@@ -479,6 +479,29 @@
     "step6Hint": "Il quadro finale positivo. La tua vita oggi, migliore di prima. E perché ora aiuti gli altri.",
     "step6Ph": "Es.: Oggi vivo della mia passione, ho accompagnato +200 persone e aiuto i [target] a [obiettivo] senza [ostacolo]. Il mio obiettivo: …"
   },
+  "competitorAnalysis": {
+    "competitorPh": "Prezzo, punti forti, punti deboli, ciò che sai già…",
+    "synthesisTitle": "Sintesi competitiva",
+    "noSynthesis": "Nessuna sintesi disponibile.",
+    "importedDocLabel": "Documento importato:",
+    "toastCreditsTitle": "Crediti insufficienti",
+    "toastCreditsAnalysis": "L'analisi competitiva costa 1 credito.",
+    "toastCreditsImport": "L'importazione di un documento costa 1 credito.",
+    "toastAnalysisDone": "Analisi competitiva completata ✓",
+    "toastDocImported": "Documento importato ✓",
+    "toastDocImportedDesc": "Concorrenti pre-compilati dal documento. Lancia l'analisi IA per ottenere il tuo report.",
+    "toastSummaryUpdated": "Riepilogo aggiornato",
+    "toastUpdated": "Aggiornato",
+    "toastMatrixUpdated": "Matrice aggiornata",
+    "errNoResult": "Nessun risultato ricevuto",
+    "weaknessesTitle": "Da migliorare",
+    "opportunitiesTitle": "Opportunità",
+    "contentStrategyLabel": "Strategia di contenuto",
+    "differencesSummaryLabel": "Riepilogo delle differenze",
+    "differentiationLabel": "Strategia di differenziazione",
+    "offerImprovementsLabel": "Miglioramenti da apportare alla mia offerta",
+    "addCompetitor": "Aggiungi un concorrente"
+  },
   "settings": {
     "title": "Impostazioni",
     "tabs": {

@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import {
   Search,
   Plus,
@@ -321,6 +322,8 @@ function buildMarkdownExport(analysis: AnalysisData): string {
 
 export default function CompetitorAnalysisSection() {
   const { toast } = useToast();
+  const t = useTranslations("competitorAnalysis");
+  const tc = useTranslations("common");
 
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
@@ -417,7 +420,7 @@ export default function CompetitorAnalysisSection() {
         if (contentType.includes("application/json")) {
           const json = await res.json();
           if (json?.error === "NO_CREDITS") {
-            toast({ title: "Crédits insuffisants", description: "L'analyse concurrentielle coûte 1 crédit.", variant: "destructive" });
+            toast({ title: t("toastCreditsTitle"), description: t("toastCreditsAnalysis"), variant: "destructive" });
             return;
           }
           throw new Error(json?.error || "Erreur");
@@ -458,7 +461,7 @@ export default function CompetitorAnalysisSection() {
         setProgressMsg("");
         if (finalError) {
           if (finalError === "NO_CREDITS") {
-            toast({ title: "Crédits insuffisants", description: "L'analyse concurrentielle coûte 1 crédit.", variant: "destructive" });
+            toast({ title: t("toastCreditsTitle"), description: t("toastCreditsAnalysis"), variant: "destructive" });
             return;
           }
           throw new Error(finalError);
@@ -466,9 +469,9 @@ export default function CompetitorAnalysisSection() {
         if (finalResult?.ok && finalResult.analysis) {
           setAnalysis(finalResult.analysis);
           setShowResults(true);
-          toast({ title: "Analyse concurrentielle terminée ✓" });
+          toast({ title: t("toastAnalysisDone") });
         } else {
-          throw new Error("Aucun résultat reçu");
+          throw new Error(t("errNoResult"));
         }
       } catch (e: any) {
         setProgressMsg("");
@@ -490,7 +493,7 @@ export default function CompetitorAnalysisSection() {
         const json = (await res.json().catch(() => null)) as any;
         if (!json?.ok) {
           if (json?.error === "NO_CREDITS") {
-            toast({ title: "Crédits insuffisants", description: "L'import de document coûte 1 crédit.", variant: "destructive" });
+            toast({ title: t("toastCreditsTitle"), description: t("toastCreditsImport"), variant: "destructive" });
             return;
           }
           throw new Error(json?.error || "Erreur");
@@ -500,7 +503,7 @@ export default function CompetitorAnalysisSection() {
           setCompetitors(json.analysis.competitors);
         }
         setShowResults(false);
-        toast({ title: "Document importé ✓", description: "Concurrents pré-remplis depuis le doc. Lance l'analyse IA pour obtenir ton rapport." });
+        toast({ title: t("toastDocImported"), description: t("toastDocImportedDesc") });
       } catch (err: any) {
         toast({ title: "Erreur lors de l'import", description: err?.message ?? "Erreur inconnue", variant: "destructive" });
       } finally {
@@ -524,7 +527,7 @@ export default function CompetitorAnalysisSection() {
         if (!json?.ok) throw new Error(json?.error || "Erreur");
         setAnalysis((prev) => (prev ? { ...prev, summary: editedSummary } : prev));
         setEditingSummary(false);
-        toast({ title: "Résumé mis à jour" });
+        toast({ title: t("toastSummaryUpdated") });
       } catch (e: any) {
         toast({ title: "Erreur", description: e?.message ?? "Impossible de sauvegarder", variant: "destructive" });
       }
@@ -547,7 +550,7 @@ export default function CompetitorAnalysisSection() {
         if (field === "strengths") setEditingStrengths(false);
         if (field === "weaknesses") setEditingWeaknesses(false);
         if (field === "opportunities") setEditingOpportunities(false);
-        toast({ title: "Mis à jour" });
+        toast({ title: t("toastUpdated") });
       } catch (e: any) {
         toast({ title: "Erreur", description: e?.message ?? "Impossible de sauvegarder", variant: "destructive" });
       }
@@ -567,7 +570,7 @@ export default function CompetitorAnalysisSection() {
         if (!json?.ok) throw new Error(json?.error || "Erreur");
         setAnalysis((prev) => (prev ? { ...prev, positioning_matrix: editedMatrix } : prev));
         setEditingMatrix(false);
-        toast({ title: "Matrice mise à jour" });
+        toast({ title: t("toastMatrixUpdated") });
       } catch (e: any) {
         toast({ title: "Erreur", description: e?.message ?? "Impossible de sauvegarder", variant: "destructive" });
       }
@@ -824,7 +827,7 @@ export default function CompetitorAnalysisSection() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Ce que tu sais du concurrent</Label>
                     <Textarea
-                      placeholder="Prix, points forts, points faibles, ce que tu sais déjà..."
+                      placeholder={t("competitorPh")}
                       value={comp.notes}
                       onChange={(e) => updateCompetitor(idx, "notes", e.target.value)}
                       rows={3}
@@ -880,7 +883,7 @@ export default function CompetitorAnalysisSection() {
             <div className="flex items-center justify-center border border-dashed rounded-lg min-h-[200px]">
               <Button variant="ghost" size="sm" onClick={addCompetitor} className="gap-1 text-muted-foreground">
                 <Plus className="w-4 h-4" />
-                Ajouter un concurrent
+                {t("addCompetitor")}
               </Button>
             </div>
           )}
@@ -942,7 +945,7 @@ export default function CompetitorAnalysisSection() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-bold">Synthèse concurrentielle</h3>
+                <h3 className="text-lg font-bold">{t("synthesisTitle")}</h3>
               </div>
               <div className="flex items-center gap-2">
                 {analysis.updated_at && (
@@ -985,7 +988,7 @@ export default function CompetitorAnalysisSection() {
               <div>
                 {analysis.summary
                   ? renderMarkdown(analysis.summary)
-                  : <p className="text-sm text-muted-foreground">Aucune synthèse disponible.</p>}
+                  : <p className="text-sm text-muted-foreground">{t("noSynthesis")}</p>}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1002,7 +1005,7 @@ export default function CompetitorAnalysisSection() {
 
             {analysis.uploaded_document_summary && analysis.status === "completed" && (
               <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Document importé :</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t("importedDocLabel")}</p>
                 <p className="text-sm">{analysis.uploaded_document_summary}</p>
               </div>
             )}
@@ -1034,13 +1037,13 @@ export default function CompetitorAnalysisSection() {
                       </div>
                     ))}
                     <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => setEditedStrengths((prev) => [...prev, ""])}>
-                      <Plus className="w-3 h-3" /> Ajouter
+                      <Plus className="w-3 h-3" /> {tc("add")}
                     </Button>
                     <div className="flex gap-2 pt-1">
                       <Button size="sm" className="h-7 text-xs" onClick={() => saveSwotField("strengths", editedStrengths)} disabled={savingSwot}>
                         <Save className="w-3 h-3 mr-1" />{savingSwot ? "..." : "Sauver"}
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingStrengths(false)}>Annuler</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingStrengths(false)}>{tc("cancel")}</Button>
                     </div>
                   </div>
                 ) : (
@@ -1061,7 +1064,7 @@ export default function CompetitorAnalysisSection() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <TrendingDown className="w-4 h-4 text-orange-600" />
-                    <h4 className="font-semibold text-orange-700">À améliorer</h4>
+                    <h4 className="font-semibold text-orange-700">{t("weaknessesTitle")}</h4>
                   </div>
                   {!editingWeaknesses && (
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedWeaknesses([...analysis.weaknesses!]); setEditingWeaknesses(true); }}>
@@ -1080,13 +1083,13 @@ export default function CompetitorAnalysisSection() {
                       </div>
                     ))}
                     <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => setEditedWeaknesses((prev) => [...prev, ""])}>
-                      <Plus className="w-3 h-3" /> Ajouter
+                      <Plus className="w-3 h-3" /> {tc("add")}
                     </Button>
                     <div className="flex gap-2 pt-1">
                       <Button size="sm" className="h-7 text-xs" onClick={() => saveSwotField("weaknesses", editedWeaknesses)} disabled={savingSwot}>
                         <Save className="w-3 h-3 mr-1" />{savingSwot ? "..." : "Sauver"}
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingWeaknesses(false)}>Annuler</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingWeaknesses(false)}>{tc("cancel")}</Button>
                     </div>
                   </div>
                 ) : (
@@ -1107,7 +1110,7 @@ export default function CompetitorAnalysisSection() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Lightbulb className="w-4 h-4 text-blue-600" />
-                    <h4 className="font-semibold text-blue-700">Opportunités</h4>
+                    <h4 className="font-semibold text-blue-700">{t("opportunitiesTitle")}</h4>
                   </div>
                   {!editingOpportunities && (
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedOpportunities([...analysis.opportunities!]); setEditingOpportunities(true); }}>
@@ -1126,13 +1129,13 @@ export default function CompetitorAnalysisSection() {
                       </div>
                     ))}
                     <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => setEditedOpportunities((prev) => [...prev, ""])}>
-                      <Plus className="w-3 h-3" /> Ajouter
+                      <Plus className="w-3 h-3" /> {tc("add")}
                     </Button>
                     <div className="flex gap-2 pt-1">
                       <Button size="sm" className="h-7 text-xs" onClick={() => saveSwotField("opportunities", editedOpportunities)} disabled={savingSwot}>
                         <Save className="w-3 h-3 mr-1" />{savingSwot ? "..." : "Sauver"}
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingOpportunities(false)}>Annuler</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingOpportunities(false)}>{tc("cancel")}</Button>
                     </div>
                   </div>
                 ) : (
@@ -1174,7 +1177,7 @@ export default function CompetitorAnalysisSection() {
                       <Save className="w-4 h-4 mr-1" />
                       {savingMatrix ? "Sauvegarde..." : "Sauvegarder"}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingMatrix(false)}>Annuler</Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingMatrix(false)}>{tc("cancel")}</Button>
                   </div>
                 </div>
               ) : (
@@ -1257,7 +1260,7 @@ export default function CompetitorAnalysisSection() {
                               <Button size="sm" className="h-7 text-xs gap-1" onClick={() => saveCompetitorDetail(name)} disabled={savingDetail}>
                                 <Save className="w-3 h-3" />{savingDetail ? "..." : "Sauvegarder"}
                               </Button>
-                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingDetail(null)}>Annuler</Button>
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingDetail(null)}>{tc("cancel")}</Button>
                             </>
                           ) : (
                             <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" onClick={(e) => { e.stopPropagation(); setEditedDetail({ ...d }); setEditingDetail(name); }}>
@@ -1319,7 +1322,7 @@ export default function CompetitorAnalysisSection() {
                                     </div>
                                   ))}
                                   <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => updateDetailField("main_offers", [...(ed.main_offers || []), { name: "", price: "", description: "" }])}>
-                                    <Plus className="w-3 h-3" /> Ajouter une offre
+                                    <Plus className="w-3 h-3" /> {tc("add")} une offre
                                   </Button>
                                 </div>
                               ) : (
@@ -1349,7 +1352,7 @@ export default function CompetitorAnalysisSection() {
                                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => removeDetailListItem("strengths", i)}><X className="w-3 h-3" /></Button>
                                       </div>
                                     ))}
-                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("strengths")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("strengths")}><Plus className="w-3 h-3" /> {tc("add")}</Button>
                                   </div>
                                 ) : (
                                   <ul className="text-sm space-y-1 mt-1">
@@ -1371,7 +1374,7 @@ export default function CompetitorAnalysisSection() {
                                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => removeDetailListItem("weaknesses", i)}><X className="w-3 h-3" /></Button>
                                       </div>
                                     ))}
-                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("weaknesses")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("weaknesses")}><Plus className="w-3 h-3" /> {tc("add")}</Button>
                                   </div>
                                 ) : (
                                   <ul className="text-sm space-y-1 mt-1">
@@ -1394,7 +1397,7 @@ export default function CompetitorAnalysisSection() {
                                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => removeDetailListItem("channels", i)}><X className="w-3 h-3" /></Button>
                                     </div>
                                   ))}
-                                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("channels")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("channels")}><Plus className="w-3 h-3" /> {tc("add")}</Button>
                                 </div>
                               ) : (
                                 <div className="flex flex-wrap gap-1.5 mt-1">
@@ -1407,7 +1410,7 @@ export default function CompetitorAnalysisSection() {
                           )}
                           {(ed.content_strategy || isEditing) && (
                             <div>
-                              <Label className="text-xs text-muted-foreground">Stratégie de contenu</Label>
+                              <Label className="text-xs text-muted-foreground">{t("contentStrategyLabel")}</Label>
                               {isEditing ? (
                                 <Textarea value={ed.content_strategy || ""} onChange={(e) => updateDetailField("content_strategy", e.target.value)} rows={2} className="mt-1 text-sm resize-y" />
                               ) : (
@@ -1445,7 +1448,7 @@ export default function CompetitorAnalysisSection() {
                             {(ed.key_differences_summary || isEditing) && (
                               isEditing ? (
                                 <div>
-                                  <Label className="text-xs text-muted-foreground">Résumé des différences</Label>
+                                  <Label className="text-xs text-muted-foreground">{t("differencesSummaryLabel")}</Label>
                                   <Textarea value={ed.key_differences_summary || ""} onChange={(e) => updateDetailField("key_differences_summary", e.target.value)} rows={3} className="mt-1 text-sm resize-y" />
                                 </div>
                               ) : d.key_differences_summary ? (
@@ -1469,7 +1472,7 @@ export default function CompetitorAnalysisSection() {
                                           <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeDetailListItem("user_advantages", i)}><X className="w-3 h-3" /></Button>
                                         </div>
                                       ))}
-                                      <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("user_advantages")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                      <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("user_advantages")}><Plus className="w-3 h-3" /> {tc("add")}</Button>
                                     </div>
                                   ) : (
                                     <ul className="space-y-1.5">
@@ -1496,7 +1499,7 @@ export default function CompetitorAnalysisSection() {
                                           <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeDetailListItem("user_disadvantages", i)}><X className="w-3 h-3" /></Button>
                                         </div>
                                       ))}
-                                      <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("user_disadvantages")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                      <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("user_disadvantages")}><Plus className="w-3 h-3" /> {tc("add")}</Button>
                                     </div>
                                   ) : (
                                     <ul className="space-y-1.5">
@@ -1524,7 +1527,7 @@ export default function CompetitorAnalysisSection() {
                               <div>
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                   <Target className="w-3.5 h-3.5 text-primary" />
-                                  <Label className="text-xs font-semibold text-primary">Stratégie de différenciation</Label>
+                                  <Label className="text-xs font-semibold text-primary">{t("differentiationLabel")}</Label>
                                 </div>
                                 {isEditing ? (
                                   <Textarea value={ed.differentiation_strategy || ""} onChange={(e) => updateDetailField("differentiation_strategy", e.target.value)} rows={3} className="text-sm resize-y" />
@@ -1547,7 +1550,7 @@ export default function CompetitorAnalysisSection() {
                                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeDetailListItem("communication_focus", i)}><X className="w-3 h-3" /></Button>
                                       </div>
                                     ))}
-                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("communication_focus")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("communication_focus")}><Plus className="w-3 h-3" /> {tc("add")}</Button>
                                   </div>
                                 ) : (
                                   <ul className="space-y-1.5">
@@ -1565,7 +1568,7 @@ export default function CompetitorAnalysisSection() {
                               <div>
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                   <ShoppingBag className="w-3.5 h-3.5 text-primary" />
-                                  <Label className="text-xs font-semibold text-primary">Améliorations à apporter à mon offre</Label>
+                                  <Label className="text-xs font-semibold text-primary">{t("offerImprovementsLabel")}</Label>
                                 </div>
                                 {isEditing ? (
                                   <div className="space-y-1">
@@ -1575,7 +1578,7 @@ export default function CompetitorAnalysisSection() {
                                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeDetailListItem("offer_improvements", i)}><X className="w-3 h-3" /></Button>
                                       </div>
                                     ))}
-                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("offer_improvements")}><Plus className="w-3 h-3" /> Ajouter</Button>
+                                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-6" onClick={() => addDetailListItem("offer_improvements")}><Plus className="w-3 h-3" /> {tc("add")}</Button>
                                   </div>
                                 ) : (
                                   <ul className="space-y-1.5">
@@ -1598,7 +1601,7 @@ export default function CompetitorAnalysisSection() {
                             <Button size="sm" className="gap-1" onClick={() => saveCompetitorDetail(name)} disabled={savingDetail}>
                               <Save className="w-3.5 h-3.5" />{savingDetail ? "Sauvegarde..." : "Sauvegarder"}
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingDetail(null)}>Annuler</Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingDetail(null)}>{tc("cancel")}</Button>
                           </div>
                         )}
                       </div>

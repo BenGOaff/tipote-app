@@ -479,6 +479,29 @@
     "step6Hint": "الصورة النهائية الإيجابية. حياتك اليوم أفضل من قبل. ولماذا تساعد الآخرين الآن.",
     "step6Ph": "مثال: اليوم أعيش من شغفي، رافقت أكثر من 200 شخص، وأساعد [الجمهور] على [الهدف] بدون [عائق]. هدفي: …"
   },
+  "competitorAnalysis": {
+    "competitorPh": "السعر، نقاط القوة، نقاط الضعف، ما تعرفه بالفعل…",
+    "synthesisTitle": "ملخّص التنافسية",
+    "noSynthesis": "لا يوجد ملخّص متاح.",
+    "importedDocLabel": "المستند المستورَد:",
+    "toastCreditsTitle": "الأرصدة غير كافية",
+    "toastCreditsAnalysis": "يكلّف التحليل التنافسي رصيدًا واحدًا.",
+    "toastCreditsImport": "يكلّف استيراد مستند رصيدًا واحدًا.",
+    "toastAnalysisDone": "اكتمل التحليل التنافسي ✓",
+    "toastDocImported": "تم استيراد المستند ✓",
+    "toastDocImportedDesc": "تم تعبئة المنافسين تلقائيًا من المستند. شغِّل التحليل بالذكاء الاصطناعي للحصول على تقريرك.",
+    "toastSummaryUpdated": "تم تحديث الملخّص",
+    "toastUpdated": "تم التحديث",
+    "toastMatrixUpdated": "تم تحديث المصفوفة",
+    "errNoResult": "لم يتم استلام أي نتيجة",
+    "weaknessesTitle": "للتحسين",
+    "opportunitiesTitle": "الفرص",
+    "contentStrategyLabel": "استراتيجية المحتوى",
+    "differencesSummaryLabel": "ملخّص الفروقات",
+    "differentiationLabel": "استراتيجية التمييز",
+    "offerImprovementsLabel": "تحسينات يجب إدخالها على عرضي",
+    "addCompetitor": "إضافة منافس"
+  },
   "settings": {
     "title": "الإعدادات",
     "tabs": {
