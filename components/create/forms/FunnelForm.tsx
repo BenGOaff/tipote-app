@@ -371,16 +371,16 @@ export function FunnelForm({
     }
   };
 
-  const handlePreviewTemplate = async (t: SystemeTemplate) => {
+  const handlePreviewTemplate = async (tpl: SystemeTemplate) => {
     try {
-      const kind = t.type === "sales" ? "vente" : "capture";
+      const kind = tpl.type === "sales" ? "vente" : "capture";
 
       const res = await fetch("/api/templates/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           kind,
-          templateId: t.id,
+          templateId: tpl.id,
           mode: "preview",
           contentData: {},
           brandTokens: null,
@@ -411,10 +411,10 @@ export function FunnelForm({
     }
   };
 
-  const handleSelectTemplate = (t: SystemeTemplate) => {
-    setSelectedTemplate(t);
-    setFunnelPageType(t.type === "sales" ? "sales" : "capture");
-    loadTemplateSchema(t);
+  const handleSelectTemplate = (tpl: SystemeTemplate) => {
+    setSelectedTemplate(tpl);
+    setFunnelPageType(tpl.type === "sales" ? "sales" : "capture");
+    loadTemplateSchema(tpl);
     setStep("config");
   };
 
