@@ -4433,5 +4433,12 @@
     "rootDescription": "Tipote – strategic planning & business automations",
     "supportTitle": "Tipote — Help Center",
     "supportDescription": "Find answers to all your questions about Tipote"
+  },
+  "supportFooter": {
+    "contact": "Can't find the answer?",
+    "contactCta": "Contact us at hello@tipote.com",
+    "rights": "All rights reserved",
+    "terms": "Terms",
+    "privacy": "Privacy"
   }
 }

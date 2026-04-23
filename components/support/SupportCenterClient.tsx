@@ -257,7 +257,7 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
         )}
       </div>
 
-      <SupportFooter locale={locale} />
+      <SupportFooter />
       <SupportChatWidget locale={locale} />
     </div>
   );
