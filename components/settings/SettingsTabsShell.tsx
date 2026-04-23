@@ -247,6 +247,7 @@ function formatPersonaSummary(text: string): string {
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const tSettings = useTranslations("settings");
   const tSP = useTranslations("settingsPage");
+  const tStory = useTranslations("storytellingSection");
   const router = useRouter();
   const sp = useSearchParams();
   const { toast } = useToast();
@@ -2042,10 +2043,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-2">
             <BookOpen className="w-5 h-5 text-muted-foreground" />
-            <h3 className="text-lg font-bold">Ton storytelling</h3>
+            <h3 className="text-lg font-bold">{tStory("sectionTitle")}</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-5">
-            Raconte ton parcours en 6 étapes. Tipote utilisera ton histoire pour personnaliser tes contenus, pages de vente, emails et posts.
+            {tStory("sectionDesc")}
           </p>
 
           <div className="space-y-5">
@@ -2053,15 +2054,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
-                <Label className="text-sm font-semibold">La situation initiale</Label>
+                <Label className="text-sm font-semibold">{tStory("step1Title")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Il était une fois… Décris ta vie / ton activité avant le déclic. Le monde &quot;normal&quot; dans lequel tu évoluais.
+                {tStory("step1Hint")}
               </p>
               <Textarea
                 value={storySituationInitiale}
                 onChange={(e) => setStorySituationInitiale(e.target.value)}
-                placeholder="Ex: J'étais salarié(e) dans une grande entreprise depuis 8 ans. Je faisais ce qu'on attendait de moi, mais quelque chose manquait…"
+                placeholder={tStory("step1Ph")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2071,15 +2072,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
-                <Label className="text-sm font-semibold">L&apos;élément déclencheur</Label>
+                <Label className="text-sm font-semibold">{tStory("step2Title")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Mais un jour… Quel événement a tout changé ? Le moment où l&apos;ordre établi a été perturbé.
+                {tStory("step2Hint")}
               </p>
               <Textarea
                 value={storyElementDeclencheur}
                 onChange={(e) => setStoryElementDeclencheur(e.target.value)}
-                placeholder="Ex: Un lundi matin, j'ai reçu un mail de restructuration. C'était le déclic : je ne voulais plus dépendre d'une décision qui n'était pas la mienne…"
+                placeholder={tStory("step2Ph")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2089,15 +2090,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
-                <Label className="text-sm font-semibold">A cause de ça…</Label>
+                <Label className="text-sm font-semibold">{tStory("step3Title")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Les galères, les doutes, les échecs. La situation se dégrade avant de s&apos;améliorer.
+                {tStory("step3Hint")}
               </p>
               <Textarea
                 value={storyPeripeties}
                 onChange={(e) => setStoryPeripeties(e.target.value)}
-                placeholder="Ex: J'ai lancé mon activité sans plan, perdu mes premières économies, eu des mois à 0€ de CA. Ma famille doutait, je doutais aussi…"
+                placeholder={tStory("step3Ph")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2107,15 +2108,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">4</span>
-                <Label className="text-sm font-semibold">Jusqu&apos;au jour où…</Label>
+                <Label className="text-sm font-semibold">{tStory("step4Title")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Le pire moment. Tout semble perdu pour le héros. Mais une solution se dessine.
+                {tStory("step4Hint")}
               </p>
               <Textarea
                 value={storyMomentCritique}
                 onChange={(e) => setStoryMomentCritique(e.target.value)}
-                placeholder="Ex: J'étais à deux doigts de tout arrêter. Et puis j'ai découvert une méthode / rencontré un mentor / compris quelque chose de fondamental…"
+                placeholder={tStory("step4Ph")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2125,15 +2126,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">5</span>
-                <Label className="text-sm font-semibold">Tout s&apos;arrange…</Label>
+                <Label className="text-sm font-semibold">{tStory("step5Title")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                La résolution. Ta situation s&apos;améliore progressivement grâce à ce que tu as découvert.
+                {tStory("step5Hint")}
               </p>
               <Textarea
                 value={storyResolution}
                 onChange={(e) => setStoryResolution(e.target.value)}
-                placeholder="Ex: En appliquant cette approche, j'ai signé mes premiers clients, puis 10, puis 50. Mon CA a atteint X€/mois en Y mois…"
+                placeholder={tStory("step5Ph")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2143,15 +2144,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">6</span>
-                <Label className="text-sm font-semibold">Et depuis ce jour…</Label>
+                <Label className="text-sm font-semibold">{tStory("step6Title")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Le tableau final positif. Ta vie aujourd&apos;hui, meilleure qu&apos;avant. Et pourquoi tu aides les autres maintenant.
+                {tStory("step6Hint")}
               </p>
               <Textarea
                 value={storySituationFinale}
                 onChange={(e) => setStorySituationFinale(e.target.value)}
-                placeholder="Ex: Aujourd'hui je vis de ma passion, j'ai accompagné +200 personnes et j'aide les [cible] à [objectif] sans [obstacle]. Mon objectif : …"
+                placeholder={tStory("step6Ph")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2242,8 +2243,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               ) : (
                 <div className="p-8 text-center text-muted-foreground rounded-lg border bg-background">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium mb-1">Pas encore de résumé persona</p>
-                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer un résumé de ton client idéal.</p>
+                  <p className="text-sm font-medium mb-1">{tSP("positioningTab.emptySummary")}</p>
+                  <p className="text-xs">{tSP("positioningTab.emptySummaryHint")}</p>
                 </div>
               )}
             </div>
@@ -2256,15 +2257,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                      Le résumé persona a été modifié depuis le dernier enrichissement
+                      {tSP("positioningTab.staleTitle")}
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                      Clique sur &quot;Enrichir avec l&apos;IA&quot; pour mettre à jour le persona détaillé avec tes modifications.
+                      {tSP("positioningTab.staleDescDetailed")}
                     </p>
                   </div>
                   <Button variant="outline" size="sm" className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900" onClick={enrichPersona} disabled={enriching}>
                     <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                    Ré-enrichir
+                    {tSP("positioningTab.reEnrich")}
                   </Button>
                 </div>
               )}
@@ -2275,7 +2276,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       value={personaDetailedMarkdown}
                       onChange={(e) => setPersonaDetailedMarkdown(e.target.value)}
                       className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
-                      placeholder="Persona détaillé..."
+                      placeholder={tSP("positioningTab.detailedPh")}
                       autoFocus
                     />
                     <div className="flex justify-end gap-2">
@@ -2317,8 +2318,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium mb-1">Pas encore de persona détaillé</p>
-                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer un profil persona ultra-détaillé de ton client idéal.</p>
+                  <p className="text-sm font-medium mb-1">{tSP("positioningTab.emptyDetailed")}</p>
+                  <p className="text-xs">{tSP("positioningTab.emptyDetailedHint")}</p>
                 </div>
               )}
               {competitorInsightsMarkdown && (
@@ -2326,7 +2327,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   <hr className="border-border" />
                   <div className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-base font-bold">Mécanisme unique &amp; analyse concurrentielle</h4>
+                      <h4 className="text-base font-bold">{tSP("positioningTab.mechanismTitle")}</h4>
                       {!insightsEditMode && (
                         <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setInsightsEditMode(true)}>
                           <Pencil className="w-3.5 h-3.5" />
@@ -2340,7 +2341,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                           value={competitorInsightsMarkdown}
                           onChange={(e) => setCompetitorInsightsMarkdown(e.target.value)}
                           className="w-full min-h-[200px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
-                          placeholder="Mécanisme unique & analyse concurrentielle..."
+                          placeholder={tSP("positioningTab.mechanismPh")}
                           autoFocus
                         />
                         <div className="flex justify-end gap-2">
@@ -2379,10 +2380,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                      Le résumé persona a été modifié depuis le dernier enrichissement
+                      {tSP("positioningTab.staleTitle")}
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                      Clique sur &quot;Enrichir avec l&apos;IA&quot; pour mettre à jour la synthèse.
+                      {tSP("positioningTab.staleDescSynthesis")}
                     </p>
                   </div>
                 </div>
@@ -2394,7 +2395,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       value={narrativeSynthesisMarkdown}
                       onChange={(e) => setNarrativeSynthesisMarkdown(e.target.value)}
                       className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
-                      placeholder="Synthèse narrative..."
+                      placeholder={tSP("positioningTab.synthesisPh")}
                       autoFocus
                     />
                     <div className="flex justify-end gap-2">
@@ -2436,8 +2437,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium mb-1">Pas encore de synthèse narrative</p>
-                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer une synthèse complète.</p>
+                  <p className="text-sm font-medium mb-1">{tSP("positioningTab.emptySynthesis")}</p>
+                  <p className="text-xs">{tSP("positioningTab.emptySynthesisHint")}</p>
                 </div>
               )}
             </div>
