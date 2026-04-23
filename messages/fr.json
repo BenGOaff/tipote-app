@@ -966,6 +966,32 @@
       "description": "Définis ton positionnement pour que Tipote adapte tous les contenus générés à ta voix et à ton audience.",
       "saveSuccess": "Positionnement enregistré avec succès.",
       "saveError": "Erreur lors de la sauvegarde du positionnement."
+    },
+    "toast": {
+      "profileSaved": "Profil mis à jour",
+      "positioningSaved": "Positionnement enregistré",
+      "offersSaved": "Offres enregistrées",
+      "personaSaved": "Persona enregistré",
+      "noCredits": "Crédits insuffisants",
+      "personaEnrichCost": "L'enrichissement du persona coûte 1 crédit.",
+      "personaEnriched": "Persona enrichi avec succès",
+      "noResult": "Aucun résultat reçu",
+      "legalUrlsSaved": "URLs légales enregistrées",
+      "resetConfirm": "⚠️ Réinitialiser ton Tipote ?\n\nTous les contenus, toutes les tâches et toutes les personnalisations seront effacés. C'est définitif.",
+      "resetCancelled": "Réinitialisation annulée",
+      "resetDone": "Tipote réinitialisé ✅"
+    },
+    "placeholders": {
+      "mechanism": "[mécanisme unique]",
+      "story1": "Ex: J'étais salarié(e) dans une grande entreprise depuis 8 ans. Je faisais ce qu'on attendait de moi, mais quelque chose manquait…",
+      "story2": "Ex: Un lundi matin, j'ai reçu un mail de restructuration. C'était le déclic : je ne voulais plus dépendre d'une décision qui n'était pas la mienne…",
+      "story3": "Ex: J'ai lancé mon activité sans plan, perdu mes premières économies, eu des mois à 0€ de CA. Ma famille doutait, je doutais aussi…",
+      "story4": "Ex: J'étais à deux doigts de tout arrêter. Et puis j'ai découvert une méthode / rencontré un mentor / compris quelque chose de fondamental…",
+      "story5": "Ex: En appliquant cette approche, j'ai signé mes premiers clients, puis 10, puis 50. Mon CA a atteint X€/mois en Y mois…",
+      "story6": "Ex: Aujourd'hui je vis de ma passion, j'ai accompagné +200 personnes et j'aide les [cible] à [objectif] sans [obstacle]. Mon objectif : …",
+      "personaDetail": "Persona détaillé...",
+      "mechanismAnalysis": "Mécanisme unique & analyse concurrentielle...",
+      "narrativeSummary": "Synthèse narrative..."
     }
   },
   "today": {

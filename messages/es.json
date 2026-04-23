@@ -966,6 +966,32 @@
       "description": "Define tu posicionamiento para que Tipote adapte todo el contenido generado a tu voz y tu audiencia.",
       "saveSuccess": "Posicionamiento guardado correctamente.",
       "saveError": "Error al guardar el posicionamiento."
+    },
+    "toast": {
+      "profileSaved": "Perfil actualizado",
+      "positioningSaved": "Posicionamiento guardado",
+      "offersSaved": "Ofertas guardadas",
+      "personaSaved": "Persona guardado",
+      "noCredits": "Créditos insuficientes",
+      "personaEnrichCost": "El enriquecimiento del persona cuesta 1 crédito.",
+      "personaEnriched": "Persona enriquecido con éxito",
+      "noResult": "Ningún resultado recibido",
+      "legalUrlsSaved": "URLs legales guardadas",
+      "resetConfirm": "⚠️ ¿Reiniciar tu Tipote?\n\nTodo el contenido, todas las tareas y todas las personalizaciones serán borrados. Es definitivo.",
+      "resetCancelled": "Reinicio cancelado",
+      "resetDone": "Tipote reiniciado ✅"
+    },
+    "placeholders": {
+      "mechanism": "[mecanismo único]",
+      "story1": "Ej.: Era empleado(a) en una gran empresa desde hace 8 años. Hacía lo que se esperaba de mí, pero algo faltaba…",
+      "story2": "Ej.: Un lunes por la mañana, recibí un email de reestructuración. Fue el clic: ya no quería depender de una decisión que no era la mía…",
+      "story3": "Ej.: Lancé mi negocio sin plan, perdí mis primeros ahorros, tuve meses a 0€ de ingresos. Mi familia dudaba, yo también…",
+      "story4": "Ej.: Estaba a punto de rendirme. Y entonces descubrí un método / conocí un mentor / entendí algo fundamental…",
+      "story5": "Ej.: Aplicando este enfoque, conseguí mis primeros clientes, luego 10, luego 50. Mi facturación alcanzó X€/mes en Y meses…",
+      "story6": "Ej.: Hoy vivo de mi pasión, he acompañado a +200 personas y ayudo a [público] a [objetivo] sin [obstáculo]. Mi objetivo: …",
+      "personaDetail": "Persona detallado...",
+      "mechanismAnalysis": "Mecanismo único y análisis de la competencia...",
+      "narrativeSummary": "Síntesis narrativa..."
     }
   },
   "today": {

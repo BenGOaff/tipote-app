@@ -966,6 +966,32 @@
       "description": "Define your positioning so Tipote adapts every generated piece of content to your voice and audience.",
       "saveSuccess": "Positioning saved successfully.",
       "saveError": "Failed to save positioning."
+    },
+    "toast": {
+      "profileSaved": "Profile updated",
+      "positioningSaved": "Positioning saved",
+      "offersSaved": "Offers saved",
+      "personaSaved": "Persona saved",
+      "noCredits": "Insufficient credits",
+      "personaEnrichCost": "Persona enrichment costs 1 credit.",
+      "personaEnriched": "Persona enriched successfully",
+      "noResult": "No result received",
+      "legalUrlsSaved": "Legal URLs saved",
+      "resetConfirm": "⚠️ Reset your Tipote?\n\nAll content, tasks and customizations will be deleted. This is irreversible.",
+      "resetCancelled": "Reset cancelled",
+      "resetDone": "Tipote reset ✅"
+    },
+    "placeholders": {
+      "mechanism": "[unique mechanism]",
+      "story1": "E.g. I was an employee in a large company for 8 years. I was doing what was expected of me, but something was missing…",
+      "story2": "E.g. One Monday morning, I got a restructuring email. That was the trigger: I no longer wanted to depend on a decision that wasn't mine…",
+      "story3": "E.g. I launched my business without a plan, lost my early savings, had €0 months. My family doubted, I doubted too…",
+      "story4": "E.g. I was about to give up. Then I discovered a method / met a mentor / understood something fundamental…",
+      "story5": "E.g. By applying this approach, I signed my first clients, then 10, then 50. My revenue reached €X/month in Y months…",
+      "story6": "E.g. Today I live from my passion, I've coached over 200 people and I help [target] with [goal] without [obstacle]. My goal: …",
+      "personaDetail": "Detailed persona...",
+      "mechanismAnalysis": "Unique mechanism & competitive analysis...",
+      "narrativeSummary": "Narrative summary..."
     }
   },
   "today": {

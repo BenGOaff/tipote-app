@@ -966,6 +966,32 @@
       "description": "Definisci il tuo posizionamento affinché Tipote adatti tutto il contenuto generato alla tua voce e al tuo pubblico.",
       "saveSuccess": "Posizionamento salvato correttamente.",
       "saveError": "Errore nel salvataggio del posizionamento."
+    },
+    "toast": {
+      "profileSaved": "Profilo aggiornato",
+      "positioningSaved": "Posizionamento salvato",
+      "offersSaved": "Offerte salvate",
+      "personaSaved": "Persona salvato",
+      "noCredits": "Crediti insufficienti",
+      "personaEnrichCost": "L'arricchimento del persona costa 1 credito.",
+      "personaEnriched": "Persona arricchito con successo",
+      "noResult": "Nessun risultato ricevuto",
+      "legalUrlsSaved": "URL legali salvati",
+      "resetConfirm": "⚠️ Reimpostare il tuo Tipote?\n\nTutti i contenuti, task e personalizzazioni saranno cancellati. È definitivo.",
+      "resetCancelled": "Reset annullato",
+      "resetDone": "Tipote reimpostato ✅"
+    },
+    "placeholders": {
+      "mechanism": "[meccanismo unico]",
+      "story1": "Es.: Ero dipendente in una grande azienda da 8 anni. Facevo quello che ci si aspettava da me, ma qualcosa mancava…",
+      "story2": "Es.: Un lunedì mattina ho ricevuto un'email di ristrutturazione. È stato il clic: non volevo più dipendere da una decisione che non era mia…",
+      "story3": "Es.: Ho lanciato la mia attività senza un piano, ho perso i miei primi risparmi, ho avuto mesi a 0€ di fatturato. La mia famiglia dubitava, anch'io dubitavo…",
+      "story4": "Es.: Ero a un passo dal mollare. Poi ho scoperto un metodo / incontrato un mentore / capito qualcosa di fondamentale…",
+      "story5": "Es.: Applicando questo approccio, ho firmato i miei primi clienti, poi 10, poi 50. Il mio fatturato ha raggiunto X€/mese in Y mesi…",
+      "story6": "Es.: Oggi vivo della mia passione, ho accompagnato +200 persone e aiuto i [target] a [obiettivo] senza [ostacolo]. Il mio obiettivo: …",
+      "personaDetail": "Persona dettagliato...",
+      "mechanismAnalysis": "Meccanismo unico & analisi della concorrenza...",
+      "narrativeSummary": "Sintesi narrativa..."
     }
   },
   "today": {
