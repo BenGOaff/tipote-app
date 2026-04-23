@@ -4440,5 +4440,42 @@
     "rights": "Tutti i diritti riservati",
     "terms": "Termini",
     "privacy": "Privacy"
+  },
+  "adminUsers": {
+    "toast": {
+      "planUpdated": "Piano aggiornato",
+      "cannotUpdatePlan": "Impossibile aggiornare il piano",
+      "creditsError": "Errore crediti",
+      "cannotLoadCredits": "Impossibile caricare i crediti",
+      "bulkActionDone": "Azione di massa completata",
+      "bulkActionError": "Errore azione di massa",
+      "userCreated": "Utente creato",
+      "userUpdated": "Utente aggiornato",
+      "createError": "Errore durante la creazione",
+      "cannotCreateUser": "Impossibile creare l'utente",
+      "notifSent": "Notifica inviata",
+      "magicLinkSent": "(magic link inviato)"
+    },
+    "notifHeader": "Invia una notifica",
+    "notifToSelected": "a {n} utente(i) selezionati",
+    "notifToAll": "a tutti gli utenti",
+    "iconPh": "Icona (emoji)",
+    "sendToAll": "Invia a tutti",
+    "emailHeader": "Invia un'email brandizzata",
+    "emailToSegment": "segmentato per piano",
+    "preheaderPh": "Preheader (anteprima inbox, facoltativo)",
+    "greetingPh": "Saluto (predefinito: nome utente o 'Ciao,')",
+    "bodyPh": "Corpo dell'email * (HTML supportato: <br/>, <strong>, <a>...)",
+    "sendAllEmoji": "📧 Invia a tutti",
+    "failedCount": "{n, plural, one {# errore} other {# errori}}",
+    "cancel": "Annulla",
+    "createUser": "+ Crea utente",
+    "firstNamePh": "Nome (facoltativo)",
+    "creating": "Creazione...",
+    "createAndSend": "Crea e invia magic link",
+    "selectAll": "Seleziona tutto",
+    "loadingShort": "...",
+    "viewCredits": "Visualizza crediti",
+    "bonusCreditsPh": "Numero di crediti bonus"
   }
 }

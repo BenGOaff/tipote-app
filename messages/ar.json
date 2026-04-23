@@ -4440,5 +4440,42 @@
     "rights": "جميع الحقوق محفوظة",
     "terms": "الشروط",
     "privacy": "الخصوصية"
+  },
+  "adminUsers": {
+    "toast": {
+      "planUpdated": "تم تحديث الخطة",
+      "cannotUpdatePlan": "تعذّر تحديث الخطة",
+      "creditsError": "خطأ في الأرصدة",
+      "cannotLoadCredits": "تعذّر تحميل الأرصدة",
+      "bulkActionDone": "اكتمل الإجراء الجماعي",
+      "bulkActionError": "خطأ في الإجراء الجماعي",
+      "userCreated": "تم إنشاء المستخدم",
+      "userUpdated": "تم تحديث المستخدم",
+      "createError": "خطأ أثناء الإنشاء",
+      "cannotCreateUser": "تعذّر إنشاء المستخدم",
+      "notifSent": "تم إرسال الإشعار",
+      "magicLinkSent": "(تم إرسال magic link)"
+    },
+    "notifHeader": "إرسال إشعار",
+    "notifToSelected": "إلى {n} مستخدم محدد",
+    "notifToAll": "إلى جميع المستخدمين",
+    "iconPh": "أيقونة (emoji)",
+    "sendToAll": "إرسال للجميع",
+    "emailHeader": "إرسال بريد إلكتروني بعلامة",
+    "emailToSegment": "مُقسَّم حسب الخطة",
+    "preheaderPh": "عنوان فرعي (نص معاينة الإنبوكس، اختياري)",
+    "greetingPh": "تحية (افتراضي: اسم المستخدم أو 'مرحبًا،')",
+    "bodyPh": "محتوى البريد * (HTML مدعوم: <br/>, <strong>, <a>...)",
+    "sendAllEmoji": "📧 إرسال للجميع",
+    "failedCount": "{n, plural, one {# إخفاق} other {# إخفاقات}}",
+    "cancel": "إلغاء",
+    "createUser": "+ إنشاء مستخدم",
+    "firstNamePh": "الاسم الأول (اختياري)",
+    "creating": "جاري الإنشاء...",
+    "createAndSend": "إنشاء وإرسال magic link",
+    "selectAll": "تحديد الكل",
+    "loadingShort": "...",
+    "viewCredits": "عرض الأرصدة",
+    "bonusCreditsPh": "عدد الأرصدة الإضافية"
   }
 }

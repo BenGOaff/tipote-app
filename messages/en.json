@@ -4440,5 +4440,42 @@
     "rights": "All rights reserved",
     "terms": "Terms",
     "privacy": "Privacy"
+  },
+  "adminUsers": {
+    "toast": {
+      "planUpdated": "Plan updated",
+      "cannotUpdatePlan": "Unable to update the plan",
+      "creditsError": "Credits error",
+      "cannotLoadCredits": "Unable to load credits",
+      "bulkActionDone": "Bulk action complete",
+      "bulkActionError": "Bulk action error",
+      "userCreated": "User created",
+      "userUpdated": "User updated",
+      "createError": "Error during creation",
+      "cannotCreateUser": "Unable to create the user",
+      "notifSent": "Notification sent",
+      "magicLinkSent": "(magic link sent)"
+    },
+    "notifHeader": "Send a notification",
+    "notifToSelected": "to {n} selected user(s)",
+    "notifToAll": "to all users",
+    "iconPh": "Icon (emoji)",
+    "sendToAll": "Send to all",
+    "emailHeader": "Send a branded email",
+    "emailToSegment": "segmented by plan",
+    "preheaderPh": "Preheader (inbox preview text, optional)",
+    "greetingPh": "Greeting (default: user's first name or 'Hi,')",
+    "bodyPh": "Email body * (HTML supported: <br/>, <strong>, <a>...)",
+    "sendAllEmoji": "📧 Send to all",
+    "failedCount": "{n, plural, one {# failure} other {# failures}}",
+    "cancel": "Cancel",
+    "createUser": "+ Create user",
+    "firstNamePh": "First name (optional)",
+    "creating": "Creating...",
+    "createAndSend": "Create and send magic link",
+    "selectAll": "Select all",
+    "loadingShort": "...",
+    "viewCredits": "View credits",
+    "bonusCreditsPh": "Number of bonus credits"
   }
 }
