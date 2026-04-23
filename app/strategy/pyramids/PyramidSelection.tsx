@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -168,7 +169,7 @@ function OfferCard({ offer, level, expanded, onToggle }: {
             <div className="flex items-start gap-2">
               <Target className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Problème urgent :</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("urgentProblem")}</p>
                 <p className="text-sm">{offer.problem}</p>
               </div>
             </div>
@@ -242,6 +243,7 @@ function OfferCard({ offer, level, expanded, onToggle }: {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function PyramidSelection() {
+  const t = useTranslations("pyramidSelection");
   const router = useRouter();
   const { toast } = useToast();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -256,11 +258,11 @@ export default function PyramidSelection() {
   const [expandedOffers, setExpandedOffers] = useState<Record<string, boolean>>({});
 
   const BOOT_STEPS = [
-    "Je sauvegarde ta sélection…",
-    "Je construis ta stratégie personnalisée…",
-    "Je génère tes premières tâches…",
-    "Je peaufine ton espace…",
-  ] as const;
+    t("savingSelection"),
+    t("buildingStrategy"),
+    t("generatingTasks"),
+    t("polishingSpace"),
+  ];
 
   const toggleOffer = useCallback((key: string) => {
     setExpandedOffers((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -363,7 +365,7 @@ export default function PyramidSelection() {
       }
       if (!fullOk) {
         const recovered = await ensureStrategyAfterTimeout(supabase, user.id);
-        if (!recovered) throw new Error("Impossible de générer la stratégie.");
+        if (!recovered) throw new Error(t("cannotGenerate"));
       }
 
       // Step 2: Sync tasks
@@ -403,7 +405,7 @@ export default function PyramidSelection() {
               <Loader2 className="h-7 w-7 animate-spin text-primary" />
             </div>
           </div>
-          <h2 className="text-xl font-semibold">Je construis ta stratégie…</h2>
+          <h2 className="text-xl font-semibold">{t("buildingTitle")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {BOOT_STEPS[bootStep]}
           </p>
@@ -437,9 +439,9 @@ export default function PyramidSelection() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Tipote crée tes pyramides d'offres...</h1>
+            <h1 className="text-2xl font-bold">{t("creatingPyramids")}</h1>
             <p className="text-muted-foreground">
-              {progressStep || "Analyse de ton profil et création de 3 pyramides d'offres percutantes."}
+              {progressStep || t("analyzingProfile")}
             </p>
           </div>
         </div>
@@ -458,7 +460,7 @@ export default function PyramidSelection() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Génération en cours</h1>
+            <h1 className="text-2xl font-bold">{t("generating")}</h1>
             <p className="text-muted-foreground">
               La création de tes pyramides prend un peu plus de temps. Clique ci-dessous pour réessayer.
             </p>

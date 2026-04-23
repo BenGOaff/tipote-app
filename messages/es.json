@@ -4013,5 +4013,17 @@
     "copy": "Copiar",
     "dialogTitle": "Editar y copiar",
     "apply": "Aplicar"
+  },
+  "pyramidSelection": {
+    "urgentProblem": "Problema urgente:",
+    "savingSelection": "Guardando tu selección…",
+    "buildingStrategy": "Construyendo tu estrategia personalizada…",
+    "generatingTasks": "Generando tus primeras tareas…",
+    "polishingSpace": "Puliendo tu espacio…",
+    "cannotGenerate": "No se puede generar la estrategia.",
+    "buildingTitle": "Construyendo tu estrategia…",
+    "creatingPyramids": "Tipote está creando tus pirámides de ofertas...",
+    "analyzingProfile": "Analizando tu perfil y creando 3 pirámides de ofertas impactantes.",
+    "generating": "Generando"
   }
 }

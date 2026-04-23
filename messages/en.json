@@ -4013,5 +4013,17 @@
     "copy": "Copy",
     "dialogTitle": "Edit & copy",
     "apply": "Apply"
+  },
+  "pyramidSelection": {
+    "urgentProblem": "Urgent problem:",
+    "savingSelection": "Saving your selection…",
+    "buildingStrategy": "Building your personalized strategy…",
+    "generatingTasks": "Generating your first tasks…",
+    "polishingSpace": "Polishing your workspace…",
+    "cannotGenerate": "Unable to generate the strategy.",
+    "buildingTitle": "Building your strategy…",
+    "creatingPyramids": "Tipote is creating your offer pyramids...",
+    "analyzingProfile": "Analyzing your profile and creating 3 impactful offer pyramids.",
+    "generating": "Generating"
   }
 }

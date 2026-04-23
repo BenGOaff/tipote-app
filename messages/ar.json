@@ -4013,5 +4013,17 @@
     "copy": "نسخ",
     "dialogTitle": "تعديل ونسخ",
     "apply": "تطبيق"
+  },
+  "pyramidSelection": {
+    "urgentProblem": "مشكلة عاجلة:",
+    "savingSelection": "جاري حفظ اختيارك…",
+    "buildingStrategy": "جاري بناء استراتيجيتك المخصصة…",
+    "generatingTasks": "جاري إنشاء مهامك الأولى…",
+    "polishingSpace": "جاري تلميع مساحتك…",
+    "cannotGenerate": "تعذّر إنشاء الاستراتيجية.",
+    "buildingTitle": "جاري بناء استراتيجيتك…",
+    "creatingPyramids": "Tipote يُنشئ هرمي عروضك...",
+    "analyzingProfile": "تحليل ملفك الشخصي وإنشاء 3 أهرام عروض مؤثرة.",
+    "generating": "جاري الإنشاء"
   }
 }
