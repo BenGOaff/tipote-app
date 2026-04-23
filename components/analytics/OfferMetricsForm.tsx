@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,13 +34,13 @@ interface OfferMetricsFormProps {
   onMonthConsumed?: () => void;
 }
 
-const getQuickDates = () => {
+const getQuickDates = (todayLabel: string) => {
   const dates: Array<{ value: string; label: string }> = [];
   const now = new Date();
   // Today
   dates.push({
     value: format(now, "yyyy-MM-dd"),
-    label: `Aujourd'hui (${format(now, "d MMM yyyy", { locale: fr })})`,
+    label: `${todayLabel} (${format(now, "d MMM yyyy", { locale: fr })})`,
   });
   // Last 6 months (first of month)
   for (let i = 0; i < 6; i++) {
@@ -82,7 +83,8 @@ export const OfferMetricsForm = ({
   initialMonth,
   onMonthConsumed,
 }: OfferMetricsFormProps) => {
-  const quickDates = useMemo(() => getQuickDates(), []);
+  const t = useTranslations("offerMetrics");
+  const quickDates = useMemo(() => getQuickDates(t("today")), [t]);
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM-dd"));
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -220,7 +222,7 @@ export const OfferMetricsForm = ({
       <Card className="p-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
           <div className="space-y-1">
-            <Label className="font-semibold">Date des données</Label>
+            <Label className="font-semibold">{t("dateLabel")}</Label>
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
@@ -264,7 +266,7 @@ export const OfferMetricsForm = ({
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-5 h-5 text-primary" />
-          <h3 className="font-bold text-base">Pages (par offre)</h3>
+          <h3 className="font-bold text-base">{t("pagesSection")}</h3>
         </div>
 
         <div className="space-y-4">
@@ -285,7 +287,7 @@ export const OfferMetricsForm = ({
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span>Payante</span>
+                      <span>{t("paid")}</span>
                       <Switch checked={row.is_paid} onCheckedChange={(v) => updateRow(idx, "is_paid", v)} />
                     </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeRow(idx)}>
@@ -297,7 +299,7 @@ export const OfferMetricsForm = ({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">
-                      Visiteurs de la page de {row.is_paid ? "vente" : "capture"} de cette offre
+                      {row.is_paid ? t("visitorsSale") : t("visitorsCapture")}
                     </Label>
                     <Input
                       type="number"
@@ -309,7 +311,7 @@ export const OfferMetricsForm = ({
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">
-                      {row.is_paid ? "Inscrits qui ont vu la page de vente" : "Nouveaux inscrits via cette page"}
+                      {row.is_paid ? t("signupsSale") : t("signupsCapture")}
                     </Label>
                     <Input
                       type="number"
@@ -323,7 +325,7 @@ export const OfferMetricsForm = ({
                     <>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">
-                          Nombre de ventes de &quot;{row.offer_name}&quot;
+                          {t("salesCount", { name: row.offer_name })}
                         </Label>
                         <Input
                           type="number"
@@ -335,7 +337,7 @@ export const OfferMetricsForm = ({
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">
-                          CA total de &quot;{row.offer_name}&quot; (EUR)
+                          {t("revenueLabel", { name: row.offer_name })}
                         </Label>
                         <Input
                           type="number"
@@ -354,17 +356,17 @@ export const OfferMetricsForm = ({
                   <div className="flex flex-wrap gap-2 text-xs">
                     {visitors > 0 && (
                       <span className="px-2 py-1 rounded bg-muted/50">
-                        Taux de capture : <strong>{captureRate}%</strong>
+                        {t("captureRate")} <strong>{captureRate}%</strong>
                       </span>
                     )}
                     {salesConv !== null && sales > 0 && (
                       <span className="px-2 py-1 rounded bg-muted/50">
-                        Taux de conversion vente : <strong>{salesConv}%</strong>
+                        {t("salesConvRate")} <strong>{salesConv}%</strong>
                       </span>
                     )}
                     {row.is_paid && revenue > 0 && visitors > 0 && (
                       <span className="px-2 py-1 rounded bg-muted/50">
-                        CA/visiteur : <strong>{(revenue / visitors).toFixed(2)} EUR</strong>
+                        {t("revenuePerVisitor")} <strong>{(revenue / visitors).toFixed(2)} EUR</strong>
                       </span>
                     )}
                   </div>
@@ -379,12 +381,12 @@ export const OfferMetricsForm = ({
           <Input
             value={customOfferName}
             onChange={(e) => setCustomOfferName(e.target.value)}
-            placeholder="Ajouter une offre manuellement..."
+            placeholder={t("addOfferPlaceholder")}
             className="flex-1"
             onKeyDown={(e) => e.key === "Enter" && addCustomOffer()}
           />
           <Button variant="outline" onClick={addCustomOffer} disabled={!customOfferName.trim()}>
-            <Plus className="w-4 h-4 mr-1" /> Ajouter
+            <Plus className="w-4 h-4 mr-1" /> {t("add")}
           </Button>
         </div>
       </Card>
@@ -393,13 +395,13 @@ export const OfferMetricsForm = ({
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-4">
           <Mail className="w-5 h-5 text-primary" />
-          <h3 className="font-bold text-base">Emails</h3>
+          <h3 className="font-bold text-base">{t("emails")}</h3>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Nombre total d&apos;emails dans ta liste
+              {t("emailsListLabel")}
             </Label>
             <Input
               type="number"
@@ -411,7 +413,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Nombre d&apos;emails envoyés (newsletters, sequences...)
+              {t("emailsSentLabel")}
             </Label>
             <Input
               type="number"
@@ -423,7 +425,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Taux d&apos;ouverture moyen des emails (%)
+              {t("emailsOpenLabel")}
             </Label>
             <Input
               type="number"
@@ -436,7 +438,7 @@ export const OfferMetricsForm = ({
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Taux de clics moyen des emails (%)
+              {t("emailsClickLabel")}
             </Label>
             <Input
               type="number"
@@ -459,7 +461,7 @@ export const OfferMetricsForm = ({
         >
           <span className="flex items-center gap-2 text-sm font-medium">
             <HelpCircle className="w-4 h-4 text-muted-foreground" />
-            Où trouver ces chiffres ?
+            {t("whereToFind")}
           </span>
           {showGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </Button>
@@ -468,57 +470,57 @@ export const OfferMetricsForm = ({
           <div className="mt-4 space-y-4 text-sm">
             <div className="space-y-2">
               <h4 className="font-bold flex items-center gap-1.5">
-                Statistiques Pages (Systeme.io)
+                {t("guidePagesTitle")}
                 <ExternalLink className="w-3 h-3 text-muted-foreground" />
               </h4>
               <ul className="space-y-1.5 text-muted-foreground ml-4">
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Visiteurs :</span>
-                  <span>Tunnels &gt; [Ton tunnel] &gt; Statistiques &gt; colonne &laquo; Pages vues &raquo; (visiteurs uniques de la page de capture ou vente)</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("guideVisitors")}</span>
+                  <span>{t("guideVisitorsDesc")}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Inscrits :</span>
-                  <span>Tunnels &gt; Statistiques &gt; colonne « Opt-in » (personnes ayant laissé leur email)</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("guideSignups")}</span>
+                  <span>{t("guideSignupsDesc")}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Ventes :</span>
-                  <span>Tunnels &gt; Statistiques &gt; &laquo; Ventes &raquo; OU Tableau de bord &gt; Ventes (filtre par produit et mois)</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("guideSales")}</span>
+                  <span>{t("guideSalesDesc")}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">CA :</span>
-                  <span>Tableau de bord &gt; Revenus (filtre par mois) OU Stripe/PayPal si paiement externe</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("guideRevenue")}</span>
+                  <span>{t("guideRevenueDesc")}</span>
                 </li>
               </ul>
             </div>
 
             <div className="space-y-2">
               <h4 className="font-bold flex items-center gap-1.5">
-                Statistiques Emails (Systeme.io)
+                {t("guideEmailsTitle")}
                 <ExternalLink className="w-3 h-3 text-muted-foreground" />
               </h4>
               <ul className="space-y-1.5 text-muted-foreground ml-4">
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taille liste :</span>
-                  <span>Contacts &gt; nombre total affiché en haut (prends le chiffre en fin de mois)</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("guideListSize")}</span>
+                  <span>{t("guideListSizeDesc")}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Emails envoyés :</span>
-                  <span>Emails &gt; Newsletters &gt; compte les emails envoyés ce mois (newsletters + broadcasts)</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("guideEmailsSent")}</span>
+                  <span>{t("guideEmailsSentDesc")}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taux ouverture :</span>
-                  <span>Emails &gt; Statistiques &gt; moyenne du taux d&apos;ouverture de tous les emails envoyés ce mois</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("guideOpenRate")}</span>
+                  <span>{t("guideOpenRateDesc")}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">Taux de clics :</span>
-                  <span>Emails &gt; Statistiques &gt; moyenne du taux de clics de tous les emails envoyés ce mois</span>
+                  <span className="font-medium text-foreground min-w-[80px] sm:min-w-[120px]">{t("guideClickRate")}</span>
+                  <span>{t("guideClickRateDesc")}</span>
                 </li>
               </ul>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/50 border">
               <p className="text-xs text-muted-foreground">
-                <strong className="text-foreground">Astuce :</strong> Les visiteurs et leads de tes pages Tipote sont comptabilisés automatiquement. Ici tu saisis les chiffres globaux de tes tunnels (Système.io ou autre CRM).
+                <strong className="text-foreground">{t("tipLabel")}</strong> {t("tipText")}
               </p>
             </div>
           </div>
@@ -529,7 +531,7 @@ export const OfferMetricsForm = ({
       <div className="flex justify-end">
         <Button onClick={handleSaveAll} disabled={isSaving} size="lg">
           {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-          Enregistrer tout
+          {t("saveAll")}
         </Button>
       </div>
     </div>
