@@ -79,12 +79,12 @@ export function ArticleForm({
 
   const objectives = useMemo(
     () => [
-      { id: "traffic_seo" as const, label: "Trafic SEO" },
-      { id: "authority" as const, label: "Autorité" },
-      { id: "emails" as const, label: "Emails" },
-      { id: "sales" as const, label: "Ventes" },
+      { id: "traffic_seo" as const, label: t("trafficSeo") },
+      { id: "authority" as const, label: t("authority") },
+      { id: "emails" as const, label: t("emailsLabel") },
+      { id: "sales" as const, label: t("salesLabel") },
     ],
-    []
+    [t]
   );
 
   const canGeneratePlan = Boolean(

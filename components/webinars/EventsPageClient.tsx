@@ -81,11 +81,11 @@ type OfferOption = {
   price_max: number | null;
 };
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  draft: { label: "Brouillon", color: "bg-slate-100 text-slate-600" },
-  scheduled: { label: "Planifié", color: "bg-blue-100 text-blue-700" },
-  live: { label: "En direct", color: "bg-green-100 text-green-700" },
-  completed: { label: "Terminé", color: "bg-purple-100 text-purple-700" },
+const STATUS_CONFIG: Record<string, { labelKey: string; color: string }> = {
+  draft: { labelKey: "statusDraft", color: "bg-slate-100 text-slate-600" },
+  scheduled: { labelKey: "statusScheduled", color: "bg-blue-100 text-blue-700" },
+  live: { labelKey: "statusLive", color: "bg-green-100 text-green-700" },
+  completed: { labelKey: "statusCompleted", color: "bg-purple-100 text-purple-700" },
 };
 
 const EVENT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
@@ -399,7 +399,7 @@ export default function EventsPageClient() {
                     size="sm"
                     onClick={() => setStatusFilter(s)}
                   >
-                    {s === "all" ? t("allStatuses") : (STATUS_CONFIG[s]?.label ?? s)}
+                    {s === "all" ? t("allStatuses") : (STATUS_CONFIG[s]?.labelKey ? t(STATUS_CONFIG[s].labelKey as any) : s)}
                   </Button>
                 ))}
               </div>
@@ -489,7 +489,7 @@ export default function EventsPageClient() {
                     {/* Badges */}
                     <div className="flex items-center gap-1.5 mb-2">
                       <Badge className={`text-[10px] ${ec.color}`}>{ec.label}</Badge>
-                      <Badge className={`text-[10px] ${sc.color}`}>{sc.label}</Badge>
+                      <Badge className={`text-[10px] ${sc.color}`}>{t(sc.labelKey as any)}</Badge>
                     </div>
 
                     {/* Date & offer */}

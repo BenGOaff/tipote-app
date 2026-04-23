@@ -339,7 +339,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
       toast({ title: t("toast.error"), description: json.error || "Erreur", variant: "destructive" });
       return;
     }
-    toast({ title: "Sauvegardé" });
+    toast({ title: t("savedShort") });
     router.refresh();
   }, [toast, t, router]);
 
@@ -986,7 +986,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                             e.stopPropagation();
                                             deleteTask(String(item.id));
                                           }}
-                                          title="Supprimer la tâche"
+                                          title={t("deleteTaskTitle")}
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
                                         </button>

@@ -284,7 +284,7 @@ export function VideoForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadAsPdf(generatedContent, title || "Script Vidéo")}
+                onClick={() => downloadAsPdf(generatedContent, title || t("videoScriptDefault"))}
                 disabled={!generatedContent}
               >
                 <FileDown className="w-4 h-4 mr-1" />

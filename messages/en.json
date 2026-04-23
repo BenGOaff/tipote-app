@@ -590,7 +590,8 @@
     "clickOpen": "Click to discover",
     "clickClose": "Click to close",
     "alreadyOpen": "Already open",
-    "ariaOpen": "Open gem"
+    "ariaOpen": "Open gem",
+    "networkError": "Network error"
   },
   "templates": {
     "title": "Systeme.io Templates",
@@ -651,7 +652,9 @@
       "connectError": "Failed to connect account.",
       "disconnectSuccess": "Account disconnected successfully.",
       "disconnectError": "Failed to disconnect account."
-    }
+    },
+    "messengerConnected": "Messenger connected",
+    "messengerConnectedDesc": "Facebook DM automations are now active."
   },
   "publishModal": {
     "publishOn": "Publish on {platform}",
@@ -1354,7 +1357,9 @@
       "phaseUpdatedDesc": "Changes have been saved",
       "personaUpdated": "Persona updated",
       "personaUpdatedDesc": "Changes have been saved"
-    }
+    },
+    "savedShort": "Saved",
+    "deleteTaskTitle": "Delete task"
   },
   "onboarding": {
     "title": "Welcome to Tipote",
@@ -1879,7 +1884,9 @@
     "uploading": "Uploading...",
     "dropText": "Drag your video here or click to browse",
     "videoStorageHint": "The video will be stored in Supabase Storage — the URL remains valid even for scheduled posts.",
-    "deleteLabel": "Delete {name}"
+    "deleteLabel": "Delete {name}",
+    "uploadNetworkError": "Network error during upload",
+    "gifReelNotice": "The animated GIF will be published as a video on Facebook (Reel) to preserve the animation."
   },
   "contentActions": {
     "viewEdit": "View / edit",
@@ -2234,7 +2241,8 @@
     "saveError": "Error saving lead",
     "deleteSuccess": "Lead deleted",
     "deleteError": "Error deleting lead",
-    "encryptionBadge": "Your data is end-to-end encrypted (AES-256). Neither Tipote nor any third party can read your leads' information."
+    "encryptionBadge": "Your data is end-to-end encrypted (AES-256). Neither Tipote nor any third party can read your leads' information.",
+    "subtitle": "Manage your contacts and leads from one place."
   },
   "widgets": {
     "title": "Widgets",
@@ -2447,7 +2455,11 @@
     "ctaLabel": "CTA (optional)",
     "ctaPlaceholder": "E.g.: Download the free guide",
     "ctaUrlLabel": "CTA link (optional)",
-    "ctaUrlPlaceholder": "E.g.: https://…"
+    "ctaUrlPlaceholder": "E.g.: https://…",
+    "authority": "Authority",
+    "trafficSeo": "SEO traffic",
+    "emailsLabel": "Emails",
+    "salesLabel": "Sales"
   },
   "emailForm": {
     "generating": "Generating...",
@@ -2485,7 +2497,8 @@
     "durationLabel": "Duration",
     "subjectPlaceholder": "E.g.: How to sell without being pushy",
     "resultLabel": "Generated script",
-    "resultPlaceholder": "The script will appear here…"
+    "resultPlaceholder": "The script will appear here…",
+    "videoScriptDefault": "Video Script"
   },
   "postActions": {
     "publishOn": "Publish on {label}",
@@ -2610,7 +2623,9 @@
     "exportCsv": "Export CSV",
     "noLeads": "No leads for this page.",
     "firstName": "First name",
-    "phone": "Phone"
+    "phone": "Phone",
+    "networkError": "Network error",
+    "subtitle": "Create and manage your capture pages, sales pages and your Link in Bio."
   },
   "checklistTemplates": {
     "applyTemplate": "Apply a template:",
@@ -3294,7 +3309,11 @@
     "webinarDeleted": "Webinar deleted",
     "totalWebinars": "Total webinars",
     "noWebinars": "No webinars yet.",
-    "noWebinarsHint": "Create your first webinar to start tracking your KPIs."
+    "noWebinarsHint": "Create your first webinar to start tracking your KPIs.",
+    "statusScheduled": "Scheduled",
+    "statusCompleted": "Completed",
+    "statusDraft": "Draft",
+    "statusLive": "Live"
   },
   "quizForm": {
     "createTitle": "Create a quiz",

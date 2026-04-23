@@ -295,7 +295,7 @@ export default function PepitesPageClient() {
       // On laisse juste un refresh visuel général.
       refreshAll();
     } catch {
-      setAdminError("Erreur réseau");
+      setAdminError(t("networkError"));
     } finally {
       setSaving(false);
     }

@@ -590,7 +590,8 @@
     "clickOpen": "Haz clic para expandir",
     "clickClose": "Haz clic para cerrar",
     "alreadyOpen": "Ya abierto",
-    "ariaOpen": "Abrir joya"
+    "ariaOpen": "Abrir joya",
+    "networkError": "Error de red"
   },
   "templates": {
     "title": "Plantillas Systeme.io",
@@ -651,7 +652,9 @@
       "connectError": "Error al conectar la cuenta.",
       "disconnectSuccess": "Cuenta desconectada correctamente.",
       "disconnectError": "Error al desconectar la cuenta."
-    }
+    },
+    "messengerConnected": "Messenger conectado",
+    "messengerConnectedDesc": "Las automatizaciones DM de Facebook están ahora activas."
   },
   "publishModal": {
     "publishOn": "Publicar en {platform}",
@@ -1354,7 +1357,9 @@
       "phaseUpdatedDesc": "Los cambios han sido guardados",
       "personaUpdated": "Persona actualizada",
       "personaUpdatedDesc": "Los cambios han sido guardados"
-    }
+    },
+    "savedShort": "Guardado",
+    "deleteTaskTitle": "Eliminar la tarea"
   },
   "onboarding": {
     "title": "Bienvenido/a a Tipote",
@@ -1879,7 +1884,9 @@
     "uploading": "Cargando...",
     "dropText": "Arrastra tu vídeo aquí o haz clic para explorar",
     "videoStorageHint": "El vídeo se almacenará en Supabase Storage — la URL sigue válida incluso para publicaciones programadas.",
-    "deleteLabel": "Eliminar {name}"
+    "deleteLabel": "Eliminar {name}",
+    "uploadNetworkError": "Error de red durante la carga",
+    "gifReelNotice": "El GIF animado se publicará como vídeo en Facebook (Reel) para conservar la animación."
   },
   "contentActions": {
     "viewEdit": "Ver / editar",
@@ -2234,7 +2241,8 @@
     "saveError": "Error al guardar",
     "deleteSuccess": "Lead eliminado",
     "deleteError": "Error al eliminar",
-    "encryptionBadge": "Tus datos están cifrados de extremo a extremo (AES-256). Ni Tipote ni terceros pueden leer la información de tus leads."
+    "encryptionBadge": "Tus datos están cifrados de extremo a extremo (AES-256). Ni Tipote ni terceros pueden leer la información de tus leads.",
+    "subtitle": "Gestiona tus contactos y leads desde un solo lugar."
   },
   "widgets": {
     "title": "Notificaciones Toast",
@@ -2447,7 +2455,11 @@
     "ctaLabel": "CTA (opcional)",
     "ctaPlaceholder": "Ej.: Descargar la guía gratis",
     "ctaUrlLabel": "Enlace CTA (opcional)",
-    "ctaUrlPlaceholder": "Ej.: https://…"
+    "ctaUrlPlaceholder": "Ej.: https://…",
+    "authority": "Autoridad",
+    "trafficSeo": "Tráfico SEO",
+    "emailsLabel": "Emails",
+    "salesLabel": "Ventas"
   },
   "emailForm": {
     "generating": "Generando...",
@@ -2485,7 +2497,8 @@
     "durationLabel": "Duración",
     "subjectPlaceholder": "Ej.: Cómo vender sin ser insistente",
     "resultLabel": "Guion generado",
-    "resultPlaceholder": "El guion aparecerá aquí…"
+    "resultPlaceholder": "El guion aparecerá aquí…",
+    "videoScriptDefault": "Guion de vídeo"
   },
   "postActions": {
     "publishOn": "Publicar en {label}",
@@ -2610,7 +2623,9 @@
     "exportCsv": "Exportar CSV",
     "noLeads": "No hay leads para esta página.",
     "firstName": "Nombre",
-    "phone": "Teléfono"
+    "phone": "Teléfono",
+    "networkError": "Error de red",
+    "subtitle": "Crea y gestiona tus páginas de captura, de venta y tu Link in Bio."
   },
   "checklistTemplates": {
     "applyTemplate": "Aplicar una plantilla:",
@@ -3294,7 +3309,11 @@
     "webinarDeleted": "Webinario eliminado",
     "totalWebinars": "Total webinarios",
     "noWebinars": "No hay webinarios por el momento.",
-    "noWebinarsHint": "Crea tu primer webinario para empezar a seguir tus KPIs."
+    "noWebinarsHint": "Crea tu primer webinario para empezar a seguir tus KPIs.",
+    "statusScheduled": "Programado",
+    "statusCompleted": "Terminado",
+    "statusDraft": "Borrador",
+    "statusLive": "En directo"
   },
   "quizForm": {
     "createTitle": "Crear un quiz",

@@ -590,7 +590,8 @@
     "clickOpen": "انقر للتوسيع",
     "clickClose": "انقر للإغلاق",
     "alreadyOpen": "مفتوح بالفعل",
-    "ariaOpen": "فتح الجوهرة"
+    "ariaOpen": "فتح الجوهرة",
+    "networkError": "خطأ في الشبكة"
   },
   "templates": {
     "title": "قوالب Systeme.io",
@@ -651,7 +652,9 @@
       "connectError": "حدث خطأ أثناء ربط الحساب.",
       "disconnectSuccess": "تم قطع اتصال الحساب بنجاح.",
       "disconnectError": "حدث خطأ أثناء قطع اتصال الحساب."
-    }
+    },
+    "messengerConnected": "تم ربط Messenger",
+    "messengerConnectedDesc": "أصبحت أتمتة الرسائل المباشرة لـ Facebook نشطة الآن."
   },
   "publishModal": {
     "publishOn": "النشر على {platform}",
@@ -1354,7 +1357,9 @@
       "phaseUpdatedDesc": "تم حفظ التغييرات",
       "personaUpdated": "تم تحديث الشخصية",
       "personaUpdatedDesc": "تم حفظ التغييرات"
-    }
+    },
+    "savedShort": "تم الحفظ",
+    "deleteTaskTitle": "حذف المهمة"
   },
   "onboarding": {
     "title": "مرحباً بك في Tipote",
@@ -1879,7 +1884,9 @@
     "uploading": "جارٍ التحميل...",
     "dropText": "اسحب الفيديو هنا أو انقر للاستعراض",
     "videoStorageHint": "سيتم تخزين الفيديو — يبقى الرابط صالحاً حتى للمنشورات المجدولة.",
-    "deleteLabel": "حذف {name}"
+    "deleteLabel": "حذف {name}",
+    "uploadNetworkError": "خطأ في الشبكة أثناء الرفع",
+    "gifReelNotice": "سيتم نشر GIF المتحرّك كفيديو على Facebook (Reel) للحفاظ على الحركة."
   },
   "contentActions": {
     "viewEdit": "عرض / تعديل",
@@ -2234,7 +2241,8 @@
     "saveError": "خطأ في الحفظ",
     "deleteSuccess": "تم حذف العميل",
     "deleteError": "خطأ في الحذف",
-    "encryptionBadge": "بياناتك مشفرة من طرف إلى طرف (AES-256). لا يمكن لـ Tipote أو أي طرف ثالث قراءة معلومات عملائك."
+    "encryptionBadge": "بياناتك مشفرة من طرف إلى طرف (AES-256). لا يمكن لـ Tipote أو أي طرف ثالث قراءة معلومات عملائك.",
+    "subtitle": "أدر جهات اتصالك والعملاء المحتملين من مكان واحد."
   },
   "widgets": {
     "title": "إشعارات Toast",
@@ -2447,7 +2455,11 @@
     "ctaLabel": "الدعوة للعمل (اختياري)",
     "ctaPlaceholder": "مثال: تنزيل الدليل المجاني",
     "ctaUrlLabel": "رابط الدعوة للعمل (اختياري)",
-    "ctaUrlPlaceholder": "مثال: https://…"
+    "ctaUrlPlaceholder": "مثال: https://…",
+    "authority": "السلطة",
+    "trafficSeo": "حركة SEO",
+    "emailsLabel": "البريد الإلكتروني",
+    "salesLabel": "المبيعات"
   },
   "emailForm": {
     "generating": "جاري التوليد...",
@@ -2485,7 +2497,8 @@
     "durationLabel": "المدّة",
     "subjectPlaceholder": "مثال: كيف تبيع دون أن تكون ملحّاً",
     "resultLabel": "السيناريو المُولَّد",
-    "resultPlaceholder": "سيظهر السيناريو هنا…"
+    "resultPlaceholder": "سيظهر السيناريو هنا…",
+    "videoScriptDefault": "سكربت فيديو"
   },
   "postActions": {
     "publishOn": "نشر على {label}",
@@ -2610,7 +2623,9 @@
     "exportCsv": "تصدير CSV",
     "noLeads": "لا توجد عملاء محتملون لهذه الصفحة.",
     "firstName": "الاسم الأول",
-    "phone": "الهاتف"
+    "phone": "الهاتف",
+    "networkError": "خطأ في الشبكة",
+    "subtitle": "أنشئ وأدر صفحات الالتقاط والبيع والرابط في السيرة الذاتية."
   },
   "checklistTemplates": {
     "applyTemplate": "تطبيق قالب:",
@@ -3294,7 +3309,11 @@
     "webinarDeleted": "تم حذف الندوة",
     "totalWebinars": "إجمالي الندوات",
     "noWebinars": "لا توجد ندوات حالياً.",
-    "noWebinarsHint": "أنشئ ندوتك الأولى لبدء تتبع مؤشرات الأداء."
+    "noWebinarsHint": "أنشئ ندوتك الأولى لبدء تتبع مؤشرات الأداء.",
+    "statusScheduled": "مُجدوَل",
+    "statusCompleted": "مكتمل",
+    "statusDraft": "مسودة",
+    "statusLive": "مباشر"
   },
   "quizForm": {
     "createTitle": "إنشاء اختبار",
