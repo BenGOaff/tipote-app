@@ -259,6 +259,7 @@ export default function SocialConnections() {
   const searchParams = useSearchParams();
   const t = useTranslations("social");
   const tc = useTranslations("common");
+  const tsc = useTranslations("socialConnections");
 
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -651,7 +652,7 @@ export default function SocialConnections() {
                 {/* Onglet Commentaires */}
                 <TabsContent value="comments" className="space-y-3">
                   {fbContent.posts?.length === 0 && (
-                    <p className="text-sm text-muted-foreground py-4 text-center">Aucun post trouvé.</p>
+                    <p className="text-sm text-muted-foreground py-4 text-center">{tsc("noPostsFound")}</p>
                   )}
                   {fbContent.posts?.map((post: any) => (
                     <div key={post.id} className="border rounded-lg p-3">

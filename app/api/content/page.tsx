@@ -8,6 +8,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -141,6 +142,8 @@ export default async function ContentsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const t = await getTranslations("contents");
+  const tp = await getTranslations("contentIndexPage");
   const supabase = await getSupabaseServerClient();
   const {
     data: { session },
@@ -182,13 +185,13 @@ export default async function ContentsPage({
   }).length;
 
   return (
-    <AppShell userEmail={session.user.email ?? ""} headerTitle="Mes contenus">
+    <AppShell userEmail={session.user.email ?? ""} headerTitle={t("title")}>
       <div className="mx-auto w-full max-w-6xl space-y-6">
         {/* Header (Lovable) : titre + toggle + bouton créer */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Mes contenus</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Retrouve, planifie et édite tes contenus.</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{tp("subtitle")}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -248,11 +251,11 @@ export default async function ContentsPage({
             <p className="mt-2 text-2xl font-bold">{totalCount}</p>
           </Card>
           <Card className="p-5">
-            <p className="text-sm text-muted-foreground">Publiés</p>
+            <p className="text-sm text-muted-foreground">{tp("publishedLabel")}</p>
             <p className="mt-2 text-2xl font-bold">{publishedCount}</p>
           </Card>
           <Card className="p-5">
-            <p className="text-sm text-muted-foreground">Planifiés</p>
+            <p className="text-sm text-muted-foreground">{tp("scheduledLabel")}</p>
             <p className="mt-2 text-2xl font-bold">{scheduledCount}</p>
           </Card>
           <Card className="p-5">
@@ -289,7 +292,7 @@ export default async function ContentsPage({
                     </p>
                     <div className="mt-4">
                       <Button asChild className="rounded-xl">
-                        <Link href="/create">Créer un contenu</Link>
+                        <Link href="/create">{tp("createContent")}</Link>
                       </Button>
                     </div>
                   </Card>

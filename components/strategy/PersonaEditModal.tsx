@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ export const PersonaEditModal = ({
   persona,
   onSaved,
 }: PersonaEditModalProps) => {
+  const t = useTranslations("personaEdit");
   const [title, setTitle] = useState(persona.title);
   const [pains, setPains] = useState<string[]>(persona.pains);
   const [desires, setDesires] = useState<string[]>(persona.desires);
@@ -144,7 +146,7 @@ export const PersonaEditModal = ({
 
             {/* Pains */}
             <div className="space-y-3">
-              <Label>Problèmes principaux</Label>
+              <Label>{t("painsLabel")}</Label>
               <div className="space-y-2">
                 {pains.map((pain, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -166,7 +168,7 @@ export const PersonaEditModal = ({
                 <Input
                   value={newPain}
                   onChange={(e) => setNewPain(e.target.value)}
-                  placeholder="Ajouter un problème..."
+                  placeholder={t("addPainPh")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -232,7 +234,7 @@ export const PersonaEditModal = ({
 
             {/* Channels */}
             <div className="space-y-3">
-              <Label>Canaux préférés</Label>
+              <Label>{t("channelsLabel")}</Label>
               <div className="flex flex-wrap gap-2">
                 {channels.map((channel, i) => (
                   <Badge

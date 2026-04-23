@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Loader2, MessageCircle, Mail, Clock, CheckCircle2,
   Send, Trash2, ChevronDown, ChevronRight, XCircle,
@@ -41,6 +42,7 @@ const STATUS_CONFIG = {
 /* ────────────────── Component ────────────────── */
 
 export default function AdminTicketsClient() {
+  const t = useTranslations("adminTickets");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -296,7 +298,7 @@ export default function AdminTicketsClient() {
                       <Textarea
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Votre réponse au visiteur... (sera envoyée par email)"
+                        placeholder={t("replyPh")}
                         rows={3}
                         className="text-sm resize-none"
                       />

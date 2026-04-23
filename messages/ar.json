@@ -140,7 +140,9 @@
       "errNetwork": "خطأ في الشبكة",
       "errUpdate": "خطأ أثناء التحديث",
       "errSave": "خطأ أثناء الحفظ"
-    }
+    },
+    "addPlaceholder": "إضافة مهمّة…",
+    "completedTitle": "المهام المكتملة"
   },
   "quizShare": {
     "publicationTitle": "النشر",
@@ -413,6 +415,46 @@
     "emptyPreview": "لا توجد معاينة",
     "chatPh": "مثال: اجعل العنوان أكثر مباشرة، أضف 3 فوائد، دعوة للعمل أكثر إلحاحًا…"
   },
+  "projectSources": {
+    "dialogTitle": "إضافة مصدر سياقي",
+    "namePh": "مثال: دليل تحريري، نبرة العلامة…",
+    "contentPh": "ألصق هنا ملاحظاتك وإرشاداتك وسياق علامتك والمعلومات الأساسية…"
+  },
+  "personaEdit": {
+    "painsLabel": "المشاكل الرئيسية",
+    "addPainPh": "إضافة مشكلة…",
+    "channelsLabel": "القنوات المفضَّلة"
+  },
+  "adminSupport": {
+    "seedConfirm": "سيؤدّي هذا إلى إدراج/تحديث جميع الفئات والمقالات. هل تريد المتابعة؟",
+    "tagsLabel": "الوسوم (مفصولة بفواصل)",
+    "relatedLabel": "المقالات ذات الصلة (slugs، مفصولة بفواصل)"
+  },
+  "adminTickets": {
+    "replyPh": "ردّك على الزائر… (سيُرسَل عبر البريد الإلكتروني)"
+  },
+  "socialConnections": {
+    "noPostsFound": "لم يتمّ العثور على أيّ منشور."
+  },
+  "pyramidGen": {
+    "painLabel": "المشكلة العاجلة:",
+    "buildingTitle": "جارٍ بناء استراتيجيتك…",
+    "generatingPyramids": "Tipote يُنشئ هرم عروضك…",
+    "generatingGeneric": "جارٍ التوليد"
+  },
+  "contentIndexPage": {
+    "subtitle": "ابحث عن محتوياتك، جدوِلها وحرّرها.",
+    "publishedLabel": "منشور",
+    "scheduledLabel": "مُجدوَل",
+    "createContent": "إنشاء محتوى"
+  },
+  "metaDeletion": {
+    "title": "حذف البيانات — تم استلام الطلب",
+    "intro": "تم تسجيل طلبك لحذف البيانات المرتبطة بـ Meta.",
+    "codeLabel": "رمز التأكيد",
+    "contactHint": "إذا كنت بحاجة إلى تسريع المعالجة أو التحقّق من الحالة، تواصل مع الدعم مع ذكر هذا الرمز.",
+    "backLink": "العودة إلى Tipote"
+  },
   "settings": {
     "title": "الإعدادات",
     "tabs": {
@@ -432,7 +474,8 @@
       "saving": "جارٍ الحفظ…",
       "saved": "تم تحديث اللغة",
       "error": "خطأ في الحفظ"
-    }
+    },
+    "bannerSubtitle": "اضبط ملفّك وتوصيلاتك وتفضيلاتك."
   },
   "common": {
     "save": "حفظ",
@@ -691,7 +734,11 @@
     "enterData": "إدخال بياناتي",
     "lastUpdated": "آخر تحديث",
     "inProgress": "الشهر الحالي",
-    "edit": "تعديل"
+    "edit": "تعديل",
+    "emptyHistoryHint": "أدخِل بياناتك لعرض السجلّ هنا.",
+    "dashboardEmptyTitle": "لا توجد بيانات بعد",
+    "dashboardLeadsCaptured": "العملاء المحتملون الملتقطون",
+    "offerAnalysisHint": "يحلّل الذكاء الاصطناعي بياناتك حسب العرض"
   },
   "pepites": {
     "pageTitle": "الجواهر",
@@ -1091,7 +1138,10 @@
       "description": "حدّد تموضعك حتى يُكيّف Tipote كل المحتوى المُنشأ بما يتناسب مع صوتك وجمهورك.",
       "saveSuccess": "تم حفظ التموضع بنجاح.",
       "saveError": "خطأ في حفظ التموضع."
-    }
+    },
+    "bannerSubtitle": "اضبط ملفّك وتوصيلاتك وتفضيلاتك.",
+    "createPageLabel": "إنشاء",
+    "detailTech": "تفاصيل تقنية"
   },
   "today": {
     "title": "لوحة التحكم",
@@ -2321,7 +2371,8 @@
     "saveError": "خطأ في الحفظ",
     "deleteSuccess": "تم حذف العميل",
     "deleteError": "خطأ في الحذف",
-    "encryptionBadge": "بياناتك مشفرة من طرف إلى طرف (AES-256). لا يمكن لـ Tipote أو أي طرف ثالث قراءة معلومات عملائك."
+    "encryptionBadge": "بياناتك مشفرة من طرف إلى طرف (AES-256). لا يمكن لـ Tipote أو أي طرف ثالث قراءة معلومات عملائك.",
+    "bannerSubtitle": "أدِر جهات اتصالك وعملاءك المحتملين من مكان واحد."
   },
   "widgets": {
     "title": "إشعارات Toast",
@@ -2695,7 +2746,8 @@
     "exportCsv": "تصدير CSV",
     "noLeads": "لا توجد عملاء محتملون لهذه الصفحة.",
     "firstName": "الاسم الأول",
-    "phone": "الهاتف"
+    "phone": "الهاتف",
+    "bannerSubtitle": "أنشئ وأدِر صفحات الالتقاط والمبيعات وLink in Bio."
   },
   "checklistTemplates": {
     "applyTemplate": "تطبيق قالب:",
@@ -3490,7 +3542,8 @@
     "dropFileHere": "أفلِت ملفّك هنا أو انقر للاختيار",
     "dropFileHint": ".txt فقط — بحد أقصى 50 000 حرف",
     "selectFile": "اختر ملفًّا",
-    "importedLangLabel": "لغة الاختبار المُستَورَد"
+    "importedLangLabel": "لغة الاختبار المُستَورَد",
+    "reorderAria": "إعادة الترتيب"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",

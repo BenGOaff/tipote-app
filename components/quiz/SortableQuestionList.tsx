@@ -64,7 +64,7 @@ function SortableQuestion({
           {...attributes}
           {...listeners}
           className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none"
-          aria-label="Réordonner"
+          aria-label={t("reorderAria")}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </button>

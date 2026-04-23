@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Plus, Trash2, Edit3, Eye, EyeOff, Loader2, ChevronDown,
   ChevronRight, Database, ExternalLink, BookOpen, FolderOpen,
@@ -51,6 +52,7 @@ const LANG_LABELS: Record<string, string> = {
 };
 
 export default function AdminSupportClient() {
+  const t = useTranslations("adminSupport");
   const [categories, setCategories] = useState<Category[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,7 @@ export default function AdminSupportClient() {
   }, [fetchData]);
 
   const handleSeed = async () => {
-    if (!confirm("Ceci va insérer/mettre à jour toutes les catégories et articles. Continuer ?")) return;
+    if (!confirm(t("seedConfirm"))) return;
     setSeeding(true);
     setMessage("");
     const res = await fetch("/api/admin/support/seed", { method: "POST" });
@@ -341,7 +343,7 @@ export default function AdminSupportClient() {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-1 block">Tags (séparés par des virgules)</label>
+                <label className="text-sm font-medium mb-1 block">{t("tagsLabel")}</label>
                 <Input
                   value={(editArticle.tags ?? []).join(", ")}
                   onChange={(e) =>
@@ -354,7 +356,7 @@ export default function AdminSupportClient() {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-1 block">Articles liés (slugs, séparés par des virgules)</label>
+                <label className="text-sm font-medium mb-1 block">{t("relatedLabel")}</label>
                 <Input
                   value={(editArticle.related_slugs ?? []).join(", ")}
                   onChange={(e) =>

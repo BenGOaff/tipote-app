@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AIContent } from "@/components/ui/ai-content";
@@ -80,6 +81,8 @@ export const OfferMetricsDashboard = ({
 }: OfferMetricsDashboardProps) => {
   const hasData = metrics.length > 0;
 
+  const t = useTranslations("analytics");
+
   // Exclude the current (incomplete) month from charts to avoid skewing data
   const currentMonthStr = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const completedMonths = useMemo(
@@ -108,7 +111,7 @@ export const OfferMetricsDashboard = ({
     return (
       <Card className="p-8 text-center">
         <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium mb-2">Aucune donnée encore</h3>
+        <h3 className="text-lg font-medium mb-2">{t("dashboardEmptyTitle")}</h3>
         <p className="text-muted-foreground mb-4">
           Commence par saisir tes données dans l&apos;onglet « Saisir mes données » pour voir tes résultats.
         </p>
@@ -145,7 +148,7 @@ export const OfferMetricsDashboard = ({
                 <Users className="w-4 h-4 text-green-600" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Leads capturés</p>
+            <p className="text-xs text-muted-foreground">{t("dashboardLeadsCaptured")}</p>
             <p className="text-xl font-bold">{grandTotals.signups.toLocaleString("fr-FR")}</p>
             {grandTotals.captureRate > 0 && (
               <p className="text-xs text-muted-foreground mt-0.5">Taux moyen : {grandTotals.captureRate.toFixed(1)}%</p>

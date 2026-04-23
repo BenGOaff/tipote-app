@@ -140,7 +140,9 @@
       "errNetwork": "Errore di rete",
       "errUpdate": "Errore durante l'aggiornamento",
       "errSave": "Errore durante il salvataggio"
-    }
+    },
+    "addPlaceholder": "Aggiungi un'attività…",
+    "completedTitle": "Attività completate"
   },
   "quizShare": {
     "publicationTitle": "Pubblicazione",
@@ -413,6 +415,46 @@
     "emptyPreview": "Nessuna anteprima",
     "chatPh": "Es.: rendi il titolo più diretto, aggiungi 3 benefici, CTA più urgente…"
   },
+  "projectSources": {
+    "dialogTitle": "Aggiungi una fonte di contesto",
+    "namePh": "Es.: Manuale editoriale, Tono di marca…",
+    "contentPh": "Incolla qui le tue note, linee guida, contesto di marca, informazioni chiave…"
+  },
+  "personaEdit": {
+    "painsLabel": "Problemi principali",
+    "addPainPh": "Aggiungi un problema…",
+    "channelsLabel": "Canali preferiti"
+  },
+  "adminSupport": {
+    "seedConfirm": "Questo inserirà/aggiornerà tutte le categorie e gli articoli. Continuare?",
+    "tagsLabel": "Tag (separati da virgole)",
+    "relatedLabel": "Articoli correlati (slug, separati da virgole)"
+  },
+  "adminTickets": {
+    "replyPh": "La tua risposta al visitatore… (verrà inviata via email)"
+  },
+  "socialConnections": {
+    "noPostsFound": "Nessun post trovato."
+  },
+  "pyramidGen": {
+    "painLabel": "Problema urgente:",
+    "buildingTitle": "Sto costruendo la tua strategia…",
+    "generatingPyramids": "Tipote sta creando le tue piramidi di offerte…",
+    "generatingGeneric": "Generazione in corso"
+  },
+  "contentIndexPage": {
+    "subtitle": "Ritrova, pianifica e modifica i tuoi contenuti.",
+    "publishedLabel": "Pubblicati",
+    "scheduledLabel": "Pianificati",
+    "createContent": "Crea un contenuto"
+  },
+  "metaDeletion": {
+    "title": "Cancellazione dei dati — Richiesta ricevuta",
+    "intro": "La tua richiesta di cancellazione dei dati associati a Meta è stata registrata.",
+    "codeLabel": "Codice di conferma",
+    "contactHint": "Se hai bisogno di velocizzare o verificare lo stato, contatta il supporto indicando questo codice.",
+    "backLink": "Torna a Tipote"
+  },
   "settings": {
     "title": "Impostazioni",
     "tabs": {
@@ -432,7 +474,8 @@
       "saving": "Salvataggio…",
       "saved": "Lingua aggiornata",
       "error": "Errore durante il salvataggio"
-    }
+    },
+    "bannerSubtitle": "Configura il tuo profilo, le connessioni e le preferenze."
   },
   "common": {
     "save": "Salva",
@@ -691,7 +734,11 @@
     "enterData": "Inserisci i miei dati",
     "lastUpdated": "Aggiornato il",
     "inProgress": "Mese in corso",
-    "edit": "Modifica"
+    "edit": "Modifica",
+    "emptyHistoryHint": "Inserisci i tuoi dati per vedere qui lo storico.",
+    "dashboardEmptyTitle": "Nessun dato ancora",
+    "dashboardLeadsCaptured": "Lead catturati",
+    "offerAnalysisHint": "L'IA sta esaminando i tuoi dati per offerta"
   },
   "pepites": {
     "pageTitle": "Gemme",
@@ -1091,7 +1138,10 @@
       "description": "Definisci il tuo posizionamento affinché Tipote adatti tutto il contenuto generato alla tua voce e al tuo pubblico.",
       "saveSuccess": "Posizionamento salvato correttamente.",
       "saveError": "Errore nel salvataggio del posizionamento."
-    }
+    },
+    "bannerSubtitle": "Configura il tuo profilo, le connessioni e le preferenze.",
+    "createPageLabel": "Crea",
+    "detailTech": "Dettagli tecnici"
   },
   "today": {
     "title": "Dashboard",
@@ -2321,7 +2371,8 @@
     "saveError": "Errore nel salvataggio",
     "deleteSuccess": "Lead eliminato",
     "deleteError": "Errore nell'eliminazione",
-    "encryptionBadge": "I tuoi dati sono crittografati end-to-end (AES-256). Né Tipote né terze parti possono leggere le informazioni dei tuoi lead."
+    "encryptionBadge": "I tuoi dati sono crittografati end-to-end (AES-256). Né Tipote né terze parti possono leggere le informazioni dei tuoi lead.",
+    "bannerSubtitle": "Gestisci i tuoi contatti e lead da un unico posto."
   },
   "widgets": {
     "title": "Notifiche Toast",
@@ -2695,7 +2746,8 @@
     "exportCsv": "Esporta CSV",
     "noLeads": "Nessun lead per questa pagina.",
     "firstName": "Nome",
-    "phone": "Telefono"
+    "phone": "Telefono",
+    "bannerSubtitle": "Crea e gestisci le tue pagine di cattura, vendita e Link in Bio."
   },
   "checklistTemplates": {
     "applyTemplate": "Applica un template:",
@@ -3490,7 +3542,8 @@
     "dropFileHere": "Trascina il tuo file qui o clicca per selezionare",
     "dropFileHint": ".txt soltanto — max 50.000 caratteri",
     "selectFile": "Seleziona un file",
-    "importedLangLabel": "Lingua del quiz importato"
+    "importedLangLabel": "Lingua del quiz importato",
+    "reorderAria": "Riordina"
   },
   "quizDetail": {
     "backToList": "Torna ai quiz",

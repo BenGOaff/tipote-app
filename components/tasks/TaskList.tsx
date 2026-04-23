@@ -10,6 +10,7 @@
 
 import { useMemo, useState, useTransition, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 import TaskItemRow from './TaskItem'
 import { Button } from '@/components/ui/button'
@@ -62,6 +63,7 @@ export function TaskList({
   variant = 'default',
 }: Props) {
   const router = useRouter()
+  const t = useTranslations('tasksPage')
 
   const [newTitle, setNewTitle] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
@@ -196,7 +198,7 @@ export function TaskList({
           <Input
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Ajouter une tâche…"
+            placeholder={t('addPlaceholder')}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleCreate()
             }}

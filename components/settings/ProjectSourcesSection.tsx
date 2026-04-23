@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   FileText,
   FilePlus,
@@ -60,6 +61,7 @@ function formatDate(iso: string): string {
 }
 
 export default function ProjectSourcesSection() {
+  const t = useTranslations("projectSources");
   const { toast } = useToast();
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
@@ -262,7 +264,7 @@ export default function ProjectSourcesSection() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ajouter une source de contexte</DialogTitle>
+            <DialogTitle>{t("dialogTitle")}</DialogTitle>
           </DialogHeader>
 
           <Tabs defaultValue="text" className="mt-2">
@@ -283,7 +285,7 @@ export default function ProjectSourcesSection() {
                 <Label htmlFor="text-title">Titre *</Label>
                 <Input
                   id="text-title"
-                  placeholder="Ex: Charte éditoriale, Ton de marque..."
+                  placeholder={t("namePh")}
                   value={textTitle}
                   onChange={(e) => setTextTitle(e.target.value)}
                   maxLength={200}
@@ -293,7 +295,7 @@ export default function ProjectSourcesSection() {
                 <Label htmlFor="text-content">Contenu *</Label>
                 <Textarea
                   id="text-content"
-                  placeholder="Collez ici vos notes, guidelines, contexte de marque, informations clés..."
+                  placeholder={t("contentPh")}
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
                   rows={8}

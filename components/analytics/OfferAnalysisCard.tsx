@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ interface OfferAnalysisCardProps {
 }
 
 export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: OfferAnalysisCardProps) => {
+  const t = useTranslations("analytics");
   if (isLoading) {
     return (
       <Card className="p-6">
@@ -23,7 +25,7 @@ export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: O
           </div>
           <div>
             <h3 className="text-lg font-bold">Analyse en cours...</h3>
-            <p className="text-sm text-muted-foreground">L&apos;IA examine tes données par offre</p>
+            <p className="text-sm text-muted-foreground">{t("offerAnalysisHint")}</p>
           </div>
         </div>
         <div className="space-y-3">

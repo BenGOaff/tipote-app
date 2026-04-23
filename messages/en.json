@@ -140,7 +140,9 @@
       "errNetwork": "Network error",
       "errUpdate": "Error during update",
       "errSave": "Error during save"
-    }
+    },
+    "addPlaceholder": "Add a task…",
+    "completedTitle": "Completed tasks"
   },
   "quizShare": {
     "publicationTitle": "Publication",
@@ -413,6 +415,46 @@
     "emptyPreview": "No preview",
     "chatPh": "E.g.: make the title more direct, add 3 benefits, more urgent CTA…"
   },
+  "projectSources": {
+    "dialogTitle": "Add a context source",
+    "namePh": "E.g.: Editorial charter, Brand voice…",
+    "contentPh": "Paste your notes, guidelines, brand context, key information here…"
+  },
+  "personaEdit": {
+    "painsLabel": "Main pain points",
+    "addPainPh": "Add a pain point…",
+    "channelsLabel": "Preferred channels"
+  },
+  "adminSupport": {
+    "seedConfirm": "This will insert/update all categories and articles. Continue?",
+    "tagsLabel": "Tags (comma-separated)",
+    "relatedLabel": "Related articles (slugs, comma-separated)"
+  },
+  "adminTickets": {
+    "replyPh": "Your reply to the visitor… (will be sent by email)"
+  },
+  "socialConnections": {
+    "noPostsFound": "No post found."
+  },
+  "pyramidGen": {
+    "painLabel": "Urgent pain:",
+    "buildingTitle": "Building your strategy…",
+    "generatingPyramids": "Tipote is creating your offer pyramids…",
+    "generatingGeneric": "Generating"
+  },
+  "contentIndexPage": {
+    "subtitle": "Find, schedule and edit your content.",
+    "publishedLabel": "Published",
+    "scheduledLabel": "Scheduled",
+    "createContent": "Create content"
+  },
+  "metaDeletion": {
+    "title": "Data deletion — Request received",
+    "intro": "Your request to delete data associated with Meta has been registered.",
+    "codeLabel": "Confirmation code",
+    "contactHint": "If you need to speed things up or check the status, contact support with this code.",
+    "backLink": "Back to Tipote"
+  },
   "settings": {
     "title": "Settings",
     "tabs": {
@@ -432,7 +474,8 @@
       "saving": "Saving…",
       "saved": "Language updated",
       "error": "Failed to save"
-    }
+    },
+    "bannerSubtitle": "Configure your profile, connections and preferences."
   },
   "common": {
     "save": "Save",
@@ -691,7 +734,11 @@
     "enterData": "Enter my data",
     "lastUpdated": "Last updated",
     "inProgress": "In progress",
-    "edit": "Edit"
+    "edit": "Edit",
+    "emptyHistoryHint": "Enter your data to see the history here.",
+    "dashboardEmptyTitle": "No data yet",
+    "dashboardLeadsCaptured": "Leads captured",
+    "offerAnalysisHint": "AI is examining your per-offer data"
   },
   "pepites": {
     "pageTitle": "Gems",
@@ -1060,7 +1107,10 @@
       "overwriteDesc": "You already have a saved positioning. Saving will replace it with the new one. Your current positioning:",
       "overwriteCancel": "Cancel",
       "overwriteConfirm": "Replace"
-    }
+    },
+    "bannerSubtitle": "Configure your profile, connections and preferences.",
+    "createPageLabel": "Create",
+    "detailTech": "Technical details"
   },
   "today": {
     "title": "Dashboard",
@@ -2277,7 +2327,8 @@
     "saveError": "Error saving lead",
     "deleteSuccess": "Lead deleted",
     "deleteError": "Error deleting lead",
-    "encryptionBadge": "Your data is end-to-end encrypted (AES-256). Neither Tipote nor any third party can read your leads' information."
+    "encryptionBadge": "Your data is end-to-end encrypted (AES-256). Neither Tipote nor any third party can read your leads' information.",
+    "bannerSubtitle": "Manage your contacts and leads in one place."
   },
   "widgets": {
     "title": "Widgets",
@@ -2651,7 +2702,8 @@
     "exportCsv": "Export CSV",
     "noLeads": "No leads for this page.",
     "firstName": "First name",
-    "phone": "Phone"
+    "phone": "Phone",
+    "bannerSubtitle": "Create and manage your capture, sales and Link in Bio pages."
   },
   "checklistTemplates": {
     "applyTemplate": "Apply a template:",
@@ -3436,7 +3488,8 @@
     "dropFileHere": "Drop your file here or click to select",
     "dropFileHint": ".txt only — max 50,000 characters",
     "selectFile": "Select a file",
-    "importedLangLabel": "Imported quiz language"
+    "importedLangLabel": "Imported quiz language",
+    "reorderAria": "Reorder"
   },
   "quizDetail": {
     "backToList": "Back to quizzes",

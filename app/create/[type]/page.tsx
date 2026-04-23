@@ -7,6 +7,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -112,6 +113,7 @@ function buildDefaultPrompt(args: {
 }
 
 export default async function CreateTypePage(props: Props) {
+  const ts = await getTranslations("settingsPage");
   const { params: paramsPromise, searchParams } = props;
   const params = await paramsPromise;
 
@@ -178,7 +180,7 @@ export default async function CreateTypePage(props: Props) {
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold text-slate-500">Créer</p>
+            <p className="text-xs font-semibold text-slate-500">{ts("createPageLabel")}</p>
             <h1 className="mt-1 text-xl md:text-2xl font-semibold text-slate-900">{meta.label}</h1>
             <p className="mt-1 text-sm text-slate-500 max-w-2xl">{meta.hint}</p>
 

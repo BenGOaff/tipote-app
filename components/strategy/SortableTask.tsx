@@ -3,6 +3,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { GripVertical, Trash2 } from "lucide-react";
@@ -35,6 +36,7 @@ export const SortableTask = ({
   onDelete,
   onOpenDetail,
 }: SortableTaskProps) => {
+  const ti = useTranslations("tasksPage.item");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
 
@@ -102,7 +104,7 @@ export const SortableTask = ({
             isEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           }`}
           onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
-          title="Supprimer la tâche"
+          title={ti("deleteAria")}
         >
           <Trash2 className="w-4 h-4" />
         </Button>

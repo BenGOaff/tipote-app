@@ -143,6 +143,7 @@ const TASKS_DISPLAY_LIMIT = 4;
 
 export default function StrategyLovable(props: StrategyLovableProps) {
   const t = useTranslations("strategy");
+  const ti = useTranslations("tasksPage.item");
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -986,7 +987,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                                             e.stopPropagation();
                                             deleteTask(String(item.id));
                                           }}
-                                          title="Supprimer la tâche"
+                                          title={ti("deleteAria")}
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
                                         </button>

@@ -60,7 +60,7 @@ export default async function SettingsPage({ searchParams }: Props) {
               <PageBanner
                 icon={<Settings className="w-5 h-5" />}
                 title={t("title")}
-                subtitle="Configure ton profil, tes connexions et tes préférences."
+                subtitle={t("bannerSubtitle")}
               />
               <SettingsTabsShell userEmail={userEmail} activeTab={activeTab} />
             </div>

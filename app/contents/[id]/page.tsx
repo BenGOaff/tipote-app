@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -159,6 +160,7 @@ async function fetchContentItem(userId: string, id: string): Promise<{ item: Con
 }
 
 export default async function ContentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const ts = await getTranslations("settingsPage");
   const supabase = await getSupabaseServerClient();
   const { id } = await params;
 
@@ -195,7 +197,7 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="text-sm font-semibold">Détail technique</div>
+            <div className="text-sm font-semibold">{ts("detailTech")}</div>
             <div className="mt-2 text-sm text-muted-foreground">{error}</div>
           </div>
         </div>

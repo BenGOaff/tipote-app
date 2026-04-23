@@ -128,9 +128,9 @@ export default function AnalyticsLovableClient() {
           ) : offerState.sortedMonths.length === 0 ? (
             <Card className="p-12 text-center">
               <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucun historique</h3>
-              <p className="text-muted-foreground mb-4">Saisis tes données pour voir l&apos;historique ici.</p>
-              <Button onClick={() => setActiveTab("saisie")}>Saisir mes données</Button>
+              <h3 className="text-lg font-medium mb-2">{t("emptyTitle")}</h3>
+              <p className="text-muted-foreground mb-4">{t("emptyHistoryHint")}</p>
+              <Button onClick={() => setActiveTab("saisie")}>{t("enterData")}</Button>
             </Card>
           ) : (
             <div className="space-y-4">
