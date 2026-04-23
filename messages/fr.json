@@ -3622,5 +3622,30 @@
       "matrixCompetitor": "Concurrent",
       "matrixPositioning": "Positionnement"
     }
+  },
+  "legalDocGen": {
+    "steps": {
+      "country": "Pays",
+      "identity": "Identité",
+      "hosting": "Hébergeur",
+      "activity": "Activité",
+      "payment": "Paiement",
+      "data": "Données",
+      "preview": "Aperçu"
+    },
+    "dialogTitle": "Générer : {doc}",
+    "stepIndicator": "Étape {step}/{total} — {label}",
+    "alertTitle": "Information importante",
+    "alertBody": "Ce générateur produit des documents types couvrant les cas les plus courants. Il ne remplace pas l'avis d'un juriste qualifié. Pour des situations spécifiques (santé, finance, mineurs, activités réglementées...), nous vous recommandons vivement de faire relire vos documents par un professionnel du droit.",
+    "countryQuestion": "Dans quel pays est enregistrée votre entreprise ?",
+    "previewAlert": "Ce document est un modèle type fourni à titre informatif. Il ne constitue pas un avis juridique. Pour les situations sectorielles (santé, finance, mineurs...) ou pour plus de sécurité, nous vous invitons à faire relire ce document par un professionnel du droit certifié.",
+    "download": "Télécharger en PDF",
+    "generating": "Génération...",
+    "copyText": "Copier le texte",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "generateDoc": "Générer le document",
+    "editInfo": "Modifier mes infos",
+    "close": "Fermer"
   }
 }

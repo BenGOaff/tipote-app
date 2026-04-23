@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -51,15 +52,8 @@ type Props = {
 /*  Wizard steps                                                       */
 /* ------------------------------------------------------------------ */
 
-const STEPS = [
-  { key: "country", label: "Pays" },
-  { key: "identity", label: "Identité" },
-  { key: "hosting", label: "Hébergeur" },
-  { key: "activity", label: "Activité" },
-  { key: "payment", label: "Paiement" },
-  { key: "data", label: "Données" },
-  { key: "preview", label: "Apercu" },
-] as const;
+const STEP_KEYS = ["country", "identity", "hosting", "activity", "payment", "data", "preview"] as const;
+type StepKey = (typeof STEP_KEYS)[number];
 
 /* ------------------------------------------------------------------ */
 /*  Helper: field row                                                  */
@@ -171,6 +165,7 @@ async function downloadPdf(text: string, fileName: string) {
 /* ------------------------------------------------------------------ */
 
 export default function LegalDocGenerator({ open, onOpenChange, docType }: Props) {
+  const t = useTranslations("legalDocGen");
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<LegalFormData>({ ...DEFAULT_FORM_DATA });
   const [downloading, setDownloading] = useState(false);
@@ -183,7 +178,7 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
   );
 
   const generatedText = useMemo(() => {
-    if (step !== STEPS.length - 1) return "";
+    if (step !== STEP_KEYS.length - 1) return "";
     return generateDocument(docType, form);
   }, [step, docType, form]);
 
@@ -211,7 +206,7 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
     [onOpenChange, handleReset],
   );
 
-  const canNext = step < STEPS.length - 1;
+  const canNext = step < STEP_KEYS.length - 1;
   const canPrev = step > 0;
 
   /* ================================================================ */
@@ -225,21 +220,14 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
           <div className="flex gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-sm text-amber-800 dark:text-amber-200">
-              <p className="font-semibold mb-1">Information importante</p>
-              <p>
-                Ce générateur produit des documents types couvrant les cas les plus courants.
-                Il ne remplace pas l&apos;avis d&apos;un juriste qualifié. Pour des situations spécifiques
-                (santé, finance, mineurs, activités réglementées...), nous vous recommandons
-                vivement de faire relire vos documents par un professionnel du droit.
-              </p>
+              <p className="font-semibold mb-1">{t("alertTitle")}</p>
+              <p>{t("alertBody")}</p>
             </div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            Dans quel pays est enregistrée votre entreprise ?
-          </Label>
+          <Label className="text-sm font-medium">{t("countryQuestion")}</Label>
           <Select
             value={form.country}
             onValueChange={(v) => set("country", v as Country)}
@@ -445,11 +433,7 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
         <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3">
           <div className="flex gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-800 dark:text-amber-200">
-              Ce document est un modèle type fourni à titre informatif. Il ne constitue pas un avis juridique.
-              Pour les situations sectorielles (santé, finance, mineurs...) ou pour plus de sécurité,
-              nous vous invitons à faire relire ce document par un professionnel du droit certifié.
-            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-200">{t("previewAlert")}</p>
           </div>
         </div>
 
@@ -466,7 +450,7 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
             ) : (
               <Download className="w-4 h-4" />
             )}
-            {downloading ? "Génération..." : "Télécharger en PDF"}
+            {downloading ? t("generating") : t("download")}
           </Button>
           <Button
             variant="outline"
@@ -476,7 +460,7 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
             className="gap-2"
           >
             <FileText className="w-4 h-4" />
-            Copier le texte
+            {t("copyText")}
           </Button>
         </div>
       </div>
@@ -503,14 +487,14 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Générer : {DOC_TYPE_LABELS[docType]}
+            {t("dialogTitle", { doc: DOC_TYPE_LABELS[docType] })}
           </DialogTitle>
         </DialogHeader>
 
         {/* Step indicator */}
         <div className="flex items-center gap-1 mb-2">
-          {STEPS.map((s, i) => (
-            <div key={s.key} className="flex items-center gap-1 flex-1">
+          {STEP_KEYS.map((key, i) => (
+            <div key={key} className="flex items-center gap-1 flex-1">
               <div
                 className={`h-1.5 rounded-full flex-1 transition-colors ${
                   i <= step ? "bg-primary" : "bg-muted"
@@ -520,14 +504,14 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
           ))}
         </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Étape {step + 1}/{STEPS.length} — {STEPS[step].label}
+          {t("stepIndicator", { step: step + 1, total: STEP_KEYS.length, label: t(`steps.${STEP_KEYS[step]}` as any) })}
         </p>
 
         {/* Step content */}
         {stepRenderers[step]()}
 
         {/* Navigation */}
-        {step < STEPS.length - 1 && (
+        {step < STEP_KEYS.length - 1 && (
           <div className="flex justify-between mt-4 pt-4 border-t">
             <Button
               variant="ghost"
@@ -535,30 +519,30 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
               disabled={!canPrev}
               className="gap-2"
             >
-              <ArrowLeft className="w-4 h-4" /> Précédent
+              <ArrowLeft className="w-4 h-4" /> {t("previous")}
             </Button>
             <Button
               onClick={() => setStep((s) => s + 1)}
               disabled={!canNext}
               className="gap-2"
             >
-              {step === STEPS.length - 2 ? "Générer le document" : "Suivant"}{" "}
+              {step === STEP_KEYS.length - 2 ? t("generateDoc") : t("next")}{" "}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         )}
 
-        {step === STEPS.length - 1 && (
+        {step === STEP_KEYS.length - 1 && (
           <div className="flex justify-between mt-4 pt-4 border-t">
             <Button
               variant="ghost"
               onClick={() => setStep((s) => s - 1)}
               className="gap-2"
             >
-              <ArrowLeft className="w-4 h-4" /> Modifier mes infos
+              <ArrowLeft className="w-4 h-4" /> {t("editInfo")}
             </Button>
             <Button variant="ghost" onClick={() => handleClose(false)}>
-              Fermer
+              {t("close")}
             </Button>
           </div>
         )}

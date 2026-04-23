@@ -3622,5 +3622,30 @@
       "matrixCompetitor": "Competitor",
       "matrixPositioning": "Positioning"
     }
+  },
+  "legalDocGen": {
+    "steps": {
+      "country": "Country",
+      "identity": "Identity",
+      "hosting": "Host",
+      "activity": "Activity",
+      "payment": "Payment",
+      "data": "Data",
+      "preview": "Preview"
+    },
+    "dialogTitle": "Generate: {doc}",
+    "stepIndicator": "Step {step}/{total} — {label}",
+    "alertTitle": "Important notice",
+    "alertBody": "This generator produces template documents covering the most common cases. It does not replace advice from a qualified legal professional. For specific situations (health, finance, minors, regulated activities...), we strongly recommend having your documents reviewed by a lawyer.",
+    "countryQuestion": "In which country is your business registered?",
+    "previewAlert": "This document is a template provided for informational purposes. It does not constitute legal advice. For sector-specific situations (health, finance, minors...) or for extra safety, we recommend having it reviewed by a certified legal professional.",
+    "download": "Download as PDF",
+    "generating": "Generating...",
+    "copyText": "Copy text",
+    "previous": "Previous",
+    "next": "Next",
+    "generateDoc": "Generate document",
+    "editInfo": "Edit my info",
+    "close": "Close"
   }
 }
