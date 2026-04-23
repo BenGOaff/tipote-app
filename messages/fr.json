@@ -4025,5 +4025,62 @@
     "creatingPyramids": "Tipote crée tes pyramides d'offres...",
     "analyzingProfile": "Analyse de ton profil et création de 3 pyramides d'offres percutantes.",
     "generating": "Génération en cours"
+  },
+  "myContent": {
+    "folders": {
+      "posts": "Mes Posts",
+      "emails": "Mes Emails",
+      "articles": "Mes Articles",
+      "scripts": "Mes Scripts",
+      "offres": "Mes Offres",
+      "funnels": "Mes Pages",
+      "strategies": "Mes Stratégies",
+      "quiz": "Mes Quiz"
+    },
+    "status": {
+      "scheduled": "Planifié",
+      "published": "Publié",
+      "draft": "Brouillon",
+      "planned": "Planifié",
+      "failed": "Erreur"
+    },
+    "toast": {
+      "error": "Erreur",
+      "cannotUpdate": "Impossible de mettre à jour le contenu",
+      "saved": "Enregistré ✅",
+      "savedDesc": "Le contenu a été mis à jour.",
+      "missingDate": "Date manquante",
+      "missingDateDesc": "Choisis une date de planification.",
+      "cannotSchedule": "Impossible de planifier le contenu",
+      "rescheduled": "Reprogrammé",
+      "scheduled": "Planifié",
+      "rescheduledDesc": "Publication reprogrammée au {date} à {time}.",
+      "scheduledDesc": "La date de publication a été enregistrée.",
+      "cannotUnschedule": "Impossible de déplanifier le contenu",
+      "unscheduled": "Déplanifié ✅",
+      "unscheduledDesc": "Le contenu repasse en brouillon.",
+      "cannotPublish": "Impossible de marquer le contenu comme publié",
+      "published": "Publié ✅",
+      "publishedDesc": "Le statut a été mis à jour.",
+      "cannotDelete": "Impossible de supprimer le contenu",
+      "deleted": "Supprimé ✅",
+      "deletedDesc": "Le contenu a été supprimé.",
+      "pageDeleted": "Page supprimée"
+    },
+    "ui": {
+      "subtitle": "Posts, emails, articles, scripts et pages — tout au même endroit.",
+      "search": "Rechercher...",
+      "elementOne": "élément",
+      "elementMany": "éléments",
+      "noQuiz": "Aucun quiz créé.",
+      "manage": "Gérer",
+      "noPages": "Aucune page créée.",
+      "capturedLeads": "Leads capturés",
+      "noLeads": "Aucun lead capturé pour cette page.",
+      "firstName": "Prénom",
+      "titlePh": "Titre...",
+      "contentPh": "Contenu...",
+      "csvHeader": "Email,Prénom,Date"
+    }
   }
 }

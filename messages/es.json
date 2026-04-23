@@ -4025,5 +4025,62 @@
     "creatingPyramids": "Tipote está creando tus pirámides de ofertas...",
     "analyzingProfile": "Analizando tu perfil y creando 3 pirámides de ofertas impactantes.",
     "generating": "Generando"
+  },
+  "myContent": {
+    "folders": {
+      "posts": "Mis Posts",
+      "emails": "Mis Emails",
+      "articles": "Mis Artículos",
+      "scripts": "Mis Guiones",
+      "offres": "Mis Ofertas",
+      "funnels": "Mis Páginas",
+      "strategies": "Mis Estrategias",
+      "quiz": "Mis Quiz"
+    },
+    "status": {
+      "scheduled": "Programado",
+      "published": "Publicado",
+      "draft": "Borrador",
+      "planned": "Programado",
+      "failed": "Error"
+    },
+    "toast": {
+      "error": "Error",
+      "cannotUpdate": "No se puede actualizar el contenido",
+      "saved": "Guardado ✅",
+      "savedDesc": "El contenido se ha actualizado.",
+      "missingDate": "Falta la fecha",
+      "missingDateDesc": "Elige una fecha de programación.",
+      "cannotSchedule": "No se puede programar el contenido",
+      "rescheduled": "Reprogramado",
+      "scheduled": "Programado",
+      "rescheduledDesc": "Publicación reprogramada al {date} a las {time}.",
+      "scheduledDesc": "La fecha de publicación se ha guardado.",
+      "cannotUnschedule": "No se puede desprogramar el contenido",
+      "unscheduled": "Desprogramado ✅",
+      "unscheduledDesc": "El contenido vuelve a borrador.",
+      "cannotPublish": "No se puede marcar el contenido como publicado",
+      "published": "Publicado ✅",
+      "publishedDesc": "El estado se ha actualizado.",
+      "cannotDelete": "No se puede eliminar el contenido",
+      "deleted": "Eliminado ✅",
+      "deletedDesc": "El contenido se ha eliminado.",
+      "pageDeleted": "Página eliminada"
+    },
+    "ui": {
+      "subtitle": "Posts, emails, artículos, guiones y páginas — todo en un solo lugar.",
+      "search": "Buscar...",
+      "elementOne": "elemento",
+      "elementMany": "elementos",
+      "noQuiz": "Ningún quiz creado.",
+      "manage": "Gestionar",
+      "noPages": "Ninguna página creada.",
+      "capturedLeads": "Leads capturados",
+      "noLeads": "Ningún lead capturado para esta página.",
+      "firstName": "Nombre",
+      "titlePh": "Título...",
+      "contentPh": "Contenido...",
+      "csvHeader": "Email,Nombre,Fecha"
+    }
   }
 }
