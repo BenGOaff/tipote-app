@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -79,11 +80,9 @@ type OfferItem = {
 
 /* ───────── Constants ───────── */
 
-const DURATION_OPTIONS = [
-  { value: "7", label: "7 jours" },
-  { value: "14", label: "14 jours" },
-  { value: "30", label: "30 jours" },
-];
+// Labels for DURATION_OPTIONS and GOAL_OPTIONS are looked up via t() at render time
+// so they stay in sync with the active locale.
+const DURATION_VALUES = ["7", "14", "30"] as const;
 
 const PLATFORM_OPTIONS = [
   { value: "linkedin", label: "LinkedIn" },
@@ -94,13 +93,13 @@ const PLATFORM_OPTIONS = [
   { value: "email", label: "Email" },
 ];
 
-const GOAL_OPTIONS = [
-  { value: "visibility", label: "Visibilité & notoriété" },
-  { value: "leads", label: "Génération de leads" },
-  { value: "sales", label: "Ventes & conversions" },
-  { value: "authority", label: "Autorité & expertise" },
-  { value: "engagement", label: "Engagement communauté" },
-];
+const GOAL_VALUES = [
+  "visibility",
+  "leads",
+  "sales",
+  "authority",
+  "engagement",
+] as const;
 
 const PLATFORM_LABELS: Record<string, string> = {
   linkedin: "LinkedIn",
@@ -121,6 +120,7 @@ function PlanDayItem({
   showBorder: boolean;
   onUpdate: (updated: Partial<DayPlan>) => void;
 }) {
+  const t = useTranslations("contentStrategy");
   const [isEditing, setIsEditing] = useState(false);
   const [theme, setTheme] = useState(post.theme);
   const [hook, setHook] = useState(post.hook);
@@ -157,7 +157,7 @@ function PlanDayItem({
           </Badge>
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">Thème</Label>
+          <Label className="text-xs text-muted-foreground">{t("themeLabel")}</Label>
           <Input
             value={theme}
             onChange={(e) => setTheme(e.target.value)}
@@ -165,7 +165,7 @@ function PlanDayItem({
           />
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">Accroche</Label>
+          <Label className="text-xs text-muted-foreground">{t("hookLabel")}</Label>
           <Textarea
             value={hook}
             onChange={(e) => setHook(e.target.value)}
@@ -174,7 +174,7 @@ function PlanDayItem({
           />
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">CTA</Label>
+          <Label className="text-xs text-muted-foreground">{t("ctaLabel")}</Label>
           <Input
             value={cta}
             onChange={(e) => setCta(e.target.value)}
@@ -183,10 +183,10 @@ function PlanDayItem({
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={handleSave}>
-            <Save className="w-3 h-3 mr-1" /> Enregistrer
+            <Save className="w-3 h-3 mr-1" /> {t("save")}
           </Button>
           <Button size="sm" variant="ghost" onClick={handleCancel}>
-            Annuler
+            {t("cancel")}
           </Button>
         </div>
       </div>
@@ -213,7 +213,7 @@ function PlanDayItem({
         </Button>
       </div>
       <p className="text-sm text-muted-foreground mt-1">{post.hook}</p>
-      <p className="text-xs text-muted-foreground">CTA : {post.cta}</p>
+      <p className="text-xs text-muted-foreground">{t("ctaLabel")} : {post.cta}</p>
     </div>
   );
 }
@@ -223,15 +223,21 @@ const MAX_CONCURRENT = 3;
 
 /* ───────── Helpers ───────── */
 
-async function safeFetchJson(url: string, opts: RequestInit): Promise<any> {
+// Throws Error with the localized message the caller provides via `msgFor`.
+// `msgFor` is usually `{ server: ..., generic: ... }` already localized via useTranslations.
+async function safeFetchJson(
+  url: string,
+  opts: RequestInit,
+  msgFor: { server: (status: number) => string; generic: (status: number) => string },
+): Promise<any> {
   const res = await fetch(url, opts);
   const ct = res.headers.get("content-type") || "";
   if (!ct.includes("application/json")) {
-    throw new Error(`Erreur serveur (${res.status}). Réessaye.`);
+    throw new Error(msgFor.server(res.status));
   }
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json?.error || `Erreur (${res.status})`);
+    throw new Error(json?.error || msgFor.generic(res.status));
   }
   return json;
 }
@@ -339,6 +345,13 @@ interface ContentStrategyFormProps {
 export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const t = useTranslations("contentStrategy");
+
+  // Localized error builder handed to safeFetchJson
+  const fetchMsgs = useMemo(() => ({
+    server: (status: number) => t("errors.server", { status }),
+    generic: (status: number) => t("errors.generic", { status }),
+  }), [t]);
 
   // Step
   const [step, setStep] = useState<Step>("config");
@@ -476,10 +489,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           );
         }
       } else {
-        throw new Error("Contenu introuvable");
+        throw new Error(t("toast.contentNotFound"));
       }
     } catch {
-      toast({ title: "Erreur lors du chargement", variant: "destructive" });
+      toast({ title: t("toast.loadError"), variant: "destructive" });
       setContentModalId(null);
     } finally {
       setContentModalLoading(false);
@@ -510,17 +523,17 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      });
+      }, fetchMsgs);
       // Sync back to contents list
       setContents((prev) =>
         prev.map((c) =>
           c.jobId === contentModalId ? { ...c, content: contentModalData.content } : c,
         ),
       );
-      toast({ title: "Contenu sauvegardé !" });
+      toast({ title: t("toast.contentSaved") });
       return true;
     } catch {
-      toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
+      toast({ title: t("toast.saveError"), variant: "destructive" });
       return false;
     } finally {
       setContentModalSaving(false);
@@ -536,11 +549,11 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   // ── STEP 1: Generate strategy plan ──
   const handleGeneratePlan = async () => {
     if (platforms.length === 0) {
-      toast({ title: "Sélectionne au moins une plateforme", variant: "destructive" });
+      toast({ title: t("toast.atLeastOnePlatform"), variant: "destructive" });
       return;
     }
     if (goals.length === 0) {
-      toast({ title: "Sélectionne au moins un objectif", variant: "destructive" });
+      toast({ title: t("toast.atLeastOneGoal"), variant: "destructive" });
       return;
     }
 
@@ -555,20 +568,20 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           goals,
           context: context.trim() || undefined,
         }),
-      });
+      }, fetchMsgs);
 
       if (!json.ok || !json.strategy) {
-        throw new Error(json.error || "Erreur lors de la génération");
+        throw new Error(json.error || t("toast.planError"));
       }
 
       setStrategy(json.strategy);
       if (json.strategyItemId) setStrategyItemId(json.strategyItemId);
       setStep("plan");
-      toast({ title: "Plan stratégique généré !" });
+      toast({ title: t("toast.planGenerated") });
     } catch (e: any) {
       toast({
-        title: "Erreur",
-        description: e?.message || "Impossible de générer la stratégie",
+        title: t("toast.error"),
+        description: e?.message || t("toast.cannotGenerate"),
         variant: "destructive",
       });
     } finally {
@@ -683,7 +696,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ meta: { content_ids: generatedIds } }),
-        });
+        }, fetchMsgs);
       } catch { /* non-blocking */ }
     }
 
@@ -700,14 +713,14 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: editText }),
-      });
+      }, fetchMsgs);
       setContents((prev) =>
         prev.map((c, i) => (i === contentIdx ? { ...c, content: editText } : c)),
       );
       setEditingIdx(null);
-      toast({ title: "Contenu mis à jour !" });
+      toast({ title: t("toast.contentUpdated") });
     } catch {
-      toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
+      toast({ title: t("toast.saveError"), variant: "destructive" });
     }
   };
 
@@ -739,7 +752,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
     // Title
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    const title = strategy?.title || "Stratégie de contenu";
+    const title = strategy?.title || t("pdfDefaultTitle");
     const titleWrapped = doc.splitTextToSize(title, usableWidth) as string[];
     for (const tl of titleWrapped) {
       ensureSpace(10);
@@ -756,7 +769,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
       ensureSpace(9);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
-      doc.text(`Jour ${dayNum}`, marginX, y);
+      doc.text(t("day", { n: dayNum }), marginX, y);
       y += 9;
 
       for (const item of items) {
@@ -788,7 +801,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
       }
     }
 
-    const fileName = `strategie-${(strategy?.title || "contenu").replace(/[^a-zA-Z0-9àéèùâêîôû]/gi, "_")}.pdf`;
+    const fileName = `strategy-${(strategy?.title || t("pdfDefaultTitle")).replace(/[^a-zA-Z0-9àéèùâêîôû]/gi, "_")}.pdf`;
     doc.save(fileName);
   }, [contents, strategy]);
 
@@ -825,29 +838,30 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
+    }, fetchMsgs);
     setContentModalData((prev) => prev ? { ...prev, status: "scheduled" } : prev);
-    toast({ title: "Contenu programmé !" });
+    toast({ title: t("toast.contentScheduled") });
   };
 
   const handleModalCopy = () => {
     if (!contentModalData) return;
     navigator.clipboard.writeText(contentModalData.content);
-    toast({ title: "Contenu copié !" });
+    toast({ title: t("toast.contentCopied") });
   };
 
   const handleModalDownloadPdf = () => {
     if (!contentModalData) return;
+    const fallbackTitle = t("untitled");
     import("jspdf").then(({ jsPDF }) => {
       const doc = new jsPDF();
       doc.setFontSize(16);
-      doc.text(contentModalData.title || "Sans titre", 20, 20);
+      doc.text(contentModalData.title || fallbackTitle, 20, 20);
       doc.setFontSize(11);
       const pdfLines = doc.splitTextToSize(contentModalData.content || "", 170);
       doc.text(pdfLines, 20, 35);
-      doc.save(`${(contentModalData.title || "contenu").replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
+      doc.save(`${(contentModalData.title || fallbackTitle).replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
     }).catch(() => {
-      toast({ title: "Erreur PDF", variant: "destructive" });
+      toast({ title: t("toast.pdfError"), variant: "destructive" });
     });
   };
 
@@ -861,7 +875,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         ) : contentModalData ? (
           <div className="space-y-4">
             <DialogHeader>
-              <DialogTitle className="sr-only">Détail du contenu</DialogTitle>
+              <DialogTitle className="sr-only">{t("contentDetail")}</DialogTitle>
               <Input
                 value={contentModalData.title}
                 onChange={(e) =>
@@ -870,7 +884,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                   )
                 }
                 className="text-lg font-bold border-none px-0 focus-visible:ring-0"
-                placeholder="Titre du contenu"
+                placeholder={t("contentTitle")}
               />
             </DialogHeader>
 
@@ -889,10 +903,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                 }
               >
                 {contentModalData.status === "published"
-                  ? "Publié"
+                  ? t("statusPublished")
                   : contentModalData.status === "scheduled"
-                    ? "Planifié"
-                    : "Brouillon"}
+                    ? t("statusScheduled")
+                    : t("statusDraft")}
               </Badge>
             </div>
 
@@ -925,7 +939,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                 ) : (
                   <Save className="w-4 h-4 mr-1" />
                 )}
-                Sauvegarder
+                {t("saved")}
               </Button>
             </div>
 
@@ -940,17 +954,17 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                       size="sm"
                     >
                       <CalendarDays className="w-4 h-4 mr-1" />
-                      Planifier dans le calendrier
+                      {t("scheduleInCalendar")}
                     </Button>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={handleModalCopy}>
                       <Copy className="w-4 h-4 mr-1" />
-                      Copier
+                      {t("copy")}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleModalDownloadPdf}>
                       <Download className="w-4 h-4 mr-1" />
-                      PDF
+                      {t("pdf")}
                     </Button>
                   </div>
                 </div>
@@ -1003,25 +1017,25 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               <CalendarDays className="w-5 h-5" />
-              Stratégie de contenu
+              {t("title")}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Génère tous tes contenus en quelques clics
+              {t("subtitle")}
             </p>
           </div>
         </div>
 
         <Card className="p-6 space-y-6">
           <div className="space-y-2">
-            <Label>Durée du plan</Label>
+            <Label>{t("durationLabel")}</Label>
             <Select value={duration} onValueChange={setDuration}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {DURATION_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                {DURATION_VALUES.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {t(`durations.d${v}` as any)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1029,9 +1043,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Plateformes</Label>
+            <Label>{t("platformsLabel")}</Label>
             <p className="text-xs text-muted-foreground">
-              Tu peux en sélectionner plusieurs — du contenu sera généré pour chaque plateforme chaque jour
+              {t("platformsHint")}
             </p>
             <div className="flex flex-wrap gap-2">
               {PLATFORM_OPTIONS.map((p) => (
@@ -1048,16 +1062,16 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Objectifs</Label>
+            <Label>{t("goalsLabel")}</Label>
             <div className="flex flex-wrap gap-2">
-              {GOAL_OPTIONS.map((g) => (
+              {GOAL_VALUES.map((g) => (
                 <Badge
-                  key={g.value}
-                  variant={goals.includes(g.value) ? "default" : "outline"}
+                  key={g}
+                  variant={goals.includes(g) ? "default" : "outline"}
                   className="cursor-pointer select-none"
-                  onClick={() => toggleGoal(g.value)}
+                  onClick={() => toggleGoal(g)}
                 >
-                  {g.label}
+                  {t(`goals.${g}` as any)}
                 </Badge>
               ))}
             </div>
@@ -1065,16 +1079,16 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
           {offers.length > 0 && (
             <div className="space-y-2">
-              <Label>Offre de référence (optionnel)</Label>
+              <Label>{t("offerLabel")}</Label>
               <Select
                 value={selectedOfferIdx >= 0 ? String(selectedOfferIdx) : "none"}
                 onValueChange={(v) => setSelectedOfferIdx(v === "none" ? -1 : Number(v))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Aucune offre" />
+                  <SelectValue placeholder={t("offerNone")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Aucune offre</SelectItem>
+                  <SelectItem value="none">{t("offerNone")}</SelectItem>
                   {offers.map((o, i) => (
                     <SelectItem key={i} value={String(i)}>
                       {o.name}{o.price ? ` — ${o.price}` : ""}
@@ -1086,9 +1100,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           )}
 
           <div className="space-y-2">
-            <Label>Contexte supplémentaire (optionnel)</Label>
+            <Label>{t("contextLabel")}</Label>
             <Textarea
-              placeholder="Lancement d'offre prévu, événement à promouvoir, thématique spécifique..."
+              placeholder={t("contextPlaceholder")}
               value={context}
               onChange={(e) => setContext(e.target.value)}
               rows={3}
@@ -1104,12 +1118,12 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             {generating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Création du plan...
+                {t("generatingPlan")}
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 mr-2" />
-                Générer le plan stratégique
+                {t("generatePlanCta")}
               </>
             )}
           </Button>
@@ -1133,14 +1147,14 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             <div>
               <h2 className="text-xl font-bold">{strategy.title}</h2>
               <p className="text-sm text-muted-foreground">
-                {uniqueDays} jours — {strategy.days.length} contenus sur {platforms.length} plateforme(s)
+                {t("planSummary", { uniqueDays, posts: strategy.days.length, platforms: platforms.length })}
               </p>
             </div>
           </div>
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Clique sur le crayon pour modifier une idée avant de générer les contenus.
+          {t("planEditHint")}
         </p>
 
         <div className="space-y-4">
@@ -1148,7 +1162,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             <Card key={dayNum} className="p-4">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary">J{dayNum}</span>
+                  <span className="text-sm font-bold text-primary">{t("dayShort", { n: dayNum })}</span>
                 </div>
                 <div className="flex-1 min-w-0 space-y-3">
                   {posts.map((post, pi) => {
@@ -1187,10 +1201,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
             size="lg"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            Générer {strategy.days.length} contenus ({strategy.days.length} crédits)
+            {t("generateAllCta", { count: strategy.days.length })}
           </Button>
           <Button variant="outline" onClick={() => setStep("config")}>
-            Modifier
+            {t("editPlan")}
           </Button>
         </div>
         {contentModal}
@@ -1207,9 +1221,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin" />
           <div>
-            <h2 className="text-xl font-bold">Génération en cours...</h2>
+            <h2 className="text-xl font-bold">{t("generatingTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              {doneCount}/{totalCount} contenus prêts
+              {t("generatingSubtitle", { done: doneCount, total: totalCount })}
             </p>
           </div>
         </div>
@@ -1217,7 +1231,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
         <Card className="p-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm">
-              <span>Progression</span>
+              <span>{t("progress")}</span>
               <span className="font-medium">{progress}%</span>
             </div>
             <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
@@ -1230,7 +1244,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
               {Array.from(contentDayGroups.entries()).map(([dayNum, entries]) => (
                 <div key={dayNum}>
                   <p className="text-xs font-semibold text-muted-foreground mt-2 mb-1">
-                    Jour {dayNum}
+                    {t("day", { n: dayNum })}
                   </p>
                   {entries.map(({ item }) => (
                     <div
@@ -1286,7 +1300,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           <div>
             <h2 className="text-xl font-bold">{strategy?.title}</h2>
             <p className="text-sm text-muted-foreground">
-              {doneCount} contenus générés{errorCount > 0 ? `, ${errorCount} erreurs` : ""}
+              {t("reviewSubtitle", { done: doneCount, errors: errorCount })}
             </p>
           </div>
         </div>
@@ -1294,11 +1308,11 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           {doneCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleDownloadText}>
               <Download className="w-4 h-4 mr-1" />
-              Télécharger tout
+              {t("downloadAll")}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => router.push("/contents")}>
-            Mes contenus
+            {t("myContents")}
           </Button>
         </div>
       </div>
@@ -1308,9 +1322,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           <div key={dayNum}>
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-xs font-bold text-primary">J{dayNum}</span>
+                <span className="text-xs font-bold text-primary">{t("dayShort", { n: dayNum })}</span>
               </div>
-              <h3 className="text-sm font-semibold text-muted-foreground">Jour {dayNum}</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">{t("day", { n: dayNum })}</h3>
             </div>
 
             <div className="space-y-2 pl-4 border-l-2 border-muted ml-4">
@@ -1334,7 +1348,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                             <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                           )}
                           {item.status === "error" && (
-                            <Badge variant="destructive" className="text-xs">Erreur</Badge>
+                            <Badge variant="destructive" className="text-xs">{t("errorBadge")}</Badge>
                           )}
                         </div>
                       </div>
@@ -1349,7 +1363,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                                 e.stopPropagation();
                                 openContentModal(item.jobId);
                               }}
-                              title="Voir / Planifier / Publier"
+                              title={t("viewAction")}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -1362,7 +1376,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                                 setEditingIdx(idx);
                                 setEditText(item.content);
                               }}
-                              title="Modifier"
+                              title={t("editAction")}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -1389,7 +1403,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                             onClick={() => openContentModal(item.jobId)}
                           >
                             <Eye className="w-3 h-3 mr-1" />
-                            Planifier / Publier
+                            {t("scheduleOrPublish")}
                           </Button>
                           <Button
                             variant="outline"
@@ -1400,7 +1414,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                             }}
                           >
                             <Edit className="w-3 h-3 mr-1" />
-                            Modifier
+                            {t("editAction")}
                           </Button>
                         </div>
                       </div>
@@ -1419,8 +1433,12 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           <DialogHeader>
             <DialogTitle>
               {editingIdx !== null && contents[editingIdx]
-                ? `Modifier — Jour ${contents[editingIdx].day} (${PLATFORM_LABELS[contents[editingIdx].platform] || contents[editingIdx].platform}) : ${contents[editingIdx].theme}`
-                : "Modifier"}
+                ? t("editDialogTitle", {
+                    day: t("day", { n: contents[editingIdx].day }),
+                    platform: PLATFORM_LABELS[contents[editingIdx].platform] || contents[editingIdx].platform,
+                    theme: contents[editingIdx].theme,
+                  })
+                : t("editGeneric")}
             </DialogTitle>
           </DialogHeader>
           <Textarea
@@ -1431,10 +1449,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
           />
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setEditingIdx(null)}>
-              Annuler
+              {t("cancel")}
             </Button>
             <Button onClick={() => editingIdx !== null && handleSaveEdit(editingIdx)}>
-              Enregistrer
+              {t("save")}
             </Button>
           </div>
         </DialogContent>
