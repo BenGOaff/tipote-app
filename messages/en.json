@@ -634,7 +634,11 @@
       "disconnectedDesc": "The connection has been removed.",
       "errorTitle": "Error",
       "errorUnknown": "Unknown error",
-      "errorNetwork": "Network error"
+      "errorNetwork": "Network error",
+      "connectSuccess": "Account connected successfully.",
+      "connectError": "Failed to connect account.",
+      "disconnectSuccess": "Account disconnected successfully.",
+      "disconnectError": "Failed to disconnect account."
     }
   },
   "publishModal": {
@@ -753,7 +757,12 @@
       "provocateur": "Provocative",
       "storytelling": "Storytelling",
       "humoristique": "Humorous",
-      "serieux": "Serious"
+      "serieux": "Serious",
+      "professional": "Professional",
+      "friendly": "Friendly",
+      "humorous": "Humorous",
+      "inspirational": "Inspirational",
+      "direct": "Direct"
     },
     "objectifsTitle": "Goals",
     "objectifsDesc": "What do you want to achieve with auto-comments?",
@@ -762,7 +771,11 @@
       "vendre": "Sell",
       "divertir": "Entertain",
       "inspirer": "Inspire",
-      "community": "Build community"
+      "community": "Build community",
+      "engagement": "Drive engagement",
+      "visibility": "Increase visibility",
+      "authority": "Demonstrate authority",
+      "network": "Expand network"
     },
     "langageTitle": "Language & Vocabulary",
     "langageDesc": "Personalise the vocabulary used in your comments",
@@ -778,7 +791,9 @@
       "ok": "Settings saved",
       "okDesc": "Your auto-comment preferences have been updated.",
       "error": "Error",
-      "errorDesc": "Unable to save"
+      "errorDesc": "Unable to save",
+      "saveSuccess": "Preferences saved successfully.",
+      "saveError": "Failed to save preferences."
     }
   },
   "settingsPage": {
@@ -817,7 +832,10 @@
       },
       "passwordDialog": {
         "description": "Change your Tipote password"
-      }
+      },
+      "lastName": "Last name",
+      "saveSuccess": "Profile updated successfully.",
+      "saveError": "Failed to save profile."
     },
     "connections": {
       "sioTitle": "Systeme.io",
@@ -829,7 +847,9 @@
       "sioPlaceholder": "Paste your API key here...",
       "sioSaved": "Systeme.io API key saved",
       "save": "Save",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "title": "Connections",
+      "description": "Manage your integrations and connected accounts."
     },
     "reglages": {
       "langTitle": "Language and content",
@@ -896,7 +916,14 @@
       "allGeneratedOffersDeleted": "All generated offers have been deleted",
       "deleteAll": "Delete all",
       "generatedBadge": "AI",
-      "untitledOffer": "Untitled offer"
+      "untitledOffer": "Untitled offer",
+      "title": "Preferences",
+      "notifications": "Notifications",
+      "notificationsDesc": "Get alerts about your content and activity.",
+      "theme": "Theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "System"
     },
     "positioningTab": {
       "nicheTitle": "My niche formula",
@@ -922,7 +949,11 @@
       "overwriteTitle": "Change your positioning?",
       "overwriteDesc": "You already have a saved positioning. Saving will replace it with the new one. Your current positioning:",
       "overwriteCancel": "Cancel",
-      "overwriteConfirm": "Replace"
+      "overwriteConfirm": "Replace",
+      "title": "My positioning",
+      "description": "Define your positioning so Tipote adapts every generated piece of content to your voice and audience.",
+      "saveSuccess": "Positioning saved successfully.",
+      "saveError": "Failed to save positioning."
     }
   },
   "today": {
@@ -1040,7 +1071,14 @@
       "educatif": "Educational",
       "storytelling": "Storytelling",
       "provocateur": "Provocative",
-      "minimaliste": "Minimalist"
+      "minimaliste": "Minimalist",
+      "professional": "Professional",
+      "friendly": "Friendly",
+      "humorous": "Humorous",
+      "inspirational": "Inspirational",
+      "educational": "Educational",
+      "direct": "Direct",
+      "provocative": "Provocative"
     },
     "platforms": {
       "linkedin": "LinkedIn",
@@ -1050,7 +1088,8 @@
       "threads": "Threads",
       "email": "Email",
       "blog": "Blog/Article",
-      "youtube": "YouTube"
+      "youtube": "YouTube",
+      "tiktok": "TikTok"
     },
     "contentTypes": {
       "post": "Social media post",
@@ -1234,7 +1273,9 @@
     "progress": {
       "tasksCompleted": "Completed tasks",
       "currentPhase": "Current phase",
-      "revenueGoal": "Revenue goal"
+      "revenueGoal": "Revenue goal",
+      "daysRemaining": "Days remaining",
+      "outOf90": "Out of 90 days"
     },
     "noTasks": "No tasks in this phase yet.",
     "moreTasks": "See {count} more tasks",
@@ -1633,7 +1674,10 @@
     "listTitle": "My automations",
     "empty": {
       "title": "No automations yet",
-      "description": "Create your first automation to automatically reply to comments on Instagram and Facebook."
+      "description": "Create your first automation to automatically reply to comments on Instagram and Facebook.",
+      "ctaDm": "Auto DM on comment",
+      "ctaEmail": "Auto email on comment",
+      "emailName": "Email capture on comment"
     },
     "templates": {
       "title": "Ready-to-use templates",
@@ -3165,7 +3209,17 @@
         "phase6_replay_challenge": "Challenge replay prepared for resale",
         "phase6_replay_webinar": "Replay sent to absent registrants"
       }
-    }
+    },
+    "newWebinar": "New webinar",
+    "editWebinar": "Edit webinar",
+    "deleteWebinar": "Delete this webinar?",
+    "deleteWebinarDesc": "This action is irreversible.",
+    "webinarCreated": "Webinar created",
+    "webinarUpdated": "Webinar updated",
+    "webinarDeleted": "Webinar deleted",
+    "totalWebinars": "Total webinars",
+    "noWebinars": "No webinars yet.",
+    "noWebinarsHint": "Create your first webinar to start tracking your KPIs."
   },
   "quizForm": {
     "createTitle": "Create a quiz",
