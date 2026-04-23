@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -145,6 +146,7 @@ function SchemaFieldInput({
   choice: "user" | "generate" | "remove";
   onChoiceChange: (c: "user" | "generate" | "remove") => void;
 }) {
+  const t = useTranslations("funnelConfig");
   const isDisabled = choice === "generate" || choice === "remove";
 
   return (
@@ -165,17 +167,17 @@ function SchemaFieldInput({
 
       {choice === "remove" ? (
         <div className="rounded-md border border-dashed border-red-300 bg-red-50 px-3 py-2 text-xs text-red-600">
-          Cette section sera supprimée du template.
+          {t("sectionRemoved")}
         </div>
       ) : choice === "generate" ? (
         <div className="rounded-md border border-dashed border-blue-300 bg-blue-50 px-3 py-2 text-xs text-blue-600">
-          L'IA générera ce contenu automatiquement.
+          {t("aiWillGenerate")}
         </div>
       ) : field.inputType === "textarea" || field.kind === "array_scalar" || field.kind === "array_object" ? (
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={getPlaceholder(field)}
+          placeholder={getPlaceholder(field, t)}
           className="min-h-[80px]"
           disabled={isDisabled}
         />
@@ -184,7 +186,7 @@ function SchemaFieldInput({
           type={field.inputType === "email" ? "email" : field.inputType === "url" || field.inputType === "image_url" ? "url" : "text"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={getPlaceholder(field)}
+          placeholder={getPlaceholder(field, t)}
           disabled={isDisabled}
         />
       )}
@@ -192,16 +194,19 @@ function SchemaFieldInput({
   );
 }
 
-function getPlaceholder(field: UserField): string {
-  if (field.inputType === "image_url") return "https://... (URL de l'image)";
+function getPlaceholder(
+  field: UserField,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
+  if (field.inputType === "image_url") return t("placeholderImage");
   if (field.inputType === "url") return "https://...";
-  if (field.inputType === "email") return "contact@votresite.com";
+  if (field.inputType === "email") return t("placeholderEmail");
   if (field.kind === "array_object" && field.subFields?.length) {
     const example = field.subFields.map((sf) => sf.key.replace(/_/g, " ")).join(", ");
-    return `1 par ligne (${example})`;
+    return t("placeholderArrayObject", { example });
   }
-  if (field.kind === "array_scalar") return "1 élément par ligne";
-  return `ex: ${field.label}`;
+  if (field.kind === "array_scalar") return t("placeholderArrayScalar");
+  return t("placeholderDefault", { label: field.label });
 }
 
 // ─── Main component ──────────────────────────────────────────────
@@ -244,6 +249,7 @@ export function FunnelConfigStep({
   onBack,
   creditCost,
 }: FunnelConfigStepProps) {
+  const t = useTranslations("funnelConfig");
   const showVisualExtras = mode === "visual";
 
   // Group template fields by category
@@ -263,12 +269,12 @@ export function FunnelConfigStep({
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Retour
+          {t("back")}
         </Button>
         <div>
-          <h3 className="text-lg font-semibold">Décris ton offre</h3>
+          <h3 className="text-lg font-semibold">{t("describeOffer")}</h3>
           <p className="text-sm text-muted-foreground">
-            L'IA utilisera ces informations pour personnaliser le contenu.
+            {t("describeOfferHint")}
           </p>
         </div>
       </div>
@@ -286,7 +292,7 @@ export function FunnelConfigStep({
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm">{selectedTemplate.name}</p>
             <Badge variant="outline" className="text-[10px]">
-              {selectedTemplate.type === "capture" ? "Page de capture" : "Page de vente"}
+              {selectedTemplate.type === "capture" ? t("capturePage") : t("salesPage")}
             </Badge>
           </div>
         </Card>
@@ -295,21 +301,21 @@ export function FunnelConfigStep({
       {/* Page type selector (text_only mode only) */}
       {mode === "text_only" && (
         <div className="space-y-2">
-          <Label>Type de page</Label>
+          <Label>{t("pageType")}</Label>
           <div className="flex gap-2">
             <Button
               variant={funnelPageType === "capture" ? "default" : "outline"}
               size="sm"
               onClick={() => setFunnelPageType("capture")}
             >
-              Page de capture
+              {t("capturePage")}
             </Button>
             <Button
               variant={funnelPageType === "sales" ? "default" : "outline"}
               size="sm"
               onClick={() => setFunnelPageType("sales")}
             >
-              Page de vente
+              {t("salesPage")}
             </Button>
           </div>
         </div>
@@ -325,7 +331,7 @@ export function FunnelConfigStep({
             onClick={() => setOfferChoice("existing")}
             disabled={offers.length === 0}
           >
-            Offre existante
+            {t("existingOffer")}
           </Button>
           <Button
             type="button"
@@ -333,18 +339,18 @@ export function FunnelConfigStep({
             size="sm"
             onClick={() => setOfferChoice("scratch")}
           >
-            À partir de zéro
+            {t("fromScratch")}
           </Button>
         </div>
 
         {offerChoice === "existing" ? (
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">
-              Choisis une offre, tu n'auras pas à tout re-renseigner.
+              {t("chooseOfferHint")}
             </Label>
             <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
               <SelectTrigger>
-                <SelectValue placeholder={offers.length ? "Sélectionne une offre" : "Aucune offre disponible"} />
+                <SelectValue placeholder={offers.length ? t("selectOffer") : t("noOffer")} />
               </SelectTrigger>
               <SelectContent>
                 {offers.map((o) => (
@@ -358,41 +364,41 @@ export function FunnelConfigStep({
         ) : (
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label>Ton offre *</Label>
+              <Label>{t("offerLabel")}</Label>
               <Textarea
-                placeholder="Ex: Formation Instagram pour coachs sportifs – 297€ – Inclut 6 modules vidéo, des templates et un groupe privé…"
+                placeholder={t("offerPlaceholder")}
                 value={offerPromise}
                 onChange={(e) => setOfferPromise(e.target.value)}
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                Décris ton offre ou colle une description existante. Plus tu donnes de détails, meilleur sera le résultat.
+                {t("offerHelp")}
               </p>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nom de l'offre</Label>
+                <Label>{t("offerName")}</Label>
                 <Input
                   value={offerName}
                   onChange={(e) => setOfferName(e.target.value)}
-                  placeholder="ex: Plan d'action 90 jours"
+                  placeholder={t("offerNamePlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Cible</Label>
+                <Label>{t("target")}</Label>
                 <Input
                   value={offerTarget}
                   onChange={(e) => setOfferTarget(e.target.value)}
-                  placeholder="ex: Coachs / freelances..."
+                  placeholder={t("targetPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Prix</Label>
+                <Label>{t("price")}</Label>
                 <Input
                   value={offerPrice}
                   onChange={(e) => setOfferPrice(e.target.value)}
-                  placeholder="ex: 49€ / 490€ / 1997€"
+                  placeholder={t("pricePlaceholder")}
                 />
               </div>
             </div>
@@ -403,23 +409,23 @@ export function FunnelConfigStep({
       {/* Urgency & guarantee */}
       <div className="space-y-4 border-t pt-4">
         <p className="text-sm font-medium text-muted-foreground">
-          Angles de persuasion (optionnel)
+          {t("persuasionTitle")}
         </p>
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Urgence</Label>
+            <Label>{t("urgency")}</Label>
             <Input
               value={urgency}
               onChange={(e) => setUrgency(e.target.value)}
-              placeholder="ex: Offre valable jusqu'à dimanche"
+              placeholder={t("urgencyPlaceholder")}
             />
           </div>
           <div className="space-y-2">
-            <Label>Garantie</Label>
+            <Label>{t("guarantee")}</Label>
             <Input
               value={guarantee}
               onChange={(e) => setGuarantee(e.target.value)}
-              placeholder="ex: Satisfait ou remboursé 14 jours"
+              placeholder={t("guaranteePlaceholder")}
             />
           </div>
         </div>
@@ -429,7 +435,7 @@ export function FunnelConfigStep({
       {showVisualExtras && !isLoadingSchema && templateUserFields.length > 0 && (
         <div className="space-y-4 border-t pt-4">
           <p className="text-sm font-medium text-muted-foreground">
-            Personnalisation du template (optionnel)
+            {t("customizationTitle")}
           </p>
 
           {/* Main user fields (identity, images, etc.) */}
@@ -437,7 +443,7 @@ export function FunnelConfigStep({
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <ImageIcon className="h-4 w-4" />
-                Ce dont le template a besoin
+                {t("templateNeeds")}
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
@@ -477,10 +483,10 @@ export function FunnelConfigStep({
               <Separator />
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Sparkles className="h-4 w-4" />
-                Sections optionnelles
+                {t("optionalSections")}
               </div>
               <p className="text-xs text-muted-foreground">
-                Fournis tes propres données, laisse l'IA générer, ou supprime la section.
+                {t("optionalSectionsHint")}
               </p>
 
               {optionalSections.map((field) => (
@@ -502,7 +508,7 @@ export function FunnelConfigStep({
               <Separator />
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Link2 className="h-4 w-4" />
-                Liens légaux
+                {t("legalLinks")}
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
@@ -525,7 +531,7 @@ export function FunnelConfigStep({
       {showVisualExtras && isLoadingSchema && (
         <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Chargement des champs du template...
+          {t("loadingFields")}
         </div>
       )}
 
@@ -538,14 +544,14 @@ export function FunnelConfigStep({
           size="lg"
         >
           {isGenerating ? (
-            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération en cours...</>
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("generating")}</>
           ) : (
-            <><Wand2 className="w-4 h-4 mr-2" />Générer {mode === "visual" ? "la page" : "le copywriting"}</>
+            <><Wand2 className="w-4 h-4 mr-2" />{mode === "visual" ? t("generatePage") : t("generateCopy")}</>
           )}
         </Button>
         <Badge variant="outline" className="gap-1 whitespace-nowrap py-2">
           <Coins className="w-3.5 h-3.5" />
-          {creditCost} crédits
+          {t("credits", { n: creditCost })}
         </Badge>
       </div>
     </div>
