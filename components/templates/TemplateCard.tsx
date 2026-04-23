@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,25 +16,26 @@ interface TemplateCardProps {
 }
 
 export function TemplateCard({ template }: TemplateCardProps) {
+  const t = useTranslations("templateCard");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const handleImport = () => {
     if (!template.shareLink) {
-      toast.error("Lien d'import non disponible", {
-        description: "Ce template n'a pas encore de lien d'import configuré."
+      toast.error(t("toast.noLink"), {
+        description: t("toast.noLinkDesc")
       });
       return;
     }
     window.open(template.shareLink, "_blank");
-    toast.success("Redirection vers Systeme.io", {
-      description: "Le template va s'importer dans ton compte."
+    toast.success(t("toast.redirecting"), {
+      description: t("toast.redirectingDesc")
     });
   };
 
   const typeLabel = {
-    capture: "Page de capture",
-    sales: "Page de vente",
-    blog: "Blog"
+    capture: t("typeCapture"),
+    sales: t("typeSales"),
+    blog: t("typeBlog")
   };
 
   const typeColors = {
@@ -58,7 +60,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
             <DialogTrigger asChild>
               <Button variant="secondary" size="sm" className="gap-2">
                 <Eye className="w-4 h-4" />
-                Aperçu
+                {t("preview")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
@@ -77,11 +79,11 @@ export function TemplateCard({ template }: TemplateCardProps) {
                   className="w-full rounded-lg border"
                 />
                 <div>
-                  <h4 className="font-semibold mb-2">Description</h4>
+                  <h4 className="font-semibold mb-2">{t("description")}</h4>
                   <p className="text-muted-foreground">{template.description}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2">Inclus dans ce template</h4>
+                  <h4 className="font-semibold mb-2">{t("included")}</h4>
                   <ul className="grid grid-cols-2 gap-2">
                     {template.features.map((feature, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -93,7 +95,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
                 </div>
                 <Button onClick={handleImport} className="w-full gap-2" size="lg">
                   <Download className="w-4 h-4" />
-                  Importer dans Systeme.io
+                  {t("importToSystemeio")}
                   <ExternalLink className="w-4 h-4 ml-auto" />
                 </Button>
               </div>
@@ -112,7 +114,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
         {/* Free Badge */}
         {template.price === "Gratuit" && (
           <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
-            Gratuit
+            {t("free")}
           </Badge>
         )}
       </div>
@@ -156,7 +158,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
           variant={template.shareLink ? "default" : "secondary"}
         >
           <Download className="w-4 h-4" />
-          Importer le template
+          {t("importTemplate")}
           <ExternalLink className="w-4 h-4 ml-auto opacity-50" />
         </Button>
       </CardContent>
