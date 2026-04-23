@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +96,7 @@ export function FunnelForm({
   existingOffers = [],
 }: FunnelFormProps) {
   const { toast } = useToast();
+  const t = useTranslations("funnelForm");
 
   const [step, setStep] = useState<Step>("mode");
   const [mode, setMode] = useState<Mode>("visual");
@@ -341,7 +343,7 @@ export function FunnelForm({
     } catch (e: any) {
       toast({
         title: "Erreur preview",
-        description: e?.message || "Impossible de prévisualiser",
+        description: e?.message || t("toast.cannotPreview"),
         variant: "destructive",
       });
       setRenderedHtml("");
@@ -394,7 +396,7 @@ export function FunnelForm({
       }
 
       const html = extractHtmlFromRenderResponse(raw, data);
-      const blob = new Blob([html || "<div style='padding:24px'>Aucun aperçu</div>"], {
+      const blob = new Blob([html || `<div style='padding:24px'>${t("noPreview")}</div>`], {
         type: "text/html;charset=utf-8",
       });
       const url = URL.createObjectURL(blob);
@@ -403,7 +405,7 @@ export function FunnelForm({
     } catch (e: any) {
       toast({
         title: "Preview indisponible",
-        description: e?.message || "Impossible d'ouvrir l'aperçu",
+        description: e?.message || t("toast.cannotOpenPreview"),
         variant: "destructive",
       });
     }
@@ -484,8 +486,8 @@ export function FunnelForm({
       if (!outTrimmed || outTrimmed.startsWith("Erreur:")) {
         const errorDetail = outTrimmed.replace(/^Erreur:\s*/i, "").trim();
         toast({
-          title: "Erreur de génération",
-          description: errorDetail || "La génération a échoué ou le délai a expiré. Réessaye.",
+          title: t("toast.generationError"),
+          description: errorDetail || t("toast.generationFailed"),
           variant: "destructive",
         });
         return;
@@ -494,8 +496,8 @@ export function FunnelForm({
       const extracted = extractTemplateContentData(outTrimmed);
       if (!extracted) {
         toast({
-          title: "Réponse IA invalide",
-          description: "Impossible de lire le contentData du template. Le modèle n'a peut-être pas renvoyé du JSON valide.",
+          title: t("toast.invalidAiResponse"),
+          description: t("toast.invalidAiResponseDesc"),
           variant: "destructive",
         });
         return;
@@ -517,7 +519,7 @@ export function FunnelForm({
       await renderHtmlFromContentData(merged, null);
       setStep("preview");
     } catch (e: any) {
-      toast({ title: "Erreur génération", description: e?.message || "Impossible de générer", variant: "destructive" });
+      toast({ title: t("toast.generationErrorShort"), description: e?.message || t("toast.cannotGenerate"), variant: "destructive" });
     }
   };
 
@@ -547,7 +549,7 @@ export function FunnelForm({
       };
 
       await onSave(payload);
-      toast({ title: "Sauvegardé" });
+      toast({ title: t("toast.saved") });
     } catch (e: any) {
       toast({ title: "Erreur sauvegarde", description: e?.message || "Impossible de sauvegarder", variant: "destructive" });
     }
@@ -561,7 +563,7 @@ export function FunnelForm({
         { role: "user", content: message },
         {
           role: "assistant",
-          content: "Pour l'instant, les itérations s'appliquent aux templates (mode page prête à l'emploi).",
+          content: t("toast.iterationOnlyTemplates"),
         },
       ]);
       return "OK";
@@ -591,14 +593,14 @@ export function FunnelForm({
       const data = safeJsonParse<any>(raw);
 
       if (!res.ok) {
-        const msg = (data && (data.error || data.message)) || raw || "Impossible d'itérer";
+        const msg = (data && (data.error || data.message)) || raw || t("toast.cannotIterate");
         throw new Error(msg);
       }
 
       const nextContentData = data?.nextContentData && typeof data.nextContentData === "object" ? data.nextContentData : null;
       const nextBrandTokens = data?.nextBrandTokens && typeof data.nextBrandTokens === "object" ? data.nextBrandTokens : null;
 
-      if (!nextContentData) throw new Error("Réponse itération invalide");
+      if (!nextContentData) throw new Error(t("toast.invalidIteration"));
 
       // Keep as pending until user accepts
       setPendingContentData(nextContentData);
@@ -610,14 +612,14 @@ export function FunnelForm({
       const explanation =
         typeof data?.explanation === "string"
           ? data.explanation
-          : "Modification proposée. Vérifie l'aperçu, puis accepte ou refuse.";
+          : t("toast.iterationApplied");
       setMessages((prev) => [...prev, { role: "assistant", content: explanation }]);
 
       return explanation;
     } catch (e: any) {
-      const msg = e?.message || "Erreur itération";
-      setMessages((prev) => [...prev, { role: "assistant", content: `Erreur: ${msg}` }]);
-      toast({ title: "Erreur itération", description: msg, variant: "destructive" });
+      const msg = e?.message || t("toast.iterationError");
+      setMessages((prev) => [...prev, { role: "assistant", content: `${t("toast.iterationError")}: ${msg}` }]);
+      toast({ title: t("toast.iterationError"), description: msg, variant: "destructive" });
       return msg;
     } finally {
       setIsIterating(false);
@@ -636,7 +638,7 @@ export function FunnelForm({
     setPendingContentData(null);
     setPendingBrandTokens(null);
 
-    toast({ title: "Modifications appliquées" });
+    toast({ title: t("toast.changesApplied") });
   };
 
   const handleRejectIteration = async () => {
@@ -648,7 +650,7 @@ export function FunnelForm({
       await renderHtmlFromContentData(contentData, brandTokens);
     }
 
-    toast({ title: "Modifications refusées" });
+    toast({ title: t("toast.changesRejected") });
   };
 
   // ─── Step progress ────────────────────────────────────────────
@@ -656,15 +658,15 @@ export function FunnelForm({
   const visibleSteps =
     mode === "visual"
       ? [
-          { key: "mode", label: "Format" },
-          { key: "template", label: "Template" },
-          { key: "config", label: "Offre" },
-          { key: "preview", label: "Résultat" },
+          { key: "mode", label: t("steps.mode") },
+          { key: "template", label: t("steps.template") },
+          { key: "config", label: t("steps.config") },
+          { key: "preview", label: t("steps.preview") },
         ]
       : [
-          { key: "mode", label: "Format" },
-          { key: "config", label: "Offre" },
-          { key: "preview", label: "Résultat" },
+          { key: "mode", label: t("steps.mode") },
+          { key: "config", label: t("steps.config") },
+          { key: "preview", label: t("steps.preview") },
         ];
   const currentStepIdx = visibleSteps.findIndex((s) => s.key === step);
 
@@ -674,7 +676,7 @@ export function FunnelForm({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Route className="w-5 h-5" />
-          Créer une Page
+          {t("header")}
         </h2>
         <div className="flex items-center gap-3">
           {/* Progress indicator */}

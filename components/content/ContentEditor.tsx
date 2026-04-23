@@ -109,6 +109,7 @@ function toYmdOrEmpty(v: string | null | undefined) {
 export function ContentEditor({ initialItem }: Props) {
   const router = useRouter();
   const tFilters = useTranslations("contentFilters");
+  const t = useTranslations("contentEditor");
 
   // Baseline local: permet un "dirty" fiable après save,
   // même si le refresh Next met un peu de temps ou renvoie un item équivalent.
@@ -315,11 +316,11 @@ export function ContentEditor({ initialItem }: Props) {
   const copyToClipboard = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast({ title: "Copié", description: label });
+      toast({ title: t("toast.copied"), description: label });
     } catch {
       toast({
         title: "Impossible de copier",
-        description: "Ton navigateur bloque le clipboard. Sélectionne puis Ctrl/Cmd+C.",
+        description: t("toast.clipboardBlocked"),
         variant: "destructive",
       });
     }
@@ -336,8 +337,8 @@ export function ContentEditor({ initialItem }: Props) {
       URL.revokeObjectURL(url);
     } catch {
       toast({
-        title: "Téléchargement impossible",
-        description: "Ton navigateur a bloqué le téléchargement.",
+        title: t("toast.downloadImpossible"),
+        description: t("toast.downloadBlocked"),
         variant: "destructive",
       });
     }
@@ -534,7 +535,7 @@ export function ContentEditor({ initialItem }: Props) {
         }));
       }
 
-      toast({ title: "Enregistré", description: "Ton contenu a été sauvegardé." });
+      toast({ title: t("toast.saved"), description: t("toast.savedDesc") });
 
       // refresh server data (best-effort)
       router.refresh();
@@ -566,7 +567,7 @@ export function ContentEditor({ initialItem }: Props) {
         return false;
       }
 
-      toast({ title: "Supprimé", description: "Le contenu a été supprimé." });
+      toast({ title: t("toast.deleted"), description: t("toast.deletedDesc") });
       router.push("/contents");
       return true;
     } catch (e: any) {
@@ -584,11 +585,11 @@ export function ContentEditor({ initialItem }: Props) {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(content ?? "");
-      toast({ title: "Copié", description: "Le contenu est dans le presse-papiers." });
+      toast({ title: t("toast.copied"), description: t("toast.copiedInClipboard") });
     } catch {
       toast({
         title: "Impossible de copier",
-        description: "Ton navigateur bloque le clipboard. Sélectionne puis Ctrl/Cmd+C.",
+        description: t("toast.clipboardBlocked"),
         variant: "destructive",
       });
     }
@@ -606,7 +607,7 @@ export function ContentEditor({ initialItem }: Props) {
         });
         return;
       }
-      toast({ title: "Dupliqué", description: "Un nouveau contenu a été créé." });
+      toast({ title: t("toast.duplicated"), description: t("toast.duplicatedDesc") });
       router.push(`/contents/${data.id}`);
       router.refresh();
     } catch (e: any) {
@@ -717,7 +718,7 @@ export function ContentEditor({ initialItem }: Props) {
     } catch {
       toast({
         title: "Erreur PDF",
-        description: "Impossible de générer le PDF.",
+        description: t("toast.pdfError"),
         variant: "destructive",
       });
     }
@@ -746,7 +747,7 @@ export function ContentEditor({ initialItem }: Props) {
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant={statusBadgeVariant}>{statusLabel}</Badge>
               {dirty ? (
-                <Badge variant="outline">Modifications non enregistrées</Badge>
+                <Badge variant="outline">{t("unsaved")}</Badge>
               ) : (
                 <Badge variant="secondary">À jour</Badge>
               )}
@@ -792,7 +793,7 @@ export function ContentEditor({ initialItem }: Props) {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Supprimer ce contenu ?</AlertDialogTitle>
-                  <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+                  <AlertDialogDescription>{t("irreversible")}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annuler</AlertDialogCancel>
@@ -826,8 +827,8 @@ export function ContentEditor({ initialItem }: Props) {
             <p className="font-semibold">Contenu</p>
             <p className="text-sm text-muted-foreground">
               {isFunnel
-                ? "Pour les funnels, Tipote stocke un JSON (contentData) puis rend le HTML de façon déterministe."
-                : "Édite librement. Cmd/Ctrl+S pour sauvegarder."}
+                ? t("funnelHint")
+                : t("editHint")}
             </p>
           </div>
 
@@ -926,7 +927,7 @@ export function ContentEditor({ initialItem }: Props) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>JSON stocké (lecture seule)</Label>
+                  <Label>{t("jsonStored")}</Label>
                   <Textarea value={funnelPayloadString} readOnly rows={6} className="font-mono text-xs" />
                 </div>
               </TabsContent>
@@ -965,7 +966,7 @@ export function ContentEditor({ initialItem }: Props) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => copyToClipboard(htmlPreview, "Preview copiée")}
+                    onClick={() => copyToClipboard(htmlPreview, t("toast.previewCopied"))}
                     disabled={!htmlPreview}
                   >
                     <Copy className="w-4 h-4 mr-1" />
@@ -982,7 +983,7 @@ export function ContentEditor({ initialItem }: Props) {
                     Télécharger kit
                   </Button>
 
-                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(htmlKit, "Kit copié")} disabled={!htmlKit}>
+                  <Button variant="outline" size="sm" onClick={() => copyToClipboard(htmlKit, t("toast.kitCopied"))} disabled={!htmlKit}>
                     <Copy className="w-4 h-4 mr-1" />
                     Copier kit
                   </Button>
@@ -1047,7 +1048,7 @@ export function ContentEditor({ initialItem }: Props) {
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Colle ou écris ton contenu ici…"
+              placeholder={t("placeholder")}
               rows={22}
             />
           )}
@@ -1088,7 +1089,7 @@ export function ContentEditor({ initialItem }: Props) {
         {isSocialPost && isPinterest && (
           <Card className="p-4 space-y-4">
             <div>
-              <p className="font-semibold">Paramètres Pinterest</p>
+              <p className="font-semibold">{t("pinterestSettings")}</p>
               <p className="text-sm text-muted-foreground">
                 Titre max 100 car. · Description max 500 car. · Image requise
               </p>

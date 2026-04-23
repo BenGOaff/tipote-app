@@ -1365,7 +1365,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const [showThankYouModal, setShowThankYouModal] = useState(false);
   const [thankYouHeading, setThankYouHeading] = useState((page as any).thank_you_title || page.content_data?.thank_you_heading || "Merci pour ton inscription !");
   const [thankYouSubtitle, setThankYouSubtitle] = useState((page as any).thank_you_subtitle || "");
-  const [thankYouMessage, setThankYouMessage] = useState((page as any).thank_you_message || page.content_data?.thank_you_message || "Tu vas recevoir un email de confirmation dans quelques instants. Pense à vérifier tes spams.");
+  const [thankYouMessage, setThankYouMessage] = useState((page as any).thank_you_message || page.content_data?.thank_you_message || t("thankYouDefault"));
   const [thankYouShowEmailHint, setThankYouShowEmailHint] = useState((page as any).thank_you_show_email_hint !== false);
   const [thankYouCtas, setThankYouCtas] = useState<{ text: string; url: string; style: "primary" | "outline" | "secondary" }[]>(() => {
     const ctas = (page as any).thank_you_ctas;
@@ -1713,9 +1713,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     if (typeof window === "undefined") return true;
     // eslint-disable-next-line no-alert
     const ok = window.confirm(
-      "Tu as fait des modifications directes sur la page (texte, images, couleurs, sections) depuis la dernière génération.\n\n" +
-      "L'IA va régénérer la page à partir du modèle et ces modifications directes seront écrasées.\n\n" +
-      "Continuer quand même ?",
+      t("directChangesWarn1") + "\n\n" +
+      t("directChangesWarn2") + "\n\n" +
+      t("directChangesConfirm"),
     );
     return ok;
   }, []);
@@ -2361,7 +2361,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
           <button onClick={copyUrl} className="p-0.5 rounded hover:bg-green-100 dark:hover:bg-green-900/30">
             {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3 text-green-600" />}
           </button>
-          <span className="text-green-600/50 ml-auto hidden sm:inline">Modifications en temps réel</span>
+          <span className="text-green-600/50 ml-auto hidden sm:inline">{t("liveChanges")}</span>
         </div>
       )}
 

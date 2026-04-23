@@ -100,68 +100,15 @@ const coalesceStringArray = (
 const getDefaultOfferDetails = (
   offerType: OfferType,
   _offer: Offer,
+  t: ReturnType<typeof useTranslations>,
 ): Partial<Offer> => {
-  const baseDetails = {
-    lead_magnet: {
-      why: "Ce lead magnet attire ton audience cible en résolvant un problème urgent et spécifique. Il établit ta crédibilité et te positionne comme expert de ton domaine.",
-      whyPrice:
-        "Gratuit pour maximiser les inscriptions et construire ta liste email. La valeur perçue doit être élevée pour encourager le partage.",
-      whatToCreate: [
-        "Un contenu qui répond à une question brûlante de ton audience",
-        "Un format facilement consommable (PDF, vidéo courte, checklist)",
-        "Un design professionnel qui reflète ta marque",
-        "Une page de capture optimisée pour les conversions",
-      ],
-      howToCreate:
-        "Commence par identifier le problème #1 de ton audience. Crée un contenu actionnable qu'ils peuvent appliquer immédiatement. Limite le contenu à l'essentiel pour qu'il soit rapide à consommer mais impactant.",
-      howToPromote: [
-        "Posts organiques sur tes réseaux sociaux avec un CTA clair",
-        "Publicités ciblées sur Facebook/Instagram vers ta page de capture",
-        "Partenariats avec d'autres créateurs pour du cross-promo",
-        "Mentions dans tes emails et contenus existants",
-      ],
-    },
-    low_ticket: {
-      why: "Cette offre convertit tes leads en clients. Elle prouve la valeur de tes produits et crée une habitude d'achat tout en générant tes premiers revenus.",
-      whyPrice:
-        "Un prix accessible (47-197€) réduit la friction d'achat. Assez élevé pour attirer des clients sérieux, assez bas pour être une décision impulsive.",
-      whatToCreate: [
-        "Une formation ou ressource qui approfondit le lead magnet",
-        "Des templates, scripts ou outils pratiques",
-        "Un accès à une communauté ou des bonus exclusifs",
-        "Une page de vente convaincante avec témoignages",
-      ],
-      howToCreate:
-        "Transforme ton expertise en un produit structuré. Inclus des résultats mesurables et des étapes claires. Ajoute des bonus pour augmenter la valeur perçue.",
-      howToPromote: [
-        "Séquence email automatisée après le lead magnet",
-        "Offres flash et promotions limitées",
-        "Upsell direct après l'inscription au lead magnet",
-        "Témoignages et études de cas sur les réseaux",
-      ],
-    },
-    high_ticket: {
-      why: "Cette offre maximise tes revenus avec un accompagnement premium. Elle attire les clients les plus motivés qui veulent des résultats garantis.",
-      whyPrice:
-        "Un prix premium (997€+) reflète la valeur transformationnelle. Les clients qui investissent plus sont plus engagés et obtiennent de meilleurs résultats.",
-      whatToCreate: [
-        "Un programme d'accompagnement complet sur plusieurs semaines",
-        "Des sessions de coaching individuelles ou en groupe",
-        "Un accès VIP avec support prioritaire",
-        "Des ressources avancées et exclusives",
-      ],
-      howToCreate:
-        "Conçois une transformation complète. Définis clairement les résultats attendus et le processus. Limite les places pour créer l'exclusivité et pouvoir offrir un suivi personnalisé.",
-      howToPromote: [
-        "Webinars de vente avec présentation de la méthode",
-        "Appels de découverte pour qualifier les prospects",
-        "Témoignages vidéo de clients transformés",
-        "Séquence email nurturing sur plusieurs semaines",
-      ],
-    },
+  return {
+    why: t(`${offerType}.why` as any),
+    whyPrice: t(`${offerType}.whyPrice` as any),
+    whatToCreate: t.raw(`${offerType}.whatToCreate` as any) as string[],
+    howToCreate: t(`${offerType}.howToCreate` as any),
+    howToPromote: t.raw(`${offerType}.howToPromote` as any) as string[],
   };
-
-  return baseDetails[offerType];
 };
 
 export const OfferDetailModal = ({
@@ -172,12 +119,13 @@ export const OfferDetailModal = ({
   onUpdateOffer,
 }: OfferDetailModalProps) => {
   const t = useTranslations('strategyDetails');
+  const tDefaults = useTranslations('offerDefaults');
   const config = offerConfig[offerType];
   const Icon = config.icon;
 
   const defaultDetails = useMemo(
-    () => getDefaultOfferDetails(offerType, offer),
-    [offerType, offer],
+    () => getDefaultOfferDetails(offerType, offer, tDefaults),
+    [offerType, offer, tDefaults],
   );
 
   const buildHydratedOffer = (): Offer => ({

@@ -274,7 +274,19 @@
       "betterPricing": "Migliorare il prezzo",
       "strongerPromise": "Rinforzare la promessa",
       "addBonuses": "Aggiungere bonus"
-    }
+    },
+    "copied": "Copiato",
+    "copiedDesc": "Il testo è stato copiato negli appunti.",
+    "offerRequired": "Offerta richiesta",
+    "offerRequiredDesc": "Seleziona un'offerta da migliorare.",
+    "contentRequired": "Contenuto richiesto",
+    "contentRequiredDesc": "Genera un contenuto prima di salvare.",
+    "tasksCreated": "{n, plural, one {# task creato} other {# task creati}}",
+    "tasksCreatedDesc": "I task sono stati aggiunti al tuo piano d'azione.",
+    "error": "Errore",
+    "cannotCreateTasks": "Impossibile creare i task.",
+    "tasksDetected": "{n, plural, one {# task rilevato} other {# task rilevati}}",
+    "createTasks": "Crea i task"
   },
   "settings": {
     "title": "Impostazioni",
@@ -1051,7 +1063,13 @@
         "recommendation": "devi pianificare e creare i tuoi prossimi contenuti",
         "why": "per aumentare la tua visibilità e attrarre nuovi prospect"
       }
-    }
+    },
+    "mixedResults": "Risultati misti questo mese.",
+    "cancelled": "annullato",
+    "oneScheduledToday": "1 contenuto pianificato oggi",
+    "veryDynamic": "Super dinamico questo mese!",
+    "warningDown": "Attenzione, alcuni indicatori stanno calando.",
+    "manyScheduledToday": "contenuti pianificati oggi"
   },
   "create": {
     "title": "Crea contenuto",
@@ -2902,7 +2920,21 @@
     },
     "noContent": "Nessun contenuto di testo disponibile.",
     "generatedBy": "Generato da Tipote",
-    "tip": "Clicca su un elemento nell'anteprima per modificarne le proprietà."
+    "tip": "Clicca su un elemento nell'anteprima per modificarne le proprietà.",
+    "bulletList": "Elenco puntato",
+    "pasteVideoUrl": "Incolla l'URL del video",
+    "listItem1": "Primo elemento",
+    "listItem2": "Secondo elemento",
+    "listItem3": "Terzo elemento",
+    "thankYouDefault": "Riceverai un'email di conferma a breve. Controlla lo spam.",
+    "directChangesWarn1": "Hai fatto modifiche dirette alla pagina (testo, immagini, colori, sezioni) dall'ultima generazione.",
+    "directChangesWarn2": "L'IA rigenererà la pagina dal template e queste modifiche dirette saranno sovrascritte.",
+    "directChangesConfirm": "Continuare comunque?",
+    "publishFailed": "Pubblicazione fallita: {err}",
+    "networkError": "errore di rete",
+    "missingColumnsHint": " (potrebbe mancare una colonna — le ultime migrazioni Supabase devono essere applicate)",
+    "thankYouSaveFailed": "Impossibile salvare la pagina di ringraziamento: {err}",
+    "liveChanges": "Modifiche in tempo reale"
   },
   "clients": {
     "title": "Gestione Clienti",
@@ -4082,5 +4114,156 @@
       "contentPh": "Contenuto...",
       "csvHeader": "Email,Nome,Data"
     }
+  },
+  "offerDefaults": {
+    "lead_magnet": {
+      "why": "Questo lead magnet attira il tuo pubblico target risolvendo un problema urgente e specifico. Costruisce la tua credibilità e ti posiziona come esperto nel tuo campo.",
+      "whyPrice": "Gratuito per massimizzare le iscrizioni e costruire la tua lista email. Il valore percepito deve essere alto per incoraggiare la condivisione.",
+      "whatToCreate": [
+        "Un contenuto che risponde a una domanda scottante del tuo pubblico",
+        "Un formato facilmente consumabile (PDF, video breve, checklist)",
+        "Un design professionale che riflette il tuo brand",
+        "Una pagina di cattura ottimizzata per le conversioni"
+      ],
+      "howToCreate": "Inizia identificando il problema n°1 del tuo pubblico. Crea contenuti attuabili che possano applicare subito. Limita il contenuto all'essenziale per essere rapido da consumare ma d'impatto.",
+      "howToPromote": [
+        "Post organici sui tuoi social con una CTA chiara",
+        "Annunci mirati su Facebook/Instagram verso la tua pagina di cattura",
+        "Partnership cross-promo con altri creator",
+        "Menzioni nelle tue email e contenuti esistenti"
+      ]
+    },
+    "low_ticket": {
+      "why": "Questa offerta converte i tuoi lead in clienti. Dimostra il valore dei tuoi prodotti e crea un'abitudine di acquisto generando i tuoi primi ricavi.",
+      "whyPrice": "Un prezzo accessibile (47–197€) riduce la frizione all'acquisto. Abbastanza alto per attirare clienti seri, abbastanza basso per essere una decisione impulsiva.",
+      "whatToCreate": [
+        "Una formazione o risorsa che approfondisce il lead magnet",
+        "Template, script o strumenti pratici",
+        "Accesso a una community o bonus esclusivi",
+        "Una pagina di vendita convincente con testimonianze"
+      ],
+      "howToCreate": "Trasforma la tua competenza in un prodotto strutturato. Includi risultati misurabili e passaggi chiari. Aggiungi bonus per aumentare il valore percepito.",
+      "howToPromote": [
+        "Sequenza email automatica dopo il lead magnet",
+        "Offerte flash e promozioni a tempo",
+        "Upsell diretto dopo l'iscrizione al lead magnet",
+        "Testimonianze e case study sui social"
+      ]
+    },
+    "high_ticket": {
+      "why": "Questa offerta massimizza i tuoi ricavi con un accompagnamento premium. Attira i clienti più motivati che vogliono risultati garantiti.",
+      "whyPrice": "Un prezzo premium (997€+) riflette il valore trasformazionale. I clienti che investono di più sono più coinvolti e ottengono risultati migliori.",
+      "whatToCreate": [
+        "Un programma di accompagnamento completo su più settimane",
+        "Sessioni di coaching individuali o di gruppo",
+        "Accesso VIP con supporto prioritario",
+        "Risorse avanzate ed esclusive"
+      ],
+      "howToCreate": "Progetta una trasformazione completa. Definisci chiaramente i risultati attesi e il processo. Limita i posti per creare esclusività e offrire follow-up personalizzato.",
+      "howToPromote": [
+        "Webinar di vendita che presentano il tuo metodo",
+        "Chiamate di scoperta per qualificare i prospect",
+        "Testimonianze video di clienti trasformati",
+        "Sequenza email nurturing su più settimane"
+      ]
+    }
+  },
+  "funnelForm": {
+    "header": "Crea una Pagina",
+    "steps": {
+      "mode": "Formato",
+      "template": "Template",
+      "config": "Offerta",
+      "preview": "Risultato"
+    },
+    "noPreview": "Nessuna anteprima",
+    "toast": {
+      "cannotPreview": "Impossibile visualizzare l'anteprima",
+      "cannotOpenPreview": "Impossibile aprire l'anteprima",
+      "generationError": "Errore di generazione",
+      "generationFailed": "La generazione è fallita o è scaduta. Riprova.",
+      "invalidAiResponse": "Risposta IA non valida",
+      "invalidAiResponseDesc": "Impossibile leggere il contentData del template. Il modello potrebbe non aver restituito JSON valido.",
+      "generationErrorShort": "Errore generazione",
+      "cannotGenerate": "Impossibile generare",
+      "saved": "Salvato",
+      "iterationOnlyTemplates": "Per ora, le iterazioni si applicano ai template (modalità pagina pronta all'uso).",
+      "cannotIterate": "Impossibile iterare",
+      "invalidIteration": "Risposta iterazione non valida",
+      "iterationApplied": "Modifica proposta. Controlla l'anteprima, poi accetta o rifiuta.",
+      "iterationError": "Errore iterazione",
+      "changesApplied": "Modifiche applicate",
+      "changesRejected": "Modifiche rifiutate"
+    }
+  },
+  "pageChat": {
+    "imageHint": "💡 Per cambiare un'immagine, cliccala direttamente nell'anteprima! Potrai importare la foto che vuoi.",
+    "reformulate": "Riformula la tua richiesta e riprova.",
+    "noCredits": "Crediti insufficienti. Ricarica per continuare.",
+    "applied": "Modifica applicata.",
+    "appliedNetworkError": "Modifica applicata ma errore di rete durante il salvataggio.",
+    "networkError": "Errore di rete.",
+    "networkErrorRetry": "Errore di rete. Riprova.",
+    "cancelled": "Modifica annullata.",
+    "partialUndo": "Annullamento parziale (colonne mancanti: {cols}).",
+    "suggestHeader": "Chiedi una modifica all'IA",
+    "askAi": "Chiedi all'IA...",
+    "undoTitle": "Annulla l'ultima modifica",
+    "collapse": "Riduci",
+    "describeChangeTitle": "Descrivi cosa vuoi modificare",
+    "describeChange": "Descrivi la modifica...",
+    "chatAi": "Chat IA",
+    "suggestions": {
+      "vitrine": [
+        "Cambia il titolo principale",
+        "Cambia il colore principale",
+        "Rendi il CTA più accattivante",
+        "Aggiungi un servizio",
+        "Cambia lo sfondo dell'hero",
+        "Rendi il tono più professionale"
+      ],
+      "vente": [
+        "Cambia il titolo principale",
+        "Rendi il CTA più urgente",
+        "Modifica i benefici",
+        "Cambia il colore principale",
+        "Migliora la sezione garanzia",
+        "Modifica le FAQ"
+      ],
+      "capture": [
+        "Cambia il titolo principale",
+        "Rendi il CTA più urgente",
+        "Aggiungi più benefici",
+        "Cambia il colore principale",
+        "Modifica la descrizione",
+        "Rendi il tono più professionale"
+      ]
+    }
+  },
+  "contentEditor": {
+    "toast": {
+      "copied": "Copiato",
+      "copiedInClipboard": "Il contenuto è negli appunti.",
+      "clipboardBlocked": "Il tuo browser blocca gli appunti. Seleziona poi Ctrl/Cmd+C.",
+      "downloadImpossible": "Download impossibile",
+      "downloadBlocked": "Il tuo browser ha bloccato il download.",
+      "saved": "Salvato",
+      "savedDesc": "Il tuo contenuto è stato salvato.",
+      "deleted": "Eliminato",
+      "deletedDesc": "Il contenuto è stato eliminato.",
+      "duplicated": "Duplicato",
+      "duplicatedDesc": "È stato creato un nuovo contenuto.",
+      "pdfError": "Impossibile generare il PDF.",
+      "previewCopied": "Anteprima copiata",
+      "kitCopied": "Kit copiato"
+    },
+    "unsaved": "Modifiche non salvate",
+    "irreversible": "Questa azione è irreversibile.",
+    "funnelHint": "Per i funnel, Tipote memorizza un JSON (contentData) e renderizza l'HTML in modo deterministico.",
+    "editHint": "Modifica liberamente. Cmd/Ctrl+S per salvare.",
+    "jsonStored": "JSON memorizzato (sola lettura)",
+    "clickGenerateHtml": "Genera HTML",
+    "placeholder": "Incolla o scrivi il tuo contenuto qui…",
+    "pinterestSettings": "Impostazioni Pinterest"
   }
 }

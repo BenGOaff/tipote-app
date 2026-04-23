@@ -274,7 +274,19 @@
       "betterPricing": "Améliorer le pricing",
       "strongerPromise": "Renforcer la promesse",
       "addBonuses": "Ajouter des bonus"
-    }
+    },
+    "copied": "Copié",
+    "copiedDesc": "Le texte a été copié dans le presse-papiers.",
+    "offerRequired": "Offre requise",
+    "offerRequiredDesc": "Sélectionne une offre à améliorer.",
+    "contentRequired": "Contenu requis",
+    "contentRequiredDesc": "Génère un contenu avant de sauvegarder.",
+    "tasksCreated": "{n, plural, one {# tâche créée} other {# tâches créées}}",
+    "tasksCreatedDesc": "Les tâches ont été ajoutées à ton plan d'action.",
+    "error": "Erreur",
+    "cannotCreateTasks": "Impossible de créer les tâches.",
+    "tasksDetected": "{n, plural, one {# tâche détectée} other {# tâches détectées}}",
+    "createTasks": "Créer les tâches"
   },
   "settings": {
     "title": "Paramètres",
@@ -1051,7 +1063,13 @@
         "recommendation": "tu dois planifier et créer tes prochains contenus",
         "why": "pour booster ta visibilité et attirer de nouveaux prospects"
       }
-    }
+    },
+    "mixedResults": "Résultats mitigés ce mois-ci.",
+    "cancelled": "annulé",
+    "oneScheduledToday": "1 contenu programmé aujourd’hui",
+    "veryDynamic": "Super dynamique ce mois-ci !",
+    "warningDown": "Attention, quelques indicateurs baissent.",
+    "manyScheduledToday": "contenus programmés aujourd’hui"
   },
   "create": {
     "title": "Créer du contenu",
@@ -2902,7 +2920,21 @@
     },
     "noContent": "Aucun contenu texte disponible.",
     "generatedBy": "Genere par Tipote",
-    "tip": "Clique sur un élément dans l'aperçu pour modifier ses propriétés."
+    "tip": "Clique sur un élément dans l'aperçu pour modifier ses propriétés.",
+    "bulletList": "Liste à puces",
+    "pasteVideoUrl": "Coller l'URL de la vidéo",
+    "listItem1": "Premier élément",
+    "listItem2": "Deuxième élément",
+    "listItem3": "Troisième élément",
+    "thankYouDefault": "Tu vas recevoir un email de confirmation dans quelques instants. Pense à vérifier tes spams.",
+    "directChangesWarn1": "Tu as fait des modifications directes sur la page (texte, images, couleurs, sections) depuis la dernière génération.",
+    "directChangesWarn2": "L'IA va régénérer la page à partir du modèle et ces modifications directes seront écrasées.",
+    "directChangesConfirm": "Continuer quand même ?",
+    "publishFailed": "Publication échouée : {err}",
+    "networkError": "erreur réseau",
+    "missingColumnsHint": " (une colonne est peut-être manquante — les dernières migrations Supabase doivent être appliquées)",
+    "thankYouSaveFailed": "Impossible d'enregistrer la page de remerciement : {err}",
+    "liveChanges": "Modifications en temps réel"
   },
   "clients": {
     "title": "Suivi Clients",
@@ -4082,5 +4114,156 @@
       "contentPh": "Contenu...",
       "csvHeader": "Email,Prénom,Date"
     }
+  },
+  "offerDefaults": {
+    "lead_magnet": {
+      "why": "Ce lead magnet attire ton audience cible en résolvant un problème urgent et spécifique. Il établit ta crédibilité et te positionne comme expert de ton domaine.",
+      "whyPrice": "Gratuit pour maximiser les inscriptions et construire ta liste email. La valeur perçue doit être élevée pour encourager le partage.",
+      "whatToCreate": [
+        "Un contenu qui répond à une question brûlante de ton audience",
+        "Un format facilement consommable (PDF, vidéo courte, checklist)",
+        "Un design professionnel qui reflète ta marque",
+        "Une page de capture optimisée pour les conversions"
+      ],
+      "howToCreate": "Commence par identifier le problème #1 de ton audience. Crée un contenu actionnable qu'ils peuvent appliquer immédiatement. Limite le contenu à l'essentiel pour qu'il soit rapide à consommer mais impactant.",
+      "howToPromote": [
+        "Posts organiques sur tes réseaux sociaux avec un CTA clair",
+        "Publicités ciblées sur Facebook/Instagram vers ta page de capture",
+        "Partenariats avec d'autres créateurs pour du cross-promo",
+        "Mentions dans tes emails et contenus existants"
+      ]
+    },
+    "low_ticket": {
+      "why": "Cette offre convertit tes leads en clients. Elle prouve la valeur de tes produits et crée une habitude d'achat tout en générant tes premiers revenus.",
+      "whyPrice": "Un prix accessible (47-197€) réduit la friction d'achat. Assez élevé pour attirer des clients sérieux, assez bas pour être une décision impulsive.",
+      "whatToCreate": [
+        "Une formation ou ressource qui approfondit le lead magnet",
+        "Des templates, scripts ou outils pratiques",
+        "Un accès à une communauté ou des bonus exclusifs",
+        "Une page de vente convaincante avec témoignages"
+      ],
+      "howToCreate": "Transforme ton expertise en un produit structuré. Inclus des résultats mesurables et des étapes claires. Ajoute des bonus pour augmenter la valeur perçue.",
+      "howToPromote": [
+        "Séquence email automatisée après le lead magnet",
+        "Offres flash et promotions limitées",
+        "Upsell direct après l'inscription au lead magnet",
+        "Témoignages et études de cas sur les réseaux"
+      ]
+    },
+    "high_ticket": {
+      "why": "Cette offre maximise tes revenus avec un accompagnement premium. Elle attire les clients les plus motivés qui veulent des résultats garantis.",
+      "whyPrice": "Un prix premium (997€+) reflète la valeur transformationnelle. Les clients qui investissent plus sont plus engagés et obtiennent de meilleurs résultats.",
+      "whatToCreate": [
+        "Un programme d'accompagnement complet sur plusieurs semaines",
+        "Des sessions de coaching individuelles ou en groupe",
+        "Un accès VIP avec support prioritaire",
+        "Des ressources avancées et exclusives"
+      ],
+      "howToCreate": "Conçois une transformation complète. Définis clairement les résultats attendus et le processus. Limite les places pour créer l'exclusivité et pouvoir offrir un suivi personnalisé.",
+      "howToPromote": [
+        "Webinars de vente avec présentation de la méthode",
+        "Appels de découverte pour qualifier les prospects",
+        "Témoignages vidéo de clients transformés",
+        "Séquence email nurturing sur plusieurs semaines"
+      ]
+    }
+  },
+  "funnelForm": {
+    "header": "Créer une Page",
+    "steps": {
+      "mode": "Format",
+      "template": "Template",
+      "config": "Offre",
+      "preview": "Résultat"
+    },
+    "noPreview": "Aucun aperçu",
+    "toast": {
+      "cannotPreview": "Impossible de prévisualiser",
+      "cannotOpenPreview": "Impossible d'ouvrir l'aperçu",
+      "generationError": "Erreur de génération",
+      "generationFailed": "La génération a échoué ou le délai a expiré. Réessaye.",
+      "invalidAiResponse": "Réponse IA invalide",
+      "invalidAiResponseDesc": "Impossible de lire le contentData du template. Le modèle n'a peut-être pas renvoyé du JSON valide.",
+      "generationErrorShort": "Erreur génération",
+      "cannotGenerate": "Impossible de générer",
+      "saved": "Sauvegardé",
+      "iterationOnlyTemplates": "Pour l'instant, les itérations s'appliquent aux templates (mode page prête à l'emploi).",
+      "cannotIterate": "Impossible d'itérer",
+      "invalidIteration": "Réponse itération invalide",
+      "iterationApplied": "Modification proposée. Vérifie l'aperçu, puis accepte ou refuse.",
+      "iterationError": "Erreur itération",
+      "changesApplied": "Modifications appliquées",
+      "changesRejected": "Modifications refusées"
+    }
+  },
+  "pageChat": {
+    "imageHint": "💡 Pour modifier une image, clique directement dessus dans l'aperçu ! Tu pourras importer la photo de ton choix.",
+    "reformulate": "Reformule ta demande et réessaie.",
+    "noCredits": "Crédits insuffisants. Recharge pour continuer.",
+    "applied": "Modification appliquée.",
+    "appliedNetworkError": "Modification appliquée mais erreur réseau pendant la sauvegarde.",
+    "networkError": "Erreur réseau.",
+    "networkErrorRetry": "Erreur réseau. Réessaie.",
+    "cancelled": "Modification annulée.",
+    "partialUndo": "Annulation partielle (colonnes manquantes : {cols}).",
+    "suggestHeader": "Demande une modification à l'IA",
+    "askAi": "Demande à l'IA...",
+    "undoTitle": "Annuler la dernière modification",
+    "collapse": "Réduire",
+    "describeChangeTitle": "Décris ce que tu veux modifier",
+    "describeChange": "Décris la modification...",
+    "chatAi": "Chat IA",
+    "suggestions": {
+      "vitrine": [
+        "Change le titre principal",
+        "Modifie la couleur principale",
+        "Rends le CTA plus accrocheur",
+        "Ajoute un service",
+        "Change le fond du hero",
+        "Rends le ton plus professionnel"
+      ],
+      "vente": [
+        "Change le titre principal",
+        "Rends le CTA plus urgent",
+        "Modifie les bénéfices",
+        "Change la couleur principale",
+        "Améliore la section garantie",
+        "Modifie la FAQ"
+      ],
+      "capture": [
+        "Change le titre principal",
+        "Rends le CTA plus urgent",
+        "Ajoute plus de bénéfices",
+        "Change la couleur principale",
+        "Modifie la description",
+        "Rends le ton plus professionnel"
+      ]
+    }
+  },
+  "contentEditor": {
+    "toast": {
+      "copied": "Copié",
+      "copiedInClipboard": "Le contenu est dans le presse-papiers.",
+      "clipboardBlocked": "Ton navigateur bloque le clipboard. Sélectionne puis Ctrl/Cmd+C.",
+      "downloadImpossible": "Téléchargement impossible",
+      "downloadBlocked": "Ton navigateur a bloqué le téléchargement.",
+      "saved": "Enregistré",
+      "savedDesc": "Ton contenu a été sauvegardé.",
+      "deleted": "Supprimé",
+      "deletedDesc": "Le contenu a été supprimé.",
+      "duplicated": "Dupliqué",
+      "duplicatedDesc": "Un nouveau contenu a été créé.",
+      "pdfError": "Impossible de générer le PDF.",
+      "previewCopied": "Preview copiée",
+      "kitCopied": "Kit copié"
+    },
+    "unsaved": "Modifications non enregistrées",
+    "irreversible": "Cette action est irréversible.",
+    "funnelHint": "Pour les funnels, Tipote stocke un JSON (contentData) puis rend le HTML de façon déterministe.",
+    "editHint": "Édite librement. Cmd/Ctrl+S pour sauvegarder.",
+    "jsonStored": "JSON stocké (lecture seule)",
+    "clickGenerateHtml": "Générer HTML",
+    "placeholder": "Colle ou écris ton contenu ici…",
+    "pinterestSettings": "Paramètres Pinterest"
   }
 }

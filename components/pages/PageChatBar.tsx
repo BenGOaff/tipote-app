@@ -7,6 +7,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Send, Loader2, Undo2, Check, X, MessageCircle, Sparkles, ChevronRight, ChevronLeft } from "lucide-react";
 
 type Props = {
@@ -48,6 +49,7 @@ type ChatMessage = {
 };
 
 export default function PageChatBar({ pageId, templateId, kind, contentData, brandTokens, onUpdate, beforeSubmit, disabled, locale, compact }: Props) {
+  const t = useTranslations("pageChat");
   const [instruction, setInstruction] = useState("");
   const [loading, setLoading] = useState(false);
   const [reformulating, setReformulating] = useState(false);
@@ -106,7 +108,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
 
       const data = await res.json();
       if (data.tip === "click_image") {
-        addMessage("assistant", "💡 Pour modifier une image, clique directement dessus dans l'aperçu ! Tu pourras importer la photo de ton choix.");
+        addMessage("assistant", t("imageHint"));
         setInstruction("");
         return;
       }
@@ -135,7 +137,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
   // Reject reformulation
   const handleRejectReformulation = useCallback(() => {
     setReformulation(null);
-    addMessage("assistant", "Reformule ta demande et réessaie.");
+    addMessage("assistant", t("reformulate"));
     inputRef.current?.focus();
   }, []);
 
@@ -163,7 +165,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
 
       if (!res.ok) {
         const errMsg = data.code === "NO_CREDITS"
-          ? "Crédits insuffisants. Recharge pour continuer."
+          ? t("noCredits")
           : (data.error || "Erreur lors de la modification.");
         setError(errMsg);
         addMessage("assistant", errMsg);
@@ -171,7 +173,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         return;
       }
 
-      const explanation = data.explanation || "Modification appliquée.";
+      const explanation = data.explanation || t("applied");
       addMessage("assistant", explanation);
       setInstruction("");
       onUpdate(data.nextContentData, data.nextBrandTokens, explanation);
@@ -197,11 +199,11 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         }
       } catch (e: any) {
         console.error("[PageChatBar] iteration save network error", e);
-        setError("Modification appliquée mais erreur réseau pendant la sauvegarde.");
+        setError(t("appliedNetworkError"));
       }
     } catch {
-      setError("Erreur réseau.");
-      addMessage("assistant", "Erreur réseau. Réessaie.");
+      setError(t("networkError"));
+      addMessage("assistant", t("networkErrorRetry"));
       setHistory((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);
@@ -214,7 +216,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
     const last = history[history.length - 1];
     setHistory((prev) => prev.slice(0, -1));
     onUpdate(last.contentData, last.brandTokens, "Annule");
-    addMessage("assistant", "Modification annulée.");
+    addMessage("assistant", t("cancelled"));
 
     fetch(`/api/pages/${pageId}`, {
       method: "PATCH",
@@ -227,33 +229,12 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
       const d = await r.json().catch(() => ({} as any));
       if (!r.ok) console.error("[PageChatBar] undo save failed", d);
       else if (Array.isArray(d?.dropped) && d.dropped.length > 0) {
-        setError(`Annulation partielle (colonnes manquantes : ${d.dropped.join(", ")}).`);
+        setError(t("partialUndo", { cols: d.dropped.join(", ") }));
       }
     }).catch((e) => console.error("[PageChatBar] undo network error", e));
   }, [history, onUpdate, pageId]);
 
-  const suggestions = kind === "vitrine" ? [
-    "Change le titre principal",
-    "Modifie la couleur principale",
-    "Rends le CTA plus accrocheur",
-    "Ajoute un service",
-    "Change le fond du hero",
-    "Rends le ton plus professionnel",
-  ] : kind === "vente" ? [
-    "Change le titre principal",
-    "Rends le CTA plus urgent",
-    "Modifie les bénéfices",
-    "Change la couleur principale",
-    "Améliore la section garantie",
-    "Modifie la FAQ",
-  ] : [
-    "Change le titre principal",
-    "Rends le CTA plus urgent",
-    "Ajoute plus de bénéfices",
-    "Change la couleur principale",
-    "Modifie la description",
-    "Rends le ton plus professionnel",
-  ];
+  const suggestions = t.raw(`suggestions.${kind}` as any) as string[];
 
   // ─── Compact mode: embedded chat panel (no collapse, minimal chrome) ───
   if (compact) {
@@ -263,7 +244,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs font-semibold">Chat IA</span>
+            <span className="text-xs font-semibold">{t("chatAi")}</span>
             <span className="text-[9px] text-muted-foreground bg-muted px-1 py-0.5 rounded">0.5 cr.</span>
           </div>
           {history.length > 0 && (
@@ -276,7 +257,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         {/* Compact messages */}
         <div className="flex-1 overflow-y-auto px-2 py-2 space-y-2 min-h-0">
           {messages.length === 0 && !reformulation && (
-            <p className="text-[11px] text-muted-foreground/60 text-center py-2">Demande une modification à l&apos;IA</p>
+            <p className="text-[11px] text-muted-foreground/60 text-center py-2">{t("suggestHeader")}</p>
           )}
 
           {messages.map((msg) => (
@@ -325,7 +306,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-              placeholder="Demande à l'IA..."
+              placeholder={t("askAi")}
               disabled={disabled || loading || reformulating}
               className="flex-1 bg-transparent text-[11px] placeholder:text-muted-foreground focus:outline-none resize-none min-h-[24px] max-h-[60px] py-0.5"
               rows={1}
@@ -374,7 +355,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
             <button
               onClick={handleUndo}
               className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"
-              title="Annuler la dernière modification"
+              title={t("undoTitle")}
             >
               <Undo2 className="w-3.5 h-3.5" />
             </button>
@@ -382,7 +363,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
           <button
             onClick={() => setCollapsed(true)}
             className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"
-            title="Réduire"
+            title={t("collapse")}
           >
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
@@ -394,7 +375,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         {messages.length === 0 && !reformulation && (
           <div className="text-center py-8">
             <Sparkles className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground mb-1">Décris ce que tu veux modifier</p>
+            <p className="text-sm text-muted-foreground mb-1">{t("describeChangeTitle")}</p>
             <p className="text-xs text-muted-foreground/60">Ex: &quot;Change le titre&quot;, &quot;Ajoute de l&apos;urgence&quot;</p>
           </div>
         )}
@@ -497,7 +478,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
                 handleSubmit();
               }
             }}
-            placeholder="Décris la modification..."
+            placeholder={t("describeChange")}
             disabled={disabled || loading || reformulating}
             className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none resize-none min-h-[36px] max-h-[100px] py-1"
             rows={1}
