@@ -4025,5 +4025,62 @@
     "creatingPyramids": "Tipote is creating your offer pyramids...",
     "analyzingProfile": "Analyzing your profile and creating 3 impactful offer pyramids.",
     "generating": "Generating"
+  },
+  "myContent": {
+    "folders": {
+      "posts": "My Posts",
+      "emails": "My Emails",
+      "articles": "My Articles",
+      "scripts": "My Scripts",
+      "offres": "My Offers",
+      "funnels": "My Pages",
+      "strategies": "My Strategies",
+      "quiz": "My Quizzes"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "published": "Published",
+      "draft": "Draft",
+      "planned": "Scheduled",
+      "failed": "Failed"
+    },
+    "toast": {
+      "error": "Error",
+      "cannotUpdate": "Unable to update the content",
+      "saved": "Saved ✅",
+      "savedDesc": "The content has been updated.",
+      "missingDate": "Missing date",
+      "missingDateDesc": "Choose a scheduling date.",
+      "cannotSchedule": "Unable to schedule the content",
+      "rescheduled": "Rescheduled",
+      "scheduled": "Scheduled",
+      "rescheduledDesc": "Publication rescheduled to {date} at {time}.",
+      "scheduledDesc": "The publication date has been saved.",
+      "cannotUnschedule": "Unable to unschedule the content",
+      "unscheduled": "Unscheduled ✅",
+      "unscheduledDesc": "The content is back to draft.",
+      "cannotPublish": "Unable to mark the content as published",
+      "published": "Published ✅",
+      "publishedDesc": "The status has been updated.",
+      "cannotDelete": "Unable to delete the content",
+      "deleted": "Deleted ✅",
+      "deletedDesc": "The content has been deleted.",
+      "pageDeleted": "Page deleted"
+    },
+    "ui": {
+      "subtitle": "Posts, emails, articles, scripts and pages — all in one place.",
+      "search": "Search...",
+      "elementOne": "item",
+      "elementMany": "items",
+      "noQuiz": "No quiz created yet.",
+      "manage": "Manage",
+      "noPages": "No page created yet.",
+      "capturedLeads": "Captured leads",
+      "noLeads": "No lead captured for this page yet.",
+      "firstName": "First name",
+      "titlePh": "Title...",
+      "contentPh": "Content...",
+      "csvHeader": "Email,First name,Date"
+    }
   }
 }

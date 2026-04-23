@@ -4025,5 +4025,62 @@
     "creatingPyramids": "Tipote sta creando le tue piramidi di offerte...",
     "analyzingProfile": "Analisi del tuo profilo e creazione di 3 piramidi di offerte d'impatto.",
     "generating": "Generazione in corso"
+  },
+  "myContent": {
+    "folders": {
+      "posts": "I miei Post",
+      "emails": "Le mie Email",
+      "articles": "I miei Articoli",
+      "scripts": "I miei Script",
+      "offres": "Le mie Offerte",
+      "funnels": "Le mie Pagine",
+      "strategies": "Le mie Strategie",
+      "quiz": "I miei Quiz"
+    },
+    "status": {
+      "scheduled": "Pianificato",
+      "published": "Pubblicato",
+      "draft": "Bozza",
+      "planned": "Pianificato",
+      "failed": "Errore"
+    },
+    "toast": {
+      "error": "Errore",
+      "cannotUpdate": "Impossibile aggiornare il contenuto",
+      "saved": "Salvato ✅",
+      "savedDesc": "Il contenuto è stato aggiornato.",
+      "missingDate": "Data mancante",
+      "missingDateDesc": "Scegli una data di pianificazione.",
+      "cannotSchedule": "Impossibile pianificare il contenuto",
+      "rescheduled": "Ripianificato",
+      "scheduled": "Pianificato",
+      "rescheduledDesc": "Pubblicazione ripianificata al {date} alle {time}.",
+      "scheduledDesc": "La data di pubblicazione è stata salvata.",
+      "cannotUnschedule": "Impossibile rimuovere la pianificazione",
+      "unscheduled": "Non pianificato ✅",
+      "unscheduledDesc": "Il contenuto torna in bozza.",
+      "cannotPublish": "Impossibile segnare il contenuto come pubblicato",
+      "published": "Pubblicato ✅",
+      "publishedDesc": "Lo stato è stato aggiornato.",
+      "cannotDelete": "Impossibile eliminare il contenuto",
+      "deleted": "Eliminato ✅",
+      "deletedDesc": "Il contenuto è stato eliminato.",
+      "pageDeleted": "Pagina eliminata"
+    },
+    "ui": {
+      "subtitle": "Post, email, articoli, script e pagine — tutto in un solo posto.",
+      "search": "Cerca...",
+      "elementOne": "elemento",
+      "elementMany": "elementi",
+      "noQuiz": "Nessun quiz creato.",
+      "manage": "Gestisci",
+      "noPages": "Nessuna pagina creata.",
+      "capturedLeads": "Lead acquisiti",
+      "noLeads": "Nessun lead acquisito per questa pagina.",
+      "firstName": "Nome",
+      "titlePh": "Titolo...",
+      "contentPh": "Contenuto...",
+      "csvHeader": "Email,Nome,Data"
+    }
   }
 }

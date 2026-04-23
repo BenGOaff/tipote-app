@@ -4025,5 +4025,62 @@
     "creatingPyramids": "Tipote يُنشئ هرمي عروضك...",
     "analyzingProfile": "تحليل ملفك الشخصي وإنشاء 3 أهرام عروض مؤثرة.",
     "generating": "جاري الإنشاء"
+  },
+  "myContent": {
+    "folders": {
+      "posts": "منشوراتي",
+      "emails": "رسائلي",
+      "articles": "مقالاتي",
+      "scripts": "سكربتاتي",
+      "offres": "عروضي",
+      "funnels": "صفحاتي",
+      "strategies": "استراتيجياتي",
+      "quiz": "اختباراتي"
+    },
+    "status": {
+      "scheduled": "مُجدوَل",
+      "published": "منشور",
+      "draft": "مسودة",
+      "planned": "مُجدوَل",
+      "failed": "فشل"
+    },
+    "toast": {
+      "error": "خطأ",
+      "cannotUpdate": "تعذّر تحديث المحتوى",
+      "saved": "تم الحفظ ✅",
+      "savedDesc": "تم تحديث المحتوى.",
+      "missingDate": "التاريخ ناقص",
+      "missingDateDesc": "اختر تاريخ الجدولة.",
+      "cannotSchedule": "تعذّرت جدولة المحتوى",
+      "rescheduled": "أُعيدت الجدولة",
+      "scheduled": "مُجدوَل",
+      "rescheduledDesc": "أُعيد جدولة النشر في {date} الساعة {time}.",
+      "scheduledDesc": "تم حفظ تاريخ النشر.",
+      "cannotUnschedule": "تعذّر إلغاء جدولة المحتوى",
+      "unscheduled": "أُلغيت الجدولة ✅",
+      "unscheduledDesc": "عاد المحتوى إلى مسودة.",
+      "cannotPublish": "تعذّر تعليم المحتوى كمنشور",
+      "published": "منشور ✅",
+      "publishedDesc": "تم تحديث الحالة.",
+      "cannotDelete": "تعذّر حذف المحتوى",
+      "deleted": "تم الحذف ✅",
+      "deletedDesc": "تم حذف المحتوى.",
+      "pageDeleted": "تم حذف الصفحة"
+    },
+    "ui": {
+      "subtitle": "منشورات ورسائل بريد ومقالات وسكربتات وصفحات — كل شيء في مكان واحد.",
+      "search": "بحث...",
+      "elementOne": "عنصر",
+      "elementMany": "عناصر",
+      "noQuiz": "لم يتم إنشاء أي اختبار.",
+      "manage": "إدارة",
+      "noPages": "لم يتم إنشاء أي صفحة.",
+      "capturedLeads": "العملاء المحتملون الملتقطون",
+      "noLeads": "لم يُلتقط أي عميل محتمل لهذه الصفحة.",
+      "firstName": "الاسم الأول",
+      "titlePh": "العنوان...",
+      "contentPh": "المحتوى...",
+      "csvHeader": "البريد الإلكتروني,الاسم الأول,التاريخ"
+    }
   }
 }

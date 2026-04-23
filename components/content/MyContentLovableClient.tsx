@@ -11,6 +11,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -276,6 +277,7 @@ export default function MyContentLovableClient({
   error,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("myContent");
 
   const [view, setView] = useState<"list" | "calendar">(initialView);
   const [search, setSearch] = useState("");
@@ -355,20 +357,20 @@ export default function MyContentLovableClient({
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Erreur",
-          description: json?.error ?? "Impossible de mettre à jour le contenu",
+          title: t("toast.error"),
+          description: json?.error ?? t("toast.cannotUpdate"),
           variant: "destructive",
         });
         return;
       }
 
-      toast({ title: "Enregistré ✅", description: "Le contenu a été mis à jour." });
+      toast({ title: t("toast.saved"), description: t("toast.savedDesc") });
       setEditingContent(null);
       router.refresh();
     } catch (e) {
       toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible de mettre à jour le contenu",
+        title: t("toast.error"),
+        description: e instanceof Error ? e.message : t("toast.cannotUpdate"),
         variant: "destructive",
       });
     } finally {
@@ -380,8 +382,8 @@ export default function MyContentLovableClient({
     if (!planningContent) return;
     if (!planDate) {
       toast({
-        title: "Date manquante",
-        description: "Choisis une date de planification.",
+        title: t("toast.missingDate"),
+        description: t("toast.missingDateDesc"),
         variant: "destructive",
       });
       return;
@@ -401,8 +403,8 @@ export default function MyContentLovableClient({
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Erreur",
-          description: json?.error ?? "Impossible de planifier le contenu",
+          title: t("toast.error"),
+          description: json?.error ?? t("toast.cannotSchedule"),
           variant: "destructive",
         });
         return;
@@ -410,17 +412,17 @@ export default function MyContentLovableClient({
 
       const isReschedule = normalizeKeyStatus(planningContent.status) === "scheduled";
       toast({
-        title: isReschedule ? "Reprogrammé" : "Planifié",
+        title: isReschedule ? t("toast.rescheduled") : t("toast.scheduled"),
         description: isReschedule
-          ? `Publication reprogrammée au ${planDate} à ${planTime || "09:00"}.`
-          : "La date de publication a été enregistrée.",
+          ? t("toast.rescheduledDesc", { date: planDate, time: planTime || "09:00" })
+          : t("toast.scheduledDesc"),
       });
       setPlanningContent(null);
       router.refresh();
     } catch (e) {
       toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible de planifier le contenu",
+        title: t("toast.error"),
+        description: e instanceof Error ? e.message : t("toast.cannotSchedule"),
         variant: "destructive",
       });
     } finally {
@@ -443,19 +445,19 @@ export default function MyContentLovableClient({
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Erreur",
-          description: json?.error ?? "Impossible de déplanifier le contenu",
+          title: t("toast.error"),
+          description: json?.error ?? t("toast.cannotUnschedule"),
           variant: "destructive",
         });
         return;
       }
 
-      toast({ title: "Déplanifié ✅", description: "Le contenu repasse en brouillon." });
+      toast({ title: t("toast.unscheduled"), description: t("toast.unscheduledDesc") });
       router.refresh();
     } catch (e) {
       toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible de déplanifier le contenu",
+        title: t("toast.error"),
+        description: e instanceof Error ? e.message : t("toast.cannotUnschedule"),
         variant: "destructive",
       });
     } finally {
@@ -478,19 +480,19 @@ export default function MyContentLovableClient({
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Erreur",
-          description: json?.error ?? "Impossible de marquer le contenu comme publié",
+          title: t("toast.error"),
+          description: json?.error ?? t("toast.cannotPublish"),
           variant: "destructive",
         });
         return;
       }
 
-      toast({ title: "Publié ✅", description: "Le statut a été mis à jour." });
+      toast({ title: t("toast.published"), description: t("toast.publishedDesc") });
       router.refresh();
     } catch (e) {
       toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible de marquer le contenu comme publié",
+        title: t("toast.error"),
+        description: e instanceof Error ? e.message : t("toast.cannotPublish"),
         variant: "destructive",
       });
     } finally {
@@ -509,20 +511,20 @@ export default function MyContentLovableClient({
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.ok === false) {
         toast({
-          title: "Erreur",
-          description: json?.error ?? "Impossible de supprimer le contenu",
+          title: t("toast.error"),
+          description: json?.error ?? t("toast.cannotDelete"),
           variant: "destructive",
         });
         return;
       }
 
-      toast({ title: "Supprimé ✅", description: "Le contenu a été supprimé." });
+      toast({ title: t("toast.deleted"), description: t("toast.deletedDesc") });
       setDeleteConfirm(null);
       router.refresh();
     } catch (e) {
       toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible de supprimer le contenu",
+        title: t("toast.error"),
+        description: e instanceof Error ? e.message : t("toast.cannotDelete"),
         variant: "destructive",
       });
     } finally {
@@ -571,7 +573,7 @@ export default function MyContentLovableClient({
             <PageBanner
               icon={<ClipboardList className="w-5 h-5" />}
               title="Tous tes contenus"
-              subtitle="Posts, emails, articles, scripts et pages — tout au même endroit."
+              subtitle={t("ui.subtitle")}
             >
               <Button asChild size="sm" className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground">
                 <Link href="/create">
@@ -586,7 +588,7 @@ export default function MyContentLovableClient({
               <div className="relative flex-1 max-w-md w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher..."
+                  placeholder={t("ui.search")}
                   className="pl-9"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -647,10 +649,10 @@ export default function MyContentLovableClient({
                               <FIcon className={`w-5 h-5 ${folder.color}`} />
                             </div>
                             <div className="font-semibold text-sm group-hover:text-primary transition-colors">
-                              {folder.label}
+                              {t(`folders.${folder.id}` as any)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {count} {count <= 1 ? "élément" : "éléments"}
+                              {count} {count <= 1 ? t("ui.elementOne") : t("ui.elementMany")}
                             </div>
                           </Card>
                         </button>
@@ -670,7 +672,7 @@ export default function MyContentLovableClient({
                           const statusKey = normalizeKeyStatus(item.status);
                           const Icon = typeIcons[typeKey] ?? FileText;
                           const badgeClasses = statusColors[statusKey] ?? "bg-muted text-muted-foreground";
-                          const badgeLabel = statusLabels[statusKey] ?? "—";
+                          const badgeLabel = statusKey in { draft:1, scheduled:1, planned:1, published:1, failed:1 } ? t(`status.${statusKey}` as any) : "—";
 
                           return (
                             <Card key={item.id} className="p-4">
@@ -743,7 +745,7 @@ export default function MyContentLovableClient({
 
                   {quizzes.length === 0 ? (
                     <Card className="p-6">
-                      <p className="text-sm text-muted-foreground text-center py-4">Aucun quiz créé.</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("ui.noQuiz")}</p>
                     </Card>
                   ) : (
                     <div className="space-y-3">
@@ -785,7 +787,7 @@ export default function MyContentLovableClient({
                                 </div>
                               </div>
                               <Button variant="outline" size="sm" asChild>
-                                <Link href={`/quiz/${qz.id}`}>Gérer</Link>
+                                <Link href={`/quiz/${qz.id}`}>{t("ui.manage")}</Link>
                               </Button>
                             </div>
                           </Card>
@@ -819,7 +821,7 @@ export default function MyContentLovableClient({
 
                   {funnels.length === 0 ? (
                     <Card className="p-6">
-                      <p className="text-sm text-muted-foreground text-center py-4">Aucune page créée.</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("ui.noPages")}</p>
                     </Card>
                   ) : (
                     <div className="space-y-3">
@@ -918,11 +920,11 @@ export default function MyContentLovableClient({
                     <Dialog open onOpenChange={() => setFunnelLeads(null)}>
                       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                         <DialogHeader>
-                          <DialogTitle>Leads capturés</DialogTitle>
+                          <DialogTitle>{t("ui.capturedLeads")}</DialogTitle>
                           <DialogDescription>{funnelLeads.leads.length} lead(s)</DialogDescription>
                         </DialogHeader>
                         {funnelLeads.leads.length === 0 ? (
-                          <p className="text-sm text-muted-foreground py-4 text-center">Aucun lead capturé pour cette page.</p>
+                          <p className="text-sm text-muted-foreground py-4 text-center">{t("ui.noLeads")}</p>
                         ) : (
                           <div className="space-y-3">
                             <div className="overflow-x-auto">
@@ -930,7 +932,7 @@ export default function MyContentLovableClient({
                                 <thead>
                                   <tr className="border-b text-left">
                                     <th className="pb-2 font-medium">Email</th>
-                                    <th className="pb-2 font-medium">Prénom</th>
+                                    <th className="pb-2 font-medium">{t("ui.firstName")}</th>
                                     <th className="pb-2 font-medium">Date</th>
                                   </tr>
                                 </thead>
@@ -951,7 +953,7 @@ export default function MyContentLovableClient({
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                const csv = ["Email,Prénom,Date"];
+                                const csv = [t("ui.csvHeader")];
                                 for (const l of funnelLeads.leads) {
                                   csv.push(`${l.email ?? ""},${l.first_name ?? ""},${l.created_at ?? ""}`);
                                 }
@@ -1001,7 +1003,7 @@ export default function MyContentLovableClient({
                               try {
                                 await fetch(`/api/pages/${id}`, { method: "DELETE" });
                                 setFunnels((prev) => prev.filter((p) => p.id !== id));
-                                toast({ title: "Page supprimée" });
+                                toast({ title: t("toast.pageDeleted") });
                               } catch { /* ignore */ }
                             }}
                           >
@@ -1030,7 +1032,7 @@ export default function MyContentLovableClient({
                     return (
                       <h2 className="text-lg font-bold flex items-center gap-2">
                         <FIcon className={`w-5 h-5 ${folder.color}`} />
-                        {folder.label}
+                        {t(`folders.${folder.id}` as any)}
                       </h2>
                     );
                   })()}
@@ -1066,7 +1068,7 @@ export default function MyContentLovableClient({
 
                                 const badgeClasses =
                                   statusColors[statusKey] ?? "bg-muted text-muted-foreground";
-                                const badgeLabel = statusLabels[statusKey] ?? "—";
+                                const badgeLabel = statusKey in { draft:1, scheduled:1, planned:1, published:1, failed:1 } ? t(`status.${statusKey}` as any) : "—";
 
                                 return (
                                   <Card key={item.id} className="p-4">
@@ -1190,7 +1192,7 @@ export default function MyContentLovableClient({
                       id="edit-title"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      placeholder="Titre..."
+                      placeholder={t("ui.titlePh")}
                     />
                   </div>
 
@@ -1201,7 +1203,7 @@ export default function MyContentLovableClient({
                       value={editBody}
                       onChange={(e) => setEditBody(e.target.value)}
                       rows={12}
-                      placeholder="Contenu..."
+                      placeholder={t("ui.contentPh")}
                     />
                   </div>
                 </div>
