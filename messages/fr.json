@@ -634,7 +634,11 @@
       "disconnectedDesc": "La connexion a été supprimée.",
       "errorTitle": "Erreur",
       "errorUnknown": "Erreur inconnue",
-      "errorNetwork": "Erreur réseau"
+      "errorNetwork": "Erreur réseau",
+      "connectSuccess": "Compte connecté avec succès.",
+      "connectError": "Erreur lors de la connexion du compte.",
+      "disconnectSuccess": "Compte déconnecté avec succès.",
+      "disconnectError": "Erreur lors de la déconnexion du compte."
     }
   },
   "publishModal": {
@@ -753,7 +757,12 @@
       "provocateur": "Provocateur",
       "storytelling": "Storytelling",
       "humoristique": "Humoristique",
-      "serieux": "Sérieux"
+      "serieux": "Sérieux",
+      "professional": "Professionnel",
+      "friendly": "Amical",
+      "humorous": "Humoristique",
+      "inspirational": "Inspirant",
+      "direct": "Direct"
     },
     "objectifsTitle": "Objectifs",
     "objectifsDesc": "Que souhaitez-vous accomplir avec les auto-commentaires ?",
@@ -762,7 +771,11 @@
       "vendre": "Vendre",
       "divertir": "Divertir",
       "inspirer": "Inspirer",
-      "community": "Construire communauté"
+      "community": "Construire communauté",
+      "engagement": "Générer de l'engagement",
+      "visibility": "Augmenter la visibilité",
+      "authority": "Démontrer mon expertise",
+      "network": "Élargir mon réseau"
     },
     "langageTitle": "Langage & Vocabulaire",
     "langageDesc": "Personnalisez le vocabulaire utilisé dans vos commentaires",
@@ -778,7 +791,9 @@
       "ok": "Paramètres sauvegardés",
       "okDesc": "Vos préférences d'auto-commentaire ont été mises à jour.",
       "error": "Erreur",
-      "errorDesc": "Impossible de sauvegarder"
+      "errorDesc": "Impossible de sauvegarder",
+      "saveSuccess": "Préférences enregistrées avec succès.",
+      "saveError": "Erreur lors de l'enregistrement des préférences."
     }
   },
   "settingsPage": {
@@ -817,7 +832,10 @@
       },
       "passwordDialog": {
         "description": "Modifier votre mot de passe Tipote"
-      }
+      },
+      "lastName": "Nom",
+      "saveSuccess": "Profil mis à jour avec succès.",
+      "saveError": "Erreur lors de la sauvegarde du profil."
     },
     "connections": {
       "sioTitle": "Systeme.io",
@@ -829,7 +847,9 @@
       "sioPlaceholder": "Colle ta clé API ici...",
       "sioSaved": "Clé API Systeme.io enregistrée",
       "save": "Enregistrer",
-      "saving": "Enregistrement…"
+      "saving": "Enregistrement…",
+      "title": "Connexions",
+      "description": "Gère tes intégrations et comptes connectés."
     },
     "reglages": {
       "langTitle": "Langue et contenu",
@@ -896,7 +916,14 @@
       "allGeneratedOffersDeleted": "Toutes les offres générées ont été supprimées",
       "deleteAll": "Tout supprimer",
       "generatedBadge": "IA",
-      "untitledOffer": "Offre sans nom"
+      "untitledOffer": "Offre sans nom",
+      "title": "Préférences",
+      "notifications": "Notifications",
+      "notificationsDesc": "Reçois des alertes sur tes contenus et ton activité.",
+      "theme": "Thème",
+      "themeLight": "Clair",
+      "themeDark": "Sombre",
+      "themeSystem": "Système"
     },
     "positioningTab": {
       "nicheTitle": "Ma formule de niche",
@@ -922,7 +949,11 @@
       "overwriteTitle": "Modifier ton positionnement ?",
       "overwriteDesc": "Tu as déjà un positionnement enregistré. En sauvegardant, tu vas le remplacer par le nouveau. Ton positionnement actuel :",
       "overwriteCancel": "Annuler",
-      "overwriteConfirm": "Remplacer"
+      "overwriteConfirm": "Remplacer",
+      "title": "Mon positionnement",
+      "description": "Définis ton positionnement pour que Tipote adapte tous les contenus générés à ta voix et à ton audience.",
+      "saveSuccess": "Positionnement enregistré avec succès.",
+      "saveError": "Erreur lors de la sauvegarde du positionnement."
     }
   },
   "today": {
@@ -1040,7 +1071,14 @@
       "educatif": "Éducatif",
       "storytelling": "Storytelling",
       "provocateur": "Provocateur",
-      "minimaliste": "Minimaliste"
+      "minimaliste": "Minimaliste",
+      "professional": "Professionnel",
+      "friendly": "Amical",
+      "humorous": "Humoristique",
+      "inspirational": "Inspirant",
+      "educational": "Éducatif",
+      "direct": "Direct",
+      "provocative": "Provocateur"
     },
     "platforms": {
       "linkedin": "LinkedIn",
@@ -1050,7 +1088,8 @@
       "threads": "Threads",
       "email": "Email",
       "blog": "Blog/Article",
-      "youtube": "YouTube"
+      "youtube": "YouTube",
+      "tiktok": "TikTok"
     },
     "contentTypes": {
       "post": "Post réseaux sociaux",
@@ -1234,7 +1273,9 @@
     "progress": {
       "tasksCompleted": "Tâches complétées",
       "currentPhase": "Phase actuelle",
-      "revenueGoal": "Objectif revenu"
+      "revenueGoal": "Objectif revenu",
+      "daysRemaining": "Jours restants",
+      "outOf90": "Sur 90 jours"
     },
     "noTasks": "Aucune tâche dans cette phase pour l'instant.",
     "moreTasks": "Voir les {count} autres tâches",
@@ -1633,7 +1674,10 @@
     "listTitle": "Mes automatisations",
     "empty": {
       "title": "Aucune automatisation",
-      "description": "Choisis une plateforme ci-dessus pour créer ta première automatisation."
+      "description": "Choisis une plateforme ci-dessus pour créer ta première automatisation.",
+      "ctaDm": "Auto DM sur commentaire",
+      "ctaEmail": "Auto email sur commentaire",
+      "emailName": "Capture email sur commentaire"
     },
     "templates": {
       "title": "Templates prêts à l'emploi",
@@ -3165,7 +3209,17 @@
         "phase6_replay_challenge": "Replay du challenge préparé pour re-vente",
         "phase6_replay_webinar": "Replay envoyé aux inscrits absents"
       }
-    }
+    },
+    "newWebinar": "Nouveau webinaire",
+    "editWebinar": "Modifier le webinaire",
+    "deleteWebinar": "Supprimer ce webinaire ?",
+    "deleteWebinarDesc": "Cette action est irréversible.",
+    "webinarCreated": "Webinaire créé",
+    "webinarUpdated": "Webinaire mis à jour",
+    "webinarDeleted": "Webinaire supprimé",
+    "totalWebinars": "Total webinaires",
+    "noWebinars": "Aucun webinaire pour le moment.",
+    "noWebinarsHint": "Créez votre premier webinaire pour commencer à suivre vos KPIs."
   },
   "quizForm": {
     "createTitle": "Créer un quiz",
