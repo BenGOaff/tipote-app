@@ -1202,13 +1202,39 @@ export default function PublicQuizClient({
         {toastOverlay}
         {shareOverlay}
         <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
-            <h2 className="text-2xl sm:text-4xl font-bold text-center">
-              {interp(quiz.capture_heading) || t.captureHeadingDefault}
-            </h2>
-            <RichParagraph
-              className="text-muted-foreground text-center text-lg"
-              text={interp(quiz.capture_subtitle) || t.captureSubtitleDefault}
-            />
+            {(() => {
+              const headingRaw = interp(quiz.capture_heading) || "";
+              if (headingRaw && isHtml(headingRaw)) {
+                return (
+                  <div
+                    className="tipote-quiz-rich text-2xl sm:text-4xl font-bold text-center"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(headingRaw) }}
+                  />
+                );
+              }
+              return (
+                <h2 className="text-2xl sm:text-4xl font-bold text-center">
+                  {headingRaw || t.captureHeadingDefault}
+                </h2>
+              );
+            })()}
+            {(() => {
+              const subtitleRaw = interp(quiz.capture_subtitle) || "";
+              if (subtitleRaw && isHtml(subtitleRaw)) {
+                return (
+                  <div
+                    className="tipote-quiz-rich text-muted-foreground text-center text-lg"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(subtitleRaw) }}
+                  />
+                );
+              }
+              return (
+                <RichParagraph
+                  className="text-muted-foreground text-center text-lg"
+                  text={subtitleRaw || t.captureSubtitleDefault}
+                />
+              );
+            })()}
 
             <div className="space-y-4">
               {(quiz.capture_first_name || quiz.capture_last_name) && (
