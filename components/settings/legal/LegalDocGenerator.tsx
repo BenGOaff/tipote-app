@@ -166,6 +166,7 @@ async function downloadPdf(text: string, fileName: string) {
 
 export default function LegalDocGenerator({ open, onOpenChange, docType }: Props) {
   const t = useTranslations("legalDocGen");
+  const tf = useTranslations("legalDocFields");
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<LegalFormData>({ ...DEFAULT_FORM_DATA });
   const [downloading, setDownloading] = useState(false);
@@ -254,27 +255,27 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
     const c = form.country;
     return (
       <div className="space-y-3">
-        <Field label="Type de structure" value={form.structureType} onChange={(v) => set("structureType", v)} placeholder="Ex: SAS, SARL, Auto-entrepreneur, Sàrl, SA, SRL..." />
-        <Field label="Raison sociale" value={form.raisonSociale} onChange={(v) => set("raisonSociale", v)} placeholder="Nom légal de votre entreprise" />
-        <Field label="Nom commercial (si différent)" value={form.nomCommercial} onChange={(v) => set("nomCommercial", v)} />
-        <Field label="Nom et prénom du responsable légal" value={form.responsableName} onChange={(v) => set("responsableName", v)} />
-        <Field label="Fonction du responsable" value={form.responsableFunction} onChange={(v) => set("responsableFunction", v)} placeholder="Ex: Président, Gérant, CEO" />
-        <Field label="Adresse complète du siège" value={form.adresse} onChange={(v) => set("adresse", v)} />
-        <Field label="Email de contact légal" value={form.email} onChange={(v) => set("email", v)} />
-        <Field label="Téléphone" value={form.telephone} onChange={(v) => set("telephone", v)} />
-        <Field label="URL du site" value={form.siteUrl} onChange={(v) => set("siteUrl", v)} placeholder="https://monsite.com" />
+        <Field label={tf("identity.structureType")} value={form.structureType} onChange={(v) => set("structureType", v)} placeholder={tf("identity.structureTypePh")} />
+        <Field label={tf("identity.raisonSociale")} value={form.raisonSociale} onChange={(v) => set("raisonSociale", v)} placeholder={tf("identity.raisonSocialePh")} />
+        <Field label={tf("identity.nomCommercial")} value={form.nomCommercial} onChange={(v) => set("nomCommercial", v)} />
+        <Field label={tf("identity.responsableName")} value={form.responsableName} onChange={(v) => set("responsableName", v)} />
+        <Field label={tf("identity.responsableFunction")} value={form.responsableFunction} onChange={(v) => set("responsableFunction", v)} placeholder={tf("identity.responsableFunctionPh")} />
+        <Field label={tf("identity.adresse")} value={form.adresse} onChange={(v) => set("adresse", v)} />
+        <Field label={tf("identity.email")} value={form.email} onChange={(v) => set("email", v)} />
+        <Field label={tf("identity.telephone")} value={form.telephone} onChange={(v) => set("telephone", v)} />
+        <Field label={tf("identity.siteUrl")} value={form.siteUrl} onChange={(v) => set("siteUrl", v)} placeholder="https://monsite.com" />
 
         {/* France-specific */}
         {c === "france" && (
           <>
             <div className="border-t pt-3 mt-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Registres — France</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{tf("identity.registersFr")}</p>
             </div>
-            <Field label="N° SIREN/SIRET" value={form.siren} onChange={(v) => set("siren", v)} />
-            <Field label="Ville du RCS" value={form.rcsVille} onChange={(v) => set("rcsVille", v)} />
-            <Field label="N° d'immatriculation au RCS" value={form.rcsNumero} onChange={(v) => set("rcsNumero", v)} />
-            <Field label="N° TVA intracommunautaire" value={form.tvaIntra} onChange={(v) => set("tvaIntra", v)} />
-            <Field label="Capital social (€)" value={form.capitalSocial} onChange={(v) => set("capitalSocial", v)} />
+            <Field label={tf("identity.siren")} value={form.siren} onChange={(v) => set("siren", v)} />
+            <Field label={tf("identity.rcsVille")} value={form.rcsVille} onChange={(v) => set("rcsVille", v)} />
+            <Field label={tf("identity.rcsNumero")} value={form.rcsNumero} onChange={(v) => set("rcsNumero", v)} />
+            <Field label={tf("identity.tvaIntra")} value={form.tvaIntra} onChange={(v) => set("tvaIntra", v)} />
+            <Field label={tf("identity.capitalSocial")} value={form.capitalSocial} onChange={(v) => set("capitalSocial", v)} />
           </>
         )}
 
@@ -282,10 +283,10 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
         {c === "belgique" && (
           <>
             <div className="border-t pt-3 mt-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Registres — Belgique</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{tf("identity.registersBe")}</p>
             </div>
-            <Field label="N° d'entreprise (BCE)" value={form.bceName} onChange={(v) => set("bceName", v)} />
-            <Field label="N° de TVA intracommunautaire" value={form.tvaBelgique} onChange={(v) => set("tvaBelgique", v)} />
+            <Field label={tf("identity.bceName")} value={form.bceName} onChange={(v) => set("bceName", v)} />
+            <Field label={tf("identity.tvaBelgique")} value={form.tvaBelgique} onChange={(v) => set("tvaBelgique", v)} />
           </>
         )}
 
@@ -293,12 +294,12 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
         {c === "luxembourg" && (
           <>
             <div className="border-t pt-3 mt-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Registres — Luxembourg</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{tf("identity.registersLu")}</p>
             </div>
-            <Field label="N° RCS Luxembourg (RCSL)" value={form.rcslNumero} onChange={(v) => set("rcslNumero", v)} />
-            <Field label="N° TVA" value={form.tvaLux} onChange={(v) => set("tvaLux", v)} />
-            <Field label="Capital social (€)" value={form.capitalSocial} onChange={(v) => set("capitalSocial", v)} />
-            <Field label="Autorisation d'établissement (si applicable)" value={form.autorisationEtablissement} onChange={(v) => set("autorisationEtablissement", v)} />
+            <Field label={tf("identity.rcslNumero")} value={form.rcslNumero} onChange={(v) => set("rcslNumero", v)} />
+            <Field label={tf("identity.tvaLux")} value={form.tvaLux} onChange={(v) => set("tvaLux", v)} />
+            <Field label={tf("identity.capitalSocial")} value={form.capitalSocial} onChange={(v) => set("capitalSocial", v)} />
+            <Field label={tf("identity.autorisationEtablissement")} value={form.autorisationEtablissement} onChange={(v) => set("autorisationEtablissement", v)} />
           </>
         )}
 
@@ -306,10 +307,10 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
         {c === "suisse" && (
           <>
             <div className="border-t pt-3 mt-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Registres — Suisse</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{tf("identity.registersCh")}</p>
             </div>
-            <Field label="N° IDE" value={form.ideNumero} onChange={(v) => set("ideNumero", v)} />
-            <Field label="N° TVA (si assujetti)" value={form.tvaSuisse} onChange={(v) => set("tvaSuisse", v)} />
+            <Field label={tf("identity.ideNumero")} value={form.ideNumero} onChange={(v) => set("ideNumero", v)} />
+            <Field label={tf("identity.tvaSuisse")} value={form.tvaSuisse} onChange={(v) => set("tvaSuisse", v)} />
           </>
         )}
 
@@ -317,11 +318,11 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
         {c === "canada" && (
           <>
             <div className="border-t pt-3 mt-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Registres — Canada</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{tf("identity.registersCa")}</p>
             </div>
-            <Field label="Province principale d'exercice" value={form.province} onChange={(v) => set("province", v)} placeholder="Ex: Québec, Ontario, Colombie-Britannique..." />
-            <Field label="N° d'entreprise (BN fédéral)" value={form.bnNumero} onChange={(v) => set("bnNumero", v)} />
-            <Field label="NEQ (Québec uniquement)" value={form.neqNumero} onChange={(v) => set("neqNumero", v)} />
+            <Field label={tf("identity.province")} value={form.province} onChange={(v) => set("province", v)} placeholder={tf("identity.provincePh")} />
+            <Field label={tf("identity.bnNumero")} value={form.bnNumero} onChange={(v) => set("bnNumero", v)} />
+            <Field label={tf("identity.neqNumero")} value={form.neqNumero} onChange={(v) => set("neqNumero", v)} />
           </>
         )}
       </div>
@@ -332,12 +333,12 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
     return (
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground mb-2">
-          Informations sur l&apos;hébergeur de votre site web (obligatoire pour les mentions légales).
+          {tf("hosting.intro")}
         </p>
-        <Field label="Nom / Raison sociale de l'hébergeur" value={form.hebergeurNom} onChange={(v) => set("hebergeurNom", v)} placeholder="Ex: OVH, Vercel, AWS, Infomaniak..." />
-        <Field label="Adresse complète" value={form.hebergeurAdresse} onChange={(v) => set("hebergeurAdresse", v)} />
-        <Field label="Téléphone" value={form.hebergeurTelephone} onChange={(v) => set("hebergeurTelephone", v)} />
-        <Field label="Site web" value={form.hebergeurUrl} onChange={(v) => set("hebergeurUrl", v)} placeholder="https://www.ovhcloud.com" />
+        <Field label={tf("hosting.nom")} value={form.hebergeurNom} onChange={(v) => set("hebergeurNom", v)} placeholder={tf("hosting.nomPh")} />
+        <Field label={tf("hosting.adresse")} value={form.hebergeurAdresse} onChange={(v) => set("hebergeurAdresse", v)} />
+        <Field label={tf("hosting.telephone")} value={form.hebergeurTelephone} onChange={(v) => set("hebergeurTelephone", v)} />
+        <Field label={tf("hosting.url")} value={form.hebergeurUrl} onChange={(v) => set("hebergeurUrl", v)} placeholder={tf("hosting.urlPh")} />
       </div>
     );
   }
@@ -345,20 +346,20 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
   function renderActivity() {
     return (
       <div className="space-y-3">
-        <Field label="Type d'activité principale" value={form.activiteType} onChange={(v) => set("activiteType", v)} placeholder="Coach, formation en ligne, e-commerce, SaaS, agence..." />
-        <Field label="Description des produits/services vendus" value={form.produitsDescription} onChange={(v) => set("produitsDescription", v)} placeholder="Formations en ligne sur le marketing digital, coaching individuel..." textarea />
+        <Field label={tf("activity.type")} value={form.activiteType} onChange={(v) => set("activiteType", v)} placeholder={tf("activity.typePh")} />
+        <Field label={tf("activity.products")} value={form.produitsDescription} onChange={(v) => set("produitsDescription", v)} placeholder={tf("activity.productsPh")} textarea />
         <div className="space-y-1.5">
-          <Label className="text-sm">Public visé</Label>
+          <Label className="text-sm">{tf("activity.publicLabel")}</Label>
           <Select value={form.publicVise} onValueChange={(v) => set("publicVise", v)}>
-            <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={tf("activity.choose")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="B2C">B2C (particuliers)</SelectItem>
-              <SelectItem value="B2B">B2B (professionnels)</SelectItem>
-              <SelectItem value="B2C et B2B">Mix B2C + B2B</SelectItem>
+              <SelectItem value="B2C">{tf("activity.b2c")}</SelectItem>
+              <SelectItem value="B2B">{tf("activity.b2b")}</SelectItem>
+              <SelectItem value="B2C et B2B">{tf("activity.mix")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <Field label="Zone(s) géographique(s) visée(s)" value={form.zoneGeo} onChange={(v) => set("zoneGeo", v)} placeholder="France, UE, monde entier..." />
+        <Field label={tf("activity.zone")} value={form.zoneGeo} onChange={(v) => set("zoneGeo", v)} placeholder={tf("activity.zonePh")} />
       </div>
     );
   }
@@ -367,19 +368,19 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
     return (
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label className="text-sm">Modalité de commande</Label>
+          <Label className="text-sm">{tf("payment.modality")}</Label>
           <Select value={form.modaliteCommande} onValueChange={(v) => set("modaliteCommande", v)}>
-            <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={tf("activity.choose")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="Paiement en ligne sur le site">Paiement en ligne sur le site</SelectItem>
-              <SelectItem value="Redirection vers Stripe Checkout">Redirection vers plateforme (Stripe, Shopify...)</SelectItem>
-              <SelectItem value="Prise de rendez-vous / devis">Prise de rendez-vous / devis</SelectItem>
+              <SelectItem value="Paiement en ligne sur le site">{tf("payment.online")}</SelectItem>
+              <SelectItem value="Redirection vers Stripe Checkout">{tf("payment.redirect")}</SelectItem>
+              <SelectItem value="Prise de rendez-vous / devis">{tf("payment.appointment")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <Field label="Moyens de paiement acceptés" value={form.moyensPaiement} onChange={(v) => set("moyensPaiement", v)} placeholder="Carte bancaire, PayPal, virement..." />
-        <Field label="Devise" value={form.devise} onChange={(v) => set("devise", v)} placeholder="EUR, CHF, CAD..." />
-        <Field label="Prestataire de paiement" value={form.prestatairePaiement} onChange={(v) => set("prestatairePaiement", v)} placeholder="Stripe, PayPal, Systeme.io..." />
+        <Field label={tf("payment.methods")} value={form.moyensPaiement} onChange={(v) => set("moyensPaiement", v)} placeholder={tf("payment.methodsPh")} />
+        <Field label={tf("payment.currency")} value={form.devise} onChange={(v) => set("devise", v)} placeholder={tf("payment.currencyPh")} />
+        <Field label={tf("payment.provider")} value={form.prestatairePaiement} onChange={(v) => set("prestatairePaiement", v)} placeholder={tf("payment.providerPh")} />
 
         <div className="border-t pt-3 mt-3">
           <div className="flex items-center gap-3 mb-3">
@@ -387,22 +388,22 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
               checked={form.produitsPhysiques}
               onCheckedChange={(v) => set("produitsPhysiques", v)}
             />
-            <Label className="text-sm">Je vends des produits physiques (livraison)</Label>
+            <Label className="text-sm">{tf("payment.physicalSwitch")}</Label>
           </div>
           {form.produitsPhysiques && (
             <div className="space-y-3 pl-1">
-              <Field label="Zones livrées" value={form.zonesLivrees} onChange={(v) => set("zonesLivrees", v)} placeholder="France métropolitaine, UE..." />
-              <Field label="Délais moyens de livraison" value={form.delaisLivraison} onChange={(v) => set("delaisLivraison", v)} placeholder="3-5 jours ouvrés" />
-              <Field label="Frais de livraison" value={form.fraisLivraison} onChange={(v) => set("fraisLivraison", v)} placeholder="Offerts dès 50€, sinon 4,90€" />
+              <Field label={tf("payment.zones")} value={form.zonesLivrees} onChange={(v) => set("zonesLivrees", v)} placeholder={tf("payment.zonesPh")} />
+              <Field label={tf("payment.delays")} value={form.delaisLivraison} onChange={(v) => set("delaisLivraison", v)} placeholder={tf("payment.delaysPh")} />
+              <Field label={tf("payment.fees")} value={form.fraisLivraison} onChange={(v) => set("fraisLivraison", v)} placeholder={tf("payment.feesPh")} />
             </div>
           )}
         </div>
 
         <div className="border-t pt-3 mt-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Rétractation & remboursement</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{tf("payment.refundHeader")}</p>
         </div>
-        <Field label="Exclusions au droit de rétractation (si applicables)" value={form.retractationExclusions} onChange={(v) => set("retractationExclusions", v)} placeholder="Contenu numérique immédiatement accessible, prestation déjà exécutée..." textarea />
-        <Field label="Politique de remboursement" value={form.politiqueRemboursement} onChange={(v) => set("politiqueRemboursement", v)} placeholder="Remboursement intégral sous 14 jours, hors contenus numériques déjà accédés." textarea />
+        <Field label={tf("payment.exclusions")} value={form.retractationExclusions} onChange={(v) => set("retractationExclusions", v)} placeholder={tf("payment.exclusionsPh")} textarea />
+        <Field label={tf("payment.refundPolicy")} value={form.politiqueRemboursement} onChange={(v) => set("politiqueRemboursement", v)} placeholder={tf("payment.refundPolicyPh")} textarea />
       </div>
     );
   }
@@ -411,17 +412,17 @@ export default function LegalDocGenerator({ open, onOpenChange, docType }: Props
     return (
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground mb-1">
-          Pour la politique de confidentialité et les mentions relatives aux données personnelles.
+          {tf("data.intro")}
         </p>
-        <Field label="Données collectées" value={form.donneesCollectees} onChange={(v) => set("donneesCollectees", v)} placeholder="Nom, prénom, email, téléphone, adresse, données de paiement (via prestataire), cookies..." textarea />
-        <Field label="Outils et sous-traitants utilisés" value={form.outilsUtilises} onChange={(v) => set("outilsUtilises", v)} placeholder="Google Analytics, Meta Pixel, Mailchimp, Stripe, Brevo..." textarea />
-        <Field label="Finalités du traitement" value={form.finalitesTraitement} onChange={(v) => set("finalitesTraitement", v)} placeholder="Newsletter, prospection, stats, gestion de compte, facturation..." textarea />
-        <Field label="Durées de conservation" value={form.dureesConservation} onChange={(v) => set("dureesConservation", v)} placeholder="Prospects: 3 ans, Clients: 10 ans (comptabilité), Cookies: 13 mois" textarea />
-        <Field label="Email de contact RGPD / vie privée" value={form.emailRgpd} onChange={(v) => set("emailRgpd", v)} placeholder="rgpd@monsite.com (si différent de l'email principal)" />
-        <Field label="Transferts de données hors UE / hors pays" value={form.transfertsHorsUE} onChange={(v) => set("transfertsHorsUE", v)} placeholder="USA (Google Analytics, Stripe) avec clauses contractuelles types..." textarea />
+        <Field label={tf("data.collected")} value={form.donneesCollectees} onChange={(v) => set("donneesCollectees", v)} placeholder={tf("data.collectedPh")} textarea />
+        <Field label={tf("data.tools")} value={form.outilsUtilises} onChange={(v) => set("outilsUtilises", v)} placeholder={tf("data.toolsPh")} textarea />
+        <Field label={tf("data.purposes")} value={form.finalitesTraitement} onChange={(v) => set("finalitesTraitement", v)} placeholder={tf("data.purposesPh")} textarea />
+        <Field label={tf("data.retention")} value={form.dureesConservation} onChange={(v) => set("dureesConservation", v)} placeholder={tf("data.retentionPh")} textarea />
+        <Field label={tf("data.emailRgpd")} value={form.emailRgpd} onChange={(v) => set("emailRgpd", v)} placeholder={tf("data.emailRgpdPh")} />
+        <Field label={tf("data.transfers")} value={form.transfertsHorsUE} onChange={(v) => set("transfertsHorsUE", v)} placeholder={tf("data.transfersPh")} textarea />
 
         {form.country === "canada" && (
-          <Field label="Responsable de la vie privée (Loi 25)" value={form.responsableViePrivee} onChange={(v) => set("responsableViePrivee", v)} placeholder="Nom du responsable de la protection des renseignements personnels" />
+          <Field label={tf("data.privacyOfficer")} value={form.responsableViePrivee} onChange={(v) => set("responsableViePrivee", v)} placeholder={tf("data.privacyOfficerPh")} />
         )}
       </div>
     );
