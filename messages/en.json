@@ -3338,7 +3338,8 @@
     "stepResults": "Results",
     "stepCapture": "Capture",
     "stepVirality": "Virality",
-    "stepShare": "Share"
+    "stepShare": "Share",
+    "reorder": "Reorder"
   },
   "quizDetail": {
     "backToList": "Back to quizzes",
@@ -3805,5 +3806,108 @@
         "hint": "E.g. capture page, sales page, one-page landing site."
       }
     }
+  },
+  "strategyPhases": {
+    "fondations": {
+      "title": "Phase 1: Foundations",
+      "period": "Lay the groundwork"
+    },
+    "croissance": {
+      "title": "Phase 2: Growth",
+      "period": "Grow your audience"
+    },
+    "scale": {
+      "title": "Phase 3: Scale",
+      "period": "Automate and scale"
+    },
+    "currentPhaseLabel": "Foundations"
+  },
+  "syncTasks": {
+    "syncImpossible": "Sync failed",
+    "genericError": "Something went wrong.",
+    "tasksSynced": "Tasks synced",
+    "tasksSyncedDesc": "{n} task(s) added from your plan.",
+    "syncDone": "Sync complete.",
+    "syncing": "Syncing…",
+    "syncButton": "Sync my tasks"
+  },
+  "pageGen": {
+    "error": "Error",
+    "ready": "Your page is ready!",
+    "creating": "Tipote is building your page…",
+    "redirecting": "Redirecting to the editor...",
+    "fewSeconds": "Should take just a few seconds (but it's worth the wait 😉)"
+  },
+  "funnelPreview": {
+    "htmlCopied": "HTML copied!",
+    "textCopied": "Text copied!",
+    "htmlDownloaded": "HTML downloaded!",
+    "pagePlaceholder": "Page title",
+    "previewTitle": "Your page preview",
+    "newTab": "New tab",
+    "downloadHtml": "Download HTML",
+    "pageFrame": "Page preview",
+    "pageReady": "Your page is ready!",
+    "pageReadyHint": "Download the HTML to import it into your tool (Systeme.io, WordPress, etc.). All you have to do is personalize the texts and add your images and logo if needed. Use the chat below to fine-tune the copy before downloading.",
+    "copywriting": "Copywriting",
+    "copyText": "Copy text",
+    "templateRendered": "The template is rendered from src/templates. To adjust the copy, use the iteration chat below.",
+    "copywritingGenerated": "Generated copy",
+    "copy": "Copy",
+    "html": "HTML",
+    "saveDraft": "Save as draft",
+    "publish": "Publish"
+  },
+  "projectSources": {
+    "title": "Context sources",
+    "subtitle": "Add context (notes, PDF, documents) that will be automatically injected into all your content generations.",
+    "add": "Add",
+    "noSources": "No sources yet.",
+    "noSourcesHint": "Add notes, your editorial guidelines, or import a PDF to enrich your generations.",
+    "maxReached": "Maximum 5 sources per project reached.",
+    "dialogTitle": "Add a context source",
+    "tabText": "Free text",
+    "tabFile": "File",
+    "titleLabel": "Title *",
+    "titlePh": "E.g. Editorial guidelines, brand tone...",
+    "contentLabel": "Content *",
+    "contentPh": "Paste your notes, guidelines, brand context, key info here...",
+    "addSource": "Add the source",
+    "fileTitle": "Title",
+    "fileTitlePh": "Title (auto-filled from file)",
+    "fileUpload": "File (PDF, DOCX, TXT — max 5 MB)",
+    "fileDrop": "Click or drop a file here",
+    "fileImport": "Import the file",
+    "toast": {
+      "error": "Error",
+      "unknown": "Unknown error",
+      "sourceAdded": "Source added",
+      "cannotAdd": "Unable to add the source.",
+      "cannotImport": "Unable to import the file.",
+      "sourceDeleted": "Source deleted",
+      "cannotDelete": "Unable to delete.",
+      "genericError": "Error"
+    }
+  },
+  "small": {
+    "selectMonth": "Select a month",
+    "templateNoImport": "This template doesn't have an import link configured yet.",
+    "addTask": "Add a task…",
+    "deleteTask": "Delete task",
+    "reorder": "Reorder",
+    "addTaskBtn": "Add a task",
+    "addShort": "Add"
+  },
+  "funnelChat": {
+    "request": "Request a change to the copy or the visual…",
+    "costHint": "Each chat change costs {n} credit.",
+    "credit": "{n} credit",
+    "placeholder": "E.g. make the title more direct, add 3 benefits, more urgent CTA...",
+    "send": "Send",
+    "messages": "{n} message(s)",
+    "noMessages": "No messages",
+    "cancel": "Cancel",
+    "accept": "Accept",
+    "noPending": "No pending changes"
   }
 }

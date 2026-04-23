@@ -3338,7 +3338,8 @@
     "stepResults": "Resultados",
     "stepCapture": "Captura",
     "stepVirality": "Viralidad",
-    "stepShare": "Compartir"
+    "stepShare": "Compartir",
+    "reorder": "Reordenar"
   },
   "quizDetail": {
     "backToList": "Volver a los quiz",
@@ -3805,5 +3806,108 @@
         "hint": "Ej.: página de captura, página de venta, landing one-page."
       }
     }
+  },
+  "strategyPhases": {
+    "fondations": {
+      "title": "Fase 1: Fundamentos",
+      "period": "Sentar las bases"
+    },
+    "croissance": {
+      "title": "Fase 2: Crecimiento",
+      "period": "Desarrollar tu audiencia"
+    },
+    "scale": {
+      "title": "Fase 3: Escala",
+      "period": "Automatizar y escalar"
+    },
+    "currentPhaseLabel": "Fundamentos"
+  },
+  "syncTasks": {
+    "syncImpossible": "Sincronización imposible",
+    "genericError": "Ha ocurrido un error.",
+    "tasksSynced": "Tareas sincronizadas",
+    "tasksSyncedDesc": "{n} tarea(s) añadida(s) desde tu plan.",
+    "syncDone": "Sincronización completada.",
+    "syncing": "Sincronizando…",
+    "syncButton": "Sincronizar mis tareas"
+  },
+  "pageGen": {
+    "error": "Error",
+    "ready": "¡Tu página está lista!",
+    "creating": "Tipote está creando tu página…",
+    "redirecting": "Redirigiendo al editor...",
+    "fewSeconds": "Solo debería tardar unos segundos (pero vale la pena esperar 😉)"
+  },
+  "funnelPreview": {
+    "htmlCopied": "¡HTML copiado!",
+    "textCopied": "¡Texto copiado!",
+    "htmlDownloaded": "¡HTML descargado!",
+    "pagePlaceholder": "Título de la página",
+    "previewTitle": "Vista previa de tu página",
+    "newTab": "Nueva pestaña",
+    "downloadHtml": "Descargar HTML",
+    "pageFrame": "Vista previa",
+    "pageReady": "¡Tu página está lista!",
+    "pageReadyHint": "Descarga el HTML para importarlo a tu herramienta (Systeme.io, WordPress, etc.). Solo tienes que personalizar los textos y añadir tus imágenes y logo si quieres. Usa el chat de abajo para ajustar el copywriting antes de descargar.",
+    "copywriting": "Copywriting",
+    "copyText": "Copiar el texto",
+    "templateRendered": "La plantilla se renderiza desde src/templates. Para ajustar el copywriting, usa el chat de iteración abajo.",
+    "copywritingGenerated": "Copywriting generado",
+    "copy": "Copiar",
+    "html": "HTML",
+    "saveDraft": "Guardar borrador",
+    "publish": "Publicar"
+  },
+  "projectSources": {
+    "title": "Fuentes de contexto",
+    "subtitle": "Añade contexto (notas, PDF, documentos) que se inyectará automáticamente en todas tus generaciones de contenido.",
+    "add": "Añadir",
+    "noSources": "Ninguna fuente por ahora.",
+    "noSourcesHint": "Añade notas, tu guía editorial, o importa un PDF para enriquecer tus generaciones.",
+    "maxReached": "Máximo 5 fuentes por proyecto alcanzado.",
+    "dialogTitle": "Añadir una fuente de contexto",
+    "tabText": "Texto libre",
+    "tabFile": "Archivo",
+    "titleLabel": "Título *",
+    "titlePh": "Ej.: Guía editorial, tono de marca...",
+    "contentLabel": "Contenido *",
+    "contentPh": "Pega aquí tus notas, guidelines, contexto de marca, información clave...",
+    "addSource": "Añadir la fuente",
+    "fileTitle": "Título",
+    "fileTitlePh": "Título (autocompletado desde el archivo)",
+    "fileUpload": "Archivo (PDF, DOCX, TXT — máx 5 MB)",
+    "fileDrop": "Haz clic o arrastra un archivo aquí",
+    "fileImport": "Importar el archivo",
+    "toast": {
+      "error": "Error",
+      "unknown": "Error desconocido",
+      "sourceAdded": "Fuente añadida",
+      "cannotAdd": "No se pudo añadir la fuente.",
+      "cannotImport": "No se pudo importar el archivo.",
+      "sourceDeleted": "Fuente eliminada",
+      "cannotDelete": "No se puede eliminar.",
+      "genericError": "Error"
+    }
+  },
+  "small": {
+    "selectMonth": "Selecciona un mes",
+    "templateNoImport": "Esta plantilla aún no tiene un enlace de importación configurado.",
+    "addTask": "Añadir una tarea…",
+    "deleteTask": "Eliminar la tarea",
+    "reorder": "Reordenar",
+    "addTaskBtn": "Añadir una tarea",
+    "addShort": "Añadir"
+  },
+  "funnelChat": {
+    "request": "Solicita una modificación del texto o del visual…",
+    "costHint": "Cada cambio vía chat cuesta {n} crédito.",
+    "credit": "{n} crédito",
+    "placeholder": "Ej: haz el título más directo, añade 3 beneficios, CTA más urgente...",
+    "send": "Enviar",
+    "messages": "{n} mensaje(s)",
+    "noMessages": "Ningún mensaje",
+    "cancel": "Cancelar",
+    "accept": "Aceptar",
+    "noPending": "Ningún cambio pendiente"
   }
 }

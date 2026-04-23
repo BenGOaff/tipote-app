@@ -3338,7 +3338,8 @@
     "stepResults": "النتائج",
     "stepCapture": "الالتقاط",
     "stepVirality": "الانتشار الفيروسي",
-    "stepShare": "المشاركة"
+    "stepShare": "المشاركة",
+    "reorder": "إعادة الترتيب"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",
@@ -3805,5 +3806,108 @@
         "hint": "مثال: صفحة التقاط، صفحة بيع، موقع من صفحة واحدة."
       }
     }
+  },
+  "strategyPhases": {
+    "fondations": {
+      "title": "المرحلة 1: الأسس",
+      "period": "إرساء الأسس"
+    },
+    "croissance": {
+      "title": "المرحلة 2: النمو",
+      "period": "تطوير جمهورك"
+    },
+    "scale": {
+      "title": "المرحلة 3: التوسع",
+      "period": "الأتمتة والتوسع"
+    },
+    "currentPhaseLabel": "الأسس"
+  },
+  "syncTasks": {
+    "syncImpossible": "تعذّرت المزامنة",
+    "genericError": "حدث خطأ.",
+    "tasksSynced": "تمت مزامنة المهام",
+    "tasksSyncedDesc": "تمت إضافة {n} مهمة من خطتك.",
+    "syncDone": "اكتملت المزامنة.",
+    "syncing": "جاري المزامنة…",
+    "syncButton": "مزامنة مهامي"
+  },
+  "pageGen": {
+    "error": "خطأ",
+    "ready": "صفحتك جاهزة!",
+    "creating": "Tipote يُنشئ صفحتك…",
+    "redirecting": "إعادة التوجيه إلى المحرر...",
+    "fewSeconds": "ينبغي أن يستغرق بضع ثوانٍ فقط (لكن الأمر يستحق الانتظار 😉)"
+  },
+  "funnelPreview": {
+    "htmlCopied": "تم نسخ HTML!",
+    "textCopied": "تم نسخ النص!",
+    "htmlDownloaded": "تم تنزيل HTML!",
+    "pagePlaceholder": "عنوان الصفحة",
+    "previewTitle": "معاينة صفحتك",
+    "newTab": "علامة تبويب جديدة",
+    "downloadHtml": "تنزيل HTML",
+    "pageFrame": "معاينة الصفحة",
+    "pageReady": "صفحتك جاهزة!",
+    "pageReadyHint": "حمّل HTML لاستيراده إلى أداتك (Systeme.io، WordPress، إلخ). ما عليك سوى تخصيص النصوص وإضافة صورك وشعارك إذا لزم. استخدم الدردشة أدناه لضبط النصوص قبل التنزيل.",
+    "copywriting": "النصوص",
+    "copyText": "نسخ النص",
+    "templateRendered": "يتم عرض القالب من src/templates. لتعديل النصوص، استخدم دردشة التكرار أدناه.",
+    "copywritingGenerated": "النصوص المُنشأة",
+    "copy": "نسخ",
+    "html": "HTML",
+    "saveDraft": "حفظ كمسودة",
+    "publish": "نشر"
+  },
+  "projectSources": {
+    "title": "مصادر السياق",
+    "subtitle": "أضف سياقًا (ملاحظات، PDF، مستندات) سيتم حقنه تلقائيًا في كل عمليات إنشاء المحتوى.",
+    "add": "إضافة",
+    "noSources": "لا توجد مصادر حتى الآن.",
+    "noSourcesHint": "أضف ملاحظات أو ميثاق التحرير الخاص بك أو استورد PDF لإثراء عمليات الإنشاء.",
+    "maxReached": "تم الوصول إلى الحد الأقصى: 5 مصادر لكل مشروع.",
+    "dialogTitle": "إضافة مصدر سياق",
+    "tabText": "نص حر",
+    "tabFile": "ملف",
+    "titleLabel": "العنوان *",
+    "titlePh": "مثال: ميثاق التحرير، نبرة العلامة...",
+    "contentLabel": "المحتوى *",
+    "contentPh": "الصق هنا ملاحظاتك وإرشاداتك وسياق علامتك ومعلوماتك الأساسية...",
+    "addSource": "إضافة المصدر",
+    "fileTitle": "العنوان",
+    "fileTitlePh": "العنوان (ملء تلقائي من الملف)",
+    "fileUpload": "ملف (PDF, DOCX, TXT — حد أقصى 5 ميغابايت)",
+    "fileDrop": "انقر أو أسقط ملفًا هنا",
+    "fileImport": "استيراد الملف",
+    "toast": {
+      "error": "خطأ",
+      "unknown": "خطأ غير معروف",
+      "sourceAdded": "تمت إضافة المصدر",
+      "cannotAdd": "تعذّرت إضافة المصدر.",
+      "cannotImport": "تعذّر استيراد الملف.",
+      "sourceDeleted": "تم حذف المصدر",
+      "cannotDelete": "تعذّر الحذف.",
+      "genericError": "خطأ"
+    }
+  },
+  "small": {
+    "selectMonth": "اختر شهرًا",
+    "templateNoImport": "هذا القالب لا يحتوي بعد على رابط استيراد مُهيأ.",
+    "addTask": "إضافة مهمة…",
+    "deleteTask": "حذف المهمة",
+    "reorder": "إعادة الترتيب",
+    "addTaskBtn": "إضافة مهمة",
+    "addShort": "إضافة"
+  },
+  "funnelChat": {
+    "request": "اطلب تعديلاً على النص أو العنصر المرئي…",
+    "costHint": "كل تعديل عبر الدردشة يكلف {n} رصيد.",
+    "credit": "{n} رصيد",
+    "placeholder": "مثال: اجعل العنوان أكثر مباشرة، أضف 3 مزايا، CTA أكثر إلحاحًا...",
+    "send": "إرسال",
+    "messages": "{n} رسالة",
+    "noMessages": "لا توجد رسائل",
+    "cancel": "إلغاء",
+    "accept": "قبول",
+    "noPending": "لا توجد تعديلات معلقة"
   }
 }
