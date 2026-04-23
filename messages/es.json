@@ -4135,5 +4135,33 @@
         "Secuencia de email nurturing durante varias semanas"
       ]
     }
+  },
+  "funnelForm": {
+    "header": "Crear una Página",
+    "steps": {
+      "mode": "Formato",
+      "template": "Plantilla",
+      "config": "Oferta",
+      "preview": "Resultado"
+    },
+    "noPreview": "Sin vista previa",
+    "toast": {
+      "cannotPreview": "No se puede previsualizar",
+      "cannotOpenPreview": "No se puede abrir la vista previa",
+      "generationError": "Error de generación",
+      "generationFailed": "La generación falló o expiró. Inténtalo de nuevo.",
+      "invalidAiResponse": "Respuesta IA inválida",
+      "invalidAiResponseDesc": "No se pudo leer el contentData de la plantilla. El modelo puede no haber devuelto JSON válido.",
+      "generationErrorShort": "Error de generación",
+      "cannotGenerate": "No se puede generar",
+      "saved": "Guardado",
+      "iterationOnlyTemplates": "De momento, las iteraciones se aplican a las plantillas (modo página lista para usar).",
+      "cannotIterate": "No se puede iterar",
+      "invalidIteration": "Respuesta de iteración inválida",
+      "iterationApplied": "Cambio propuesto. Revisa la vista previa, luego acepta o rechaza.",
+      "iterationError": "Error de iteración",
+      "changesApplied": "Cambios aplicados",
+      "changesRejected": "Cambios rechazados"
+    }
   }
 }

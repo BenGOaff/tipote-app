@@ -4135,5 +4135,33 @@
         "Sequenza email nurturing su più settimane"
       ]
     }
+  },
+  "funnelForm": {
+    "header": "Crea una Pagina",
+    "steps": {
+      "mode": "Formato",
+      "template": "Template",
+      "config": "Offerta",
+      "preview": "Risultato"
+    },
+    "noPreview": "Nessuna anteprima",
+    "toast": {
+      "cannotPreview": "Impossibile visualizzare l'anteprima",
+      "cannotOpenPreview": "Impossibile aprire l'anteprima",
+      "generationError": "Errore di generazione",
+      "generationFailed": "La generazione è fallita o è scaduta. Riprova.",
+      "invalidAiResponse": "Risposta IA non valida",
+      "invalidAiResponseDesc": "Impossibile leggere il contentData del template. Il modello potrebbe non aver restituito JSON valido.",
+      "generationErrorShort": "Errore generazione",
+      "cannotGenerate": "Impossibile generare",
+      "saved": "Salvato",
+      "iterationOnlyTemplates": "Per ora, le iterazioni si applicano ai template (modalità pagina pronta all'uso).",
+      "cannotIterate": "Impossibile iterare",
+      "invalidIteration": "Risposta iterazione non valida",
+      "iterationApplied": "Modifica proposta. Controlla l'anteprima, poi accetta o rifiuta.",
+      "iterationError": "Errore iterazione",
+      "changesApplied": "Modifiche applicate",
+      "changesRejected": "Modifiche rifiutate"
+    }
   }
 }

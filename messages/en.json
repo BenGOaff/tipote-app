@@ -4135,5 +4135,33 @@
         "Multi-week email nurturing sequence"
       ]
     }
+  },
+  "funnelForm": {
+    "header": "Create a Page",
+    "steps": {
+      "mode": "Format",
+      "template": "Template",
+      "config": "Offer",
+      "preview": "Result"
+    },
+    "noPreview": "No preview",
+    "toast": {
+      "cannotPreview": "Unable to preview",
+      "cannotOpenPreview": "Unable to open preview",
+      "generationError": "Generation error",
+      "generationFailed": "Generation failed or timed out. Please try again.",
+      "invalidAiResponse": "Invalid AI response",
+      "invalidAiResponseDesc": "Unable to read the template's contentData. The model may not have returned valid JSON.",
+      "generationErrorShort": "Generation error",
+      "cannotGenerate": "Unable to generate",
+      "saved": "Saved",
+      "iterationOnlyTemplates": "For now, iterations only apply to templates (ready-to-use page mode).",
+      "cannotIterate": "Unable to iterate",
+      "invalidIteration": "Invalid iteration response",
+      "iterationApplied": "Change proposed. Check the preview, then accept or reject.",
+      "iterationError": "Iteration error",
+      "changesApplied": "Changes applied",
+      "changesRejected": "Changes rejected"
+    }
   }
 }

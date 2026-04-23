@@ -4135,5 +4135,33 @@
         "تسلسل بريدي تربوي على عدة أسابيع"
       ]
     }
+  },
+  "funnelForm": {
+    "header": "إنشاء صفحة",
+    "steps": {
+      "mode": "التنسيق",
+      "template": "القالب",
+      "config": "العرض",
+      "preview": "النتيجة"
+    },
+    "noPreview": "لا توجد معاينة",
+    "toast": {
+      "cannotPreview": "تعذّرت المعاينة",
+      "cannotOpenPreview": "تعذّر فتح المعاينة",
+      "generationError": "خطأ في الإنشاء",
+      "generationFailed": "فشل الإنشاء أو انتهت المهلة. أعد المحاولة.",
+      "invalidAiResponse": "استجابة ذكاء اصطناعي غير صالحة",
+      "invalidAiResponseDesc": "تعذّرت قراءة contentData للقالب. قد لا يكون النموذج قد أعاد JSON صالحًا.",
+      "generationErrorShort": "خطأ الإنشاء",
+      "cannotGenerate": "تعذّر الإنشاء",
+      "saved": "تم الحفظ",
+      "iterationOnlyTemplates": "في الوقت الحالي، تنطبق التكرارات على القوالب فقط (وضع الصفحة الجاهزة).",
+      "cannotIterate": "تعذّر التكرار",
+      "invalidIteration": "استجابة تكرار غير صالحة",
+      "iterationApplied": "تم اقتراح تعديل. تحقّق من المعاينة ثم اقبل أو ارفض.",
+      "iterationError": "خطأ التكرار",
+      "changesApplied": "تم تطبيق التعديلات",
+      "changesRejected": "تم رفض التعديلات"
+    }
   }
 }

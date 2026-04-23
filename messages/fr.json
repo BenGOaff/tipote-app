@@ -4135,5 +4135,33 @@
         "Séquence email nurturing sur plusieurs semaines"
       ]
     }
+  },
+  "funnelForm": {
+    "header": "Créer une Page",
+    "steps": {
+      "mode": "Format",
+      "template": "Template",
+      "config": "Offre",
+      "preview": "Résultat"
+    },
+    "noPreview": "Aucun aperçu",
+    "toast": {
+      "cannotPreview": "Impossible de prévisualiser",
+      "cannotOpenPreview": "Impossible d'ouvrir l'aperçu",
+      "generationError": "Erreur de génération",
+      "generationFailed": "La génération a échoué ou le délai a expiré. Réessaye.",
+      "invalidAiResponse": "Réponse IA invalide",
+      "invalidAiResponseDesc": "Impossible de lire le contentData du template. Le modèle n'a peut-être pas renvoyé du JSON valide.",
+      "generationErrorShort": "Erreur génération",
+      "cannotGenerate": "Impossible de générer",
+      "saved": "Sauvegardé",
+      "iterationOnlyTemplates": "Pour l'instant, les itérations s'appliquent aux templates (mode page prête à l'emploi).",
+      "cannotIterate": "Impossible d'itérer",
+      "invalidIteration": "Réponse itération invalide",
+      "iterationApplied": "Modification proposée. Vérifie l'aperçu, puis accepte ou refuse.",
+      "iterationError": "Erreur itération",
+      "changesApplied": "Modifications appliquées",
+      "changesRejected": "Modifications refusées"
+    }
   }
 }
