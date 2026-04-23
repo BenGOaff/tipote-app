@@ -141,7 +141,7 @@ export default function SupportCategoryClient({
         )}
       </div>
 
-      <SupportFooter locale={locale} />
+      <SupportFooter />
       <SupportChatWidget locale={locale} />
     </div>
   );

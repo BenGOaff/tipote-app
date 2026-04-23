@@ -180,7 +180,7 @@ export function VideoUploader({
             }
           };
 
-          xhr.onerror = () => reject(new Error("Erreur réseau durant l'upload"));
+          xhr.onerror = () => reject(new Error(t("uploadNetworkError")));
           xhr.send(file);
         });
 
@@ -389,8 +389,8 @@ export function VideoUploader({
         <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
           <AlertCircle className="h-3 w-3" />
           {video.type === "image/gif"
-            ? "Le GIF animé sera publié comme vidéo sur Facebook (Reel) pour conserver l\u2019animation."
-            : t('videoStorageHint')}
+            ? t("gifReelNotice")
+            : t("videoStorageHint")}
         </div>
       )}
 

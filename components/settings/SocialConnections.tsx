@@ -320,7 +320,7 @@ export default function SocialConnections() {
 
     // Messenger
     if (searchParams.get("messenger_connected") === "1") {
-      toast({ title: "Messenger connecté", description: "Les automatisations DM Facebook sont maintenant actives." });
+      toast({ title: t("messengerConnected"), description: t("messengerConnectedDesc") });
       fetchConnections();
     }
     const messengerError = searchParams.get("messenger_error");

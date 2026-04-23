@@ -885,7 +885,7 @@ function QuickCreateAutomationModal({
   const t = useTranslations("postForm");
   const [keyword, setKeyword] = useState("");
   const [dmMessage, setDmMessage] = useState(
-    "Voici ton lien 👉 [lien à compléter]\n\nÀ très vite ! 🙌"
+    t("dmDefault")
   );
   const [saving, setSaving] = useState(false);
 
@@ -897,7 +897,7 @@ function QuickCreateAutomationModal({
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("Non authentifié");
+      if (!userData.user) throw new Error(t("notAuth"));
 
       const name = `Auto — "${keyword.trim()}"`;
       const { data, error } = await supabase
@@ -916,13 +916,13 @@ function QuickCreateAutomationModal({
 
       if (error || !data) throw new Error(error?.message ?? "Erreur inconnue");
 
-      toast.success("Automatisation créée !");
+      toast.success(t("automationCreated"));
       onCreated(data as QuickAuto);
       onOpenChange(false);
       setKeyword("");
-      setDmMessage("Voici ton lien 👉 [lien à compléter]\n\nÀ très vite ! 🙌");
+      setDmMessage(t("dmDefault"));
     } catch (err: any) {
-      toast.error(err.message ?? "Impossible de créer l'automatisation");
+      toast.error(err.message ?? t("cannotCreateAutomation"));
     } finally {
       setSaving(false);
     }

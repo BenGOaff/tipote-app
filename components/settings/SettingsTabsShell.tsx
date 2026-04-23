@@ -603,7 +603,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
 
-        toast({ title: "Profil mis à jour" });
+        toast({ title: tSP("toast.profileSaved") });
       } catch (e: any) {
         toast({
           title: "Enregistrement impossible",
@@ -636,7 +636,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
 
-        toast({ title: "Positionnement enregistré" });
+        toast({ title: tSP("toast.positioningSaved") });
       } catch (e: any) {
         toast({
           title: "Enregistrement impossible",
@@ -733,7 +733,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setOffers(saved);
         setInitialOffers(saved);
 
-        toast({ title: "Offres enregistrées" });
+        toast({ title: tSP("toast.offersSaved") });
       } catch (e: any) {
         toast({ title: "Impossible d'enregistrer", description: e?.message ?? "Erreur", variant: "destructive" });
       }
@@ -781,7 +781,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setInitialPersonaDetailedMarkdown(personaDetailedMarkdown);
         setInitialNarrativeSynthesisMarkdown(narrativeSynthesisMarkdown);
         setInitialCompetitorInsightsMarkdown(competitorInsightsMarkdown);
-        toast({ title: "Persona enregistré" });
+        toast({ title: tSP("toast.personaSaved") });
       } catch (e: any) {
         toast({ title: "Enregistrement impossible", description: e?.message ?? "Erreur inconnue", variant: "destructive" });
       }
@@ -859,8 +859,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         if (finalError) {
           if (finalError === "NO_CREDITS") {
             toast({
-              title: "Crédits insuffisants",
-              description: "L'enrichissement du persona coûte 1 crédit.",
+              title: tSP("toast.noCredits"),
+              description: tSP("toast.personaEnrichCost"),
               variant: "destructive",
             });
             return;
@@ -877,9 +877,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           // Don't update initialProfile here — it should only change after an explicit Save.
           // Updating it here made positioningDirty = false, disabling the Save button.
           setPersonaStale(false);
-          toast({ title: "Persona enrichi avec succès" });
+          toast({ title: tSP("toast.personaEnriched") });
         } else {
-          throw new Error("Aucun résultat reçu");
+          throw new Error(tSP("toast.noResult"));
         }
         return;
       }
@@ -889,8 +889,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       if (!json?.ok) {
         if (json?.error === "NO_CREDITS") {
           toast({
-            title: "Crédits insuffisants",
-            description: "L'enrichissement du persona coûte 1 crédit.",
+            title: tSP("toast.noCredits"),
+            description: tSP("toast.personaEnrichCost"),
             variant: "destructive",
           });
           return;
@@ -905,7 +905,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       if (json.persona_detailed_markdown) setPersonaDetailTab("detailed");
       // Don't update initialProfile here — keep dirty so Save button stays enabled.
       setPersonaStale(false);
-      toast({ title: "Persona enrichi avec succès" });
+      toast({ title: tSP("toast.personaEnriched") });
     } catch (e: any) {
       toast({
         title: "Erreur lors de l'enrichissement",
@@ -948,7 +948,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setTermsUrl(row?.terms_url ?? "");
         setCgvUrl(row?.cgv_url ?? "");
 
-        toast({ title: "URLs légales enregistrées" });
+        toast({ title: tSP("toast.legalUrlsSaved") });
       } catch (e: any) {
         toast({
           title: "Enregistrement impossible",
@@ -1108,14 +1108,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   async function onResetAccount() {
     try {
       const ok1 = window.confirm(
-        "⚠️ Réinitialiser ton Tipote ?\n\nTous les contenus, toutes les tâches et toutes les personnalisations seront effacés. C’est définitif.",
+        tSP("toast.resetConfirm"),
       );
       if (!ok1) return;
 
       const confirmWord = window.prompt('Tape "RESET" pour confirmer :');
       if ((confirmWord ?? "").trim().toUpperCase() !== "RESET") {
         toast({
-          title: "Réinitialisation annulée",
+          title: tSP("toast.resetCancelled"),
           description: 'Tu dois taper "RESET" pour confirmer.',
           variant: "destructive",
         });
@@ -1137,7 +1137,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       }
 
       toast({
-        title: "Tipote réinitialisé ✅",
+        title: tSP("toast.resetDone"),
         description: "On te renvoie vers l’onboarding.",
       });
 
@@ -1962,7 +1962,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {(nicheMechanism || !nicheTarget) && (
               <>
                 {" "}grâce à{" "}
-                <span className="font-semibold text-primary">{nicheMechanism || "[mécanisme unique]"}</span>
+                <span className="font-semibold text-primary">{nicheMechanism || tSP("placeholders.mechanism")}</span>
               </>
             )}
             {(nicheMarker || !nicheTarget) && (
@@ -2061,7 +2061,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               <Textarea
                 value={storySituationInitiale}
                 onChange={(e) => setStorySituationInitiale(e.target.value)}
-                placeholder="Ex: J'étais salarié(e) dans une grande entreprise depuis 8 ans. Je faisais ce qu'on attendait de moi, mais quelque chose manquait…"
+                placeholder={tSP("placeholders.story1")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2079,7 +2079,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               <Textarea
                 value={storyElementDeclencheur}
                 onChange={(e) => setStoryElementDeclencheur(e.target.value)}
-                placeholder="Ex: Un lundi matin, j'ai reçu un mail de restructuration. C'était le déclic : je ne voulais plus dépendre d'une décision qui n'était pas la mienne…"
+                placeholder={tSP("placeholders.story2")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2097,7 +2097,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               <Textarea
                 value={storyPeripeties}
                 onChange={(e) => setStoryPeripeties(e.target.value)}
-                placeholder="Ex: J'ai lancé mon activité sans plan, perdu mes premières économies, eu des mois à 0€ de CA. Ma famille doutait, je doutais aussi…"
+                placeholder={tSP("placeholders.story3")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2115,7 +2115,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               <Textarea
                 value={storyMomentCritique}
                 onChange={(e) => setStoryMomentCritique(e.target.value)}
-                placeholder="Ex: J'étais à deux doigts de tout arrêter. Et puis j'ai découvert une méthode / rencontré un mentor / compris quelque chose de fondamental…"
+                placeholder={tSP("placeholders.story4")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2133,7 +2133,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               <Textarea
                 value={storyResolution}
                 onChange={(e) => setStoryResolution(e.target.value)}
-                placeholder="Ex: En appliquant cette approche, j'ai signé mes premiers clients, puis 10, puis 50. Mon CA a atteint X€/mois en Y mois…"
+                placeholder={tSP("placeholders.story5")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2151,7 +2151,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               <Textarea
                 value={storySituationFinale}
                 onChange={(e) => setStorySituationFinale(e.target.value)}
-                placeholder="Ex: Aujourd'hui je vis de ma passion, j'ai accompagné +200 personnes et j'aide les [cible] à [objectif] sans [obstacle]. Mon objectif : …"
+                placeholder={tSP("placeholders.story6")}
                 className="ml-8 resize-y min-h-[80px]"
                 disabled={profileLoading}
               />
@@ -2275,7 +2275,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       value={personaDetailedMarkdown}
                       onChange={(e) => setPersonaDetailedMarkdown(e.target.value)}
                       className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
-                      placeholder="Persona détaillé..."
+                      placeholder={tSP("placeholders.personaDetail")}
                       autoFocus
                     />
                     <div className="flex justify-end gap-2">
@@ -2340,7 +2340,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                           value={competitorInsightsMarkdown}
                           onChange={(e) => setCompetitorInsightsMarkdown(e.target.value)}
                           className="w-full min-h-[200px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
-                          placeholder="Mécanisme unique & analyse concurrentielle..."
+                          placeholder={tSP("placeholders.mechanismAnalysis")}
                           autoFocus
                         />
                         <div className="flex justify-end gap-2">
@@ -2394,7 +2394,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       value={narrativeSynthesisMarkdown}
                       onChange={(e) => setNarrativeSynthesisMarkdown(e.target.value)}
                       className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
-                      placeholder="Synthèse narrative..."
+                      placeholder={tSP("placeholders.narrativeSummary")}
                       autoFocus
                     />
                     <div className="flex justify-end gap-2">

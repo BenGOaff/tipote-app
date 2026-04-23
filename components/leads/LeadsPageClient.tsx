@@ -248,7 +248,7 @@ export default function LeadsPageClient({ leads: initialLeads, error }: Props) {
 
           <div className="flex-1 p-4 sm:p-5 lg:p-6">
           <div className="max-w-[1200px] mx-auto w-full space-y-5">
-            <PageBanner icon={<Users className="w-5 h-5" />} title={t("title")} subtitle="Gère tes contacts et leads depuis un seul endroit." />
+            <PageBanner icon={<Users className="w-5 h-5" />} title={t("title")} subtitle={t("subtitle")} />
 
             {error && (
               <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800">

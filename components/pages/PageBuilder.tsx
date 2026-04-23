@@ -1843,7 +1843,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       }));
       setShowPublishModal(false);
     } catch (err: any) {
-      alert(`Publication échouée : ${err?.message || "erreur réseau"}`);
+      alert(t("publishFailed", { err: err?.message || t("networkError") }));
     } finally {
       setPublishing(false);
     }
@@ -1974,7 +1974,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       if (!res.ok) {
         const serverMsg = data?.error || "";
         const hint = /column|does not exist|schema/i.test(serverMsg)
-          ? " (une colonne est peut-être manquante — les dernières migrations Supabase doivent être appliquées)"
+          ? t("missingColumnsHint")
           : "";
         alert(`Impossible d'enregistrer la page de remerciement : ${serverMsg || `erreur ${res.status}`}${hint}`);
         return;
@@ -1989,7 +1989,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       setPage(prev => ({ ...prev, ...payload } as PageData));
       setShowThankYouModal(false);
     } catch (err: any) {
-      alert(`Impossible d'enregistrer la page de remerciement : ${err?.message || "erreur réseau"}`);
+      alert(t("thankYouSaveFailed", { err: err?.message || t("networkError") }));
     } finally { setSavingThankYou(false); }
   }, [page.id, thankYouHeading, thankYouSubtitle, thankYouMessage, thankYouCtas, thankYouShowEmailHint]);
 

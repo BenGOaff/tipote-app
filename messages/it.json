@@ -590,7 +590,8 @@
     "clickOpen": "Clicca per espandere",
     "clickClose": "Clicca per chiudere",
     "alreadyOpen": "Già aperto",
-    "ariaOpen": "Apri gemma"
+    "ariaOpen": "Apri gemma",
+    "networkError": "Errore di rete"
   },
   "templates": {
     "title": "Template Systeme.io",
@@ -651,7 +652,9 @@
       "connectError": "Errore durante la connessione dell'account.",
       "disconnectSuccess": "Account disconnesso correttamente.",
       "disconnectError": "Errore durante la disconnessione dell'account."
-    }
+    },
+    "messengerConnected": "Messenger connesso",
+    "messengerConnectedDesc": "Le automazioni DM Facebook sono ora attive."
   },
   "publishModal": {
     "publishOn": "Pubblica su {platform}",
@@ -966,6 +969,32 @@
       "description": "Definisci il tuo posizionamento affinché Tipote adatti tutto il contenuto generato alla tua voce e al tuo pubblico.",
       "saveSuccess": "Posizionamento salvato correttamente.",
       "saveError": "Errore nel salvataggio del posizionamento."
+    },
+    "toast": {
+      "profileSaved": "Profilo aggiornato",
+      "positioningSaved": "Posizionamento salvato",
+      "offersSaved": "Offerte salvate",
+      "personaSaved": "Persona salvato",
+      "noCredits": "Crediti insufficienti",
+      "personaEnrichCost": "L'arricchimento del persona costa 1 credito.",
+      "personaEnriched": "Persona arricchito con successo",
+      "noResult": "Nessun risultato ricevuto",
+      "legalUrlsSaved": "URL legali salvati",
+      "resetConfirm": "⚠️ Reimpostare il tuo Tipote?\n\nTutti i contenuti, task e personalizzazioni saranno cancellati. È definitivo.",
+      "resetCancelled": "Reset annullato",
+      "resetDone": "Tipote reimpostato ✅"
+    },
+    "placeholders": {
+      "mechanism": "[meccanismo unico]",
+      "story1": "Es.: Ero dipendente in una grande azienda da 8 anni. Facevo quello che ci si aspettava da me, ma qualcosa mancava…",
+      "story2": "Es.: Un lunedì mattina ho ricevuto un'email di ristrutturazione. È stato il clic: non volevo più dipendere da una decisione che non era mia…",
+      "story3": "Es.: Ho lanciato la mia attività senza un piano, ho perso i miei primi risparmi, ho avuto mesi a 0€ di fatturato. La mia famiglia dubitava, anch'io dubitavo…",
+      "story4": "Es.: Ero a un passo dal mollare. Poi ho scoperto un metodo / incontrato un mentore / capito qualcosa di fondamentale…",
+      "story5": "Es.: Applicando questo approccio, ho firmato i miei primi clienti, poi 10, poi 50. Il mio fatturato ha raggiunto X€/mese in Y mesi…",
+      "story6": "Es.: Oggi vivo della mia passione, ho accompagnato +200 persone e aiuto i [target] a [obiettivo] senza [ostacolo]. Il mio obiettivo: …",
+      "personaDetail": "Persona dettagliato...",
+      "mechanismAnalysis": "Meccanismo unico & analisi della concorrenza...",
+      "narrativeSummary": "Sintesi narrativa..."
     }
   },
   "today": {
@@ -1328,7 +1357,9 @@
       "phaseUpdatedDesc": "Le modifiche sono state salvate",
       "personaUpdated": "Persona aggiornata",
       "personaUpdatedDesc": "Le modifiche sono state salvate"
-    }
+    },
+    "savedShort": "Salvato",
+    "deleteTaskTitle": "Elimina il task"
   },
   "onboarding": {
     "title": "Benvenuto/a su Tipote",
@@ -1771,7 +1802,13 @@
     "errors": {
       "tableNotReady": "La tabella Supabase non esiste ancora. Segui la guida di configurazione sopra.",
       "saveFailed": "Errore durante il salvataggio"
-    }
+    },
+    "platformDescDmComment": "Auto DM + risposta commento",
+    "platformDescCommentOnly": "Auto risposta commento",
+    "platformDescLikeComment": "Auto like + risposta commento",
+    "commentReply": "Risposta commento",
+    "likeCommentReply": "Like + risposta commento",
+    "networkError": "Errore di rete"
   },
   "autoCommentPanel": {
     "title": "Auto-commenti",
@@ -1847,7 +1884,9 @@
     "uploading": "Caricamento in corso...",
     "dropText": "Trascina il tuo video qui o clicca per sfogliare",
     "videoStorageHint": "Il video sarà conservato in Supabase Storage — l'URL resta valido anche per i post programmati.",
-    "deleteLabel": "Elimina {name}"
+    "deleteLabel": "Elimina {name}",
+    "uploadNetworkError": "Errore di rete durante l'upload",
+    "gifReelNotice": "La GIF animata sarà pubblicata come video su Facebook (Reel) per preservare l’animazione."
   },
   "contentActions": {
     "viewEdit": "Visualizza / modifica",
@@ -2202,7 +2241,8 @@
     "saveError": "Errore nel salvataggio",
     "deleteSuccess": "Lead eliminato",
     "deleteError": "Errore nell'eliminazione",
-    "encryptionBadge": "I tuoi dati sono crittografati end-to-end (AES-256). Né Tipote né terze parti possono leggere le informazioni dei tuoi lead."
+    "encryptionBadge": "I tuoi dati sono crittografati end-to-end (AES-256). Né Tipote né terze parti possono leggere le informazioni dei tuoi lead.",
+    "subtitle": "Gestisci i tuoi contatti e lead da un solo posto."
   },
   "widgets": {
     "title": "Notifiche Toast",
@@ -2383,7 +2423,11 @@
     "toneHumorous": "Umoristico",
     "textExceedsLimit": "Il testo supera il limite di {limit} caratteri per {platform}",
     "connectPlatformToPublish": "Connetti {platform} nelle impostazioni per pubblicare o programmare.",
-    "connectSocialToPublish": "Connetti un social network nelle impostazioni per pubblicare o programmare direttamente."
+    "connectSocialToPublish": "Connetti un social network nelle impostazioni per pubblicare o programmare direttamente.",
+    "dmDefault": "Ecco il tuo link 👉 [link da completare]\n\nA presto! 🙌",
+    "notAuth": "Non autenticato",
+    "automationCreated": "Automazione creata!",
+    "cannotCreateAutomation": "Impossibile creare l'automazione"
   },
   "articleForm": {
     "generating": "Generazione...",
@@ -2411,7 +2455,11 @@
     "ctaLabel": "CTA (opzionale)",
     "ctaPlaceholder": "Es.: Scarica la guida gratuita",
     "ctaUrlLabel": "Link CTA (opzionale)",
-    "ctaUrlPlaceholder": "Es.: https://…"
+    "ctaUrlPlaceholder": "Es.: https://…",
+    "authority": "Autorità",
+    "trafficSeo": "Traffico SEO",
+    "emailsLabel": "Email",
+    "salesLabel": "Vendite"
   },
   "emailForm": {
     "generating": "Generazione...",
@@ -2423,7 +2471,14 @@
     "regenerate": "Rigenera",
     "copied": "Copiato",
     "copy": "Copia",
-    "pdf": "PDF"
+    "pdf": "PDF",
+    "subjectPh": "Es.: Iniziare un business online senza budget",
+    "ctaPh": "Es.: Rispondi a questa email con il tuo obiettivo",
+    "outcomePh": "Risultato principale (facoltativo)",
+    "linkPh": "Es.: https://... (link di download)",
+    "emailGenerated": "Email generata",
+    "emailsGenerated": "Email generate ({n})",
+    "emailAppearsHere": "L'email apparirà qui..."
   },
   "videoForm": {
     "generating": "Generazione...",
@@ -2442,7 +2497,8 @@
     "durationLabel": "Durata",
     "subjectPlaceholder": "Es.: Come vendere senza essere insistenti",
     "resultLabel": "Script generato",
-    "resultPlaceholder": "Lo script apparirà qui…"
+    "resultPlaceholder": "Lo script apparirà qui…",
+    "videoScriptDefault": "Script video"
   },
   "postActions": {
     "publishOn": "Pubblica su {label}",
@@ -2567,7 +2623,9 @@
     "exportCsv": "Esporta CSV",
     "noLeads": "Nessun lead per questa pagina.",
     "firstName": "Nome",
-    "phone": "Telefono"
+    "phone": "Telefono",
+    "networkError": "Errore di rete",
+    "subtitle": "Crea e gestisci le tue pagine di cattura, di vendita e il tuo Link in Bio."
   },
   "checklistTemplates": {
     "applyTemplate": "Applica un template:",
@@ -3251,7 +3309,11 @@
     "webinarDeleted": "Webinar eliminato",
     "totalWebinars": "Totale webinar",
     "noWebinars": "Nessun webinar al momento.",
-    "noWebinarsHint": "Crea il tuo primo webinar per iniziare a monitorare i tuoi KPI."
+    "noWebinarsHint": "Crea il tuo primo webinar per iniziare a monitorare i tuoi KPI.",
+    "statusScheduled": "Pianificato",
+    "statusCompleted": "Completato",
+    "statusDraft": "Bozza",
+    "statusLive": "In diretta"
   },
   "quizForm": {
     "createTitle": "Crea un quiz",
@@ -4371,5 +4433,69 @@
     "rootDescription": "Tipote – pianificazione strategica e automazioni per il business",
     "supportTitle": "Tipote — Centro assistenza",
     "supportDescription": "Trova le risposte a tutte le tue domande su Tipote"
+  },
+  "supportFooter": {
+    "contact": "Non trovi la risposta?",
+    "contactCta": "Contattaci a hello@tipote.com",
+    "rights": "Tutti i diritti riservati",
+    "terms": "Termini",
+    "privacy": "Privacy"
+  },
+  "adminUsers": {
+    "toast": {
+      "planUpdated": "Piano aggiornato",
+      "cannotUpdatePlan": "Impossibile aggiornare il piano",
+      "creditsError": "Errore crediti",
+      "cannotLoadCredits": "Impossibile caricare i crediti",
+      "bulkActionDone": "Azione di massa completata",
+      "bulkActionError": "Errore azione di massa",
+      "userCreated": "Utente creato",
+      "userUpdated": "Utente aggiornato",
+      "createError": "Errore durante la creazione",
+      "cannotCreateUser": "Impossibile creare l'utente",
+      "notifSent": "Notifica inviata",
+      "magicLinkSent": "(magic link inviato)"
+    },
+    "notifHeader": "Invia una notifica",
+    "notifToSelected": "a {n} utente(i) selezionati",
+    "notifToAll": "a tutti gli utenti",
+    "iconPh": "Icona (emoji)",
+    "sendToAll": "Invia a tutti",
+    "emailHeader": "Invia un'email brandizzata",
+    "emailToSegment": "segmentato per piano",
+    "preheaderPh": "Preheader (anteprima inbox, facoltativo)",
+    "greetingPh": "Saluto (predefinito: nome utente o 'Ciao,')",
+    "bodyPh": "Corpo dell'email * (HTML supportato: <br/>, <strong>, <a>...)",
+    "sendAllEmoji": "📧 Invia a tutti",
+    "failedCount": "{n, plural, one {# errore} other {# errori}}",
+    "cancel": "Annulla",
+    "createUser": "+ Crea utente",
+    "firstNamePh": "Nome (facoltativo)",
+    "creating": "Creazione...",
+    "createAndSend": "Crea e invia magic link",
+    "selectAll": "Seleziona tutto",
+    "loadingShort": "...",
+    "viewCredits": "Visualizza crediti",
+    "bonusCreditsPh": "Numero di crediti bonus"
+  },
+  "adminTickets": {
+    "statusOpen": "Aperto",
+    "statusReplied": "Risposto",
+    "statusClosed": "Chiuso",
+    "tabOpen": "Aperti",
+    "tabReplied": "Risposti",
+    "tabClosed": "Chiusi",
+    "tabAll": "Tutti",
+    "heading": "Ticket di supporto",
+    "totalTickets": "{n, plural, one {# ticket} other {# ticket}} in totale",
+    "pending": "{n} in attesa",
+    "noTickets": "Nessun ticket",
+    "noTicketsPending": "in attesa",
+    "deleteConfirm": "Eliminare questo ticket?",
+    "repliedOn": "Risposto il {date}",
+    "replyPh": "La tua risposta al visitatore... (sarà inviata via email)",
+    "replyAndSend": "Rispondi e invia via email",
+    "close": "Chiudi",
+    "reopen": "Riapri"
   }
 }

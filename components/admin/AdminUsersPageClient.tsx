@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "@/components/ui/use-toast";
 
 import { Card } from "@/components/ui/card";
@@ -88,6 +89,7 @@ function fmtDateShort(value: string | null) {
 }
 
 export default function AdminUsersPageClient({ adminEmail }: { adminEmail: string }) {
+  const t = useTranslations("adminUsers");
   const [q, setQ] = useState("");
   const [planFilter, setPlanFilter] = useState<string>(ALL_PLANS_FILTER);
   const [sortField, setSortField] = useState<SortField>("updated_at");
@@ -307,13 +309,13 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       }
 
       toast({
-        title: "Plan mis à jour",
+        title: t("toast.planUpdated"),
         description: `${user.email ?? user.id} → ${nextPlan}`,
       });
     } catch (e) {
       toast({
         title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible de mettre à jour le plan",
+        description: e instanceof Error ? e.message : t("toast.cannotUpdatePlan"),
         variant: "destructive",
       });
     } finally {
@@ -336,8 +338,8 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       setCreditsById((prev) => ({ ...prev, [userId]: json.credits }));
     } catch (e) {
       toast({
-        title: "Erreur crédits",
-        description: e instanceof Error ? e.message : "Impossible de charger les crédits",
+        title: t("toast.creditsError"),
+        description: e instanceof Error ? e.message : t("toast.cannotLoadCredits"),
         variant: "destructive",
       });
     } finally {
@@ -385,7 +387,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       }
 
       toast({
-        title: "Action groupée terminée",
+        title: t("toast.bulkActionDone"),
         description: `${json.succeeded} réussi(s), ${json.failed} échoué(s) sur ${json.total}`,
       });
 
@@ -397,7 +399,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
     } catch (e) {
       toast({
         title: "Erreur",
-        description: e instanceof Error ? e.message : "Erreur action groupée",
+        description: e instanceof Error ? e.message : t("toast.bulkActionError"),
         variant: "destructive",
       });
     } finally {
@@ -427,12 +429,12 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       });
       const json = await res.json();
       if (!res.ok || !json?.ok) {
-        throw new Error(json?.error || "Erreur lors de la création");
+        throw new Error(json?.error || t("toast.createError"));
       }
 
       toast({
-        title: json.already_existed ? "Utilisateur mis à jour" : "Utilisateur créé",
-        description: `${email} → ${createPlan}${json.magic_link_sent ? " (magic link envoyé)" : ""}`,
+        title: json.already_existed ? t("toast.userUpdated") : t("toast.userCreated"),
+        description: `${email} → ${createPlan}${json.magic_link_sent ? ` ${t("toast.magicLinkSent")}` : ""}`,
       });
 
       // Reset form
@@ -447,7 +449,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
     } catch (e) {
       toast({
         title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible de créer l'utilisateur",
+        description: e instanceof Error ? e.message : t("toast.cannotCreateUser"),
         variant: "destructive",
       });
     } finally {
@@ -479,7 +481,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       const json = await res.json();
       if (!res.ok || json.error) throw new Error(json.error ?? "Erreur");
       toast({
-        title: "Notification envoyée",
+        title: t("toast.notifSent"),
         description: `${json.inserted} utilisateur(s) notifié(s).`,
       });
       setNotifTitle("");
@@ -506,7 +508,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
           <div className="space-y-1">
             <div className="text-base font-semibold">Notifications</div>
             <div className="text-sm text-muted-foreground">
-              Envoyer une notification {selectedIds.size > 0 ? `aux ${selectedIds.size} user(s) sélectionnés` : "à tous les utilisateurs"}.
+              {t("notifHeader")} {selectedIds.size > 0 ? t("notifToSelected", { n: selectedIds.size }) : t("notifToAll")}.
             </div>
           </div>
           <Button variant="outline" onClick={() => setShowNotifForm((v) => !v)}>
@@ -520,7 +522,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               <Input
                 value={notifIcon}
                 onChange={(e) => setNotifIcon(e.target.value)}
-                placeholder="Icône (emoji)"
+                placeholder={t("iconPh")}
                 className="w-20"
               />
               <Input
@@ -554,7 +556,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 ? "Envoi en cours..."
                 : selectedIds.size > 0
                 ? `Envoyer à ${selectedIds.size} user(s)`
-                : "Envoyer à tous"}
+                : t("sendToAll")}
             </Button>
           </div>
         )}
@@ -565,7 +567,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
           <div className="space-y-1">
             <div className="text-base font-semibold">📧 Email Marketing</div>
             <div className="text-sm text-muted-foreground">
-              Envoyer un email brandé {selectedIds.size > 0 ? `aux ${selectedIds.size} user(s) sélectionnés` : "segmenté par plan"}.
+              {t("emailHeader")} {selectedIds.size > 0 ? t("notifToSelected", { n: selectedIds.size }) : t("emailToSegment")}.
             </div>
           </div>
           <Button variant="outline" onClick={() => { setShowEmailForm((v) => !v); setEmailPreviewHtml(null); setEmailResult(null); }}>
@@ -609,17 +611,17 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             <Input
               value={emailPreheader}
               onChange={(e) => setEmailPreheader(e.target.value)}
-              placeholder="Preheader (texte aperçu inbox, optionnel)"
+              placeholder={t("preheaderPh")}
             />
             <Input
               value={emailGreeting}
               onChange={(e) => setEmailGreeting(e.target.value)}
-              placeholder="Salutation (défaut: prénom de l'user ou 'Bonjour,')"
+              placeholder={t("greetingPh")}
             />
             <textarea
               value={emailBody}
               onChange={(e) => setEmailBody(e.target.value)}
-              placeholder="Corps de l'email * (HTML supporté : <br/>, <strong>, <a>...)"
+              placeholder={t("bodyPh")}
               rows={6}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
@@ -710,7 +712,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                   ? `📧 Envoyer à ${selectedIds.size} user(s)`
                   : emailSegment.length > 0
                   ? `📧 Envoyer aux ${emailSegment.join(", ")}`
-                  : "📧 Envoyer à tous"}
+                  : t("sendAllEmoji")}
               </Button>
             </div>
 
@@ -718,7 +720,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             {emailResult && (
               <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm">
                 ✅ <strong>{emailResult.sent}</strong> envoyé{emailResult.sent > 1 ? "s" : ""} sur {emailResult.total}
-                {emailResult.failed > 0 && <span className="text-red-600 ml-2">({emailResult.failed} échec{emailResult.failed > 1 ? "s" : ""})</span>}
+                {emailResult.failed > 0 && <span className="text-red-600 ml-2">({t("failedCount", { n: emailResult.failed })})</span>}
               </div>
             )}
 
@@ -765,7 +767,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               variant="outline"
               onClick={() => setShowCreateForm((v) => !v)}
             >
-              {showCreateForm ? "Annuler" : "+ Créer user"}
+              {showCreateForm ? t("cancel") : t("createUser")}
             </Button>
           </div>
         </div>
@@ -811,7 +813,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               <Input
                 value={createFirstName}
                 onChange={(e) => setCreateFirstName(e.target.value)}
-                placeholder="Prénom (optionnel)"
+                placeholder={t("firstNamePh")}
               />
               <Input
                 value={createLastName}
@@ -831,7 +833,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 </SelectContent>
               </Select>
               <Button onClick={createUser} disabled={creating || !createEmail.trim()}>
-                {creating ? "Création..." : "Créer et envoyer magic link"}
+                {creating ? t("creating") : t("createAndSend")}
               </Button>
             </div>
           </div>
@@ -895,7 +897,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                   <Checkbox
                     checked={allFilteredSelected && filteredUsers.length > 0}
                     onCheckedChange={toggleSelectAll}
-                    aria-label="Tout sélectionner"
+                    aria-label={t("selectAll")}
                   />
                 </TableHead>
                 <TableHead
@@ -1009,7 +1011,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                           disabled={isLoadingCredits}
                           onClick={() => loadCredits(u.id)}
                         >
-                          {isLoadingCredits ? "..." : "Voir crédits"}
+                          {isLoadingCredits ? t("loadingShort") : t("viewCredits")}
                         </Button>
                       )}
                     </TableCell>
@@ -1105,7 +1107,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               min={1}
               value={bulkCredits}
               onChange={(e) => setBulkCredits(e.target.value)}
-              placeholder="Nombre de crédits bonus"
+              placeholder={t("bonusCreditsPh")}
             />
           </div>
           <DialogFooter>

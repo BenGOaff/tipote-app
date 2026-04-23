@@ -328,7 +328,7 @@ export default function SupportArticleClient({
         )}
       </div>
 
-      <SupportFooter locale={locale} />
+      <SupportFooter />
       <SupportChatWidget locale={locale} />
     </div>
   );

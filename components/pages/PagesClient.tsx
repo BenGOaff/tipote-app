@@ -324,7 +324,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
         }
       }
     } catch (err: any) {
-      setGenError(err?.message || "Erreur réseau");
+      setGenError(err?.message || t("networkError"));
     }
   }, [createType, offerSource, selectedOfferId, offers, selectedEventId, events, offerName, offerPromise, offerTarget, offerPrice, offerGuarantees, offerUrgency, offerBenefits, paymentUrl]);
 
@@ -409,7 +409,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
             <div className="flex-1 p-4 sm:p-5 lg:p-6">
               <div className="max-w-[1200px] mx-auto w-full space-y-5">
 
-                <PageBanner icon={<Globe className="w-5 h-5" />} title={t("headerTitle")} subtitle="Crée et gère tes pages de capture, de vente et ton Link in Bio." />
+                <PageBanner icon={<Globe className="w-5 h-5" />} title={t("headerTitle")} subtitle={t("subtitle")} />
 
                 {/* ==================== GENERATING ==================== */}
                 {view === "generating" && (
