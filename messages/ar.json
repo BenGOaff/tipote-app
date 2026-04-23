@@ -113,7 +113,9 @@
     "promptLink": "رابط الوصلة (https://…، mailto:…)",
     "invalidUrlFull": "رابط غير صالح: لا يُسمح إلا بـ https وmailto وtel والمسارات النسبية.",
     "promptImage": "رابط الصورة (https://… أو /مسار)",
-    "invalidUrl": "رابط غير صالح."
+    "invalidUrl": "رابط غير صالح.",
+    "bulletList": "قائمة نقطية",
+    "numberedList": "قائمة مرقّمة"
   },
   "tasksPage": {
     "title": "المهام",

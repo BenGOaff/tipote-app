@@ -303,7 +303,8 @@
   margin: 0.5rem auto;
 }
 .tipote-quiz-rich p { margin: 0.5em 0; }
-.tipote-quiz-rich ul, .tipote-quiz-rich ol { padding-left: 1.25rem; margin: 0.5em 0; }
+.tipote-quiz-rich ul { list-style: disc outside; padding-left: 1.25rem; margin: 0.5em 0; }
+.tipote-quiz-rich ol { list-style: decimal outside; padding-left: 1.5rem; margin: 0.5em 0; }
 .tipote-quiz-rich li { margin: 0.25em 0; }
 .tipote-quiz-rich a { color: inherit; text-decoration: underline; }
 .tipote-quiz-rich h1 { font-size: 1.5rem; font-weight: 700; margin: 0.75em 0 0.25em; }
@@ -312,5 +313,19 @@
 .tipote-quiz-rich [style*="text-align: center"] { text-align: center; }
 .tipote-quiz-rich [style*="text-align: right"] { text-align: right; }
 .tipote-quiz-rich [style*="text-align: left"] { text-align: left; }
+
+/* Inline RichTextEdit (components/ui/rich-text-edit.tsx).
+   Restores the list-style that Tailwind preflight resets, so bullet and
+   numbered lists produced by the toolbar actually show up both while
+   editing (contenteditable) and in view mode (dangerouslySetInnerHTML). */
+.tipote-rich ul,
+[contenteditable] ul { list-style: disc outside; padding-left: 1.25rem; margin: 0.5em 0; }
+.tipote-rich ol,
+[contenteditable] ol { list-style: decimal outside; padding-left: 1.5rem; margin: 0.5em 0; }
+.tipote-rich li,
+[contenteditable] li { margin: 0.25em 0; }
+.tipote-rich [style*="text-align: center"] { text-align: center; }
+.tipote-rich [style*="text-align: right"] { text-align: right; }
+.tipote-rich [style*="text-align: left"] { text-align: left; }
 
 

@@ -113,7 +113,9 @@
     "promptLink": "Link URL (https://…, mailto:…)",
     "invalidUrlFull": "Invalid URL: only https, mailto, tel and relative paths are allowed.",
     "promptImage": "Image URL (https://… or /path)",
-    "invalidUrl": "Invalid URL."
+    "invalidUrl": "Invalid URL.",
+    "bulletList": "Bullet list",
+    "numberedList": "Numbered list"
   },
   "tasksPage": {
     "title": "Tasks",

@@ -113,7 +113,9 @@
     "promptLink": "URL du lien (https://…, mailto:…)",
     "invalidUrlFull": "URL invalide : seuls https, mailto, tel et chemins relatifs sont autorisés.",
     "promptImage": "URL de l'image (https://… ou /chemin)",
-    "invalidUrl": "URL invalide."
+    "invalidUrl": "URL invalide.",
+    "bulletList": "Liste à puces",
+    "numberedList": "Liste numérotée"
   },
   "tasksPage": {
     "title": "Tâches",
