@@ -120,6 +120,7 @@ function OfferCard({ offer, level, expanded, onToggle }: {
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const t = useTranslations("pyramidSelection");
   const cfg = LEVEL_CONFIG[level];
   const Icon = cfg.icon;
   const priceLabel = typeof offer.price === "number"
