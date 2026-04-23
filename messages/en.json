@@ -4477,5 +4477,25 @@
     "loadingShort": "...",
     "viewCredits": "View credits",
     "bonusCreditsPh": "Number of bonus credits"
+  },
+  "adminTickets": {
+    "statusOpen": "Open",
+    "statusReplied": "Replied",
+    "statusClosed": "Closed",
+    "tabOpen": "Open",
+    "tabReplied": "Replied",
+    "tabClosed": "Closed",
+    "tabAll": "All",
+    "heading": "Support tickets",
+    "totalTickets": "{n, plural, one {# ticket} other {# tickets}} total",
+    "pending": "{n} pending",
+    "noTickets": "No tickets",
+    "noTicketsPending": "pending",
+    "deleteConfirm": "Delete this ticket?",
+    "repliedOn": "Replied on {date}",
+    "replyPh": "Your reply to the visitor... (will be sent by email)",
+    "replyAndSend": "Reply & send by email",
+    "close": "Close",
+    "reopen": "Reopen"
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Loader2, MessageCircle, Mail, Clock, CheckCircle2,
   Send, Trash2, ChevronDown, ChevronRight, XCircle,
@@ -33,14 +34,16 @@ type Ticket = {
 };
 
 const STATUS_CONFIG = {
-  open: { label: "Ouvert", color: "bg-amber-100 text-amber-700", icon: Clock },
-  replied: { label: "Répondu", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
-  closed: { label: "Fermé", color: "bg-gray-100 text-gray-500", icon: Archive },
+  open: { labelKey: "statusOpen", color: "bg-amber-100 text-amber-700", icon: Clock },
+  replied: { labelKey: "statusReplied", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
+  closed: { labelKey: "statusClosed", color: "bg-gray-100 text-gray-500", icon: Archive },
 };
 
 /* ────────────────── Component ────────────────── */
 
 export default function AdminTicketsClient() {
+  const t = useTranslations("adminTickets");
+  const locale = useLocale();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -106,14 +109,14 @@ export default function AdminTicketsClient() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Supprimer ce ticket ?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     await fetch(`/api/admin/support/tickets?id=${id}`, { method: "DELETE" });
     fetchTickets();
   };
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
-    return d.toLocaleDateString("fr-FR", {
+    return d.toLocaleDateString(locale, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -130,13 +133,13 @@ export default function AdminTicketsClient() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">
-            Tickets de support
+            {t("heading")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {total} ticket{total !== 1 ? "s" : ""} au total
+            {t("totalTickets", { n: total })}
             {statusFilter === "open" && openCount > 0 && (
               <span className="ml-1 text-amber-600 font-medium">
-                — {openCount} en attente
+                — {t("pending", { n: openCount })}
               </span>
             )}
           </p>
@@ -146,10 +149,10 @@ export default function AdminTicketsClient() {
       {/* Status filter tabs */}
       <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
         {[
-          { key: "open", label: "Ouverts" },
-          { key: "replied", label: "Répondus" },
-          { key: "closed", label: "Fermés" },
-          { key: "", label: "Tous" },
+          { key: "open", label: t("tabOpen") },
+          { key: "replied", label: t("tabReplied") },
+          { key: "closed", label: t("tabClosed") },
+          { key: "", label: t("tabAll") },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -174,7 +177,7 @@ export default function AdminTicketsClient() {
       ) : tickets.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">Aucun ticket {statusFilter === "open" ? "en attente" : ""}</p>
+          <p className="text-sm">{t("noTickets")} {statusFilter === "open" ? t("noTicketsPending") : ""}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -207,7 +210,7 @@ export default function AdminTicketsClient() {
                       </span>
                       <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 shrink-0", cfg.color)}>
                         <StatusIcon className="w-3 h-3 mr-0.5" />
-                        {cfg.label}
+                        {t(cfg.labelKey as any)}
                       </Badge>
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 uppercase">
                         {ticket.locale}
@@ -283,7 +286,7 @@ export default function AdminTicketsClient() {
                       <div className="bg-green-50 border border-green-100 rounded-lg p-3">
                         <p className="text-xs font-medium text-green-700 mb-1 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" />
-                          Répondu le {ticket.replied_at ? formatDate(ticket.replied_at) : "—"}
+                          {t("repliedOn", { date: ticket.replied_at ? formatDate(ticket.replied_at) : "—" })}
                         </p>
                         <p className="text-sm text-green-900 whitespace-pre-wrap">
                           {ticket.admin_reply}
@@ -296,7 +299,7 @@ export default function AdminTicketsClient() {
                       <Textarea
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Votre réponse au visiteur... (sera envoyée par email)"
+                        placeholder={t("replyPh")}
                         rows={3}
                         className="text-sm resize-none"
                       />
@@ -312,7 +315,7 @@ export default function AdminTicketsClient() {
                           ) : (
                             <Send className="w-3.5 h-3.5" />
                           )}
-                          Répondre & envoyer par email
+                          {t("replyAndSend")}
                         </Button>
 
                         {ticket.status !== "closed" && (
@@ -323,7 +326,7 @@ export default function AdminTicketsClient() {
                             className="gap-1.5 text-muted-foreground"
                           >
                             <XCircle className="w-3.5 h-3.5" />
-                            Fermer
+                            {t("close")}
                           </Button>
                         )}
 
@@ -334,7 +337,7 @@ export default function AdminTicketsClient() {
                             onClick={() => handleStatusChange(ticket.id, "open")}
                             className="gap-1.5 text-muted-foreground"
                           >
-                            Rouvrir
+                            {t("reopen")}
                           </Button>
                         )}
 

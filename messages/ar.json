@@ -4477,5 +4477,25 @@
     "loadingShort": "...",
     "viewCredits": "عرض الأرصدة",
     "bonusCreditsPh": "عدد الأرصدة الإضافية"
+  },
+  "adminTickets": {
+    "statusOpen": "مفتوح",
+    "statusReplied": "تم الرد",
+    "statusClosed": "مغلق",
+    "tabOpen": "مفتوحة",
+    "tabReplied": "تم الرد عليها",
+    "tabClosed": "مغلقة",
+    "tabAll": "الكل",
+    "heading": "تذاكر الدعم",
+    "totalTickets": "{n} تذكرة إجمالاً",
+    "pending": "{n} قيد الانتظار",
+    "noTickets": "لا توجد تذاكر",
+    "noTicketsPending": "قيد الانتظار",
+    "deleteConfirm": "حذف هذه التذكرة؟",
+    "repliedOn": "تم الرد في {date}",
+    "replyPh": "ردّك على الزائر... (سيتم إرساله عبر البريد الإلكتروني)",
+    "replyAndSend": "الرد والإرسال عبر البريد",
+    "close": "إغلاق",
+    "reopen": "إعادة فتح"
   }
 }

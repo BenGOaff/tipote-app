@@ -4477,5 +4477,25 @@
     "loadingShort": "...",
     "viewCredits": "Voir crédits",
     "bonusCreditsPh": "Nombre de crédits bonus"
+  },
+  "adminTickets": {
+    "statusOpen": "Ouvert",
+    "statusReplied": "Répondu",
+    "statusClosed": "Fermé",
+    "tabOpen": "Ouverts",
+    "tabReplied": "Répondus",
+    "tabClosed": "Fermés",
+    "tabAll": "Tous",
+    "heading": "Tickets de support",
+    "totalTickets": "{n, plural, one {# ticket} other {# tickets}} au total",
+    "pending": "{n} en attente",
+    "noTickets": "Aucun ticket",
+    "noTicketsPending": "en attente",
+    "deleteConfirm": "Supprimer ce ticket ?",
+    "repliedOn": "Répondu le {date}",
+    "replyPh": "Votre réponse au visiteur... (sera envoyée par email)",
+    "replyAndSend": "Répondre & envoyer par email",
+    "close": "Fermer",
+    "reopen": "Rouvrir"
   }
 }
