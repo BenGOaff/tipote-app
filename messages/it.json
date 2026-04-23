@@ -4082,5 +4082,58 @@
       "contentPh": "Contenuto...",
       "csvHeader": "Email,Nome,Data"
     }
+  },
+  "offerDefaults": {
+    "lead_magnet": {
+      "why": "Questo lead magnet attira il tuo pubblico target risolvendo un problema urgente e specifico. Costruisce la tua credibilità e ti posiziona come esperto nel tuo campo.",
+      "whyPrice": "Gratuito per massimizzare le iscrizioni e costruire la tua lista email. Il valore percepito deve essere alto per incoraggiare la condivisione.",
+      "whatToCreate": [
+        "Un contenuto che risponde a una domanda scottante del tuo pubblico",
+        "Un formato facilmente consumabile (PDF, video breve, checklist)",
+        "Un design professionale che riflette il tuo brand",
+        "Una pagina di cattura ottimizzata per le conversioni"
+      ],
+      "howToCreate": "Inizia identificando il problema n°1 del tuo pubblico. Crea contenuti attuabili che possano applicare subito. Limita il contenuto all'essenziale per essere rapido da consumare ma d'impatto.",
+      "howToPromote": [
+        "Post organici sui tuoi social con una CTA chiara",
+        "Annunci mirati su Facebook/Instagram verso la tua pagina di cattura",
+        "Partnership cross-promo con altri creator",
+        "Menzioni nelle tue email e contenuti esistenti"
+      ]
+    },
+    "low_ticket": {
+      "why": "Questa offerta converte i tuoi lead in clienti. Dimostra il valore dei tuoi prodotti e crea un'abitudine di acquisto generando i tuoi primi ricavi.",
+      "whyPrice": "Un prezzo accessibile (47–197€) riduce la frizione all'acquisto. Abbastanza alto per attirare clienti seri, abbastanza basso per essere una decisione impulsiva.",
+      "whatToCreate": [
+        "Una formazione o risorsa che approfondisce il lead magnet",
+        "Template, script o strumenti pratici",
+        "Accesso a una community o bonus esclusivi",
+        "Una pagina di vendita convincente con testimonianze"
+      ],
+      "howToCreate": "Trasforma la tua competenza in un prodotto strutturato. Includi risultati misurabili e passaggi chiari. Aggiungi bonus per aumentare il valore percepito.",
+      "howToPromote": [
+        "Sequenza email automatica dopo il lead magnet",
+        "Offerte flash e promozioni a tempo",
+        "Upsell diretto dopo l'iscrizione al lead magnet",
+        "Testimonianze e case study sui social"
+      ]
+    },
+    "high_ticket": {
+      "why": "Questa offerta massimizza i tuoi ricavi con un accompagnamento premium. Attira i clienti più motivati che vogliono risultati garantiti.",
+      "whyPrice": "Un prezzo premium (997€+) riflette il valore trasformazionale. I clienti che investono di più sono più coinvolti e ottengono risultati migliori.",
+      "whatToCreate": [
+        "Un programma di accompagnamento completo su più settimane",
+        "Sessioni di coaching individuali o di gruppo",
+        "Accesso VIP con supporto prioritario",
+        "Risorse avanzate ed esclusive"
+      ],
+      "howToCreate": "Progetta una trasformazione completa. Definisci chiaramente i risultati attesi e il processo. Limita i posti per creare esclusività e offrire follow-up personalizzato.",
+      "howToPromote": [
+        "Webinar di vendita che presentano il tuo metodo",
+        "Chiamate di scoperta per qualificare i prospect",
+        "Testimonianze video di clienti trasformati",
+        "Sequenza email nurturing su più settimane"
+      ]
+    }
   }
 }

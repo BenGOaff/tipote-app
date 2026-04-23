@@ -4082,5 +4082,58 @@
       "contentPh": "Content...",
       "csvHeader": "Email,First name,Date"
     }
+  },
+  "offerDefaults": {
+    "lead_magnet": {
+      "why": "This lead magnet attracts your target audience by solving an urgent, specific problem. It builds credibility and positions you as an expert in your field.",
+      "whyPrice": "Free to maximize signups and grow your email list. Perceived value must be high enough to encourage sharing.",
+      "whatToCreate": [
+        "Content that answers a burning question your audience has",
+        "An easily-consumable format (PDF, short video, checklist)",
+        "Professional design that reflects your brand",
+        "A capture page optimized for conversions"
+      ],
+      "howToCreate": "Start by identifying your audience's #1 problem. Create actionable content they can apply immediately. Keep it essential — quick to consume but impactful.",
+      "howToPromote": [
+        "Organic social posts with a clear CTA",
+        "Targeted Facebook/Instagram ads to your capture page",
+        "Cross-promo partnerships with other creators",
+        "Mentions in your existing emails and content"
+      ]
+    },
+    "low_ticket": {
+      "why": "This offer converts leads into customers. It proves the value of your products and builds a purchase habit while generating early revenue.",
+      "whyPrice": "An accessible price (€47–€197) reduces purchase friction. High enough to attract serious buyers, low enough to be an impulse decision.",
+      "whatToCreate": [
+        "A training or resource that builds on the lead magnet",
+        "Templates, scripts or practical tools",
+        "Access to a community or exclusive bonuses",
+        "A convincing sales page with testimonials"
+      ],
+      "howToCreate": "Turn your expertise into a structured product. Include measurable outcomes and clear steps. Add bonuses to boost perceived value.",
+      "howToPromote": [
+        "Automated email sequence after the lead magnet",
+        "Flash offers and limited-time promotions",
+        "Direct upsell right after lead-magnet opt-in",
+        "Testimonials and case studies on social"
+      ]
+    },
+    "high_ticket": {
+      "why": "This offer maximizes revenue with premium coaching. It attracts the most motivated clients who want guaranteed results.",
+      "whyPrice": "A premium price (€997+) reflects transformational value. Clients who invest more are more engaged and get better results.",
+      "whatToCreate": [
+        "A full coaching program over several weeks",
+        "1:1 or group coaching sessions",
+        "VIP access with priority support",
+        "Advanced, exclusive resources"
+      ],
+      "howToCreate": "Design a full transformation. Clearly define the outcomes and the process. Limit seats to create exclusivity and allow for personal follow-up.",
+      "howToPromote": [
+        "Sales webinars presenting your method",
+        "Discovery calls to qualify prospects",
+        "Video testimonials from transformed clients",
+        "Multi-week email nurturing sequence"
+      ]
+    }
   }
 }
