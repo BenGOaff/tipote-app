@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 // Fields accepting rich-text HTML (bold, italic, links, images, alignment).
 // Sanitized server-side on PATCH as defence-in-depth (the editor already
 // sanitizes client-side before every save).
-const RICH_TEXT_FIELDS = ["introduction"] as const;
+const RICH_TEXT_FIELDS = ["introduction", "capture_heading", "capture_subtitle"] as const;
 
 type RouteContext = { params: Promise<{ quizId: string }> };
 

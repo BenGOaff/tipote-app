@@ -1,9 +1,15 @@
 "use client";
 
 // Inline rich-text editor used in the quiz editor.
-// Click-to-edit with a floating toolbar: bold, italic, underline, alignment,
-// link, image. Stores sanitized HTML. Read-only renders also go through the
-// same sanitizer to keep the public page XSS-safe.
+// Click-to-edit with a floating toolbar: bold, italic, underline, alignment
+// (left / center / right), link, image. Stores sanitized HTML. Read-only
+// renders also go through the same sanitizer to keep the public page XSS-safe.
+//
+// `singleLine`:
+//   - Enter commits the edit instead of inserting a newline
+//   - Image insertion is hidden (no room to show one in a single line)
+//   - Alignment stays available — it's a purely visual block toggle that works
+//     on a one-line title just as well as on a paragraph.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -122,12 +128,10 @@ export function RichTextEdit({
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("italic"); }} title={t("italic")}><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("underline"); }} title={t("underline")}><UnderlineIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           <span className="w-px h-4 bg-border mx-0.5" />
-          {!singleLine && <>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("alignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("alignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("alignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
-            <span className="w-px h-4 bg-border mx-0.5" />
-          </>}
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("alignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("alignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("alignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
+          <span className="w-px h-4 bg-border mx-0.5" />
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("addLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={t("insertImage")}><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
         </div>
