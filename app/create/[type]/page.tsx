@@ -7,6 +7,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -17,32 +18,7 @@ type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const TYPE_LABELS: Record<string, { label: string; hint: string }> = {
-  post: {
-    label: "Post réseaux sociaux",
-    hint: "Ex : un post LinkedIn prêt à publier (hook fort, valeur, CTA soft).",
-  },
-  email: {
-    label: "Email",
-    hint: "Ex : objet + préheader + corps + CTA.",
-  },
-  blog: {
-    label: "Article / Blog",
-    hint: "Ex : un article structuré (intro, plan H2/H3, conclusion actionnable).",
-  },
-  video_script: {
-    label: "Script vidéo",
-    hint: "Ex : script 45–60s (hook, tension, valeur, CTA).",
-  },
-  sales_page: {
-    label: "Page de vente",
-    hint: "Ex : structure + copywriting (promesse, preuves, objection, offre).",
-  },
-  funnel: {
-    label: "Page / Site vitrine",
-    hint: "Ex : page de capture, page de vente, site vitrine one-page.",
-  },
-};
+const TYPE_KEYS = ["post", "email", "blog", "video_script", "sales_page", "funnel"] as const;
 
 function safeString(v: unknown) {
   return typeof v === "string" ? v : "";
@@ -125,11 +101,14 @@ export default async function CreateTypePage(props: Props) {
   const userEmail = session.user.email ?? "";
 
   const safeType = (params.type ?? "").trim().toLowerCase();
-  const meta = TYPE_LABELS[safeType] ?? null;
-
-  if (!meta) {
+  if (!TYPE_KEYS.includes(safeType as typeof TYPE_KEYS[number])) {
     redirect("/create");
   }
+  const t = await getTranslations("createTypePage");
+  const meta = {
+    label: t(`types.${safeType}.label` as any),
+    hint: t(`types.${safeType}.hint` as any),
+  };
 
   const sp = (await searchParams) ?? {};
   const templateKey = safeString(sp.template);
@@ -178,13 +157,13 @@ export default async function CreateTypePage(props: Props) {
       <div className="space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold text-slate-500">Créer</p>
+            <p className="text-xs font-semibold text-slate-500">{t("createLabel")}</p>
             <h1 className="mt-1 text-xl md:text-2xl font-semibold text-slate-900">{meta.label}</h1>
             <p className="mt-1 text-sm text-slate-500 max-w-2xl">{meta.hint}</p>
 
             {templatePrompt ? (
               <p className="mt-2 inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                Template rapide activé
+                {t("templateActive")}
               </p>
             ) : null}
           </div>
@@ -196,7 +175,7 @@ export default async function CreateTypePage(props: Props) {
                 type="submit"
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
               >
-                ← Retour
+                {t("back")}
               </button>
             </form>
 
@@ -205,7 +184,7 @@ export default async function CreateTypePage(props: Props) {
                 type="submit"
                 className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
               >
-                Mes contenus
+                {t("myContents")}
               </button>
             </form>
           </div>

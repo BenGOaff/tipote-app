@@ -3773,5 +3773,37 @@
     "sioTitle": "Systeme.io — Tag di cattura",
     "sioTag": "Tag applicato a ogni lead catturato",
     "sioTagHint": "Separato dai tag di risultato: questo tag è applicato a ogni email (indipendentemente dal risultato)."
+  },
+  "createTypePage": {
+    "createLabel": "Crea",
+    "templateActive": "Template rapido attivo",
+    "back": "← Indietro",
+    "myContents": "I miei contenuti",
+    "types": {
+      "post": {
+        "label": "Post social",
+        "hint": "Es.: un post LinkedIn pronto da pubblicare (hook forte, valore, CTA soft)."
+      },
+      "email": {
+        "label": "Email",
+        "hint": "Es.: oggetto + preheader + corpo + CTA."
+      },
+      "blog": {
+        "label": "Articolo / Blog",
+        "hint": "Es.: un articolo strutturato (intro, piano H2/H3, conclusione attuabile)."
+      },
+      "video_script": {
+        "label": "Script video",
+        "hint": "Es.: script 45–60s (hook, tensione, valore, CTA)."
+      },
+      "sales_page": {
+        "label": "Pagina di vendita",
+        "hint": "Es.: struttura + copywriting (promessa, prove, obiezione, offerta)."
+      },
+      "funnel": {
+        "label": "Landing / Sito vetrina",
+        "hint": "Es.: pagina di cattura, pagina di vendita, sito vetrina one-page."
+      }
+    }
   }
 }

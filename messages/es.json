@@ -3773,5 +3773,37 @@
     "sioTitle": "Systeme.io — Tag de captura",
     "sioTag": "Tag aplicado a cada lead capturado",
     "sioTagHint": "Separado de los tags de resultado: este tag se aplica a cada email (sea cual sea el resultado)."
+  },
+  "createTypePage": {
+    "createLabel": "Crear",
+    "templateActive": "Plantilla rápida activada",
+    "back": "← Volver",
+    "myContents": "Mi contenido",
+    "types": {
+      "post": {
+        "label": "Post redes sociales",
+        "hint": "Ej.: un post de LinkedIn listo para publicar (hook fuerte, valor, CTA soft)."
+      },
+      "email": {
+        "label": "Email",
+        "hint": "Ej.: asunto + preheader + cuerpo + CTA."
+      },
+      "blog": {
+        "label": "Artículo / Blog",
+        "hint": "Ej.: un artículo estructurado (intro, plan H2/H3, conclusión accionable)."
+      },
+      "video_script": {
+        "label": "Guion de vídeo",
+        "hint": "Ej.: guion 45–60s (hook, tensión, valor, CTA)."
+      },
+      "sales_page": {
+        "label": "Página de venta",
+        "hint": "Ej.: estructura + copywriting (promesa, pruebas, objeción, oferta)."
+      },
+      "funnel": {
+        "label": "Landing / One-page",
+        "hint": "Ej.: página de captura, página de venta, landing one-page."
+      }
+    }
   }
 }
