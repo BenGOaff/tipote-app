@@ -4207,5 +4207,31 @@
         "Make the tone more professional"
       ]
     }
+  },
+  "contentEditor": {
+    "toast": {
+      "copied": "Copied",
+      "copiedInClipboard": "Content is in the clipboard.",
+      "clipboardBlocked": "Your browser blocks the clipboard. Select and press Ctrl/Cmd+C.",
+      "downloadImpossible": "Download impossible",
+      "downloadBlocked": "Your browser blocked the download.",
+      "saved": "Saved",
+      "savedDesc": "Your content has been saved.",
+      "deleted": "Deleted",
+      "deletedDesc": "The content has been deleted.",
+      "duplicated": "Duplicated",
+      "duplicatedDesc": "A new content has been created.",
+      "pdfError": "Unable to generate the PDF.",
+      "previewCopied": "Preview copied",
+      "kitCopied": "Kit copied"
+    },
+    "unsaved": "Unsaved changes",
+    "irreversible": "This action is irreversible.",
+    "funnelHint": "For funnels, Tipote stores a JSON (contentData) and renders the HTML deterministically.",
+    "editHint": "Edit freely. Cmd/Ctrl+S to save.",
+    "jsonStored": "Stored JSON (read-only)",
+    "clickGenerateHtml": "Generate HTML",
+    "placeholder": "Paste or write your content here…",
+    "pinterestSettings": "Pinterest settings"
   }
 }

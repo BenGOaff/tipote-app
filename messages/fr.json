@@ -4207,5 +4207,31 @@
         "Rends le ton plus professionnel"
       ]
     }
+  },
+  "contentEditor": {
+    "toast": {
+      "copied": "Copié",
+      "copiedInClipboard": "Le contenu est dans le presse-papiers.",
+      "clipboardBlocked": "Ton navigateur bloque le clipboard. Sélectionne puis Ctrl/Cmd+C.",
+      "downloadImpossible": "Téléchargement impossible",
+      "downloadBlocked": "Ton navigateur a bloqué le téléchargement.",
+      "saved": "Enregistré",
+      "savedDesc": "Ton contenu a été sauvegardé.",
+      "deleted": "Supprimé",
+      "deletedDesc": "Le contenu a été supprimé.",
+      "duplicated": "Dupliqué",
+      "duplicatedDesc": "Un nouveau contenu a été créé.",
+      "pdfError": "Impossible de générer le PDF.",
+      "previewCopied": "Preview copiée",
+      "kitCopied": "Kit copié"
+    },
+    "unsaved": "Modifications non enregistrées",
+    "irreversible": "Cette action est irréversible.",
+    "funnelHint": "Pour les funnels, Tipote stocke un JSON (contentData) puis rend le HTML de façon déterministe.",
+    "editHint": "Édite librement. Cmd/Ctrl+S pour sauvegarder.",
+    "jsonStored": "JSON stocké (lecture seule)",
+    "clickGenerateHtml": "Générer HTML",
+    "placeholder": "Colle ou écris ton contenu ici…",
+    "pinterestSettings": "Paramètres Pinterest"
   }
 }

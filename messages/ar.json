@@ -4207,5 +4207,31 @@
         "اجعل النبرة أكثر احترافية"
       ]
     }
+  },
+  "contentEditor": {
+    "toast": {
+      "copied": "تم النسخ",
+      "copiedInClipboard": "المحتوى في الحافظة.",
+      "clipboardBlocked": "متصفحك يحجب الحافظة. حدّد ثم Ctrl/Cmd+C.",
+      "downloadImpossible": "التنزيل متعذّر",
+      "downloadBlocked": "حجب متصفحك التنزيل.",
+      "saved": "تم الحفظ",
+      "savedDesc": "تم حفظ محتواك.",
+      "deleted": "تم الحذف",
+      "deletedDesc": "تم حذف المحتوى.",
+      "duplicated": "تم الاستنساخ",
+      "duplicatedDesc": "تم إنشاء محتوى جديد.",
+      "pdfError": "تعذّر إنشاء PDF.",
+      "previewCopied": "تم نسخ المعاينة",
+      "kitCopied": "تم نسخ الحزمة"
+    },
+    "unsaved": "تعديلات غير محفوظة",
+    "irreversible": "هذا الإجراء لا يمكن التراجع عنه.",
+    "funnelHint": "بالنسبة للقمع، يُخزّن Tipote JSON (contentData) ثم يُصيّر HTML بشكل حتمي.",
+    "editHint": "عدّل بحرّية. Cmd/Ctrl+S للحفظ.",
+    "jsonStored": "JSON مُخزّن (للقراءة فقط)",
+    "clickGenerateHtml": "إنشاء HTML",
+    "placeholder": "الصق أو اكتب محتواك هنا…",
+    "pinterestSettings": "إعدادات Pinterest"
   }
 }
