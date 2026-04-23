@@ -3959,5 +3959,26 @@
     "orange": "Naranja",
     "seedCta": "Haz el CTA más directo y orientado a resultados, sin ser agresivo.",
     "ctaBtn": "CTA"
+  },
+  "pinterestBoard": {
+    "boardLabel": "Tablero de Pinterest",
+    "loading": "Cargando tableros…",
+    "noBoardsFound": "Ningún tablero encontrado.",
+    "createBoard": "Crear un tablero Pinterest",
+    "chooseBoard": "Elige un tablero…",
+    "privacySecret": "secreto",
+    "privacyProtected": "protegido",
+    "createNew": "Crear un nuevo tablero",
+    "boardNamePh": "Nombre del tablero…",
+    "create": "Crear",
+    "cancel": "Cancelar",
+    "selectBoardHint": "Selecciona el tablero donde publicar el pin.",
+    "destinationLink": "Enlace de destino",
+    "optional": "(opcional)",
+    "destinationHint": "URL a la que redirige el pin. Ej.: un artículo, un producto, una página de captura.",
+    "cannotLoad": "No se pudieron cargar los tableros.",
+    "networkLoad": "Error de red al cargar los tableros.",
+    "cannotCreate": "No se pudo crear el tablero.",
+    "networkCreate": "Error de red al crear el tablero."
   }
 }

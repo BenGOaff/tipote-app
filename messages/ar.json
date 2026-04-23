@@ -3959,5 +3959,26 @@
     "orange": "برتقالي",
     "seedCta": "اجعل CTA أكثر مباشرة وموجّهًا نحو النتيجة، دون أن يكون عدوانيًا.",
     "ctaBtn": "CTA"
+  },
+  "pinterestBoard": {
+    "boardLabel": "لوحة Pinterest",
+    "loading": "جاري تحميل اللوحات…",
+    "noBoardsFound": "لا توجد لوحات.",
+    "createBoard": "إنشاء لوحة Pinterest",
+    "chooseBoard": "اختر لوحة…",
+    "privacySecret": "سرّي",
+    "privacyProtected": "محمي",
+    "createNew": "إنشاء لوحة جديدة",
+    "boardNamePh": "اسم اللوحة…",
+    "create": "إنشاء",
+    "cancel": "إلغاء",
+    "selectBoardHint": "اختر اللوحة التي سيُنشر عليها الدبوس.",
+    "destinationLink": "رابط الوجهة",
+    "optional": "(اختياري)",
+    "destinationHint": "الرابط الذي يوجّه إليه الدبوس. مثال: مقال مدوّنة، منتج، صفحة التقاط.",
+    "cannotLoad": "تعذّر تحميل اللوحات.",
+    "networkLoad": "خطأ شبكة أثناء تحميل اللوحات.",
+    "cannotCreate": "تعذّر إنشاء اللوحة.",
+    "networkCreate": "خطأ شبكة أثناء إنشاء اللوحة."
   }
 }

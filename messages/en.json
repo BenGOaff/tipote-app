@@ -3959,5 +3959,26 @@
     "orange": "Orange",
     "seedCta": "Make the CTA more direct and results-oriented, without being aggressive.",
     "ctaBtn": "CTA"
+  },
+  "pinterestBoard": {
+    "boardLabel": "Pinterest board",
+    "loading": "Loading boards…",
+    "noBoardsFound": "No boards found.",
+    "createBoard": "Create a Pinterest board",
+    "chooseBoard": "Choose a board…",
+    "privacySecret": "secret",
+    "privacyProtected": "protected",
+    "createNew": "Create a new board",
+    "boardNamePh": "Board name…",
+    "create": "Create",
+    "cancel": "Cancel",
+    "selectBoardHint": "Select the board where the pin will be posted.",
+    "destinationLink": "Destination link",
+    "optional": "(optional)",
+    "destinationHint": "URL the pin links to. E.g. a blog article, a product, a capture page.",
+    "cannotLoad": "Unable to load the boards.",
+    "networkLoad": "Network error while loading boards.",
+    "cannotCreate": "Unable to create the board.",
+    "networkCreate": "Network error while creating the board."
   }
 }

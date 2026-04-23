@@ -3959,5 +3959,26 @@
     "orange": "Orange",
     "seedCta": "Rends le CTA plus direct et orienté résultat, sans être agressif.",
     "ctaBtn": "CTA"
+  },
+  "pinterestBoard": {
+    "boardLabel": "Tableau Pinterest",
+    "loading": "Chargement des tableaux…",
+    "noBoardsFound": "Aucun tableau trouvé.",
+    "createBoard": "Créer un tableau Pinterest",
+    "chooseBoard": "Choisir un tableau…",
+    "privacySecret": "secret",
+    "privacyProtected": "protégé",
+    "createNew": "Créer un nouveau tableau",
+    "boardNamePh": "Nom du tableau…",
+    "create": "Créer",
+    "cancel": "Annuler",
+    "selectBoardHint": "Sélectionne le tableau sur lequel publier l'épingle.",
+    "destinationLink": "Lien de destination",
+    "optional": "(optionnel)",
+    "destinationHint": "URL vers laquelle l'épingle redirige. Ex: article de blog, produit, page de capture.",
+    "cannotLoad": "Impossible de charger les tableaux.",
+    "networkLoad": "Erreur réseau lors du chargement des tableaux.",
+    "cannotCreate": "Impossible de créer le tableau.",
+    "networkCreate": "Erreur réseau lors de la création du tableau."
   }
 }

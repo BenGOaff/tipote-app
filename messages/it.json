@@ -3959,5 +3959,26 @@
     "orange": "Arancione",
     "seedCta": "Rendi il CTA più diretto e orientato al risultato, senza essere aggressivo.",
     "ctaBtn": "CTA"
+  },
+  "pinterestBoard": {
+    "boardLabel": "Bacheca Pinterest",
+    "loading": "Caricamento bacheche…",
+    "noBoardsFound": "Nessuna bacheca trovata.",
+    "createBoard": "Crea una bacheca Pinterest",
+    "chooseBoard": "Scegli una bacheca…",
+    "privacySecret": "segreta",
+    "privacyProtected": "protetta",
+    "createNew": "Crea una nuova bacheca",
+    "boardNamePh": "Nome della bacheca…",
+    "create": "Crea",
+    "cancel": "Annulla",
+    "selectBoardHint": "Seleziona la bacheca dove pubblicare il pin.",
+    "destinationLink": "Link di destinazione",
+    "optional": "(facoltativo)",
+    "destinationHint": "URL verso cui punta il pin. Es.: un articolo, un prodotto, una pagina di cattura.",
+    "cannotLoad": "Impossibile caricare le bacheche.",
+    "networkLoad": "Errore di rete durante il caricamento delle bacheche.",
+    "cannotCreate": "Impossibile creare la bacheca.",
+    "networkCreate": "Errore di rete durante la creazione della bacheca."
   }
 }
