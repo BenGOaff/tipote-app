@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -145,9 +146,10 @@ export function ArticleEditorModal({
   onOpenChange,
   initialValue,
   onApply,
-  title = "Modifier & copier",
-  applyLabel = "Appliquer",
+  title,
+  applyLabel,
 }: ArticleEditorModalProps) {
+  const t = useTranslations("articleEditor");
   const editorRef = useRef<HTMLDivElement | null>(null);
 
   // ✅ IMPORTANT: comme DialogContent est en Portal, le ref peut être null au moment du 1er effect.
@@ -277,7 +279,7 @@ export function ArticleEditorModal({
         {/* ✅ Le contenu (header+form+éditeur) scrolle, pas la page */}
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <DialogHeader className="space-y-1">
-            <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{title ?? t("dialogTitle")}</DialogTitle>
             <DialogDescription>
               Modifie ton article avec une mise en forme (H1/H2/gras/liens) puis
               copie-le en gardant le rendu.
@@ -453,7 +455,7 @@ export function ArticleEditorModal({
                 ) : (
                   <Copy className="w-4 h-4 mr-2" />
                 )}
-                {copied ? "Copié" : "Copier"}
+                {copied ? t("copied") : t("copy")}
               </Button>
             </div>
 
@@ -501,7 +503,7 @@ export function ArticleEditorModal({
                 Fermer
               </Button>
               <Button type="button" onClick={apply}>
-                {applyLabel}
+                {applyLabel ?? t("apply")}
               </Button>
             </div>
           </div>

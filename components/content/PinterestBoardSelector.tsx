@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, AlertCircle, Plus } from "lucide-react";
 import {
   Select,
@@ -36,6 +37,7 @@ export function PinterestBoardSelector({
   onLinkChange,
   disabled = false,
 }: Props) {
+  const t = useTranslations("pinterestBoard");
   const [boards, setBoards] = React.useState<Board[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -56,12 +58,12 @@ export function PinterestBoardSelector({
           if (json.ok && Array.isArray(json.boards)) {
             setBoards(json.boards);
           } else {
-            setError(json.error ?? "Impossible de charger les tableaux.");
+            setError(json.error ?? t("cannotLoad"));
           }
         }
       } catch {
         if (!cancelled) {
-          setError("Erreur réseau lors du chargement des tableaux.");
+          setError(t("networkLoad"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -71,7 +73,7 @@ export function PinterestBoardSelector({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   async function handleCreateBoard() {
     if (!newBoardName.trim()) return;
@@ -89,10 +91,10 @@ export function PinterestBoardSelector({
         setNewBoardName("");
         setShowNewBoard(false);
       } else {
-        setError(json.error ?? "Impossible de créer le tableau.");
+        setError(json.error ?? t("cannotCreate"));
       }
     } catch {
-      setError("Erreur réseau lors de la création du tableau.");
+      setError(t("networkCreate"));
     } finally {
       setCreating(false);
     }
@@ -103,14 +105,14 @@ export function PinterestBoardSelector({
       {/* Tableau Pinterest */}
       <div className="space-y-1.5">
         <Label htmlFor="pinterest-board">
-          Tableau Pinterest{" "}
+          {t("boardLabel")}{" "}
           <span className="text-rose-500">*</span>
         </Label>
 
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground h-9">
             <Loader2 className="w-4 h-4 animate-spin" />
-            Chargement des tableaux…
+            {t("loading")}
           </div>
         ) : error ? (
           <div className="flex items-center gap-2 text-sm text-rose-600">
@@ -120,7 +122,7 @@ export function PinterestBoardSelector({
         ) : boards.length === 0 && !showNewBoard ? (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Aucun tableau trouvé.
+              {t("noBoardsFound")}
             </p>
             <Button
               type="button"
@@ -130,7 +132,7 @@ export function PinterestBoardSelector({
               onClick={() => setShowNewBoard(true)}
             >
               <Plus className="w-3.5 h-3.5" />
-              Créer un tableau Pinterest
+              {t("createBoard")}
             </Button>
           </div>
         ) : (
@@ -141,7 +143,7 @@ export function PinterestBoardSelector({
               disabled={disabled}
             >
               <SelectTrigger id="pinterest-board">
-                <SelectValue placeholder="Choisir un tableau…" />
+                <SelectValue placeholder={t("chooseBoard")} />
               </SelectTrigger>
               <SelectContent>
                 {boards.map((board) => (
@@ -149,7 +151,7 @@ export function PinterestBoardSelector({
                     {board.name}
                     {board.privacy !== "PUBLIC" && (
                       <span className="ml-2 text-xs text-muted-foreground">
-                        ({board.privacy === "SECRET" ? "secret" : "protégé"})
+                        ({board.privacy === "SECRET" ? t("privacySecret") : t("privacyProtected")})
                       </span>
                     )}
                   </SelectItem>
@@ -165,7 +167,7 @@ export function PinterestBoardSelector({
                 onClick={() => setShowNewBoard(true)}
               >
                 <Plus className="w-3 h-3" />
-                Créer un nouveau tableau
+                {t("createNew")}
               </Button>
             )}
           </>
@@ -177,7 +179,7 @@ export function PinterestBoardSelector({
             <Input
               value={newBoardName}
               onChange={(e) => setNewBoardName(e.target.value)}
-              placeholder="Nom du tableau…"
+              placeholder={t("boardNamePh")}
               className="h-8 text-sm"
               disabled={creating}
               onKeyDown={(e) => {
@@ -197,7 +199,7 @@ export function PinterestBoardSelector({
               {creating ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                "Créer"
+                t("create")
               )}
             </Button>
             <Button
@@ -210,21 +212,21 @@ export function PinterestBoardSelector({
                 setNewBoardName("");
               }}
             >
-              Annuler
+              {t("cancel")}
             </Button>
           </div>
         )}
 
         <p className="text-xs text-muted-foreground">
-          Sélectionne le tableau sur lequel publier l&apos;épingle.
+          {t("selectBoardHint")}
         </p>
       </div>
 
       {/* Lien de destination (optionnel) */}
       <div className="space-y-1.5">
         <Label htmlFor="pinterest-link">
-          Lien de destination{" "}
-          <span className="text-muted-foreground text-xs">(optionnel)</span>
+          {t("destinationLink")}{" "}
+          <span className="text-muted-foreground text-xs">{t("optional")}</span>
         </Label>
         <Input
           id="pinterest-link"
@@ -235,7 +237,7 @@ export function PinterestBoardSelector({
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">
-          URL vers laquelle l&apos;épingle redirige. Ex: article de blog, produit, page de capture.
+          {t("destinationHint")}
         </p>
       </div>
     </div>
