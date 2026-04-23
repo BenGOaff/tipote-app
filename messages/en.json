@@ -3980,5 +3980,38 @@
     "networkLoad": "Network error while loading boards.",
     "cannotCreate": "Unable to create the board.",
     "networkCreate": "Network error while creating the board."
+  },
+  "personaModal": {
+    "title": "Edit persona",
+    "description": "Edit your target persona. Changes will be synced across the app.",
+    "mainProfile": "Main profile",
+    "profilePh": "Ex: Solo entrepreneur, 30-45 yo",
+    "pains": "Main pain points",
+    "addPain": "Add a pain point...",
+    "goals": "Goals",
+    "addGoal": "Add a goal...",
+    "channels": "Preferred channels",
+    "addChannel": "Add a channel...",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save"
+  },
+  "funnelTemplate": {
+    "previewTitle": "Template preview",
+    "back": "Back",
+    "choose": "Choose your template",
+    "chooseHint": "Click a template to see the preview, then select it.",
+    "backToTemplates": "Back to templates",
+    "capture": "Capture",
+    "sales": "Sales",
+    "stylePreview": "Style preview (demo text)",
+    "newTab": "New tab",
+    "useTemplate": "Use this template"
+  },
+  "articleEditor": {
+    "copied": "Copied",
+    "copy": "Copy",
+    "dialogTitle": "Edit & copy",
+    "apply": "Apply"
   }
 }

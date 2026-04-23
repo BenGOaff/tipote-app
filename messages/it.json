@@ -3980,5 +3980,38 @@
     "networkLoad": "Errore di rete durante il caricamento delle bacheche.",
     "cannotCreate": "Impossibile creare la bacheca.",
     "networkCreate": "Errore di rete durante la creazione della bacheca."
+  },
+  "personaModal": {
+    "title": "Modifica il persona",
+    "description": "Modifica il tuo persona target. Le modifiche verranno sincronizzate ovunque nell'applicazione.",
+    "mainProfile": "Profilo principale",
+    "profilePh": "Es.: Imprenditore solo, 30-45 anni",
+    "pains": "Problemi principali",
+    "addPain": "Aggiungi un problema...",
+    "goals": "Obiettivi",
+    "addGoal": "Aggiungi un obiettivo...",
+    "channels": "Canali preferiti",
+    "addChannel": "Aggiungi un canale...",
+    "cancel": "Annulla",
+    "saving": "Salvataggio...",
+    "save": "Salva"
+  },
+  "funnelTemplate": {
+    "previewTitle": "Anteprima template",
+    "back": "Indietro",
+    "choose": "Scegli il tuo template",
+    "chooseHint": "Clicca su un template per vedere l'anteprima, poi selezionalo.",
+    "backToTemplates": "Torna ai template",
+    "capture": "Cattura",
+    "sales": "Vendita",
+    "stylePreview": "Anteprima dello stile (testo dimostrativo)",
+    "newTab": "Nuova scheda",
+    "useTemplate": "Usa questo template"
+  },
+  "articleEditor": {
+    "copied": "Copiato",
+    "copy": "Copia",
+    "dialogTitle": "Modifica e copia",
+    "apply": "Applica"
   }
 }

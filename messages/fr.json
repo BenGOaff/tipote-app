@@ -3980,5 +3980,38 @@
     "networkLoad": "Erreur réseau lors du chargement des tableaux.",
     "cannotCreate": "Impossible de créer le tableau.",
     "networkCreate": "Erreur réseau lors de la création du tableau."
+  },
+  "personaModal": {
+    "title": "Modifier le persona",
+    "description": "Modifie ton persona cible. Les changements seront synchronisés partout dans l'application.",
+    "mainProfile": "Profil principal",
+    "profilePh": "Ex: Entrepreneur solo, 30-45 ans",
+    "pains": "Problèmes principaux",
+    "addPain": "Ajouter un problème...",
+    "goals": "Objectifs",
+    "addGoal": "Ajouter un objectif...",
+    "channels": "Canaux préférés",
+    "addChannel": "Ajouter un canal...",
+    "cancel": "Annuler",
+    "saving": "Enregistrement...",
+    "save": "Enregistrer"
+  },
+  "funnelTemplate": {
+    "previewTitle": "Aperçu template",
+    "back": "Retour",
+    "choose": "Choisis ton template",
+    "chooseHint": "Clique sur un template pour voir l'aperçu, puis sélectionne-le.",
+    "backToTemplates": "Retour aux templates",
+    "capture": "Capture",
+    "sales": "Vente",
+    "stylePreview": "Aperçu du style (texte de démonstration)",
+    "newTab": "Nouvel onglet",
+    "useTemplate": "Utiliser ce template"
+  },
+  "articleEditor": {
+    "copied": "Copié",
+    "copy": "Copier",
+    "dialogTitle": "Modifier & copier",
+    "apply": "Appliquer"
   }
 }

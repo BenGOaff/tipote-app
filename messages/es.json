@@ -3980,5 +3980,38 @@
     "networkLoad": "Error de red al cargar los tableros.",
     "cannotCreate": "No se pudo crear el tablero.",
     "networkCreate": "Error de red al crear el tablero."
+  },
+  "personaModal": {
+    "title": "Editar el persona",
+    "description": "Edita tu persona objetivo. Los cambios se sincronizarán en toda la aplicación.",
+    "mainProfile": "Perfil principal",
+    "profilePh": "Ej.: Emprendedor solo, 30-45 años",
+    "pains": "Problemas principales",
+    "addPain": "Añadir un problema...",
+    "goals": "Objetivos",
+    "addGoal": "Añadir un objetivo...",
+    "channels": "Canales preferidos",
+    "addChannel": "Añadir un canal...",
+    "cancel": "Cancelar",
+    "saving": "Guardando...",
+    "save": "Guardar"
+  },
+  "funnelTemplate": {
+    "previewTitle": "Vista previa plantilla",
+    "back": "Volver",
+    "choose": "Elige tu plantilla",
+    "chooseHint": "Haz clic en una plantilla para ver la vista previa, luego selecciónala.",
+    "backToTemplates": "Volver a las plantillas",
+    "capture": "Captura",
+    "sales": "Venta",
+    "stylePreview": "Vista previa del estilo (texto de demostración)",
+    "newTab": "Nueva pestaña",
+    "useTemplate": "Usar esta plantilla"
+  },
+  "articleEditor": {
+    "copied": "Copiado",
+    "copy": "Copiar",
+    "dialogTitle": "Editar y copiar",
+    "apply": "Aplicar"
   }
 }

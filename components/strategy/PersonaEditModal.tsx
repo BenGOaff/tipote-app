@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ export const PersonaEditModal = ({
   persona,
   onSaved,
 }: PersonaEditModalProps) => {
+  const t = useTranslations("personaModal");
   const [title, setTitle] = useState(persona.title);
   const [pains, setPains] = useState<string[]>(persona.pains);
   const [desires, setDesires] = useState<string[]>(persona.desires);
@@ -122,29 +124,28 @@ export const PersonaEditModal = ({
         <div className="flex flex-col max-h-[90vh]">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="text-2xl font-display font-bold">
-              Modifier le persona
+              {t("title")}
             </DialogTitle>
             <DialogDescription>
-              Modifie ton persona cible. Les changements seront synchronisés
-              partout dans l&apos;application.
+              {t("description")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="px-6 pb-6 overflow-auto space-y-6">
             {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="persona-title">Profil principal</Label>
+              <Label htmlFor="persona-title">{t("mainProfile")}</Label>
               <Input
                 id="persona-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex: Entrepreneur solo, 30-45 ans"
+                placeholder={t("profilePh")}
               />
             </div>
 
             {/* Pains */}
             <div className="space-y-3">
-              <Label>Problèmes principaux</Label>
+              <Label>{t("pains")}</Label>
               <div className="space-y-2">
                 {pains.map((pain, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -166,7 +167,7 @@ export const PersonaEditModal = ({
                 <Input
                   value={newPain}
                   onChange={(e) => setNewPain(e.target.value)}
-                  placeholder="Ajouter un problème..."
+                  placeholder={t("addPain")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -187,7 +188,7 @@ export const PersonaEditModal = ({
 
             {/* Desires */}
             <div className="space-y-3">
-              <Label>Objectifs</Label>
+              <Label>{t("goals")}</Label>
               <div className="space-y-2">
                 {desires.map((desire, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -209,7 +210,7 @@ export const PersonaEditModal = ({
                 <Input
                   value={newDesire}
                   onChange={(e) => setNewDesire(e.target.value)}
-                  placeholder="Ajouter un objectif..."
+                  placeholder={t("addGoal")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -232,7 +233,7 @@ export const PersonaEditModal = ({
 
             {/* Channels */}
             <div className="space-y-3">
-              <Label>Canaux préférés</Label>
+              <Label>{t("channels")}</Label>
               <div className="flex flex-wrap gap-2">
                 {channels.map((channel, i) => (
                   <Badge
@@ -250,7 +251,7 @@ export const PersonaEditModal = ({
                 <Input
                   value={newChannel}
                   onChange={(e) => setNewChannel(e.target.value)}
-                  placeholder="Ajouter un canal..."
+                  placeholder={t("addChannel")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -274,7 +275,7 @@ export const PersonaEditModal = ({
             {/* Actions */}
             <div className="flex gap-3 justify-end pt-2">
               <Button type="button" variant="outline" onClick={onClose}>
-                Annuler
+                {t("cancel")}
               </Button>
               <Button
                 onClick={handleSave}
@@ -285,7 +286,7 @@ export const PersonaEditModal = ({
                 ) : (
                   <Save className="w-4 h-4 mr-2" />
                 )}
-                {saving ? "Enregistrement..." : "Enregistrer"}
+                {saving ? t("saving") : t("save")}
               </Button>
             </div>
           </div>

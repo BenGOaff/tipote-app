@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ function getLayoutPath(t: SystemeTemplate): string {
 }
 
 export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate, preselected }: Props) {
+  const t = useTranslations("funnelTemplate");
   const [tab, setTab] = useState<"capture" | "sales">(preselected?.type ?? "capture");
   const [previewTemplate, setPreviewTemplate] = useState<SystemeTemplate | null>(null);
 
@@ -36,12 +38,12 @@ export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Retour
+          {t("back")}
         </Button>
         <div>
-          <h3 className="text-lg font-semibold">Choisis ton template</h3>
+          <h3 className="text-lg font-semibold">{t("choose")}</h3>
           <p className="text-sm text-muted-foreground">
-            Clique sur un template pour voir l&apos;aperçu, puis sélectionne-le.
+            {t("chooseHint")}
           </p>
         </div>
       </div>
@@ -52,12 +54,12 @@ export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate
           <div className="flex items-center justify-between">
             <Button variant="ghost" size="sm" onClick={() => setPreviewTemplate(null)}>
               <ArrowLeft className="w-4 h-4 mr-1" />
-              Retour aux templates
+              {t("backToTemplates")}
             </Button>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{previewTemplate.name}</span>
               <Badge variant="outline" className="text-xs">
-                {previewTemplate.type === "capture" ? "Capture" : "Vente"}
+                {previewTemplate.type === "capture" ? t("capture") : t("sales")}
               </Badge>
             </div>
           </div>
@@ -67,16 +69,16 @@ export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate
             <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
               <span className="text-sm text-muted-foreground flex items-center gap-1.5">
                 <Eye className="w-3.5 h-3.5" />
-                Aperçu du style (texte de démonstration)
+                {t("stylePreview")}
               </span>
               <Button variant="ghost" size="sm" onClick={() => onPreviewTemplate(previewTemplate)}>
-                Nouvel onglet
+                {t("newTab")}
               </Button>
             </div>
             <div className="h-[450px]">
               <iframe
                 src={`/api/templates/file/${getLayoutPath(previewTemplate)}`}
-                title="Aperçu template"
+                title={t("previewTitle")}
                 className="w-full h-full border-0"
                 sandbox="allow-scripts"
               />
@@ -89,15 +91,15 @@ export function FunnelTemplateStep({ onBack, onSelectTemplate, onPreviewTemplate
             </p>
             <Button onClick={() => { onSelectTemplate(previewTemplate); setPreviewTemplate(null); }}>
               <Check className="w-4 h-4 mr-1" />
-              Utiliser ce template
+              {t("useTemplate")}
             </Button>
           </div>
         </div>
       ) : (
         <Tabs value={tab} onValueChange={(v) => setTab(v as "capture" | "sales")} className="w-full">
           <TabsList className="grid w-full max-w-xs grid-cols-2">
-            <TabsTrigger value="capture">Capture ({captureTemplates.length})</TabsTrigger>
-            <TabsTrigger value="sales">Vente ({salesTemplates.length})</TabsTrigger>
+            <TabsTrigger value="capture">{t("capture")} ({captureTemplates.length})</TabsTrigger>
+            <TabsTrigger value="sales">{t("sales")} ({salesTemplates.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value={tab} className="mt-4">
