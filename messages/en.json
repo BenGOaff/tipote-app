@@ -3856,5 +3856,36 @@
     "html": "HTML",
     "saveDraft": "Save as draft",
     "publish": "Publish"
+  },
+  "projectSources": {
+    "title": "Context sources",
+    "subtitle": "Add context (notes, PDF, documents) that will be automatically injected into all your content generations.",
+    "add": "Add",
+    "noSources": "No sources yet.",
+    "noSourcesHint": "Add notes, your editorial guidelines, or import a PDF to enrich your generations.",
+    "maxReached": "Maximum 5 sources per project reached.",
+    "dialogTitle": "Add a context source",
+    "tabText": "Free text",
+    "tabFile": "File",
+    "titleLabel": "Title *",
+    "titlePh": "E.g. Editorial guidelines, brand tone...",
+    "contentLabel": "Content *",
+    "contentPh": "Paste your notes, guidelines, brand context, key info here...",
+    "addSource": "Add the source",
+    "fileTitle": "Title",
+    "fileTitlePh": "Title (auto-filled from file)",
+    "fileUpload": "File (PDF, DOCX, TXT — max 5 MB)",
+    "fileDrop": "Click or drop a file here",
+    "fileImport": "Import the file",
+    "toast": {
+      "error": "Error",
+      "unknown": "Unknown error",
+      "sourceAdded": "Source added",
+      "cannotAdd": "Unable to add the source.",
+      "cannotImport": "Unable to import the file.",
+      "sourceDeleted": "Source deleted",
+      "cannotDelete": "Unable to delete.",
+      "genericError": "Error"
+    }
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   FileText,
   FilePlus,
@@ -47,9 +48,9 @@ function formatBytes(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   try {
-    return new Date(iso).toLocaleDateString("fr-FR", {
+    return new Date(iso).toLocaleDateString(locale, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -61,6 +62,8 @@ function formatDate(iso: string): string {
 
 export default function ProjectSourcesSection() {
   const { toast } = useToast();
+  const t = useTranslations("projectSources");
+  const locale = useLocale();
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -113,15 +116,15 @@ export default function ProjectSourcesSection() {
       });
       const data = await res.json();
       if (!data?.ok) {
-        toast({ title: "Erreur", description: data?.error ?? "Erreur inconnue", variant: "destructive" });
+        toast({ title: t("toast.error"), description: data?.error ?? t("toast.unknown"), variant: "destructive" });
         return;
       }
       setSources((prev) => [...prev, data.source]);
       resetForm();
       setDialogOpen(false);
-      toast({ title: "Source ajoutée" });
+      toast({ title: t("toast.sourceAdded") });
     } catch {
-      toast({ title: "Erreur", description: "Impossible d'ajouter la source.", variant: "destructive" });
+      toast({ title: t("toast.error"), description: t("toast.cannotAdd"), variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -141,15 +144,15 @@ export default function ProjectSourcesSection() {
       });
       const data = await res.json();
       if (!data?.ok) {
-        toast({ title: "Erreur", description: data?.error ?? "Erreur inconnue", variant: "destructive" });
+        toast({ title: t("toast.error"), description: data?.error ?? t("toast.unknown"), variant: "destructive" });
         return;
       }
       setSources((prev) => [...prev, data.source]);
       resetForm();
       setDialogOpen(false);
-      toast({ title: "Source ajoutée" });
+      toast({ title: t("toast.sourceAdded") });
     } catch {
-      toast({ title: "Erreur", description: "Impossible d'importer le fichier.", variant: "destructive" });
+      toast({ title: t("toast.error"), description: t("toast.cannotImport"), variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -162,12 +165,12 @@ export default function ProjectSourcesSection() {
       const data = await res.json();
       if (data?.ok) {
         setSources((prev) => prev.filter((s) => s.id !== id));
-        toast({ title: "Source supprimée" });
+        toast({ title: t("toast.sourceDeleted") });
       } else {
-        toast({ title: "Erreur", description: data?.error ?? "Erreur", variant: "destructive" });
+        toast({ title: t("toast.error"), description: data?.error ?? t("toast.genericError"), variant: "destructive" });
       }
     } catch {
-      toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
+      toast({ title: t("toast.error"), description: t("toast.cannotDelete"), variant: "destructive" });
     } finally {
       setDeletingId(null);
     }
@@ -186,10 +189,9 @@ export default function ProjectSourcesSection() {
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold">Sources de contexte</h3>
+          <h3 className="text-lg font-bold">{t("title")}</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Ajoutez du contexte (notes, PDF, documents) qui sera automatiquement injecté dans toutes vos
-            générations de contenu.
+            {t("subtitle")}
           </p>
         </div>
         <Button
@@ -199,7 +201,7 @@ export default function ProjectSourcesSection() {
           disabled={sources.length >= 5}
         >
           <FilePlus className="w-4 h-4" />
-          Ajouter
+          {t("add")}
         </Button>
       </div>
 
@@ -210,9 +212,9 @@ export default function ProjectSourcesSection() {
       ) : sources.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p className="text-sm">Aucune source pour le moment.</p>
+          <p className="text-sm">{t("noSources")}</p>
           <p className="text-xs mt-1">
-            Ajoutez des notes, votre charte éditoriale, ou importez un PDF pour enrichir vos générations.
+            {t("noSourcesHint")}
           </p>
         </div>
       ) : (
@@ -231,7 +233,7 @@ export default function ProjectSourcesSection() {
                     {s.source_type.toUpperCase()}
                     {s.file_size_bytes ? ` · ${formatBytes(s.file_size_bytes)}` : ""}
                     {" · "}
-                    {formatDate(s.created_at)}
+                    {formatDate(s.created_at, locale)}
                   </p>
                 </div>
                 <Button
@@ -252,7 +254,7 @@ export default function ProjectSourcesSection() {
           })}
           {sources.length >= 5 && (
             <p className="text-xs text-muted-foreground text-center pt-2">
-              Maximum 5 sources par projet atteint.
+              {t("maxReached")}
             </p>
           )}
         </div>
@@ -262,38 +264,38 @@ export default function ProjectSourcesSection() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ajouter une source de contexte</DialogTitle>
+            <DialogTitle>{t("dialogTitle")}</DialogTitle>
           </DialogHeader>
 
           <Tabs defaultValue="text" className="mt-2">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="text" className="gap-2">
                 <StickyNote className="w-4 h-4" />
-                Texte libre
+                {t("tabText")}
               </TabsTrigger>
               <TabsTrigger value="file" className="gap-2">
                 <Upload className="w-4 h-4" />
-                Fichier
+                {t("tabFile")}
               </TabsTrigger>
             </TabsList>
 
             {/* Text tab */}
             <TabsContent value="text" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="text-title">Titre *</Label>
+                <Label htmlFor="text-title">{t("titleLabel")}</Label>
                 <Input
                   id="text-title"
-                  placeholder="Ex: Charte éditoriale, Ton de marque..."
+                  placeholder={t("titlePh")}
                   value={textTitle}
                   onChange={(e) => setTextTitle(e.target.value)}
                   maxLength={200}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="text-content">Contenu *</Label>
+                <Label htmlFor="text-content">{t("contentLabel")}</Label>
                 <Textarea
                   id="text-content"
-                  placeholder="Collez ici vos notes, guidelines, contexte de marque, informations clés..."
+                  placeholder={t("contentPh")}
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
                   rows={8}
@@ -310,24 +312,24 @@ export default function ProjectSourcesSection() {
                 disabled={submitting || !textTitle.trim() || textContent.trim().length < 10}
               >
                 {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Ajouter la source
+                {t("addSource")}
               </Button>
             </TabsContent>
 
             {/* File tab */}
             <TabsContent value="file" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="file-title">Titre</Label>
+                <Label htmlFor="file-title">{t("fileTitle")}</Label>
                 <Input
                   id="file-title"
-                  placeholder="Titre (auto-rempli depuis le fichier)"
+                  placeholder={t("fileTitlePh")}
                   value={fileTitle}
                   onChange={(e) => setFileTitle(e.target.value)}
                   maxLength={200}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Fichier (PDF, DOCX, TXT — max 5 Mo)</Label>
+                <Label>{t("fileUpload")}</Label>
                 <div
                   className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
@@ -354,7 +356,7 @@ export default function ProjectSourcesSection() {
                     <>
                       <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
-                        Cliquez ou glissez un fichier ici
+                        {t("fileDrop")}
                       </p>
                     </>
                   )}
@@ -373,7 +375,7 @@ export default function ProjectSourcesSection() {
                 disabled={submitting || !selectedFile}
               >
                 {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Importer le fichier
+                {t("fileImport")}
               </Button>
             </TabsContent>
           </Tabs>
