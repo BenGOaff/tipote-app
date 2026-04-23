@@ -4365,5 +4365,11 @@
       "privacyOfficer": "Privacy officer (Law 25)",
       "privacyOfficerPh": "Name of the person in charge of protecting personal information"
     }
+  },
+  "meta": {
+    "rootTitle": "Tipote",
+    "rootDescription": "Tipote – strategic planning & business automations",
+    "supportTitle": "Tipote — Help Center",
+    "supportDescription": "Find answers to all your questions about Tipote"
   }
 }

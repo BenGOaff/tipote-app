@@ -4365,5 +4365,11 @@
       "privacyOfficer": "Responsable de la privacidad (Ley 25)",
       "privacyOfficerPh": "Nombre del responsable de la protección de los datos personales"
     }
+  },
+  "meta": {
+    "rootTitle": "Tipote",
+    "rootDescription": "Tipote – planificación estratégica y automatizaciones de negocio",
+    "supportTitle": "Tipote — Centro de ayuda",
+    "supportDescription": "Encuentra respuestas a todas tus preguntas sobre Tipote"
   }
 }

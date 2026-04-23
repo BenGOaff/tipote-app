@@ -4365,5 +4365,11 @@
       "privacyOfficer": "مسؤول الخصوصية (القانون 25)",
       "privacyOfficerPh": "اسم المسؤول عن حماية المعلومات الشخصية"
     }
+  },
+  "meta": {
+    "rootTitle": "Tipote",
+    "rootDescription": "Tipote – التخطيط الاستراتيجي وأتمتة الأعمال",
+    "supportTitle": "Tipote — مركز المساعدة",
+    "supportDescription": "اعثر على إجابات لجميع أسئلتك حول Tipote"
   }
 }
