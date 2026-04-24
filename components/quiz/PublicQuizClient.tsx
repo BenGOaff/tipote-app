@@ -144,6 +144,7 @@ type QuizTranslations = {
   personalizeFirstNamePlaceholder: string;
   personalizeGender: string;
   personalizeContinue: string;
+  resultCtaDefault: string;
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -193,6 +194,7 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstNamePlaceholder: "Ex : Marie",
     personalizeGender: "Comment préfères-tu être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
+    resultCtaDefault: "Découvrir",
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -240,6 +242,7 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstNamePlaceholder: "Ex : Marie",
     personalizeGender: "Comment préférez-vous être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
+    resultCtaDefault: "Découvrir",
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -287,6 +290,7 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstNamePlaceholder: "e.g. Alex",
     personalizeGender: "How should we refer to you?",
     personalizeContinue: "Start the quiz",
+    resultCtaDefault: "Discover",
   },
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
@@ -334,6 +338,7 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstNamePlaceholder: "Ej: Ana",
     personalizeGender: "¿Cómo prefieres que te tratemos?",
     personalizeContinue: "Empezar el quiz",
+    resultCtaDefault: "Descubrir",
   },
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
@@ -381,6 +386,7 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstNamePlaceholder: "z. B. Alex",
     personalizeGender: "Wie sollen wir dich ansprechen?",
     personalizeContinue: "Quiz starten",
+    resultCtaDefault: "Entdecken",
   },
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
@@ -428,6 +434,7 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstNamePlaceholder: "Ex: Ana",
     personalizeGender: "Como prefere que te chamemos?",
     personalizeContinue: "Começar o quiz",
+    resultCtaDefault: "Descobrir",
   },
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
@@ -475,6 +482,7 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstNamePlaceholder: "Es: Anna",
     personalizeGender: "Come preferisci essere chiamat·a?",
     personalizeContinue: "Inizia il quiz",
+    resultCtaDefault: "Scopri",
   },
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
@@ -522,6 +530,7 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstNamePlaceholder: "مثالًا: ياسمين",
     personalizeGender: "كيف تُفضّل أن نخاطبك؟",
     personalizeContinue: "ابدأ الاختبار",
+    resultCtaDefault: "اكتشف",
   },
 };
 
@@ -1576,11 +1585,13 @@ export default function PublicQuizClient({
               );
             })()}
 
-          {/* CTA — per-result URL takes priority over global */}
+          {/* CTA — per-result URL takes priority over global.
+              Falls back to the locale's default label when only the URL is set,
+              so a user who forgets the text still gets a working button. */}
           {(() => {
             const ctaUrl = resultProfile?.cta_url || quiz.cta_url;
-            const ctaText = interp(resultProfile?.cta_text || quiz.cta_text);
-            return ctaText && ctaUrl ? (
+            const ctaText = interp(resultProfile?.cta_text || quiz.cta_text || "") || t.resultCtaDefault;
+            return ctaUrl ? (
               <Button size="lg" className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug" asChild>
                 <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
                   {ctaText}
