@@ -260,6 +260,7 @@ export default function SocialConnections() {
   const searchParams = useSearchParams();
   const t = useTranslations("social");
   const tc = useTranslations("common");
+  const locale = useLocale();
 
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
