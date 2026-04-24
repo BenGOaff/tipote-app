@@ -953,6 +953,7 @@ function PostPickerModal({
 }) {
   const t = useTranslations("automations");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

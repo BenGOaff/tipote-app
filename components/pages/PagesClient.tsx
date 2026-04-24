@@ -1041,6 +1041,7 @@ type Lead = {
 
 function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle: string; onClose: () => void }) {
   const t = useTranslations("pages");
+  const locale = useLocale();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -1253,6 +1253,7 @@ function ProcessCard({
   onDeleteProcess: () => void;
 }) {
   const tc = useTranslations("common");
+  const locale = useLocale();
   const [newItemTitle, setNewItemTitle] = useState("");
   const [expanded, setExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
