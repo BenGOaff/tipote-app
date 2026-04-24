@@ -20,6 +20,7 @@ interface MetricsChartProps {
 }
 
 export const MetricsChart = ({ metrics }: MetricsChartProps) => {
+  const locale = useLocale();
   if (metrics.length < 2) {
     return null;
   }
