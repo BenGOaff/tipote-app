@@ -108,11 +108,15 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
   };
 
   if (editing) {
-    const cls = `${className || ""} w-full bg-white/90 border-2 border-primary/40 outline-none rounded-lg px-2 py-1`;
+    // Strip any white/light text color the caller passed in so the edit field
+    // (white background) keeps a readable dark-on-white contrast — fixes the
+    // "invisible text" on inverted buttons like the start CTA.
+    const safeClass = (className || "").replace(/\btext-white\b/g, "").replace(/\btext-(?:primary|background)-foreground\b/g, "");
+    const cls = `${safeClass} text-foreground w-full bg-white border-2 border-primary/40 outline-none rounded-lg px-2 py-1`;
     return multiline ? (
-      <textarea ref={ref as React.RefObject<HTMLTextAreaElement>} value={value} onChange={(e) => onChange(e.target.value)} onBlur={() => setEditing(false)} className={`${cls} resize-none min-h-[60px]`} placeholder={placeholder} style={style} />
+      <textarea ref={ref as React.RefObject<HTMLTextAreaElement>} value={value} onChange={(e) => onChange(e.target.value)} onBlur={() => setEditing(false)} className={`${cls} resize-none min-h-[60px]`} placeholder={placeholder} style={{ ...style, color: undefined }} />
     ) : (
-      <input ref={ref as React.RefObject<HTMLInputElement>} value={value} onChange={(e) => onChange(e.target.value)} onBlur={() => setEditing(false)} onKeyDown={(e) => e.key === "Enter" && setEditing(false)} className={cls} placeholder={placeholder} style={style} />
+      <input ref={ref as React.RefObject<HTMLInputElement>} value={value} onChange={(e) => onChange(e.target.value)} onBlur={() => setEditing(false)} onKeyDown={(e) => e.key === "Enter" && setEditing(false)} className={cls} placeholder={placeholder} style={{ ...style, color: undefined }} />
     );
   }
   return (
@@ -402,6 +406,80 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       return null;
     }
   }, [locale, t]);
+
+  // Bulk-genderize every text field of the quiz in one go. Used when the
+  // author toggles "Ask gender" after the quiz was already generated without
+  // variants. Walks questions / options / results sequentially (each call
+  // costs credits, and the server rate-limits anyway). Returns progress so
+  // we can show it in the toast and stop early on NO_CREDITS.
+  const [bulkGenderizing, setBulkGenderizing] = useState<{ done: number; total: number } | null>(null);
+  const runBulkGenderize = useCallback(async () => {
+    if (bulkGenderizing) return;
+    type Field = {
+      get: () => string | null | undefined;
+      set: (v: string) => void;
+    };
+    const fields: Field[] = [];
+    editQuestions.forEach((q, qi) => {
+      fields.push({ get: () => q.question_text, set: (v) => setEditQuestions((p) => p.map((x, i) => i === qi ? { ...x, question_text: v } : x)) });
+      q.options.forEach((_, oi) => {
+        fields.push({ get: () => editQuestions[qi]?.options[oi]?.text, set: (v) => setEditQuestions((p) => p.map((x, i) => i !== qi ? x : { ...x, options: x.options.map((o, j) => j === oi ? { ...o, text: v } : o) })) });
+      });
+    });
+    editResults.forEach((_, ri) => {
+      (["title", "description", "insight", "projection", "cta_text"] as const).forEach((key) => {
+        fields.push({
+          get: () => (editResults[ri] as any)?.[key],
+          set: (v) => setEditResults((p) => p.map((r, i) => i === ri ? { ...r, [key]: v } : r)),
+        });
+      });
+    });
+
+    // Only process fields that have actual content and don't already contain a gender split.
+    const queue = fields.filter((f) => {
+      const raw = (f.get() ?? "").toString();
+      const text = raw.replace(/<[^>]*>/g, "").trim();
+      if (!text) return false;
+      return !/\{[^{}]*\|[^{}]*\|[^{}]*\}/.test(raw);
+    });
+
+    if (queue.length === 0) {
+      toast.info(t("genderizeAllDone"));
+      return;
+    }
+
+    setBulkGenderizing({ done: 0, total: queue.length });
+    let done = 0;
+    let stop = false;
+    for (const f of queue) {
+      if (stop) break;
+      const raw = (f.get() ?? "").toString();
+      const text = raw.replace(/<[^>]*>/g, "").trim();
+      try {
+        const res = await fetch("/api/quiz/gender-variants", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, locale: locale || "fr" }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.status === 402 || json?.error === "NO_CREDITS") {
+          toast.error(t("toastNoCredits"));
+          stop = true;
+          break;
+        }
+        if (res.ok && json?.ok && typeof json.folded === "string") {
+          f.set(json.folded);
+          done++;
+          setBulkGenderizing({ done, total: queue.length });
+        }
+      } catch {
+        // skip failed field and continue
+      }
+    }
+    setBulkGenderizing(null);
+    if (done === queue.length) toast.success(t("genderizeAllDone"));
+    else toast.warning(t("genderizeAllPartial", { done, total: queue.length }));
+  }, [bulkGenderizing, editQuestions, editResults, locale, t]);
 
   // Logo upload (reuses public-assets bucket, same layout as SettingsClient)
   async function handleLogoUpload(file: File) {
@@ -768,6 +846,27 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     checked={askGender}
                     onChange={setAskGender}
                   />
+                  {askGender && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={runBulkGenderize}
+                      disabled={!!bulkGenderizing}
+                    >
+                      {bulkGenderizing ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                          {t("genderizingAll", { done: bulkGenderizing.done, total: bulkGenderizing.total })}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 mr-2" />
+                          {t("genderizeAll")}
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </section>
 
                 <Separator />
