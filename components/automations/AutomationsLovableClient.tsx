@@ -766,6 +766,7 @@ function AutomationCard({
   onToggle: (a: SocialAutomation) => void;
 }) {
   const t = useTranslations("automations");
+  const tc = useTranslations("common");
   const [showTest, setShowTest] = useState(false);
   const [testInput, setTestInput] = useState("");
   const [isTesting, setIsTesting] = useState(false);
@@ -951,6 +952,7 @@ function PostPickerModal({
   onSelect: (postId: string, preview: string) => void;
 }) {
   const t = useTranslations("automations");
+  const tc = useTranslations("common");
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

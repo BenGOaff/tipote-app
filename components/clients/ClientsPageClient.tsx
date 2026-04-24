@@ -1252,6 +1252,7 @@ function ProcessCard({
   onUpdateProcess: (data: Record<string, unknown>) => void;
   onDeleteProcess: () => void;
 }) {
+  const tc = useTranslations("common");
   const [newItemTitle, setNewItemTitle] = useState("");
   const [expanded, setExpanded] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
