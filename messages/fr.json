@@ -2039,7 +2039,11 @@
     "subscriptionUpdated": "Abonnement mis à jour. Tu peux réessayer.",
     "subscriptionCheckError": "Impossible de vérifier l'abonnement.",
     "generateFirst": "Génère du contenu d'abord.",
-    "schedulingError": "Programmation impossible"
+    "schedulingError": "Programmation impossible",
+    "placeholderEmail": "Objectif de l'email, contexte, offre, cible, ton…\nEx: email de relance après découverte, ton direct, CTA prise de call.",
+    "placeholderBlog": "Sujet, angle, cible, mots-clés (si tu en as), longueur…\nEx: \"Comment trouver ses 10 premiers clients en B2B\", ton pédagogique, plan H2/H3.",
+    "placeholderScript": "Sujet, format (Reel/TikTok/YouTube), durée, cible, ton…\nEx: 45s, hook fort, 3 points, CTA vers lead magnet.",
+    "placeholderPost": "Sujet, angle, cible, objectif, style…\nEx: post LinkedIn storytelling, 180–240 mots, ton direct, 1 CTA."
   },
   "createHub": {
     "title": "Créer du contenu",
@@ -2075,7 +2079,13 @@
     "contentGeneratedDesc": "Vous pouvez maintenant le modifier avant de le sauvegarder",
     "generationError": "Erreur de génération",
     "generationErrorDesc": "Impossible de générer le contenu",
-    "saveError": "Sauvegarde impossible"
+    "saveError": "Sauvegarde impossible",
+    "aiRequest": "DEMANDE",
+    "aiType": "Type",
+    "aiPlatform": "Plateforme",
+    "aiTone": "Ton",
+    "aiTopic": "Sujet",
+    "aiInstruction": "Génère un contenu directement publiable. Donne uniquement le résultat final."
   },
   "strategyDetails": {
     "addTask": "Ajouter une tâche",
@@ -3701,7 +3711,11 @@
     "errors": {
       "server": "Erreur serveur ({status}). Réessaye.",
       "generic": "Erreur ({status})"
-    }
+    },
+    "aiHookLabel": "ACCROCHE (première phrase, à développer en contenu complet)",
+    "aiCtaLabel": "CTA (à placer en fin de contenu)",
+    "aiEmailInstruction": "IMPORTANT : Rédige un email COMPLET avec objet, accroche, corps développé (arguments, storytelling, valeur) et CTA. Minimum 200 mots.",
+    "aiPostInstruction": "IMPORTANT : Rédige un post COMPLET et DÉVELOPPÉ d'au moins 150 mots. L'accroche est le DÉBUT du post, pas le post entier. Développe avec des arguments, du storytelling, de la valeur ajoutée."
   },
   "competitorAnalysis": {
     "loading": "Chargement de l'analyse concurrentielle...",
@@ -4644,5 +4658,10 @@
     "replyAndSend": "Répondre & envoyer par email",
     "close": "Fermer",
     "reopen": "Rouvrir"
+  },
+  "adminSupport": {
+    "seedConfirm": "Ceci va insérer/mettre à jour toutes les catégories et articles. Continuer ?",
+    "seedButton": "Seed / Mettre à jour le contenu",
+    "seeding": "Seeding..."
   }
 }

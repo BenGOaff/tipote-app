@@ -624,13 +624,11 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
       // so we provide the theme as `subject` and the hook/CTA as development instructions.
       const subjectLines: string[] = [day.theme];
       subjectLines.push("");
-      subjectLines.push(`ACCROCHE (première phrase, à développer en contenu complet) : ${day.hook}`);
-      subjectLines.push(`CTA (à placer en fin de contenu) : ${day.cta}`);
+      subjectLines.push(`${t("aiHookLabel")} : ${day.hook}`);
+      subjectLines.push(`${t("aiCtaLabel")} : ${day.cta}`);
       subjectLines.push("");
       subjectLines.push(
-        type === "email"
-          ? "IMPORTANT : Rédige un email COMPLET avec objet, accroche, corps développé (arguments, storytelling, valeur) et CTA. Minimum 200 mots."
-          : "IMPORTANT : Rédige un post COMPLET et DÉVELOPPÉ d'au moins 150 mots. L'accroche est le DÉBUT du post, pas le post entier. Développe avec des arguments, du storytelling, de la valeur ajoutée.",
+        type === "email" ? t("aiEmailInstruction") : t("aiPostInstruction"),
       );
 
       // Build offer context for the generate route

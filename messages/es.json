@@ -2039,7 +2039,11 @@
     "subscriptionUpdated": "Suscripción actualizada. Puedes volver a intentarlo.",
     "subscriptionCheckError": "No se pudo verificar la suscripción.",
     "generateFirst": "Genera contenido primero.",
-    "schedulingError": "Programación fallida"
+    "schedulingError": "Programación fallida",
+    "placeholderEmail": "Objetivo del email, contexto, oferta, objetivo, tono…\nEj: email de seguimiento tras descubrimiento, tono directo, CTA reservar llamada.",
+    "placeholderBlog": "Tema, ángulo, objetivo, palabras clave (si las tienes), longitud…\nEj: \"Cómo encontrar tus primeros 10 clientes B2B\", tono pedagógico, plan H2/H3.",
+    "placeholderScript": "Tema, formato (Reel/TikTok/YouTube), duración, objetivo, tono…\nEj: 45s, hook potente, 3 puntos, CTA al lead magnet.",
+    "placeholderPost": "Tema, ángulo, objetivo, meta, estilo…\nEj: publicación storytelling LinkedIn, 180–240 palabras, tono directo, 1 CTA."
   },
   "createHub": {
     "title": "Crear contenido",
@@ -2075,7 +2079,13 @@
     "contentGeneratedDesc": "Ahora puedes editarlo antes de guardarlo",
     "generationError": "Error de generación",
     "generationErrorDesc": "No se pudo generar el contenido",
-    "saveError": "Error al guardar"
+    "saveError": "Error al guardar",
+    "aiRequest": "SOLICITUD",
+    "aiType": "Tipo",
+    "aiPlatform": "Plataforma",
+    "aiTone": "Tono",
+    "aiTopic": "Tema",
+    "aiInstruction": "Genera contenido listo para publicar. Devuelve solo el resultado final."
   },
   "strategyDetails": {
     "addTask": "Añadir una tarea",
@@ -3701,7 +3711,11 @@
     "errors": {
       "server": "Error del servidor ({status}). Vuelve a intentarlo.",
       "generic": "Error ({status})"
-    }
+    },
+    "aiHookLabel": "GANCHO (primera frase, a desarrollar en contenido completo)",
+    "aiCtaLabel": "CTA (a colocar al final del contenido)",
+    "aiEmailInstruction": "IMPORTANTE: Redacta un email COMPLETO con asunto, gancho, cuerpo desarrollado (argumentos, storytelling, valor) y CTA. Mínimo 200 palabras.",
+    "aiPostInstruction": "IMPORTANTE: Redacta una publicación COMPLETA y DESARROLLADA de al menos 150 palabras. El gancho es el INICIO de la publicación, no la publicación entera. Desarrolla con argumentos, storytelling, valor añadido."
   },
   "competitorAnalysis": {
     "loading": "Cargando el análisis de la competencia...",
@@ -4644,5 +4658,10 @@
     "replyAndSend": "Responder y enviar por email",
     "close": "Cerrar",
     "reopen": "Reabrir"
+  },
+  "adminSupport": {
+    "seedConfirm": "Esto insertará/actualizará todas las categorías y artículos. ¿Continuar?",
+    "seedButton": "Seed / Actualizar contenido",
+    "seeding": "Sembrando..."
   }
 }

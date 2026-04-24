@@ -2039,7 +2039,11 @@
     "subscriptionUpdated": "Subscription updated. You can try again.",
     "subscriptionCheckError": "Unable to check subscription.",
     "generateFirst": "Generate content first.",
-    "schedulingError": "Scheduling failed"
+    "schedulingError": "Scheduling failed",
+    "placeholderEmail": "Email goal, context, offer, target, tone…\nEx: follow-up email after discovery call, direct tone, CTA to book a call.",
+    "placeholderBlog": "Topic, angle, target, keywords (if any), length…\nEx: \"How to find your first 10 B2B clients\", pedagogical tone, H2/H3 outline.",
+    "placeholderScript": "Topic, format (Reel/TikTok/YouTube), duration, target, tone…\nEx: 45s, strong hook, 3 points, CTA to lead magnet.",
+    "placeholderPost": "Topic, angle, target, goal, style…\nEx: LinkedIn storytelling post, 180–240 words, direct tone, 1 CTA."
   },
   "createHub": {
     "title": "Create content",
@@ -2075,7 +2079,13 @@
     "contentGeneratedDesc": "You can now edit it before saving",
     "generationError": "Generation error",
     "generationErrorDesc": "Unable to generate content",
-    "saveError": "Save failed"
+    "saveError": "Save failed",
+    "aiRequest": "REQUEST",
+    "aiType": "Type",
+    "aiPlatform": "Platform",
+    "aiTone": "Tone",
+    "aiTopic": "Topic",
+    "aiInstruction": "Generate content that is ready to publish. Return only the final result."
   },
   "strategyDetails": {
     "addTask": "Add a task",
@@ -3701,7 +3711,11 @@
     "errors": {
       "server": "Server error ({status}). Please try again.",
       "generic": "Error ({status})"
-    }
+    },
+    "aiHookLabel": "HOOK (first sentence, to be expanded into full content)",
+    "aiCtaLabel": "CTA (to place at the end of the content)",
+    "aiEmailInstruction": "IMPORTANT: Write a COMPLETE email with subject, hook, developed body (arguments, storytelling, value) and CTA. Minimum 200 words.",
+    "aiPostInstruction": "IMPORTANT: Write a COMPLETE and DEVELOPED post of at least 150 words. The hook is the BEGINNING of the post, not the whole post. Develop it with arguments, storytelling, added value."
   },
   "competitorAnalysis": {
     "loading": "Loading competitor analysis...",
@@ -4644,5 +4658,10 @@
     "replyAndSend": "Reply & send by email",
     "close": "Close",
     "reopen": "Reopen"
+  },
+  "adminSupport": {
+    "seedConfirm": "This will insert/update all categories and articles. Continue?",
+    "seedButton": "Seed / Update content",
+    "seeding": "Seeding..."
   }
 }

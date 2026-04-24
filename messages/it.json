@@ -2039,7 +2039,11 @@
     "subscriptionUpdated": "Abbonamento aggiornato. Puoi riprovare.",
     "subscriptionCheckError": "Impossibile verificare l'abbonamento.",
     "generateFirst": "Genera prima il contenuto.",
-    "schedulingError": "Programmazione fallita"
+    "schedulingError": "Programmazione fallita",
+    "placeholderEmail": "Obiettivo dell'email, contesto, offerta, target, tono…\nEs: email di follow-up dopo la scoperta, tono diretto, CTA prenotazione call.",
+    "placeholderBlog": "Argomento, angolo, target, parole chiave (se ne hai), lunghezza…\nEs: \"Come trovare i tuoi primi 10 clienti B2B\", tono pedagogico, piano H2/H3.",
+    "placeholderScript": "Argomento, formato (Reel/TikTok/YouTube), durata, target, tono…\nEs: 45s, hook forte, 3 punti, CTA al lead magnet.",
+    "placeholderPost": "Argomento, angolo, target, obiettivo, stile…\nEs: post storytelling LinkedIn, 180–240 parole, tono diretto, 1 CTA."
   },
   "createHub": {
     "title": "Crea contenuto",
@@ -2075,7 +2079,13 @@
     "contentGeneratedDesc": "Ora puoi modificarlo prima di salvarlo",
     "generationError": "Errore di generazione",
     "generationErrorDesc": "Impossibile generare il contenuto",
-    "saveError": "Salvataggio impossibile"
+    "saveError": "Salvataggio impossibile",
+    "aiRequest": "RICHIESTA",
+    "aiType": "Tipo",
+    "aiPlatform": "Piattaforma",
+    "aiTone": "Tono",
+    "aiTopic": "Argomento",
+    "aiInstruction": "Genera un contenuto pronto da pubblicare. Restituisci solo il risultato finale."
   },
   "strategyDetails": {
     "addTask": "Aggiungi un compito",
@@ -3701,7 +3711,11 @@
     "errors": {
       "server": "Errore del server ({status}). Riprova.",
       "generic": "Errore ({status})"
-    }
+    },
+    "aiHookLabel": "HOOK (prima frase, da sviluppare in contenuto completo)",
+    "aiCtaLabel": "CTA (da mettere alla fine del contenuto)",
+    "aiEmailInstruction": "IMPORTANTE: Scrivi un'email COMPLETA con oggetto, hook, corpo sviluppato (argomentazioni, storytelling, valore) e CTA. Minimo 200 parole.",
+    "aiPostInstruction": "IMPORTANTE: Scrivi un post COMPLETO e SVILUPPATO di almeno 150 parole. L'hook è l'INIZIO del post, non l'intero post. Sviluppa con argomentazioni, storytelling, valore aggiunto."
   },
   "competitorAnalysis": {
     "loading": "Caricamento dell'analisi della concorrenza...",
@@ -4644,5 +4658,10 @@
     "replyAndSend": "Rispondi e invia via email",
     "close": "Chiudi",
     "reopen": "Riapri"
+  },
+  "adminSupport": {
+    "seedConfirm": "Questo inserirà/aggiornerà tutte le categorie e gli articoli. Continuare?",
+    "seedButton": "Seed / Aggiorna contenuto",
+    "seeding": "Seeding..."
   }
 }

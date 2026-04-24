@@ -53,6 +53,7 @@ const LANG_LABELS: Record<string, string> = {
 
 export default function AdminSupportClient() {
   const tc = useTranslations("common");
+  const ta = useTranslations("adminSupport");
   const [categories, setCategories] = useState<Category[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +80,7 @@ export default function AdminSupportClient() {
   }, [fetchData]);
 
   const handleSeed = async () => {
-    if (!confirm("Ceci va insérer/mettre à jour toutes les catégories et articles. Continuer ?")) return;
+    if (!confirm(ta("seedConfirm"))) return;
     setSeeding(true);
     setMessage("");
     const res = await fetch("/api/admin/support/seed", { method: "POST" });
@@ -150,7 +151,7 @@ export default function AdminSupportClient() {
             disabled={seeding}
           >
             {seeding ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Database className="w-4 h-4 mr-1.5" />}
-            {seeding ? "Seeding..." : "Seed / Mettre à jour le contenu"}
+            {seeding ? ta("seeding") : ta("seedButton")}
           </Button>
           <a
             href="/support"
