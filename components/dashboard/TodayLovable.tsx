@@ -414,7 +414,7 @@ function buildStrategicObjective(
 
 type ProgressionLine = { label: string; value: string; trend?: "up" | "down" | "stable" };
 
-function buildProgressionSummary(p: ProgressionData, t?: (key: string) => string): { headline: string | null; lines: ProgressionLine[] } | null {
+function buildProgressionSummary(p: ProgressionData, t?: (key: string) => string, locale: string = "fr"): { headline: string | null; lines: ProgressionLine[] } | null {
   if (!p.hasMetrics) return null;
 
   const hasPrev =
@@ -427,11 +427,11 @@ function buildProgressionSummary(p: ProgressionData, t?: (key: string) => string
   if (p.revenue !== null) {
     if (hasPrev && p.prevRevenue !== null && p.prevRevenue > 0) {
       const pct = Math.round(((p.revenue - p.prevRevenue) / p.prevRevenue) * 100);
-      if (pct >= 5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€ (+${pct}%)`, trend: "up" }); hasPositive = true; }
-      else if (pct <= -5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€ (${pct}%)`, trend: "down" }); hasNegative = true; }
-      else lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€`, trend: "stable" });
+      if (pct >= 5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString(locale)}€ (+${pct}%)`, trend: "up" }); hasPositive = true; }
+      else if (pct <= -5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString(locale)}€ (${pct}%)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: "CA", value: `${p.revenue.toLocaleString(locale)}€`, trend: "stable" });
     } else {
-      lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€` });
+      lines.push({ label: "CA", value: `${p.revenue.toLocaleString(locale)}€` });
     }
   }
 
@@ -875,7 +875,7 @@ export default function TodayLovable() {
   }, [supabase, fetchEncouragement]);
 
   // Résumé intelligent de la progression analytics
-  const progressionSummary = useMemo(() => buildProgressionSummary(progression, t), [progression, t]);
+  const progressionSummary = useMemo(() => buildProgressionSummary(progression, t, locale), [progression, t, locale]);
 
   return (
     <SidebarProvider>
@@ -1032,8 +1032,8 @@ export default function TodayLovable() {
                             </div>
                             <Progress value={pct} className="h-2" />
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{rev.toLocaleString("fr-FR")} €</span>
-                              <span>Objectif : {goal.toLocaleString("fr-FR")} €</span>
+                              <span>{rev.toLocaleString(locale)} €</span>
+                              <span>Objectif : {goal.toLocaleString(locale)} €</span>
                             </div>
                           </div>
                         );

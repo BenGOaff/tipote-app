@@ -3,7 +3,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -143,6 +143,8 @@ const TASKS_DISPLAY_LIMIT = 4;
 
 export default function StrategyLovable(props: StrategyLovableProps) {
   const t = useTranslations("strategy");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -336,7 +338,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     });
     const json = await res.json().catch(() => ({}));
     if (!json.ok) {
-      toast({ title: t("toast.error"), description: json.error || "Erreur", variant: "destructive" });
+      toast({ title: t("toast.error"), description: json.error || tc("error"), variant: "destructive" });
       return;
     }
     toast({ title: t("savedShort") });
@@ -719,17 +721,17 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       className="h-8 text-sm"
                       disabled={savingRevGoal}
                     />
-                    <button onClick={handleSaveRevGoal} disabled={savingRevGoal || !revGoalInput.trim()} className="text-primary hover:text-primary/80 disabled:opacity-40 shrink-0" aria-label="Enregistrer">
+                    <button onClick={handleSaveRevGoal} disabled={savingRevGoal || !revGoalInput.trim()} className="text-primary hover:text-primary/80 disabled:opacity-40 shrink-0" aria-label={tc("save")}>
                       <Check className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setIsEditingRevGoal(false)} className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Annuler">
+                    <button onClick={() => setIsEditingRevGoal(false)} className="text-muted-foreground hover:text-foreground shrink-0" aria-label={tc("cancel")}>
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <p className="text-xl font-bold">{revenueGoalLocal}</p>
-                    <button onClick={() => { setRevGoalInput(revenueGoalLocal === "—" ? "" : revenueGoalLocal); setIsEditingRevGoal(true); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors" aria-label="Modifier l'objectif de revenu" title="Modifier">
+                    <button onClick={() => { setRevGoalInput(revenueGoalLocal === "—" ? "" : revenueGoalLocal); setIsEditingRevGoal(true); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors" aria-label={t("editRevenueGoal")} title={tc("edit")}>
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -742,7 +744,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   return (
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{rev.toLocaleString("fr-FR")} € ce mois</span>
+                        <span>{rev.toLocaleString(locale)} € ce mois</span>
                         {goalNum > 0 && <span className={pct >= 100 ? "text-green-600 font-semibold" : pct >= 50 ? "text-amber-600" : "text-muted-foreground"}>{pct}%</span>}
                       </div>
                       {goalNum > 0 && <Progress value={pct} className="h-1.5" />}

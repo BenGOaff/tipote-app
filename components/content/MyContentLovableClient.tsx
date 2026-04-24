@@ -278,6 +278,7 @@ export default function MyContentLovableClient({
 }: Props) {
   const router = useRouter();
   const t = useTranslations("myContent");
+  const tc = useTranslations("common");
 
   const [view, setView] = useState<"list" | "calendar">(initialView);
   const [search, setSearch] = useState("");
@@ -699,11 +700,11 @@ export default function MyContentLovableClient({
                                             e.stopPropagation();
                                             openPlan(item);
                                           }}
-                                          title="Modifier la date et l'heure de publication"
+                                          title={t("ui.editPublishDate")}
                                         >
                                           <Clock className="h-3.5 w-3.5" />
                                           {formatDate(item.scheduled_date)}
-                                          {(item.meta as any)?.scheduled_time ? ` à ${(item.meta as any).scheduled_time}` : ""}
+                                          {(item.meta as any)?.scheduled_time ? ` ${t("ui.atTime")} ${(item.meta as any).scheduled_time}` : ""}
                                         </button>
                                       ) : null}
                                     </div>
@@ -1098,11 +1099,11 @@ export default function MyContentLovableClient({
                                                   e.stopPropagation();
                                                   openPlan(item);
                                                 }}
-                                                title="Modifier la date et l'heure de publication"
+                                                title={t("ui.editPublishDate")}
                                               >
                                                 <Clock className="h-3.5 w-3.5" />
                                                 {formatDate(item.scheduled_date)}
-                                                {(item.meta as any)?.scheduled_time ? ` à ${(item.meta as any).scheduled_time}` : ""}
+                                                {(item.meta as any)?.scheduled_time ? ` ${t("ui.atTime")} ${(item.meta as any).scheduled_time}` : ""}
                                               </button>
                                             ) : null}
                                           </div>
@@ -1139,8 +1140,8 @@ export default function MyContentLovableClient({
                                             <DropdownMenuItem onClick={() => openPlan(item)} disabled={busy !== null}>
                                               <Calendar className="w-4 h-4 mr-2" />
                                               {normalizeKeyStatus(item.status) === "scheduled"
-                                                ? "Modifier date"
-                                                : "Planifier"}
+                                                ? t("ui.editDate")
+                                                : t("ui.schedule")}
                                             </DropdownMenuItem>
 
                                             {normalizeKeyStatus(item.status) === "scheduled" ? (
@@ -1210,10 +1211,10 @@ export default function MyContentLovableClient({
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setEditingContent(null)} disabled={busy === "edit"}>
-                    Annuler
+                    {tc("cancel")}
                   </Button>
                   <Button onClick={handleSaveEdit} disabled={busy === "edit"}>
-                    {busy === "edit" ? "Enregistrement..." : "Enregistrer"}
+                    {busy === "edit" ? t("ui.saving") : tc("save")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1226,13 +1227,13 @@ export default function MyContentLovableClient({
                   <DialogTitle className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5 text-primary" />
                     {planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
-                      ? "Reprogrammer la publication"
-                      : "Planifier la publication"}
+                      ? t("ui.rescheduleTitle")
+                      : t("ui.scheduleTitle")}
                   </DialogTitle>
                   <DialogDescription>
                     {planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
-                      ? "Modifie la date et l\u2019heure de publication. Le post sera automatiquement publi\u00e9 via Tipote."
-                      : "Choisis une date et une heure de publication. Le statut passera sur \u00abPlanifi\u00e9\u00bb."}
+                      ? t("ui.rescheduleDesc")
+                      : t("ui.scheduleDesc")}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -1240,7 +1241,7 @@ export default function MyContentLovableClient({
                 {planningContent && (
                   <div className="rounded-lg border bg-muted/50 p-3">
                     <p className="text-sm font-medium truncate">
-                      {safeString(planningContent.title) || "Sans titre"}
+                      {safeString(planningContent.title) || t("ui.untitled")}
                     </p>
                     {safeString(planningContent.channel) && (
                       <p className="text-xs text-muted-foreground capitalize mt-0.5">
@@ -1252,7 +1253,7 @@ export default function MyContentLovableClient({
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="plan-date">Date de publication</Label>
+                    <Label htmlFor="plan-date">{t("ui.publishDate")}</Label>
                     <Input
                       id="plan-date"
                       type="date"
@@ -1263,7 +1264,7 @@ export default function MyContentLovableClient({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="plan-time">Heure de publication</Label>
+                    <Label htmlFor="plan-time">{t("ui.publishTime")}</Label>
                     <Input
                       id="plan-time"
                       type="time"
@@ -1275,14 +1276,14 @@ export default function MyContentLovableClient({
 
                 <DialogFooter className="gap-2 sm:gap-0">
                   <Button variant="outline" onClick={() => setPlanningContent(null)} disabled={busy === "plan"}>
-                    Annuler
+                    {tc("cancel")}
                   </Button>
                   <Button onClick={handleSavePlan} disabled={busy === "plan" || !planDate}>
                     {busy === "plan"
-                      ? "Enregistrement..."
+                      ? t("ui.saving")
                       : planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
-                        ? "Reprogrammer"
-                        : "Planifier"}
+                        ? t("ui.reschedule")
+                        : t("ui.schedule")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1292,18 +1293,18 @@ export default function MyContentLovableClient({
             <Dialog open={!!deleteConfirm} onOpenChange={(open) => (!open ? setDeleteConfirm(null) : null)}>
               <DialogContent className="sm:max-w-[520px]">
                 <DialogHeader>
-                  <DialogTitle>Supprimer le contenu</DialogTitle>
+                  <DialogTitle>{t("ui.deleteTitle")}</DialogTitle>
                   <DialogDescription>
-                    Cette action est irréversible. Le contenu sera supprimé définitivement.
+                    {t("ui.deleteDesc")}
                   </DialogDescription>
                 </DialogHeader>
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={busy === "delete"}>
-                    Annuler
+                    {tc("cancel")}
                   </Button>
                   <Button variant="destructive" onClick={handleDelete} disabled={busy === "delete"}>
-                    {busy === "delete" ? "Suppression..." : "Supprimer"}
+                    {busy === "delete" ? t("ui.deleting") : tc("delete")}
                   </Button>
                 </DialogFooter>
               </DialogContent>

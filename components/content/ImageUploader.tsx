@@ -44,6 +44,7 @@ export function ImageUploader({
   disabled = false,
 }: Props) {
   const t = useTranslations('imageUploader');
+  const tc = useTranslations('common');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -79,7 +80,7 @@ export function ImageUploader({
         body: formData,
       });
 
-      const json = await res.json().catch(() => ({ ok: false, error: "Erreur réseau" }));
+      const json = await res.json().catch(() => ({ ok: false, error: tc("networkError") }));
 
       if (!res.ok || !json.ok) {
         toast({

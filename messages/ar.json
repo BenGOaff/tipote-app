@@ -341,7 +341,41 @@
     "sioTagsLoading": "جارٍ التحميل…",
     "sioLoadTags": "تحميل علاماتي",
     "sioNoTag": "— بدون علامة —",
-    "sioCreateTag": "إنشاء علامة جديدة"
+    "sioCreateTag": "إنشاء علامة جديدة",
+    "atTime": "في",
+    "errorSending": "خطأ في الإرسال",
+    "errorUnknown": "خطأ غير معروف",
+    "errorPdf": "خطأ PDF",
+    "cannotCopy": "تعذر النسخ",
+    "cannotLoad": "تعذر التحميل",
+    "cannotSend": "تعذر الإرسال",
+    "invalidAmount": "مبلغ غير صالح",
+    "emailRequired": "البريد الإلكتروني مطلوب",
+    "fieldRequired": "حقل مطلوب",
+    "preview": "معاينة",
+    "apply": "تطبيق",
+    "send": "إرسال",
+    "sending": "جارٍ الإرسال...",
+    "sendingShort": "جارٍ الإرسال...",
+    "validate": "تأكيد",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "modify": "تعديل",
+    "selected": "محدد",
+    "noData": "لا توجد بيانات",
+    "unknown": "غير معروف",
+    "open": "فتح",
+    "renderError": "خطأ في عرض HTML",
+    "noDataShort": "—",
+    "serverError": "خطأ في الخادم",
+    "noSSEStream": "لا يوجد تدفق SSE",
+    "cannotSave": "تعذر الحفظ",
+    "networkError": "خطأ في الشبكة",
+    "enrichmentError": "خطأ أثناء الإثراء",
+    "saveError": "خطأ في الحفظ",
+    "deleteArticleConfirm": "هل تريد حذف هذا المقال؟",
+    "signOut": "تسجيل الخروج",
+    "signingOut": "جارٍ تسجيل الخروج…"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -1359,7 +1393,8 @@
       "personaUpdatedDesc": "تم حفظ التغييرات"
     },
     "savedShort": "تم الحفظ",
-    "deleteTaskTitle": "حذف المهمة"
+    "deleteTaskTitle": "حذف المهمة",
+    "editRevenueGoal": "تعديل هدف الإيرادات"
   },
   "onboarding": {
     "title": "مرحباً بك في Tipote",
@@ -1808,7 +1843,37 @@
     "platformDescLikeComment": "إعجاب تلقائي + رد على التعليق",
     "commentReply": "رد على التعليق",
     "likeCommentReply": "إعجاب + رد على التعليق",
-    "networkError": "خطأ في الشبكة"
+    "networkError": "خطأ في الشبكة",
+    "defaultReplies": {
+      "metaReplies": [
+        "هي في رسائلك الخاصة! 📩",
+        "نلتقي في الرسائل الخاصة 😊",
+        "أخبرني إذا استلمتها!",
+        "سأرسلها خلال دقيقتين ⚡",
+        "رائع، هي في رسائلك!"
+      ],
+      "tiktokReplies": [
+        "شكرًا على تعليقك! 🙌",
+        "رائع، شكرًا على المشاركة!",
+        "ممتاز، سعيد باهتمامك! 🔥",
+        "ملاحظ، شكرًا!",
+        "رائع، شكرًا لك!"
+      ],
+      "linkedinReplies": [
+        "شكرًا على ملاحظتك! 🙏",
+        "ملاحظة رائعة، شكرًا!",
+        "سعيد أنها تتناغم معك!",
+        "شكرًا لأخذك الوقت للتعليق 👏",
+        "سؤال جيد جدًا، شكرًا!"
+      ],
+      "twitterReplies": [
+        "شكرًا على ردك! 🙌",
+        "ممتاز، شكرًا على المشاركة!",
+        "رائع، سعيد باهتمامك! 🔥",
+        "ملاحظ، شكرًا!",
+        "رائع، شكرًا لك!"
+      ]
+    }
   },
   "autoCommentPanel": {
     "title": "التعليقات التلقائية",
@@ -1848,7 +1913,8 @@
     "noContent": "لا يوجد محتوى لهذا التاريخ",
     "untitled": "بدون عنوان",
     "reschedule": "إعادة جدولة",
-    "edit": "تعديل"
+    "edit": "تعديل",
+    "atTime": "في"
   },
   "imageUploader": {
     "label": "الصور",
@@ -1973,7 +2039,11 @@
     "subscriptionUpdated": "تم تحديث الاشتراك. يمكنك المحاولة مرة أخرى.",
     "subscriptionCheckError": "تعذر التحقق من الاشتراك.",
     "generateFirst": "أنشئ محتوى أولاً.",
-    "schedulingError": "فشلت الجدولة"
+    "schedulingError": "فشلت الجدولة",
+    "placeholderEmail": "هدف البريد الإلكتروني، السياق، العرض، الجمهور، النبرة…\nمثال: بريد متابعة بعد مكالمة اكتشاف، نبرة مباشرة، دعوة لحجز مكالمة.",
+    "placeholderBlog": "الموضوع، الزاوية، الجمهور، الكلمات المفتاحية (إن وُجدت)، الطول…\nمثال: \"كيف تجد أول 10 عملاء B2B\"، نبرة تعليمية، هيكل H2/H3.",
+    "placeholderScript": "الموضوع، الصيغة (Reel/TikTok/YouTube)، المدة، الجمهور، النبرة…\nمثال: 45ث، هوك قوي، 3 نقاط، دعوة لـ lead magnet.",
+    "placeholderPost": "الموضوع، الزاوية، الجمهور، الهدف، الأسلوب…\nمثال: منشور LinkedIn قصصي، 180–240 كلمة، نبرة مباشرة، دعوة واحدة."
   },
   "createHub": {
     "title": "إنشاء محتوى",
@@ -2009,7 +2079,13 @@
     "contentGeneratedDesc": "يمكنك الآن تعديله قبل الحفظ",
     "generationError": "خطأ في التوليد",
     "generationErrorDesc": "تعذر توليد المحتوى",
-    "saveError": "فشل الحفظ"
+    "saveError": "فشل الحفظ",
+    "aiRequest": "الطلب",
+    "aiType": "النوع",
+    "aiPlatform": "المنصة",
+    "aiTone": "النبرة",
+    "aiTopic": "الموضوع",
+    "aiInstruction": "أنشئ محتوى جاهزًا للنشر. أعد النتيجة النهائية فقط."
   },
   "strategyDetails": {
     "addTask": "إضافة مهمة",
@@ -2198,7 +2274,11 @@
     "error": "خطأ",
     "generateError": "تعذر الإنشاء",
     "saveError": "تعذر الحفظ",
-    "newContent": "محتوى جديد"
+    "newContent": "محتوى جديد",
+    "contentNotFound": "المحتوى غير موجود",
+    "cannotLoadContent": "تعذر تحميل هذا المحتوى للتحرير.",
+    "cannotLoadContentShort": "تعذر تحميل المحتوى.",
+    "editPost": "تعديل المنشور"
   },
   "leads": {
     "title": "العملاء المحتملون",
@@ -2459,7 +2539,9 @@
     "authority": "السلطة",
     "trafficSeo": "حركة SEO",
     "emailsLabel": "البريد الإلكتروني",
-    "salesLabel": "المبيعات"
+    "salesLabel": "المبيعات",
+    "editAndCopy": "تعديل ونسخ",
+    "apply": "تطبيق"
   },
   "emailForm": {
     "generating": "جاري التوليد...",
@@ -3313,7 +3395,20 @@
     "statusScheduled": "مُجدوَل",
     "statusCompleted": "مكتمل",
     "statusDraft": "مسودة",
-    "statusLive": "مباشر"
+    "statusLive": "مباشر",
+    "promptPrefix": {
+      "p1_script_ch": "سكربت لتحدٍّ",
+      "p1_script_wb": "سكربت لندوة عبر الإنترنت",
+      "p2_capture": "صفحة التقاط لـ",
+      "p4_invite": "بريد دعوة لـ",
+      "p4_promo": "منشور ترويجي لـ",
+      "p4_teasing": "سلسلة تشويق لـ",
+      "p4_reminders": "سلسلة تذكير لـ",
+      "p5_reminder": "بريد تذكير لـ",
+      "p5_motivation": "منشور تحفيز اليوم X من التحدي",
+      "p6_review": "بريد ملخص ما بعد الحدث لـ",
+      "p6_followup": "سلسلة متابعة ما بعد الحدث لـ"
+    }
   },
   "quizForm": {
     "createTitle": "إنشاء اختبار",
@@ -3531,7 +3626,12 @@
     "personnalisationTitle": "تخصيص الاختبار",
     "askGenderLabel": "اطلب الجنس (هو / هي / هم)",
     "optionsTitle": "الخيارات",
-    "shareRequestLabel": "طلب المشاركة"
+    "shareRequestLabel": "طلب المشاركة",
+    "uploading": "جارٍ الرفع…",
+    "change": "تغيير",
+    "addLogo": "إضافة شعاري",
+    "replace": "استبدال",
+    "addVisual": "إضافة صورة"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
@@ -3611,7 +3711,11 @@
     "errors": {
       "server": "خطأ في الخادم ({status}). حاول مرة أخرى.",
       "generic": "خطأ ({status})"
-    }
+    },
+    "aiHookLabel": "الخطاف (الجملة الأولى، ستطوَّر إلى محتوى كامل)",
+    "aiCtaLabel": "الدعوة لاتخاذ إجراء (توضع في نهاية المحتوى)",
+    "aiEmailInstruction": "مهم: اكتب بريدًا إلكترونيًا كاملاً بموضوع وخطاف ومتن متطور (حجج، قصص، قيمة) ودعوة لاتخاذ إجراء. الحد الأدنى 200 كلمة.",
+    "aiPostInstruction": "مهم: اكتب منشورًا كاملاً ومتطورًا بما لا يقل عن 150 كلمة. الخطاف هو بداية المنشور وليس المنشور كله. طوّره بحجج وسرد قصصي وقيمة مضافة."
   },
   "competitorAnalysis": {
     "loading": "جاري تحميل تحليل المنافسين...",
@@ -4174,7 +4278,23 @@
       "firstName": "الاسم الأول",
       "titlePh": "العنوان...",
       "contentPh": "المحتوى...",
-      "csvHeader": "البريد الإلكتروني,الاسم الأول,التاريخ"
+      "csvHeader": "البريد الإلكتروني,الاسم الأول,التاريخ",
+      "atTime": "في",
+      "editPublishDate": "تعديل تاريخ ووقت النشر",
+      "editDate": "تعديل التاريخ",
+      "schedule": "جدولة",
+      "saving": "جارٍ الحفظ...",
+      "deleting": "جارٍ الحذف...",
+      "reschedule": "إعادة جدولة",
+      "rescheduleTitle": "إعادة جدولة النشر",
+      "scheduleTitle": "جدولة النشر",
+      "rescheduleDesc": "عدّل تاريخ ووقت النشر. سيتم نشر المنشور تلقائيًا عبر Tipote.",
+      "scheduleDesc": "اختر تاريخ ووقت النشر. ستتحول الحالة إلى «مجدول».",
+      "untitled": "بدون عنوان",
+      "publishDate": "تاريخ النشر",
+      "publishTime": "وقت النشر",
+      "deleteTitle": "حذف المحتوى",
+      "deleteDesc": "هذا الإجراء لا رجعة فيه. سيتم حذف المحتوى نهائيًا."
     }
   },
   "offerDefaults": {
@@ -4256,7 +4376,11 @@
       "iterationError": "خطأ التكرار",
       "changesApplied": "تم تطبيق التعديلات",
       "changesRejected": "تم رفض التعديلات"
-    }
+    },
+    "cannotRenderTemplate": "تعذر عرض القالب",
+    "previewError": "خطأ المعاينة",
+    "saveError": "خطأ الحفظ",
+    "cannotSaveFull": "تعذر الحفظ"
   },
   "pageChat": {
     "imageHint": "💡 لتغيير صورة، انقر عليها مباشرة في المعاينة! ستتمكّن من استيراد الصورة التي تريدها.",
@@ -4300,7 +4424,11 @@
         "عدّل الوصف",
         "اجعل النبرة أكثر احترافية"
       ]
-    }
+    },
+    "appliedButNotSaved": "تم التطبيق لكن لم يُحفظ: {err}",
+    "errorCode": "خطأ {code}",
+    "reformulateError": "خطأ في إعادة الصياغة.",
+    "modifyError": "خطأ أثناء التعديل."
   },
   "contentEditor": {
     "toast": {
@@ -4476,7 +4604,40 @@
     "selectAll": "تحديد الكل",
     "loadingShort": "...",
     "viewCredits": "عرض الأرصدة",
-    "bonusCreditsPh": "عدد الأرصدة الإضافية"
+    "bonusCreditsPh": "عدد الأرصدة الإضافية",
+    "never": "أبدًا",
+    "today": "اليوم",
+    "yesterday": "أمس",
+    "daysAgo": "منذ {n} يومًا",
+    "weeksAgo": "منذ {n} أسابيع",
+    "bulkSummary": "{succeeded} ناجحة، {failed} فاشلة من أصل {total}",
+    "confirmSendEmail": "إرسال هذا البريد إلى {target}؟",
+    "selectUser": "تحديد {email}",
+    "sendNotif": "إرسال إشعار",
+    "composeEmail": "إنشاء بريد إلكتروني",
+    "sendToN": "إرسال إلى {n} مستخدم",
+    "sendEmailToN": "📧 إرسال إلى {n} مستخدم",
+    "sendEmailToSeg": "📧 إرسال إلى {seg}",
+    "nUsersSelected": "{n} مستخدم محدد",
+    "allUsersInSeg": "جميع المستخدمين {seg}",
+    "allUsers": "جميع المستخدمين",
+    "searchByEmail": "البحث بالبريد الإلكتروني...",
+    "refresh": "تحديث",
+    "alsoConfirmEmail": "إرسال هذا البريد إلى {target}؟",
+    "notifTitlePh": "عنوان الإشعار *",
+    "notifDescPh": "الوصف (اختياري)",
+    "buttonUrlPh": "رابط الزر (اختياري)",
+    "buttonTextPh": "نص الزر",
+    "emailSubjectPh": "موضوع البريد الإلكتروني *",
+    "ctaUrlPh": "رابط زر الإجراء (اختياري)",
+    "buyerEmailPh": "بريد المشتري *",
+    "namePh": "الاسم (اختياري)",
+    "planPh": "الخطة",
+    "inProgress": "قيد التنفيذ...",
+    "newPlanPh": "خطة جديدة",
+    "invalidPlan": "خطة غير صالحة",
+    "cannotLoadUsers": "تعذر تحميل المستخدمين",
+    "valueLabel": "القيمة: {v}"
   },
   "adminTickets": {
     "statusOpen": "مفتوح",
@@ -4497,5 +4658,10 @@
     "replyAndSend": "الرد والإرسال عبر البريد",
     "close": "إغلاق",
     "reopen": "إعادة فتح"
+  },
+  "adminSupport": {
+    "seedConfirm": "سيتم إدراج/تحديث جميع الفئات والمقالات. هل تريد المتابعة؟",
+    "seedButton": "بذر / تحديث المحتوى",
+    "seeding": "جارٍ البذر..."
   }
 }

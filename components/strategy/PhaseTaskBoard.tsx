@@ -54,6 +54,7 @@ export default function PhaseTaskBoard({
 }: PhaseTaskBoardProps) {
   const t = useTranslations("phasePage");
   const td = useTranslations("phaseDetail");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -154,7 +155,7 @@ export default function PhaseTaskBoard({
         ]);
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     } finally {
       setIsAdding(false);
     }
@@ -207,7 +208,7 @@ export default function PhaseTaskBoard({
       });
       const json = await res.json().catch(() => ({}));
       if (!json.ok) {
-        toast({ title: "Erreur", variant: "destructive" });
+        toast({ title: tc("error"), variant: "destructive" });
         return;
       }
       toast({ title: t("saved") });

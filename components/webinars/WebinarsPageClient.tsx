@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
@@ -79,10 +79,10 @@ function avg(total: number, count: number): string {
   return `${(total / count).toFixed(0)}\u00a0\u20ac`;
 }
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "\u2014";
   try {
-    return new Date(iso).toLocaleDateString("fr-FR", {
+    return new Date(iso).toLocaleDateString(locale, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -101,6 +101,8 @@ function kpiColor(value: number, good: number, excellent: number): string {
 
 export default function WebinarsPageClient() {
   const t = useTranslations("webinars");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const { toast } = useToast();
 
   const [webinars, setWebinars] = useState<Webinar[]>([]);
@@ -193,7 +195,7 @@ export default function WebinarsPageClient() {
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (!data?.ok) throw new Error(data?.error ?? "Erreur");
+        if (!data?.ok) throw new Error(data?.error ?? tc("error"));
         setWebinars((prev) => prev.map((w) => (w.id === data.webinar.id ? data.webinar : w)));
         toast({ title: t("webinarUpdated") });
       } else {
@@ -203,14 +205,14 @@ export default function WebinarsPageClient() {
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (!data?.ok) throw new Error(data?.error ?? "Erreur");
+        if (!data?.ok) throw new Error(data?.error ?? tc("error"));
         setWebinars((prev) => [data.webinar, ...prev]);
         toast({ title: t("webinarCreated") });
       }
       setDialogOpen(false);
       resetForm();
     } catch (e: any) {
-      toast({ title: "Erreur", description: e?.message, variant: "destructive" });
+      toast({ title: tc("error"), description: e?.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -225,7 +227,7 @@ export default function WebinarsPageClient() {
         toast({ title: t("webinarDeleted") });
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
   }, [t, toast]);
 
@@ -331,7 +333,7 @@ export default function WebinarsPageClient() {
                           <Badge className={`text-[10px] ${sc.color}`}>{sc.label}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(w.webinar_date)}
+                          {formatDate(w.webinar_date, locale)}
                           {w.offer_name ? ` \u00b7 ${w.offer_name}` : ""}
                           {w.registrants > 0 ? ` \u00b7 ${w.registrants} inscrits` : ""}
                         </p>

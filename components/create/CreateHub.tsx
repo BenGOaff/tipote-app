@@ -157,13 +157,13 @@ export default function CreateHub({ profile, plan }: Props) {
       const prompt = [
         context,
         "",
-        "DEMANDE",
-        `Type : ${selectedType}`,
-        platform ? `Plateforme : ${platform}` : "",
-        aiTone ? `Ton : ${aiTone}` : "",
-        `Sujet : ${aiTopic}`,
+        t("aiRequest"),
+        `${t("aiType")} : ${selectedType}`,
+        platform ? `${t("aiPlatform")} : ${platform}` : "",
+        aiTone ? `${t("aiTone")} : ${aiTone}` : "",
+        `${t("aiTopic")} : ${aiTopic}`,
         "",
-        "Génère un contenu directement publiable. Donne uniquement le résultat final.",
+        t("aiInstruction"),
       ]
         .filter(Boolean)
         .join("\n");

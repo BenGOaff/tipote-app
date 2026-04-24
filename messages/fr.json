@@ -341,7 +341,41 @@
     "sioTagsLoading": "Chargement…",
     "sioLoadTags": "Charger mes tags",
     "sioNoTag": "— Aucun tag —",
-    "sioCreateTag": "Créer un nouveau tag"
+    "sioCreateTag": "Créer un nouveau tag",
+    "atTime": "à",
+    "errorSending": "Erreur d'envoi",
+    "errorUnknown": "Erreur inconnue",
+    "errorPdf": "Erreur PDF",
+    "cannotCopy": "Impossible de copier",
+    "cannotLoad": "Impossible de charger",
+    "cannotSend": "Impossible d'envoyer",
+    "invalidAmount": "Montant invalide",
+    "emailRequired": "Email requis",
+    "fieldRequired": "Champ requis",
+    "preview": "Prévisualiser",
+    "apply": "Appliquer",
+    "send": "Envoyer",
+    "sending": "Envoi en cours...",
+    "sendingShort": "Envoi...",
+    "validate": "Valider",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "modify": "Modifier",
+    "selected": "sélectionné(s)",
+    "noData": "Aucune donnée",
+    "unknown": "Inconnu",
+    "open": "Ouvrir",
+    "renderError": "Erreur rendu HTML",
+    "noDataShort": "—",
+    "serverError": "Erreur serveur",
+    "noSSEStream": "Pas de flux SSE",
+    "cannotSave": "Enregistrement impossible",
+    "networkError": "Erreur réseau",
+    "enrichmentError": "Erreur lors de l'enrichissement",
+    "saveError": "Erreur de sauvegarde",
+    "deleteArticleConfirm": "Supprimer cet article ?",
+    "signOut": "Se déconnecter",
+    "signingOut": "Déconnexion…"
   },
   "auth": {
     "login": "Se connecter",
@@ -1359,7 +1393,8 @@
       "personaUpdatedDesc": "Les modifications ont été enregistrées"
     },
     "savedShort": "Sauvegardé",
-    "deleteTaskTitle": "Supprimer la tâche"
+    "deleteTaskTitle": "Supprimer la tâche",
+    "editRevenueGoal": "Modifier l'objectif de revenu"
   },
   "onboarding": {
     "title": "Bienvenue sur Tipote",
@@ -1808,7 +1843,37 @@
     "platformDescLikeComment": "Auto like + réponse commentaire",
     "commentReply": "Réponse commentaire",
     "likeCommentReply": "Like + réponse commentaire",
-    "networkError": "Erreur réseau"
+    "networkError": "Erreur réseau",
+    "defaultReplies": {
+      "metaReplies": [
+        "C'est dans tes DMs ! 📩",
+        "RDV en message privé 😊",
+        "Dis-moi si tu as bien reçu !",
+        "Je t'envoie ça dans 2mn ⚡",
+        "Super, c'est dans tes messages !"
+      ],
+      "tiktokReplies": [
+        "Merci pour ton commentaire ! 🙌",
+        "Super, merci de participer !",
+        "Top, content que ça t'intéresse ! 🔥",
+        "C'est noté, merci !",
+        "Génial, merci à toi !"
+      ],
+      "linkedinReplies": [
+        "Merci pour ton retour ! 🙏",
+        "Super remarque, merci !",
+        "Content que ça résonne avec toi !",
+        "Merci d'avoir pris le temps de commenter 👏",
+        "Très bonne question, merci !"
+      ],
+      "twitterReplies": [
+        "Merci pour ta réponse ! 🙌",
+        "Top, merci de participer !",
+        "Super, content que ça t'intéresse ! 🔥",
+        "C'est noté, merci !",
+        "Génial, merci à toi !"
+      ]
+    }
   },
   "autoCommentPanel": {
     "title": "Auto-commentaires",
@@ -1848,7 +1913,8 @@
     "noContent": "Aucun contenu pour cette date",
     "untitled": "Sans titre",
     "reschedule": "Reprogrammer",
-    "edit": "Modifier"
+    "edit": "Modifier",
+    "atTime": "à"
   },
   "imageUploader": {
     "label": "Images",
@@ -1973,7 +2039,11 @@
     "subscriptionUpdated": "Abonnement mis à jour. Tu peux réessayer.",
     "subscriptionCheckError": "Impossible de vérifier l'abonnement.",
     "generateFirst": "Génère du contenu d'abord.",
-    "schedulingError": "Programmation impossible"
+    "schedulingError": "Programmation impossible",
+    "placeholderEmail": "Objectif de l'email, contexte, offre, cible, ton…\nEx: email de relance après découverte, ton direct, CTA prise de call.",
+    "placeholderBlog": "Sujet, angle, cible, mots-clés (si tu en as), longueur…\nEx: \"Comment trouver ses 10 premiers clients en B2B\", ton pédagogique, plan H2/H3.",
+    "placeholderScript": "Sujet, format (Reel/TikTok/YouTube), durée, cible, ton…\nEx: 45s, hook fort, 3 points, CTA vers lead magnet.",
+    "placeholderPost": "Sujet, angle, cible, objectif, style…\nEx: post LinkedIn storytelling, 180–240 mots, ton direct, 1 CTA."
   },
   "createHub": {
     "title": "Créer du contenu",
@@ -2009,7 +2079,13 @@
     "contentGeneratedDesc": "Vous pouvez maintenant le modifier avant de le sauvegarder",
     "generationError": "Erreur de génération",
     "generationErrorDesc": "Impossible de générer le contenu",
-    "saveError": "Sauvegarde impossible"
+    "saveError": "Sauvegarde impossible",
+    "aiRequest": "DEMANDE",
+    "aiType": "Type",
+    "aiPlatform": "Plateforme",
+    "aiTone": "Ton",
+    "aiTopic": "Sujet",
+    "aiInstruction": "Génère un contenu directement publiable. Donne uniquement le résultat final."
   },
   "strategyDetails": {
     "addTask": "Ajouter une tâche",
@@ -2198,7 +2274,11 @@
     "error": "Erreur",
     "generateError": "Impossible de générer",
     "saveError": "Impossible de sauvegarder",
-    "newContent": "Nouveau contenu"
+    "newContent": "Nouveau contenu",
+    "contentNotFound": "Contenu introuvable",
+    "cannotLoadContent": "Impossible de charger ce contenu pour l'éditer.",
+    "cannotLoadContentShort": "Impossible de charger le contenu.",
+    "editPost": "Modifier le post"
   },
   "leads": {
     "title": "Mes Leads",
@@ -2459,7 +2539,9 @@
     "authority": "Autorité",
     "trafficSeo": "Trafic SEO",
     "emailsLabel": "Emails",
-    "salesLabel": "Ventes"
+    "salesLabel": "Ventes",
+    "editAndCopy": "Modifier & copier",
+    "apply": "Appliquer"
   },
   "emailForm": {
     "generating": "Génération...",
@@ -3313,7 +3395,20 @@
     "statusScheduled": "Planifié",
     "statusCompleted": "Terminé",
     "statusDraft": "Brouillon",
-    "statusLive": "En direct"
+    "statusLive": "En direct",
+    "promptPrefix": {
+      "p1_script_ch": "Script pour un challenge",
+      "p1_script_wb": "Script pour un webinaire",
+      "p2_capture": "Page de capture pour",
+      "p4_invite": "Email d'invitation pour",
+      "p4_promo": "Post de promotion pour",
+      "p4_teasing": "Séquence de teasing pour",
+      "p4_reminders": "Séquence de rappels pour",
+      "p5_reminder": "Email de rappel pour",
+      "p5_motivation": "Post de motivation jour X du challenge",
+      "p6_review": "Email bilan post-événement pour",
+      "p6_followup": "Séquence de relance post-événement pour"
+    }
   },
   "quizForm": {
     "createTitle": "Créer un quiz",
@@ -3531,7 +3626,12 @@
     "personnalisationTitle": "Personnalisation du quiz",
     "askGenderLabel": "Demander le genre (il / elle / iel)",
     "optionsTitle": "Options",
-    "shareRequestLabel": "Demande de partage"
+    "shareRequestLabel": "Demande de partage",
+    "uploading": "Envoi…",
+    "change": "Changer",
+    "addLogo": "Ajouter mon logo",
+    "replace": "Remplacer",
+    "addVisual": "Ajouter un visuel"
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",
@@ -3611,7 +3711,11 @@
     "errors": {
       "server": "Erreur serveur ({status}). Réessaye.",
       "generic": "Erreur ({status})"
-    }
+    },
+    "aiHookLabel": "ACCROCHE (première phrase, à développer en contenu complet)",
+    "aiCtaLabel": "CTA (à placer en fin de contenu)",
+    "aiEmailInstruction": "IMPORTANT : Rédige un email COMPLET avec objet, accroche, corps développé (arguments, storytelling, valeur) et CTA. Minimum 200 mots.",
+    "aiPostInstruction": "IMPORTANT : Rédige un post COMPLET et DÉVELOPPÉ d'au moins 150 mots. L'accroche est le DÉBUT du post, pas le post entier. Développe avec des arguments, du storytelling, de la valeur ajoutée."
   },
   "competitorAnalysis": {
     "loading": "Chargement de l'analyse concurrentielle...",
@@ -4174,7 +4278,23 @@
       "firstName": "Prénom",
       "titlePh": "Titre...",
       "contentPh": "Contenu...",
-      "csvHeader": "Email,Prénom,Date"
+      "csvHeader": "Email,Prénom,Date",
+      "atTime": "à",
+      "editPublishDate": "Modifier la date et l'heure de publication",
+      "editDate": "Modifier date",
+      "schedule": "Planifier",
+      "saving": "Enregistrement...",
+      "deleting": "Suppression...",
+      "reschedule": "Reprogrammer",
+      "rescheduleTitle": "Reprogrammer la publication",
+      "scheduleTitle": "Planifier la publication",
+      "rescheduleDesc": "Modifie la date et l’heure de publication. Le post sera automatiquement publié via Tipote.",
+      "scheduleDesc": "Choisis une date et une heure de publication. Le statut passera sur «Planifié».",
+      "untitled": "Sans titre",
+      "publishDate": "Date de publication",
+      "publishTime": "Heure de publication",
+      "deleteTitle": "Supprimer le contenu",
+      "deleteDesc": "Cette action est irréversible. Le contenu sera supprimé définitivement."
     }
   },
   "offerDefaults": {
@@ -4256,7 +4376,11 @@
       "iterationError": "Erreur itération",
       "changesApplied": "Modifications appliquées",
       "changesRejected": "Modifications refusées"
-    }
+    },
+    "cannotRenderTemplate": "Impossible de rendre le template",
+    "previewError": "Erreur preview",
+    "saveError": "Erreur sauvegarde",
+    "cannotSaveFull": "Impossible de sauvegarder"
   },
   "pageChat": {
     "imageHint": "💡 Pour modifier une image, clique directement dessus dans l'aperçu ! Tu pourras importer la photo de ton choix.",
@@ -4300,7 +4424,11 @@
         "Modifie la description",
         "Rends le ton plus professionnel"
       ]
-    }
+    },
+    "appliedButNotSaved": "Modification appliquée mais non sauvegardée : {err}",
+    "errorCode": "erreur {code}",
+    "reformulateError": "Erreur de reformulation.",
+    "modifyError": "Erreur lors de la modification."
   },
   "contentEditor": {
     "toast": {
@@ -4476,7 +4604,40 @@
     "selectAll": "Tout sélectionner",
     "loadingShort": "...",
     "viewCredits": "Voir crédits",
-    "bonusCreditsPh": "Nombre de crédits bonus"
+    "bonusCreditsPh": "Nombre de crédits bonus",
+    "never": "Jamais",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "daysAgo": "Il y a {n}j",
+    "weeksAgo": "Il y a {n} sem.",
+    "bulkSummary": "{succeeded} réussi(s), {failed} échoué(s) sur {total}",
+    "confirmSendEmail": "Envoyer cet email à {target} ?",
+    "selectUser": "Sélectionner {email}",
+    "sendNotif": "Envoyer une notification",
+    "composeEmail": "Composer un email",
+    "sendToN": "Envoyer à {n} user(s)",
+    "sendEmailToN": "📧 Envoyer à {n} user(s)",
+    "sendEmailToSeg": "📧 Envoyer aux {seg}",
+    "nUsersSelected": "{n} user(s) sélectionnés",
+    "allUsersInSeg": "tous les users {seg}",
+    "allUsers": "TOUS les users",
+    "searchByEmail": "Rechercher par email...",
+    "refresh": "Rafraichir",
+    "alsoConfirmEmail": "Envoyer cet email à {target} ?",
+    "notifTitlePh": "Titre de la notification *",
+    "notifDescPh": "Description (optionnel)",
+    "buttonUrlPh": "URL du bouton (optionnel)",
+    "buttonTextPh": "Texte du bouton",
+    "emailSubjectPh": "Objet de l'email *",
+    "ctaUrlPh": "URL du bouton CTA (optionnel)",
+    "buyerEmailPh": "Email de l'acheteur *",
+    "namePh": "Nom (optionnel)",
+    "planPh": "Plan",
+    "inProgress": "En cours...",
+    "newPlanPh": "Nouveau plan",
+    "invalidPlan": "Plan invalide",
+    "cannotLoadUsers": "Impossible de charger les users",
+    "valueLabel": "Valeur: {v}"
   },
   "adminTickets": {
     "statusOpen": "Ouvert",
@@ -4497,5 +4658,10 @@
     "replyAndSend": "Répondre & envoyer par email",
     "close": "Fermer",
     "reopen": "Rouvrir"
+  },
+  "adminSupport": {
+    "seedConfirm": "Ceci va insérer/mettre à jour toutes les catégories et articles. Continuer ?",
+    "seedButton": "Seed / Mettre à jour le contenu",
+    "seeding": "Seeding..."
   }
 }

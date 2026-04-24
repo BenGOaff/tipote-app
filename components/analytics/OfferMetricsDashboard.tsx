@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 "use client";
 
 import { useMemo } from "react";
@@ -57,10 +58,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <span className="text-muted-foreground">{entry.name}:</span>
           <span className="font-medium">
             {entry.name.includes("CA") || entry.name.includes("Revenu")
-              ? `${entry.value.toLocaleString("fr-FR")} EUR`
+              ? `${entry.value.toLocaleString(locale)} EUR`
               : entry.name.includes("%") || entry.name.includes("Taux")
                 ? `${Number(entry.value).toFixed(1)}%`
-                : entry.value.toLocaleString("fr-FR")}
+                : entry.value.toLocaleString(locale)}
           </span>
         </div>
       ))}
@@ -133,9 +134,9 @@ export const OfferMetricsDashboard = ({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Ventes totales</p>
-            <p className="text-xl font-bold">{grandTotals.sales.toLocaleString("fr-FR")}</p>
+            <p className="text-xl font-bold">{grandTotals.sales.toLocaleString(locale)}</p>
             {grandTotals.revenue > 0 && (
-              <p className="text-xs text-muted-foreground mt-0.5">{grandTotals.revenue.toLocaleString("fr-FR")} EUR de CA</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{grandTotals.revenue.toLocaleString(locale)} EUR de CA</p>
             )}
           </Card>
 
@@ -146,7 +147,7 @@ export const OfferMetricsDashboard = ({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Leads capturés</p>
-            <p className="text-xl font-bold">{grandTotals.signups.toLocaleString("fr-FR")}</p>
+            <p className="text-xl font-bold">{grandTotals.signups.toLocaleString(locale)}</p>
             {grandTotals.captureRate > 0 && (
               <p className="text-xs text-muted-foreground mt-0.5">Taux moyen : {grandTotals.captureRate.toFixed(1)}%</p>
             )}
@@ -174,7 +175,7 @@ export const OfferMetricsDashboard = ({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">CA total</p>
-            <p className="text-xl font-bold">{grandTotals.revenue.toLocaleString("fr-FR")} EUR</p>
+            <p className="text-xl font-bold">{grandTotals.revenue.toLocaleString(locale)} EUR</p>
           </Card>
 
           <Card className="p-4">

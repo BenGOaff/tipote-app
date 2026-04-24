@@ -207,9 +207,9 @@ export function ContentCalendarView({
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {showTime && metaTime
-                                    ? `${format(scheduled, "d MMM", { locale: dateFnsLocales[locale] ?? fr })} à ${metaTime}`
+                                    ? `${format(scheduled, "d MMM", { locale: dateFnsLocales[locale] ?? fr })} ${t("atTime")} ${metaTime}`
                                     : showTime
-                                      ? format(scheduled, "d MMM à HH:mm", { locale: dateFnsLocales[locale] ?? fr })
+                                      ? `${format(scheduled, "d MMM", { locale: dateFnsLocales[locale] ?? fr })} ${t("atTime")} ${format(scheduled, "HH:mm", { locale: dateFnsLocales[locale] ?? fr })}`
                                       : format(scheduled, "d MMM", { locale: dateFnsLocales[locale] ?? fr })}
                                 </span>
                               </>

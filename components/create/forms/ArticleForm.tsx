@@ -487,8 +487,8 @@ export function ArticleForm({
         open={editorOpen}
         onOpenChange={setEditorOpen}
         initialValue={generatedContent || ""} // ✅ injecte le plan/article courant
-        title="Modifier & copier"
-        applyLabel="Appliquer"
+        title={t("editAndCopy")}
+        applyLabel={t("apply")}
         onApply={({ text }) => {
           // DB = texte (le bouton "Copier" dans la modale gère HTML/texte)
           setGeneratedContent(text);

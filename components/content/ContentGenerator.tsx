@@ -45,8 +45,7 @@ function metaForType(type: string, t: (key: string) => string) {
     return {
       title: t('email'),
       subtitle: t('emailSub'),
-      placeholder:
-        "Objectif de l'email, contexte, offre, cible, ton…\nEx: email de relance après découverte, ton direct, CTA prise de call.",
+      placeholder: t('placeholderEmail'),
       defaultChannel: 'Email',
       defaultTags: ['email', 'conversion'],
     }
@@ -56,8 +55,7 @@ function metaForType(type: string, t: (key: string) => string) {
     return {
       title: t('blogArticle'),
       subtitle: t('blogSub'),
-      placeholder:
-        'Sujet, angle, cible, mots-clés (si tu en as), longueur…\nEx: "Comment trouver ses 10 premiers clients en B2B", ton pédagogique, plan H2/H3.',
+      placeholder: t('placeholderBlog'),
       defaultChannel: 'Blog',
       defaultTags: ['blog', 'seo'],
     }
@@ -67,8 +65,7 @@ function metaForType(type: string, t: (key: string) => string) {
     return {
       title: t('videoScript'),
       subtitle: t('videoSub'),
-      placeholder:
-        'Sujet, format (Reel/TikTok/YouTube), durée, cible, ton…\nEx: 45s, hook fort, 3 points, CTA vers lead magnet.',
+      placeholder: t('placeholderScript'),
       defaultChannel: 'Vidéo',
       defaultTags: ['video', 'script'],
     }
@@ -77,8 +74,7 @@ function metaForType(type: string, t: (key: string) => string) {
   return {
     title: t('postSocial'),
     subtitle: t('postSocialSub'),
-    placeholder:
-      'Sujet, angle, cible, objectif, style…\nEx: post LinkedIn storytelling, 180–240 mots, ton direct, 1 CTA.',
+    placeholder: t('placeholderPost'),
     defaultChannel: 'LinkedIn',
     defaultTags: ['social', 'post'],
   }

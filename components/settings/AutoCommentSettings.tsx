@@ -93,6 +93,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
   const hasAccess = planHasAccess(plan);
   const { toast } = useToast();
   const t = useTranslations("autoComments");
+  const tc = useTranslations("common");
 
   const { balance: aiCredits, loading: creditsLoading } = useCreditsBalance();
 
@@ -159,7 +160,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
       const json = await res.json();
 
       if (!res.ok || !json.ok) {
-        throw new Error(json.error || "Erreur de sauvegarde");
+        throw new Error(json.error || tc("saveError"));
       }
 
       toast({ title: t("toast.ok"), description: t("toast.okDesc") });

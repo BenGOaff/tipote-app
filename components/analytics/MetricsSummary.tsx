@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 "use client";
 
 import { Card } from "@/components/ui/card";
@@ -30,7 +31,7 @@ export const MetricsSummary = ({ metrics, previousMetrics }: MetricsSummaryProps
   const summaryMetrics = [
     {
       label: "Chiffre d'affaires",
-      value: `${(metrics.revenue || 0).toLocaleString("fr-FR")}€`,
+      value: `${(metrics.revenue || 0).toLocaleString(locale)}€`,
       icon: Euro,
       color: "text-success",
       change: calculateChange(metrics.revenue || 0, previousMetrics?.revenue ?? null),

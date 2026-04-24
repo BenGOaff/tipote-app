@@ -341,7 +341,41 @@
     "sioTagsLoading": "Cargando…",
     "sioLoadTags": "Cargar mis etiquetas",
     "sioNoTag": "— Sin etiqueta —",
-    "sioCreateTag": "Crear una nueva etiqueta"
+    "sioCreateTag": "Crear una nueva etiqueta",
+    "atTime": "a las",
+    "errorSending": "Error de envío",
+    "errorUnknown": "Error desconocido",
+    "errorPdf": "Error de PDF",
+    "cannotCopy": "No se pudo copiar",
+    "cannotLoad": "No se pudo cargar",
+    "cannotSend": "No se pudo enviar",
+    "invalidAmount": "Importe inválido",
+    "emailRequired": "Email requerido",
+    "fieldRequired": "Campo requerido",
+    "preview": "Vista previa",
+    "apply": "Aplicar",
+    "send": "Enviar",
+    "sending": "Enviando...",
+    "sendingShort": "Enviando...",
+    "validate": "Validar",
+    "create": "Crear",
+    "update": "Actualizar",
+    "modify": "Modificar",
+    "selected": "seleccionado(s)",
+    "noData": "Sin datos",
+    "unknown": "Desconocido",
+    "open": "Abrir",
+    "renderError": "Error de renderizado HTML",
+    "noDataShort": "—",
+    "serverError": "Error del servidor",
+    "noSSEStream": "Sin flujo SSE",
+    "cannotSave": "No se pudo guardar",
+    "networkError": "Error de red",
+    "enrichmentError": "Error durante el enriquecimiento",
+    "saveError": "Error al guardar",
+    "deleteArticleConfirm": "¿Eliminar este artículo?",
+    "signOut": "Cerrar sesión",
+    "signingOut": "Cerrando sesión…"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -1359,7 +1393,8 @@
       "personaUpdatedDesc": "Los cambios han sido guardados"
     },
     "savedShort": "Guardado",
-    "deleteTaskTitle": "Eliminar la tarea"
+    "deleteTaskTitle": "Eliminar la tarea",
+    "editRevenueGoal": "Editar objetivo de ingresos"
   },
   "onboarding": {
     "title": "Bienvenido/a a Tipote",
@@ -1808,7 +1843,37 @@
     "platformDescLikeComment": "Auto like + respuesta comentario",
     "commentReply": "Respuesta comentario",
     "likeCommentReply": "Like + respuesta comentario",
-    "networkError": "Error de red"
+    "networkError": "Error de red",
+    "defaultReplies": {
+      "metaReplies": [
+        "¡Está en tus DMs! 📩",
+        "Nos vemos en mensaje privado 😊",
+        "¡Dime si lo has recibido!",
+        "Te lo envío en 2min ⚡",
+        "¡Genial, está en tus mensajes!"
+      ],
+      "tiktokReplies": [
+        "¡Gracias por tu comentario! 🙌",
+        "¡Genial, gracias por participar!",
+        "¡Top, me alegra que te interese! 🔥",
+        "¡Anotado, gracias!",
+        "¡Genial, gracias a ti!"
+      ],
+      "linkedinReplies": [
+        "¡Gracias por tu opinión! 🙏",
+        "¡Gran observación, gracias!",
+        "¡Me alegra que resuene contigo!",
+        "Gracias por tomarte el tiempo de comentar 👏",
+        "¡Muy buena pregunta, gracias!"
+      ],
+      "twitterReplies": [
+        "¡Gracias por tu respuesta! 🙌",
+        "¡Top, gracias por participar!",
+        "¡Genial, me alegra que te interese! 🔥",
+        "¡Anotado, gracias!",
+        "¡Genial, gracias a ti!"
+      ]
+    }
   },
   "autoCommentPanel": {
     "title": "Auto-comentarios",
@@ -1848,7 +1913,8 @@
     "noContent": "Sin contenido para esta fecha",
     "untitled": "Sin título",
     "reschedule": "Reprogramar",
-    "edit": "Editar"
+    "edit": "Editar",
+    "atTime": "a las"
   },
   "imageUploader": {
     "label": "Imágenes",
@@ -1973,7 +2039,11 @@
     "subscriptionUpdated": "Suscripción actualizada. Puedes volver a intentarlo.",
     "subscriptionCheckError": "No se pudo verificar la suscripción.",
     "generateFirst": "Genera contenido primero.",
-    "schedulingError": "Programación fallida"
+    "schedulingError": "Programación fallida",
+    "placeholderEmail": "Objetivo del email, contexto, oferta, objetivo, tono…\nEj: email de seguimiento tras descubrimiento, tono directo, CTA reservar llamada.",
+    "placeholderBlog": "Tema, ángulo, objetivo, palabras clave (si las tienes), longitud…\nEj: \"Cómo encontrar tus primeros 10 clientes B2B\", tono pedagógico, plan H2/H3.",
+    "placeholderScript": "Tema, formato (Reel/TikTok/YouTube), duración, objetivo, tono…\nEj: 45s, hook potente, 3 puntos, CTA al lead magnet.",
+    "placeholderPost": "Tema, ángulo, objetivo, meta, estilo…\nEj: publicación storytelling LinkedIn, 180–240 palabras, tono directo, 1 CTA."
   },
   "createHub": {
     "title": "Crear contenido",
@@ -2009,7 +2079,13 @@
     "contentGeneratedDesc": "Ahora puedes editarlo antes de guardarlo",
     "generationError": "Error de generación",
     "generationErrorDesc": "No se pudo generar el contenido",
-    "saveError": "Error al guardar"
+    "saveError": "Error al guardar",
+    "aiRequest": "SOLICITUD",
+    "aiType": "Tipo",
+    "aiPlatform": "Plataforma",
+    "aiTone": "Tono",
+    "aiTopic": "Tema",
+    "aiInstruction": "Genera contenido listo para publicar. Devuelve solo el resultado final."
   },
   "strategyDetails": {
     "addTask": "Añadir una tarea",
@@ -2198,7 +2274,11 @@
     "error": "Error",
     "generateError": "No se pudo generar",
     "saveError": "No se pudo guardar",
-    "newContent": "Nuevo contenido"
+    "newContent": "Nuevo contenido",
+    "contentNotFound": "Contenido no encontrado",
+    "cannotLoadContent": "No se pudo cargar este contenido para editarlo.",
+    "cannotLoadContentShort": "No se pudo cargar el contenido.",
+    "editPost": "Editar publicación"
   },
   "leads": {
     "title": "Mis Leads",
@@ -2459,7 +2539,9 @@
     "authority": "Autoridad",
     "trafficSeo": "Tráfico SEO",
     "emailsLabel": "Emails",
-    "salesLabel": "Ventas"
+    "salesLabel": "Ventas",
+    "editAndCopy": "Editar y copiar",
+    "apply": "Aplicar"
   },
   "emailForm": {
     "generating": "Generando...",
@@ -3313,7 +3395,20 @@
     "statusScheduled": "Programado",
     "statusCompleted": "Terminado",
     "statusDraft": "Borrador",
-    "statusLive": "En directo"
+    "statusLive": "En directo",
+    "promptPrefix": {
+      "p1_script_ch": "Guión para un challenge",
+      "p1_script_wb": "Guión para un webinar",
+      "p2_capture": "Página de captura para",
+      "p4_invite": "Email de invitación para",
+      "p4_promo": "Publicación de promoción para",
+      "p4_teasing": "Secuencia de intriga para",
+      "p4_reminders": "Secuencia de recordatorios para",
+      "p5_reminder": "Email de recordatorio para",
+      "p5_motivation": "Publicación de motivación día X del challenge",
+      "p6_review": "Email de balance post-evento para",
+      "p6_followup": "Secuencia de seguimiento post-evento para"
+    }
   },
   "quizForm": {
     "createTitle": "Crear un quiz",
@@ -3531,7 +3626,12 @@
     "personnalisationTitle": "Personalización del quiz",
     "askGenderLabel": "Pedir el género (él / ella / elle)",
     "optionsTitle": "Opciones",
-    "shareRequestLabel": "Solicitud de compartir"
+    "shareRequestLabel": "Solicitud de compartir",
+    "uploading": "Subiendo…",
+    "change": "Cambiar",
+    "addLogo": "Añadir mi logo",
+    "replace": "Reemplazar",
+    "addVisual": "Añadir un visual"
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",
@@ -3611,7 +3711,11 @@
     "errors": {
       "server": "Error del servidor ({status}). Vuelve a intentarlo.",
       "generic": "Error ({status})"
-    }
+    },
+    "aiHookLabel": "GANCHO (primera frase, a desarrollar en contenido completo)",
+    "aiCtaLabel": "CTA (a colocar al final del contenido)",
+    "aiEmailInstruction": "IMPORTANTE: Redacta un email COMPLETO con asunto, gancho, cuerpo desarrollado (argumentos, storytelling, valor) y CTA. Mínimo 200 palabras.",
+    "aiPostInstruction": "IMPORTANTE: Redacta una publicación COMPLETA y DESARROLLADA de al menos 150 palabras. El gancho es el INICIO de la publicación, no la publicación entera. Desarrolla con argumentos, storytelling, valor añadido."
   },
   "competitorAnalysis": {
     "loading": "Cargando el análisis de la competencia...",
@@ -4174,7 +4278,23 @@
       "firstName": "Nombre",
       "titlePh": "Título...",
       "contentPh": "Contenido...",
-      "csvHeader": "Email,Nombre,Fecha"
+      "csvHeader": "Email,Nombre,Fecha",
+      "atTime": "a las",
+      "editPublishDate": "Editar fecha y hora de publicación",
+      "editDate": "Editar fecha",
+      "schedule": "Planificar",
+      "saving": "Guardando...",
+      "deleting": "Eliminando...",
+      "reschedule": "Reprogramar",
+      "rescheduleTitle": "Reprogramar la publicación",
+      "scheduleTitle": "Planificar la publicación",
+      "rescheduleDesc": "Edita la fecha y hora de publicación. La publicación se realizará automáticamente vía Tipote.",
+      "scheduleDesc": "Elige una fecha y hora de publicación. El estado pasará a «Planificado».",
+      "untitled": "Sin título",
+      "publishDate": "Fecha de publicación",
+      "publishTime": "Hora de publicación",
+      "deleteTitle": "Eliminar contenido",
+      "deleteDesc": "Esta acción es irreversible. El contenido se eliminará de forma permanente."
     }
   },
   "offerDefaults": {
@@ -4256,7 +4376,11 @@
       "iterationError": "Error de iteración",
       "changesApplied": "Cambios aplicados",
       "changesRejected": "Cambios rechazados"
-    }
+    },
+    "cannotRenderTemplate": "No se pudo renderizar la plantilla",
+    "previewError": "Error de vista previa",
+    "saveError": "Error al guardar",
+    "cannotSaveFull": "No se pudo guardar"
   },
   "pageChat": {
     "imageHint": "💡 Para cambiar una imagen, haz clic directamente sobre ella en la vista previa. Podrás importar la foto que quieras.",
@@ -4300,7 +4424,11 @@
         "Edita la descripción",
         "Haz el tono más profesional"
       ]
-    }
+    },
+    "appliedButNotSaved": "Cambio aplicado pero no guardado: {err}",
+    "errorCode": "error {code}",
+    "reformulateError": "Error de reformulación.",
+    "modifyError": "Error al modificar."
   },
   "contentEditor": {
     "toast": {
@@ -4476,7 +4604,40 @@
     "selectAll": "Seleccionar todo",
     "loadingShort": "...",
     "viewCredits": "Ver créditos",
-    "bonusCreditsPh": "Número de créditos bonus"
+    "bonusCreditsPh": "Número de créditos bonus",
+    "never": "Nunca",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "daysAgo": "Hace {n}d",
+    "weeksAgo": "Hace {n}sem",
+    "bulkSummary": "{succeeded} correctos, {failed} fallidos de {total}",
+    "confirmSendEmail": "¿Enviar este email a {target}?",
+    "selectUser": "Seleccionar {email}",
+    "sendNotif": "Enviar una notificación",
+    "composeEmail": "Redactar un email",
+    "sendToN": "Enviar a {n} usuario(s)",
+    "sendEmailToN": "📧 Enviar a {n} usuario(s)",
+    "sendEmailToSeg": "📧 Enviar a {seg}",
+    "nUsersSelected": "{n} usuario(s) seleccionado(s)",
+    "allUsersInSeg": "todos los usuarios {seg}",
+    "allUsers": "TODOS los usuarios",
+    "searchByEmail": "Buscar por email...",
+    "refresh": "Actualizar",
+    "alsoConfirmEmail": "¿Enviar este email a {target}?",
+    "notifTitlePh": "Título de la notificación *",
+    "notifDescPh": "Descripción (opcional)",
+    "buttonUrlPh": "URL del botón (opcional)",
+    "buttonTextPh": "Texto del botón",
+    "emailSubjectPh": "Asunto del email *",
+    "ctaUrlPh": "URL del botón CTA (opcional)",
+    "buyerEmailPh": "Email del comprador *",
+    "namePh": "Nombre (opcional)",
+    "planPh": "Plan",
+    "inProgress": "En curso...",
+    "newPlanPh": "Nuevo plan",
+    "invalidPlan": "Plan inválido",
+    "cannotLoadUsers": "No se pudieron cargar los usuarios",
+    "valueLabel": "Valor: {v}"
   },
   "adminTickets": {
     "statusOpen": "Abierto",
@@ -4497,5 +4658,10 @@
     "replyAndSend": "Responder y enviar por email",
     "close": "Cerrar",
     "reopen": "Reabrir"
+  },
+  "adminSupport": {
+    "seedConfirm": "Esto insertará/actualizará todas las categorías y artículos. ¿Continuar?",
+    "seedButton": "Seed / Actualizar contenido",
+    "seeding": "Sembrando..."
   }
 }

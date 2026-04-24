@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -146,6 +146,8 @@ const TEMPLATE_COLORS = [
 // ─── Main component ─────────────────────────────────────────
 export default function ClientsPageClient({ clients: initialClients, templates: initialTemplates, error }: Props) {
   const t = useTranslations("clients");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -1286,7 +1288,7 @@ function ProcessCard({
         setShowAddPayment(false);
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
   };
 
@@ -1299,7 +1301,7 @@ function ProcessCard({
         setLocalCollected(json.amount_collected);
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
   };
 
@@ -1481,7 +1483,7 @@ function ProcessCard({
             <div className="space-y-1">
               {payments.map((p) => (
                 <div key={p.id} className="flex items-center gap-2 text-xs px-1 py-0.5 group">
-                  <span className="text-muted-foreground w-20 shrink-0">{new Date(p.paid_at).toLocaleDateString("fr-FR")}</span>
+                  <span className="text-muted-foreground w-20 shrink-0">{new Date(p.paid_at).toLocaleDateString(locale)}</span>
                   <span className="font-medium text-green-700">+{p.amount}€</span>
                   {p.note && <span className="text-muted-foreground truncate">{p.note}</span>}
                   <button
