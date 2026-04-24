@@ -371,7 +371,8 @@
     "noSSEStream": "لا يوجد تدفق SSE",
     "cannotSave": "تعذر الحفظ",
     "networkError": "خطأ في الشبكة",
-    "enrichmentError": "خطأ أثناء الإثراء"
+    "enrichmentError": "خطأ أثناء الإثراء",
+    "saveError": "خطأ في الحفظ"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -1389,7 +1390,8 @@
       "personaUpdatedDesc": "تم حفظ التغييرات"
     },
     "savedShort": "تم الحفظ",
-    "deleteTaskTitle": "حذف المهمة"
+    "deleteTaskTitle": "حذف المهمة",
+    "editRevenueGoal": "تعديل هدف الإيرادات"
   },
   "onboarding": {
     "title": "مرحباً بك في Tipote",
@@ -2229,7 +2231,11 @@
     "error": "خطأ",
     "generateError": "تعذر الإنشاء",
     "saveError": "تعذر الحفظ",
-    "newContent": "محتوى جديد"
+    "newContent": "محتوى جديد",
+    "contentNotFound": "المحتوى غير موجود",
+    "cannotLoadContent": "تعذر تحميل هذا المحتوى للتحرير.",
+    "cannotLoadContentShort": "تعذر تحميل المحتوى.",
+    "editPost": "تعديل المنشور"
   },
   "leads": {
     "title": "العملاء المحتملون",
@@ -3562,7 +3568,12 @@
     "personnalisationTitle": "تخصيص الاختبار",
     "askGenderLabel": "اطلب الجنس (هو / هي / هم)",
     "optionsTitle": "الخيارات",
-    "shareRequestLabel": "طلب المشاركة"
+    "shareRequestLabel": "طلب المشاركة",
+    "uploading": "جارٍ الرفع…",
+    "change": "تغيير",
+    "addLogo": "إضافة شعاري",
+    "replace": "استبدال",
+    "addVisual": "إضافة صورة"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
@@ -4303,7 +4314,11 @@
       "iterationError": "خطأ التكرار",
       "changesApplied": "تم تطبيق التعديلات",
       "changesRejected": "تم رفض التعديلات"
-    }
+    },
+    "cannotRenderTemplate": "تعذر عرض القالب",
+    "previewError": "خطأ المعاينة",
+    "saveError": "خطأ الحفظ",
+    "cannotSaveFull": "تعذر الحفظ"
   },
   "pageChat": {
     "imageHint": "💡 لتغيير صورة، انقر عليها مباشرة في المعاينة! ستتمكّن من استيراد الصورة التي تريدها.",
@@ -4349,7 +4364,9 @@
       ]
     },
     "appliedButNotSaved": "تم التطبيق لكن لم يُحفظ: {err}",
-    "errorCode": "خطأ {code}"
+    "errorCode": "خطأ {code}",
+    "reformulateError": "خطأ في إعادة الصياغة.",
+    "modifyError": "خطأ أثناء التعديل."
   },
   "contentEditor": {
     "toast": {

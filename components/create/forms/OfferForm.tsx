@@ -59,6 +59,7 @@ function parseTasks(text: string): string[] {
 export function OfferForm(props: OfferFormProps) {
   const { toast } = useToast();
   const t = useTranslations("offerForm");
+  const tc = useTranslations("common");
 
   const [formMode, setFormMode] = useState<FormMode>("improve");
   const [offerType, setOfferType] = useState<OfferType>("lead_magnet");
@@ -124,7 +125,7 @@ export function OfferForm(props: OfferFormProps) {
       await navigator.clipboard.writeText(result || "");
       toast({ title: t("copied"), description: t("copiedDesc") });
     } catch {
-      toast({ title: "Erreur", description: "Impossible de copier.", variant: "destructive" });
+      toast({ title: tc("error"), description: tc("cannotCopy"), variant: "destructive" });
     }
   };
 

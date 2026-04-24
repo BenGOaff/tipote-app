@@ -87,6 +87,7 @@ const BUTTON_STYLES: { id: ButtonStyle; label: string }[] = [
 export default function LinkinbioEditor({ initialPage, onBack }: Props) {
   const { toast } = useToast();
   const t = useTranslations("linkinbio");
+  const tc = useTranslations("common");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Page state
@@ -195,7 +196,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
         setLinks((prev) => [...prev, data.link]);
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
   };
 
@@ -274,7 +275,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
       setPage((p) => ({ ...p, title: displayName, slug, content_data: contentData, meta_title: metaTitle, meta_description: metaDescription }));
       toast({ title: t("saved") });
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
     setSaving(false);
   };
@@ -295,7 +296,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
         toast({ title: isPublished ? t("unpublished") : t("published") });
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
     setPublishing(false);
   };

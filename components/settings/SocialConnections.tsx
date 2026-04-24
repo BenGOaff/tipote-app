@@ -670,7 +670,7 @@ export default function SocialConnections() {
                             <div key={comment.id || Math.random()} className="text-sm">
                               <div className="flex items-center gap-1.5">
                                 <User className="w-3 h-3 text-muted-foreground" />
-                                <span className="font-medium text-xs">{comment.from?.name ?? "Utilisateur"}</span>
+                                <span className="font-medium text-xs">{comment.from?.name ?? tc("unknown")}</span>
                                 <span className="text-xs text-muted-foreground">
                                   {new Date(comment.created_time).toLocaleDateString(locale)}
                                 </span>
@@ -697,7 +697,7 @@ export default function SocialConnections() {
                     <div key={post.id} className="border rounded-lg p-3">
                       <div className="flex items-center gap-1.5 mb-1">
                         <User className="w-3 h-3 text-muted-foreground" />
-                        <span className="font-medium text-sm">{post.from?.name ?? "Utilisateur"}</span>
+                        <span className="font-medium text-sm">{post.from?.name ?? tc("unknown")}</span>
                         <span className="text-xs text-muted-foreground">
                           {new Date(post.created_time).toLocaleDateString(locale)}
                         </span>

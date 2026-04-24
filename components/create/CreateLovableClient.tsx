@@ -330,6 +330,7 @@ export default function CreateLovableClient() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const t = useTranslations('createClient');
+  const tc = useTranslations('common');
 
   const editId = searchParams.get("edit");
 
@@ -367,8 +368,8 @@ export default function CreateLovableClient() {
           setSelectedType("post");
         } else {
           toast({
-            title: "Contenu introuvable",
-            description: "Impossible de charger ce contenu pour l'éditer.",
+            title: t("contentNotFound"),
+            description: t("cannotLoadContent"),
             variant: "destructive",
           });
           setEditData(null);
@@ -376,8 +377,8 @@ export default function CreateLovableClient() {
       } catch {
         if (!cancelled) {
           toast({
-            title: "Erreur",
-            description: "Impossible de charger le contenu.",
+            title: tc("error"),
+            description: t("cannotLoadContentShort"),
             variant: "destructive",
           });
         }
@@ -693,7 +694,7 @@ export default function CreateLovableClient() {
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{editId ? "Modifier le post" : t('create')}</h1>} />
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{editId ? t('editPost') : t('create')}</h1>} />
 
           <div className="flex-1 p-4 sm:p-5 lg:p-6"><div className="max-w-[1200px] mx-auto w-full space-y-5">
             {editLoading ? (

@@ -371,7 +371,8 @@
     "noSSEStream": "Sin flujo SSE",
     "cannotSave": "No se pudo guardar",
     "networkError": "Error de red",
-    "enrichmentError": "Error durante el enriquecimiento"
+    "enrichmentError": "Error durante el enriquecimiento",
+    "saveError": "Error al guardar"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -1389,7 +1390,8 @@
       "personaUpdatedDesc": "Los cambios han sido guardados"
     },
     "savedShort": "Guardado",
-    "deleteTaskTitle": "Eliminar la tarea"
+    "deleteTaskTitle": "Eliminar la tarea",
+    "editRevenueGoal": "Editar objetivo de ingresos"
   },
   "onboarding": {
     "title": "Bienvenido/a a Tipote",
@@ -2229,7 +2231,11 @@
     "error": "Error",
     "generateError": "No se pudo generar",
     "saveError": "No se pudo guardar",
-    "newContent": "Nuevo contenido"
+    "newContent": "Nuevo contenido",
+    "contentNotFound": "Contenido no encontrado",
+    "cannotLoadContent": "No se pudo cargar este contenido para editarlo.",
+    "cannotLoadContentShort": "No se pudo cargar el contenido.",
+    "editPost": "Editar publicación"
   },
   "leads": {
     "title": "Mis Leads",
@@ -3562,7 +3568,12 @@
     "personnalisationTitle": "Personalización del quiz",
     "askGenderLabel": "Pedir el género (él / ella / elle)",
     "optionsTitle": "Opciones",
-    "shareRequestLabel": "Solicitud de compartir"
+    "shareRequestLabel": "Solicitud de compartir",
+    "uploading": "Subiendo…",
+    "change": "Cambiar",
+    "addLogo": "Añadir mi logo",
+    "replace": "Reemplazar",
+    "addVisual": "Añadir un visual"
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",
@@ -4303,7 +4314,11 @@
       "iterationError": "Error de iteración",
       "changesApplied": "Cambios aplicados",
       "changesRejected": "Cambios rechazados"
-    }
+    },
+    "cannotRenderTemplate": "No se pudo renderizar la plantilla",
+    "previewError": "Error de vista previa",
+    "saveError": "Error al guardar",
+    "cannotSaveFull": "No se pudo guardar"
   },
   "pageChat": {
     "imageHint": "💡 Para cambiar una imagen, haz clic directamente sobre ella en la vista previa. Podrás importar la foto que quieras.",
@@ -4349,7 +4364,9 @@
       ]
     },
     "appliedButNotSaved": "Cambio aplicado pero no guardado: {err}",
-    "errorCode": "error {code}"
+    "errorCode": "error {code}",
+    "reformulateError": "Error de reformulación.",
+    "modifyError": "Error al modificar."
   },
   "contentEditor": {
     "toast": {

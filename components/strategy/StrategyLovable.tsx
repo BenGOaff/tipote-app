@@ -721,17 +721,17 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       className="h-8 text-sm"
                       disabled={savingRevGoal}
                     />
-                    <button onClick={handleSaveRevGoal} disabled={savingRevGoal || !revGoalInput.trim()} className="text-primary hover:text-primary/80 disabled:opacity-40 shrink-0" aria-label="Enregistrer">
+                    <button onClick={handleSaveRevGoal} disabled={savingRevGoal || !revGoalInput.trim()} className="text-primary hover:text-primary/80 disabled:opacity-40 shrink-0" aria-label={tc("save")}>
                       <Check className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setIsEditingRevGoal(false)} className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Annuler">
+                    <button onClick={() => setIsEditingRevGoal(false)} className="text-muted-foreground hover:text-foreground shrink-0" aria-label={tc("cancel")}>
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <p className="text-xl font-bold">{revenueGoalLocal}</p>
-                    <button onClick={() => { setRevGoalInput(revenueGoalLocal === "—" ? "" : revenueGoalLocal); setIsEditingRevGoal(true); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors" aria-label="Modifier l'objectif de revenu" title="Modifier">
+                    <button onClick={() => { setRevGoalInput(revenueGoalLocal === "—" ? "" : revenueGoalLocal); setIsEditingRevGoal(true); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors" aria-label={t("editRevenueGoal")} title={tc("edit")}>
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                   </div>

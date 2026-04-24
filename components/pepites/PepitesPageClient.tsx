@@ -188,6 +188,7 @@ function PepiteCard(props: {
 
 export default function PepitesPageClient() {
   const t = useTranslations("pepites");
+  const tc = useTranslations("common");
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<PepiteItem[]>([]);
@@ -283,7 +284,7 @@ export default function PepitesPageClient() {
 
       const json = await res.json().catch(() => ({}));
       if (!json?.ok) {
-        setAdminError(json?.error || "Erreur");
+        setAdminError(json?.error || tc("error"));
         return;
       }
 

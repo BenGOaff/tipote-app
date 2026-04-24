@@ -97,6 +97,7 @@ export function FunnelForm({
 }: FunnelFormProps) {
   const { toast } = useToast();
   const t = useTranslations("funnelForm");
+  const tc = useTranslations("common");
 
   const [step, setStep] = useState<Step>("mode");
   const [mode, setMode] = useState<Mode>("visual");
@@ -334,7 +335,7 @@ export function FunnelForm({
       const data = safeJsonParse<any>(raw);
 
       if (!res.ok) {
-        const msg = (data && (data.error || data.message)) || raw || "Impossible de rendre le template";
+        const msg = (data && (data.error || data.message)) || raw || t("cannotRenderTemplate");
         throw new Error(msg);
       }
 
@@ -342,7 +343,7 @@ export function FunnelForm({
       setRenderedHtml(html || "");
     } catch (e: any) {
       toast({
-        title: "Erreur preview",
+        title: t("previewError"),
         description: e?.message || t("toast.cannotPreview"),
         variant: "destructive",
       });
@@ -551,7 +552,7 @@ export function FunnelForm({
       await onSave(payload);
       toast({ title: t("toast.saved") });
     } catch (e: any) {
-      toast({ title: "Erreur sauvegarde", description: e?.message || "Impossible de sauvegarder", variant: "destructive" });
+      toast({ title: t("saveError"), description: e?.message || t("cannotSaveFull"), variant: "destructive" });
     }
   };
 

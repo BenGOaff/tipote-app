@@ -184,6 +184,7 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
 export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const router = useRouter();
   const t = useTranslations("quizDetail");
+  const tc = useTranslations("common");
 
   const [loading, setLoading] = useState(true);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
@@ -461,7 +462,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         throw new Error(json?.error || "Error");
       }
       toast.success(t("toastSaved"));
-    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Erreur"); } finally { setSaving(false); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : tc("error")); } finally { setSaving(false); }
   };
 
   const handleToggleStatus = async () => {
@@ -546,7 +547,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             <button onClick={() => setDevice("mobile")} className={`p-1.5 rounded-md ${device === "mobile" ? "bg-background shadow-sm" : ""}`}><Smartphone className="w-4 h-4" /></button>
           </div>
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : "Enregistrer"}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : tc("save")}
           </Button>
           <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
         </div>
@@ -636,7 +637,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
                       <div className="flex items-center gap-2">
                         <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
-                          {uploadingLogo ? "Envoi…" : "Changer"}
+                          {uploadingLogo ? t("uploading") : t("change")}
                         </button>
                         <button type="button" onClick={async () => { await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brand_logo_url: null }) }); setBrandLogoUrl(null); }} className="text-xs text-destructive hover:underline">Retirer</button>
                       </div>
@@ -644,7 +645,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   ) : (
                     <button type="button" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo} className="w-full border-2 border-dashed rounded-lg p-4 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
                       <Plus className="w-4 h-4" />
-                      {uploadingLogo ? "Envoi…" : "Ajouter mon logo"}
+                      {uploadingLogo ? t("uploading") : t("addLogo")}
                     </button>
                   )}
                   <input
@@ -749,7 +750,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                               disabled={uploadingBonusImage}
                               className="text-xs text-primary hover:underline block"
                             >
-                              {uploadingBonusImage ? "Envoi…" : "Remplacer"}
+                              {uploadingBonusImage ? t("uploading") : t("replace")}
                             </button>
                             <button
                               type="button"
@@ -768,7 +769,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           className="w-full border-2 border-dashed rounded-lg p-3 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
                         >
                           <Plus className="w-3 h-3" />
-                          {uploadingBonusImage ? "Envoi…" : "Ajouter un visuel"}
+                          {uploadingBonusImage ? t("uploading") : t("addVisual")}
                         </button>
                       )}
                       <input
@@ -1023,7 +1024,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   className="flex-1 bg-transparent outline-none text-sm font-mono px-1 py-1"
                 />
               </div>
-              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enregistrer"}</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : tc("save")}</Button>
             </div>
             <div className="flex items-center gap-2">
               <Input value={publicUrl} readOnly className="font-mono text-sm bg-muted flex-1" />

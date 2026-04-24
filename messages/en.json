@@ -371,7 +371,8 @@
     "noSSEStream": "No SSE stream",
     "cannotSave": "Could not save",
     "networkError": "Network error",
-    "enrichmentError": "Enrichment error"
+    "enrichmentError": "Enrichment error",
+    "saveError": "Save error"
   },
   "auth": {
     "login": "Sign in",
@@ -1389,7 +1390,8 @@
       "personaUpdatedDesc": "Changes have been saved"
     },
     "savedShort": "Saved",
-    "deleteTaskTitle": "Delete task"
+    "deleteTaskTitle": "Delete task",
+    "editRevenueGoal": "Edit revenue goal"
   },
   "onboarding": {
     "title": "Welcome to Tipote",
@@ -2229,7 +2231,11 @@
     "error": "Error",
     "generateError": "Unable to generate",
     "saveError": "Unable to save",
-    "newContent": "New content"
+    "newContent": "New content",
+    "contentNotFound": "Content not found",
+    "cannotLoadContent": "Could not load this content for editing.",
+    "cannotLoadContentShort": "Could not load the content.",
+    "editPost": "Edit post"
   },
   "leads": {
     "title": "My Leads",
@@ -3562,7 +3568,12 @@
     "personnalisationTitle": "Quiz personalization",
     "askGenderLabel": "Ask for gender (he / she / they)",
     "optionsTitle": "Options",
-    "shareRequestLabel": "Share request"
+    "shareRequestLabel": "Share request",
+    "uploading": "Uploading…",
+    "change": "Change",
+    "addLogo": "Add my logo",
+    "replace": "Replace",
+    "addVisual": "Add a visual"
   },
   "contentStrategy": {
     "title": "Content strategy",
@@ -4303,7 +4314,11 @@
       "iterationError": "Iteration error",
       "changesApplied": "Changes applied",
       "changesRejected": "Changes rejected"
-    }
+    },
+    "cannotRenderTemplate": "Could not render template",
+    "previewError": "Preview error",
+    "saveError": "Save error",
+    "cannotSaveFull": "Could not save"
   },
   "pageChat": {
     "imageHint": "💡 To change an image, click it directly in the preview! You'll be able to import the photo you want.",
@@ -4349,7 +4364,9 @@
       ]
     },
     "appliedButNotSaved": "Change applied but not saved: {err}",
-    "errorCode": "error {code}"
+    "errorCode": "error {code}",
+    "reformulateError": "Reformulation error.",
+    "modifyError": "Error while modifying."
   },
   "contentEditor": {
     "toast": {

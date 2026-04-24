@@ -101,8 +101,8 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
           return;
         }
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Erreur de reformulation.");
-        addMessage("assistant", data.error || "Erreur de reformulation.");
+        setError(data.error || t("reformulateError"));
+        addMessage("assistant", data.error || t("reformulateError"));
         return;
       }
 
@@ -166,7 +166,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
       if (!res.ok) {
         const errMsg = data.code === "NO_CREDITS"
           ? t("noCredits")
-          : (data.error || "Erreur lors de la modification.");
+          : (data.error || t("modifyError"));
         setError(errMsg);
         addMessage("assistant", errMsg);
         setHistory((prev) => prev.slice(0, -1));
@@ -248,7 +248,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
             <span className="text-[9px] text-muted-foreground bg-muted px-1 py-0.5 rounded">0.5 cr.</span>
           </div>
           {history.length > 0 && (
-            <button onClick={handleUndo} className="p-1 rounded hover:bg-muted text-muted-foreground" title="Annuler">
+            <button onClick={handleUndo} className="p-1 rounded hover:bg-muted text-muted-foreground" title={t("undoTitle")}>
               <Undo2 className="w-3 h-3" />
             </button>
           )}

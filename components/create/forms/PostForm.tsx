@@ -883,6 +883,7 @@ function QuickCreateAutomationModal({
   onCreated: (auto: QuickAuto) => void;
 }) {
   const t = useTranslations("postForm");
+  const tc = useTranslations("common");
   const [keyword, setKeyword] = useState("");
   const [dmMessage, setDmMessage] = useState(
     t("dmDefault")
@@ -914,7 +915,7 @@ function QuickCreateAutomationModal({
         .select("id, name, trigger_keyword")
         .single();
 
-      if (error || !data) throw new Error(error?.message ?? "Erreur inconnue");
+      if (error || !data) throw new Error(error?.message ?? tc("errorUnknown"));
 
       toast.success(t("automationCreated"));
       onCreated(data as QuickAuto);

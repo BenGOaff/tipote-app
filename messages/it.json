@@ -371,7 +371,8 @@
     "noSSEStream": "Nessun flusso SSE",
     "cannotSave": "Salvataggio impossibile",
     "networkError": "Errore di rete",
-    "enrichmentError": "Errore durante l'arricchimento"
+    "enrichmentError": "Errore durante l'arricchimento",
+    "saveError": "Errore di salvataggio"
   },
   "auth": {
     "login": "Accedi",
@@ -1389,7 +1390,8 @@
       "personaUpdatedDesc": "Le modifiche sono state salvate"
     },
     "savedShort": "Salvato",
-    "deleteTaskTitle": "Elimina il task"
+    "deleteTaskTitle": "Elimina il task",
+    "editRevenueGoal": "Modifica obiettivo di ricavo"
   },
   "onboarding": {
     "title": "Benvenuto/a su Tipote",
@@ -2229,7 +2231,11 @@
     "error": "Errore",
     "generateError": "Impossibile generare",
     "saveError": "Impossibile salvare",
-    "newContent": "Nuovo contenuto"
+    "newContent": "Nuovo contenuto",
+    "contentNotFound": "Contenuto non trovato",
+    "cannotLoadContent": "Impossibile caricare questo contenuto per modificarlo.",
+    "cannotLoadContentShort": "Impossibile caricare il contenuto.",
+    "editPost": "Modifica post"
   },
   "leads": {
     "title": "I Miei Lead",
@@ -3562,7 +3568,12 @@
     "personnalisationTitle": "Personalizzazione del quiz",
     "askGenderLabel": "Chiedi il genere (lui / lei / loro)",
     "optionsTitle": "Opzioni",
-    "shareRequestLabel": "Richiesta di condivisione"
+    "shareRequestLabel": "Richiesta di condivisione",
+    "uploading": "Invio…",
+    "change": "Cambia",
+    "addLogo": "Aggiungi il mio logo",
+    "replace": "Sostituisci",
+    "addVisual": "Aggiungi un visuale"
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",
@@ -4303,7 +4314,11 @@
       "iterationError": "Errore iterazione",
       "changesApplied": "Modifiche applicate",
       "changesRejected": "Modifiche rifiutate"
-    }
+    },
+    "cannotRenderTemplate": "Impossibile renderizzare il template",
+    "previewError": "Errore anteprima",
+    "saveError": "Errore di salvataggio",
+    "cannotSaveFull": "Impossibile salvare"
   },
   "pageChat": {
     "imageHint": "💡 Per cambiare un'immagine, cliccala direttamente nell'anteprima! Potrai importare la foto che vuoi.",
@@ -4349,7 +4364,9 @@
       ]
     },
     "appliedButNotSaved": "Modifica applicata ma non salvata: {err}",
-    "errorCode": "errore {code}"
+    "errorCode": "errore {code}",
+    "reformulateError": "Errore di riformulazione.",
+    "modifyError": "Errore durante la modifica."
   },
   "contentEditor": {
     "toast": {

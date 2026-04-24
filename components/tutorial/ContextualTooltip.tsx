@@ -2,6 +2,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useTutorial, ContextualTooltip as ContextualTooltipType } from "@/hooks/useTutorial";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
@@ -24,6 +25,7 @@ export function ContextualTooltip({
   delay = 1000,
 }: ContextualTooltipProps) {
   const { hasSeenContext, markContextSeen, tutorialOptOut } = useTutorial();
+  const tc = useTranslations("common");
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export function ContextualTooltip({
               <button
                 onClick={handleDismiss}
                 className="p-1 hover:bg-white/20 rounded transition-colors flex-shrink-0"
-                aria-label="Fermer"
+                aria-label={tc("close")}
               >
                 <X className="w-4 h-4" />
               </button>
