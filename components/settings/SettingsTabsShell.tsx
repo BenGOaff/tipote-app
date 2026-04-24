@@ -247,6 +247,7 @@ function formatPersonaSummary(text: string): string {
 export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const tSettings = useTranslations("settings");
   const tSP = useTranslations("settingsPage");
+  const tc = useTranslations("common");
   const router = useRouter();
   const sp = useSearchParams();
   const { toast } = useToast();
@@ -354,7 +355,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const res = await fetch("/api/profile", { method: "GET" });
         const json = (await res.json().catch(() => null)) as any;
         if (cancelled) return;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
 
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
@@ -435,8 +436,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       } catch (e: any) {
         if (!cancelled) {
           toast({
-            title: "Impossible de charger le profil",
-            description: e?.message ?? "Erreur inconnue",
+            title: tc("cannotLoad"),
+            description: e?.message ?? tc("errorUnknown"),
             variant: "destructive",
           });
         }
@@ -475,7 +476,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       body: JSON.stringify({ [field]: value }),
     });
     if (!res.ok) {
-      toast({ title: "Erreur", description: "Impossible de sauvegarder", variant: "destructive" });
+      toast({ title: tc("error"), description: tc("cannotSave"), variant: "destructive" });
     }
   }
 
@@ -598,7 +599,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         });
 
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
 
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
@@ -606,8 +607,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         toast({ title: tSP("toast.profileSaved") });
       } catch (e: any) {
         toast({
-          title: "Enregistrement impossible",
-          description: e?.message ?? "Erreur inconnue",
+          title: tc("cannotSave"),
+          description: e?.message ?? tc("errorUnknown"),
           variant: "destructive",
         });
       }
@@ -631,7 +632,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         });
 
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
 
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
@@ -639,8 +640,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         toast({ title: tSP("toast.positioningSaved") });
       } catch (e: any) {
         toast({
-          title: "Enregistrement impossible",
-          description: e?.message ?? "Erreur inconnue",
+          title: tc("cannotSave"),
+          description: e?.message ?? tc("errorUnknown"),
           variant: "destructive",
         });
       }
@@ -716,7 +717,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           body: JSON.stringify({ offers: cleaned }),
         });
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
 
         const row = (json.profile ?? null) as ProfileRow | null;
         const saved = Array.isArray(row?.offers)
@@ -735,7 +736,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
         toast({ title: tSP("toast.offersSaved") });
       } catch (e: any) {
-        toast({ title: "Impossible d'enregistrer", description: e?.message ?? "Erreur", variant: "destructive" });
+        toast({ title: tc("cannotSave"), description: e?.message ?? tc("error"), variant: "destructive" });
       }
     });
   };
@@ -777,13 +778,13 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           }),
         });
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
         setInitialPersonaDetailedMarkdown(personaDetailedMarkdown);
         setInitialNarrativeSynthesisMarkdown(narrativeSynthesisMarkdown);
         setInitialCompetitorInsightsMarkdown(competitorInsightsMarkdown);
         toast({ title: tSP("toast.personaSaved") });
       } catch (e: any) {
-        toast({ title: "Enregistrement impossible", description: e?.message ?? "Erreur inconnue", variant: "destructive" });
+        toast({ title: tc("cannotSave"), description: e?.message ?? tc("errorUnknown"), variant: "destructive" });
       }
     });
   };
@@ -851,7 +852,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             try {
               const parsed = JSON.parse(eventData);
               if (eventType === "result") finalResult = parsed;
-              else if (eventType === "error") finalError = parsed.error || "Erreur inconnue";
+              else if (eventType === "error") finalError = parsed.error || tc("errorUnknown");
             } catch { /* skip malformed */ }
           }
         }
@@ -895,7 +896,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           });
           return;
         }
-        throw new Error(json?.error || "Erreur");
+        throw new Error(json?.error || tc("error"));
       }
 
       if (json.persona_summary) setMission(json.persona_summary);
@@ -908,8 +909,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       toast({ title: tSP("toast.personaEnriched") });
     } catch (e: any) {
       toast({
-        title: "Erreur lors de l'enrichissement",
-        description: e?.message ?? "Erreur inconnue",
+        title: tc("enrichmentError"),
+        description: e?.message ?? tc("errorUnknown"),
         variant: "destructive",
       });
     } finally {
@@ -940,7 +941,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         });
 
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
 
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
@@ -951,8 +952,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         toast({ title: tSP("toast.legalUrlsSaved") });
       } catch (e: any) {
         toast({
-          title: "Enregistrement impossible",
-          description: e?.message ?? "Erreur inconnue",
+          title: tc("cannotSave"),
+          description: e?.message ?? tc("errorUnknown"),
           variant: "destructive",
         });
       }
@@ -979,7 +980,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         });
 
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
 
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
@@ -989,8 +990,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         toast({ title: tSP("connections.sioSaved") });
       } catch (e: any) {
         toast({
-          title: "Enregistrement impossible",
-          description: e?.message ?? "Erreur inconnue",
+          title: tc("cannotSave"),
+          description: e?.message ?? tc("errorUnknown"),
           variant: "destructive",
         });
       }
@@ -1017,7 +1018,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         });
 
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
 
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
@@ -1028,7 +1029,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       } catch (e: any) {
         toast({
           title: tSP("reglages.saveError"),
-          description: e?.message ?? "Erreur inconnue",
+          description: e?.message ?? tc("errorUnknown"),
           variant: "destructive",
         });
       }
@@ -1075,7 +1076,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         });
 
         const json = (await res.json().catch(() => null)) as any;
-        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
 
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
@@ -1093,7 +1094,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       } catch (e: any) {
         toast({
           title: tSP("reglages.linksSaveError"),
-          description: e?.message ?? "Erreur inconnue",
+          description: e?.message ?? tc("errorUnknown"),
           variant: "destructive",
         });
       }
@@ -1130,7 +1131,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       if (!res.ok || !json?.ok) {
         toast({
           title: "Reset impossible",
-          description: json?.error || "Erreur inconnue",
+          description: json?.error || tc("errorUnknown"),
           variant: "destructive",
         });
         return;
@@ -1145,7 +1146,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     } catch (e) {
       toast({
         title: "Reset impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        description: e instanceof Error ? e.message : tc("errorUnknown"),
         variant: "destructive",
       });
     } finally {
@@ -2285,7 +2286,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       </Button>
                       <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
                         <Save className="w-4 h-4 mr-2" />
-                        {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                        {savingPersonaMarkdown ? tc("saving") : tc("save")}
                       </Button>
                     </div>
                   </div>
@@ -2308,7 +2309,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       <div className="flex justify-end px-4 pb-3">
                         <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={savingPersonaMarkdown}>
                           <Save className="w-4 h-4 mr-2" />
-                          {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                          {savingPersonaMarkdown ? tc("saving") : tc("save")}
                         </Button>
                       </div>
                     )}
@@ -2350,7 +2351,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                           </Button>
                           <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
                             <Save className="w-4 h-4 mr-2" />
-                            {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                            {savingPersonaMarkdown ? tc("saving") : tc("save")}
                           </Button>
                         </div>
                       </div>
@@ -2404,7 +2405,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       </Button>
                       <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
                         <Save className="w-4 h-4 mr-2" />
-                        {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                        {savingPersonaMarkdown ? tc("saving") : tc("save")}
                       </Button>
                     </div>
                   </div>
@@ -2427,7 +2428,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       <div className="flex justify-end px-4 pb-3">
                         <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={savingPersonaMarkdown}>
                           <Save className="w-4 h-4 mr-2" />
-                          {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                          {savingPersonaMarkdown ? tc("saving") : tc("save")}
                         </Button>
                       </div>
                     )}

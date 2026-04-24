@@ -368,7 +368,10 @@
     "renderError": "HTML render error",
     "noDataShort": "—",
     "serverError": "Server error",
-    "noSSEStream": "No SSE stream"
+    "noSSEStream": "No SSE stream",
+    "cannotSave": "Could not save",
+    "networkError": "Network error",
+    "enrichmentError": "Enrichment error"
   },
   "auth": {
     "login": "Sign in",
@@ -4203,7 +4206,22 @@
       "titlePh": "Title...",
       "contentPh": "Content...",
       "csvHeader": "Email,First name,Date",
-      "atTime": "at"
+      "atTime": "at",
+      "editPublishDate": "Edit publish date and time",
+      "editDate": "Edit date",
+      "schedule": "Schedule",
+      "saving": "Saving...",
+      "deleting": "Deleting...",
+      "reschedule": "Reschedule",
+      "rescheduleTitle": "Reschedule publication",
+      "scheduleTitle": "Schedule publication",
+      "rescheduleDesc": "Edit the publication date and time. The post will be automatically published via Tipote.",
+      "scheduleDesc": "Choose a publication date and time. The status will switch to “Scheduled”.",
+      "untitled": "Untitled",
+      "publishDate": "Publication date",
+      "publishTime": "Publication time",
+      "deleteTitle": "Delete content",
+      "deleteDesc": "This action is irreversible. The content will be permanently deleted."
     }
   },
   "offerDefaults": {

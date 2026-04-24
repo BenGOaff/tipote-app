@@ -368,7 +368,10 @@
     "renderError": "Erreur rendu HTML",
     "noDataShort": "—",
     "serverError": "Erreur serveur",
-    "noSSEStream": "Pas de flux SSE"
+    "noSSEStream": "Pas de flux SSE",
+    "cannotSave": "Enregistrement impossible",
+    "networkError": "Erreur réseau",
+    "enrichmentError": "Erreur lors de l'enrichissement"
   },
   "auth": {
     "login": "Se connecter",
@@ -4203,7 +4206,22 @@
       "titlePh": "Titre...",
       "contentPh": "Contenu...",
       "csvHeader": "Email,Prénom,Date",
-      "atTime": "à"
+      "atTime": "à",
+      "editPublishDate": "Modifier la date et l'heure de publication",
+      "editDate": "Modifier date",
+      "schedule": "Planifier",
+      "saving": "Enregistrement...",
+      "deleting": "Suppression...",
+      "reschedule": "Reprogrammer",
+      "rescheduleTitle": "Reprogrammer la publication",
+      "scheduleTitle": "Planifier la publication",
+      "rescheduleDesc": "Modifie la date et l’heure de publication. Le post sera automatiquement publié via Tipote.",
+      "scheduleDesc": "Choisis une date et une heure de publication. Le statut passera sur «Planifié».",
+      "untitled": "Sans titre",
+      "publishDate": "Date de publication",
+      "publishTime": "Heure de publication",
+      "deleteTitle": "Supprimer le contenu",
+      "deleteDesc": "Cette action est irréversible. Le contenu sera supprimé définitivement."
     }
   },
   "offerDefaults": {

@@ -368,7 +368,10 @@
     "renderError": "خطأ في عرض HTML",
     "noDataShort": "—",
     "serverError": "خطأ في الخادم",
-    "noSSEStream": "لا يوجد تدفق SSE"
+    "noSSEStream": "لا يوجد تدفق SSE",
+    "cannotSave": "تعذر الحفظ",
+    "networkError": "خطأ في الشبكة",
+    "enrichmentError": "خطأ أثناء الإثراء"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -4203,7 +4206,22 @@
       "titlePh": "العنوان...",
       "contentPh": "المحتوى...",
       "csvHeader": "البريد الإلكتروني,الاسم الأول,التاريخ",
-      "atTime": "في"
+      "atTime": "في",
+      "editPublishDate": "تعديل تاريخ ووقت النشر",
+      "editDate": "تعديل التاريخ",
+      "schedule": "جدولة",
+      "saving": "جارٍ الحفظ...",
+      "deleting": "جارٍ الحذف...",
+      "reschedule": "إعادة جدولة",
+      "rescheduleTitle": "إعادة جدولة النشر",
+      "scheduleTitle": "جدولة النشر",
+      "rescheduleDesc": "عدّل تاريخ ووقت النشر. سيتم نشر المنشور تلقائيًا عبر Tipote.",
+      "scheduleDesc": "اختر تاريخ ووقت النشر. ستتحول الحالة إلى «مجدول».",
+      "untitled": "بدون عنوان",
+      "publishDate": "تاريخ النشر",
+      "publishTime": "وقت النشر",
+      "deleteTitle": "حذف المحتوى",
+      "deleteDesc": "هذا الإجراء لا رجعة فيه. سيتم حذف المحتوى نهائيًا."
     }
   },
   "offerDefaults": {

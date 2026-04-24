@@ -497,7 +497,7 @@ export function ContentEditor({ initialItem }: Props) {
 
       if (!("ok" in data) || !data.ok) {
         toast({
-          title: "Enregistrement impossible",
+          title: tc("cannotSave"),
           description: (data as any).error ?? tc("error"),
           variant: "destructive",
         });
@@ -544,7 +544,7 @@ export function ContentEditor({ initialItem }: Props) {
       return true;
     } catch (e: any) {
       toast({
-        title: "Enregistrement impossible",
+        title: tc("cannotSave"),
         description: e?.message || tc("error"),
         variant: "destructive",
       });
@@ -1137,7 +1137,7 @@ export function ContentEditor({ initialItem }: Props) {
                   variant="outline"
                 >
                   <Save className="h-4 w-4 mr-1.5" />
-                  {saving ? "Enregistrement…" : "Sauvegarder"}
+                  {saving ? tc("saving") : tc("save")}
                 </Button>
 
                 <Button
