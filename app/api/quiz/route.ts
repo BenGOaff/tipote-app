@@ -106,6 +106,16 @@ export async function POST(req: NextRequest) {
         sio_share_tag_name: body.sio_share_tag_name ?? null,
         capture_heading: body.capture_heading ?? null,
         capture_subtitle: body.capture_subtitle ?? null,
+        // Lead-capture field toggles (email is always captured)
+        capture_first_name: body.capture_first_name === true ? true : false,
+        capture_last_name: body.capture_last_name === true ? true : false,
+        capture_phone: body.capture_phone === true ? true : false,
+        capture_country: body.capture_country === true ? true : false,
+        // Personalization flags (show the "Personalize" screen before Q1)
+        ask_first_name: body.ask_first_name === true ? true : false,
+        ask_gender: body.ask_gender === true ? true : false,
+        // Formality (tu / vous) — falls back to profile default when null
+        address_form: body.address_form === "tu" || body.address_form === "vous" ? body.address_form : null,
         status: body.status === "active" ? "active" : "draft",
         config_objective: body.config_objective ?? null,
         config_target: body.config_target ?? null,
@@ -150,6 +160,8 @@ export async function POST(req: NextRequest) {
           cta_text: r.cta_text ?? null,
           cta_url: r.cta_url ?? null,
           sio_tag_name: r.sio_tag_name ?? null,
+          sio_course_id: r.sio_course_id ?? null,
+          sio_community_id: r.sio_community_id ?? null,
           sort_order: i,
         })),
       );
