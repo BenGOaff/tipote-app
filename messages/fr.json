@@ -3637,7 +3637,13 @@
     "genderizeAll": "Genrer tout le quiz",
     "genderizingAll": "Génération en cours… ({done}/{total})",
     "genderizeAllDone": "Variantes générées ✓",
-    "genderizeAllPartial": "Partiel : {done}/{total} champs traités"
+    "genderizeAllPartial": "Partiel : {done}/{total} champs traités",
+    "continueWithoutBonus": "Continuer sans bonus",
+    "copyLink": "Copier le lien",
+    "shareMessageLabel": "Message pré-rempli du partage",
+    "bonusImageAlt": "Aperçu du bonus",
+    "addBonusVisual": "+ Ajouter un visuel pour le bonus",
+    "bonusImageClickHint": "Cliquer pour remplacer"
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",

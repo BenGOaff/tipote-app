@@ -3637,7 +3637,13 @@
     "genderizeAll": "Genera tutte le varianti",
     "genderizingAll": "Generazione… ({done}/{total})",
     "genderizeAllDone": "Varianti generate ✓",
-    "genderizeAllPartial": "Parziale: {done}/{total} campi"
+    "genderizeAllPartial": "Parziale: {done}/{total} campi",
+    "continueWithoutBonus": "Continua senza bonus",
+    "copyLink": "Copia link",
+    "shareMessageLabel": "Messaggio di condivisione precompilato",
+    "bonusImageAlt": "Anteprima del bonus",
+    "addBonusVisual": "+ Aggiungi unimmagine per il bonus",
+    "bonusImageClickHint": "Clicca per sostituire"
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

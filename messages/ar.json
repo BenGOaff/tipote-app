@@ -3637,7 +3637,13 @@
     "genderizeAll": "توليد جميع الصيغ",
     "genderizingAll": "جارٍ التوليد… ({done}/{total})",
     "genderizeAllDone": "تم توليد الصيغ ✓",
-    "genderizeAllPartial": "جزئي: {done}/{total} حقول"
+    "genderizeAllPartial": "جزئي: {done}/{total} حقول",
+    "continueWithoutBonus": "المتابعة بدون هدية",
+    "copyLink": "نسخ الرابط",
+    "shareMessageLabel": "رسالة المشاركة المُعدّة مسبقًا",
+    "bonusImageAlt": "معاينة الهدية",
+    "addBonusVisual": "+ أضف صورة للهدية",
+    "bonusImageClickHint": "انقر للاستبدال"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
