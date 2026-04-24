@@ -48,28 +48,6 @@ interface OfferMetricsDashboardProps {
   onAnalyze: () => void;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg text-sm">
-      <p className="font-medium mb-2 capitalize">{label}</p>
-      {payload.map((entry: any, index: number) => (
-        <div key={index} className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-          <span className="text-muted-foreground">{entry.name}:</span>
-          <span className="font-medium">
-            {entry.name.includes("CA") || entry.name.includes("Revenu")
-              ? `${entry.value.toLocaleString(locale)} EUR`
-              : entry.name.includes("%") || entry.name.includes("Taux")
-                ? `${Number(entry.value).toFixed(1)}%`
-                : entry.value.toLocaleString(locale)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
 export const OfferMetricsDashboard = ({
   metrics,
   sortedMonths,
@@ -80,7 +58,30 @@ export const OfferMetricsDashboard = ({
   isAnalyzing,
   onAnalyze,
 }: OfferMetricsDashboardProps) => {
+  const locale = useLocale();
   const hasData = metrics.length > 0;
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-background border border-border rounded-lg p-3 shadow-lg text-sm">
+        <p className="font-medium mb-2 capitalize">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <div key={index} className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-muted-foreground">{entry.name}:</span>
+            <span className="font-medium">
+              {entry.name.includes("CA") || entry.name.includes("Revenu")
+                ? `${entry.value.toLocaleString(locale)} EUR`
+                : entry.name.includes("%") || entry.name.includes("Taux")
+                  ? `${Number(entry.value).toFixed(1)}%`
+                  : entry.value.toLocaleString(locale)}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   // Exclude the current (incomplete) month from charts to avoid skewing data
   const currentMonthStr = format(startOfMonth(new Date()), "yyyy-MM-dd");

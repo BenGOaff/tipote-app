@@ -27,6 +27,7 @@ const calculateChange = (
 };
 
 export const MetricsSummary = ({ metrics, previousMetrics }: MetricsSummaryProps) => {
+  const locale = useLocale();
   if (!metrics) return null;
 
   const summaryMetrics = [
