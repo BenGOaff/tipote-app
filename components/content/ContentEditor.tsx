@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
@@ -109,6 +109,7 @@ function toYmdOrEmpty(v: string | null | undefined) {
 export function ContentEditor({ initialItem }: Props) {
   const router = useRouter();
   const tFilters = useTranslations("contentFilters");
+  const locale = useLocale();
   const t = useTranslations("contentEditor");
 
   // Baseline local: permet un "dirty" fiable après save,
@@ -1153,7 +1154,7 @@ export function ContentEditor({ initialItem }: Props) {
                 <p className="text-xs text-muted-foreground">
                   Programmé pour le{" "}
                   <span className="font-medium">
-                    {new Date(scheduledDate + "T00:00:00").toLocaleDateString("fr-FR", {
+                    {new Date(scheduledDate + "T00:00:00").toLocaleDateString(locale, {
                       day: "numeric",
                       month: "long",
                       year: "numeric",

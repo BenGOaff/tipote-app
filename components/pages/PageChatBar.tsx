@@ -193,7 +193,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         const persistData = await persistRes.json().catch(() => ({} as any));
         if (!persistRes.ok) {
           console.error("[PageChatBar] iteration save failed", persistData);
-          setError(`Modification appliquée mais non sauvegardée : ${persistData?.error || `erreur ${persistRes.status}`}`);
+          setError(t("appliedButNotSaved", { err: persistData?.error || t("errorCode", { code: persistRes.status }) }));
         } else if (Array.isArray(persistData?.dropped) && persistData.dropped.length > 0) {
           setError(`Sauvegardé partiellement (colonnes manquantes : ${persistData.dropped.join(", ")}). Demande à l'équipe tech de déployer les dernières migrations.`);
         }

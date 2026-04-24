@@ -3,7 +3,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { GripVertical, Trash2 } from "lucide-react";
@@ -37,6 +37,7 @@ export const SortableTask = ({
   onOpenDetail,
 }: SortableTaskProps) => {
   const t = useTranslations("small");
+  const locale = useLocale();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
 
@@ -126,7 +127,7 @@ export const SortableTask = ({
           )}
           {task.due_date && (
             <span className="text-[10px] text-muted-foreground">
-              {new Date(task.due_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+              {new Date(task.due_date).toLocaleDateString(locale, { day: "numeric", month: "short" })}
             </span>
           )}
           {task.estimated_duration && (

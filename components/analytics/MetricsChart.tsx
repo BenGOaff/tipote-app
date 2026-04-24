@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import { Card } from "@/components/ui/card";
 import {
   LineChart,
@@ -46,7 +47,7 @@ export const MetricsChart = ({ metrics }: MetricsChartProps) => {
               <span className="text-muted-foreground">{entry.name}:</span>
               <span className="font-medium">
                 {entry.name === "CA"
-                  ? `${entry.value.toLocaleString("fr-FR")}€`
+                  ? `${entry.value.toLocaleString(locale)}€`
                   : entry.name === "Conversion"
                     ? `${entry.value.toFixed(1)}%`
                     : entry.value}

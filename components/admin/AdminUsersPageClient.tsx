@@ -2,7 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { toast } from "@/components/ui/use-toast";
 
 import { Card } from "@/components/ui/card";
@@ -67,29 +67,34 @@ const PLAN_ORDER: Record<string, number> = {
   elite: 4,
 };
 
-function fmtDate(value: string | null) {
+function fmtDate(value: string | null, locale: string) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("fr-FR");
+  return d.toLocaleString(locale);
 }
 
-function fmtDateShort(value: string | null) {
-  if (!value) return "Jamais";
+function fmtDateShort(
+  value: string | null,
+  locale: string,
+  t: (k: string, v?: Record<string, string | number>) => string,
+) {
+  if (!value) return t("never");
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "Jamais";
+  if (Number.isNaN(d.getTime())) return t("never");
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return "Aujourd'hui";
-  if (diffDays === 1) return "Hier";
-  if (diffDays < 7) return `Il y a ${diffDays}j`;
-  if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} sem.`;
-  return d.toLocaleDateString("fr-FR");
+  if (diffDays === 0) return t("today");
+  if (diffDays === 1) return t("yesterday");
+  if (diffDays < 7) return t("daysAgo", { n: diffDays });
+  if (diffDays < 30) return t("weeksAgo", { n: Math.floor(diffDays / 7) });
+  return d.toLocaleDateString(locale);
 }
 
 export default function AdminUsersPageClient({ adminEmail }: { adminEmail: string }) {
   const t = useTranslations("adminUsers");
+  const locale = useLocale();
   const [q, setQ] = useState("");
   const [planFilter, setPlanFilter] = useState<string>(ALL_PLANS_FILTER);
   const [sortField, setSortField] = useState<SortField>("updated_at");
@@ -388,7 +393,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
 
       toast({
         title: t("toast.bulkActionDone"),
-        description: `${json.succeeded} réussi(s), ${json.failed} échoué(s) sur ${json.total}`,
+        description: t("bulkSummary", { succeeded: json.succeeded, failed: json.failed, total: json.total }),
       });
 
       // Refresh data and clear selection
@@ -673,7 +678,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                     : emailSegment.length > 0
                     ? `tous les users ${emailSegment.join(", ")}`
                     : "TOUS les users";
-                  if (!confirm(`Envoyer cet email à ${target} ?`)) return;
+                  if (!confirm(t("confirmSendEmail", { target }))) return;
 
                   setSendingEmail(true);
                   setEmailResult(null);
@@ -947,7 +952,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => toggleSelect(u.id)}
-                        aria-label={`Sélectionner ${u.email}`}
+                        aria-label={t("selectUser", { email: u.email ?? "" })}
                       />
                     </TableCell>
 
@@ -1017,13 +1022,13 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                     </TableCell>
 
                     <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">
-                      <span title={fmtDate(u.last_sign_in_at)}>
-                        {fmtDateShort(u.last_sign_in_at)}
+                      <span title={fmtDate(u.last_sign_in_at, locale)}>
+                        {fmtDateShort(u.last_sign_in_at, locale, t)}
                       </span>
                     </TableCell>
 
                     <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
-                      {fmtDate(u.updated_at)}
+                      {fmtDate(u.updated_at, locale)}
                     </TableCell>
 
                     <TableCell className="text-right">

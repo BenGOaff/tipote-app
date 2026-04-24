@@ -341,7 +341,8 @@
     "sioTagsLoading": "Loading…",
     "sioLoadTags": "Load my tags",
     "sioNoTag": "— No tag —",
-    "sioCreateTag": "Create a new tag"
+    "sioCreateTag": "Create a new tag",
+    "atTime": "at"
   },
   "auth": {
     "login": "Sign in",
@@ -1848,7 +1849,8 @@
     "noContent": "No content for this date",
     "untitled": "Untitled",
     "reschedule": "Reschedule",
-    "edit": "Edit"
+    "edit": "Edit",
+    "atTime": "at"
   },
   "imageUploader": {
     "label": "Images",
@@ -4174,7 +4176,8 @@
       "firstName": "First name",
       "titlePh": "Title...",
       "contentPh": "Content...",
-      "csvHeader": "Email,First name,Date"
+      "csvHeader": "Email,First name,Date",
+      "atTime": "at"
     }
   },
   "offerDefaults": {
@@ -4300,7 +4303,9 @@
         "Edit the description",
         "Make the tone more professional"
       ]
-    }
+    },
+    "appliedButNotSaved": "Change applied but not saved: {err}",
+    "errorCode": "error {code}"
   },
   "contentEditor": {
     "toast": {
@@ -4476,7 +4481,15 @@
     "selectAll": "Select all",
     "loadingShort": "...",
     "viewCredits": "View credits",
-    "bonusCreditsPh": "Number of bonus credits"
+    "bonusCreditsPh": "Number of bonus credits",
+    "never": "Never",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{n}d ago",
+    "weeksAgo": "{n}w ago",
+    "bulkSummary": "{succeeded} succeeded, {failed} failed out of {total}",
+    "confirmSendEmail": "Send this email to {target}?",
+    "selectUser": "Select {email}"
   },
   "adminTickets": {
     "statusOpen": "Open",

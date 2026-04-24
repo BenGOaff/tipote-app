@@ -6,7 +6,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Download, Copy, Check, X, Plus,
   Upload, Smartphone, Tablet, Monitor,
@@ -1251,6 +1251,7 @@ const INLINE_EDIT_SCRIPT = `
 
 export default function PageBuilder({ initialPage, onBack }: Props) {
   const t = useTranslations("pageBuilder");
+  const locale = useLocale();
 
   // Translated device labels
   const deviceLabels = useMemo<Record<Device, string>>(() => ({
@@ -3381,7 +3382,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         <p className="text-sm font-medium truncate">{lead.email}</p>
                         <p className="text-xs text-muted-foreground">
                           {lead.first_name && <span>{lead.first_name} · </span>}
-                          {new Date(lead.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                          {new Date(lead.created_at).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}
                         </p>
                       </div>
                       {lead.sio_synced && <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700">Sync SIO</span>}

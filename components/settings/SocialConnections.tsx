@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Linkedin, Facebook, Instagram, AtSign, Unplug, RefreshCw, CheckCircle2, AlertCircle, Loader2, Eye, MessageSquare, MessageCircle, Tag, User } from "lucide-react";
 
 // Icone X (Twitter) - SVG officiel du logo X
@@ -68,6 +68,7 @@ function PinterestConsentDialog({
   onConfirm: () => void;
 }) {
   const tp = useTranslations("pinterestConsent");
+  const locale = useLocale();
   const tc = useTranslations("common");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -660,7 +661,7 @@ export default function SocialConnections() {
                           {post.message || post.story || "(post sans texte)"}
                         </p>
                         <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                          {new Date(post.created_time).toLocaleDateString("fr-FR")}
+                          {new Date(post.created_time).toLocaleDateString(locale)}
                         </span>
                       </div>
                       {post.comments?.data?.length > 0 ? (
@@ -671,7 +672,7 @@ export default function SocialConnections() {
                                 <User className="w-3 h-3 text-muted-foreground" />
                                 <span className="font-medium text-xs">{comment.from?.name ?? "Utilisateur"}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {new Date(comment.created_time).toLocaleDateString("fr-FR")}
+                                  {new Date(comment.created_time).toLocaleDateString(locale)}
                                 </span>
                               </div>
                               <p className="text-muted-foreground ml-4">{comment.message}</p>
@@ -698,7 +699,7 @@ export default function SocialConnections() {
                         <User className="w-3 h-3 text-muted-foreground" />
                         <span className="font-medium text-sm">{post.from?.name ?? "Utilisateur"}</span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(post.created_time).toLocaleDateString("fr-FR")}
+                          {new Date(post.created_time).toLocaleDateString(locale)}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">{post.message || "(post sans texte)"}</p>

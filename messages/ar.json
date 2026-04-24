@@ -341,7 +341,8 @@
     "sioTagsLoading": "جارٍ التحميل…",
     "sioLoadTags": "تحميل علاماتي",
     "sioNoTag": "— بدون علامة —",
-    "sioCreateTag": "إنشاء علامة جديدة"
+    "sioCreateTag": "إنشاء علامة جديدة",
+    "atTime": "في"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -1848,7 +1849,8 @@
     "noContent": "لا يوجد محتوى لهذا التاريخ",
     "untitled": "بدون عنوان",
     "reschedule": "إعادة جدولة",
-    "edit": "تعديل"
+    "edit": "تعديل",
+    "atTime": "في"
   },
   "imageUploader": {
     "label": "الصور",
@@ -4174,7 +4176,8 @@
       "firstName": "الاسم الأول",
       "titlePh": "العنوان...",
       "contentPh": "المحتوى...",
-      "csvHeader": "البريد الإلكتروني,الاسم الأول,التاريخ"
+      "csvHeader": "البريد الإلكتروني,الاسم الأول,التاريخ",
+      "atTime": "في"
     }
   },
   "offerDefaults": {
@@ -4300,7 +4303,9 @@
         "عدّل الوصف",
         "اجعل النبرة أكثر احترافية"
       ]
-    }
+    },
+    "appliedButNotSaved": "تم التطبيق لكن لم يُحفظ: {err}",
+    "errorCode": "خطأ {code}"
   },
   "contentEditor": {
     "toast": {
@@ -4476,7 +4481,15 @@
     "selectAll": "تحديد الكل",
     "loadingShort": "...",
     "viewCredits": "عرض الأرصدة",
-    "bonusCreditsPh": "عدد الأرصدة الإضافية"
+    "bonusCreditsPh": "عدد الأرصدة الإضافية",
+    "never": "أبدًا",
+    "today": "اليوم",
+    "yesterday": "أمس",
+    "daysAgo": "منذ {n} يومًا",
+    "weeksAgo": "منذ {n} أسابيع",
+    "bulkSummary": "{succeeded} ناجحة، {failed} فاشلة من أصل {total}",
+    "confirmSendEmail": "إرسال هذا البريد إلى {target}؟",
+    "selectUser": "تحديد {email}"
   },
   "adminTickets": {
     "statusOpen": "مفتوح",

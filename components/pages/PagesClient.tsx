@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Plus, FileText, ShoppingCart, Trash2, Copy,
   ArrowLeft, ArrowRight, Loader2, Package, PenTool, Check, Globe,
@@ -45,6 +45,7 @@ type View = "list" | "step1" | "step2" | "generating" | "edit" | "linkinbio-edit
 export default function PagesClient({ userEmail }: { userEmail: string }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const t = useTranslations("pages");
+  const locale = useLocale();
   const [view, setView] = useState<View>("list");
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,9 +205,9 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
         // Inject date as urgency
         if (ev.webinar_date) {
           const d = new Date(ev.webinar_date);
-          const dateStr = d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+          const dateStr = d.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
           payload.offerUrgency = ev.event_type === "challenge" && ev.end_date
-            ? `Du ${dateStr} au ${new Date(ev.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
+            ? `Du ${dateStr} au ${new Date(ev.end_date).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" })}`
             : dateStr;
         }
       }
@@ -622,8 +623,8 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                                       <h4 className="font-medium text-sm">{ev.title}</h4>
                                       <p className="text-xs text-muted-foreground mt-0.5">
                                         {ev.event_type === "challenge" ? "Challenge" : "Webinaire"}
-                                        {ev.webinar_date && ` · ${new Date(ev.webinar_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`}
-                                        {ev.event_type === "challenge" && ev.end_date && ` → ${new Date(ev.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`}
+                                        {ev.webinar_date && ` · ${new Date(ev.webinar_date).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}`}
+                                        {ev.event_type === "challenge" && ev.end_date && ` → ${new Date(ev.end_date).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}`}
                                       </p>
                                     </div>
                                     {selectedEventId === ev.id && (
@@ -1119,7 +1120,7 @@ function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle:
                         {lead.utm_source || lead.referrer ? (lead.utm_source || new URL(lead.referrer || "https://direct").hostname) : "Direct"}
                       </td>
                       <td className="py-2.5 text-muted-foreground text-xs">
-                        {lead.created_at ? new Date(lead.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                        {lead.created_at ? new Date(lead.created_at).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) : "—"}
                       </td>
                     </tr>
                   ))}

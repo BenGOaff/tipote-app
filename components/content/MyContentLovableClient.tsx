@@ -703,7 +703,7 @@ export default function MyContentLovableClient({
                                         >
                                           <Clock className="h-3.5 w-3.5" />
                                           {formatDate(item.scheduled_date)}
-                                          {(item.meta as any)?.scheduled_time ? ` à ${(item.meta as any).scheduled_time}` : ""}
+                                          {(item.meta as any)?.scheduled_time ? ` ${t("ui.atTime")} ${(item.meta as any).scheduled_time}` : ""}
                                         </button>
                                       ) : null}
                                     </div>
@@ -1102,7 +1102,7 @@ export default function MyContentLovableClient({
                                               >
                                                 <Clock className="h-3.5 w-3.5" />
                                                 {formatDate(item.scheduled_date)}
-                                                {(item.meta as any)?.scheduled_time ? ` à ${(item.meta as any).scheduled_time}` : ""}
+                                                {(item.meta as any)?.scheduled_time ? ` ${t("ui.atTime")} ${(item.meta as any).scheduled_time}` : ""}
                                               </button>
                                             ) : null}
                                           </div>

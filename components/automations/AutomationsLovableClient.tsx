@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageBanner } from "@/components/PageBanner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -219,6 +219,7 @@ function parseVariants(raw: string): string[] {
 
 export default function AutomationsLovableClient() {
   const t = useTranslations("automations");
+  const locale = useLocale();
 
   const [automations, setAutomations] = useState<SocialAutomation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1006,7 +1007,7 @@ function PostPickerModal({
 
   function formatDate(iso: string) {
     try {
-      return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+      return new Date(iso).toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
     } catch { return iso; }
   }
 

@@ -3,7 +3,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -143,6 +143,7 @@ const TASKS_DISPLAY_LIMIT = 4;
 
 export default function StrategyLovable(props: StrategyLovableProps) {
   const t = useTranslations("strategy");
+  const locale = useLocale();
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -742,7 +743,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   return (
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{rev.toLocaleString("fr-FR")} € ce mois</span>
+                        <span>{rev.toLocaleString(locale)} € ce mois</span>
                         {goalNum > 0 && <span className={pct >= 100 ? "text-green-600 font-semibold" : pct >= 50 ? "text-amber-600" : "text-muted-foreground"}>{pct}%</span>}
                       </div>
                       {goalNum > 0 && <Progress value={pct} className="h-1.5" />}

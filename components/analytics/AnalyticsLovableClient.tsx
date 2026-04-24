@@ -194,7 +194,7 @@ export default function AnalyticsLovableClient() {
                                 <span>{m.visitors} vis.</span>
                                 <span>{m.signups} insc.</span>
                                 {m.is_paid && <span>{m.sales_count} ventes</span>}
-                                {m.is_paid && m.revenue > 0 && <span>{m.revenue.toLocaleString("fr-FR")} EUR</span>}
+                                {m.is_paid && m.revenue > 0 && <span>{m.revenue.toLocaleString(locale)} EUR</span>}
                               </div>
                             </div>
                           ))}
@@ -205,7 +205,7 @@ export default function AnalyticsLovableClient() {
                           <span>Total : {totals.visitors} vis.</span>
                           <span>{totals.signups} insc.</span>
                           <span>{totals.sales} ventes</span>
-                          {totals.revenue > 0 && <span>{totals.revenue.toLocaleString("fr-FR")} EUR</span>}
+                          {totals.revenue > 0 && <span>{totals.revenue.toLocaleString(locale)} EUR</span>}
                         </div>
                       </div>
                     )}
