@@ -3637,7 +3637,18 @@
     "genderizeAll": "Genrer tout le quiz",
     "genderizingAll": "Génération en cours… ({done}/{total})",
     "genderizeAllDone": "Variantes générées ✓",
-    "genderizeAllPartial": "Partiel : {done}/{total} champs traités"
+    "genderizeAllPartial": "Partiel : {done}/{total} champs traités",
+    "continueWithoutBonus": "Continuer sans bonus",
+    "copyLink": "Copier le lien",
+    "shareMessageLabel": "Message pré-rempli du partage",
+    "bonusImageAlt": "Aperçu du bonus",
+    "addBonusVisual": "+ Ajouter un visuel pour le bonus",
+    "bonusImageClickHint": "Cliquer pour remplacer",
+    "onboardingTitle": "🎉 Bienvenue dans ton éditeur de quiz",
+    "onboardingPoint1": "Clique sur n'importe quel texte pour l'éditer directement dans l'aperçu.",
+    "onboardingPoint2": "Le bouton ✨ à côté de chaque champ génère automatiquement les variantes genrées (il / elle / iel).",
+    "onboardingPoint3": "Utilise la barre latérale gauche pour naviguer entre les étapes du quiz (intro, questions, résultats, partage).",
+    "onboardingDismiss": "C'est parti"
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",

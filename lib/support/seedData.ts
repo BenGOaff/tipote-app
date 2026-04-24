@@ -3478,7 +3478,21 @@ Rendez-vous sur **Créer un quiz** dans la sidebar. Tu as 3 options :
 - **Formats supportés :** .txt uniquement pour l'instant. Pour un PDF ou un DOCX, copie-colle le texte dans un fichier .txt avant d'importer.
 - Astuce : structure ton .txt avec des sections claires (questions numérotées, options A/B/C/D, résultats nommés) → l'IA respectera mieux ta structure.
 
-> Tu peux toujours modifier le quiz généré ou importé avant de le publier.`,
+> Tu peux toujours modifier le quiz généré ou importé avant de le publier.
+
+---
+
+## Personnalisation dynamique (prénom & genre)
+
+Active **"Demander le prénom"** et/ou **"Demander le genre"** dans la barre latérale pour afficher un écran optionnel avant la 1ʳᵉ question. Les visiteurs choisissent leur genre (Il / Elle / Iel) → tes questions, résultats et CTA s'adaptent automatiquement.
+
+**Comment ça marche :**
+- Clique sur le **bouton ✨** à côté de n'importe quel champ → l'IA génère 3 variantes (masculin, féminin, inclusif) et les stocke au format \`{prêt|prête|prêt·e}\`.
+- Tu peux éditer chaque variante à la main après génération.
+- Le placeholder \`{name}\` s'insère dans tes textes pour afficher le prénom.
+- Si tu actives "genre" **après** avoir généré le quiz, un bouton **"Genrer tout le quiz"** balaie tous les champs d'un coup.
+
+**Cas des langues non-genrées (anglais, etc.) :** l'IA renvoie le même texte 3× → le rendu public reste identique sans faire d'erreur grammaticale.`,
       en: `## Create a quiz on Tiquiz
 
 Go to **Create a quiz** in the sidebar. You have 3 options:
@@ -3503,19 +3517,57 @@ Go to **Create a quiz** in the sidebar. You have 3 options:
 - **Supported formats:** .txt only for now. For PDF/DOCX, copy the text into a .txt file before importing.
 - Tip: structure your .txt with clear sections (numbered questions, A/B/C/D options, named results) so the AI respects your structure.
 
-> You can always edit the generated or imported quiz before publishing.`,
+> You can always edit the generated or imported quiz before publishing.
+
+---
+
+## Dynamic personalization (first name & gender)
+
+Enable **"Ask for first name"** and/or **"Ask for gender"** in the sidebar to display an optional screen before the first question. Visitors pick their gender (He / She / They) → your questions, results and CTAs adapt automatically.
+
+**How it works:**
+- Click the **✨ button** next to any field → AI generates 3 variants (masculine, feminine, inclusive) stored as \`{ready|ready|ready}\`.
+- You can edit each variant by hand after generation.
+- The \`{name}\` placeholder inserts the visitor's first name into your copy.
+- If you enable "gender" **after** generating the quiz, a **"Genderize entire quiz"** button sweeps every field at once.
+
+**Non-gendered languages (English, etc.):** AI returns the same text 3× → the public render stays identical, no grammar mistakes.`,
       es: `## Crear un quiz en Tiquiz
 
-Ve a **Crear un quiz**. Tienes 3 opciones: **Manual** (añade preguntas y resultados tú mismo), **IA** (elige un objetivo, público y tono, la IA genera todo), o **Importar** un archivo .txt (la IA estructura tu contenido existente). Para PDF/DOCX, copia el texto a .txt antes de importar. Puedes editar el quiz antes de publicar.`,
+Ve a **Crear un quiz**. Tienes 3 opciones: **Manual** (añade preguntas y resultados tú mismo), **IA** (elige un objetivo, público y tono, la IA genera todo), o **Importar** un archivo .txt (la IA estructura tu contenido existente). Para PDF/DOCX, copia el texto a .txt antes de importar. Puedes editar el quiz antes de publicar.
+
+---
+
+## Personalización dinámica (nombre y género)
+
+Activa **"Pedir el nombre"** y/o **"Pedir el género"** en la barra lateral para mostrar una pantalla opcional antes de la 1ª pregunta. Los visitantes eligen su género (Él / Ella / Elle) → tus preguntas, resultados y CTA se adaptan automáticamente.
+
+**Cómo funciona:** haz clic en el botón **✨** junto a cualquier campo → la IA genera 3 variantes (masculino, femenino, inclusivo) almacenadas como \`{listo|lista|liste}\`. El placeholder \`{name}\` inserta el nombre del visitante. Si activas "género" **después** de generar el quiz, el botón **"Generar todas las variantes"** procesa todos los campos de una vez.`,
       it: `## Creare un quiz su Tiquiz
 
-Vai su **Crea un quiz**. Hai 3 opzioni: **Manuale** (aggiungi domande e risultati), **IA** (scegli obiettivo, pubblico e tono, l'IA genera tutto), o **Importa** un file .txt (l'IA struttura i tuoi contenuti). Per PDF/DOCX, copia il testo in .txt prima dell'import. Puoi modificare il quiz prima di pubblicare.`,
+Vai su **Crea un quiz**. Hai 3 opzioni: **Manuale** (aggiungi domande e risultati), **IA** (scegli obiettivo, pubblico e tono, l'IA genera tutto), o **Importa** un file .txt (l'IA struttura i tuoi contenuti). Per PDF/DOCX, copia il testo in .txt prima dell'import. Puoi modificare il quiz prima di pubblicare.
+
+---
+
+## Personalizzazione dinamica (nome e genere)
+
+Attiva **"Chiedi il nome"** e/o **"Chiedi il genere"** nella barra laterale per mostrare una schermata opzionale prima della 1ª domanda. I visitatori scelgono il genere (Lui / Lei / Neutro) → le tue domande, risultati e CTA si adattano automaticamente.
+
+**Come funziona:** clicca il pulsante **✨** accanto a qualsiasi campo → l'IA genera 3 varianti (maschile, femminile, inclusiva) memorizzate come \`{pronto|pronta|pronto}\`. Il placeholder \`{name}\` inserisce il nome del visitatore. Se attivi "genere" **dopo** aver generato il quiz, il pulsante **"Genera tutte le varianti"** elabora tutti i campi in una volta.`,
       ar: `## إنشاء اختبار على Tiquiz
 
-اذهب إلى **إنشاء اختبار**. لديك 3 خيارات: **يدوي**، **ذكاء اصطناعي**، أو **استيراد** ملف .txt (يقوم الذكاء الاصطناعي بهيكلة محتواك). بالنسبة لـ PDF/DOCX، انسخ النص إلى .txt قبل الاستيراد. يمكنك تعديل الاختبار قبل النشر.`,
+اذهب إلى **إنشاء اختبار**. لديك 3 خيارات: **يدوي**، **ذكاء اصطناعي**، أو **استيراد** ملف .txt (يقوم الذكاء الاصطناعي بهيكلة محتواك). بالنسبة لـ PDF/DOCX، انسخ النص إلى .txt قبل الاستيراد. يمكنك تعديل الاختبار قبل النشر.
+
+---
+
+## التخصيص الديناميكي (الاسم والجنس)
+
+فعّل **"اسأل عن الاسم"** و/أو **"اسأل عن الجنس"** في الشريط الجانبي لعرض شاشة اختيارية قبل السؤال الأول. يختار الزوار جنسهم (هو / هي / محايد) → تتكيّف أسئلتك ونتائجك ودعواتك للإجراء تلقائيًا.
+
+**كيف يعمل:** انقر زر **✨** بجانب أي حقل → يُولّد الذكاء الاصطناعي 3 صيغ (مذكر، مؤنث، محايد) محفوظة بصيغة \`{جاهز|جاهزة|جاهز}\`. عنصر النائب \`{name}\` يُدرج اسم الزائر. إذا فعّلت "الجنس" **بعد** توليد الاختبار، زر **"توليد جميع الصيغ"** يعالج كل الحقول دفعة واحدة.`,
     },
     related_slugs: ["what-is-tiquiz", "tiquiz-leads", "tiquiz-systeme-io"],
-    tags: ["tiquiz", "quiz", "create", "ai", "manual", "import"],
+    tags: ["tiquiz", "quiz", "create", "ai", "manual", "import", "personalization", "gender", "genderize"],
   },
   {
     category_slug: "tiquiz",

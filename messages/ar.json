@@ -3637,7 +3637,18 @@
     "genderizeAll": "توليد جميع الصيغ",
     "genderizingAll": "جارٍ التوليد… ({done}/{total})",
     "genderizeAllDone": "تم توليد الصيغ ✓",
-    "genderizeAllPartial": "جزئي: {done}/{total} حقول"
+    "genderizeAllPartial": "جزئي: {done}/{total} حقول",
+    "continueWithoutBonus": "المتابعة بدون هدية",
+    "copyLink": "نسخ الرابط",
+    "shareMessageLabel": "رسالة المشاركة المُعدّة مسبقًا",
+    "bonusImageAlt": "معاينة الهدية",
+    "addBonusVisual": "+ أضف صورة للهدية",
+    "bonusImageClickHint": "انقر للاستبدال",
+    "onboardingTitle": "🎉 مرحبًا بك في محرر الاختبار",
+    "onboardingPoint1": "انقر على أي نص لتعديله مباشرة في المعاينة.",
+    "onboardingPoint2": "زر ✨ بجانب كل حقل يُولّد تلقائيًا صيغ الجنس.",
+    "onboardingPoint3": "استخدم الشريط الجانبي الأيسر للتنقل بين مراحل الاختبار.",
+    "onboardingDismiss": "فهمت"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

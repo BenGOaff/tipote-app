@@ -3637,7 +3637,18 @@
     "genderizeAll": "Genera tutte le varianti",
     "genderizingAll": "Generazione… ({done}/{total})",
     "genderizeAllDone": "Varianti generate ✓",
-    "genderizeAllPartial": "Parziale: {done}/{total} campi"
+    "genderizeAllPartial": "Parziale: {done}/{total} campi",
+    "continueWithoutBonus": "Continua senza bonus",
+    "copyLink": "Copia link",
+    "shareMessageLabel": "Messaggio di condivisione precompilato",
+    "bonusImageAlt": "Anteprima del bonus",
+    "addBonusVisual": "+ Aggiungi unimmagine per il bonus",
+    "bonusImageClickHint": "Clicca per sostituire",
+    "onboardingTitle": "🎉 Benvenuto nel tuo editor di quiz",
+    "onboardingPoint1": "Clicca su qualsiasi testo per modificarlo direttamente nell'anteprima.",
+    "onboardingPoint2": "Il pulsante ✨ accanto a ogni campo genera automaticamente le varianti di genere.",
+    "onboardingPoint3": "Usa la barra laterale a sinistra per navigare tra le fasi del quiz.",
+    "onboardingDismiss": "Capito"
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

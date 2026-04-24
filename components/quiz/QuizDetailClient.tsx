@@ -39,6 +39,7 @@ import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { useTutorial } from "@/hooks/useTutorial";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import {
@@ -219,6 +220,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const router = useRouter();
   const t = useTranslations("quizDetail");
   const tc = useTranslations("common");
+  const { hasSeenContext, markContextSeen, tutorialOptOut } = useTutorial();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    if (tutorialOptOut) return;
+    if (hasSeenContext("first_quiz_editor_visit")) return;
+    const timer = setTimeout(() => setShowOnboarding(true), 600);
+    return () => clearTimeout(timer);
+  }, [hasSeenContext, tutorialOptOut]);
+  const dismissOnboarding = useCallback(() => {
+    markContextSeen("first_quiz_editor_visit");
+    setShowOnboarding(false);
+  }, [markContextSeen]);
 
   const [loading, setLoading] = useState(true);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
@@ -661,6 +674,25 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       <div className="h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
+      {/* First-visit onboarding banner */}
+      {showOnboarding && (
+        <div className="shrink-0 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
+          <div className="flex items-start gap-3 max-w-5xl mx-auto">
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <h3 className="text-sm font-semibold">{t("onboardingTitle")}</h3>
+              <ul className="text-xs text-muted-foreground leading-relaxed space-y-0.5 list-disc pl-5">
+                <li>{t("onboardingPoint1")}</li>
+                <li>{t("onboardingPoint2")}</li>
+                <li>{t("onboardingPoint3")}</li>
+              </ul>
+            </div>
+            <Button size="sm" variant="outline" onClick={dismissOnboarding}>
+              {t("onboardingDismiss")}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
@@ -1046,54 +1078,94 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </div>
               </div>
 
-              {/* ── BONUS / SHARE STEP (only if viralityEnabled) ── */}
+              {/* ── BONUS / SHARE STEP (only if viralityEnabled) ──
+                  Inline-editable just like capture and result steps: click
+                  the image slot to upload/replace, click the description or
+                  share message to edit. Keeps the sidebar Share panel for the
+                  advanced stuff (networks, Systeme.io tag, consent). */}
               {viralityEnabled && (
                 <div ref={bonusRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
-                  <div className="max-w-lg w-full space-y-5 text-center">
+                  <div className="max-w-lg w-full space-y-6 text-center">
                     <div className="flex justify-center">
                       <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: `${pc}15`, color: pc }}>
                         <Gift className="w-7 h-7" />
                       </div>
                     </div>
+
                     <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
                       {quiz?.address_form === "vous" ? t("bonusGiftTitleFormal") : t("bonusGiftTitle")}
                     </h2>
                     <p className="text-muted-foreground text-base leading-relaxed">
-                      {quiz?.address_form === "vous"
-                        ? t("bonusShareTextFormal")
-                        : t("bonusShareText")}
+                      {quiz?.address_form === "vous" ? t("bonusShareTextFormal") : t("bonusShareText")}
                     </p>
-                    <div className="rounded-xl border p-4 bg-muted/30 space-y-3 text-left">
-                      {bonusImageUrl && (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={bonusImageUrl} alt="" className="w-full max-h-44 object-contain rounded-lg bg-white" />
-                      )}
-                      <InlineEdit
+
+                    {/* Bonus card — image + description are inline-editable */}
+                    <div className="rounded-xl border p-5 bg-muted/20 space-y-4 text-left">
+                      <button
+                        type="button"
+                        onClick={() => bonusImageInputRef.current?.click()}
+                        disabled={uploadingBonusImage}
+                        className="group w-full rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors overflow-hidden relative"
+                        title={bonusImageUrl ? t("bonusImageClickHint") : undefined}
+                      >
+                        {bonusImageUrl ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={bonusImageUrl} alt={t("bonusImageAlt")} className="w-full max-h-56 object-contain bg-white" />
+                            <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[10px] px-2 py-1 rounded">
+                              {uploadingBonusImage ? t("uploading") : t("bonusImageClickHint")}
+                            </span>
+                          </>
+                        ) : (
+                          <div className="py-10 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+                            <Plus className="w-5 h-5" />
+                            <span className="text-xs font-medium">{uploadingBonusImage ? t("uploading") : t("addBonusVisual")}</span>
+                          </div>
+                        )}
+                      </button>
+                      <RichTextEdit
                         value={bonusDescription}
                         onChange={setBonusDescription}
-                        multiline
+                        onGenderize={genderize}
                         className="text-sm font-medium"
                         placeholder={t("bonusDescPlaceholder")}
                       />
                     </div>
+
+                    {/* Pre-filled share message — inline editable */}
+                    <div className="text-left space-y-1.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {t("shareMessageLabel")}
+                      </p>
+                      <RichTextEdit
+                        value={shareMessage}
+                        onChange={setShareMessage}
+                        onGenderize={genderize}
+                        className="text-sm bg-background border rounded-lg"
+                        placeholder={`Je viens de faire le quiz "${title || "…"}" !`}
+                      />
+                    </div>
+
+                    {/* Share buttons mockup — reflect actual configured networks */}
                     <div className="space-y-2">
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         {shareNetworks.length > 0 ? t("shareVia") : t("shareActivate")}
                       </p>
                       <div className="flex flex-wrap justify-center gap-2">
                         {shareNetworks.map((n) => (
-                          <button key={n} type="button" className="px-4 py-2 rounded-full border text-xs font-medium capitalize hover:bg-muted transition-colors">
+                          <span key={n} className="px-4 py-2 rounded-full border text-xs font-medium capitalize" style={{ borderColor: `${pc}40`, color: pc }}>
                             {n}
-                          </button>
+                          </span>
                         ))}
-                        <button type="button" className="px-4 py-2 rounded-full border text-xs font-medium hover:bg-muted transition-colors inline-flex items-center gap-1.5">
-                          <Copy className="w-3 h-3" /> Copier le lien
-                        </button>
+                        <span className="px-4 py-2 rounded-full border text-xs font-medium inline-flex items-center gap-1.5" style={{ borderColor: `${pc}40`, color: pc }}>
+                          <Copy className="w-3 h-3" /> {t("copyLink")}
+                        </span>
                       </div>
                     </div>
-                    <button type="button" className="text-xs text-muted-foreground underline hover:text-foreground">
-                      {quiz?.address_form === "vous" ? "Continuer sans bonus" : "Continuer sans bonus"}
-                    </button>
+
+                    <p className="text-xs text-muted-foreground underline-offset-2 underline cursor-default">
+                      {t("continueWithoutBonus")}
+                    </p>
                   </div>
                 </div>
               )}

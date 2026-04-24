@@ -50,7 +50,8 @@ export type ContextualTooltip =
   | "first_contents_visit"
   | "first_calendar_visit"
   | "first_settings_visit"
-  | "first_analytics_visit";
+  | "first_analytics_visit"
+  | "first_quiz_editor_visit";
 
 type SeenMap = Record<string, boolean>;
 
