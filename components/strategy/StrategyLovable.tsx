@@ -143,6 +143,7 @@ const TASKS_DISPLAY_LIMIT = 4;
 
 export default function StrategyLovable(props: StrategyLovableProps) {
   const t = useTranslations("strategy");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
   const { toast } = useToast();
@@ -337,7 +338,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
     });
     const json = await res.json().catch(() => ({}));
     if (!json.ok) {
-      toast({ title: t("toast.error"), description: json.error || "Erreur", variant: "destructive" });
+      toast({ title: t("toast.error"), description: json.error || tc("error"), variant: "destructive" });
       return;
     }
     toast({ title: t("savedShort") });

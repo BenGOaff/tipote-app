@@ -45,6 +45,7 @@ type View = "list" | "step1" | "step2" | "generating" | "edit" | "linkinbio-edit
 export default function PagesClient({ userEmail }: { userEmail: string }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const t = useTranslations("pages");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const [view, setView] = useState<View>("list");
   const [pages, setPages] = useState<PageSummary[]>([]);
@@ -265,13 +266,13 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Erreur serveur" }));
-        setGenError(err.error || "Erreur serveur");
+        const err = await res.json().catch(() => ({ error: tc("serverError") }));
+        setGenError(err.error || tc("serverError"));
         return;
       }
 
       const reader = res.body?.getReader();
-      if (!reader) { setGenError("Pas de flux SSE"); return; }
+      if (!reader) { setGenError(tc("noSSEStream")); return; }
 
       const decoder = new TextDecoder();
       let buffer = "";
@@ -315,7 +316,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                 }
 
                 if (eventType === "error") {
-                  setGenError(p.message || "Erreur inconnue");
+                  setGenError(p.message || tc("errorUnknown"));
                 }
               } catch { /* ignore */ }
               eventType = "";

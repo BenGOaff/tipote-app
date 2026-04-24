@@ -101,6 +101,7 @@ function kpiColor(value: number, good: number, excellent: number): string {
 
 export default function WebinarsPageClient() {
   const t = useTranslations("webinars");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const { toast } = useToast();
 
@@ -194,7 +195,7 @@ export default function WebinarsPageClient() {
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (!data?.ok) throw new Error(data?.error ?? "Erreur");
+        if (!data?.ok) throw new Error(data?.error ?? tc("error"));
         setWebinars((prev) => prev.map((w) => (w.id === data.webinar.id ? data.webinar : w)));
         toast({ title: t("webinarUpdated") });
       } else {
@@ -204,14 +205,14 @@ export default function WebinarsPageClient() {
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (!data?.ok) throw new Error(data?.error ?? "Erreur");
+        if (!data?.ok) throw new Error(data?.error ?? tc("error"));
         setWebinars((prev) => [data.webinar, ...prev]);
         toast({ title: t("webinarCreated") });
       }
       setDialogOpen(false);
       resetForm();
     } catch (e: any) {
-      toast({ title: "Erreur", description: e?.message, variant: "destructive" });
+      toast({ title: tc("error"), description: e?.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -226,7 +227,7 @@ export default function WebinarsPageClient() {
         toast({ title: t("webinarDeleted") });
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
   }, [t, toast]);
 

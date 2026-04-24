@@ -146,6 +146,7 @@ const TEMPLATE_COLORS = [
 // ─── Main component ─────────────────────────────────────────
 export default function ClientsPageClient({ clients: initialClients, templates: initialTemplates, error }: Props) {
   const t = useTranslations("clients");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
   const { toast } = useToast();
@@ -1287,7 +1288,7 @@ function ProcessCard({
         setShowAddPayment(false);
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
   };
 
@@ -1300,7 +1301,7 @@ function ProcessCard({
         setLocalCollected(json.amount_collected);
       }
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: tc("error"), variant: "destructive" });
     }
   };
 

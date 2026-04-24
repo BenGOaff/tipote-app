@@ -94,6 +94,7 @@ function fmtDateShort(
 
 export default function AdminUsersPageClient({ adminEmail }: { adminEmail: string }) {
   const t = useTranslations("adminUsers");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const [q, setQ] = useState("");
   const [planFilter, setPlanFilter] = useState<string>(ALL_PLANS_FILTER);
@@ -257,8 +258,8 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       setDraftPlanById(nextDraft);
     } catch (e) {
       toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible de charger les users",
+        title: tc("error"),
+        description: e instanceof Error ? e.message : tc("cannotLoad"),
         variant: "destructive",
       });
     } finally {
@@ -319,7 +320,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       });
     } catch (e) {
       toast({
-        title: "Erreur",
+        title: tc("error"),
         description: e instanceof Error ? e.message : t("toast.cannotUpdatePlan"),
         variant: "destructive",
       });
@@ -369,7 +370,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       } else {
         const amount = parseInt(bulkCredits, 10);
         if (!amount || amount <= 0) {
-          toast({ title: "Erreur", description: "Montant invalide", variant: "destructive" });
+          toast({ title: tc("error"), description: tc("invalidAmount"), variant: "destructive" });
           setBulkLoading(false);
           return;
         }
@@ -403,7 +404,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       await loadUsers();
     } catch (e) {
       toast({
-        title: "Erreur",
+        title: tc("error"),
         description: e instanceof Error ? e.message : t("toast.bulkActionError"),
         variant: "destructive",
       });
@@ -415,7 +416,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
   async function createUser() {
     const email = createEmail.trim().toLowerCase();
     if (!email) {
-      toast({ title: "Erreur", description: "Email requis", variant: "destructive" });
+      toast({ title: tc("error"), description: tc("emailRequired"), variant: "destructive" });
       return;
     }
 
@@ -453,7 +454,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       await loadUsers();
     } catch (e) {
       toast({
-        title: "Erreur",
+        title: tc("error"),
         description: e instanceof Error ? e.message : t("toast.cannotCreateUser"),
         variant: "destructive",
       });
@@ -484,7 +485,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
         body: JSON.stringify(payload),
       });
       const json = await res.json();
-      if (!res.ok || json.error) throw new Error(json.error ?? "Erreur");
+      if (!res.ok || json.error) throw new Error(json.error ?? tc("error"));
       toast({
         title: t("toast.notifSent"),
         description: `${json.inserted} utilisateur(s) notifié(s).`,
@@ -496,8 +497,8 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       setShowNotifForm(false);
     } catch (e) {
       toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Impossible d'envoyer",
+        title: tc("error"),
+        description: e instanceof Error ? e.message : tc("cannotSend"),
         variant: "destructive",
       });
     } finally {
@@ -702,10 +703,10 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                       setEmailResult({ sent: data.sent, failed: data.failed, total: data.total });
                       toast({ title: `✅ ${data.sent}/${data.total} emails envoyés` });
                     } else {
-                      toast({ title: "Erreur", description: data.error, variant: "destructive" });
+                      toast({ title: tc("error"), description: data.error, variant: "destructive" });
                     }
                   } catch (err) {
-                    toast({ title: "Erreur d'envoi", variant: "destructive" });
+                    toast({ title: tc("errorSending"), variant: "destructive" });
                   } finally {
                     setSendingEmail(false);
                   }

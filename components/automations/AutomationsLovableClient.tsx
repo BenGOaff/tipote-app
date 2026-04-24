@@ -219,6 +219,7 @@ function parseVariants(raw: string): string[] {
 
 export default function AutomationsLovableClient() {
   const t = useTranslations("automations");
+  const tc = useTranslations("common");
   const locale = useLocale();
 
   const [automations, setAutomations] = useState<SocialAutomation[]>([]);
@@ -819,7 +820,7 @@ function AutomationCard({
         body: JSON.stringify({ automation_id: auto.id, test_comment: testInput }),
       });
       const data = await res.json();
-      setTestResult({ ok: data.ok, detail: data.detail ?? data.error ?? "Erreur inconnue" });
+      setTestResult({ ok: data.ok, detail: data.detail ?? data.error ?? tc("errorUnknown") });
     } catch {
       setTestResult({ ok: false, detail: t("networkError") });
     } finally {
@@ -1001,7 +1002,7 @@ function PostPickerModal({
           permalink_url: "",
         })) ?? []);
       })
-      .catch(() => setError("Impossible de charger les posts"))
+      .catch(() => setError(tc("cannotLoad")))
       .finally(() => setLoading(false));
   }, [open, platform]);
 

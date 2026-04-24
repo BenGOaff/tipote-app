@@ -111,6 +111,7 @@ export function ContentEditor({ initialItem }: Props) {
   const tFilters = useTranslations("contentFilters");
   const locale = useLocale();
   const t = useTranslations("contentEditor");
+  const tc = useTranslations("common");
 
   // Baseline local: permet un "dirty" fiable après save,
   // même si le refresh Next met un peu de temps ou renvoie un item équivalent.
@@ -295,7 +296,7 @@ export function ContentEditor({ initialItem }: Props) {
       });
 
       const htmlPrev = await resPrev.text();
-      if (!resPrev.ok) throw new Error(htmlPrev || "Erreur rendu preview");
+      if (!resPrev.ok) throw new Error(htmlPrev || tc("renderError"));
       setHtmlPreview(htmlPrev);
 
       const resKit = await fetch("/api/templates/render", {
@@ -305,10 +306,10 @@ export function ContentEditor({ initialItem }: Props) {
       });
 
       const htmlK = await resKit.text();
-      if (!resKit.ok) throw new Error(htmlK || "Erreur rendu kit");
+      if (!resKit.ok) throw new Error(htmlK || tc("renderError"));
       setHtmlKit(htmlK);
     } catch (e: any) {
-      toast({ title: "Erreur rendu HTML", description: e?.message || "Erreur HTML", variant: "destructive" });
+      toast({ title: tc("renderError"), description: e?.message || tc("renderError"), variant: "destructive" });
     } finally {
       setIsRenderingHtml(false);
     }
@@ -320,7 +321,7 @@ export function ContentEditor({ initialItem }: Props) {
       toast({ title: t("toast.copied"), description: label });
     } catch {
       toast({
-        title: "Impossible de copier",
+        title: tc("cannotCopy"),
         description: t("toast.clipboardBlocked"),
         variant: "destructive",
       });
@@ -497,7 +498,7 @@ export function ContentEditor({ initialItem }: Props) {
       if (!("ok" in data) || !data.ok) {
         toast({
           title: "Enregistrement impossible",
-          description: (data as any).error ?? "Erreur",
+          description: (data as any).error ?? tc("error"),
           variant: "destructive",
         });
         return false;
@@ -544,7 +545,7 @@ export function ContentEditor({ initialItem }: Props) {
     } catch (e: any) {
       toast({
         title: "Enregistrement impossible",
-        description: e?.message || "Erreur",
+        description: e?.message || tc("error"),
         variant: "destructive",
       });
       return false;
@@ -562,7 +563,7 @@ export function ContentEditor({ initialItem }: Props) {
       if (!res.ok || !("ok" in data) || !data.ok) {
         toast({
           title: "Suppression impossible",
-          description: (data as any).error ?? "Erreur",
+          description: (data as any).error ?? tc("error"),
           variant: "destructive",
         });
         return false;
@@ -574,7 +575,7 @@ export function ContentEditor({ initialItem }: Props) {
     } catch (e: any) {
       toast({
         title: "Suppression impossible",
-        description: e?.message || "Erreur",
+        description: e?.message || tc("error"),
         variant: "destructive",
       });
       return false;
@@ -589,7 +590,7 @@ export function ContentEditor({ initialItem }: Props) {
       toast({ title: t("toast.copied"), description: t("toast.copiedInClipboard") });
     } catch {
       toast({
-        title: "Impossible de copier",
+        title: tc("cannotCopy"),
         description: t("toast.clipboardBlocked"),
         variant: "destructive",
       });
@@ -603,7 +604,7 @@ export function ContentEditor({ initialItem }: Props) {
       if (!res.ok || !data?.ok || !data?.id) {
         toast({
           title: "Duplication impossible",
-          description: data?.error ?? "Erreur",
+          description: data?.error ?? tc("error"),
           variant: "destructive",
         });
         return;
@@ -614,7 +615,7 @@ export function ContentEditor({ initialItem }: Props) {
     } catch (e: any) {
       toast({
         title: "Duplication impossible",
-        description: e?.message || "Erreur",
+        description: e?.message || tc("error"),
         variant: "destructive",
       });
     }
@@ -678,10 +679,10 @@ export function ContentEditor({ initialItem }: Props) {
       if (!("ok" in data) || !data.ok) {
         toast({
           title: "Programmation impossible",
-          description: (data as any).error ?? "Erreur",
+          description: (data as any).error ?? tc("error"),
           variant: "destructive",
         });
-        throw new Error((data as any).error ?? "Erreur");
+        throw new Error((data as any).error ?? tc("error"));
       }
 
       setBaseline((prev) => ({
@@ -718,7 +719,7 @@ export function ContentEditor({ initialItem }: Props) {
       });
     } catch {
       toast({
-        title: "Erreur PDF",
+        title: tc("errorPdf"),
         description: t("toast.pdfError"),
         variant: "destructive",
       });
