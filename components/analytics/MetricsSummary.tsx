@@ -1,5 +1,6 @@
-import { useLocale } from "next-intl";
 "use client";
+
+import { useLocale } from "next-intl";
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
