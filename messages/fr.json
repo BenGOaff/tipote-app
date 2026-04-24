@@ -372,7 +372,8 @@
     "cannotSave": "Enregistrement impossible",
     "networkError": "Erreur réseau",
     "enrichmentError": "Erreur lors de l'enrichissement",
-    "saveError": "Erreur de sauvegarde"
+    "saveError": "Erreur de sauvegarde",
+    "deleteArticleConfirm": "Supprimer cet article ?"
   },
   "auth": {
     "login": "Se connecter",
@@ -2496,7 +2497,9 @@
     "authority": "Autorité",
     "trafficSeo": "Trafic SEO",
     "emailsLabel": "Emails",
-    "salesLabel": "Ventes"
+    "salesLabel": "Ventes",
+    "editAndCopy": "Modifier & copier",
+    "apply": "Appliquer"
   },
   "emailForm": {
     "generating": "Génération...",
@@ -4550,7 +4553,32 @@
     "weeksAgo": "Il y a {n} sem.",
     "bulkSummary": "{succeeded} réussi(s), {failed} échoué(s) sur {total}",
     "confirmSendEmail": "Envoyer cet email à {target} ?",
-    "selectUser": "Sélectionner {email}"
+    "selectUser": "Sélectionner {email}",
+    "sendNotif": "Envoyer une notification",
+    "composeEmail": "Composer un email",
+    "sendToN": "Envoyer à {n} user(s)",
+    "sendEmailToN": "📧 Envoyer à {n} user(s)",
+    "sendEmailToSeg": "📧 Envoyer aux {seg}",
+    "nUsersSelected": "{n} user(s) sélectionnés",
+    "allUsersInSeg": "tous les users {seg}",
+    "allUsers": "TOUS les users",
+    "searchByEmail": "Rechercher par email...",
+    "refresh": "Rafraichir",
+    "alsoConfirmEmail": "Envoyer cet email à {target} ?",
+    "notifTitlePh": "Titre de la notification *",
+    "notifDescPh": "Description (optionnel)",
+    "buttonUrlPh": "URL du bouton (optionnel)",
+    "buttonTextPh": "Texte du bouton",
+    "emailSubjectPh": "Objet de l'email *",
+    "ctaUrlPh": "URL du bouton CTA (optionnel)",
+    "buyerEmailPh": "Email de l'acheteur *",
+    "namePh": "Nom (optionnel)",
+    "planPh": "Plan",
+    "inProgress": "En cours...",
+    "newPlanPh": "Nouveau plan",
+    "invalidPlan": "Plan invalide",
+    "cannotLoadUsers": "Impossible de charger les users",
+    "valueLabel": "Valeur: {v}"
   },
   "adminTickets": {
     "statusOpen": "Ouvert",

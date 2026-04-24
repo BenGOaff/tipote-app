@@ -372,7 +372,8 @@
     "cannotSave": "Salvataggio impossibile",
     "networkError": "Errore di rete",
     "enrichmentError": "Errore durante l'arricchimento",
-    "saveError": "Errore di salvataggio"
+    "saveError": "Errore di salvataggio",
+    "deleteArticleConfirm": "Eliminare questo articolo?"
   },
   "auth": {
     "login": "Accedi",
@@ -2496,7 +2497,9 @@
     "authority": "Autorità",
     "trafficSeo": "Traffico SEO",
     "emailsLabel": "Email",
-    "salesLabel": "Vendite"
+    "salesLabel": "Vendite",
+    "editAndCopy": "Modifica e copia",
+    "apply": "Applica"
   },
   "emailForm": {
     "generating": "Generazione...",
@@ -4550,7 +4553,32 @@
     "weeksAgo": "{n} sett. fa",
     "bulkSummary": "{succeeded} riusciti, {failed} falliti su {total}",
     "confirmSendEmail": "Inviare questa email a {target}?",
-    "selectUser": "Seleziona {email}"
+    "selectUser": "Seleziona {email}",
+    "sendNotif": "Invia una notifica",
+    "composeEmail": "Componi un'email",
+    "sendToN": "Invia a {n} utente(i)",
+    "sendEmailToN": "📧 Invia a {n} utente(i)",
+    "sendEmailToSeg": "📧 Invia a {seg}",
+    "nUsersSelected": "{n} utente(i) selezionato(i)",
+    "allUsersInSeg": "tutti gli utenti {seg}",
+    "allUsers": "TUTTI gli utenti",
+    "searchByEmail": "Cerca per email...",
+    "refresh": "Aggiorna",
+    "alsoConfirmEmail": "Inviare questa email a {target}?",
+    "notifTitlePh": "Titolo della notifica *",
+    "notifDescPh": "Descrizione (opzionale)",
+    "buttonUrlPh": "URL del pulsante (opzionale)",
+    "buttonTextPh": "Testo del pulsante",
+    "emailSubjectPh": "Oggetto dell'email *",
+    "ctaUrlPh": "URL del pulsante CTA (opzionale)",
+    "buyerEmailPh": "Email dell'acquirente *",
+    "namePh": "Nome (opzionale)",
+    "planPh": "Piano",
+    "inProgress": "In corso...",
+    "newPlanPh": "Nuovo piano",
+    "invalidPlan": "Piano non valido",
+    "cannotLoadUsers": "Impossibile caricare gli utenti",
+    "valueLabel": "Valore: {v}"
   },
   "adminTickets": {
     "statusOpen": "Aperto",

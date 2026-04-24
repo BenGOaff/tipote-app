@@ -721,7 +721,7 @@ export default function EventsPageClient() {
                 value={formOfferId}
                 onChange={(e) => setFormOfferId(e.target.value)}
               >
-                <option value="">{t("fields.noOffer") ?? "Aucune offre"}</option>
+                <option value="">{t("fields.noOffer")}</option>
                 {offers.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.name}{o.price_min ? ` (${o.price_min}\u20ac)` : ""}

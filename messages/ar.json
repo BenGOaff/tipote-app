@@ -372,7 +372,8 @@
     "cannotSave": "تعذر الحفظ",
     "networkError": "خطأ في الشبكة",
     "enrichmentError": "خطأ أثناء الإثراء",
-    "saveError": "خطأ في الحفظ"
+    "saveError": "خطأ في الحفظ",
+    "deleteArticleConfirm": "هل تريد حذف هذا المقال؟"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -2496,7 +2497,9 @@
     "authority": "السلطة",
     "trafficSeo": "حركة SEO",
     "emailsLabel": "البريد الإلكتروني",
-    "salesLabel": "المبيعات"
+    "salesLabel": "المبيعات",
+    "editAndCopy": "تعديل ونسخ",
+    "apply": "تطبيق"
   },
   "emailForm": {
     "generating": "جاري التوليد...",
@@ -4550,7 +4553,32 @@
     "weeksAgo": "منذ {n} أسابيع",
     "bulkSummary": "{succeeded} ناجحة، {failed} فاشلة من أصل {total}",
     "confirmSendEmail": "إرسال هذا البريد إلى {target}؟",
-    "selectUser": "تحديد {email}"
+    "selectUser": "تحديد {email}",
+    "sendNotif": "إرسال إشعار",
+    "composeEmail": "إنشاء بريد إلكتروني",
+    "sendToN": "إرسال إلى {n} مستخدم",
+    "sendEmailToN": "📧 إرسال إلى {n} مستخدم",
+    "sendEmailToSeg": "📧 إرسال إلى {seg}",
+    "nUsersSelected": "{n} مستخدم محدد",
+    "allUsersInSeg": "جميع المستخدمين {seg}",
+    "allUsers": "جميع المستخدمين",
+    "searchByEmail": "البحث بالبريد الإلكتروني...",
+    "refresh": "تحديث",
+    "alsoConfirmEmail": "إرسال هذا البريد إلى {target}؟",
+    "notifTitlePh": "عنوان الإشعار *",
+    "notifDescPh": "الوصف (اختياري)",
+    "buttonUrlPh": "رابط الزر (اختياري)",
+    "buttonTextPh": "نص الزر",
+    "emailSubjectPh": "موضوع البريد الإلكتروني *",
+    "ctaUrlPh": "رابط زر الإجراء (اختياري)",
+    "buyerEmailPh": "بريد المشتري *",
+    "namePh": "الاسم (اختياري)",
+    "planPh": "الخطة",
+    "inProgress": "قيد التنفيذ...",
+    "newPlanPh": "خطة جديدة",
+    "invalidPlan": "خطة غير صالحة",
+    "cannotLoadUsers": "تعذر تحميل المستخدمين",
+    "valueLabel": "القيمة: {v}"
   },
   "adminTickets": {
     "statusOpen": "مفتوح",

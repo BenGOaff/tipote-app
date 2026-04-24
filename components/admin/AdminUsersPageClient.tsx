@@ -276,8 +276,8 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
 
     if (!PLANS.includes(nextPlan as any)) {
       toast({
-        title: "Plan invalide",
-        description: `Valeur: ${nextPlan}`,
+        title: t("invalidPlan"),
+        description: t("valueLabel", { v: nextPlan }),
         variant: "destructive",
       });
       return;
@@ -518,7 +518,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             </div>
           </div>
           <Button variant="outline" onClick={() => setShowNotifForm((v) => !v)}>
-            {showNotifForm ? "Fermer" : "Envoyer une notification"}
+            {showNotifForm ? tc("close") : t("sendNotif")}
           </Button>
         </div>
 
@@ -534,34 +534,34 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               <Input
                 value={notifTitle}
                 onChange={(e) => setNotifTitle(e.target.value)}
-                placeholder="Titre de la notification *"
+                placeholder={t("notifTitlePh")}
                 className="flex-1"
               />
             </div>
             <Input
               value={notifBody}
               onChange={(e) => setNotifBody(e.target.value)}
-              placeholder="Description (optionnel)"
+              placeholder={t("notifDescPh")}
             />
             <div className="flex gap-2">
               <Input
                 value={notifActionUrl}
                 onChange={(e) => setNotifActionUrl(e.target.value)}
-                placeholder="URL du bouton (optionnel)"
+                placeholder={t("buttonUrlPh")}
                 className="flex-1"
               />
               <Input
                 value={notifActionLabel}
                 onChange={(e) => setNotifActionLabel(e.target.value)}
-                placeholder="Texte du bouton"
+                placeholder={t("buttonTextPh")}
                 className="w-48"
               />
             </div>
             <Button onClick={sendBroadcastNotification} disabled={sendingNotif || !notifTitle.trim()}>
               {sendingNotif
-                ? "Envoi en cours..."
+                ? tc("sending")
                 : selectedIds.size > 0
-                ? `Envoyer à ${selectedIds.size} user(s)`
+                ? t("sendToN", { n: selectedIds.size })
                 : t("sendToAll")}
             </Button>
           </div>
@@ -577,7 +577,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             </div>
           </div>
           <Button variant="outline" onClick={() => { setShowEmailForm((v) => !v); setEmailPreviewHtml(null); setEmailResult(null); }}>
-            {showEmailForm ? "Fermer" : "Composer un email"}
+            {showEmailForm ? tc("close") : t("composeEmail")}
           </Button>
         </div>
 
@@ -612,7 +612,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             <Input
               value={emailSubject}
               onChange={(e) => setEmailSubject(e.target.value)}
-              placeholder="Objet de l'email *"
+              placeholder={t("emailSubjectPh")}
             />
             <Input
               value={emailPreheader}
@@ -635,13 +635,13 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               <Input
                 value={emailCtaUrl}
                 onChange={(e) => setEmailCtaUrl(e.target.value)}
-                placeholder="URL du bouton CTA (optionnel)"
+                placeholder={t("ctaUrlPh")}
                 className="flex-1"
               />
               <Input
                 value={emailCtaLabel}
                 onChange={(e) => setEmailCtaLabel(e.target.value)}
-                placeholder="Texte du bouton"
+                placeholder={t("buttonTextPh")}
                 className="w-48"
               />
             </div>
@@ -675,10 +675,10 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 disabled={!emailSubject.trim() || !emailBody.trim() || sendingEmail}
                 onClick={async () => {
                   const target = selectedIds.size > 0
-                    ? `${selectedIds.size} user(s) sélectionnés`
+                    ? t("nUsersSelected", { n: selectedIds.size })
                     : emailSegment.length > 0
-                    ? `tous les users ${emailSegment.join(", ")}`
-                    : "TOUS les users";
+                    ? t("allUsersInSeg", { seg: emailSegment.join(", ") })
+                    : t("allUsers");
                   if (!confirm(t("confirmSendEmail", { target }))) return;
 
                   setSendingEmail(true);
@@ -713,11 +713,11 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 }}
               >
                 {sendingEmail
-                  ? "Envoi en cours..."
+                  ? tc("sending")
                   : selectedIds.size > 0
-                  ? `📧 Envoyer à ${selectedIds.size} user(s)`
+                  ? t("sendEmailToN", { n: selectedIds.size })
                   : emailSegment.length > 0
-                  ? `📧 Envoyer aux ${emailSegment.join(", ")}`
+                  ? t("sendEmailToSeg", { seg: emailSegment.join(", ") })
                   : t("sendAllEmoji")}
               </Button>
             </div>
@@ -763,11 +763,11 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Rechercher par email..."
+              placeholder={t("searchByEmail")}
               className="w-full sm:w-72"
             />
             <Button onClick={loadUsers} disabled={loading}>
-              {loading ? "Chargement..." : "Rafraichir"}
+              {loading ? tc("loading") : t("refresh")}
             </Button>
             <Button
               variant="outline"
@@ -813,7 +813,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                   type="email"
                   value={createEmail}
                   onChange={(e) => setCreateEmail(e.target.value)}
-                  placeholder="Email de l'acheteur *"
+                  placeholder={t("buyerEmailPh")}
                 />
               </div>
               <Input
@@ -824,11 +824,11 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
               <Input
                 value={createLastName}
                 onChange={(e) => setCreateLastName(e.target.value)}
-                placeholder="Nom (optionnel)"
+                placeholder={t("namePh")}
               />
               <Select value={createPlan} onValueChange={setCreatePlan}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Plan" />
+                  <SelectValue placeholder={t("planPh")} />
                 </SelectTrigger>
                 <SelectContent>
                   {PLANS.map((p) => (
@@ -975,7 +975,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                           }
                         >
                           <SelectTrigger className="w-[140px]">
-                            <SelectValue placeholder="Plan" />
+                            <SelectValue placeholder={t("planPh")} />
                           </SelectTrigger>
                           <SelectContent>
                             {PLANS.map((p) => (
@@ -1038,7 +1038,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                         onClick={() => savePlan(u)}
                         disabled={savingId === u.id || loading || !dirty}
                       >
-                        {savingId === u.id ? "Envoi..." : "Appliquer"}
+                        {savingId === u.id ? tc("sendingShort") : tc("apply")}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -1073,7 +1073,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
           <div className="py-4">
             <Select value={bulkPlan} onValueChange={setBulkPlan}>
               <SelectTrigger>
-                <SelectValue placeholder="Nouveau plan" />
+                <SelectValue placeholder={t("newPlanPh")} />
               </SelectTrigger>
               <SelectContent>
                 {PLANS.map((p) => (
@@ -1090,7 +1090,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             </Button>
             <Button onClick={executeBulkAction} disabled={bulkLoading}>
               {bulkLoading
-                ? "En cours..."
+                ? t("inProgress")
                 : `Appliquer "${bulkPlan}" à ${selectedIds.size} user(s)`}
             </Button>
           </DialogFooter>
@@ -1122,7 +1122,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             </Button>
             <Button onClick={executeBulkAction} disabled={bulkLoading}>
               {bulkLoading
-                ? "En cours..."
+                ? t("inProgress")
                 : `Ajouter ${bulkCredits} crédits à ${selectedIds.size} user(s)`}
             </Button>
           </DialogFooter>

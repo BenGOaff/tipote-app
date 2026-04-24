@@ -372,7 +372,8 @@
     "cannotSave": "No se pudo guardar",
     "networkError": "Error de red",
     "enrichmentError": "Error durante el enriquecimiento",
-    "saveError": "Error al guardar"
+    "saveError": "Error al guardar",
+    "deleteArticleConfirm": "¿Eliminar este artículo?"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -2496,7 +2497,9 @@
     "authority": "Autoridad",
     "trafficSeo": "Tráfico SEO",
     "emailsLabel": "Emails",
-    "salesLabel": "Ventas"
+    "salesLabel": "Ventas",
+    "editAndCopy": "Editar y copiar",
+    "apply": "Aplicar"
   },
   "emailForm": {
     "generating": "Generando...",
@@ -4550,7 +4553,32 @@
     "weeksAgo": "Hace {n}sem",
     "bulkSummary": "{succeeded} correctos, {failed} fallidos de {total}",
     "confirmSendEmail": "¿Enviar este email a {target}?",
-    "selectUser": "Seleccionar {email}"
+    "selectUser": "Seleccionar {email}",
+    "sendNotif": "Enviar una notificación",
+    "composeEmail": "Redactar un email",
+    "sendToN": "Enviar a {n} usuario(s)",
+    "sendEmailToN": "📧 Enviar a {n} usuario(s)",
+    "sendEmailToSeg": "📧 Enviar a {seg}",
+    "nUsersSelected": "{n} usuario(s) seleccionado(s)",
+    "allUsersInSeg": "todos los usuarios {seg}",
+    "allUsers": "TODOS los usuarios",
+    "searchByEmail": "Buscar por email...",
+    "refresh": "Actualizar",
+    "alsoConfirmEmail": "¿Enviar este email a {target}?",
+    "notifTitlePh": "Título de la notificación *",
+    "notifDescPh": "Descripción (opcional)",
+    "buttonUrlPh": "URL del botón (opcional)",
+    "buttonTextPh": "Texto del botón",
+    "emailSubjectPh": "Asunto del email *",
+    "ctaUrlPh": "URL del botón CTA (opcional)",
+    "buyerEmailPh": "Email del comprador *",
+    "namePh": "Nombre (opcional)",
+    "planPh": "Plan",
+    "inProgress": "En curso...",
+    "newPlanPh": "Nuevo plan",
+    "invalidPlan": "Plan inválido",
+    "cannotLoadUsers": "No se pudieron cargar los usuarios",
+    "valueLabel": "Valor: {v}"
   },
   "adminTickets": {
     "statusOpen": "Abierto",

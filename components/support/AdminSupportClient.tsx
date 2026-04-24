@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Plus, Trash2, Edit3, Eye, EyeOff, Loader2, ChevronDown,
   ChevronRight, Database, ExternalLink, BookOpen, FolderOpen,
@@ -51,6 +52,7 @@ const LANG_LABELS: Record<string, string> = {
 };
 
 export default function AdminSupportClient() {
+  const tc = useTranslations("common");
   const [categories, setCategories] = useState<Category[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,7 @@ export default function AdminSupportClient() {
   };
 
   const handleDeleteArticle = async (id: string) => {
-    if (!confirm("Supprimer cet article ?")) return;
+    if (!confirm(tc("deleteArticleConfirm"))) return;
     const res = await fetch(`/api/admin/support?type=article&id=${id}`, { method: "DELETE" });
     if ((await res.json()).ok) fetchData();
   };
@@ -269,7 +271,7 @@ export default function AdminSupportClient() {
                                     size="icon"
                                     className="h-7 w-7 text-destructive hover:text-destructive"
                                     onClick={() => handleDeleteArticle(art.id)}
-                                    title="Supprimer"
+                                    title={tc("delete")}
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </Button>

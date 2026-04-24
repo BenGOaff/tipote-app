@@ -372,7 +372,8 @@
     "cannotSave": "Could not save",
     "networkError": "Network error",
     "enrichmentError": "Enrichment error",
-    "saveError": "Save error"
+    "saveError": "Save error",
+    "deleteArticleConfirm": "Delete this article?"
   },
   "auth": {
     "login": "Sign in",
@@ -2496,7 +2497,9 @@
     "authority": "Authority",
     "trafficSeo": "SEO traffic",
     "emailsLabel": "Emails",
-    "salesLabel": "Sales"
+    "salesLabel": "Sales",
+    "editAndCopy": "Edit & copy",
+    "apply": "Apply"
   },
   "emailForm": {
     "generating": "Generating...",
@@ -4550,7 +4553,32 @@
     "weeksAgo": "{n}w ago",
     "bulkSummary": "{succeeded} succeeded, {failed} failed out of {total}",
     "confirmSendEmail": "Send this email to {target}?",
-    "selectUser": "Select {email}"
+    "selectUser": "Select {email}",
+    "sendNotif": "Send a notification",
+    "composeEmail": "Compose an email",
+    "sendToN": "Send to {n} user(s)",
+    "sendEmailToN": "📧 Send to {n} user(s)",
+    "sendEmailToSeg": "📧 Send to {seg}",
+    "nUsersSelected": "{n} selected user(s)",
+    "allUsersInSeg": "all users {seg}",
+    "allUsers": "ALL users",
+    "searchByEmail": "Search by email...",
+    "refresh": "Refresh",
+    "alsoConfirmEmail": "Send this email to {target}?",
+    "notifTitlePh": "Notification title *",
+    "notifDescPh": "Description (optional)",
+    "buttonUrlPh": "Button URL (optional)",
+    "buttonTextPh": "Button text",
+    "emailSubjectPh": "Email subject *",
+    "ctaUrlPh": "CTA button URL (optional)",
+    "buyerEmailPh": "Buyer email *",
+    "namePh": "Name (optional)",
+    "planPh": "Plan",
+    "inProgress": "In progress...",
+    "newPlanPh": "New plan",
+    "invalidPlan": "Invalid plan",
+    "cannotLoadUsers": "Could not load users",
+    "valueLabel": "Value: {v}"
   },
   "adminTickets": {
     "statusOpen": "Open",
