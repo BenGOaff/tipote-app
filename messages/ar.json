@@ -3631,7 +3631,9 @@
     "change": "تغيير",
     "addLogo": "إضافة شعاري",
     "replace": "استبدال",
-    "addVisual": "إضافة صورة"
+    "addVisual": "إضافة صورة",
+    "toastNoCredits": "نفدت رصيدك من الذكاء الاصطناعي. أعد الشحن للمتابعة.",
+    "toastGenderizeFailed": "تعذر إنشاء الصيغ. حاول مرة أخرى."
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

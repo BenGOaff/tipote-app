@@ -3631,7 +3631,9 @@
     "change": "Change",
     "addLogo": "Add my logo",
     "replace": "Replace",
-    "addVisual": "Add a visual"
+    "addVisual": "Add a visual",
+    "toastNoCredits": "Out of AI credits. Top up your account to continue.",
+    "toastGenderizeFailed": "Could not generate the variants. Try again."
   },
   "contentStrategy": {
     "title": "Content strategy",
