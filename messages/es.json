@@ -3643,7 +3643,12 @@
     "shareMessageLabel": "Mensaje de compartir predefinido",
     "bonusImageAlt": "Vista previa del bonus",
     "addBonusVisual": "+ Añadir una imagen para el bonus",
-    "bonusImageClickHint": "Haz clic para reemplazar"
+    "bonusImageClickHint": "Haz clic para reemplazar",
+    "onboardingTitle": "🎉 Bienvenido a tu editor de quiz",
+    "onboardingPoint1": "Haz clic en cualquier texto para editarlo en la vista previa.",
+    "onboardingPoint2": "El botón ✨ junto a cada campo genera automáticamente las variantes de género.",
+    "onboardingPoint3": "Usa la barra lateral izquierda para navegar por las etapas del quiz.",
+    "onboardingDismiss": "Entendido"
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",

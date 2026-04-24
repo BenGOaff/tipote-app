@@ -3643,7 +3643,12 @@
     "shareMessageLabel": "Pre-filled share message",
     "bonusImageAlt": "Bonus preview",
     "addBonusVisual": "+ Add a bonus visual",
-    "bonusImageClickHint": "Click to replace"
+    "bonusImageClickHint": "Click to replace",
+    "onboardingTitle": "🎉 Welcome to your quiz editor",
+    "onboardingPoint1": "Click any text to edit it inline directly in the preview.",
+    "onboardingPoint2": "The ✨ button next to each field auto-generates gender variants (he / she / they).",
+    "onboardingPoint3": "Use the left sidebar to jump between quiz steps (intro, questions, results, share).",
+    "onboardingDismiss": "Got it"
   },
   "contentStrategy": {
     "title": "Content strategy",

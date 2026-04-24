@@ -39,6 +39,7 @@ import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { useTutorial } from "@/hooks/useTutorial";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import {
@@ -219,6 +220,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const router = useRouter();
   const t = useTranslations("quizDetail");
   const tc = useTranslations("common");
+  const { hasSeenContext, markContextSeen, tutorialOptOut } = useTutorial();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    if (tutorialOptOut) return;
+    if (hasSeenContext("first_quiz_editor_visit")) return;
+    const timer = setTimeout(() => setShowOnboarding(true), 600);
+    return () => clearTimeout(timer);
+  }, [hasSeenContext, tutorialOptOut]);
+  const dismissOnboarding = useCallback(() => {
+    markContextSeen("first_quiz_editor_visit");
+    setShowOnboarding(false);
+  }, [markContextSeen]);
 
   const [loading, setLoading] = useState(true);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
@@ -661,6 +674,25 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       <div className="h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
+      {/* First-visit onboarding banner */}
+      {showOnboarding && (
+        <div className="shrink-0 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
+          <div className="flex items-start gap-3 max-w-5xl mx-auto">
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <h3 className="text-sm font-semibold">{t("onboardingTitle")}</h3>
+              <ul className="text-xs text-muted-foreground leading-relaxed space-y-0.5 list-disc pl-5">
+                <li>{t("onboardingPoint1")}</li>
+                <li>{t("onboardingPoint2")}</li>
+                <li>{t("onboardingPoint3")}</li>
+              </ul>
+            </div>
+            <Button size="sm" variant="outline" onClick={dismissOnboarding}>
+              {t("onboardingDismiss")}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
