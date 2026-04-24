@@ -373,7 +373,9 @@
     "networkError": "Network error",
     "enrichmentError": "Enrichment error",
     "saveError": "Save error",
-    "deleteArticleConfirm": "Delete this article?"
+    "deleteArticleConfirm": "Delete this article?",
+    "signOut": "Sign out",
+    "signingOut": "Signing out…"
   },
   "auth": {
     "login": "Sign in",
@@ -1841,7 +1843,37 @@
     "platformDescLikeComment": "Auto like + comment reply",
     "commentReply": "Comment reply",
     "likeCommentReply": "Like + comment reply",
-    "networkError": "Network error"
+    "networkError": "Network error",
+    "defaultReplies": {
+      "metaReplies": [
+        "It's in your DMs! 📩",
+        "Meet in private message 😊",
+        "Let me know if you got it!",
+        "I'll send it in 2min ⚡",
+        "Great, it's in your messages!"
+      ],
+      "tiktokReplies": [
+        "Thanks for your comment! 🙌",
+        "Great, thanks for joining!",
+        "Top, glad it interests you! 🔥",
+        "Noted, thanks!",
+        "Awesome, thanks to you!"
+      ],
+      "linkedinReplies": [
+        "Thanks for your feedback! 🙏",
+        "Great point, thanks!",
+        "Glad it resonates with you!",
+        "Thanks for taking the time to comment 👏",
+        "Very good question, thanks!"
+      ],
+      "twitterReplies": [
+        "Thanks for your reply! 🙌",
+        "Top, thanks for joining!",
+        "Great, glad it interests you! 🔥",
+        "Noted, thanks!",
+        "Awesome, thanks to you!"
+      ]
+    }
   },
   "autoCommentPanel": {
     "title": "Auto-comments",
@@ -3353,7 +3385,20 @@
     "statusScheduled": "Scheduled",
     "statusCompleted": "Completed",
     "statusDraft": "Draft",
-    "statusLive": "Live"
+    "statusLive": "Live",
+    "promptPrefix": {
+      "p1_script_ch": "Script for a challenge",
+      "p1_script_wb": "Script for a webinar",
+      "p2_capture": "Capture page for",
+      "p4_invite": "Invitation email for",
+      "p4_promo": "Promotion post for",
+      "p4_teasing": "Teasing sequence for",
+      "p4_reminders": "Reminder sequence for",
+      "p5_reminder": "Reminder email for",
+      "p5_motivation": "Motivation post day X of the challenge",
+      "p6_review": "Post-event review email for",
+      "p6_followup": "Post-event follow-up sequence for"
+    }
   },
   "quizForm": {
     "createTitle": "Create a quiz",

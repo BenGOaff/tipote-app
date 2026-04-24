@@ -65,7 +65,7 @@ interface Props {
 
 // ─── Phase definitions ───────────────────────────────────────────────────────
 
-function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
+function getPhases(isChallenge: boolean, tp: (k: string) => string): Record<string, PlaybookPhase> {
   const c = isChallenge;
   return {
     phase1: {
@@ -95,7 +95,7 @@ function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
         {
           key: "phase2_script",
           labelKey: c ? "phase2_script_challenge" : "phase2_script_webinar",
-          generateAction: { type: "video_script", promptPrefix: c ? "Script pour un challenge" : "Script pour un webinaire" },
+          generateAction: { type: "video_script", promptPrefix: c ? tp("p1_script_ch") : tp("p1_script_wb") },
         },
         { key: "phase2_slides", labelKey: "phase2_slides" },
         ...(c
@@ -116,7 +116,7 @@ function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
         {
           key: "phase3_capture",
           labelKey: "phase3_capture",
-          generateAction: { type: "sales_page", promptPrefix: "Page de capture pour" },
+          generateAction: { type: "sales_page", promptPrefix: tp("p2_capture") },
         },
         { key: "phase3_payment", labelKey: "phase3_payment" },
         ...(c ? [{ key: "phase3_banner", labelKey: "phase3_banner" }] : []),
@@ -137,17 +137,17 @@ function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
         {
           key: "phase4_emails_invite",
           labelKey: "phase4_emails_invite",
-          generateAction: { type: "email", promptPrefix: "Email d'invitation pour" },
+          generateAction: { type: "email", promptPrefix: tp("p4_invite") },
         },
         {
           key: "phase4_posts",
           labelKey: "phase4_posts",
-          generateAction: { type: "post", promptPrefix: "Post de promotion pour" },
+          generateAction: { type: "post", promptPrefix: tp("p4_promo") },
         },
         {
           key: "phase4_sequence",
           labelKey: c ? "phase4_sequence_challenge" : "phase4_sequence_webinar",
-          generateAction: { type: "email", promptPrefix: c ? "Séquence de teasing pour" : "Séquence de rappels pour" },
+          generateAction: { type: "email", promptPrefix: c ? tp("p4_teasing") : tp("p4_reminders") },
         },
         { key: "phase4_partners", labelKey: "phase4_partners" },
       ],
@@ -161,7 +161,7 @@ function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
         {
           key: "phase5_reminder",
           labelKey: c ? "phase5_reminder_challenge" : "phase5_reminder_webinar",
-          generateAction: { type: "email", promptPrefix: "Email de rappel pour" },
+          generateAction: { type: "email", promptPrefix: tp("p5_reminder") },
         },
         ...(c
           ? [
@@ -169,7 +169,7 @@ function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
               {
                 key: "phase5_motivation",
                 labelKey: "phase5_motivation",
-                generateAction: { type: "post", promptPrefix: "Post de motivation jour X du challenge" },
+                generateAction: { type: "post", promptPrefix: tp("p5_motivation") },
               },
               { key: "phase5_pitch_j3", labelKey: "phase5_pitch_j3" },
               { key: "phase5_sale_j4", labelKey: "phase5_sale_j4" },
@@ -189,12 +189,12 @@ function getPhases(isChallenge: boolean): Record<string, PlaybookPhase> {
         {
           key: "phase6_bilan",
           labelKey: "phase6_bilan",
-          generateAction: { type: "email", promptPrefix: "Email bilan post-événement pour" },
+          generateAction: { type: "email", promptPrefix: tp("p6_review") },
         },
         {
           key: "phase6_relance",
           labelKey: "phase6_relance",
-          generateAction: { type: "email", promptPrefix: "Séquence de relance post-événement pour" },
+          generateAction: { type: "email", promptPrefix: tp("p6_followup") },
         },
         { key: "phase6_urgency", labelKey: "phase6_urgency" },
         { key: "phase6_kpis", labelKey: "phase6_kpis" },
@@ -498,9 +498,10 @@ function PlaybookAIGenerator({
 
 export default function EventPlaybook({ webinar, onProgressUpdate, onPlaybookDataUpdate }: Props) {
   const t = useTranslations("webinars");
+  const tp = useTranslations("webinars.promptPrefix");
   const [progress, setProgress] = useState<Record<string, boolean>>(webinar.playbook_progress ?? {});
   const isChallenge = webinar.event_type === "challenge";
-  const phases = useMemo(() => getPhases(isChallenge), [isChallenge]);
+  const phases = useMemo(() => getPhases(isChallenge, tp), [isChallenge, tp]);
 
   // Sync progress back
   useEffect(() => {

@@ -3,12 +3,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Button } from "@/components/ui/button";
 
 export default function LogoutButton() {
   const router = useRouter();
+  const tc = useTranslations("common");
   const [loading, setLoading] = useState(false);
 
   async function handleLogout() {
@@ -34,7 +36,7 @@ export default function LogoutButton() {
       onClick={handleLogout}
       disabled={loading}
     >
-      {loading ? "Déconnexion…" : "Se déconnecter"}
+      {loading ? tc("signingOut") : tc("signOut")}
     </Button>
   );
 }

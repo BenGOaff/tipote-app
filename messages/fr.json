@@ -373,7 +373,9 @@
     "networkError": "Erreur réseau",
     "enrichmentError": "Erreur lors de l'enrichissement",
     "saveError": "Erreur de sauvegarde",
-    "deleteArticleConfirm": "Supprimer cet article ?"
+    "deleteArticleConfirm": "Supprimer cet article ?",
+    "signOut": "Se déconnecter",
+    "signingOut": "Déconnexion…"
   },
   "auth": {
     "login": "Se connecter",
@@ -1841,7 +1843,37 @@
     "platformDescLikeComment": "Auto like + réponse commentaire",
     "commentReply": "Réponse commentaire",
     "likeCommentReply": "Like + réponse commentaire",
-    "networkError": "Erreur réseau"
+    "networkError": "Erreur réseau",
+    "defaultReplies": {
+      "metaReplies": [
+        "C'est dans tes DMs ! 📩",
+        "RDV en message privé 😊",
+        "Dis-moi si tu as bien reçu !",
+        "Je t'envoie ça dans 2mn ⚡",
+        "Super, c'est dans tes messages !"
+      ],
+      "tiktokReplies": [
+        "Merci pour ton commentaire ! 🙌",
+        "Super, merci de participer !",
+        "Top, content que ça t'intéresse ! 🔥",
+        "C'est noté, merci !",
+        "Génial, merci à toi !"
+      ],
+      "linkedinReplies": [
+        "Merci pour ton retour ! 🙏",
+        "Super remarque, merci !",
+        "Content que ça résonne avec toi !",
+        "Merci d'avoir pris le temps de commenter 👏",
+        "Très bonne question, merci !"
+      ],
+      "twitterReplies": [
+        "Merci pour ta réponse ! 🙌",
+        "Top, merci de participer !",
+        "Super, content que ça t'intéresse ! 🔥",
+        "C'est noté, merci !",
+        "Génial, merci à toi !"
+      ]
+    }
   },
   "autoCommentPanel": {
     "title": "Auto-commentaires",
@@ -3353,7 +3385,20 @@
     "statusScheduled": "Planifié",
     "statusCompleted": "Terminé",
     "statusDraft": "Brouillon",
-    "statusLive": "En direct"
+    "statusLive": "En direct",
+    "promptPrefix": {
+      "p1_script_ch": "Script pour un challenge",
+      "p1_script_wb": "Script pour un webinaire",
+      "p2_capture": "Page de capture pour",
+      "p4_invite": "Email d'invitation pour",
+      "p4_promo": "Post de promotion pour",
+      "p4_teasing": "Séquence de teasing pour",
+      "p4_reminders": "Séquence de rappels pour",
+      "p5_reminder": "Email de rappel pour",
+      "p5_motivation": "Post de motivation jour X du challenge",
+      "p6_review": "Email bilan post-événement pour",
+      "p6_followup": "Séquence de relance post-événement pour"
+    }
   },
   "quizForm": {
     "createTitle": "Créer un quiz",

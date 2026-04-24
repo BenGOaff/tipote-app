@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageBanner } from "@/components/PageBanner";
@@ -76,38 +76,6 @@ interface FormState {
   comment_reply_variants: string; // newline-separated in form
 }
 
-const DEFAULT_COMMENT_REPLIES = [
-  "C'est dans tes DMs ! 📩",
-  "RDV en message privé 😊",
-  "Dis-moi si tu as bien reçu !",
-  "Je t'envoie ça dans 2mn ⚡",
-  "Super, c'est dans tes messages !",
-].join("\n");
-
-const DEFAULT_TIKTOK_COMMENT_REPLIES = [
-  "Merci pour ton commentaire ! 🙌",
-  "Super, merci de participer !",
-  "Top, content que ça t'intéresse ! 🔥",
-  "C'est noté, merci !",
-  "Génial, merci à toi !",
-].join("\n");
-
-const DEFAULT_LINKEDIN_COMMENT_REPLIES = [
-  "Merci pour ton retour ! 🙏",
-  "Super remarque, merci !",
-  "Content que ça résonne avec toi !",
-  "Merci d'avoir pris le temps de commenter 👏",
-  "Très bonne question, merci !",
-].join("\n");
-
-const DEFAULT_TWITTER_COMMENT_REPLIES = [
-  "Merci pour ta réponse ! 🙌",
-  "Top, merci de participer !",
-  "Super, content que ça t'intéresse ! 🔥",
-  "C'est noté, merci !",
-  "Génial, merci à toi !",
-].join("\n");
-
 const DEFAULT_FORM: FormState = {
   name: "",
   type: "comment_to_dm",
@@ -119,7 +87,7 @@ const DEFAULT_FORM: FormState = {
   systemeio_tag: "",
   target_post_url: "",
   target_post_preview: "",
-  comment_reply_variants: DEFAULT_COMMENT_REPLIES,
+  comment_reply_variants: "",
 };
 
 /* ─────────────────────────── Platform status config ─── */
@@ -222,12 +190,24 @@ export default function AutomationsLovableClient() {
   const tc = useTranslations("common");
   const locale = useLocale();
 
+  const defaultRepliesByPlatform = useMemo(() => {
+    const toStr = (arr: unknown) => (Array.isArray(arr) ? (arr as string[]).join("\n") : "");
+    return {
+      meta: toStr(t.raw("defaultReplies.metaReplies")),
+      tiktok: toStr(t.raw("defaultReplies.tiktokReplies")),
+      linkedin: toStr(t.raw("defaultReplies.linkedinReplies")),
+      twitter: toStr(t.raw("defaultReplies.twitterReplies")),
+    };
+  }, [t]);
+
+  const defaultForm = useMemo<FormState>(() => ({ ...DEFAULT_FORM, comment_reply_variants: defaultRepliesByPlatform.meta }), [defaultRepliesByPlatform]);
+
   const [automations, setAutomations] = useState<SocialAutomation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [form, setForm] = useState<FormState>(defaultForm);
   const [postPickerOpen, setPostPickerOpen] = useState(false);
 
   /* ── Load automations ── */
@@ -267,7 +247,7 @@ export default function AutomationsLovableClient() {
 
   /* ── Open create modal ── */
   function openCreate() {
-    setForm(DEFAULT_FORM);
+    setForm(defaultForm);
     setEditingId(null);
     setShowModal(true);
   }
@@ -276,17 +256,17 @@ export default function AutomationsLovableClient() {
   function openCreateForPlatform(platform: Platform) {
     const isCommentOnly = platform === "tiktok" || platform === "linkedin" || platform === "twitter";
     setForm({
-      ...DEFAULT_FORM,
+      ...defaultForm,
       platforms: [platform],
       type: "comment_to_dm",
       comment_reply_variants:
         platform === "linkedin"
-          ? DEFAULT_LINKEDIN_COMMENT_REPLIES
+          ? defaultRepliesByPlatform.linkedin
           : platform === "tiktok"
-          ? DEFAULT_TIKTOK_COMMENT_REPLIES
+          ? defaultRepliesByPlatform.tiktok
           : platform === "twitter"
-          ? DEFAULT_TWITTER_COMMENT_REPLIES
-          : DEFAULT_COMMENT_REPLIES,
+          ? defaultRepliesByPlatform.twitter
+          : defaultRepliesByPlatform.meta,
       dm_message: isCommentOnly ? "" : "",
     });
     setEditingId(null);
