@@ -2,12 +2,21 @@
 
 // LanguageCombobox — branded, searchable picker for AI quiz generation.
 //
-// Uses the same self-contained pattern as ObjectivesDropdown (button +
-// click-outside + panel) so it has zero new runtime dependencies and works
-// identically in Tipote and Tiquiz. Backed by `lib/quizLanguages.ts`,
-// which decouples generation language from UI locale.
+// Design notes addressing real user feedback:
+// - Real flags via <img> from flagcdn.com. Emoji flag glyphs are unreliable
+//   on Windows / Linux without flag fonts (they fall back to "FR", "DE",
+//   etc. which looks broken).
+// - One line per option: native name + the same name translated into the
+//   user's UI locale via Intl.DisplayNames. We deliberately do NOT show
+//   the English name to a French user — it would be redundant noise.
+//   When both labels would be identical (the language matches the UI),
+//   we show the native name only.
+// - The panel automatically flips above the trigger when there isn't
+//   enough room below, and caps its height to the available viewport
+//   space so the list is always scrollable.
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import { Check, ChevronDown, Globe, Search } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -47,21 +56,28 @@ const DEFAULT_STRINGS = {
   noResults: "Aucune langue ne correspond.",
 };
 
+// Min height we want to keep visible inside the panel (search bar + a few
+// rows). If we have less than this in either direction, we still pick the
+// largest of the two and let the inner list scroll.
+const MIN_PANEL_HEIGHT = 240;
+// Comfortable max so the list isn't a giant wall when there's lots of room.
+const MAX_PANEL_HEIGHT = 420;
+// Vertical breathing room from the viewport edge.
+const VIEWPORT_MARGIN = 12;
+
 function normalize(s: string): string {
   return s
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
+    // strip combining diacritics
+    .replace(/\p{M}/gu, "");
 }
 
-function matches(lang: QuizLanguage, q: string): boolean {
-  if (!q) return true;
-  const needle = normalize(q);
-  return (
-    normalize(lang.englishName).includes(needle) ||
-    normalize(lang.nativeName).includes(needle) ||
-    lang.code.toLowerCase().includes(needle)
-  );
+function flagSrc(country?: string): string | null {
+  if (!country) return null;
+  // 40px wide, ~30px tall — perfect for a 16-20px display, retina-friendly.
+  // flagcdn.com is a free, no-auth, fast-cached flag CDN.
+  return `https://flagcdn.com/w40/${country.toLowerCase()}.png`;
 }
 
 export function LanguageCombobox({
@@ -74,15 +90,58 @@ export function LanguageCombobox({
   ariaLabel,
 }: Props) {
   const s = { ...DEFAULT_STRINGS, ...(strings ?? {}) };
+  const uiLocale = useLocale();
+
+  // Translator: language code -> name in the user's UI locale.
+  // Falls back gracefully if the runtime doesn't support DisplayNames.
+  const displayNames = useMemo(() => {
+    if (typeof Intl === "undefined" || !("DisplayNames" in Intl)) return null;
+    try {
+      return new Intl.DisplayNames([uiLocale], {
+        type: "language",
+        fallback: "code",
+      });
+    } catch {
+      return null;
+    }
+  }, [uiLocale]);
+
+  function localizedNameFor(lang: QuizLanguage): string | null {
+    if (!displayNames) return null;
+    try {
+      const name = displayNames.of(lang.code);
+      if (!name) return null;
+      // Capitalize first letter so we get "Japonais" not "japonais".
+      return name.charAt(0).toLocaleUpperCase(uiLocale) + name.slice(1);
+    } catch {
+      return null;
+    }
+  }
+
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [placement, setPlacement] = useState<"bottom" | "top">("bottom");
+  const [panelMaxHeight, setPanelMaxHeight] = useState(MAX_PANEL_HEIGHT);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
 
   const selected = getQuizLanguage(value);
+
+  function matches(lang: QuizLanguage, q: string): boolean {
+    if (!q) return true;
+    const needle = normalize(q);
+    const localized = localizedNameFor(lang) ?? "";
+    return (
+      normalize(lang.englishName).includes(needle) ||
+      normalize(lang.nativeName).includes(needle) ||
+      normalize(localized).includes(needle) ||
+      lang.code.toLowerCase().includes(needle)
+    );
+  }
 
   // Filter + group: "popular" pinned first when no query, otherwise flat.
   const { popular, others, flat } = useMemo(() => {
@@ -100,9 +159,27 @@ export function LanguageCombobox({
       others: flatFiltered.filter((l) => !l.popular),
       flat: flatFiltered,
     };
-  }, [query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, uiLocale]);
 
-  // Close on outside click.
+  // Compute placement (above / below) + max-height based on available room.
+  function recomputePosition() {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const vh = typeof window !== "undefined" ? window.innerHeight : 0;
+    const spaceBelow = Math.max(0, vh - rect.bottom - VIEWPORT_MARGIN);
+    const spaceAbove = Math.max(0, rect.top - VIEWPORT_MARGIN);
+
+    // Prefer below by default. Flip up only if "below" is too cramped AND
+    // "above" actually has more room — otherwise we'd flip into a worse spot.
+    const flipUp = spaceBelow < MIN_PANEL_HEIGHT && spaceAbove > spaceBelow;
+    const space = flipUp ? spaceAbove : spaceBelow;
+    setPlacement(flipUp ? "top" : "bottom");
+    setPanelMaxHeight(Math.max(MIN_PANEL_HEIGHT, Math.min(MAX_PANEL_HEIGHT, space)));
+  }
+
+  // Close on outside click + recompute on resize/scroll while open.
   useEffect(() => {
     if (!open) return;
     function onMouseDown(e: MouseEvent) {
@@ -110,17 +187,26 @@ export function LanguageCombobox({
         setOpen(false);
       }
     }
+    function onResize() {
+      recomputePosition();
+    }
     document.addEventListener("mousedown", onMouseDown);
-    return () => document.removeEventListener("mousedown", onMouseDown);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
+    };
   }, [open]);
 
-  // Reset query + autofocus search when opening.
+  // Reset query + autofocus search + position panel when opening.
   useEffect(() => {
     if (open) {
       setQuery("");
       const idx = flat.findIndex((l) => l.code === value);
       setActiveIndex(idx >= 0 ? idx : 0);
-      // microtask so the input is in the DOM
+      recomputePosition();
       requestAnimationFrame(() => inputRef.current?.focus());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,10 +248,35 @@ export function LanguageCombobox({
     }
   }
 
+  function FlagOrGlobe({ country, size }: { country?: string; size: number }) {
+    const src = flagSrc(country);
+    if (!src) {
+      return <Globe className="text-muted-foreground shrink-0" style={{ width: size, height: size }} />;
+    }
+    return (
+      // Real PNG flag — renders identically across OS, no emoji font needed.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        decoding="async"
+        width={size}
+        height={Math.round((size * 3) / 4)}
+        className="rounded-sm shrink-0 object-cover ring-1 ring-border/40"
+        style={{ width: size, height: Math.round((size * 3) / 4) }}
+      />
+    );
+  }
+
   function renderOption(lang: QuizLanguage) {
     const isSelected = lang.code === value;
     const flatIndex = flat.findIndex((l) => l.code === lang.code);
     const isActive = flatIndex === activeIndex;
+    const localized = localizedNameFor(lang);
+    // Skip the secondary label if it would just duplicate the native name.
+    const showSecondary = localized && localized.toLowerCase() !== lang.nativeName.toLowerCase();
     return (
       <button
         key={lang.code}
@@ -183,12 +294,8 @@ export function LanguageCombobox({
         )}
       >
         <span className="flex items-center gap-2.5 min-w-0">
-          {lang.flag && (
-            <span aria-hidden className="text-base leading-none shrink-0">
-              {lang.flag}
-            </span>
-          )}
-          <span className="flex flex-col min-w-0">
+          <FlagOrGlobe country={lang.country} size={20} />
+          <span className="flex items-baseline gap-1.5 min-w-0">
             <span
               className={cn(
                 "text-sm font-medium leading-tight truncate",
@@ -197,25 +304,25 @@ export function LanguageCombobox({
             >
               {lang.nativeName}
             </span>
-            {lang.englishName !== lang.nativeName && (
-              <span className="text-[11px] text-muted-foreground leading-tight truncate">
-                {lang.englishName}
+            {showSecondary && (
+              <span className="text-xs text-muted-foreground leading-tight truncate">
+                · {localized}
               </span>
             )}
           </span>
         </span>
-        {isSelected ? (
-          <Check className="h-4 w-4 text-primary shrink-0" />
-        ) : (
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 font-mono shrink-0">
-            {lang.code}
-          </span>
-        )}
+        {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
       </button>
     );
   }
 
   const triggerLabel = selected?.nativeName ?? s.placeholder;
+  const triggerSecondary =
+    selected ? localizedNameFor(selected) : null;
+  const showTriggerSecondary =
+    triggerSecondary &&
+    selected &&
+    triggerSecondary.toLowerCase() !== selected.nativeName.toLowerCase();
 
   return (
     <div ref={wrapperRef} className={cn("space-y-1.5 relative", className)}>
@@ -223,6 +330,7 @@ export function LanguageCombobox({
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
 
       <button
+        ref={triggerRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -236,13 +344,7 @@ export function LanguageCombobox({
         )}
       >
         <span className="flex items-center gap-2 min-w-0">
-          {selected?.flag ? (
-            <span aria-hidden className="text-base leading-none shrink-0">
-              {selected.flag}
-            </span>
-          ) : (
-            <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-          )}
+          <FlagOrGlobe country={selected?.country} size={20} />
           <span
             className={cn(
               "truncate",
@@ -252,9 +354,9 @@ export function LanguageCombobox({
           >
             {triggerLabel}
           </span>
-          {selected && selected.englishName !== selected.nativeName && (
+          {showTriggerSecondary && (
             <span className="text-xs text-muted-foreground truncate hidden sm:inline">
-              · {selected.englishName}
+              · {triggerSecondary}
             </span>
           )}
         </span>
@@ -268,10 +370,14 @@ export function LanguageCombobox({
 
       {open && (
         <div
-          className="absolute z-50 left-0 right-0 mt-1 rounded-xl border border-border bg-popover shadow-lg overflow-hidden"
+          className={cn(
+            "absolute z-50 left-0 right-0 rounded-xl border border-border bg-popover shadow-lg overflow-hidden flex flex-col",
+            placement === "bottom" ? "top-full mt-1" : "bottom-full mb-1",
+          )}
           role="dialog"
+          style={{ maxHeight: panelMaxHeight }}
         >
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30 shrink-0">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
@@ -293,7 +399,7 @@ export function LanguageCombobox({
             ref={listRef}
             id={listboxId}
             role="listbox"
-            className="max-h-72 overflow-y-auto p-2 space-y-3"
+            className="flex-1 min-h-0 overflow-y-auto p-2 space-y-3"
           >
             {flat.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-6">
