@@ -3525,8 +3525,8 @@
     "aiChatBriefApplied": "Génération en cours…",
     "aiPersonalizeLabel": "Personnalisation dynamique",
     "aiPersonalizeHint": "Adapte questions, résultats et CTA au visiteur. L'IA produit directement les variantes si tu actives les options ci-dessous.",
-    "aiAskFirstName": "Demander le prénom (utilise {name} dans les textes)",
-    "aiAskGender": "Demander le genre (utilise {m|f|x} pour 3 variantes)",
+    "aiAskFirstName": "Demander le prénom",
+    "aiAskGender": "Demander le genre",
     "freePlanLimit": "Le plan gratuit est limité à 1 quiz. Passe à un plan payant pour en créer davantage !",
     "errCreate": "Erreur lors de la création",
     "errImportFormat": "Formats PDF et DOCX bientôt supportés. Pour l'instant, exporte ton contenu en .txt.",
@@ -4692,5 +4692,9 @@
     "seedConfirm": "Ceci va insérer/mettre à jour toutes les catégories et articles. Continuer ?",
     "seedButton": "Seed / Mettre à jour le contenu",
     "seeding": "Seeding..."
+  },
+  "quizVars": {
+    "insertNameTitle": "Insérer le prénom du visiteur ({name})",
+    "insertGenderTitle": "Insérer une variante selon le genre — masculin | féminin | non-binaire (ex : cher | chère | cher·e)"
   }
 }
