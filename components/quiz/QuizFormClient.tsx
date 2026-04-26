@@ -21,6 +21,7 @@ import SioSelectors from "@/components/quiz/SioSelectors";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 import { QuizIdeaChat, type QuizBrief } from "@/components/quiz/QuizIdeaChat";
 import { QUIZ_OBJECTIVES } from "@/lib/prompts/quiz/system";
+import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -764,18 +765,6 @@ export default function QuizFormClient() {
   }
 
   // ---------------------------------------------------------------------------
-  // Locale options (for the quiz language selector)
-  // ---------------------------------------------------------------------------
-
-  const localeOptions = [
-    { value: "fr", label: "Français" },
-    { value: "en", label: "English" },
-    { value: "es", label: "Español" },
-    { value: "it", label: "Italiano" },
-    { value: "ar", label: "العربية" },
-  ];
-
-  // ---------------------------------------------------------------------------
   // Step navigation (Typeform-style)
   // ---------------------------------------------------------------------------
 
@@ -1071,12 +1060,18 @@ export default function QuizFormClient() {
               </div>
 
               {/* 7. Locale */}
-              <div className="space-y-2">
-                <Label>{t("localeLabel")}</Label>
-                <select value={aiLocale} onChange={(e) => setAiLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
-                  {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
-                </select>
-              </div>
+              <LanguageCombobox
+                value={aiLocale}
+                onValueChange={setAiLocale}
+                label={t("localeLabel")}
+                strings={{
+                  placeholder: t("localePlaceholder"),
+                  searchPlaceholder: t("localeSearchPlaceholder"),
+                  popularHeading: t("localePopularHeading"),
+                  allHeading: t("localeAllHeading"),
+                  noResults: t("localeNoResults"),
+                }}
+              />
 
               <Button className="w-full rounded-full" onClick={() => handleGenerate()} disabled={generating}>
                 <Sparkles className="h-4 w-4 mr-2" />{t("aiGenerate")}
@@ -1124,12 +1119,18 @@ export default function QuizFormClient() {
                 </Button>
               </div>
             )}
-            <div className="space-y-2">
-              <Label>Langue du quiz importé</Label>
-              <select value={aiLocale} onChange={(e) => setAiLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
-                {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
-              </select>
-            </div>
+            <LanguageCombobox
+              value={aiLocale}
+              onValueChange={setAiLocale}
+              label={t("importQuizLocale")}
+              strings={{
+                placeholder: t("localePlaceholder"),
+                searchPlaceholder: t("localeSearchPlaceholder"),
+                popularHeading: t("localePopularHeading"),
+                allHeading: t("localeAllHeading"),
+                noResults: t("localeNoResults"),
+              }}
+            />
           </CardContent>
         </Card>
       )}
