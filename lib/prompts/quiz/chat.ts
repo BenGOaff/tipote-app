@@ -4,6 +4,7 @@
 // main generator will consume.
 
 import { QUIZ_OBJECTIVES } from "./system";
+import { buildLanguageDirective } from "@/lib/quizLanguages";
 
 export function buildQuizChatSystemPrompt(opts: {
   locale?: string;
@@ -17,11 +18,7 @@ export function buildQuizChatSystemPrompt(opts: {
     .join("\n");
 
   const formality = addressForm === "vous" ? "VOUVOIE" : "TUTOIE";
-  const localeLabels: Record<string, string> = {
-    fr: "français", en: "anglais", es: "espagnol",
-    de: "allemand", pt: "portugais", it: "italien", ar: "arabe",
-  };
-  const langLabel = localeLabels[locale] || "français";
+  const langLabel = buildLanguageDirective(locale);
 
   return `Tu es un consultant expert en quiz lead-magnet, spécialisé dans le marketing des solopreneurs, coachs, consultants, freelances, infopreneurs et créateurs de contenu.
 
