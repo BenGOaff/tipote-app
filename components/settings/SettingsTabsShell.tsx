@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import BrandingSettings from "@/components/settings/BrandingSettings";
 import type { BrandingData } from "@/components/settings/BrandingSettings";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
@@ -1436,30 +1437,19 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label>{tSP("reglages.contentLangLabel")}</Label>
-              <Select value={contentLocale} onValueChange={setContentLocale} disabled={profileLoading}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fr">Français</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
-                  <SelectItem value="it">Italiano</SelectItem>
-                  <SelectItem value="pt">Português</SelectItem>
-                  <SelectItem value="de">Deutsch</SelectItem>
-                  <SelectItem value="nl">Nederlands</SelectItem>
-                  <SelectItem value="ar">العربية</SelectItem>
-                  <SelectItem value="tr">Türkçe</SelectItem>
-                  <SelectItem value="pl">Polski</SelectItem>
-                  <SelectItem value="ro">Română</SelectItem>
-                  <SelectItem value="ru">Русский</SelectItem>
-                  <SelectItem value="ja">日本語</SelectItem>
-                  <SelectItem value="zh">中文</SelectItem>
-                  <SelectItem value="ko">한국어</SelectItem>
-                  <SelectItem value="hi">हिन्दी</SelectItem>
-                </SelectContent>
-              </Select>
+              <LanguageCombobox
+                value={contentLocale}
+                onValueChange={setContentLocale}
+                label={tSP("reglages.contentLangLabel")}
+                hint={tSP("reglages.contentLangHint")}
+                strings={{
+                  placeholder: tSP("reglages.contentLangPlaceholder"),
+                  searchPlaceholder: tSP("reglages.contentLangSearch"),
+                  popularHeading: tSP("reglages.contentLangPopular"),
+                  allHeading: tSP("reglages.contentLangAll"),
+                  noResults: tSP("reglages.contentLangNoResults"),
+                }}
+              />
             </div>
 
             <div className="space-y-2">

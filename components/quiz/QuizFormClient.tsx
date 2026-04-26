@@ -382,7 +382,10 @@ export default function QuizFormClient() {
     };
   }, [title, introduction, questions, results, activeTab, triggerAutoSave]);
 
-  // Pre-fill target audience from user profile (Tipote: mission field)
+  // Pre-fill target audience + default content locale from user profile.
+  // Locale is only injected if the user hasn't already touched the picker
+  // (e.g. from a populateFromQuiz on an existing draft).
+  const aiLocaleTouched = useRef(false);
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
@@ -391,6 +394,8 @@ export default function QuizFormClient() {
           const ta = data.profile.mission ?? "";
           setAiTargetFromProfile(ta);
           if (ta && !aiTarget) setAiTarget(ta);
+          const cl = data.profile.content_locale;
+          if (cl && !aiLocaleTouched.current) setAiLocale(String(cl));
         }
       })
       .catch(() => {});
@@ -1062,7 +1067,7 @@ export default function QuizFormClient() {
               {/* 7. Locale */}
               <LanguageCombobox
                 value={aiLocale}
-                onValueChange={setAiLocale}
+                onValueChange={(v) => { aiLocaleTouched.current = true; setAiLocale(v); }}
                 label={t("localeLabel")}
                 strings={{
                   placeholder: t("localePlaceholder"),
@@ -1121,7 +1126,7 @@ export default function QuizFormClient() {
             )}
             <LanguageCombobox
               value={aiLocale}
-              onValueChange={setAiLocale}
+              onValueChange={(v) => { aiLocaleTouched.current = true; setAiLocale(v); }}
               label={t("importQuizLocale")}
               strings={{
                 placeholder: t("localePlaceholder"),
