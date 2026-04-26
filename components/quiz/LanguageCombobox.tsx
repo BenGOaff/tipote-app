@@ -123,6 +123,11 @@ export function LanguageCombobox({
   const [activeIndex, setActiveIndex] = useState(0);
   const [placement, setPlacement] = useState<"bottom" | "top">("bottom");
   const [panelMaxHeight, setPanelMaxHeight] = useState(MAX_PANEL_HEIGHT);
+  // Pixel coords of the trigger, captured on open / resize / scroll. We
+  // use them to position the panel with `position: fixed` so it escapes
+  // any clipping ancestor (e.g. a Card with overflow:hidden in the
+  // settings page would otherwise crop the dropdown).
+  const [triggerRect, setTriggerRect] = useState<{ left: number; top: number; bottom: number; width: number } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -162,7 +167,8 @@ export function LanguageCombobox({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, uiLocale]);
 
-  // Compute placement (above / below) + max-height based on available room.
+  // Compute placement (above / below), max-height and pixel coords for
+  // the (fixed-position) panel based on available viewport room.
   function recomputePosition() {
     const trigger = triggerRef.current;
     if (!trigger) return;
@@ -177,6 +183,12 @@ export function LanguageCombobox({
     const space = flipUp ? spaceAbove : spaceBelow;
     setPlacement(flipUp ? "top" : "bottom");
     setPanelMaxHeight(Math.max(MIN_PANEL_HEIGHT, Math.min(MAX_PANEL_HEIGHT, space)));
+    setTriggerRect({
+      left: rect.left,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+    });
   }
 
   // Close on outside click + recompute on resize/scroll while open.
@@ -368,14 +380,21 @@ export function LanguageCombobox({
         />
       </button>
 
-      {open && (
+      {open && triggerRect && (
         <div
-          className={cn(
-            "absolute z-50 left-0 right-0 rounded-xl border border-border bg-popover shadow-lg overflow-hidden flex flex-col",
-            placement === "bottom" ? "top-full mt-1" : "bottom-full mb-1",
-          )}
+          // position: fixed escapes any clipping ancestor (e.g. a Card
+          // with overflow:hidden in the settings page) — without that,
+          // the dropdown gets cropped to its parent.
+          className="fixed z-50 rounded-xl border border-border bg-popover shadow-lg overflow-hidden flex flex-col"
           role="dialog"
-          style={{ maxHeight: panelMaxHeight }}
+          style={{
+            left: triggerRect.left,
+            width: triggerRect.width,
+            ...(placement === "bottom"
+              ? { top: triggerRect.bottom + 4 }
+              : { top: Math.max(VIEWPORT_MARGIN, triggerRect.top - panelMaxHeight - 4) }),
+            maxHeight: panelMaxHeight,
+          }}
         >
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30 shrink-0">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
