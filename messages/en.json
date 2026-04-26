@@ -3525,8 +3525,8 @@
     "aiChatBriefApplied": "Generating…",
     "aiPersonalizeLabel": "Dynamic personalization",
     "aiPersonalizeHint": "Adapt questions, results and CTAs to the visitor. The AI produces variants directly if you enable the options below.",
-    "aiAskFirstName": "Ask for first name (uses {name} in text)",
-    "aiAskGender": "Ask for gender (uses {m|f|x} for 3 variants)",
+    "aiAskFirstName": "Ask for first name",
+    "aiAskGender": "Ask for gender",
     "freePlanLimit": "The free plan is limited to 1 quiz. Upgrade to a paid plan to create more!",
     "errCreate": "Creation error",
     "errImportFormat": "PDF and DOCX formats are coming soon. For now, export your content as .txt.",
@@ -4692,5 +4692,9 @@
     "seedConfirm": "This will insert/update all categories and articles. Continue?",
     "seedButton": "Seed / Update content",
     "seeding": "Seeding..."
+  },
+  "quizVars": {
+    "insertNameTitle": "Insert visitor's first name ({name})",
+    "insertGenderTitle": "Insert a gender-aware variant — masculine | feminine | non-binary (e.g. dear | dear | dear)"
   }
 }

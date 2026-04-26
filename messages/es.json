@@ -3525,8 +3525,8 @@
     "aiChatBriefApplied": "Generando…",
     "aiPersonalizeLabel": "Personalización dinámica",
     "aiPersonalizeHint": "Adapta preguntas, resultados y CTAs al visitante. La IA genera las variantes directamente si activas las opciones.",
-    "aiAskFirstName": "Pedir el nombre (usa {name} en los textos)",
-    "aiAskGender": "Pedir el género (usa {m|f|x} para 3 variantes)",
+    "aiAskFirstName": "Pedir el nombre",
+    "aiAskGender": "Pedir el género",
     "freePlanLimit": "El plan gratuito está limitado a 1 quiz. ¡Pasa a un plan de pago para crear más!",
     "errCreate": "Error al crear",
     "errImportFormat": "Los formatos PDF y DOCX estarán disponibles pronto. Por ahora, exporta tu contenido en .txt.",
@@ -4692,5 +4692,9 @@
     "seedConfirm": "Esto insertará/actualizará todas las categorías y artículos. ¿Continuar?",
     "seedButton": "Seed / Actualizar contenido",
     "seeding": "Sembrando..."
+  },
+  "quizVars": {
+    "insertNameTitle": "Insertar el nombre del visitante ({name})",
+    "insertGenderTitle": "Insertar una variante según el género — masculino | femenino | no binario (ej.: querido | querida | queride)"
   }
 }
