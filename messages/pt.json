@@ -1966,87 +1966,87 @@
     }
   },
   "automations": {
-    "title": "Automatisations",
-    "createBtn": "Créer une automatisation",
-    "copied": "Copié !",
-    "copy": "Copier le SQL",
-    "savedCreated": "Automatisation créée !",
-    "savedUpdated": "Automatisation mise à jour !",
-    "deleted": "Automatisation supprimée",
-    "deleteConfirm": "Supprimer cette automatisation ?",
-    "statusActive": "Actif",
-    "statusInactive": "Inactif",
-    "enable": "Activer",
-    "disable": "Désactiver",
-    "edit": "Modifier",
-    "delete": "Supprimer",
-    "statsTriggers": "{count} déclenchements",
-    "statsDms": "{count} DMs envoyés",
+    "title": "Automatizações",
+    "createBtn": "Criar uma automatização",
+    "copied": "Copiado!",
+    "copy": "Copiar SQL",
+    "savedCreated": "Automatização criada!",
+    "savedUpdated": "Automatização atualizada!",
+    "deleted": "Automatização eliminada",
+    "deleteConfirm": "Eliminar esta automatização?",
+    "statusActive": "Ativa",
+    "statusInactive": "Inativa",
+    "enable": "Ativar",
+    "disable": "Desativar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "statsTriggers": "{count} disparos",
+    "statsDms": "{count} DMs enviadas",
     "hero": {
-      "title": "Automatisations sociales",
-      "description": "Détecte les mots-clés dans les commentaires et répond automatiquement : DM sur Instagram et Facebook, réponse commentaire sur TikTok. Choisis ta plateforme ci-dessous pour commencer."
+      "title": "Automatizações sociais",
+      "description": "Deteta palavras-chave nos comentários e responde automaticamente: DM no Instagram e Facebook, resposta em comentário no TikTok. Escolhe a tua plataforma abaixo para começar."
     },
-    "platformsTitle": "Automatiser par plateforme",
+    "platformsTitle": "Automatizar por plataforma",
     "status": {
-      "available": "Disponible",
-      "soon": "Bientôt",
-      "unavailable": "Non disponible"
+      "available": "Disponível",
+      "soon": "Em breve",
+      "unavailable": "Não disponível"
     },
-    "xNote": "X/Twitter : API DM requiert un abonnement Pro à 5 000$/mois — non viable. Threads : l'API DM n'est pas encore ouverte aux développeurs.",
+    "xNote": "X/Twitter: a API de DM exige uma subscrição Pro de 5 000$/mês — não viável. Threads: a API de DM ainda não está aberta a programadores.",
     "setup": {
-      "title": "Configuration requise — Table Supabase manquante",
-      "description": "Copiez ce SQL et exécutez-le dans l'éditeur SQL de Supabase pour créer la table des automatisations.",
-      "instructions": "Supabase → SQL Editor → New Query → Coller → Run"
+      "title": "Configuração necessária — tabela Supabase em falta",
+      "description": "Copia este SQL e executa-o no editor SQL do Supabase para criar a tabela das automatizações.",
+      "instructions": "Supabase → SQL Editor → New Query → Colar → Run"
     },
     "guide": {
-      "title": "Comment activer tes automatisations",
-      "intro": "Suis ces 4 étapes simples pour que tes abonnés reçoivent un DM automatique dès qu'ils commentent un mot-clé sur tes posts.",
+      "title": "Como ativar as tuas automatizações",
+      "intro": "Segue estes 4 passos simples para que os teus seguidores recebam uma DM automática assim que comentarem uma palavra-chave nos teus posts.",
       "step1": {
-        "title": "Connecte ton compte Meta",
-        "desc": "Va dans Paramètres → Connexions et connecte ton compte Instagram et/ou Facebook professionnel (Page ou Compte Créateur)."
+        "title": "Liga a tua conta Meta",
+        "desc": "Vai a Definições → Ligações e liga a tua conta Instagram e/ou Facebook profissional (Página ou Conta de Criador)."
       },
       "step2": {
-        "title": "Vérifie l'accès aux messages",
-        "desc": "Depuis ton compte Instagram ou ta Page Facebook, assure-toi que les DMs et messages sont activés dans tes paramètres de confidentialité."
+        "title": "Verifica o acesso às mensagens",
+        "desc": "Na tua conta Instagram ou na tua Página Facebook, certifica-te de que as DMs e mensagens estão ativadas nas tuas definições de privacidade."
       },
       "step3": {
-        "title": "Crée ton automatisation ici",
-        "desc": "Choisis un mot-clé déclencheur (ex : PDF, GUIDE, PROMO) et rédige le message que tes abonnés recevront automatiquement en DM."
+        "title": "Cria a tua automatização aqui",
+        "desc": "Escolhe uma palavra-chave de gatilho (ex.: PDF, GUIA, PROMO) e redige a mensagem que os teus seguidores vão receber automaticamente em DM."
       },
       "step4": {
-        "title": "Teste avec un commentaire",
-        "desc": "Publie un post sur Instagram ou Facebook, commente avec ton mot-clé et vérifie que tu reçois bien le DM automatique dans les secondes qui suivent."
+        "title": "Testa com um comentário",
+        "desc": "Publica um post no Instagram ou Facebook, comenta com a tua palavra-chave e verifica que recebes a DM automática nos segundos seguintes."
       }
     },
     "rgpd": {
-      "title": "Conformité RGPD — ce qu'on fait",
-      "description": "L'user initie le contact en commentant → consentement implicite. Chaque DM inclut automatiquement 'Réponds STOP pour ne plus recevoir de messages'. La fenêtre 24h de Meta limite naturellement les envois non sollicités."
+      "title": "Conformidade RGPD — o que fazemos",
+      "description": "O utilizador inicia o contacto ao comentar → consentimento implícito. Cada DM inclui automaticamente «Responde STOP para deixar de receber mensagens». A janela de 24h da Meta limita naturalmente os envios não solicitados."
     },
-    "listTitle": "Mes automatisations",
+    "listTitle": "As minhas automatizações",
     "empty": {
-      "title": "Aucune automatisation",
-      "description": "Choisis une plateforme ci-dessus pour créer ta première automatisation.",
-      "ctaDm": "Auto DM sur commentaire",
-      "ctaEmail": "Auto email sur commentaire",
-      "emailName": "Capture email sur commentaire"
+      "title": "Sem automatizações",
+      "description": "Escolhe uma plataforma acima para criar a tua primeira automatização.",
+      "ctaDm": "DM automática em comentário",
+      "ctaEmail": "Email automático em comentário",
+      "emailName": "Captura de email em comentário"
     },
     "templates": {
-      "title": "Templates prêts à l'emploi",
-      "useBtn": "Utiliser ce template",
+      "title": "Templates prontos a usar",
+      "useBtn": "Usar este template",
       "dm": {
-        "title": "Auto DM Commentaire",
-        "description": "Poste 'Commente PDF pour recevoir ton guide'. Dès qu'un user commente 'PDF', il reçoit ton lien en DM.",
-        "example": "Post : 'Commente PDF 👇' → Commentaire 'PDF blabla' → DM automatique avec le lien",
+        "title": "DM automática em comentário",
+        "description": "Publica «Comenta PDF para receberes o teu guia». Assim que um utilizador comentar «PDF», recebe o teu link em DM.",
+        "example": "Post: «Comenta PDF 👇» → Comentário «PDF tal e tal» → DM automática com o link",
         "badge": "Instagram + Facebook",
-        "defaultMessage": "Salut {{prenom}} ! Merci pour ton commentaire 🙌 Voici ton guide gratuit : [TON_LIEN]\n\nRéponds STOP pour ne plus recevoir de messages."
+        "defaultMessage": "Olá {{prenom}}! Obrigado pelo teu comentário 🙌 Aqui está o teu guia gratuito: [O_TEU_LINK]\n\nResponde STOP para deixar de receber mensagens."
       },
       "email": {
-        "title": "Auto Email Commentaire",
-        "description": "L'user commente un mot-clé, reçoit un DM lui demandant son email, puis son guide arrive dans sa boîte mail via systeme.io.",
-        "example": "Commentaire 'GUIDE' → DM 'Envoie ton email ici' → Email envoyé → Ajout à systeme.io",
+        "title": "Email automático em comentário",
+        "description": "O utilizador comenta uma palavra-chave, recebe uma DM a pedir o email, e depois o guia chega à sua caixa de entrada via systeme.io.",
+        "example": "Comentário «GUIA» → DM «Envia o teu email aqui» → Email enviado → Adicionado ao systeme.io",
         "badge": "Instagram + Facebook + systeme.io",
-        "defaultMessage": "Salut {{prenom}} ! Pour recevoir ton guide gratuit, envoie-moi ton email en réponse à ce message 👇\n\nRéponds STOP pour ne plus recevoir de messages.",
-        "defaultEmailDm": "Super ! Je t'envoie ton guide sur {{email}} dans les prochaines minutes. Vérifie tes spams si tu ne le vois pas 📬"
+        "defaultMessage": "Olá {{prenom}}! Para receberes o teu guia gratuito, envia-me o teu email em resposta a esta mensagem 👇\n\nResponde STOP para deixar de receber mensagens.",
+        "defaultEmailDm": "Boa! Vou enviar-te o teu guia para {{email}} nos próximos minutos. Verifica os spams se não o vires 📬"
       }
     },
     "form": {
