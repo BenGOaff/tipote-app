@@ -2458,21 +2458,21 @@
     "generateError": "Não foi possível gerar a estratégia neste momento."
   },
   "refineChat": {
-    "shorter": "Plus court",
-    "punchier": "Plus percutant",
-    "moreDirect": "Ton plus direct",
-    "addCta": "Ajouter un CTA",
-    "reworkHook": "Reformuler l'accroche",
-    "moreStorytelling": "Plus de storytelling",
-    "refineError": "Erreur lors de l'affinage",
-    "errorPrefix": "Erreur : {message}",
-    "contentUpdated": "Contenu mis à jour.",
-    "refineDefault": "Impossible de raffiner le contenu",
-    "refineWithTipote": "Affiner avec Tipote",
-    "creditPerMessage": "0.5 crédit / message",
-    "close": "Fermer",
-    "thinking": "Tipote réfléchit...",
-    "placeholder": "Ex: Raccourcis le texte, ajoute une question en accroche..."
+    "shorter": "Mais curto",
+    "punchier": "Mais impactante",
+    "moreDirect": "Tom mais direto",
+    "addCta": "Adicionar um CTA",
+    "reworkHook": "Reformular a abertura",
+    "moreStorytelling": "Mais storytelling",
+    "refineError": "Erro ao refinar",
+    "errorPrefix": "Erro: {message}",
+    "contentUpdated": "Conteúdo atualizado.",
+    "refineDefault": "Não foi possível refinar o conteúdo",
+    "refineWithTipote": "Refinar com a Tipote",
+    "creditPerMessage": "0,5 crédito / mensagem",
+    "close": "Fechar",
+    "thinking": "A Tipote está a pensar...",
+    "placeholder": "Ex.: Encurta o texto, adiciona uma pergunta como abertura..."
   },
   "coach": {
     "moreClients": "Mais clientes",
@@ -3113,19 +3113,19 @@
     "saved": "Alterações guardadas"
   },
   "phaseDetail": {
-    "objective": "Objectif de cette phase",
-    "progression": "Progression",
-    "keyPoints": "Points clés à accomplir",
-    "tasks": "Tâches",
-    "newTask": "Nouvelle tâche…",
-    "edit": "Modifier",
-    "cancel": "Annuler",
-    "done": "Terminé",
-    "noTasks": "Aucune tâche pour l'instant.",
-    "dragHint": "Astuce : tu peux réordonner les tâches en les glissant.",
-    "phase1Desc": "Pose les bases de ton business : crée ton lead magnet, prépare ta première offre et optimise ta présence sur les réseaux.",
-    "phase2Desc": "Accélère ta croissance : améliore ton offre grâce aux retours clients, récolte des témoignages et développe tes partenariats.",
-    "phase3Desc": "Passe à l'échelle : automatise tes process, lance de la pub payante et commence à déléguer."
+    "objective": "Objetivo desta fase",
+    "progression": "Progresso",
+    "keyPoints": "Pontos-chave a cumprir",
+    "tasks": "Tarefas",
+    "newTask": "Nova tarefa…",
+    "edit": "Editar",
+    "cancel": "Cancelar",
+    "done": "Concluído",
+    "noTasks": "Sem tarefas de momento.",
+    "dragHint": "Dica: podes reordenar as tarefas arrastando-as.",
+    "phase1Desc": "Estabelece as bases do teu negócio: cria o teu lead magnet, prepara a tua primeira oferta e otimiza a tua presença nas redes.",
+    "phase2Desc": "Acelera o teu crescimento: melhora a tua oferta com base no feedback dos clientes, recolhe testemunhos e desenvolve as tuas parcerias.",
+    "phase3Desc": "Passa à escala: automatiza os teus processos, lança publicidade paga e começa a delegar."
   },
   "pageBuilder": {
     "tabs": {
@@ -4304,34 +4304,34 @@
     "sioTagHint": "Separada das tags de resultado: esta tag é aplicada a cada email (qualquer que seja o resultado)."
   },
   "createTypePage": {
-    "createLabel": "Créer",
-    "templateActive": "Template rapide activé",
-    "back": "← Retour",
-    "myContents": "Mes contenus",
+    "createLabel": "Criar",
+    "templateActive": "Template rápido ativado",
+    "back": "← Voltar",
+    "myContents": "Os meus conteúdos",
     "types": {
       "post": {
-        "label": "Post réseaux sociaux",
-        "hint": "Ex : un post LinkedIn prêt à publier (hook fort, valeur, CTA soft)."
+        "label": "Post de redes sociais",
+        "hint": "Ex.: um post LinkedIn pronto a publicar (hook forte, valor, CTA suave)."
       },
       "email": {
         "label": "Email",
-        "hint": "Ex : objet + préheader + corps + CTA."
+        "hint": "Ex.: assunto + pré-header + corpo + CTA."
       },
       "blog": {
-        "label": "Article / Blog",
-        "hint": "Ex : un article structuré (intro, plan H2/H3, conclusion actionnable)."
+        "label": "Artigo / Blog",
+        "hint": "Ex.: um artigo estruturado (intro, plano H2/H3, conclusão acionável)."
       },
       "video_script": {
-        "label": "Script vidéo",
-        "hint": "Ex : script 45–60s (hook, tension, valeur, CTA)."
+        "label": "Script de vídeo",
+        "hint": "Ex.: script 45–60s (hook, tensão, valor, CTA)."
       },
       "sales_page": {
-        "label": "Page de vente",
-        "hint": "Ex : structure + copywriting (promesse, preuves, objection, offre)."
+        "label": "Página de vendas",
+        "hint": "Ex.: estrutura + copywriting (promessa, provas, objeções, oferta)."
       },
       "funnel": {
-        "label": "Page / Site vitrine",
-        "hint": "Ex : page de capture, page de vente, site vitrine one-page."
+        "label": "Página / Website institucional",
+        "hint": "Ex.: página de captura, página de vendas, site institucional one-page."
       }
     }
   },
@@ -4439,20 +4439,20 @@
     "noPending": "Sem alterações pendentes"
   },
   "templateCard": {
-    "typeCapture": "Page de capture",
-    "typeSales": "Page de vente",
+    "typeCapture": "Página de captura",
+    "typeSales": "Página de vendas",
     "typeBlog": "Blog",
-    "preview": "Aperçu",
-    "description": "Description",
-    "included": "Inclus dans ce template",
-    "importToSystemeio": "Importer dans Systeme.io",
-    "importTemplate": "Importer le template",
-    "free": "Gratuit",
+    "preview": "Pré-visualização",
+    "description": "Descrição",
+    "included": "Incluído neste template",
+    "importToSystemeio": "Importar para o Systeme.io",
+    "importTemplate": "Importar o template",
+    "free": "Grátis",
     "toast": {
-      "noLink": "Lien d'import non disponible",
-      "noLinkDesc": "Ce template n'a pas encore de lien d'import configuré.",
-      "redirecting": "Redirection vers Systeme.io",
-      "redirectingDesc": "Le template va s'importer dans ton compte."
+      "noLink": "Link de importação indisponível",
+      "noLinkDesc": "Este template ainda não tem link de importação configurado.",
+      "redirecting": "A redirecionar para o Systeme.io",
+      "redirectingDesc": "O template vai ser importado para a tua conta."
     }
   },
   "templateChat": {
@@ -4510,19 +4510,19 @@
     "networkCreate": "Erreur réseau lors de la création du tableau."
   },
   "personaModal": {
-    "title": "Modifier le persona",
-    "description": "Modifie ton persona cible. Les changements seront synchronisés partout dans l'application.",
-    "mainProfile": "Profil principal",
-    "profilePh": "Ex: Entrepreneur solo, 30-45 ans",
-    "pains": "Problèmes principaux",
-    "addPain": "Ajouter un problème...",
-    "goals": "Objectifs",
-    "addGoal": "Ajouter un objectif...",
-    "channels": "Canaux préférés",
-    "addChannel": "Ajouter un canal...",
-    "cancel": "Annuler",
-    "saving": "Enregistrement...",
-    "save": "Enregistrer"
+    "title": "Editar o persona",
+    "description": "Edita o teu persona-alvo. As alterações serão sincronizadas em toda a aplicação.",
+    "mainProfile": "Perfil principal",
+    "profilePh": "Ex.: Empreendedor solo, 30-45 anos",
+    "pains": "Problemas principais",
+    "addPain": "Adicionar um problema...",
+    "goals": "Objetivos",
+    "addGoal": "Adicionar um objetivo...",
+    "channels": "Canais preferidos",
+    "addChannel": "Adicionar um canal...",
+    "cancel": "Cancelar",
+    "saving": "A guardar...",
+    "save": "Guardar"
   },
   "funnelTemplate": {
     "previewTitle": "Pré-visualização do template",
@@ -4543,16 +4543,16 @@
     "apply": "Aplicar"
   },
   "pyramidSelection": {
-    "urgentProblem": "Problème urgent :",
-    "savingSelection": "Je sauvegarde ta sélection…",
-    "buildingStrategy": "Je construis ta stratégie personnalisée…",
-    "generatingTasks": "Je génère tes premières tâches…",
-    "polishingSpace": "Je peaufine ton espace…",
-    "cannotGenerate": "Impossible de générer la stratégie.",
-    "buildingTitle": "Je construis ta stratégie…",
-    "creatingPyramids": "Tipote crée tes pyramides d'offres...",
-    "analyzingProfile": "Analyse de ton profil et création de 3 pyramides d'offres percutantes.",
-    "generating": "Génération en cours"
+    "urgentProblem": "Problema urgente:",
+    "savingSelection": "A guardar a tua seleção…",
+    "buildingStrategy": "A construir a tua estratégia personalizada…",
+    "generatingTasks": "A gerar as tuas primeiras tarefas…",
+    "polishingSpace": "A apurar o teu espaço…",
+    "cannotGenerate": "Não foi possível gerar a estratégia.",
+    "buildingTitle": "A construir a tua estratégia…",
+    "creatingPyramids": "A Tipote está a criar as tuas pirâmides de ofertas...",
+    "analyzingProfile": "Análise do teu perfil e criação de 3 pirâmides de ofertas impactantes.",
+    "generating": "Geração em curso"
   },
   "myContent": {
     "folders": {
