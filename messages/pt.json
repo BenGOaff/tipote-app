@@ -4629,54 +4629,54 @@
   },
   "offerDefaults": {
     "lead_magnet": {
-      "why": "Ce lead magnet attire ton audience cible en résolvant un problème urgent et spécifique. Il établit ta crédibilité et te positionne comme expert de ton domaine.",
-      "whyPrice": "Gratuit pour maximiser les inscriptions et construire ta liste email. La valeur perçue doit être élevée pour encourager le partage.",
+      "why": "Este lead magnet atrai a tua audiência-alvo ao resolver um problema urgente e específico. Estabelece a tua credibilidade e posiciona-te como especialista no teu domínio.",
+      "whyPrice": "Gratuito para maximizar as inscrições e construir a tua lista de email. O valor percebido deve ser elevado para incentivar a partilha.",
       "whatToCreate": [
-        "Un contenu qui répond à une question brûlante de ton audience",
-        "Un format facilement consommable (PDF, vidéo courte, checklist)",
-        "Un design professionnel qui reflète ta marque",
-        "Une page de capture optimisée pour les conversions"
+        "Um conteúdo que responde a uma pergunta urgente da tua audiência",
+        "Um formato facilmente consumível (PDF, vídeo curto, checklist)",
+        "Um design profissional que reflita a tua marca",
+        "Uma página de captura otimizada para conversões"
       ],
-      "howToCreate": "Commence par identifier le problème #1 de ton audience. Crée un contenu actionnable qu'ils peuvent appliquer immédiatement. Limite le contenu à l'essentiel pour qu'il soit rapide à consommer mais impactant.",
+      "howToCreate": "Começa por identificar o problema #1 da tua audiência. Cria um conteúdo acionável que possam aplicar imediatamente. Limita o conteúdo ao essencial para que seja rápido de consumir mas impactante.",
       "howToPromote": [
-        "Posts organiques sur tes réseaux sociaux avec un CTA clair",
-        "Publicités ciblées sur Facebook/Instagram vers ta page de capture",
-        "Partenariats avec d'autres créateurs pour du cross-promo",
-        "Mentions dans tes emails et contenus existants"
+        "Posts orgânicos nas tuas redes sociais com um CTA claro",
+        "Anúncios segmentados no Facebook/Instagram para a tua página de captura",
+        "Parcerias com outros criadores para cross-promo",
+        "Menções nos teus emails e conteúdos existentes"
       ]
     },
     "low_ticket": {
-      "why": "Cette offre convertit tes leads en clients. Elle prouve la valeur de tes produits et crée une habitude d'achat tout en générant tes premiers revenus.",
-      "whyPrice": "Un prix accessible (47-197€) réduit la friction d'achat. Assez élevé pour attirer des clients sérieux, assez bas pour être une décision impulsive.",
+      "why": "Esta oferta converte os teus leads em clientes. Comprova o valor dos teus produtos e cria um hábito de compra enquanto gera as tuas primeiras receitas.",
+      "whyPrice": "Um preço acessível (47-197€) reduz a fricção de compra. Suficientemente alto para atrair clientes sérios, suficientemente baixo para ser uma decisão impulsiva.",
       "whatToCreate": [
-        "Une formation ou ressource qui approfondit le lead magnet",
-        "Des templates, scripts ou outils pratiques",
-        "Un accès à une communauté ou des bonus exclusifs",
-        "Une page de vente convaincante avec témoignages"
+        "Uma formação ou recurso que aprofunda o lead magnet",
+        "Templates, scripts ou ferramentas práticas",
+        "Acesso a uma comunidade ou bónus exclusivos",
+        "Uma página de vendas convincente com testemunhos"
       ],
-      "howToCreate": "Transforme ton expertise en un produit structuré. Inclus des résultats mesurables et des étapes claires. Ajoute des bonus pour augmenter la valeur perçue.",
+      "howToCreate": "Transforma a tua experiência num produto estruturado. Inclui resultados mensuráveis e passos claros. Adiciona bónus para aumentar o valor percebido.",
       "howToPromote": [
-        "Séquence email automatisée après le lead magnet",
-        "Offres flash et promotions limitées",
-        "Upsell direct après l'inscription au lead magnet",
-        "Témoignages et études de cas sur les réseaux"
+        "Sequência de email automatizada após o lead magnet",
+        "Ofertas-relâmpago e promoções limitadas",
+        "Upsell direto após a inscrição no lead magnet",
+        "Testemunhos e estudos de caso nas redes"
       ]
     },
     "high_ticket": {
-      "why": "Cette offre maximise tes revenus avec un accompagnement premium. Elle attire les clients les plus motivés qui veulent des résultats garantis.",
-      "whyPrice": "Un prix premium (997€+) reflète la valeur transformationnelle. Les clients qui investissent plus sont plus engagés et obtiennent de meilleurs résultats.",
+      "why": "Esta oferta maximiza as tuas receitas com um acompanhamento premium. Atrai os clientes mais motivados que querem resultados garantidos.",
+      "whyPrice": "Um preço premium (997€+) reflete o valor transformacional. Os clientes que investem mais estão mais comprometidos e obtêm melhores resultados.",
       "whatToCreate": [
-        "Un programme d'accompagnement complet sur plusieurs semaines",
-        "Des sessions de coaching individuelles ou en groupe",
-        "Un accès VIP avec support prioritaire",
-        "Des ressources avancées et exclusives"
+        "Um programa de acompanhamento completo durante várias semanas",
+        "Sessões de coaching individuais ou em grupo",
+        "Acesso VIP com suporte prioritário",
+        "Recursos avançados e exclusivos"
       ],
-      "howToCreate": "Conçois une transformation complète. Définis clairement les résultats attendus et le processus. Limite les places pour créer l'exclusivité et pouvoir offrir un suivi personnalisé.",
+      "howToCreate": "Concebe uma transformação completa. Define claramente os resultados esperados e o processo. Limita as vagas para criar exclusividade e poder oferecer um acompanhamento personalizado.",
       "howToPromote": [
-        "Webinars de vente avec présentation de la méthode",
-        "Appels de découverte pour qualifier les prospects",
-        "Témoignages vidéo de clients transformés",
-        "Séquence email nurturing sur plusieurs semaines"
+        "Webinars de venda com apresentação do método",
+        "Chamadas de descoberta para qualificar prospetos",
+        "Testemunhos em vídeo de clientes transformados",
+        "Sequência de email nurturing durante várias semanas"
       ]
     }
   },
