@@ -20,6 +20,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Tipote pages render their own chrome — mirror QuizDetailClient so /quiz/[id]
+// keeps the same sidebar + header when mode='survey'.
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import {
   Loader2,
   Plus,
@@ -303,15 +308,26 @@ export default function SurveyDetailClient({ quizId }: { quizId: string }) {
   // ── Render guards ────────────────────────────────────────────────
   if (loading || !survey) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <SidebarProvider>
+        <div className="h-screen flex w-full">
+          <AppSidebar />
+          <main className="flex-1 flex items-center justify-center bg-background">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </main>
+        </div>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-24">
-      {/* Top bar */}
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("editTitle")}</h1>} />
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+            <div className="space-y-4 max-w-5xl mx-auto pb-24">
+              {/* Top bar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => router.push("/contents")}>
@@ -537,8 +553,12 @@ export default function SurveyDetailClient({ quizId }: { quizId: string }) {
         <TabsContent value="trends" className="space-y-4 mt-4">
           <TrendsView questions={survey.questions} leads={leads} />
         </TabsContent>
-      </Tabs>
-    </div>
+              </Tabs>
+            </div>
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
 
