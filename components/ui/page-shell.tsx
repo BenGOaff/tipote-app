@@ -7,7 +7,7 @@
 // USAGE
 // ─────
 //   <PageContainer>
-//     <PageHeader
+//     <PageHeading
 //       title="Mes contenus"
 //       subtitle="Tout ce que tu as créé"
 //       actions={<Button>+ Créer</Button>}
@@ -16,6 +16,9 @@
 //       … content …
 //     </SectionCard>
 //   </PageContainer>
+//
+// NOTE: this component is named PageHeading (not PageHeader) to avoid
+// clashing with the existing global PageHeader (the app's top bar).
 //
 // All three components are unopinionated about what's inside — they only
 // own paddings, surfaces, radius, shadow, typography. Mix freely.
@@ -55,12 +58,15 @@ export function PageContainer({
   );
 }
 
-// ─── PageHeader ────────────────────────────────────────────────────────
-// Page title + optional subtitle + actions slot, in a clean flex row that
-// wraps gracefully on mobile. Use this AT THE TOP of every PageContainer
-// instead of a hand-rolled <div> with a heading.
+// ─── PageHeading ───────────────────────────────────────────────────────
+// In-content page heading: title + optional subtitle + actions slot, in a
+// clean flex row that wraps gracefully on mobile. Use this AT THE TOP of
+// every PageContainer instead of a hand-rolled <div> with a heading.
+//
+// IMPORTANT: name is PageHeading (not PageHeader) to avoid clashing with
+// the existing global PageHeader component (the app's top bar).
 
-type PageHeaderProps = {
+type PageHeadingProps = {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   /** Right-aligned content (CTAs, filters, etc.). Wraps below on small screens. */
@@ -70,7 +76,7 @@ type PageHeaderProps = {
   className?: string;
 };
 
-export function PageHeader({ title, subtitle, actions, eyebrow, className }: PageHeaderProps) {
+export function PageHeading({ title, subtitle, actions, eyebrow, className }: PageHeadingProps) {
   return (
     <div className={cn("flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4", className)}>
       <div className="min-w-0 space-y-1">
