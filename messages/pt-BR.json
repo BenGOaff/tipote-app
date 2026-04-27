@@ -1450,144 +1450,144 @@
   },
   "branding": {
     "typography": {
-      "title": "Typographie",
-      "desc": "Choisis la police principale de ta marque. Elle sera utilisée dans les tunnels de vente et les pages générées.",
-      "fontLabel": "Police principale",
-      "fontPlaceholder": "Sélectionner une police..."
+      "title": "Tipografia",
+      "desc": "Escolha a fonte principal da sua marca. Será usada nos funis de venda e nas páginas geradas.",
+      "fontLabel": "Fonte principal",
+      "fontPlaceholder": "Selecionar uma fonte..."
     },
-    "preview": "Aperçu :",
-    "brandWith": "Votre marque avec {font}",
-    "brandParagraph": "Un texte de paragraphe pour visualiser le rendu de la police sur du contenu courant.",
+    "preview": "Visualização:",
+    "brandWith": "Sua marca com {font}",
+    "brandParagraph": "Um texto de parágrafo para visualizar a renderização da fonte em conteúdo comum.",
     "colors": {
-      "title": "Palette de couleurs",
-      "desc": "Définis les couleurs principales de ta marque. Elles seront injectées automatiquement dans les templates de tunnels.",
-      "base": "Couleur de base",
-      "accent": "Couleur d'accentuation"
+      "title": "Paleta de cores",
+      "desc": "Defina as cores principais da sua marca. Serão injetadas automaticamente nos templates de funis.",
+      "base": "Cor base",
+      "accent": "Cor de destaque"
     },
     "previewBase": "Base",
-    "previewAccent": "Accent",
-    "previewSection": "Titre de section",
-    "previewButton": "Bouton CTA",
+    "previewAccent": "Destaque",
+    "previewSection": "Título de seção",
+    "previewButton": "Botão CTA",
     "images": {
-      "title": "Images de marque",
-      "desc": "Upload ton logo et ta photo pour les intégrer automatiquement dans les tunnels. Tu pourras toujours les remplacer manuellement au cas par cas.",
-      "logoLabel": "Logo de la marque",
-      "logoDesc": "PNG ou JPG, fond transparent recommandé, min 200px de large",
-      "photoLabel": "Photo de l'auteur",
-      "photoDesc": "Photo portrait carrée, min 300x300px"
+      "title": "Imagens de marca",
+      "desc": "Faça upload do seu logo e da sua foto para integrá-los automaticamente nos funis. Você pode sempre substituí-los manualmente caso a caso.",
+      "logoLabel": "Logo da marca",
+      "logoDesc": "PNG ou JPG, fundo transparente recomendado, mín. 200 px de largura",
+      "photoLabel": "Foto do autor",
+      "photoDesc": "Foto retrato quadrada, mín. 300x300 px"
     },
     "tone": {
-      "title": "Ton de voix",
-      "desc": "Décris le ton que tu veux donner à ta communication (prérempli depuis l'onboarding si disponible). Ce ton sera utilisé pour guider l'IA dans la génération de contenu.",
-      "label": "Style de communication",
-      "placeholder": "Ex: Professionnel mais décontracté, inspirant, éducatif avec une touche d'humour. J'utilise le tutoiement et un langage direct.",
-      "chars": "{n}/500 caractères"
+      "title": "Tom de voz",
+      "desc": "Descreva o tom que quer dar à sua comunicação (pré-preenchido a partir do onboarding se disponível). Esse tom será usado para guiar a IA na geração de conteúdo.",
+      "label": "Estilo de comunicação",
+      "placeholder": "Ex.: Profissional mas descontraído, inspirador, educativo com toque de humor. Uso você e uma linguagem direta.",
+      "chars": "{n}/500 caracteres"
     },
     "upload": {
-      "deleteAria": "Supprimer",
-      "uploading": "Upload en cours...",
-      "choose": "Choisir un fichier",
-      "success": "Image uploadée",
-      "errorTitle": "Erreur d'upload",
-      "errorUnknown": "Erreur inconnue"
+      "deleteAria": "Excluir",
+      "uploading": "Enviando...",
+      "choose": "Escolher um arquivo",
+      "success": "Imagem enviada",
+      "errorTitle": "Erro de upload",
+      "errorUnknown": "Erro desconhecido"
     },
-    "save": "Enregistrer le branding",
-    "saving": "Enregistrement...",
-    "saved": "Branding enregistré",
-    "errorTitle": "Enregistrement impossible",
-    "errorUnknown": "Erreur inconnue"
+    "save": "Salvar o branding",
+    "saving": "Salvando...",
+    "saved": "Branding salvo",
+    "errorTitle": "Não foi possível salvar",
+    "errorUnknown": "Erro desconhecido"
   },
   "billing": {
-    "loading": "Chargement…",
-    "currentPlanBadge": "Plan actuel",
-    "perMonth": "/mois",
+    "loading": "Carregando…",
+    "currentPlanBadge": "Plano atual",
+    "perMonth": "/mês",
     "credits": {
-      "title": "Crédits IA",
-      "desc": "Solde disponible pour générer du contenu. 1 génération = 1 crédit.",
-      "unit": "crédits",
-      "recharge": "Recharger",
-      "purchased": "Achetés : ",
-      "consumed": " • Consommés : "
+      "title": "Créditos IA",
+      "desc": "Saldo disponível para gerar conteúdo. 1 geração = 1 crédito.",
+      "unit": "créditos",
+      "recharge": "Recarregar",
+      "purchased": "Adquiridos: ",
+      "consumed": " • Consumidos: "
     },
-    "refreshAria": "Rafraîchir",
-    "annualPromo": "Deux mois offerts",
+    "refreshAria": "Atualizar",
+    "annualPromo": "Dois meses grátis",
     "toggle": {
-      "monthly": "Mensuel",
-      "annual": "Annuel"
+      "monthly": "Mensal",
+      "annual": "Anual"
     },
-    "periodMonthly": "Par mois, sans engagement",
-    "periodAnnual": "Par an : deux mois offerts",
-    "popular": "Le préféré de tous",
-    "featuresIncluded": "Fonctionnalités incluses :",
+    "periodMonthly": "Por mês, sem compromisso",
+    "periodAnnual": "Por ano: dois meses grátis",
+    "popular": "O preferido de todos",
+    "featuresIncluded": "Funcionalidades incluídas:",
     "planCards": {
       "free": {
-        "subtitle": "Pour découvrir et tester sans risque (pas besoin de CB)",
-        "creditsLabel": "25 CRÉDITS IA (une fois)",
-        "period": "Sans limite de durée"
+        "subtitle": "Para descobrir e testar sem riscos (sem cartão)",
+        "creditsLabel": "25 CRÉDITOS IA (uma vez)",
+        "period": "Sem limite de duração"
       },
       "basic": {
-        "subtitle": "Pour démarrer avec des petits besoins",
-        "creditsLabel": "40 CRÉDITS IA par mois"
+        "subtitle": "Para começar com necessidades simples",
+        "creditsLabel": "40 CRÉDITOS IA por mês"
       },
       "pro": {
-        "subtitle": "Pour passer vraiment à la vitesse supérieure",
-        "creditsLabel": "150 CRÉDITS IA par mois"
+        "subtitle": "Para realmente subir de nível",
+        "creditsLabel": "150 CRÉDITOS IA por mês"
       },
       "elite": {
-        "subtitle": "Pour les pros qui gèrent plusieurs projets ou clients",
-        "creditsLabel": "500 CRÉDITS IA par mois"
+        "subtitle": "Para profissionais que gerenciam vários projetos ou clientes",
+        "creditsLabel": "500 CRÉDITOS IA por mês"
       }
     },
     "features": {
-      "credits25": "25 crédits offerts (one-shot)",
-      "credits40": "40 crédits par mois",
-      "credits150": "150 crédits par mois",
-      "credits500": "500 crédits par mois",
-      "strategy": "Plan stratégique personnalisé",
-      "contentGen": "Génération de contenu (tous types)",
-      "stats": "Suivi statistiques",
-      "calendar": "Calendrier éditorial",
-      "quiz": "Création de quiz",
-      "connect1": "Connexion 1 réseau social",
-      "connect2": "Connexion 2 réseaux sociaux",
-      "connect4": "Connexion 4 réseaux sociaux",
-      "connectAll": "Connexion tous réseaux sociaux",
-      "multiprofiles": "Multiprofils",
-      "analytics": "Analyse des statistiques",
-      "persona": "Enrichissement du persona",
-      "competition": "Analyse de la concurrence",
-      "buyCredits": "Ajout de crédits IA",
-      "coach": "Coach IA personnel"
+      "credits25": "25 créditos grátis (one-shot)",
+      "credits40": "40 créditos por mês",
+      "credits150": "150 créditos por mês",
+      "credits500": "500 créditos por mês",
+      "strategy": "Plano estratégico personalizado",
+      "contentGen": "Geração de conteúdo (todos os tipos)",
+      "stats": "Acompanhamento de estatísticas",
+      "calendar": "Calendário editorial",
+      "quiz": "Criação de quizzes",
+      "connect1": "Conexão de 1 rede social",
+      "connect2": "Conexão de 2 redes sociais",
+      "connect4": "Conexão de 4 redes sociais",
+      "connectAll": "Conexão de todas as redes sociais",
+      "multiprofiles": "Multiperfis",
+      "analytics": "Análise de estatísticas",
+      "persona": "Enriquecimento da persona",
+      "competition": "Análise da concorrência",
+      "buyCredits": "Adicionar créditos IA",
+      "coach": "Coach IA pessoal"
     },
-    "current": "Actuel",
-    "currentLabel": "Plan actuel",
-    "downgrade": "Downgrader",
-    "upgrade": "Upgrader",
+    "current": "Atual",
+    "currentLabel": "Plano atual",
+    "downgrade": "Fazer downgrade",
+    "upgrade": "Fazer upgrade",
     "cta": {
-      "free": "Débuter gratos"
+      "free": "Começar grátis"
     },
     "beta": {
-      "title": "Accès Beta à vie",
-      "desc": "Tu fais partie des premiers utilisateurs de Tipote. Ton accès PRO est garanti à vie, avec 150 crédits IA par mois et l'accès au coach. Pas d'abonnement, pas d'annulation."
+      "title": "Acesso Beta vitalício",
+      "desc": "Você faz parte dos primeiros usuários do Tipote. Seu acesso PRO está garantido vitaliciamente, com 150 créditos IA por mês e acesso ao coach. Sem assinatura, sem cancelamento."
     },
     "manage": {
-      "title": "Gérer votre abonnement",
-      "desc": "Modifier, upgrader ou annuler via Systeme.io",
-      "cta": "Gérer sur Systeme.io"
+      "title": "Gerencie sua assinatura",
+      "desc": "Modifique, faça upgrade ou cancele pelo Systeme.io",
+      "cta": "Gerenciar no Systeme.io"
     },
-    "cancelBtn": "Annuler mon abonnement",
-    "cancelError": "Échec de l'annulation",
-    "cancelSuccess": "Abonnement annulé",
-    "cancelSuccessDesc": "Ton abonnement a été annulé. Ton plan est maintenant Free.",
+    "cancelBtn": "Cancelar minha assinatura",
+    "cancelError": "Falha no cancelamento",
+    "cancelSuccess": "Assinatura cancelada",
+    "cancelSuccessDesc": "Sua assinatura foi cancelada. Seu plano agora é Free.",
     "cancelConfirm": {
-      "title": "Confirmer l'annulation",
-      "desc": "Ton abonnement sera annulé immédiatement. Tu passeras en plan Free avec 25 crédits IA. Tu pourras te réabonner à tout moment.",
-      "canceling": "Annulation en cours…",
-      "yes": "Oui, annuler",
-      "no": "Non, garder mon abonnement"
+      "title": "Confirmar cancelamento",
+      "desc": "Sua assinatura será cancelada imediatamente. Você passa para o plano Free com 25 créditos IA. Pode reassinar a qualquer momento.",
+      "canceling": "Cancelando…",
+      "yes": "Sim, cancelar",
+      "no": "Não, manter minha assinatura"
     },
-    "errorTitle": "Impossible de charger l'abonnement",
-    "errorDesc": "Une erreur est survenue."
+    "errorTitle": "Não foi possível carregar a assinatura",
+    "errorDesc": "Ocorreu um erro."
   },
   "strategy": {
     "title": "Ma Stratégie",
