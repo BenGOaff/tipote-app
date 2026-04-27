@@ -21,6 +21,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Sparkles, FileText, Upload, ClipboardPaste } from "lucide-react";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
+// Tipote pages render their own chrome (sidebar + page header) — pages are
+// not wrapped in an authenticated layout file. Mirroring QuizFormClient so
+// /survey/new keeps the exact same chrome as /quiz/new.
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { SURVEY_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { toast } from "sonner";
@@ -263,10 +269,16 @@ export default function SurveyFormClient() {
 
   // ── Render ────────────────────────────────────────────────────────
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
-      {(generating || importing) && <AIGeneratingOverlay />}
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("createTitle")}</h1>} />
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+            <div className="space-y-4 max-w-3xl mx-auto">
+              {(generating || importing) && <AIGeneratingOverlay />}
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <TabsList className="w-full sm:w-auto bg-transparent border-b rounded-none justify-start gap-0 h-auto p-0">
           <TabsTrigger
             value="ai"
@@ -467,7 +479,11 @@ export default function SurveyFormClient() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
-    </div>
+              </Tabs>
+            </div>
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
