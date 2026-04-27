@@ -20,19 +20,19 @@
     "coach": "Coach"
   },
   "sidebar": {
-    "tagline": "Ton compagnon malin",
-    "credits": "Crédits",
-    "seeCredits": "Voir mes crédits IA",
-    "newPepite": "Nouvelle pépite",
-    "collapse": "Recolher barra lateral",
+    "tagline": "Seu companheiro inteligente",
+    "credits": "Créditos",
+    "seeCredits": "Ver meus créditos IA",
+    "newPepite": "Nova pepita",
+    "collapse": "Recolher a barra lateral",
     "expand": "Expandir barra lateral",
     "menu": "Menu",
     "activeProject": "Projeto ativo",
     "allProjects": "Todos os projetos"
   },
   "header": {
-    "credits": "crédits",
-    "viewCredits": "Voir mes crédits IA",
+    "credits": "créditos",
+    "viewCredits": "Ver meus créditos IA",
     "account": "Minha conta",
     "logout": "Sair",
     "menu": "Menu",
@@ -283,19 +283,19 @@
     "defaultResultDesc": "Descrição do resultado…"
   },
   "sioSelectors": {
-    "loading": "Chargement des données Systeme.io…",
-    "noApiKeyBefore": "Configure ta clé API Systeme.io dans les ",
-    "noApiKeyLink": "Paramètres",
-    "noApiKeyAfter": " pour voir tes tags, formations et communautés ici.",
+    "loading": "Carregando dados Systeme.io…",
+    "noApiKeyBefore": "Configure sua chave API Systeme.io nas ",
+    "noApiKeyLink": "Configurações",
+    "noApiKeyAfter": " para ver suas tags, cursos e comunidades aqui.",
     "tagLabel": "Tag Systeme.io",
-    "noTag": "— Aucun tag —",
-    "tagPlaceholder": "Nom du tag",
-    "courseLabel": "Formation Systeme.io",
-    "noCourse": "— Aucune formation —",
-    "coursePlaceholder": "ID de la formation",
-    "communityLabel": "Communauté Systeme.io",
-    "noCommunity": "— Aucune communauté —",
-    "communityPlaceholder": "ID de la communauté"
+    "noTag": "— Sem tag —",
+    "tagPlaceholder": "Nome da tag",
+    "courseLabel": "Curso Systeme.io",
+    "noCourse": "— Sem curso —",
+    "coursePlaceholder": "ID do curso",
+    "communityLabel": "Comunidade Systeme.io",
+    "noCommunity": "— Sem comunidade —",
+    "communityPlaceholder": "ID da comunidade"
   },
   "offerForm": {
     "title": "Créer ou améliorer une offre",
@@ -519,14 +519,14 @@
     "learnMore": "Saiba mais"
   },
   "auth": {
-    "login": "Se connecter",
-    "logout": "Se déconnecter",
+    "login": "Entrar",
+    "logout": "Sair",
     "email": "Email",
     "password": "Senha",
     "forgotPassword": "Esqueceu a senha?",
-    "resetPassword": "Réinitialiser le mot de passe",
-    "noAccount": "Pas encore de compte ?",
-    "signup": "S'inscrire",
+    "resetPassword": "Redefinir a senha",
+    "noAccount": "Ainda não tem conta?",
+    "signup": "Cadastrar",
     "confirmPassword": "Confirmar a senha",
     "signIn": "Entrar",
     "signUp": "Criar uma conta",
@@ -638,11 +638,11 @@
     "sectionDesc": "Defina ou altere sua senha para entrar sem link mágico."
   },
   "setPasswordPage": {
-    "tagline": "Ton assistant stratégique intelligent",
-    "title": "Créer ton mot de passe",
-    "description": "C'est ta première connexion à Tipote. Choisis un mot de passe pour tes prochaines connexions.",
-    "loading": "Chargement...",
-    "copyright": "© {year} Tipote™. Tous droits réservés."
+    "tagline": "Seu assistente estratégico inteligente",
+    "title": "Criar sua senha",
+    "description": "Este é seu primeiro acesso ao Tipote. Escolha uma senha para suas próximas sessões.",
+    "loading": "Carregando...",
+    "copyright": "© {year} Tipote™. Todos os direitos reservados."
   },
   "tutorial": {
     "welcomeTitle": "Bem-vindo ao Tipote",
@@ -699,10 +699,10 @@
     "step": "Passo {n} de {total}"
   },
   "errors": {
-    "generic": "Une erreur est survenue. Veuillez réessayer.",
-    "unauthorized": "Non autorisé.",
-    "notFound": "Page introuvable.",
-    "network": "Erro de rede",
+    "generic": "Ocorreu um erro. Tente novamente.",
+    "unauthorized": "Não autorizado.",
+    "notFound": "Página não encontrada.",
+    "network": "Erro de rede. Verifique sua conexão.",
     "unknown": "Erro desconhecido",
     "required": "Este campo é obrigatório",
     "invalid": "Valor inválido"
@@ -924,19 +924,19 @@
     "networkError": "Erreur réseau"
   },
   "pinterestConsent": {
-    "title": "Connecter Pinterest à Tipote",
-    "description": "Connecte ton compte Pinterest Business à Tipote pour créer et programmer des épingles directement depuis ton espace de travail. Chaque épingle est publiée uniquement avec ta validation.",
-    "accessTitle": "Tipote aura accès à :",
-    "accessProfile": "Ton profil Pinterest (nom, photo de profil)",
-    "accessBoards": "Tes tableaux (pour choisir où publier tes épingles)",
-    "accessPins": "Créer, modifier et supprimer des épingles en ton nom",
-    "accessCreateBoards": "Créer des tableaux en ton nom",
-    "guaranteesTitle": "Tes garanties :",
-    "guaranteeNoResell": "Tes données ne seront jamais revendues à des tiers.",
-    "guaranteeNoAutoPublish": "Aucune épingle ne sera publiée sans ta validation explicite.",
-    "guaranteeDisconnect": "Tu peux déconnecter ton compte à tout moment depuis les Paramètres.",
-    "legalNotice": "En continuant, tu acceptes nos <terms>Conditions d'utilisation</terms> et notre <privacy>Politique de confidentialité</privacy>.",
-    "connectButton": "Connecter Pinterest"
+    "title": "Conectar o Pinterest ao Tipote",
+    "description": "Conecte sua conta Pinterest Business ao Tipote para criar e agendar pins diretamente do seu espaço de trabalho. Cada pin é publicado apenas com sua validação.",
+    "accessTitle": "O Tipote terá acesso a:",
+    "accessProfile": "Seu perfil Pinterest (nome, foto de perfil)",
+    "accessBoards": "Seus quadros (para escolher onde publicar seus pins)",
+    "accessPins": "Criar, modificar e excluir pins em seu nome",
+    "accessCreateBoards": "Criar quadros em seu nome",
+    "guaranteesTitle": "Suas garantias:",
+    "guaranteeNoResell": "Seus dados nunca serão revendidos a terceiros.",
+    "guaranteeNoAutoPublish": "Nenhum pin será publicado sem sua validação explícita.",
+    "guaranteeDisconnect": "Você pode desconectar sua conta a qualquer momento nas Configurações.",
+    "legalNotice": "Ao continuar, você aceita nossos <terms>Termos de uso</terms> e nossa <privacy>Política de privacidade</privacy>.",
+    "connectButton": "Conectar Pinterest"
   },
   "aiCredits": {
     "title": "Créditos IA",
@@ -2409,27 +2409,27 @@
     "howToPromote": "Comment promouvoir ?"
   },
   "executionFeedback": {
-    "softStart": "Démarrage en douceur",
-    "softStartBody": "Ajoute 1–2 tâches simples et exécute la première aujourd'hui. Petit rythme, gros effet.",
-    "excellentPace": "Excellent rythme",
-    "excellentPaceBody": "Tu es dans une très bonne dynamique. Garde ce niveau, et évite juste de surcharger ta journée.",
-    "goodCourse": "Bon cap",
-    "goodCourseBody": "Tu avances bien. Pour passer un cran, verrouille une petite tâche facile en premier, puis attaque le cœur.",
-    "relaunch": "On relance la machine",
-    "relaunchBody": "Choisis UNE action ultra-simple maintenant (5–10 min) pour relancer l'élan.",
-    "oneStep": "Un pas, tout de suite",
-    "oneStepBody": "Commence par la tâche la plus petite possible. L'objectif : un 1er ✅ aujourd'hui."
+    "softStart": "Início suave",
+    "softStartBody": "Adicione 1–2 tarefas simples e execute a primeira hoje. Pouco ritmo, grande efeito.",
+    "excellentPace": "Excelente ritmo",
+    "excellentPaceBody": "Você está em uma ótima dinâmica. Mantenha esse nível e evite só sobrecarregar seu dia.",
+    "goodCourse": "Bom rumo",
+    "goodCourseBody": "Você está avançando bem. Para subir um nível, feche primeiro uma tarefa pequena e fácil, depois ataque o essencial.",
+    "relaunch": "Vamos religar a máquina",
+    "relaunchBody": "Escolha UMA ação ultra-simples agora (5–10 min) para retomar o impulso.",
+    "oneStep": "Um passo, já",
+    "oneStepBody": "Comece pela tarefa mais simples possível. O objetivo: um 1º ✅ hoje."
   },
   "dashboardLayout": {
     "detailedAnalytics": "Analytics détaillés"
   },
   "executionStats": {
-    "loadingStats": "Chargement des statistiques…",
-    "execution": "Exécution",
-    "globalProgress": "Progression globale",
-    "completed": "{count} terminées",
+    "loadingStats": "Carregando estatísticas…",
+    "execution": "Execução",
+    "globalProgress": "Progresso global",
+    "completed": "{count} concluídas",
     "remaining": "{count} restantes",
-    "total": "{count} au total"
+    "total": "{count} no total"
   },
   "markTaskDone": {
     "updateError": "Impossible de mettre à jour la tâche",
@@ -2443,19 +2443,19 @@
     "markDone": "Marquer comme faite"
   },
   "onboardingNudges": {
-    "toDo": "À faire",
-    "lastStep": "Dernière étape pour débloquer ta stratégie complète",
-    "chooseOffers": "Choisis tes offres",
-    "chooseOffersDesc": "Tipote a généré 3 options. Sélectionne celle qui te ressemble le plus pour finaliser ton plan stratégique.",
-    "toFinalize": "À finaliser",
-    "finishStrategy": "On termine la stratégie + le plan d'action",
-    "generateFullStrategy": "Générer la stratégie complète",
-    "generateFullStrategyDesc": "Tes offres prennent vie : mission, positionnement, persona et plan d'action en 3 phases.",
-    "generating": "Génération...",
-    "generateNow": "Générer maintenant",
-    "viewAdjust": "Voir / ajuster",
-    "oops": "Oups",
-    "generateError": "Impossible de générer la stratégie pour le moment."
+    "toDo": "A fazer",
+    "lastStep": "Última etapa para desbloquear sua estratégia completa",
+    "chooseOffers": "Escolha suas ofertas",
+    "chooseOffersDesc": "O Tipote gerou 3 opções. Selecione a que mais combina com você para finalizar seu plano estratégico.",
+    "toFinalize": "A finalizar",
+    "finishStrategy": "Vamos terminar a estratégia + o plano de ação",
+    "generateFullStrategy": "Gerar a estratégia completa",
+    "generateFullStrategyDesc": "Suas ofertas ganham vida: missão, posicionamento, persona e plano de ação em 3 fases.",
+    "generating": "Gerando...",
+    "generateNow": "Gerar agora",
+    "viewAdjust": "Ver / ajustar",
+    "oops": "Ops",
+    "generateError": "Não foi possível gerar a estratégia no momento."
   },
   "refineChat": {
     "shorter": "Plus court",
@@ -2547,12 +2547,12 @@
     "threadGeneral": "Général"
   },
   "analysisCard": {
-    "analyzing": "Analyse en cours...",
-    "analyzingDesc": "L'IA examine tes données",
-    "aiDiagnosis": "Diagnostic IA",
-    "enterMetrics": "Saisis tes métriques pour obtenir une analyse personnalisée",
-    "analyzeRecommendations": "L'IA analysera tes données et te donnera des recommandations concrètes pour améliorer tes résultats.",
-    "analysisOf": "Analyse de {month}"
+    "analyzing": "Análise em andamento...",
+    "analyzingDesc": "A IA examina seus dados",
+    "aiDiagnosis": "Diagnóstico IA",
+    "enterMetrics": "Insira suas métricas para obter uma análise personalizada",
+    "analyzeRecommendations": "A IA analisa seus dados e te dá recomendações concretas para melhorar seus resultados.",
+    "analysisOf": "Análise de {month}"
   },
   "createClient": {
     "socialMedia": "Réseaux Sociaux",
@@ -2902,34 +2902,34 @@
     "connectSocial": "Connecte un réseau social dans les paramètres pour publier ou programmer directement."
   },
   "linkinbio": {
-    "title": "Page multiliens",
-    "tabLinks": "Liens",
+    "title": "Página multilinks",
+    "tabLinks": "Links",
     "tabDesign": "Design",
-    "profileSection": "Profil",
-    "displayNamePlaceholder": "Ton nom ou celui de ta marque",
-    "bioPlaceholder": "Décris ton activité en quelques mots...",
-    "blocksSection": "Tes blocs",
-    "newLink": "Nouveau lien",
-    "newHeader": "Titre de section",
-    "captureFormTitle": "Inscris-toi",
-    "addLink": "Lien",
-    "addHeader": "Titre",
-    "addSocial": "Réseaux",
-    "addCapture": "Capture",
-    "clicks": "clics",
-    "titlePlaceholder": "Titre du bloc",
-    "platform": "Réseau",
-    "themeLabel": "Thème",
-    "buttonStyleLabel": "Style des boutons",
-    "slugLabel": "URL personnalisée",
-    "seoTitle": "Titre SEO",
-    "seoDescription": "Description SEO",
-    "seoHint": "Un bon titre et une bonne description aident tes visiteurs à te trouver sur Google et rendent tes liens plus cliquables quand tu les partages.",
-    "saved": "Page sauvegardée",
-    "published": "Page publiée !",
-    "unpublished": "Page dépubliée",
-    "publish": "Publier",
-    "unpublish": "Dépublier"
+    "profileSection": "Perfil",
+    "displayNamePlaceholder": "Seu nome ou o da sua marca",
+    "bioPlaceholder": "Descreva sua atividade em poucas palavras...",
+    "blocksSection": "Seus blocos",
+    "newLink": "Novo link",
+    "newHeader": "Título de seção",
+    "captureFormTitle": "Inscreva-se",
+    "addLink": "Link",
+    "addHeader": "Título",
+    "addSocial": "Redes",
+    "addCapture": "Captura",
+    "clicks": "cliques",
+    "titlePlaceholder": "Título do bloco",
+    "platform": "Rede",
+    "themeLabel": "Tema",
+    "buttonStyleLabel": "Estilo dos botões",
+    "slugLabel": "URL personalizada",
+    "seoTitle": "Título SEO",
+    "seoDescription": "Descrição SEO",
+    "seoHint": "Um bom título e uma boa descrição ajudam seus visitantes a te encontrar no Google e tornam seus links mais clicáveis quando você os compartilha.",
+    "saved": "Página salva",
+    "published": "Página publicada!",
+    "unpublished": "Página despublicada",
+    "publish": "Publicar",
+    "unpublish": "Despublicar"
   },
   "pages": {
     "headerTitle": "Mes Pages",
@@ -4418,13 +4418,13 @@
     }
   },
   "small": {
-    "selectMonth": "Sélectionne un mois",
-    "templateNoImport": "Ce template n'a pas encore de lien d'import configuré.",
-    "addTask": "Ajouter une tâche…",
-    "deleteTask": "Supprimer la tâche",
-    "reorder": "Réordonner",
-    "addTaskBtn": "Ajouter une tâche",
-    "addShort": "Ajouter"
+    "selectMonth": "Selecione um mês",
+    "templateNoImport": "Este template ainda não tem link de importação configurado.",
+    "addTask": "Adicionar uma tarefa…",
+    "deleteTask": "Excluir a tarefa",
+    "reorder": "Reordenar",
+    "addTaskBtn": "Adicionar uma tarefa",
+    "addShort": "Adicionar"
   },
   "funnelChat": {
     "request": "Demander une modification du texte ou du visuel…",
@@ -4888,16 +4888,16 @@
   },
   "meta": {
     "rootTitle": "Tipote",
-    "rootDescription": "Tipote – planification stratégique & automatisations business",
-    "supportTitle": "Tipote — Centre d'aide",
-    "supportDescription": "Trouvez des réponses à toutes vos questions sur Tipote"
+    "rootDescription": "Tipote – planejamento estratégico & automações para seu negócio",
+    "supportTitle": "Tipote — Central de ajuda",
+    "supportDescription": "Encontre respostas a todas as suas perguntas sobre o Tipote"
   },
   "supportFooter": {
-    "contact": "Vous ne trouvez pas la réponse ?",
-    "contactCta": "Contactez-nous à hello@tipote.com",
-    "rights": "Tous droits réservés",
-    "terms": "CGU",
-    "privacy": "Confidentialité"
+    "contact": "Não encontra a resposta?",
+    "contactCta": "Entre em contato em hello@tipote.com",
+    "rights": "Todos os direitos reservados",
+    "terms": "Termos",
+    "privacy": "Privacidade"
   },
   "adminUsers": {
     "toast": {
@@ -4970,29 +4970,29 @@
     "valueLabel": "Valeur: {v}"
   },
   "adminTickets": {
-    "statusOpen": "Ouvert",
-    "statusReplied": "Répondu",
-    "statusClosed": "Fermé",
-    "tabOpen": "Ouverts",
-    "tabReplied": "Répondus",
-    "tabClosed": "Fermés",
-    "tabAll": "Tous",
-    "heading": "Tickets de support",
-    "totalTickets": "{n, plural, one {# ticket} other {# tickets}} au total",
-    "pending": "{n} en attente",
-    "noTickets": "Aucun ticket",
-    "noTicketsPending": "en attente",
-    "deleteConfirm": "Supprimer ce ticket ?",
-    "repliedOn": "Répondu le {date}",
-    "replyPh": "Votre réponse au visiteur... (sera envoyée par email)",
-    "replyAndSend": "Répondre & envoyer par email",
-    "close": "Fermer",
-    "reopen": "Rouvrir"
+    "statusOpen": "Aberto",
+    "statusReplied": "Respondido",
+    "statusClosed": "Fechado",
+    "tabOpen": "Abertos",
+    "tabReplied": "Respondidos",
+    "tabClosed": "Fechados",
+    "tabAll": "Todos",
+    "heading": "Tickets de suporte",
+    "totalTickets": "{n, plural, one {# ticket} other {# tickets}} no total",
+    "pending": "{n} pendentes",
+    "noTickets": "Sem tickets",
+    "noTicketsPending": "pendentes",
+    "deleteConfirm": "Excluir este ticket?",
+    "repliedOn": "Respondido em {date}",
+    "replyPh": "Sua resposta ao visitante... (será enviada por email)",
+    "replyAndSend": "Responder & enviar por email",
+    "close": "Fechar",
+    "reopen": "Reabrir"
   },
   "adminSupport": {
-    "seedConfirm": "Ceci va insérer/mettre à jour toutes les catégories et articles. Continuer ?",
-    "seedButton": "Seed / Mettre à jour le contenu",
-    "seeding": "Seeding..."
+    "seedConfirm": "Isto vai inserir/atualizar todas as categorias e artigos. Continuar?",
+    "seedButton": "Seed / Atualizar conteúdo",
+    "seeding": "Fazendo seed..."
   },
   "quizVars": {
     "insertNameTitle": "Inserir o nome do visitante ({name})",
