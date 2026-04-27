@@ -2591,7 +2591,9 @@
     "contentNotFound": "Conteúdo não encontrado",
     "cannotLoadContent": "Não foi possível carregar esse conteúdo para edição.",
     "cannotLoadContentShort": "Não foi possível carregar o conteúdo.",
-    "editPost": "Editar o post"
+    "editPost": "Editar o post",
+    "survey": "Pesquisa",
+    "surveyDesc": "Faça perguntas ao seu público (NPS, satisfação, pesquisa)."
   },
   "leads": {
     "title": "Meus leads",
@@ -5003,5 +5005,45 @@
   "quizVars": {
     "insertNameTitle": "Inserir o nome do visitante ({name})",
     "insertGenderTitle": "Inserir uma variante conforme o gênero — masculino | feminino | não binário (ex.: querido | querida | querid*)"
+  },
+  "survey": {
+    "createTitle": "Nova pesquisa",
+    "tabAi": "Com IA",
+    "tabImport": "Importar",
+    "tabManual": "Manual",
+    "aiTitle": "Gere sua pesquisa com IA",
+    "aiHint": "Escolha uma metodologia, descreva seu público: a IA monta uma pesquisa pronta para compartilhar.",
+    "aiObjectiveLabel": "Objetivo da pesquisa",
+    "aiTargetLabel": "Público da pesquisa",
+    "aiTargetHint": "Para quem é? Quanto mais específico, mais relevante.",
+    "aiTargetPlaceholder": "Ex: clientes que compraram meu curso X nos últimos 6 meses",
+    "aiTargetRequired": "Descreva o público.",
+    "aiIntentionLabel": "Intenção de negócio (opcional)",
+    "aiIntentionHint": "O que você vai fazer com as respostas.",
+    "aiIntentionPlaceholder": "Ex: identificar objeções à minha oferta premium",
+    "aiToneLabel": "Tom",
+    "aiTonePlaceholder": "Ex: profissional, caloroso, direto…",
+    "aiQuestionCountLabel": "Número de perguntas",
+    "aiCtaLabel": "CTA final (opcional)",
+    "aiCtaPlaceholder": "Ex: Agendar uma call",
+    "aiLocaleLabel": "Idioma da pesquisa",
+    "aiLocaleHint": "O idioma em que a IA vai escrever a pesquisa.",
+    "generateButton": "Gerar a pesquisa",
+    "generatingButton": "Gerando…",
+    "aiGenerated": "Pesquisa gerada com sucesso!",
+    "importTitle": "Importar uma pesquisa existente",
+    "importHint": "Cole aqui o conteúdo da sua pesquisa. A IA estrutura automaticamente.",
+    "importPlaceholder": "Cole aqui as perguntas da sua pesquisa…",
+    "importEmpty": "O conteúdo importado está vazio.",
+    "importButton": "Importar e estruturar",
+    "importingButton": "Importando…",
+    "importDone": "Pesquisa importada com sucesso!",
+    "manualDefaultTitle": "Minha pesquisa",
+    "ratingMinDefault": "Nada provável",
+    "ratingMaxDefault": "Extremamente provável",
+    "errCreate": "Não foi possível criar a pesquisa.",
+    "errAi": "Falha na geração por IA. Tente novamente.",
+    "errImport": "Falha ao importar. Tente novamente.",
+    "errFreePlanLimit": "O plano gratuito é limitado a 1 projeto. Faça upgrade para criar mais."
   }
 }

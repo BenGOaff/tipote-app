@@ -2290,7 +2290,9 @@
     "contentNotFound": "Contenu introuvable",
     "cannotLoadContent": "Impossible de charger ce contenu pour l'éditer.",
     "cannotLoadContentShort": "Impossible de charger le contenu.",
-    "editPost": "Modifier le post"
+    "editPost": "Modifier le post",
+    "survey": "Sondage",
+    "surveyDesc": "Pose des questions à ton audience (NPS, satisfaction, étude de marché)."
   },
   "leads": {
     "title": "Mes Leads",
@@ -4702,5 +4704,45 @@
   "quizVars": {
     "insertNameTitle": "Insérer le prénom du visiteur ({name})",
     "insertGenderTitle": "Insérer une variante selon le genre — masculin | féminin | non-binaire (ex : cher | chère | cher·e)"
+  },
+  "survey": {
+    "createTitle": "Nouveau sondage",
+    "tabAi": "Avec l'IA",
+    "tabImport": "Importer",
+    "tabManual": "Manuel",
+    "aiTitle": "Génère ton sondage avec l'IA",
+    "aiHint": "Choisis ta méthodologie, décris ta cible : l'IA construit un sondage prêt à diffuser.",
+    "aiObjectiveLabel": "Objectif du sondage",
+    "aiTargetLabel": "Cible du sondage",
+    "aiTargetHint": "À qui s'adresse-t-il ? Plus c'est précis, plus le sondage est pertinent.",
+    "aiTargetPlaceholder": "Ex : mes clients qui ont acheté la formation X au cours des 6 derniers mois",
+    "aiTargetRequired": "Indique la cible du sondage.",
+    "aiIntentionLabel": "Intention business (optionnel)",
+    "aiIntentionHint": "Ce que tu veux faire avec les réponses (suite à proposer, action…).",
+    "aiIntentionPlaceholder": "Ex : identifier les freins à l'achat de mon offre premium",
+    "aiToneLabel": "Ton",
+    "aiTonePlaceholder": "Ex : professionnel, chaleureux, direct…",
+    "aiQuestionCountLabel": "Nombre de questions",
+    "aiCtaLabel": "CTA final (optionnel)",
+    "aiCtaPlaceholder": "Ex : Réserver un appel découverte",
+    "aiLocaleLabel": "Langue du sondage",
+    "aiLocaleHint": "La langue dans laquelle l'IA va rédiger le sondage.",
+    "generateButton": "Générer le sondage",
+    "generatingButton": "Génération en cours…",
+    "aiGenerated": "Sondage généré avec succès !",
+    "importTitle": "Importer un sondage existant",
+    "importHint": "Colle ici le contenu de ton sondage (questions, options, échelles…). L'IA le structure automatiquement.",
+    "importPlaceholder": "Colle ici tes questions de sondage…",
+    "importEmpty": "Le contenu importé est vide.",
+    "importButton": "Importer et structurer",
+    "importingButton": "Import en cours…",
+    "importDone": "Sondage importé avec succès !",
+    "manualDefaultTitle": "Mon sondage",
+    "ratingMinDefault": "Pas du tout probable",
+    "ratingMaxDefault": "Extrêmement probable",
+    "errCreate": "Impossible de créer le sondage.",
+    "errAi": "Erreur lors de la génération IA. Réessaie.",
+    "errImport": "Erreur lors de l'import. Réessaie.",
+    "errFreePlanLimit": "L'offre gratuite est limitée à 1 projet. Passe à une offre payante pour en créer plus."
   }
 }

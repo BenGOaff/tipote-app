@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 import { useTranslations } from 'next-intl';
-import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList, CalendarDays } from "lucide-react";
+import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList, CalendarDays, MessageCircleQuestion } from "lucide-react";
 
 import { ContentTypeCard } from "@/components/create/ContentTypeCard";
 
@@ -34,6 +34,11 @@ const contentTypes = [
   { id: "offer", labelKey: "offers", descriptionKey: "offersDesc", icon: Package, color: "bg-orange-500" },
   { id: "funnel", labelKey: "funnels", descriptionKey: "funnelsDesc", icon: Route, color: "bg-indigo-500" },
   { id: "quiz", labelKey: "quizLeadMagnet", descriptionKey: "quizLeadMagnetDesc", icon: ClipboardList, color: "bg-teal-500" },
+  // Surveys reuse the same engine as quizzes (table `quizzes`, mode='survey'),
+  // but the user-facing creation flow is different — survey-specific AI
+  // prompt (NPS, CSAT, audience research…), question-type picker, no result
+  // profiles. Routes straight to /survey/new like quizzes route to /quiz/new.
+  { id: "survey", labelKey: "survey", descriptionKey: "surveyDesc", icon: MessageCircleQuestion, color: "bg-purple-500" },
   { id: "strategy", labelKey: "contentStrategy", descriptionKey: "contentStrategyDesc", icon: CalendarDays, color: "bg-amber-500" },
 ] as const;
 
@@ -721,6 +726,11 @@ export default function CreateLovableClient() {
                           // straight into the visual WYSIWYG editor with a blank
                           // starter quiz (handled server-side by /quiz/new).
                           router.push("/quiz/new");
+                        } else if (type.id === "survey") {
+                          // Surveys have a different creation flow — go to
+                          // /survey/new (AI / Import / Manual tabs) instead
+                          // of the inline content form.
+                          router.push("/survey/new");
                         } else {
                           setSelectedType(type.id);
                         }

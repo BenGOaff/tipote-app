@@ -2290,7 +2290,9 @@
     "contentNotFound": "Content not found",
     "cannotLoadContent": "Could not load this content for editing.",
     "cannotLoadContentShort": "Could not load the content.",
-    "editPost": "Edit post"
+    "editPost": "Edit post",
+    "survey": "Survey",
+    "surveyDesc": "Ask your audience questions (NPS, satisfaction, audience research)."
   },
   "leads": {
     "title": "My Leads",
@@ -4702,5 +4704,45 @@
   "quizVars": {
     "insertNameTitle": "Insert visitor's first name ({name})",
     "insertGenderTitle": "Insert a gender-aware variant — masculine | feminine | non-binary (e.g. dear | dear | dear)"
+  },
+  "survey": {
+    "createTitle": "New survey",
+    "tabAi": "With AI",
+    "tabImport": "Import",
+    "tabManual": "Manual",
+    "aiTitle": "Generate your survey with AI",
+    "aiHint": "Pick a methodology, describe your audience: AI builds a ready-to-share survey.",
+    "aiObjectiveLabel": "Survey objective",
+    "aiTargetLabel": "Survey audience",
+    "aiTargetHint": "Who is it for? The more specific, the more relevant the survey.",
+    "aiTargetPlaceholder": "e.g. customers who bought my X course in the last 6 months",
+    "aiTargetRequired": "Please describe your audience.",
+    "aiIntentionLabel": "Business intent (optional)",
+    "aiIntentionHint": "What you'll do with the answers (next step, action…).",
+    "aiIntentionPlaceholder": "e.g. identify objections to my premium offer",
+    "aiToneLabel": "Tone",
+    "aiTonePlaceholder": "e.g. professional, warm, direct…",
+    "aiQuestionCountLabel": "Number of questions",
+    "aiCtaLabel": "Final CTA (optional)",
+    "aiCtaPlaceholder": "e.g. Book a discovery call",
+    "aiLocaleLabel": "Survey language",
+    "aiLocaleHint": "The language AI will write the survey in.",
+    "generateButton": "Generate the survey",
+    "generatingButton": "Generating…",
+    "aiGenerated": "Survey generated successfully!",
+    "importTitle": "Import an existing survey",
+    "importHint": "Paste your survey content (questions, options, scales…). AI will structure it automatically.",
+    "importPlaceholder": "Paste your survey questions here…",
+    "importEmpty": "The imported content is empty.",
+    "importButton": "Import and structure",
+    "importingButton": "Importing…",
+    "importDone": "Survey imported successfully!",
+    "manualDefaultTitle": "My survey",
+    "ratingMinDefault": "Not at all likely",
+    "ratingMaxDefault": "Extremely likely",
+    "errCreate": "Couldn't create the survey.",
+    "errAi": "AI generation failed. Please retry.",
+    "errImport": "Import failed. Please retry.",
+    "errFreePlanLimit": "The free plan is limited to 1 project. Upgrade to create more."
   }
 }

@@ -6,7 +6,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
-import { buildQuizGenerationPrompt, buildQuizImportPrompt } from "@/lib/prompts/quiz/system";
+import {
+  buildQuizGenerationPrompt,
+  buildQuizImportPrompt,
+  buildSurveyGenerationPrompt,
+  buildSurveyImportPrompt,
+} from "@/lib/prompts/quiz/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const runtime = "nodejs";
@@ -71,6 +76,12 @@ export async function POST(req: NextRequest) {
 
     const mode = String(body.mode ?? "generate").trim();
     const isImport = mode === "import";
+    // `kind` toggles between the quiz schema (with results / profiles) and
+    // the survey schema (with question_type per question, no results).
+    // Default stays "quiz" so existing /quiz/new callers see byte-for-byte
+    // unchanged behaviour.
+    const kind = body.kind === "survey" ? "survey" : "quiz";
+    const isSurvey = kind === "survey";
 
     // Check credits (same cost for both modes)
     await ensureUserCredits(userId);
@@ -115,11 +126,39 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
-      const prompts = buildQuizImportPrompt({
-        content,
+      const prompts = isSurvey
+        ? buildSurveyImportPrompt({
+            content,
+            locale: String(body.locale ?? "fr"),
+            addressForm: resolvedAddressForm,
+            tone,
+          })
+        : buildQuizImportPrompt({
+            content,
+            locale: String(body.locale ?? "fr"),
+            addressForm: resolvedAddressForm,
+            tone,
+          });
+      system = prompts.system;
+      userPrompt = prompts.user;
+    } else if (isSurvey) {
+      const objective = String(body.objective ?? "").trim();
+      const target = String(body.target ?? "").trim();
+      if (!objective || !target) {
+        return NextResponse.json(
+          { ok: false, error: "objective and target are required" },
+          { status: 400 },
+        );
+      }
+      const prompts = buildSurveyGenerationPrompt({
+        objective,
+        target,
+        tone,
+        cta: String(body.cta ?? ""),
+        intention: String(body.intention ?? ""),
+        questionCount: Math.min(12, Math.max(3, Number(body.questionCount) || 6)),
         locale: String(body.locale ?? "fr"),
         addressForm: resolvedAddressForm,
-        tone,
       });
       system = prompts.system;
       userPrompt = prompts.user;

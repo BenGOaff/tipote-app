@@ -2290,7 +2290,9 @@
     "contentNotFound": "المحتوى غير موجود",
     "cannotLoadContent": "تعذر تحميل هذا المحتوى للتحرير.",
     "cannotLoadContentShort": "تعذر تحميل المحتوى.",
-    "editPost": "تعديل المنشور"
+    "editPost": "تعديل المنشور",
+    "survey": "استطلاع",
+    "surveyDesc": "اطرح أسئلة على جمهورك (NPS، رضا، بحث)."
   },
   "leads": {
     "title": "العملاء المحتملون",
@@ -4702,5 +4704,45 @@
   "quizVars": {
     "insertNameTitle": "إدراج اسم الزائر ({name})",
     "insertGenderTitle": "إدراج صياغة تتغيّر حسب الجنس — مذكر | مؤنث | محايد"
+  },
+  "survey": {
+    "createTitle": "استطلاع جديد",
+    "tabAi": "بالذكاء الاصطناعي",
+    "tabImport": "استيراد",
+    "tabManual": "يدوي",
+    "aiTitle": "أنشئ استطلاعك بالذكاء الاصطناعي",
+    "aiHint": "اختر منهجية، صف جمهورك: يبني الذكاء الاصطناعي استطلاعاً جاهزاً للنشر.",
+    "aiObjectiveLabel": "هدف الاستطلاع",
+    "aiTargetLabel": "جمهور الاستطلاع",
+    "aiTargetHint": "لمن هو موجّه؟ كلما كان دقيقاً، كان أكثر صلة.",
+    "aiTargetPlaceholder": "مثلاً: العملاء الذين اشتروا دورة X في آخر 6 أشهر",
+    "aiTargetRequired": "حدد جمهور الاستطلاع.",
+    "aiIntentionLabel": "النية التجارية (اختياري)",
+    "aiIntentionHint": "ما الذي ستفعله بالإجابات.",
+    "aiIntentionPlaceholder": "مثلاً: تحديد العوائق أمام شراء عرضي المميز",
+    "aiToneLabel": "النبرة",
+    "aiTonePlaceholder": "مثلاً: احترافية، ودودة، مباشرة…",
+    "aiQuestionCountLabel": "عدد الأسئلة",
+    "aiCtaLabel": "زر الإجراء النهائي (اختياري)",
+    "aiCtaPlaceholder": "مثلاً: حجز مكالمة استكشافية",
+    "aiLocaleLabel": "لغة الاستطلاع",
+    "aiLocaleHint": "اللغة التي سيكتب بها الذكاء الاصطناعي الاستطلاع.",
+    "generateButton": "إنشاء الاستطلاع",
+    "generatingButton": "جارٍ الإنشاء…",
+    "aiGenerated": "تم إنشاء الاستطلاع بنجاح!",
+    "importTitle": "استيراد استطلاع موجود",
+    "importHint": "ألصق محتوى استطلاعك هنا. يقوم الذكاء الاصطناعي بهيكلته تلقائياً.",
+    "importPlaceholder": "ألصق أسئلة الاستطلاع هنا…",
+    "importEmpty": "المحتوى المستورد فارغ.",
+    "importButton": "استيراد وهيكلة",
+    "importingButton": "جارٍ الاستيراد…",
+    "importDone": "تم استيراد الاستطلاع بنجاح!",
+    "manualDefaultTitle": "استطلاعي",
+    "ratingMinDefault": "غير محتمل إطلاقاً",
+    "ratingMaxDefault": "محتمل تماماً",
+    "errCreate": "تعذر إنشاء الاستطلاع.",
+    "errAi": "فشل الإنشاء بالذكاء الاصطناعي. حاول مرة أخرى.",
+    "errImport": "فشل الاستيراد. حاول مرة أخرى.",
+    "errFreePlanLimit": "الخطة المجانية محدودة بمشروع واحد. ارقِ خطتك لإنشاء المزيد."
   }
 }

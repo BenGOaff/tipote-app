@@ -2290,7 +2290,9 @@
     "contentNotFound": "Contenido no encontrado",
     "cannotLoadContent": "No se pudo cargar este contenido para editarlo.",
     "cannotLoadContentShort": "No se pudo cargar el contenido.",
-    "editPost": "Editar publicación"
+    "editPost": "Editar publicación",
+    "survey": "Encuesta",
+    "surveyDesc": "Pregunta a tu audiencia (NPS, satisfacción, investigación)."
   },
   "leads": {
     "title": "Mis Leads",
@@ -4702,5 +4704,45 @@
   "quizVars": {
     "insertNameTitle": "Insertar el nombre del visitante ({name})",
     "insertGenderTitle": "Insertar una variante según el género — masculino | femenino | no binario (ej.: querido | querida | queride)"
+  },
+  "survey": {
+    "createTitle": "Nueva encuesta",
+    "tabAi": "Con IA",
+    "tabImport": "Importar",
+    "tabManual": "Manual",
+    "aiTitle": "Genera tu encuesta con IA",
+    "aiHint": "Elige una metodología, describe tu público: la IA crea una encuesta lista para compartir.",
+    "aiObjectiveLabel": "Objetivo de la encuesta",
+    "aiTargetLabel": "Público de la encuesta",
+    "aiTargetHint": "¿A quién va dirigida? Cuanto más específico, más relevante.",
+    "aiTargetPlaceholder": "Ej: clientes que compraron mi curso X en los últimos 6 meses",
+    "aiTargetRequired": "Describe tu público.",
+    "aiIntentionLabel": "Intención de negocio (opcional)",
+    "aiIntentionHint": "Qué harás con las respuestas (siguiente paso, acción…).",
+    "aiIntentionPlaceholder": "Ej: identificar objeciones a mi oferta premium",
+    "aiToneLabel": "Tono",
+    "aiTonePlaceholder": "Ej: profesional, cálido, directo…",
+    "aiQuestionCountLabel": "Número de preguntas",
+    "aiCtaLabel": "CTA final (opcional)",
+    "aiCtaPlaceholder": "Ej: Reservar una llamada",
+    "aiLocaleLabel": "Idioma de la encuesta",
+    "aiLocaleHint": "El idioma en el que la IA redactará la encuesta.",
+    "generateButton": "Generar la encuesta",
+    "generatingButton": "Generando…",
+    "aiGenerated": "¡Encuesta generada con éxito!",
+    "importTitle": "Importar una encuesta existente",
+    "importHint": "Pega aquí el contenido de tu encuesta (preguntas, opciones, escalas…). La IA la estructura automáticamente.",
+    "importPlaceholder": "Pega aquí las preguntas de tu encuesta…",
+    "importEmpty": "El contenido importado está vacío.",
+    "importButton": "Importar y estructurar",
+    "importingButton": "Importando…",
+    "importDone": "¡Encuesta importada con éxito!",
+    "manualDefaultTitle": "Mi encuesta",
+    "ratingMinDefault": "Nada probable",
+    "ratingMaxDefault": "Muy probable",
+    "errCreate": "No se pudo crear la encuesta.",
+    "errAi": "Falló la generación con IA. Inténtalo de nuevo.",
+    "errImport": "Falló la importación. Inténtalo de nuevo.",
+    "errFreePlanLimit": "El plan gratuito está limitado a 1 proyecto. Mejora tu plan para crear más."
   }
 }
