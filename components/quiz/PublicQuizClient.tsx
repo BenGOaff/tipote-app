@@ -28,13 +28,32 @@ const isHtml = (s: string | null | undefined) => !!s && HTML_TAG_RE.test(s);
 
 
 
-type QuizOption = { text: string; result_index: number };
+type QuizOption = { text: string; result_index: number; image_url?: string | null };
+type QuestionType =
+  | "multiple_choice"
+  | "rating_scale"
+  | "star_rating"
+  | "free_text"
+  | "image_choice"
+  | "yes_no";
 type QuizQuestion = {
   id: string;
   question_text: string;
   options: QuizOption[];
   sort_order: number;
+  question_type?: QuestionType;
+  config?: Record<string, unknown> | null;
 };
+
+// Survey answers carry a discriminated union so each question type stores
+// its native value. Legacy multiple_choice quizzes always end up in the
+// "option" branch, so computeResult / SIO sync logic keeps working
+// unchanged for them.
+type SurveyAnswer =
+  | { kind: "option"; optionIndex: number }
+  | { kind: "rating"; value: number }
+  | { kind: "star"; value: number }
+  | { kind: "text"; value: string };
 type QuizResult = {
   id: string;
   title: string;
@@ -49,6 +68,11 @@ type QuizResult = {
 type PublicQuizData = {
   id: string;
   title: string;
+  // mode === "survey" disables result-profile computation, the bonus-on-share
+  // step, and the typical "your profile" reveal — surveys end on a thank-you
+  // step instead. Falls back to "quiz" for any quiz row created before the
+  // survey-mode migration.
+  mode?: "quiz" | "survey" | null;
   introduction: string | null;
   cta_text: string | null;
   cta_url: string | null;
@@ -149,6 +173,18 @@ type QuizTranslations = {
   personalizeGender: string;
   personalizeContinue: string;
   resultCtaDefault: string;
+  // Survey-specific copy — optional on the type so existing locale blocks
+  // don't need a per-locale entry. The rendering code provides safe English
+  // fallbacks for any missing key, which keeps the survey rollout small.
+  surveyThanksHeading?: string;
+  surveyThanksBody?: string;
+  surveyShareCta?: string;
+  freeTextPlaceholder?: string;
+  nextQuestion?: string;
+  yesLabel?: string;
+  noLabel?: string;
+  ratingScaleMinLabel?: string;
+  ratingScaleMaxLabel?: string;
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -199,6 +235,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Comment préfères-tu être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
     resultCtaDefault: "Découvrir",
+    surveyThanksHeading: "Merci pour ta participation !",
+    surveyThanksBody: "Tes réponses ont bien été enregistrées. Tu peux fermer cette page ou continuer ci-dessous.",
+    surveyShareCta: "Partager ce sondage",
+    freeTextPlaceholder: "Ta réponse…",
+    nextQuestion: "Suivant",
+    yesLabel: "Oui",
+    noLabel: "Non",
+    ratingScaleMinLabel: "Pas du tout",
+    ratingScaleMaxLabel: "Tout à fait",
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -563,7 +608,12 @@ export default function PublicQuizClient({
 
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<number[]>([]);
+  // One slot per question. Undefined = not yet answered (used to gate the
+  // "next" button on free_text questions, where there's no auto-advance).
+  const [answers, setAnswers] = useState<(SurveyAnswer | undefined)[]>([]);
+  // Mirror state for the free_text textarea so it stays controlled while the
+  // visitor types — only commits to `answers` when they tap "Next".
+  const [freeTextDraft, setFreeTextDraft] = useState<string>("");
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -727,10 +777,11 @@ export default function PublicQuizClient({
       const profile = saved.resultProfileId
         ? quiz.results.find((r) => r.id === saved.resultProfileId) ?? null
         : null;
-      // If the saved result profile no longer exists (creator deleted/
-      // restructured the quiz since), abandon the resume cleanly rather
-      // than showing an empty result screen.
-      if (!profile) {
+      // Surveys never persist a result profile — they go straight to the
+      // thank-you screen, which doesn't need one. For quizzes, if the saved
+      // profile id no longer matches any result (creator deleted/
+      // restructured), bail out so we don't render an empty result screen.
+      if (quiz.mode !== "survey" && !profile) {
         sessionStorage.removeItem(sessionKey);
         return;
       }
@@ -768,11 +819,15 @@ export default function PublicQuizClient({
 
   const computeResult = useCallback((): QuizResult | null => {
     if (!quiz) return null;
+    // Surveys never compute a result profile — short-circuit here so the
+    // engine only routes option-based answers from quizzes.
+    if (quiz.mode === "survey") return null;
     const scores: number[] = new Array(quiz.results.length).fill(0);
-    answers.forEach((chosenIdx, qIdx) => {
+    answers.forEach((ans, qIdx) => {
+      if (!ans || ans.kind !== "option") return;
       const q = quiz.questions[qIdx];
       if (!q) return;
-      const opt = q.options[chosenIdx];
+      const opt = q.options[ans.optionIndex];
       if (!opt) return;
       const ri = opt.result_index;
       if (ri >= 0 && ri < scores.length) scores[ri]++;
@@ -788,10 +843,17 @@ export default function PublicQuizClient({
     return quiz.results[maxIdx] ?? null;
   }, [quiz, answers]);
 
-  const handleAnswer = (optionIdx: number) => {
+  // Single answer-commit pathway for every question type. Auto-advances to
+  // the next question (or to email capture on the last one) so the existing
+  // multiple_choice UX stays untouched and rating/star/yes_no/image inherit
+  // the same one-tap flow. Free-text uses commitAnswer with explicit value
+  // wired to the "Next" button — auto-advance-on-keystroke would feel
+  // hostile while typing.
+  const commitAnswer = (ans: SurveyAnswer) => {
     const newAnswers = [...answers];
-    newAnswers[currentQ] = optionIdx;
+    newAnswers[currentQ] = ans;
     setAnswers(newAnswers);
+    setFreeTextDraft("");
 
     if (quiz && currentQ < quiz.questions.length - 1) {
       setCurrentQ(currentQ + 1);
@@ -811,11 +873,16 @@ export default function PublicQuizClient({
 
       // In preview mode, skip the actual lead submission
       if (!previewData) {
-        // Build per-question answers for analytics / export
-        const answersPayload = answers.map((optionIdx: number, qIdx: number) => ({
-          question_index: qIdx,
-          option_index: optionIdx,
-        }));
+        // Build per-question answers for analytics / export. Each shape is
+        // small but distinct so Tendances (survey) and lead-export (quiz)
+        // can render the right widget without re-deriving the type.
+        const answersPayload = answers.map((ans, qIdx) => {
+          if (!ans) return { question_index: qIdx };
+          if (ans.kind === "option") return { question_index: qIdx, option_index: ans.optionIndex };
+          if (ans.kind === "rating") return { question_index: qIdx, rating: ans.value };
+          if (ans.kind === "star") return { question_index: qIdx, stars: ans.value };
+          return { question_index: qIdx, text: ans.value };
+        });
 
         const res = await fetch(`/api/quiz/${quizId}/public`, {
           method: "POST",
@@ -1144,6 +1211,182 @@ export default function PublicQuizClient({
     if (!q) return null;
     const progress = ((currentQ + 1) / totalQ) * 100;
     const hasMultipleOptions = q.options.length >= 3;
+    const qType: QuestionType = (q.question_type as QuestionType) ?? "multiple_choice";
+    const currentAnswer = answers[currentQ];
+
+    let answerBlock: React.ReactNode;
+
+    if (qType === "rating_scale") {
+      const cfg = (q.config ?? {}) as Record<string, unknown>;
+      const min = typeof cfg.min === "number" ? cfg.min : 0;
+      const max = typeof cfg.max === "number" ? cfg.max : 10;
+      const minLabel = (cfg.minLabel as string) || (t.ratingScaleMinLabel ?? "Not at all");
+      const maxLabel = (cfg.maxLabel as string) || (t.ratingScaleMaxLabel ?? "Absolutely");
+      const values: number[] = [];
+      for (let v = min; v <= max; v++) values.push(v);
+      const selected = currentAnswer?.kind === "rating" ? currentAnswer.value : null;
+      answerBlock = (
+        <div className="space-y-3">
+          <div className="grid grid-cols-6 sm:grid-cols-11 gap-2">
+            {values.map((v) => {
+              const isSel = selected === v;
+              return (
+                <button
+                  key={v}
+                  onClick={() => commitAnswer({ kind: "rating", value: v })}
+                  className={`h-12 rounded-lg border-2 font-semibold transition-all ${
+                    isSel
+                      ? "border-primary bg-primary text-primary-foreground shadow-md scale-105"
+                      : "border-border hover:border-primary/40 hover:bg-muted/30"
+                  }`}
+                  aria-label={String(v)}
+                >
+                  {v}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground px-1">
+            <span>{minLabel}</span>
+            <span>{maxLabel}</span>
+          </div>
+        </div>
+      );
+    } else if (qType === "star_rating") {
+      const cfg = (q.config ?? {}) as Record<string, unknown>;
+      const max = typeof cfg.max === "number" ? cfg.max : 5;
+      const stars: number[] = [];
+      for (let v = 1; v <= max; v++) stars.push(v);
+      const selected = currentAnswer?.kind === "star" ? currentAnswer.value : 0;
+      answerBlock = (
+        <div className="flex justify-center gap-2 sm:gap-3">
+          {stars.map((v) => {
+            const filled = v <= selected;
+            return (
+              <button
+                key={v}
+                onClick={() => commitAnswer({ kind: "star", value: v })}
+                className="text-5xl sm:text-6xl leading-none transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                aria-label={`${v}/${max}`}
+                style={{ color: filled ? "var(--primary)" : "rgba(0,0,0,0.15)" }}
+              >
+                ★
+              </button>
+            );
+          })}
+        </div>
+      );
+    } else if (qType === "yes_no") {
+      const selectedYes = currentAnswer?.kind === "option" && currentAnswer.optionIndex === 0;
+      const selectedNo = currentAnswer?.kind === "option" && currentAnswer.optionIndex === 1;
+      answerBlock = (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <button
+            onClick={() => commitAnswer({ kind: "option", optionIndex: 0 })}
+            className={`h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+              selectedYes
+                ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                : "border-border hover:border-primary/40 hover:bg-muted/30"
+            }`}
+          >
+            {t.yesLabel ?? "Yes"}
+          </button>
+          <button
+            onClick={() => commitAnswer({ kind: "option", optionIndex: 1 })}
+            className={`h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+              selectedNo
+                ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                : "border-border hover:border-primary/40 hover:bg-muted/30"
+            }`}
+          >
+            {t.noLabel ?? "No"}
+          </button>
+        </div>
+      );
+    } else if (qType === "free_text") {
+      const cfg = (q.config ?? {}) as Record<string, unknown>;
+      const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 1000;
+      const draft = freeTextDraft || (currentAnswer?.kind === "text" ? currentAnswer.value : "");
+      const trimmed = draft.trim();
+      answerBlock = (
+        <div className="space-y-3">
+          <textarea
+            value={draft}
+            onChange={(e) => setFreeTextDraft(e.target.value.slice(0, maxLength))}
+            placeholder={t.freeTextPlaceholder ?? "Your answer…"}
+            rows={5}
+            className="w-full rounded-xl border-2 border-border focus:border-primary focus:ring-0 px-4 py-3 text-base resize-none outline-none transition-colors"
+          />
+          <div className="flex justify-end text-xs text-muted-foreground">
+            {draft.length}/{maxLength}
+          </div>
+          <Button
+            size="lg"
+            className="w-full h-12 rounded-full"
+            disabled={trimmed.length === 0}
+            onClick={() => commitAnswer({ kind: "text", value: trimmed })}
+          >
+            {t.nextQuestion ?? "Next"}
+          </Button>
+        </div>
+      );
+    } else if (qType === "image_choice") {
+      answerBlock = (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {q.options.map((opt, oi) => {
+            const isSelected =
+              currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+            return (
+              <button
+                key={oi}
+                onClick={() => commitAnswer({ kind: "option", optionIndex: oi })}
+                className={`group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
+                  isSelected
+                    ? "border-primary shadow-md scale-[1.02]"
+                    : "border-border hover:border-primary/40 hover:shadow-sm"
+                }`}
+              >
+                {opt.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={opt.image_url}
+                    alt={opt.text}
+                    className="w-full aspect-video object-cover"
+                  />
+                ) : (
+                  <div className="w-full aspect-video bg-muted/40" aria-hidden />
+                )}
+                <span className="text-base font-medium text-left p-4">{interp(opt.text)}</span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    } else {
+      // multiple_choice (default): existing UI preserved verbatim so legacy
+      // quizzes look identical to before the refactor.
+      answerBlock = (
+        <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+          {q.options.map((opt, oi) => {
+            const isSelected =
+              currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+            return (
+              <button
+                key={oi}
+                onClick={() => commitAnswer({ kind: "option", optionIndex: oi })}
+                className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
+                  isSelected
+                    ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                    : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
+                }`}
+              >
+                <span className="text-base font-medium">{interp(opt.text)}</span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen flex flex-col" style={rootStyle}>
@@ -1162,28 +1405,18 @@ export default function PublicQuizClient({
 
               <h2 className="text-2xl sm:text-4xl font-bold leading-tight">{interp(q.question_text)}</h2>
 
-              <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-                {q.options.map((opt, oi) => {
-                  const isSelected = answers[currentQ] === oi;
-                  return (
-                    <button
-                      key={oi}
-                      onClick={() => handleAnswer(oi)}
-                      className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
-                        isSelected
-                          ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
-                          : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
-                      }`}
-                    >
-                      <span className="text-base font-medium">{interp(opt.text)}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {answerBlock}
 
               <div className="flex items-center justify-between pt-4">
                 {currentQ > 0 ? (
-                  <Button variant="ghost" size="sm" onClick={() => setCurrentQ(currentQ - 1)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFreeTextDraft("");
+                      setCurrentQ(currentQ - 1);
+                    }}
+                  >
                     <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
                   </Button>
                 ) : <div />}
@@ -1554,6 +1787,66 @@ export default function PublicQuizClient({
   }
 
   // STEP: Result
+  // STEP: Result — survey branch first, since survey leads land here too
+  // (no resultProfile, no bonus flow, no profile reveal).
+  if (step === "result" && quiz.mode === "survey") {
+    const ctaUrl = quiz.cta_url || "";
+    const ctaText = interp(quiz.cta_text || "") || t.resultCtaDefault;
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        style={rootStyle}
+      >
+        {toastOverlay}
+        {shareOverlay}
+        <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
+            {t.surveyThanksHeading ?? "Thanks for your responses!"}
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            {t.surveyThanksBody ?? "Your answers have been recorded. You can close this page or continue below."}
+          </p>
+
+          {ctaUrl && (
+            <Button
+              size="lg"
+              className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
+              asChild
+            >
+              <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
+                {ctaText}
+              </a>
+            </Button>
+          )}
+
+          {/* Surveys still get a share button — just no gating, no bonus.
+              Honours "no viral but share at end" from the user spec. */}
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full rounded-full"
+            onClick={async () => {
+              const { shareText, shareUrl } = getShareData();
+              try {
+                if (typeof navigator !== "undefined" && navigator.share) {
+                  await navigator.share({ title: quiz.title, text: shareText, url: shareUrl });
+                } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+                  await navigator.clipboard.writeText(shareUrl);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                }
+              } catch {
+                /* user cancelled native share — no-op */
+              }
+            }}
+          >
+            {linkCopied ? (t.copied ?? "Copied!") : (t.surveyShareCta ?? "Share this survey")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (step === "result") {
     return (
       <div

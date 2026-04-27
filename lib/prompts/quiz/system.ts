@@ -275,3 +275,204 @@ CONSIGNES :
 
   return { system, user };
 }
+// ── Survey AI generation ──────────────────────────────────────────────
+// Surveys differ from quizzes in two structural ways:
+//   1) Each question carries a question_type (rating_scale / star_rating /
+//      yes_no / free_text / image_choice / multiple_choice) instead of
+//      always being a 4-option lead-magnet question.
+//   2) There are no result profiles — surveys end on a thank-you screen, not
+//      a personality reveal. So the JSON schema we ask for has no `results`
+//      array and `options` only matters for the option-based types.
+// The AI is briefed on a small library of survey templates (NPS, CSAT,
+// audience research) so it can produce questions that actually map to a
+// real research methodology rather than improvising.
+
+// 8 strategic survey objectives — rooted in real research methodologies so
+// the AI doesn't drift into "personality test" land.
+export const SURVEY_OBJECTIVES = [
+  { value: "nps", labelFr: "Net Promoter Score (NPS)", labelEn: "Net Promoter Score (NPS)", desc: "Mesurer la recommandation client (0-10) + raison qualitative" },
+  { value: "csat", labelFr: "Satisfaction (CSAT)", labelEn: "Customer satisfaction (CSAT)", desc: "Évaluer la satisfaction sur un service / produit / livrable" },
+  { value: "audience-research", labelFr: "Étude d'audience", labelEn: "Audience research", desc: "Comprendre les besoins, freins, attentes d'une cible" },
+  { value: "feedback", labelFr: "Recueil de feedback", labelEn: "Collect feedback", desc: "Inviter les clients à donner leurs retours libres" },
+  { value: "ces", labelFr: "Customer Effort Score (CES)", labelEn: "Customer Effort Score (CES)", desc: "Mesurer l'effort perçu pour atteindre un objectif" },
+  { value: "post-event", labelFr: "Bilan d'événement / formation", labelEn: "Post-event / course feedback", desc: "Évaluer la qualité d'une formation, masterclass, webinaire" },
+  { value: "discovery", labelFr: "Validation d'idée", labelEn: "Idea validation", desc: "Valider l'appétence pour une nouvelle offre / format" },
+  { value: "lead-qualification", labelFr: "Qualification de prospect", labelEn: "Lead qualification", desc: "Qualifier un prospect avant un appel commercial" },
+] as const;
+
+type SurveyPromptParams = {
+  objective: string;
+  target: string;
+  tone?: string;
+  cta?: string;
+  intention?: string;
+  questionCount?: number;
+  locale?: string;
+  addressForm?: "tu" | "vous";
+};
+
+export function buildSurveyGenerationPrompt(params: SurveyPromptParams): {
+  system: string;
+  user: string;
+} {
+  const {
+    objective,
+    target,
+    tone = "professionnel",
+    cta = "",
+    intention = "",
+    questionCount = 6,
+    locale = "fr",
+    addressForm = "tu",
+  } = params;
+
+  const formality = addressForm === "vous" ? "vous" : "tu";
+  const langLabel = buildLanguageDirective(locale);
+
+  const objectiveEntry = SURVEY_OBJECTIVES.find((o) => o.value === objective);
+  const objectiveLabel = objectiveEntry
+    ? `${objectiveEntry.labelFr} — ${objectiveEntry.desc}`
+    : objective;
+
+  const system = `Tu es un expert en recherche utilisateur, en feedback client et en méthodologie de sondage. Tu sais traduire un objectif business en un sondage court, exploitable et qui maximise le taux de réponse.
+
+RÔLE : Tu crées un sondage (différent d'un quiz : pas de résultat / profil / scoring) qui collecte des données qualitatives et quantitatives auprès de l'audience du créateur. Le sondage se termine par un écran de remerciement et un CTA optionnel — pas par un profil révélé.
+
+CONTEXTE PRODUIT : Ce sondage est créé sur Tiquiz. Le moteur de rendu sait afficher 6 types de questions :
+  • multiple_choice (4 options classiques)
+  • rating_scale (échelle 0-10, idéale pour NPS)
+  • star_rating (1 à 5 étoiles, idéale pour CSAT)
+  • yes_no (oui/non binaire)
+  • free_text (réponse libre, courte ou paragraphe)
+  • image_choice (sélection avec visuel — ne l'utilise QUE si la valeur visuelle est évidente)
+
+LANGUE : Tout le contenu DOIT être rédigé en ${langLabel}.
+
+OBJECTIF DU SONDAGE : ${objectiveLabel}
+${intention ? `\nINTENTION BUSINESS : ${intention}\nLe CTA final doit servir cette intention.\n` : ""}
+
+MÉTHODOLOGIE PAR OBJECTIF :
+- NPS → 1ʳᵉ question rating_scale 0-10 ("Quelle est la probabilité que ${formality === "vous" ? "vous" : "tu"} recommandiez/recommandes…?"), suivie d'une free_text qui demande la raison de la note. Optionnellement : 1-2 questions de segmentation (multiple_choice).
+- CSAT → 1 ou 2 star_rating (1-5) sur les axes clés, 1 free_text d'amélioration. Court (3-4 questions max).
+- audience-research → mix multiple_choice (besoins, freins) + free_text (priorité actuelle). Pas de scale.
+- CES → 1 rating_scale 1-7 sur l'effort perçu + 1 free_text "qu'est-ce qui aurait été plus simple ?".
+- post-event → mix star_rating (qualité globale, pertinence) + multiple_choice (format préféré) + free_text (suggestion).
+- discovery → multiple_choice (intérêt, prix perçu, format préféré) + free_text (pourquoi ?).
+- lead-qualification → multiple_choice (budget, urgence, taille équipe…) + free_text (priorité business actuelle).
+- feedback → free_text dominantes + 1 star_rating global.
+
+PRINCIPES :
+- BREF : un bon sondage tient en ${questionCount} questions. Refuse l'inflation — chaque question doit avoir un usage analytique clair.
+- NEUTRE : pas de questions orientées (biais de formulation), pas de CTA déguisé, pas de jugement.
+- RYTHMÉ : alterner les types pour éviter la monotonie. Ne pas enchaîner 5 free_text d'affilée.
+- CONCRET : chaque question doit produire de la donnée actionnable, pas du remplissage.
+- TONALITÉ : ${tone}. ${formality === "vous" ? "Vouvoyer." : "Tutoyer."}
+
+CONFIG PAR TYPE — Quand tu utilises un type non-classique, fournis une "config" minimale :
+  • rating_scale : { "min": 0, "max": 10, "minLabel": "Pas du tout probable", "maxLabel": "Extrêmement probable" }
+  • star_rating  : { "max": 5 }
+  • free_text    : { "maxLength": 500 }
+  • multiple_choice / yes_no / image_choice : pas besoin de config (laisse {} ou omets-la).
+
+OPTIONS — RÈGLES :
+  • Pour multiple_choice / image_choice : 3 à 5 options pertinentes. Couvrir l'éventail réaliste (sans "Autre" sauf si pertinent).
+  • Pour yes_no : NE PAS fournir d'options, le moteur les génère automatiquement.
+  • Pour rating_scale / star_rating / free_text : laisser "options": [].
+  • result_index n'a aucun sens dans un sondage — laisser à 0 systématiquement (le moteur l'ignore en mode survey).
+
+FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires.
+{
+  "title": "Titre court et clair du sondage",
+  "introduction": "1-2 phrases qui expliquent pourquoi participer et combien de temps ça prend",
+  "questions": [
+    {
+      "question_text": "La question",
+      "question_type": "rating_scale",
+      "config": { "min": 0, "max": 10, "minLabel": "...", "maxLabel": "..." },
+      "options": []
+    },
+    {
+      "question_text": "Question multiple_choice",
+      "question_type": "multiple_choice",
+      "options": [
+        { "text": "Option A", "result_index": 0 },
+        { "text": "Option B", "result_index": 0 }
+      ]
+    }
+  ],
+  "cta_text": "Texte du CTA final (optionnel)"
+}`;
+
+  const userParts: string[] = [
+    `OBJECTIF DU SONDAGE : ${objectiveLabel}`,
+    `CIBLE : ${target}`,
+    `TON : ${tone}`,
+    `NOMBRE DE QUESTIONS VISÉ : ${questionCount}`,
+    `LANGUE : ${langLabel}`,
+    `FORME D'ADRESSE : ${formality === "vous" ? "Vouvoiement (vous)" : "Tutoiement (tu)"}`,
+  ];
+  if (intention) userParts.push(`INTENTION BUSINESS : ${intention}`);
+  if (cta) userParts.push(`CTA DE RÉFÉRENCE : ${cta}`);
+  userParts.push(
+    `\nCONSIGNES STRICTES :`,
+    `- Applique la méthodologie correspondant à l'objectif "${objective}".`,
+    `- Génère ~${questionCount} questions, en variant les types.`,
+    `- Toutes les options multiple_choice doivent avoir result_index = 0 (ignoré en mode survey).`,
+    `- Tout le contenu DOIT être en ${langLabel}.`,
+    `- Réponds UNIQUEMENT en JSON valide, sans aucun texte autour.`,
+  );
+
+  return { system, user: userParts.join("\n") };
+}
+
+// ── Survey import prompt ──────────────────────────────────────────────
+// Same intent as buildQuizImportPrompt but emits the survey schema
+// (question_type per question, no results array).
+export function buildSurveyImportPrompt(params: {
+  content: string;
+  locale?: string;
+  addressForm?: "tu" | "vous";
+  tone?: string;
+}): { system: string; user: string } {
+  const { content, locale = "fr", addressForm = "tu", tone = "professionnel" } = params;
+  const formality = addressForm === "vous" ? "vous" : "tu";
+  const langLabel = buildLanguageDirective(locale);
+
+  const system = `Tu structures du contenu brut de sondage en JSON exploitable, sans inventer.
+
+RÔLE : Le créateur a rédigé un sondage ailleurs (doc, brouillon, PDF). Tu le restitues en JSON Tiquiz, en respectant fidèlement les questions et leurs types implicites (note 0-10 → rating_scale, étoiles → star_rating, oui/non → yes_no, question ouverte → free_text, sinon multiple_choice).
+
+LANGUE DE SORTIE : ${langLabel}. NE TRADUIS PAS si le source est déjà dans cette langue.
+FORME D'ADRESSE : ${formality === "vous" ? "VOUVOYER" : "TUTOYER"}. Conserve la forme du source si elle est claire.
+TON : ${tone}.
+
+DÉTECTION DE TYPE — heuristiques :
+  • "Sur une échelle de X à Y" / "Note de 0 à 10" / "NPS" → rating_scale (config min/max/labels).
+  • "★ ★ ★ ★ ★" / "1-5 étoiles" / "Note ce/cette … sur 5" → star_rating (config max).
+  • "Oui / Non" sans nuance → yes_no (NE PAS fournir d'options).
+  • Question sans liste d'options visibles → free_text (config maxLength: 500).
+  • Liste de 3-5 options → multiple_choice (result_index = 0 pour toutes).
+
+FORMAT DE SORTIE : JSON strict, identique au schéma de génération sondage Tiquiz.
+{
+  "title": "Titre du sondage",
+  "introduction": "Intro courte (peut être déduite du source)",
+  "questions": [
+    { "question_text": "...", "question_type": "rating_scale", "config": { "min": 0, "max": 10 }, "options": [] }
+  ],
+  "cta_text": ""
+}`;
+
+  const user = `CONTENU BRUT À STRUCTURER (langue cible : ${langLabel}) :
+
+"""
+${content}
+"""
+
+CONSIGNES :
+- Identifie le type de chaque question via les heuristiques ci-dessus.
+- N'invente pas de questions absentes du source. Tu peux compléter une intro / un CTA si manquants.
+- Réponds UNIQUEMENT en JSON valide, rien autour.`;
+
+  return { system, user };
+}

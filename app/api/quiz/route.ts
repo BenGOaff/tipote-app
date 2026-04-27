@@ -87,20 +87,28 @@ export async function POST(req: NextRequest) {
       ? "En renseignant votre email, vous acceptez notre politique de confidentialité."
       : "En renseignant ton email, tu acceptes notre politique de confidentialité.";
 
+    // Surveys reuse the quizzes table (mode='survey') so the existing
+    // creation API + permission cascade keep working unchanged. Surveys
+    // force virality_enabled = false because the public renderer doesn't
+    // gate sharing behind a bonus for them ("no viral but share at end").
+    const mode = body.mode === "survey" ? "survey" : "quiz";
+    const isSurvey = mode === "survey";
+
     // Insert quiz
     const { data: quiz, error: quizError } = await supabase
       .from("quizzes")
       .insert({
         user_id: user.id,
         ...(projectId ? { project_id: projectId } : {}),
+        mode,
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,
         cta_url: body.cta_url ?? null,
         privacy_url: privacyUrl || null,
         consent_text: body.consent_text ?? defaultConsent,
-        virality_enabled: Boolean(body.virality_enabled),
-        bonus_description: body.bonus_description ?? null,
+        virality_enabled: isSurvey ? false : Boolean(body.virality_enabled),
+        bonus_description: isSurvey ? null : (body.bonus_description ?? null),
         share_message: body.share_message ?? null,
         locale: body.locale ?? "fr",
         sio_share_tag_name: body.sio_share_tag_name ?? null,
@@ -133,22 +141,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert questions
+    // Insert questions. question_type + config let surveys carry their
+    // shape (rating / star / free_text / image / yes_no / multiple_choice).
+    // Quiz inserts that omit those fields fall through to the column
+    // defaults, so legacy callers still work.
+    const ALLOWED_TYPES = new Set([
+      "multiple_choice",
+      "rating_scale",
+      "star_rating",
+      "free_text",
+      "image_choice",
+      "yes_no",
+    ]);
     const questions = Array.isArray(body.questions) ? body.questions : [];
     if (questions.length > 0) {
       const { error: qErr } = await supabase.from("quiz_questions").insert(
-        questions.map((q: any, i: number) => ({
-          quiz_id: quiz.id,
-          question_text: String(q.question_text ?? ""),
-          options: Array.isArray(q.options) ? q.options : [],
-          sort_order: i,
-        })),
+        questions.map((q: any, i: number) => {
+          const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
+          const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
+          return {
+            quiz_id: quiz.id,
+            question_text: String(q.question_text ?? ""),
+            options: Array.isArray(q.options) ? q.options : [],
+            sort_order: i,
+            question_type,
+            config: q.config && typeof q.config === "object" && !Array.isArray(q.config) ? q.config : {},
+          };
+        }),
       );
       if (qErr) console.error("[POST /api/quiz] Questions insert error:", qErr.message);
     }
 
-    // Insert results
-    const results = Array.isArray(body.results) ? body.results : [];
+    // Insert results — surveys never have result profiles, so we skip the
+    // entire block when mode='survey'. The renderer handles a survey row
+    // with zero quiz_results without ever trying to compute one.
+    const results = !isSurvey && Array.isArray(body.results) ? body.results : [];
     if (results.length > 0) {
       const { error: rErr } = await supabase.from("quiz_results").insert(
         results.map((r: any, i: number) => ({

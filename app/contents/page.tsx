@@ -152,10 +152,12 @@ export default async function ContentsPage({
   const initialView =
     safeString(Array.isArray(viewRaw) ? viewRaw[0] : viewRaw).toLowerCase() === "calendar" ? "calendar" : "list";
 
-  // Build quizzes query scoped to project
+  // Build quizzes query scoped to project. `mode` is selected so the client
+  // can render the right badge (Quiz vs Sondage) — surveys live in the same
+  // table with mode='survey'.
   let quizzesQuery = supabase
     .from("quizzes")
-    .select("id, title, status, views_count, shares_count, created_at")
+    .select("id, title, status, views_count, shares_count, created_at, mode")
     .eq("user_id", session.user.id)
     .order("created_at", { ascending: false });
   if (projectId) quizzesQuery = quizzesQuery.eq("project_id", projectId);
@@ -181,6 +183,7 @@ export default async function ContentsPage({
     id: String(qz.id),
     title: qz.title ?? "",
     status: qz.status ?? "draft",
+    mode: (qz.mode === "survey" ? "survey" : "quiz") as "quiz" | "survey",
     views_count: qz.views_count ?? 0,
     shares_count: qz.shares_count ?? 0,
     leads_count: 0,
