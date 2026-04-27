@@ -3466,146 +3466,146 @@
     "processDeleted": "Programa eliminado"
   },
   "webinars": {
-    "title": "Mes événements live",
-    "subtitle": "Organise tes webinaires et challenges, suis tes KPIs et convertis tes inscrits.",
-    "newEvent": "Nouvel événement",
-    "editEvent": "Modifier l'événement",
-    "deleteEvent": "Supprimer cet événement ?",
-    "deleteEventDesc": "Cette action est irréversible.",
-    "eventCreated": "Événement créé",
-    "eventUpdated": "Événement mis à jour",
-    "eventDeleted": "Événement supprimé",
-    "totalEvents": "Total événements",
-    "completedWebinars": "Terminés",
-    "allStatuses": "Tous",
-    "allTypes": "Tous",
-    "cancel": "Annuler",
-    "save": "Enregistrer",
-    "delete": "Supprimer",
+    "title": "Os meus eventos ao vivo",
+    "subtitle": "Organiza os teus webinars e desafios, acompanha os teus KPIs e converte os inscritos.",
+    "newEvent": "Novo evento",
+    "editEvent": "Editar o evento",
+    "deleteEvent": "Eliminar este evento?",
+    "deleteEventDesc": "Esta ação é irreversível.",
+    "eventCreated": "Evento criado",
+    "eventUpdated": "Evento atualizado",
+    "eventDeleted": "Evento eliminado",
+    "totalEvents": "Total de eventos",
+    "completedWebinars": "Concluídos",
+    "allStatuses": "Todos",
+    "allTypes": "Todos",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
     "eventType": {
-      "webinar": "Webinaire",
-      "challenge": "Challenge"
+      "webinar": "Webinar",
+      "challenge": "Desafio"
     },
     "status": {
-      "draft": "Brouillon",
-      "scheduled": "Planifié",
-      "live": "En direct",
-      "completed": "Terminé"
+      "draft": "Rascunho",
+      "scheduled": "Agendado",
+      "live": "Ao vivo",
+      "completed": "Concluído"
     },
     "fields": {
-      "title": "Titre",
-      "topic": "Sujet",
-      "eventType": "Type d'événement",
-      "offerName": "Offre liée",
-      "startDate": "Date de début",
-      "endDate": "Date de fin",
-      "date": "Date",
-      "status": "Statut",
-      "notes": "Notes",
-      "program": "Programme du challenge",
-      "offerOther": "Autre : préciser",
-      "noOffer": "Aucune offre liée"
+      "title": "Título",
+      "topic": "Assunto",
+      "eventType": "Tipo de evento",
+      "offerName": "Oferta associada",
+      "startDate": "Data de início",
+      "endDate": "Data de fim",
+      "date": "Data",
+      "status": "Estado",
+      "notes": "Notas",
+      "program": "Programa do desafio",
+      "offerOther": "Outra: especificar",
+      "noOffer": "Nenhuma oferta associada"
     },
     "kpi": {
-      "registrants": "Inscrits",
-      "attendees": "Présents",
+      "registrants": "Inscritos",
+      "attendees": "Presentes",
       "replayViewers": "Replay",
-      "offersPresented": "Offres présentées",
-      "salesCount": "Ventes",
-      "revenue": "Revenu",
-      "attendanceRate": "Taux de présence",
-      "replayRate": "Taux replay",
-      "conversionRate": "Taux de conversion",
-      "revenuePerRegistrant": "Revenu / inscrit",
-      "avgOrderValue": "Panier moyen"
+      "offersPresented": "Ofertas apresentadas",
+      "salesCount": "Vendas",
+      "revenue": "Receita",
+      "attendanceRate": "Taxa de presença",
+      "replayRate": "Taxa de replay",
+      "conversionRate": "Taxa de conversão",
+      "revenuePerRegistrant": "Receita / inscrito",
+      "avgOrderValue": "Cesto médio"
     },
-    "noEvents": "Aucun événement pour le moment.",
-    "noEventsHint": "Crée ton premier webinaire ou challenge pour commencer à suivre tes KPIs.",
-    "programTitle": "Programme du challenge",
+    "noEvents": "Sem eventos de momento.",
+    "noEventsHint": "Cria o teu primeiro webinar ou desafio para começares a acompanhar os teus KPIs.",
+    "programTitle": "Programa do desafio",
     "playbook": {
       "title": "Playbook",
       "kpis": "KPIs",
-      "backToList": "Retour à la liste",
-      "progress": "Progression du playbook",
-      "aiAssistant": "Assistant IA",
-      "aiAssistantChallenge": "Créer ton challenge",
-      "aiAssistantWebinar": "Créer ton webinaire",
-      "aiIntro": "L'IA va utiliser ta niche, ton persona et tes offres pour te proposer des idées percutantes.",
-      "aiIntroChallenge": "challenges",
-      "aiIntroWebinar": "webinaires",
-      "generateTitles": "Générer des idées de titres",
-      "generatingTitles": "Génération des titres...",
-      "generatingProgram": "Génération du programme...",
-      "chooseTitlePrompt": "Choisis le titre qui te parle le plus :",
-      "regenerate": "Régénérer",
-      "titleChosen": "Titre choisi :",
-      "generateProgram": "Générer le programme complet",
-      "changeTitle": "Changer de titre",
-      "titlesGenerated": "Titres générés !",
-      "programGenerated": "Programme généré !",
-      "day": "Jour",
-      "totalDuration": "Durée totale",
+      "backToList": "Voltar à lista",
+      "progress": "Progresso do playbook",
+      "aiAssistant": "Assistente IA",
+      "aiAssistantChallenge": "Criar o teu desafio",
+      "aiAssistantWebinar": "Criar o teu webinar",
+      "aiIntro": "A IA vai usar o teu nicho, o teu persona e as tuas ofertas para te propor ideias impactantes.",
+      "aiIntroChallenge": "desafios",
+      "aiIntroWebinar": "webinars",
+      "generateTitles": "Gerar ideias de títulos",
+      "generatingTitles": "A gerar os títulos...",
+      "generatingProgram": "A gerar o programa...",
+      "chooseTitlePrompt": "Escolhe o título que mais te diz:",
+      "regenerate": "Voltar a gerar",
+      "titleChosen": "Título escolhido:",
+      "generateProgram": "Gerar o programa completo",
+      "changeTitle": "Mudar de título",
+      "titlesGenerated": "Títulos gerados!",
+      "programGenerated": "Programa gerado!",
+      "day": "Dia",
+      "totalDuration": "Duração total",
       "min": "min",
-      "bonusIdeas": "Idées de bonus",
-      "offerPitchTips": "Conseils pour pitcher l'offre",
-      "promoStrategies": "Stratégies de promo",
-      "tips": "Conseils",
-      "generateWithAI": "Générer avec l'IA",
-      "error": "Erreur",
-      "noCredits": "Plus de crédits disponibles.",
+      "bonusIdeas": "Ideias de bónus",
+      "offerPitchTips": "Dicas para apresentar a oferta",
+      "promoStrategies": "Estratégias de promoção",
+      "tips": "Dicas",
+      "generateWithAI": "Gerar com IA",
+      "error": "Erro",
+      "noCredits": "Sem créditos disponíveis.",
       "phase1": {
-        "label": "Préparer l'offre"
+        "label": "Preparar a oferta"
       },
       "phase2": {
-        "label": "Contenu",
-        "labelChallenge": "Contenu du challenge"
+        "label": "Conteúdo",
+        "labelChallenge": "Conteúdo do desafio"
       },
       "phase3": {
-        "label": "Préparation technique"
+        "label": "Preparação técnica"
       },
       "phase4": {
-        "label": "Acquisition & Communauté"
+        "label": "Aquisição & Comunidade"
       },
       "phase5": {
-        "label": "Pendant l'événement",
-        "labelChallenge": "Pendant le challenge"
+        "label": "Durante o evento",
+        "labelChallenge": "Durante o desafio"
       },
       "phase6": {
-        "label": "Suivi & Réutilisation"
+        "label": "Acompanhamento & Reutilização"
       },
       "tips_phase1_challenge": [
-        "Offre entre 97€ et 500€ : type formation complète",
-        "Faire le challenge en début ou milieu de mois (sinon les gens sont fauchés !)",
-        "Prévoir 80% de promo pour l'offre spéciale challenge",
-        "Option VIP : coachings supplémentaires + bonus + accès à vie aux replays",
-        "Non VIP : replay disponible d'un jour sur l'autre seulement"
+        "Oferta entre 97€ e 500€: tipo formação completa",
+        "Fazer o desafio no início ou meio do mês (caso contrário as pessoas estão sem dinheiro!)",
+        "Prever 80% de promoção para a oferta especial do desafio",
+        "Opção VIP: coachings adicionais + bónus + acesso vitalício aos replays",
+        "Não-VIP: replay disponível apenas de um dia para o outro"
       ],
       "tips_phase1_webinar": [
-        "Choisir une offre entre 97€ et 997€ selon la complexité du sujet",
-        "Faire le webinaire en début ou milieu de mois (meilleur taux de conversion)",
-        "Prévoir une offre limitée dans le temps pour créer l'urgence",
-        "Bonus exclusif réservé aux participants live pour encourager la présence"
+        "Escolhe uma oferta entre 97€ e 997€ conforme a complexidade do tema",
+        "Fazer o webinar no início ou meio do mês (melhor taxa de conversão)",
+        "Prever uma oferta limitada no tempo para criar urgência",
+        "Bónus exclusivo reservado aos participantes ao vivo para incentivar a presença"
       ],
       "tips_phase2_challenge": [
-        "Prévoir un max de valeur concrète pour démontrer ta crédibilité",
-        "Slides + exemples concrets + exercices journaliers",
-        "Jour 1 : Intro + valeur + exercice / Jour 2 : Approfondissement + exercice",
-        "Jour 3 : Plan d'action + exercice + pitch offre / Jour 4 : Coaching live + vente",
-        "Coaching en direct pour le membre le plus actif = boost d'engagement"
+        "Prever o máximo de valor concreto para demonstrar a tua credibilidade",
+        "Slides + exemplos concretos + exercícios diários",
+        "Dia 1: Intro + valor + exercício / Dia 2: Aprofundamento + exercício",
+        "Dia 3: Plano de ação + exercício + pitch da oferta / Dia 4: Coaching ao vivo + vendas",
+        "Coaching ao vivo para o membro mais ativo = boost de engagement"
       ],
       "tips_phase2_webinar": [
-        "Prévoir un max de valeur concrète pour démontrer ta crédibilité",
-        "Structure : Accroche → Contenu de valeur → Preuve → Offre → Q&A",
-        "Durée idéale : 45 à 75 minutes (inclus la vente)",
-        "Slides épurées : 1 idée par slide, peu de texte, beaucoup de visuel"
+        "Prever o máximo de valor concreto para demonstrar a tua credibilidade",
+        "Estrutura: Abertura → Conteúdo de valor → Prova → Oferta → Q&A",
+        "Duração ideal: 45 a 75 minutos (incluindo a venda)",
+        "Slides minimalistas: 1 ideia por slide, pouco texto, muito visual"
       ],
       "tips_phase3": [
-        "Matériel : un micro correct + une bonne webcam",
-        "Logiciel de live : Zoom, WebinarJam, StreamYard... (prévoir mini 500 participants)",
-        "Prévoir l'enregistrement pour les replays (revente possible ensuite !)",
-        "S'entraîner pour être à l'aise le jour J",
-        "Systeme.io ou équivalent : branding simple (couleurs + photo)",
-        "Connecter les moyens de paiement + tester les automatisations"
+        "Material: um microfone decente + uma boa webcam",
+        "Software de live: Zoom, WebinarJam, StreamYard... (prever mín. 500 participantes)",
+        "Prever a gravação para os replays (revenda possível depois!)",
+        "Treinar para estar à vontade no dia D",
+        "Systeme.io ou equivalente: branding simples (cores + foto)",
+        "Ligar os meios de pagamento + testar as automatizações"
       ],
       "tips_phase4_challenge": [
         "Créer un groupe privé (Facebook, Telegram, WhatsApp...) dédié au challenge",
