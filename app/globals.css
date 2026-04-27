@@ -74,11 +74,23 @@
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --border: 0 0% 76%;
-    --input: 0 0% 76%;
+    /* ── Borders / inputs ──
+       Softened to 92% lightness (was 76%) so cards / inputs sit on the
+       page with a barely-there outline — matches the Kawaak / Waalaxy
+       low-contrast feel where shadows do the visual lift, not borders. */
+    --border: 220 13% 92%;
+    --input: 220 13% 92%;
     --ring: 233 64% 61%;
 
     --radius: 0.75rem;
+
+    /* ── Surfaces (additive — used by SectionCard / StatCard / etc.) ──
+       surface       : default page-level surface (card bg)
+       surface-muted : "subdued" panels (filter strips, helper boxes)
+       surface-soft  : tinted blocks (icon circles, feature highlights) */
+    --surface: 0 0% 100%;
+    --surface-muted: 220 33% 97%;
+    --surface-soft: 233 64% 96%;
 
     /* ── Gradient endpoints ── */
     --primary-light: 233 64% 61%;     /* #5D6CDB */
@@ -89,11 +101,17 @@
     --gradient-secondary: linear-gradient(135deg, hsl(220 33% 96%) 0%, hsl(220 33% 94%) 100%);
     --gradient-hero: linear-gradient(135deg, hsl(233 64% 61% / 0.95) 0%, hsl(230 41% 28% / 0.9) 100%);
 
-    /* ── Shadows ── */
+    /* ── Shadows ──
+       The "soft" tier is the new SaaS-grade default for cards (kawaak /
+       waalaxy feel). "card" = at-rest, "card-hover" = subtle elevation on
+       hover. The legacy sm/md/lg are kept as-is for backwards compat. */
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1);
     --shadow-lg: 0 10px 25px -5px hsl(233 64% 61% / 0.15);
     --shadow-glow: 0 0 20px hsl(233 64% 61% / 0.3);
+    --shadow-soft: 0 1px 2px hsl(220 13% 50% / 0.04), 0 1px 3px hsl(220 13% 50% / 0.06);
+    --shadow-card: 0 1px 3px hsl(220 13% 50% / 0.04), 0 4px 12px hsl(220 13% 50% / 0.06);
+    --shadow-card-hover: 0 2px 6px hsl(220 13% 50% / 0.06), 0 8px 24px hsl(220 13% 50% / 0.08);
 
     /* ── Sidebar ── */
     --sidebar-background: 0 0% 100%;
