@@ -81,6 +81,10 @@ type QuizListItem = {
   id: string;
   title: string;
   status: string;
+  // mode='survey' rows still live in the same `quizzes` table — we just
+  // render a different badge + lighter metric set (surveys have no virality
+  // counter so the share count is irrelevant for them).
+  mode?: "quiz" | "survey" | null;
   views_count: number;
   shares_count: number;
   leads_count: number;
@@ -752,18 +756,43 @@ export default function MyContentLovableClient({
                     <div className="space-y-3">
                       {quizzes.map((qz) => {
                         const isActive = qz.status === "active";
+                        // Survey-aware rendering. mode defaults to "quiz"
+                        // for any row that doesn't carry one (legacy data,
+                        // pre-migration deployments) so existing quizzes
+                        // keep their teal icon, "Quiz sans titre" fallback,
+                        // and full "shares" counter — nothing changes for
+                        // them. Only mode === "survey" gets the purple
+                        // theming + the shorter metric set (no shares).
+                        const isSurvey = qz.mode === "survey";
                         return (
                           <Card key={qz.id} className="p-4">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex items-start gap-3 min-w-0 flex-1">
-                                <div className="mt-0.5 rounded-md bg-teal-100 dark:bg-teal-900 p-2 shrink-0">
-                                  <ClipboardList className="h-4 w-4 text-teal-700 dark:text-teal-300" />
+                                <div
+                                  className={`mt-0.5 rounded-md p-2 shrink-0 ${
+                                    isSurvey
+                                      ? "bg-purple-100 dark:bg-purple-900"
+                                      : "bg-teal-100 dark:bg-teal-900"
+                                  }`}
+                                >
+                                  <ClipboardList
+                                    className={`h-4 w-4 ${
+                                      isSurvey
+                                        ? "text-purple-700 dark:text-purple-300"
+                                        : "text-teal-700 dark:text-teal-300"
+                                    }`}
+                                  />
                                 </div>
                                 <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <div className="font-medium truncate">
-                                      {qz.title || "Quiz sans titre"}
+                                      {qz.title || (isSurvey ? "Sondage sans titre" : "Quiz sans titre")}
                                     </div>
+                                    {isSurvey && (
+                                      <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                                        Sondage
+                                      </Badge>
+                                    )}
                                     <Badge
                                       className={
                                         isActive
@@ -779,11 +808,13 @@ export default function MyContentLovableClient({
                                       <Eye className="h-3.5 w-3.5" /> {qz.views_count} vues
                                     </span>
                                     <span className="inline-flex items-center gap-1">
-                                      <Users className="h-3.5 w-3.5" /> {qz.leads_count} emails
+                                      <Users className="h-3.5 w-3.5" /> {qz.leads_count} {isSurvey ? "réponses" : "emails"}
                                     </span>
-                                    <span className="inline-flex items-center gap-1">
-                                      <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} partages
-                                    </span>
+                                    {!isSurvey && (
+                                      <span className="inline-flex items-center gap-1">
+                                        <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} partages
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
