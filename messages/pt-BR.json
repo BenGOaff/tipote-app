@@ -1903,66 +1903,66 @@
         "placeholder": "Ex.: Meu método em 3 etapas para criar uma oferta irresistível sem audiência..."
       },
       "offerFormat": {
-        "question": "Sous quel(s) format(s) veux-tu proposer tes offres ?",
-        "description": "Choisis un ou plusieurs formats qui te correspondent.",
+        "question": "Em qual(is) formato(s) você quer propor suas ofertas?",
+        "description": "Escolha um ou mais formatos que combinem com você.",
         "options": {
-          "video_course": "Formation vidéo",
-          "coaching": "Accompagnement / Coaching",
-          "templates": "Templates prêts à l'emploi",
-          "membership": "Abonnement / Membership",
-          "mastermind": "Mastermind / Groupe",
-          "checklist": "Checklist / Guide pratique",
-          "app_tool": "Application / Outil",
-          "workshop": "Atelier / Workshop live",
+          "video_course": "Curso em vídeo",
+          "coaching": "Acompanhamento / Coaching",
+          "templates": "Templates prontos",
+          "membership": "Assinatura / Membership",
+          "mastermind": "Mastermind / Grupo",
+          "checklist": "Checklist / Guia prático",
+          "app_tool": "Aplicativo / Ferramenta",
+          "workshop": "Workshop ao vivo",
           "ebook": "E-book / PDF",
-          "audit": "Audit personnalisé"
+          "audit": "Auditoria personalizada"
         }
       },
       "uniqueness": {
-        "question": "Pourquoi ton offre est unique et différente de tout ce qui existe ?",
-        "description": "Ce qui fait qu'elle est une évidence pour ton client.",
-        "placeholder": "Ex: Parce que je combine X et Y d'une façon que personne d'autre ne fait..."
+        "question": "Por que sua oferta é única e diferente de tudo o que existe?",
+        "description": "O que faz com que seja uma evidência para o seu cliente.",
+        "placeholder": "Ex.: Porque combino X e Y de um jeito que mais ninguém faz..."
       },
       "refusals": {
-        "question": "Y a-t-il des choses que tu refuses catégoriquement de faire ?",
-        "description": "Je n'incluray rien de ça dans ta stratégie.",
+        "question": "Existem coisas que você recusa categoricamente fazer?",
+        "description": "Não vou incluir nada disso na sua estratégia.",
         "options": {
-          "no_dm": "Pas de prospection en DM",
-          "no_video": "Pas de vidéos",
-          "no_articles": "Pas d'articles / blog",
-          "no_social": "Pas de réseaux sociaux",
-          "no_course": "Pas de création de formation",
-          "no_coaching": "Pas de coaching individuel",
-          "no_personal_branding": "Pas de personal branding (ne pas se montrer)",
-          "none": "Aucun refus"
+          "no_dm": "Sem prospecção por DM",
+          "no_video": "Sem vídeos",
+          "no_articles": "Sem artigos / blog",
+          "no_social": "Sem redes sociais",
+          "no_course": "Sem criação de curso",
+          "no_coaching": "Sem coaching individual",
+          "no_personal_branding": "Sem personal branding (não me mostrar)",
+          "none": "Nenhuma recusa"
         }
       },
       "nicheArea": {
-        "question": "Dans quel domaine vas-tu créer ton activité ?",
-        "description": "Choisis le domaine le plus proche de ton projet.",
+        "question": "Em qual área você vai criar sua atividade?",
+        "description": "Escolha a área mais próxima do seu projeto.",
         "options": {
-          "wellness": "Bien-être / Santé / Sport",
-          "business": "Business / Entrepreneuriat",
-          "marketing": "Marketing / Réseaux sociaux / Personal branding",
-          "finance": "Finance / Investissement / Argent",
-          "parenting": "Parentalité / Famille / Éducation",
-          "creativity": "Créativité / Art / Design",
-          "coaching": "Coaching de vie / Développement personnel",
+          "wellness": "Bem-estar / Saúde / Esporte",
+          "business": "Negócio / Empreendedorismo",
+          "marketing": "Marketing / Redes sociais / Personal branding",
+          "finance": "Finanças / Investimento / Dinheiro",
+          "parenting": "Parentalidade / Família / Educação",
+          "creativity": "Criatividade / Arte / Design",
+          "coaching": "Coaching de vida / Desenvolvimento pessoal",
           "tech": "Tech / Dev / IA",
-          "food": "Cuisine / Nutrition / Alimentation",
-          "education": "Formation / Enseignement / E-learning",
-          "travel": "Voyage / Lifestyle",
-          "other": "Autre domaine"
+          "food": "Cozinha / Nutrição / Alimentação",
+          "education": "Curso / Ensino / E-learning",
+          "travel": "Viagem / Lifestyle",
+          "other": "Outra área"
         }
       }
     },
     "finalize": {
-      "title": "Je construis ta stratégie…",
-      "step0": "Je sauvegarde tes réponses…",
-      "step1": "Je construis ta stratégie personnalisée…",
-      "step2": "Je génère tes premières tâches…",
-      "step3": "Je peaufine ton espace…",
-      "done": "Tout est prêt !"
+      "title": "Construindo sua estratégia…",
+      "step0": "Salvando suas respostas…",
+      "step1": "Construindo sua estratégia personalizada…",
+      "step2": "Gerando suas primeiras tarefas…",
+      "step3": "Ajustando seu espaço…",
+      "done": "Está tudo pronto!"
     }
   },
   "automations": {
