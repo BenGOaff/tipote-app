@@ -21,6 +21,8 @@ const LANGUAGE_LABELS: Record<SupportedLocale, string> = {
   es: "Español",
   it: "Italiano",
   ar: "العربية",
+  pt: "Português (Portugal)",
+  "pt-BR": "Português (Brasil)",
 };
 
 function setLocaleCookie(locale: string) {
