@@ -1767,38 +1767,38 @@
         }
       },
       "contentPreference": {
-        "question": "Quels types de contenus tu préfères créer ?",
-        "description": "Choisis tout ce qui s'applique.",
+        "question": "Que tipos de conteúdo preferes criar?",
+        "description": "Escolhe tudo o que se aplica.",
         "options": {
-          "short_written": "Écrits courts (posts, newsletters courtes)",
-          "long_written": "Écrits longs (articles, études de cas)",
-          "short_video": "Vidéos courtes (Reels, TikTok, Shorts)",
-          "long_video": "Vidéos longues (YouTube, formations)",
-          "visuals": "Création de visuels (infographies, carrousels)",
-          "audio": "Audio (podcasts, voice notes)"
+          "short_written": "Textos curtos (posts, newsletters curtas)",
+          "long_written": "Textos longos (artigos, casos de estudo)",
+          "short_video": "Vídeos curtos (Reels, TikTok, Shorts)",
+          "long_video": "Vídeos longos (YouTube, formações)",
+          "visuals": "Criação de visuais (infografias, carrosséis)",
+          "audio": "Áudio (podcasts, voice notes)"
         }
       },
       "preferredTone": {
-        "question": "Quel ton te correspond le mieux ?",
-        "description": "Choisis tout ce qui s'applique.",
+        "question": "Que tom mais te corresponde?",
+        "description": "Escolhe tudo o que se aplica.",
         "options": {
-          "casual": "Décontracté",
-          "professional": "Professionnel",
-          "humorous": "Humoristique",
-          "caring": "Bienveillant",
-          "authoritative": "Autoritaire / Expert",
-          "provocative": "Provocant",
-          "direct": "Direct",
-          "warm": "Chaleureux",
-          "empathetic": "Empathique",
-          "educational": "Éducatif"
+          "casual": "Descontraído",
+          "professional": "Profissional",
+          "humorous": "Humorístico",
+          "caring": "Cuidador",
+          "authoritative": "Autoritário / Especialista",
+          "provocative": "Provocador",
+          "direct": "Direto",
+          "warm": "Caloroso",
+          "empathetic": "Empático",
+          "educational": "Educativo"
         }
       },
       "platforms": {
-        "question": "Sur quels canaux es-tu déjà présent(e) ?",
-        "description": "Choisis tout ce qui s'applique.",
+        "question": "Em que canais já estás presente?",
+        "description": "Escolhe tudo o que se aplica.",
         "options": {
-          "website": "Site web",
+          "website": "Website",
           "blog": "Blog",
           "youtube": "YouTube",
           "instagram": "Instagram",
@@ -1809,98 +1809,98 @@
           "pinterest": "Pinterest",
           "threads": "Threads",
           "medium": "Medium",
-          "none": "Aucun pour l'instant"
+          "none": "Nenhum de momento"
         }
       },
       "businessStatus": {
-        "question": "Où en es-tu avec ton business ?",
+        "question": "Em que ponto estás com o teu negócio?",
         "options": {
-          "has_offers": "J'ai déjà des offres en vente",
-          "affiliation": "Je fais de l'affiliation",
-          "none": "Je pars de zéro"
+          "has_offers": "Já tenho ofertas à venda",
+          "affiliation": "Faço afiliação",
+          "none": "Estou a começar do zero"
         }
       },
       "hasAlreadySold": {
-        "question": "Tu as déjà réalisé des ventes (ou touché des commissions) ?",
+        "question": "Já fizeste vendas (ou ganhaste comissões)?",
         "options": {
-          "yes": "Oui",
-          "no": "Non, pas encore"
+          "yes": "Sim",
+          "no": "Não, ainda não"
         }
       },
       "satisfiedWithOffers": {
-        "question": "Tu es satisfait(e) de tes offres actuelles ?",
+        "question": "Estás satisfeito(a) com as tuas ofertas atuais?",
         "options": {
-          "yes": "Oui, elles me correspondent bien",
-          "improve": "Je veux les améliorer",
-          "rethink": "Je veux les repenser complètement"
+          "yes": "Sim, elas correspondem-me bem",
+          "improve": "Quero melhorá-las",
+          "rethink": "Quero repensá-las completamente"
         }
       },
       "currentMonthlyRevenue": {
-        "question": "Quel est ton chiffre d'affaires mensuel actuel ?",
+        "question": "Qual é a tua faturação mensal atual?",
         "options": {
-          "0": "0 € (pas encore de ventes)",
-          "lt500": "Moins de 500 €",
+          "0": "0 € (ainda sem vendas)",
+          "lt500": "Menos de 500 €",
           "500_1k": "500 – 1 000 €",
           "1k_3k": "1 000 – 3 000 €",
           "3k_5k": "3 000 – 5 000 €",
-          "gt5k": "Plus de 5 000 €"
+          "gt5k": "Mais de 5 000 €"
         }
       },
       "clientTestimonials": {
-        "question": "Partage 2-3 retours de clients (ce qu'ils ont dit ou ressenti).",
-        "placeholder": "ex. « Grâce à toi j'ai enfin lancé ma formation ! » — Marie"
+        "question": "Partilha 2-3 testemunhos de clientes (o que disseram ou sentiram).",
+        "placeholder": "ex.: «Graças a ti finalmente lancei a minha formação!» — Marie"
       },
       "offers": {
-        "question": "Quelles sont tes offres actuelles ?",
-        "description": "Ajoute jusqu'à 3 offres avec leurs détails."
+        "question": "Quais são as tuas ofertas atuais?",
+        "description": "Adiciona até 3 ofertas com os respetivos detalhes."
       },
       "salesPageUrls": {
-        "question": "Tu as des pages de vente ? Donne-moi les liens.",
+        "question": "Tens páginas de vendas? Dá-me os links.",
         "placeholder": "https://…"
       },
       "commissionRate": {
-        "question": "Quel est ton taux de commission moyen ?",
-        "placeholder": "ex. 30 %"
+        "question": "Qual é a tua taxa média de comissão?",
+        "placeholder": "ex.: 30 %"
       },
       "monthlyCommissions": {
-        "question": "Combien de commissions tu touches en moyenne par mois ?",
-        "placeholder": "ex. 5 commissions"
+        "question": "Quantas comissões recebes em média por mês?",
+        "placeholder": "ex.: 5 comissões"
       },
       "audienceEmail": {
-        "question": "Tu as une liste email ?",
+        "question": "Tens uma lista de email?",
         "options": {
-          "yes": "Oui",
-          "no": "Non"
+          "yes": "Sim",
+          "no": "Não"
         },
-        "countPlaceholder": "Nombre d'abonnés"
+        "countPlaceholder": "Número de subscritores"
       },
       "audienceSocial": {
-        "question": "Tu as une audience sur les réseaux ?",
+        "question": "Tens audiência nas redes?",
         "options": {
-          "yes": "Oui",
-          "no": "Non"
+          "yes": "Sim",
+          "no": "Não"
         },
-        "countPlaceholder": "Nombre d'abonnés (tous réseaux)"
+        "countPlaceholder": "Número de seguidores (todas as redes)"
       },
       "urgentProblem": {
-        "question": "Quel problème urgent tu vas résoudre pour ton client idéal ?",
-        "description": "Un vrai problème qui le stresse ou l'empêche d'avancer au quotidien.",
-        "placeholder": "Ex: Il n'arrive pas à trouver ses premiers clients malgré des mois d'efforts..."
+        "question": "Que problema urgente vais resolver para o teu cliente ideal?",
+        "description": "Um problema real que o stressa ou impede de avançar no dia a dia.",
+        "placeholder": "Ex.: Não consegue encontrar os primeiros clientes apesar de meses de esforço..."
       },
       "quickResult": {
-        "question": "Quel résultat rapide, visible et motivant peux-tu lui promettre ?",
-        "description": "Un résultat qui crée un effet \"wow\" dans les 7 premiers jours.",
-        "placeholder": "Ex: Obtenir ses 3 premiers rendez-vous qualifiés en 7 jours..."
+        "question": "Que resultado rápido, visível e motivador podes prometer-lhe?",
+        "description": "Um resultado que cria um efeito «wow» nos primeiros 7 dias.",
+        "placeholder": "Ex.: Obter os 3 primeiros encontros qualificados em 7 dias..."
       },
       "topObstacles": {
-        "question": "Quels sont les 3 plus gros obstacles qui empêchent ton client d'obtenir ce résultat ?",
-        "description": "Les blocages concrets qui le freinent aujourd'hui.",
-        "placeholder": "Ex: 1) Il ne sait pas comment se positionner\n2) Il a peur de vendre\n3) Il n'a pas de système d'acquisition..."
+        "question": "Quais são os 3 maiores obstáculos que impedem o teu cliente de obter este resultado?",
+        "description": "Os bloqueios concretos que o travam hoje.",
+        "placeholder": "Ex.: 1) Não sabe como se posicionar\n2) Tem medo de vender\n3) Não tem sistema de aquisição..."
       },
       "uniqueMethods": {
-        "question": "Quelles sont tes méthodes uniques ou innovantes pour l'aider ?",
-        "description": "Ce qui te différencie : ta méthode secrète, ton framework, ton approche unique.",
-        "placeholder": "Ex: Ma méthode en 3 étapes pour créer une offre irrésistible sans audience..."
+        "question": "Quais são os teus métodos únicos ou inovadores para ajudá-lo?",
+        "description": "O que te diferencia: o teu método secreto, o teu framework, a tua abordagem única.",
+        "placeholder": "Ex.: O meu método em 3 etapas para criar uma oferta irresistível sem audiência..."
       },
       "offerFormat": {
         "question": "Sous quel(s) format(s) veux-tu proposer tes offres ?",
