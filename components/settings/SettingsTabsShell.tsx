@@ -344,6 +344,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [generatedOffers, setGeneratedOffers] = useState<GeneratedOffer[]>([]);
   const [generatedOffersLoading, setGeneratedOffersLoading] = useState(false);
   const [deletingGenOffer, setDeletingGenOffer] = useState<number | null>(null);
+  // Inline-edit state for pyramid offers — mirrors "Mes offres" UX so the
+  // user can fix a generated title / price without having to delete and
+  // recreate from scratch in the manual section.
+  const [editingGenOffer, setEditingGenOffer] = useState<number | null>(null);
+  const [editGenOfferDraft, setEditGenOfferDraft] = useState<GeneratedOffer | null>(null);
+  const [savingGenOffer, setSavingGenOffer] = useState(false);
 
   const [initialProfile, setInitialProfile] = useState<ProfileRow | null>(null);
 
@@ -508,6 +514,52 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const startEditGeneratedOffer = (index: number) => {
+    setEditingGenOffer(index);
+    setEditGenOfferDraft({ ...generatedOffers[index] });
+  };
+
+  const cancelEditGeneratedOffer = () => {
+    setEditingGenOffer(null);
+    setEditGenOfferDraft(null);
+  };
+
+  const saveGeneratedOffer = async () => {
+    if (editingGenOffer === null || !editGenOfferDraft) return;
+    setSavingGenOffer(true);
+    try {
+      const offerIndex = editingGenOffer;
+      const draft = editGenOfferDraft;
+      const res = await fetch("/api/strategy/offer-pyramid", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          offerIndex,
+          offer: {
+            name: draft.name ?? "",
+            level: draft.level ?? "",
+            promise: draft.promise ?? "",
+            description: draft.description ?? "",
+            format: draft.format ?? "",
+            price_min: draft.price_min ?? null,
+            price_max: draft.price_max ?? null,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedOffers((prev) => prev.map((o, i) => (i === offerIndex ? { ...o, ...draft } : o)));
+        toast({ title: tSP("reglages.generatedOfferSaved") });
+        cancelEditGeneratedOffer();
+      } else {
+        toast({ title: data.error || tc("error"), variant: "destructive" });
+      }
+    } catch {
+      toast({ title: tc("error"), variant: "destructive" });
+    }
+    setSavingGenOffer(false);
+  };
 
   const deleteGeneratedOffer = async (index: number) => {
     setDeletingGenOffer(index);
@@ -1895,38 +1947,135 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               </div>
             ) : (
               <div className="space-y-3">
-                {generatedOffers.map((offer, idx) => (
-                  <div key={idx} className="rounded-lg border bg-muted/20 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm">{offer.name || tSP("reglages.untitledOffer")}</span>
-                          {offer.level && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium uppercase">{offer.level}</span>
-                          )}
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-medium">{tSP("reglages.generatedBadge")}</span>
+                {generatedOffers.map((offer, idx) => {
+                  const isEditing = editingGenOffer === idx;
+                  const draft = isEditing ? editGenOfferDraft : null;
+                  return (
+                    <div key={idx} className="rounded-lg border bg-muted/20 p-4">
+                      {!isEditing ? (
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-medium text-sm">{offer.name || tSP("reglages.untitledOffer")}</span>
+                              {offer.level && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium uppercase">{offer.level}</span>
+                              )}
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-medium">{tSP("reglages.generatedBadge")}</span>
+                            </div>
+                            {offer.promise && <p className="text-xs text-muted-foreground mb-1">{offer.promise}</p>}
+                            {(offer.price_min != null || offer.price_max != null) && (
+                              <p className="text-xs text-muted-foreground">
+                                {offer.price_min != null && offer.price_max != null
+                                  ? `${offer.price_min}€ – ${offer.price_max}€`
+                                  : offer.price_min != null ? `${offer.price_min}€+` : `${offer.price_max}€`}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => startEditGeneratedOffer(idx)}
+                              title={tSP("reglages.editOffer")}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => deleteGeneratedOffer(idx)}
+                              disabled={deletingGenOffer === idx}
+                            >
+                              {deletingGenOffer === idx ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </Button>
+                          </div>
                         </div>
-                        {offer.promise && <p className="text-xs text-muted-foreground mb-1">{offer.promise}</p>}
-                        {(offer.price_min != null || offer.price_max != null) && (
-                          <p className="text-xs text-muted-foreground">
-                            {offer.price_min != null && offer.price_max != null
-                              ? `${offer.price_min}€ – ${offer.price_max}€`
-                              : offer.price_min != null ? `${offer.price_min}€+` : `${offer.price_max}€`}
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0 text-destructive hover:text-destructive"
-                        onClick={() => deleteGeneratedOffer(idx)}
-                        disabled={deletingGenOffer === idx}
-                      >
-                        {deletingGenOffer === idx ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                      </Button>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {tSP("reglages.editingOffer")}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-medium">{tSP("reglages.generatedBadge")}</span>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{tSP("reglages.offerName")}</Label>
+                            <Input
+                              value={draft?.name ?? ""}
+                              onChange={(e) => setEditGenOfferDraft((d) => (d ? { ...d, name: e.target.value } : d))}
+                              disabled={savingGenOffer}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{tSP("reglages.offerPromise")}</Label>
+                            <Input
+                              value={draft?.promise ?? ""}
+                              onChange={(e) => setEditGenOfferDraft((d) => (d ? { ...d, promise: e.target.value } : d))}
+                              disabled={savingGenOffer}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{tSP("reglages.offerDesc")}</Label>
+                            <Textarea
+                              value={draft?.description ?? ""}
+                              onChange={(e) => setEditGenOfferDraft((d) => (d ? { ...d, description: e.target.value } : d))}
+                              disabled={savingGenOffer}
+                              className="min-h-[60px]"
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">{tSP("reglages.offerFormat")}</Label>
+                              <Input
+                                value={draft?.format ?? ""}
+                                onChange={(e) => setEditGenOfferDraft((d) => (d ? { ...d, format: e.target.value } : d))}
+                                disabled={savingGenOffer}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{tSP("reglages.priceMin")}</Label>
+                              <Input
+                                type="number"
+                                value={draft?.price_min ?? ""}
+                                onChange={(e) => {
+                                  const n = e.target.value === "" ? null : Number(e.target.value);
+                                  setEditGenOfferDraft((d) => (d ? { ...d, price_min: n ?? undefined } : d));
+                                }}
+                                disabled={savingGenOffer}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{tSP("reglages.priceMax")}</Label>
+                              <Input
+                                type="number"
+                                value={draft?.price_max ?? ""}
+                                onChange={(e) => {
+                                  const n = e.target.value === "" ? null : Number(e.target.value);
+                                  setEditGenOfferDraft((d) => (d ? { ...d, price_max: n ?? undefined } : d));
+                                }}
+                                disabled={savingGenOffer}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            <Button size="sm" onClick={saveGeneratedOffer} disabled={savingGenOffer}>
+                              {savingGenOffer ? (
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                              ) : (
+                                <Save className="w-4 h-4 mr-1.5" />
+                              )}
+                              {tSP("reglages.saveOffer")}
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={cancelEditGeneratedOffer} disabled={savingGenOffer}>
+                              {tc("cancel")}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
