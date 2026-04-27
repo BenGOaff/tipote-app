@@ -41,8 +41,8 @@ import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTutorial } from "@/hooks/useTutorial";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+// SidebarProvider / AppSidebar intentionally NOT imported — the survey
+// WYSIWYG editor is fullscreen, mirroring QuizDetailClient.
 import {
   ALLOWED_SHARE_NETWORKS,
   BRAND_FONT_CHOICES,
@@ -751,24 +751,18 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
+  // Loading state — fullscreen with no sidebar (mirrors QuizDetailClient).
   if (loading) return (
-    <SidebarProvider>
-      <div className="h-screen flex w-full">
-        <AppSidebar />
-        <main className="flex-1 flex items-center justify-center bg-background">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </main>
-      </div>
-    </SidebarProvider>
+    <div className="h-screen flex items-center justify-center bg-background">
+      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+    </div>
   );
   if (!quiz) return null;
   const pc = primaryColor;
 
   return (
-    <SidebarProvider>
-     <SioTagsProvider>
+   <SioTagsProvider>
       <div className="h-screen flex w-full">
-        <AppSidebar />
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
       {/* First-visit onboarding banner */}
       {showOnboarding && (
@@ -1450,7 +1444,6 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       )}
         </main>
       </div>
-     </SioTagsProvider>
-    </SidebarProvider>
+   </SioTagsProvider>
   );
 }
