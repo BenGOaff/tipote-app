@@ -1590,78 +1590,78 @@
     "errorDesc": "Ocorreu um erro."
   },
   "strategy": {
-    "title": "Ma Stratégie",
-    "cancel": "Annuler",
-    "save": "Enregistrer",
-    "customize": "Personnaliser",
+    "title": "Minha estratégia",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "customize": "Personalizar",
     "generatingBanner": {
-      "title": "Ton plan est en cours de préparation",
-      "desc": "Si tu viens de terminer l'onboarding, c'est normal. Tu peux lancer la génération maintenant.",
-      "generate": "Générer mon plan",
-      "generating": "Génération…",
-      "refresh": "Rafraîchir"
+      "title": "Seu plano está sendo preparado",
+      "desc": "Se você acabou de terminar o onboarding, é normal. Você pode iniciar a geração agora.",
+      "generate": "Gerar meu plano",
+      "generating": "Geração…",
+      "refresh": "Atualizar"
     },
     "overview": {
-      "title": "Ta vision stratégique",
-      "subtitle": "Plan personnalisé généré par l'IA pour atteindre tes objectifs business",
-      "revenueGoal": "Objectif revenu",
-      "horizon": "Horizon",
-      "progression": "Progression"
+      "title": "Sua visão estratégica",
+      "subtitle": "Plano personalizado gerado pela IA para você atingir seus objetivos de negócio",
+      "revenueGoal": "Meta de faturamento",
+      "horizon": "Horizonte",
+      "progression": "Progresso"
     },
     "tabs": {
-      "plan": "Plan d'action",
-      "offers": "Tes offres",
-      "persona": "Persona cible"
+      "plan": "Plano de ação",
+      "offers": "Suas ofertas",
+      "persona": "Persona-alvo"
     },
     "editBanner": {
-      "title": "Mode personnalisation",
-      "desc": "Glisse les tâches pour les réorganiser, supprime celles qui ne te conviennent pas, ou ajoute-en de nouvelles",
-      "addTask": "Ajouter une tâche"
+      "title": "Modo personalização",
+      "desc": "Arraste as tarefas para reorganizar, exclua as que não combinam com você, ou adicione novas",
+      "addTask": "Adicionar uma tarefa"
     },
     "progress": {
-      "tasksCompleted": "Tâches complétées",
-      "currentPhase": "Phase actuelle",
-      "revenueGoal": "Objectif revenu",
-      "daysRemaining": "Jours restants",
-      "outOf90": "Sur 90 jours"
+      "tasksCompleted": "Tarefas concluídas",
+      "currentPhase": "Fase atual",
+      "revenueGoal": "Meta de faturamento",
+      "daysRemaining": "Dias restantes",
+      "outOf90": "Em 90 dias"
     },
-    "noTasks": "Aucune tâche dans cette phase pour l'instant.",
-    "moreTasks": "Voir les {count} autres tâches",
+    "noTasks": "Sem tarefas nesta fase no momento.",
+    "moreTasks": "Ver as outras {count} tarefas",
     "offers": {
-      "title": "Tes offres",
-      "addOffer": "Ajouter une offre",
-      "free": "Gratuit"
+      "title": "Suas ofertas",
+      "addOffer": "Adicionar uma oferta",
+      "free": "Grátis"
     },
     "persona": {
-      "title": "Persona cible",
-      "profile": "Profil principal",
-      "pains": "Problèmes principaux",
-      "goals": "Objectifs",
-      "channels": "Canaux préférés",
-      "edit": "Modifier le persona"
+      "title": "Persona-alvo",
+      "profile": "Perfil principal",
+      "pains": "Problemas principais",
+      "goals": "Objetivos",
+      "channels": "Canais preferidos",
+      "edit": "Editar o persona"
     },
     "toast": {
-      "planReady": "C'est parti ✅",
-      "planReadyDesc": "Ton plan stratégique et tes tâches sont prêts.",
-      "planError": "Impossible de générer le plan",
-      "oops": "Oups",
-      "saved": "Modifications enregistrées",
-      "savedDesc": "Ta stratégie a été mise à jour avec succès",
-      "taskDeleted": "Tâche supprimée",
-      "taskDeletedDesc": "La tâche a bien été supprimée.",
-      "taskAdded": "Tâche ajoutée",
-      "taskAddedDesc": "La tâche a bien été créée.",
-      "error": "Erreur",
-      "taskDeleteError": "Impossible de supprimer la tâche.",
-      "taskAddError": "Impossible d'ajouter la tâche.",
-      "phaseUpdated": "Phase mise à jour",
-      "phaseUpdatedDesc": "Les modifications ont été enregistrées",
-      "personaUpdated": "Persona mis à jour",
-      "personaUpdatedDesc": "Les modifications ont été enregistrées"
+      "planReady": "Vamos lá ✅",
+      "planReadyDesc": "Seu plano estratégico e suas tarefas estão prontos.",
+      "planError": "Não foi possível gerar o plano",
+      "oops": "Ops",
+      "saved": "Alterações salvas",
+      "savedDesc": "Sua estratégia foi atualizada com sucesso",
+      "taskDeleted": "Tarefa excluída",
+      "taskDeletedDesc": "A tarefa foi excluída.",
+      "taskAdded": "Tarefa adicionada",
+      "taskAddedDesc": "A tarefa foi criada.",
+      "error": "Erro",
+      "taskDeleteError": "Não foi possível excluir a tarefa.",
+      "taskAddError": "Não foi possível adicionar a tarefa.",
+      "phaseUpdated": "Fase atualizada",
+      "phaseUpdatedDesc": "As alterações foram salvas",
+      "personaUpdated": "Persona atualizado",
+      "personaUpdatedDesc": "As alterações foram salvas"
     },
-    "savedShort": "Sauvegardé",
-    "deleteTaskTitle": "Supprimer la tâche",
-    "editRevenueGoal": "Modifier l'objectif de revenu"
+    "savedShort": "Salvo",
+    "deleteTaskTitle": "Excluir a tarefa",
+    "editRevenueGoal": "Editar a meta de faturamento"
   },
   "onboarding": {
     "title": "Bienvenue sur Tipote",
@@ -2395,18 +2395,18 @@
     "heroSubtitle": "Escolha um formato — a IA acompanha você"
   },
   "strategyDetails": {
-    "addTask": "Ajouter une tâche",
-    "addTaskDesc": "Crée une nouvelle tâche pour ta stratégie",
-    "taskName": "Nom de la tâche",
-    "taskPlaceholder": "Ex: Créer une landing page",
-    "phase": "Phase",
-    "phasePlaceholder": "Choisis une phase",
-    "whyOffer": "Pourquoi cette offre ?",
-    "whyPrice": "Pourquoi ce prix ?",
-    "pricingTiers": "Paliers de prix",
-    "whatToCreate": "Quoi créer ?",
-    "howToCreate": "Comment créer ?",
-    "howToPromote": "Comment promouvoir ?"
+    "addTask": "Adicionar uma tarefa",
+    "addTaskDesc": "Crie uma nova tarefa para sua estratégia",
+    "taskName": "Nome da tarefa",
+    "taskPlaceholder": "Ex.: Criar uma landing page",
+    "phase": "Fase",
+    "phasePlaceholder": "Escolha uma fase",
+    "whyOffer": "Por que essa oferta?",
+    "whyPrice": "Por que esse preço?",
+    "pricingTiers": "Tiers de preço",
+    "whatToCreate": "O que criar?",
+    "howToCreate": "Como criar?",
+    "howToPromote": "Como promover?"
   },
   "executionFeedback": {
     "softStart": "Início suave",
@@ -4337,18 +4337,18 @@
   },
   "strategyPhases": {
     "fondations": {
-      "title": "Phase 1 : Fondations",
-      "period": "Poser les bases"
+      "title": "Fase 1: Fundações",
+      "period": "Estabelecer as bases"
     },
     "croissance": {
-      "title": "Phase 2 : Croissance",
-      "period": "Développer son audience"
+      "title": "Fase 2: Crescimento",
+      "period": "Desenvolver a audiência"
     },
     "scale": {
-      "title": "Phase 3 : Scale",
-      "period": "Automatiser et scaler"
+      "title": "Fase 3: Scale",
+      "period": "Automatizar e escalar"
     },
-    "currentPhaseLabel": "Fondations"
+    "currentPhaseLabel": "Fundações"
   },
   "syncTasks": {
     "syncImpossible": "Sync impossible",
