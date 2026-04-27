@@ -1,6 +1,15 @@
 // components/ui/ai-generating-overlay.tsx
-// Reusable overlay shown while Tipote AI is generating content.
-// Displays a fun animated loader with a multilingual message.
+// Fullscreen overlay shown while Tiquiz AI is generating a quiz / survey.
+// Covers the entire viewport with a blurred backdrop so the page below stays
+// frozen and the user can't double-submit. The form / draft content stays
+// mounted in the DOM (preserves React state, scroll position, etc.) — only
+// the overlay sits on top.
+//
+// Used by:
+//   - QuizFormClient.tsx (Tiquiz + Tipote): drops the AI tab content while
+//     generation runs.
+//   - SurveyFormClient.tsx (Tiquiz + Tipote): renders alongside the tabs and
+//     sits over them.
 
 "use client";
 
@@ -18,7 +27,12 @@ export function AIGeneratingOverlay({ message, submessage }: AIGeneratingOverlay
   const t = useTranslations("common");
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[40vh] px-4 py-12">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={message ?? t("aiGeneratingTitle")}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm px-4"
+    >
       <div className="flex flex-col items-center max-w-md text-center">
         {/* Animated icon */}
         <div className="relative mb-6">
