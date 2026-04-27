@@ -16,7 +16,10 @@ import { useTranslations } from "next-intl";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
-import { PageBanner } from "@/components/PageBanner";
+// Design-system primitives (Phase 2 pilot). Replaces the bulky gradient
+// PageBanner + hand-rolled paddings with a cohesive heading + container +
+// card grammar shared across pages.
+import { PageContainer, PageHeading, SectionCard } from "@/components/ui/page-shell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -572,54 +575,59 @@ export default function MyContentLovableClient({
             left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
           />
 
-          {/* Container */}
-          <div className="flex-1 p-4 sm:p-5 lg:p-6">
-            <div className="max-w-[1200px] mx-auto w-full space-y-5">
-            <PageBanner
-              icon={<ClipboardList className="w-5 h-5" />}
-              title="Tous tes contenus"
+          {/* Phase-2 design-system pilot: clean heading replaces the heavy
+              gradient PageBanner; PageContainer enforces consistent padding
+              + max-width + section gap; SectionCard houses the filter strip
+              so the visual rhythm matches the rest of the (refreshed) app. */}
+          <PageContainer>
+            <PageHeading
+              title="Mes contenus"
               subtitle={t("ui.subtitle")}
-            >
-              <Button asChild size="sm" className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground">
-                <Link href="/create">
-                  <Plus className="w-4 h-4 mr-1" />
-                  Créer
-                </Link>
-              </Button>
-            </PageBanner>
+              actions={
+                <Button asChild className="rounded-full">
+                  <Link href="/create">
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    Créer
+                  </Link>
+                </Button>
+              }
+            />
 
-            {/* Filters & Toggle */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            {/* Filters & Toggle — wrapped in a SectionCard so the search bar
+                + view toggle sit on the same elevated surface as the lists
+                below, instead of floating directly on the page bg. */}
+            <SectionCard padding="sm" className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-md w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder={t("ui.search")}
-                  className="pl-9"
+                  className="pl-9 border-transparent bg-surface-muted focus-visible:bg-card"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={view === "list" ? "default" : "outline"}
-                  className="gap-2"
+              <div className="flex items-center gap-1.5 bg-surface-muted rounded-full p-0.5 w-fit">
+                <button
                   onClick={() => setView("list")}
+                  className={`gap-1.5 inline-flex items-center px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    view === "list" ? "bg-card shadow-soft text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
-                  <List className="w-4 h-4" />
+                  <List className="w-3.5 h-3.5" />
                   Liste
-                </Button>
-
-                <Button
-                  variant={view === "calendar" ? "default" : "outline"}
-                  className="gap-2"
+                </button>
+                <button
                   onClick={() => setView("calendar")}
+                  className={`gap-1.5 inline-flex items-center px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    view === "calendar" ? "bg-card shadow-soft text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
-                  <CalendarDays className="w-4 h-4" />
+                  <CalendarDays className="w-3.5 h-3.5" />
                   Calendrier
-                </Button>
+                </button>
               </div>
-            </div>
+            </SectionCard>
 
             {/* Content */}
             <div className="space-y-6">
@@ -1345,8 +1353,7 @@ export default function MyContentLovableClient({
             <div className="text-xs text-muted-foreground">
               Connecté en tant que <span className="font-medium">{userEmail}</span>
             </div>
-          </div>
-          </div>
+          </PageContainer>
         </main>
       </div>
     </SidebarProvider>
