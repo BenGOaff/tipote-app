@@ -1664,106 +1664,106 @@
     "editRevenueGoal": "Editar a meta de faturamento"
   },
   "onboarding": {
-    "title": "Bienvenue sur Tipote",
-    "subtitle": "Quelques questions pour créer ta stratégie sur-mesure.",
-    "continue": "Continuer",
-    "back": "Retour",
-    "skip": "Passer",
-    "finish": "Générer ma stratégie",
-    "pressEnter": "Appuie sur Entrée ↵",
-    "multipleChoice": "Choisis tout ce qui s'applique",
-    "singleChoice": "Choisis une réponse",
-    "textPlaceholder": "Écris ta réponse ici…",
-    "optional": "(optionnel)",
+    "title": "Bem-vindo ao Tipote",
+    "subtitle": "Algumas perguntas para criar sua estratégia sob medida.",
+    "continue": "Continuar",
+    "back": "Voltar",
+    "skip": "Pular",
+    "finish": "Gerar minha estratégia",
+    "pressEnter": "Pressione Enter ↵",
+    "multipleChoice": "Escolha tudo o que se aplica",
+    "singleChoice": "Escolha uma resposta",
+    "textPlaceholder": "Escreva sua resposta aqui…",
+    "optional": "(opcional)",
     "stepOf": "{current} / {total}",
-    "addOffer": "Ajouter une offre",
-    "removeOffer": "Supprimer",
-    "offerName": "Nom de l'offre",
-    "offerPrice": "Prix (€)",
-    "offerFormat": "Format",
-    "offerSalesCount": "Nombre de ventes (approx.)",
-    "offerFormatPlaceholder": "ex. formation en ligne, coaching, SaaS…",
+    "addOffer": "Adicionar uma oferta",
+    "removeOffer": "Excluir",
+    "offerName": "Nome da oferta",
+    "offerPrice": "Preço (€)",
+    "offerFormat": "Formato",
+    "offerSalesCount": "Número de vendas (aprox.)",
+    "offerFormatPlaceholder": "ex.: curso online, coaching, SaaS…",
     "steps": {
       "firstName": {
-        "question": "Bienvenue ! Comment tu t'appelles ?",
-        "placeholder": "Ton prénom"
+        "question": "Bem-vindo! Qual é seu nome?",
+        "placeholder": "Seu nome"
       },
       "revenueGoal": {
-        "question": "Quel est ton objectif de revenu mensuel ?",
+        "question": "Qual é sua meta de faturamento mensal?",
         "options": {
-          "lt500": "Moins de 500 €",
-          "500_1k": "500 – 1 000 €",
-          "1k_3k": "1 000 – 3 000 €",
-          "3k_5k": "3 000 – 5 000 €",
-          "5k_10k": "5 000 – 10 000 €",
-          "gt10k": "Plus de 10 000 €"
+          "lt500": "Menos de R$ 500",
+          "500_1k": "R$ 500 – R$ 1.000",
+          "1k_3k": "R$ 1.000 – R$ 3.000",
+          "3k_5k": "R$ 3.000 – R$ 5.000",
+          "5k_10k": "R$ 5.000 – R$ 10.000",
+          "gt10k": "Mais de R$ 10.000"
         }
       },
       "primaryGoal": {
-        "question": "Au-delà de l'argent, qu'est-ce qui compte le plus pour toi ?",
+        "question": "Além do dinheiro, o que mais conta para você?",
         "options": {
-          "freedom": "Liberté de temps",
-          "recognition": "Être reconnu(e) dans mon domaine",
-          "impact": "Avoir un impact réel",
-          "security": "Sécurité financière",
-          "passion": "Vivre de ma passion",
-          "independence": "Indépendance totale"
+          "freedom": "Liberdade de tempo",
+          "recognition": "Ser reconhecido(a) na minha área",
+          "impact": "Ter um impacto real",
+          "security": "Segurança financeira",
+          "passion": "Viver da minha paixão",
+          "independence": "Independência total"
         }
       },
       "businessObjectives": {
-        "question": "Qu'est-ce que tu veux accomplir en priorité avec ton business ?",
-        "description": "Choisis autant de réponses que tu veux.",
+        "question": "O que você quer alcançar prioritariamente com seu negócio?",
+        "description": "Escolha quantas respostas quiser.",
         "options": {
-          "sell_more": "Vendre plus",
-          "clarify_position": "Clarifier mon positionnement",
-          "build_audience": "Construire une audience",
-          "automate": "Automatiser ce qui marche"
+          "sell_more": "Vender mais",
+          "clarify_position": "Clarificar meu posicionamento",
+          "build_audience": "Construir uma audiência",
+          "automate": "Automatizar o que funciona"
         }
       },
       "niche": {
-        "question": "Décris ta niche en complétant cette phrase :",
-        "description": "Ne te stresse pas si c'est flou, tu pourras affiner après.",
-        "targetLabel": "J'aide les",
-        "targetPlaceholder": "ex. coachs débutants, mamans entrepreneures…",
-        "objectiveLabel": "à",
-        "objectivePlaceholder": "ex. lancer leur premier produit digital…",
-        "mechanismLabel": "grâce à",
-        "mechanismPlaceholder": "ex. une méthode simple en 5 étapes…",
-        "timeframeLabel": "en",
-        "timeframePlaceholder": "ex. 90 jours, 3 semaines…"
+        "question": "Descreva seu nicho completando esta frase:",
+        "description": "Não se estresse se for vago, você pode afinar depois.",
+        "targetLabel": "Eu ajudo",
+        "targetPlaceholder": "ex.: coaches iniciantes, mães empreendedoras…",
+        "objectiveLabel": "a",
+        "objectivePlaceholder": "ex.: lançar seu primeiro produto digital…",
+        "mechanismLabel": "através de",
+        "mechanismPlaceholder": "ex.: um método simples em 5 etapas…",
+        "timeframeLabel": "em",
+        "timeframePlaceholder": "ex.: 90 dias, 3 semanas…"
       },
       "clientProfile": {
-        "question": "Parle-moi de ton client idéal.",
-        "problemLabel": "Son plus gros problème",
-        "problemPlaceholder": "ex. il ne sait pas par où commencer, il manque de visibilité…",
-        "prevAttemptsLabel": "Ce qu'il a déjà essayé",
-        "prevAttemptsPlaceholder": "ex. des formations en ligne, des vidéos YouTube…",
-        "failuresLabel": "Ce qui n'a pas marché",
-        "failuresPlaceholder": "ex. trop générique, pas adapté à sa situation…",
-        "futureLifeLabel": "Sa vie après avoir atteint son objectif",
-        "futurePlaceholder": "ex. il a enfin du temps pour sa famille, il vit de son activité…"
+        "question": "Me fale do seu cliente ideal.",
+        "problemLabel": "O maior problema dele",
+        "problemPlaceholder": "ex.: não sabe por onde começar, falta visibilidade…",
+        "prevAttemptsLabel": "O que ele já tentou",
+        "prevAttemptsPlaceholder": "ex.: cursos online, vídeos do YouTube…",
+        "failuresLabel": "O que não funcionou",
+        "failuresPlaceholder": "ex.: muito genérico, não adaptado à situação dele…",
+        "futureLifeLabel": "A vida dele depois de atingir o objetivo",
+        "futurePlaceholder": "ex.: tem finalmente tempo para a família, vive da atividade dele…"
       },
       "timeAvailable": {
-        "question": "Combien de temps tu peux consacrer à ton business par semaine ?",
+        "question": "Quanto tempo você pode dedicar ao seu negócio por semana?",
         "options": {
-          "lt5": "Moins de 5h",
+          "lt5": "Menos de 5h",
           "5_10": "5 – 10h",
           "10_20": "10 – 20h",
           "20_30": "20 – 30h",
-          "gt30": "Plus de 30h"
+          "gt30": "Mais de 30h"
         }
       },
       "biggestBlocker": {
-        "question": "Quel est ton plus gros blocage en ce moment ?",
-        "description": "Choisis tout ce qui s'applique.",
+        "question": "Qual é o seu maior bloqueio neste momento?",
+        "description": "Escolha tudo o que se aplica.",
         "options": {
-          "knowledge": "Manque de connaissances",
-          "time": "Manque de temps",
-          "money": "Manque de budget",
-          "fear": "Peur de l'échec",
-          "clarity": "Manque de clarté / direction",
-          "tech": "Blocage technique",
-          "motivation": "Problème de motivation / régularité"
+          "knowledge": "Falta de conhecimento",
+          "time": "Falta de tempo",
+          "money": "Falta de orçamento",
+          "fear": "Medo de falhar",
+          "clarity": "Falta de clareza / direção",
+          "tech": "Bloqueio técnico",
+          "motivation": "Problema de motivação / regularidade"
         }
       },
       "contentPreference": {
