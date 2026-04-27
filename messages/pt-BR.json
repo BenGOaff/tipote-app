@@ -181,29 +181,29 @@
   },
   "tasksPage": {
     "title": "Minhas tarefas",
-    "heroTitle": "Gère ton exécution",
-    "heroDesc": "Ajoute, planifie et coche tes tâches pour rester dans le rythme.",
-    "completedBadge": "{done}/{total} terminées",
-    "totalBadge": "{total} au total",
-    "seeStrategy": "Voir la stratégie",
-    "createOneClick": "Créer en 1 clic",
-    "listTitle": "Mes tâches",
-    "emptyHint": "Astuce : si tu viens de générer ta stratégie, clique sur « Sync tâches ».",
+    "heroTitle": "Gerencie sua execução",
+    "heroDesc": "Adicione, agende e marque suas tarefas para manter o ritmo.",
+    "completedBadge": "{done}/{total} concluídas",
+    "totalBadge": "{total} no total",
+    "seeStrategy": "Ver a estratégia",
+    "createOneClick": "Criar em 1 clique",
+    "listTitle": "Minhas tarefas",
+    "emptyHint": "Dica: se você acabou de gerar sua estratégia, clique em «Sync tarefas».",
     "item": {
-      "editAria": "Modifier la tâche",
-      "deleteAria": "Supprimer la tâche",
-      "closeEditAria": "Fermer l'édition",
-      "markTodo": "Marquer comme à faire",
-      "markDone": "Marquer comme faite",
-      "titlePlaceholder": "Titre…",
-      "save": "Sauvegarder",
-      "deleteConfirmTitle": "Supprimer cette tâche ?",
-      "deleteConfirmDesc": "Cette action est définitive.",
-      "titleRequired": "Le titre est requis",
-      "errDelete": "Erreur lors de la suppression",
-      "errNetwork": "Erreur réseau",
-      "errUpdate": "Erreur lors de la mise à jour",
-      "errSave": "Erreur lors de la sauvegarde"
+      "editAria": "Editar a tarefa",
+      "deleteAria": "Excluir a tarefa",
+      "closeEditAria": "Fechar a edição",
+      "markTodo": "Marcar como a fazer",
+      "markDone": "Marcar como concluída",
+      "titlePlaceholder": "Título…",
+      "save": "Salvar",
+      "deleteConfirmTitle": "Excluir essa tarefa?",
+      "deleteConfirmDesc": "Essa ação é definitiva.",
+      "titleRequired": "O título é obrigatório",
+      "errDelete": "Erro ao excluir",
+      "errNetwork": "Erro de rede",
+      "errUpdate": "Erro ao atualizar",
+      "errSave": "Erro ao salvar"
     },
     "subtitle": "Acompanhe tudo o que você tem a fazer",
     "empty": "Sem tarefas",
@@ -1212,106 +1212,106 @@
   },
   "today": {
     "title": "Hoje",
-    "loading": "Chargement...",
-    "objectiveLabel": "Ton objectif en ce moment",
-    "nextStep": "Prochaine étape",
-    "thisWeek": "Cette semaine",
+    "loading": "Carregando...",
+    "objectiveLabel": "Seu objetivo agora",
+    "nextStep": "Próximo passo",
+    "thisWeek": "Esta semana",
     "encourageSummary": {
-      "started": "Tu as avancé sur « {actions} », bon début !",
-      "momentum": "Tu as terminé {done}/{total} étapes, dont « {actions} ». Tu avances bien !",
-      "halfWay": "Déjà {pct}% de tes étapes complétées, dont « {actions} ». Continue sur ta lancée !",
-      "almostDone": "Tu y es presque ! {pct}% complété, dont « {actions} ». La ligne d'arrivée est proche !"
+      "started": "Você avançou em «{actions}», bom começo!",
+      "momentum": "Você concluiu {done}/{total} etapas, incluindo «{actions}». Está avançando bem!",
+      "halfWay": "Já {pct}% das suas etapas concluídas, incluindo «{actions}». Continue nesse ritmo!",
+      "almostDone": "Você está quase lá! {pct}% concluído, incluindo «{actions}». A linha de chegada está perto!"
     },
-    "progressionTitle": "Ta progression",
-    "progressionSub": "Tes résultats concrets",
-    "contentsCreated": "Contenus créés",
-    "noContent": "Aucun contenu pour le moment",
-    "businessResults": "Résultats business",
-    "fillStats": "Remplis tes statistiques",
-    "fillStatsSub": "Pour mesurer tes avancées : leads capturés, ventes, vues de tunnel...",
-    "viewStats": "Voir mes statistiques",
-    "fillStatsBtn": "Remplir mes statistiques",
-    "viewStrategy": "Voir ma stratégie complète",
+    "progressionTitle": "Seu progresso",
+    "progressionSub": "Seus resultados concretos",
+    "contentsCreated": "Conteúdos criados",
+    "noContent": "Nenhum conteúdo no momento",
+    "businessResults": "Resultados de negócio",
+    "fillStats": "Preencha suas estatísticas",
+    "fillStatsSub": "Para medir seus avanços: leads capturados, vendas, visualizações do funil...",
+    "viewStats": "Ver minhas estatísticas",
+    "fillStatsBtn": "Preencher minhas estatísticas",
+    "viewStrategy": "Ver minha estratégia completa",
     "objective": {
-      "labelStartup": "Démarrage",
-      "labelFoundations": "Fondations",
-      "labelGrowth": "Croissance",
-      "labelScale": "Scale",
-      "strategyFocus": "Génère ta stratégie pour démarrer ton business.",
+      "labelStartup": "Arranque",
+      "labelFoundations": "Fundações",
+      "labelGrowth": "Crescimento",
+      "labelScale": "Escalar",
+      "strategyFocus": "Gere sua estratégia para começar seu negócio.",
       "phase": {
-        "startup": "Lancer ton activité",
-        "foundations": "Poser les fondations",
-        "growth": "Accélérer ta croissance",
-        "scale": "Scaler ton business"
+        "startup": "Lançar sua atividade",
+        "foundations": "Estabelecer as fundações",
+        "growth": "Acelerar seu crescimento",
+        "scale": "Escalar seu negócio"
       }
     },
     "ctas": {
-      "seeStrategy": "Voir ma stratégie",
-      "createContent": "Créer du contenu",
-      "createContents": "Créer tes contenus",
-      "generateStrategy": "Générer ma stratégie",
-      "seeTasks": "Voir mes tâches"
+      "seeStrategy": "Ver minha estratégia",
+      "createContent": "Criar conteúdo",
+      "createContents": "Criar seus conteúdos",
+      "generateStrategy": "Gerar minha estratégia",
+      "seeTasks": "Ver minhas tarefas"
     },
     "positive": {
-      "persona": "défini ton persona",
-      "offre": "clarifié ton offre",
-      "lead_magnet": "créé ton lead magnet",
-      "page_vente": "rédigé ta page de vente",
-      "email": "préparé tes emails",
-      "contenu": "planifié tes contenus",
-      "other": "avancé sur {label}",
-      "one": "Tu as {item}, c'est top !",
-      "two": "Tu as {item1} et {item2}, c'est top !",
-      "many": "Tu as {items} et {last}, bravo !"
+      "persona": "definiu seu persona",
+      "offre": "clarificou sua oferta",
+      "lead_magnet": "criou seu lead magnet",
+      "page_vente": "escreveu sua página de vendas",
+      "email": "preparou seus emails",
+      "contenu": "planejou seus conteúdos",
+      "other": "avançou em {label}",
+      "one": "Você {item}, show!",
+      "two": "Você {item1} e {item2}, show!",
+      "many": "Você {items} e {last}, bravo!"
     },
     "coaching": {
       "noStrategy": {
-        "recommendation": "Tu dois générer ta stratégie",
-        "why": "pour avoir un plan d'action clair et savoir exactement quoi faire chaque semaine"
+        "recommendation": "Você precisa gerar sua estratégia",
+        "why": "para ter um plano de ação claro e saber exatamente o que fazer cada semana"
       },
       "noTasks": {
-        "recommendation": "Consulte ta stratégie pour découvrir ton plan d'action",
-        "why": "et commence à créer tes premiers contenus pour lancer ton business"
+        "recommendation": "Consulte sua estratégia para descobrir seu plano de ação",
+        "why": "e comece a criar seus primeiros conteúdos para lançar seu negócio"
       },
       "allDone": {
-        "recommendation": "tu créais du nouveau contenu pour garder cette dynamique",
-        "why": "— ta base est solide, c'est le moment de passer à la vitesse supérieure"
+        "recommendation": "crie novo conteúdo para manter essa dinâmica",
+        "why": "— sua base é sólida, é hora de subir de nível"
       },
       "autre": {
-        "recommendation": "tu dois continuer à avancer sur tes tâches en cours",
-        "why": "pour garder le rythme et atteindre tes objectifs"
+        "recommendation": "você deve continuar avançando nas tarefas em andamento",
+        "why": "para manter o ritmo e atingir seus objetivos"
       },
       "persona": {
-        "recommendation": "tu dois définir ton client idéal",
-        "why": "pour savoir exactement à qui tu parles et adapter ton message"
+        "recommendation": "você deve definir seu cliente ideal",
+        "why": "para saber exatamente com quem você fala e adaptar sua mensagem"
       },
       "offre": {
-        "recommendation": "tu dois mettre le paquet sur la clarification de ton offre",
-        "why": "pour commencer à en parler avec confiance et convertir tes prospects"
+        "recommendation": "você deve focar na clarificação da sua oferta",
+        "why": "para começar a falar dela com confiança e converter seus prospects"
       },
       "lead_magnet": {
-        "recommendation": "tu dois créer ton lead magnet",
-        "why": "pour capturer des emails et construire une audience qualifiée"
+        "recommendation": "você deve criar seu lead magnet",
+        "why": "para capturar emails e construir uma audiência qualificada"
       },
       "page_vente": {
-        "recommendation": "tu dois rédiger ta page de vente",
-        "why": "pour lancer tes ventes rapidement et commencer à générer du chiffre"
+        "recommendation": "você deve escrever sua página de vendas",
+        "why": "para lançar suas vendas rapidamente e começar a faturar"
       },
       "email": {
-        "recommendation": "tu dois rédiger ta séquence email de bienvenue",
-        "why": "pour fidéliser ton audience dès le premier contact"
+        "recommendation": "você deve escrever sua sequência de email de boas-vindas",
+        "why": "para fidelizar sua audiência desde o primeiro contato"
       },
       "contenu": {
-        "recommendation": "tu dois planifier et créer tes prochains contenus",
-        "why": "pour booster ta visibilité et attirer de nouveaux prospects"
+        "recommendation": "você deve planejar e criar seus próximos conteúdos",
+        "why": "para impulsionar sua visibilidade e atrair novos prospects"
       }
     },
-    "mixedResults": "Résultats mitigés ce mois-ci.",
-    "cancelled": "annulé",
-    "oneScheduledToday": "1 contenu programmé aujourd’hui",
-    "veryDynamic": "Super dynamique ce mois-ci !",
-    "warningDown": "Attention, quelques indicateurs baissent.",
-    "manyScheduledToday": "contenus programmés aujourd’hui",
+    "mixedResults": "Resultados mistos esse mês.",
+    "cancelled": "cancelado",
+    "oneScheduledToday": "1 conteúdo agendado para hoje",
+    "veryDynamic": "Muito dinâmico esse mês!",
+    "warningDown": "Atenção, alguns indicadores estão caindo.",
+    "manyScheduledToday": "conteúdos agendados para hoje",
     "subtitle": "Seu dia em resumo",
     "todayLabel": "Hoje",
     "tomorrowLabel": "Amanhã",
