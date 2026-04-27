@@ -487,7 +487,18 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     }
   }
 
-  // Load generated offers from strategy plan
+  // Load generated offers from strategy plan.
+  //
+  // selected_pyramid stored shape can be either:
+  //   - { offers: [{name, level, ...}] }                    (legacy, rare)
+  //   - { lead_magnet: {...}, low_ticket: {...},
+  //       middle_ticket: {...}, high_ticket: {...} }        (current — what
+  //                                                          PyramidSelection
+  //                                                          actually sends)
+  // The card was reading pyramid.offers blindly, so users on the second
+  // shape (= everyone who selected a pyramid the modern way) saw an empty
+  // section even though their selection was persisted. Normalise both
+  // shapes here so the section is populated either way.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -496,19 +507,44 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const res = await fetch("/api/strategy/offer-pyramid");
         const json = await res.json().catch(() => null);
         if (cancelled) return;
-        // Extract offers from selected_pyramid (returned by GET endpoint)
         const pyramid = json?.selected_pyramid;
-        if (pyramid && Array.isArray(pyramid.offers)) {
-          setGeneratedOffers(pyramid.offers.map((o: any) => ({
-            name: String(o?.name ?? o?.offer_name ?? o?.title ?? ""),
-            level: String(o?.level ?? ""),
-            promise: String(o?.promise ?? o?.main_outcome ?? ""),
-            description: String(o?.description ?? ""),
-            price_min: typeof o?.price_min === "number" ? o.price_min : null,
+        if (!pyramid || typeof pyramid !== "object") return;
+
+        const toGenOffer = (o: any, level: string): GeneratedOffer | null => {
+          const name = String(o?.name ?? o?.offer_name ?? o?.title ?? "");
+          if (!name) return null;
+          return {
+            name,
+            level: String(o?.level ?? level ?? ""),
+            promise: String(o?.promise ?? o?.transformation ?? o?.main_outcome ?? ""),
+            description: String(o?.description ?? o?.pitch ?? ""),
+            price_min: typeof o?.price_min === "number"
+              ? o.price_min
+              : typeof o?.price === "number" ? o.price : null,
             price_max: typeof o?.price_max === "number" ? o.price_max : null,
             format: String(o?.format ?? ""),
-          })));
+          };
+        };
+
+        const flat: GeneratedOffer[] = [];
+        if (Array.isArray(pyramid.offers)) {
+          // Legacy / explicit-array shape.
+          for (const o of pyramid.offers) {
+            const g = toGenOffer(o, String((o as any)?.level ?? ""));
+            if (g) flat.push(g);
+          }
+        } else {
+          // Modern shape: named-level keys. Walk in pyramid order so the
+          // user sees lead magnet → low → middle → high top-to-bottom.
+          for (const level of ["lead_magnet", "low_ticket", "middle_ticket", "high_ticket"] as const) {
+            const o = (pyramid as any)[level];
+            if (o && typeof o === "object") {
+              const g = toGenOffer(o, level);
+              if (g) flat.push(g);
+            }
+          }
         }
+        if (flat.length > 0) setGeneratedOffers(flat);
       } catch { /* ignore */ }
       if (!cancelled) setGeneratedOffersLoading(false);
     })();

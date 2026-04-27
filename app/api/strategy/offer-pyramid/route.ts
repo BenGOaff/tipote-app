@@ -348,11 +348,25 @@ export async function GET(_req: Request) {
       const { data: planRow2 } = await planQuery2.maybeSingle();
       const planJson2 = (planRow2?.plan_json ?? null) as AnyRecord | null;
 
+      // Resolve selected_pyramid with a fallback chain: plan_json first
+      // (carries any user edits made via PATCH), then the in-DB selected
+      // pyramid from offer_pyramids. This rescues users (like Gwenn) whose
+      // selection PATCH set is_selected=true on offer_pyramids rows but
+      // never populated plan_json.selected_pyramid — without this fallback
+      // their Settings → "Mes offres générées" stays empty even though
+      // they completed the flow.
+      let selectedPyramid: AnyRecord | null = planJson2
+        ? (asRecord(planJson2.selected_pyramid) ?? asRecord(planJson2.selected_offer_pyramid) ?? null)
+        : null;
+      if (!selectedPyramid && dbResult.selectedIndex !== null) {
+        selectedPyramid = asRecord(dbResult.pyramidSets[dbResult.selectedIndex]) ?? null;
+      }
+
       return NextResponse.json({
         success: true,
         offer_pyramids: dbResult.pyramidSets,
         selected_index: dbResult.selectedIndex,
-        selected_pyramid: planJson2 ? (asRecord(planJson2.selected_pyramid) ?? asRecord(planJson2.selected_offer_pyramid) ?? null) : null,
+        selected_pyramid: selectedPyramid,
       });
     }
 
@@ -409,31 +423,58 @@ export async function PATCH(req: Request) {
       if (!pyramid) {
         return NextResponse.json({ error: "No selected pyramid to edit" }, { status: 404 });
       }
-      const offers = asArray(pyramid.offers).slice();
-      if (offerIndex < 0 || offerIndex >= offers.length) {
-        return NextResponse.json({ error: "offerIndex out of range" }, { status: 400 });
-      }
 
-      // Merge fields the editor surface allows. Anything not whitelisted
-      // (e.g. internal AI-generated metadata) is preserved untouched.
-      const previous = asRecord(offers[offerIndex]) ?? {};
-      const next: AnyRecord = { ...previous };
-      if (typeof incoming.name === "string") next.name = cleanString(incoming.name, 200);
-      if (typeof incoming.level === "string") next.level = cleanString(incoming.level, 60);
-      if (typeof incoming.promise === "string") next.promise = cleanString(incoming.promise, 800);
-      if (typeof incoming.description === "string") next.description = cleanString(incoming.description, 4000);
-      if (typeof incoming.format === "string") next.format = cleanString(incoming.format, 200);
-      if ("price_min" in incoming) {
-        const pm = toNumber(incoming.price_min);
-        if (pm === null) delete next.price_min; else next.price_min = pm;
-      }
-      if ("price_max" in incoming) {
-        const px = toNumber(incoming.price_max);
-        if (px === null) delete next.price_max; else next.price_max = px;
-      }
-      offers[offerIndex] = next;
+      // selected_pyramid comes in two shapes: legacy { offers: [...] } and
+      // modern { lead_magnet, low_ticket, middle_ticket, high_ticket }.
+      // SettingsTabsShell flattens both into a single ordered list (lead → low
+      // → middle → high), so the same offerIndex must round-trip back to the
+      // right slot regardless of shape.
+      const PYRAMID_LEVELS = ["lead_magnet", "low_ticket", "middle_ticket", "high_ticket"] as const;
+      const hasOffersArray = Array.isArray((pyramid as AnyRecord).offers);
 
-      const updatedPyramid = { ...pyramid, offers };
+      const merge = (previousOffer: AnyRecord | null): AnyRecord => {
+        const next: AnyRecord = { ...(previousOffer ?? {}) };
+        if (typeof incoming.name === "string") next.name = cleanString(incoming.name, 200);
+        if (typeof incoming.level === "string") next.level = cleanString(incoming.level, 60);
+        if (typeof incoming.promise === "string") next.promise = cleanString(incoming.promise, 800);
+        if (typeof incoming.description === "string") next.description = cleanString(incoming.description, 4000);
+        if (typeof incoming.format === "string") next.format = cleanString(incoming.format, 200);
+        if ("price_min" in incoming) {
+          const pm = toNumber(incoming.price_min);
+          if (pm === null) delete next.price_min; else next.price_min = pm;
+        }
+        if ("price_max" in incoming) {
+          const px = toNumber(incoming.price_max);
+          if (px === null) delete next.price_max; else next.price_max = px;
+        }
+        return next;
+      };
+
+      let updatedPyramid: AnyRecord;
+      let updatedOffer: AnyRecord;
+
+      if (hasOffersArray) {
+        const offers = asArray((pyramid as AnyRecord).offers).slice();
+        if (offerIndex < 0 || offerIndex >= offers.length) {
+          return NextResponse.json({ error: "offerIndex out of range" }, { status: 400 });
+        }
+        updatedOffer = merge(asRecord(offers[offerIndex]));
+        offers[offerIndex] = updatedOffer;
+        updatedPyramid = { ...pyramid, offers };
+      } else {
+        // Walk the named-level keys in the same order the client uses to
+        // flatten — the Nth populated level matches the Nth row on screen.
+        const populated: Array<{ level: typeof PYRAMID_LEVELS[number] }> = [];
+        for (const level of PYRAMID_LEVELS) {
+          if (asRecord((pyramid as AnyRecord)[level])) populated.push({ level });
+        }
+        if (offerIndex < 0 || offerIndex >= populated.length) {
+          return NextResponse.json({ error: "offerIndex out of range" }, { status: 400 });
+        }
+        const targetLevel = populated[offerIndex].level;
+        updatedOffer = merge(asRecord((pyramid as AnyRecord)[targetLevel]));
+        updatedPyramid = { ...pyramid, [targetLevel]: updatedOffer };
+      }
       const nextPlan: AnyRecord = {
         ...basePlan,
         selected_pyramid: updatedPyramid,
@@ -446,7 +487,7 @@ export async function PATCH(req: Request) {
         data: { plan_json: nextPlan, updated_at: nextPlan.updated_at },
       });
 
-      return NextResponse.json({ success: true, offer: next });
+      return NextResponse.json({ success: true, offer: updatedOffer });
     }
 
     const selectedIndex = typeof body.selectedIndex === "number" ? body.selectedIndex : null;
@@ -535,15 +576,35 @@ export async function DELETE(req: Request) {
     const nextPlan = { ...basePlan };
 
     if (offerIndex !== null) {
-      // Remove a specific offer from the selected pyramid
+      // Remove a specific offer from the selected pyramid. selected_pyramid
+      // can be either { offers: [...] } (legacy) or { lead_magnet, low_ticket,
+      // middle_ticket, high_ticket } (modern). The settings card flattens both
+      // into a single ordered list — we mirror that order here so offerIndex
+      // round-trips correctly regardless of shape.
       const pyramid = asRecord(basePlan.selected_pyramid) ?? asRecord(basePlan.selected_offer_pyramid);
       if (pyramid) {
-        const offers = asArray(pyramid.offers);
-        if (offerIndex >= 0 && offerIndex < offers.length) {
-          offers.splice(offerIndex, 1);
-          const updatedPyramid = { ...pyramid, offers };
-          nextPlan.selected_pyramid = updatedPyramid;
-          nextPlan.selected_offer_pyramid = updatedPyramid;
+        const PYRAMID_LEVELS = ["lead_magnet", "low_ticket", "middle_ticket", "high_ticket"] as const;
+        const hasOffersArray = Array.isArray((pyramid as AnyRecord).offers);
+        if (hasOffersArray) {
+          const offers = asArray((pyramid as AnyRecord).offers).slice();
+          if (offerIndex >= 0 && offerIndex < offers.length) {
+            offers.splice(offerIndex, 1);
+            const updatedPyramid = { ...pyramid, offers };
+            nextPlan.selected_pyramid = updatedPyramid;
+            nextPlan.selected_offer_pyramid = updatedPyramid;
+          }
+        } else {
+          const populated: Array<{ level: typeof PYRAMID_LEVELS[number] }> = [];
+          for (const level of PYRAMID_LEVELS) {
+            if (asRecord((pyramid as AnyRecord)[level])) populated.push({ level });
+          }
+          if (offerIndex >= 0 && offerIndex < populated.length) {
+            const targetLevel = populated[offerIndex].level;
+            const updatedPyramid: AnyRecord = { ...pyramid };
+            delete updatedPyramid[targetLevel];
+            nextPlan.selected_pyramid = updatedPyramid;
+            nextPlan.selected_offer_pyramid = updatedPyramid;
+          }
         }
       }
     } else {

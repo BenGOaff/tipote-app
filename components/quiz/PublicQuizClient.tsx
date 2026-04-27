@@ -70,6 +70,10 @@ type PublicQuizData = {
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
   capture_country?: boolean | null;
+  // Some creators (Bénédicte's first user) want to drop the GDPR-style
+  // checkbox under the email capture form when their CRM already
+  // handles consent upstream. Default true on every existing row.
+  show_consent_checkbox?: boolean | null;
   ask_first_name?: boolean | null;
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
@@ -1299,22 +1303,48 @@ export default function PublicQuizClient({
                 </div>
               )}
 
-              <label className="flex items-start gap-2.5 text-sm text-muted-foreground cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                  className="mt-0.5 w-4 h-4"
-                />
-                <ConsentText text={quiz.consent_text} privacyUrl={quiz.privacy_url} locale={quiz.locale} />
-              </label>
+              {/* Consent checkbox is opt-out per quiz (show_consent_checkbox).
+                  Why a <div> + click handler instead of <label>: a <label>
+                  swallows taps on its child <a> on iOS / Android Chrome —
+                  the visitor's tap on the privacy link toggles the checkbox
+                  instead of opening the policy. We keep the same UX (click
+                  the text → toggle) but hand-roll it so the link works. */}
+              {(quiz.show_consent_checkbox !== false) && (
+                <div
+                  className="flex items-start gap-2.5 text-sm text-muted-foreground pt-1"
+                  onClick={(e) => {
+                    const tgt = e.target as HTMLElement;
+                    if (tgt.closest("a")) return;
+                    if (tgt.tagName === "INPUT") return;
+                    setConsent(!consent);
+                  }}
+                  role="presentation"
+                >
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-0.5 w-4 h-4 cursor-pointer"
+                  />
+                  <span className="cursor-pointer">
+                    <ConsentText text={quiz.consent_text} privacyUrl={quiz.privacy_url} locale={quiz.locale} />
+                  </span>
+                </div>
+              )}
             </div>
 
             <Button
               size="lg"
               className="w-full h-12 text-base rounded-full"
               onClick={handleSubmitEmail}
-              disabled={submitting || !email.trim() || !consent}
+              disabled={
+                submitting ||
+                !email.trim() ||
+                // Hidden checkbox = no consent gate (creator manages it
+                // upstream).
+                (quiz.show_consent_checkbox !== false && !consent)
+              }
             >
               {submitting ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
