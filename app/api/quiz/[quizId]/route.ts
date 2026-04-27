@@ -230,18 +230,35 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    // Update questions if provided
+    // Update questions if provided. Survey questions carry question_type +
+    // config so the public renderer knows which widget to mount; legacy
+    // quiz inserts that omit those fields fall through to the column
+    // defaults (multiple_choice / {}).
     if (Array.isArray(body.questions)) {
+      const ALLOWED_TYPES = new Set([
+        "multiple_choice",
+        "rating_scale",
+        "star_rating",
+        "free_text",
+        "image_choice",
+        "yes_no",
+      ]);
       // Delete old questions and re-insert
       await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
       if (body.questions.length > 0) {
         await supabase.from("quiz_questions").insert(
-          body.questions.map((q: any, i: number) => ({
-            quiz_id: quizId,
-            question_text: String(q.question_text ?? ""),
-            options: Array.isArray(q.options) ? q.options : [],
-            sort_order: i,
-          })),
+          body.questions.map((q: any, i: number) => {
+            const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
+            const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
+            return {
+              quiz_id: quizId,
+              question_text: String(q.question_text ?? ""),
+              options: Array.isArray(q.options) ? q.options : [],
+              sort_order: i,
+              question_type,
+              config: q.config && typeof q.config === "object" && !Array.isArray(q.config) ? q.config : {},
+            };
+          }),
         );
       }
     }
