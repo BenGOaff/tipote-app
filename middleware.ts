@@ -21,13 +21,27 @@ import { isAdminEmail } from "@/lib/adminEmails";
 
 const ACTIVE_PROJECT_COOKIE = "tipote_active_project";
 const UI_LOCALE_COOKIE = "ui_locale";
-const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar"];
+const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar", "pt", "pt-BR"];
 
-/** Detect preferred locale from Accept-Language header (falls back to 'fr'). */
+/**
+ * Detect preferred locale from Accept-Language header.
+ * Two-pass: exact BCP 47 match ("pt-BR" → "pt-BR") then language prefix
+ * ("pt-BR" → "pt"). This is what gives a Brazilian browser pt-BR instead
+ * of being forced to pt. Falls back to 'fr'.
+ */
 function detectLocaleFromHeader(req: NextRequest): string {
   const acceptLang = req.headers.get("accept-language") ?? "";
-  const langs = acceptLang.split(",").map((l) => l.split(";")[0].trim().slice(0, 2).toLowerCase());
-  return langs.find((l) => SUPPORTED_LOCALES.includes(l)) ?? "fr";
+  const tags = acceptLang.split(",").map((l) => l.split(";")[0].trim()).filter(Boolean);
+  for (const tag of tags) {
+    const match = SUPPORTED_LOCALES.find((l) => l.toLowerCase() === tag.toLowerCase());
+    if (match) return match;
+  }
+  for (const tag of tags) {
+    const prefix = tag.split("-")[0].toLowerCase();
+    const match = SUPPORTED_LOCALES.find((l) => l.toLowerCase() === prefix);
+    if (match) return match;
+  }
+  return "fr";
 }
 
 const PUBLIC_PREFIXES = [
