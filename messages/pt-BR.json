@@ -1,6 +1,6 @@
 {
   "nav": {
-    "today": "Aujourd'hui",
+    "today": "Hoje",
     "strategy": "Estratégia",
     "create": "Criar",
     "contents": "Meus conteúdos",
@@ -13,7 +13,7 @@
     "pepites": "Pepitas",
     "settings": "Configurações",
     "widgets": "Widgets",
-    "webinars": "Événements live",
+    "webinars": "Eventos ao vivo",
     "support": "Ajuda",
     "dashboard": "Painel",
     "tasks": "Tarefas",
@@ -559,10 +559,10 @@
     "noAccount": "Ainda não tem conta?",
     "createAccount": "Criar uma conta",
     "copyright": "© {year} Tipote. Todos os direitos reservados.",
-    "legalCgu": "CGU",
-    "legalCgv": "CGV",
-    "legalPrivacy": "Confidentialité",
-    "legalMentions": "Mentions légales",
+    "legalCgu": "Termos",
+    "legalCgv": "Termos de Venda",
+    "legalPrivacy": "Privacidade",
+    "legalMentions": "Menções legais",
     "legalCookies": "Cookies",
     "errFillCredentials": "Preencha seu email e senha.",
     "errInvalidCredentials": "Email ou senha incorretos.",
@@ -578,15 +578,15 @@
   },
   "forgotPasswordPage": {
     "title": "Senha esquecida",
-    "description": "Entre ton email et nous t'enverrons un lien pour définir un nouveau mot de passe.",
+    "description": "Digite seu email e enviaremos um link para você definir uma nova senha.",
     "labelEmail": "Email",
     "sending": "Enviando…",
-    "sendLink": "Envoyer le lien",
-    "errFillEmail": "Merci de renseigner ton email.",
+    "sendLink": "Enviar o link",
+    "errFillEmail": "Por favor, informe seu email.",
     "errSendFailed": "Falha no envio. Tente novamente.",
-    "errRateLimit": "Trop de tentatives. Merci de patienter quelques minutes avant de réessayer.",
-    "successSent": "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé. Pense à vérifier tes spams.",
-    "errUnexpected": "Erreur inattendue. Merci de réessayer.",
+    "errRateLimit": "Muitas tentativas. Por favor, espere alguns minutos antes de tentar novamente.",
+    "successSent": "Se existir uma conta para esse email, foi enviado um link de redefinição. Não esqueça de verificar a pasta de spam.",
+    "errUnexpected": "Erro inesperado. Por favor tente novamente.",
     "backToLogin": "Voltar ao login",
     "desc": "Digite seu email para receber um link de redefinição.",
     "placeholder": "seu@email.com",
@@ -614,10 +614,10 @@
     "successResent": "Novo link enviado! Verifique sua caixa de entrada."
   },
   "resetPasswordPage": {
-    "loading": "Chargement…",
-    "loadingDesc": "On prépare la page de réinitialisation du mot de passe.",
-    "title": "Définir un nouveau mot de passe",
-    "description": "Choisis un nouveau mot de passe pour ton compte Tipote.",
+    "loading": "Carregando…",
+    "loadingDesc": "Estamos preparando a página de redefinição da senha.",
+    "title": "Definir uma nova senha",
+    "description": "Escolha uma nova senha para sua conta Tipote.",
     "labelNewPassword": "Nova senha",
     "labelConfirm": "Confirmar a senha",
     "hintMinLength": "Mínimo 8 caracteres.",
@@ -708,12 +708,12 @@
     "invalid": "Valor inválido"
   },
   "dashboard": {
-    "focusTitle": "Focus du jour",
-    "upToDate": "Tu es à jour 🎉 Tu peux avancer sur ta stratégie ou créer du contenu.",
-    "seeStrategy": "Voir stratégie",
-    "createContent": "Créer du contenu",
-    "nextAction": "Prochaine action à faire",
-    "allTasks": "Voir toutes les tâches",
+    "focusTitle": "Foco do dia",
+    "upToDate": "Você está em dia 🎉 Pode avançar na sua estratégia ou criar conteúdo.",
+    "seeStrategy": "Ver estratégia",
+    "createContent": "Criar conteúdo",
+    "nextAction": "Próxima ação a fazer",
+    "allTasks": "Ver todas as tarefas",
     "title": "Painel",
     "subtitle": "Visão geral do seu projeto",
     "welcome": "Bem-vindo",
@@ -2421,7 +2421,7 @@
     "oneStepBody": "Comece pela tarefa mais simples possível. O objetivo: um 1º ✅ hoje."
   },
   "dashboardLayout": {
-    "detailedAnalytics": "Analytics détaillés"
+    "detailedAnalytics": "Analytics detalhados"
   },
   "executionStats": {
     "loadingStats": "Carregando estatísticas…",

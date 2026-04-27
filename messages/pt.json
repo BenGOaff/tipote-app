@@ -1,6 +1,6 @@
 {
   "nav": {
-    "today": "Aujourd'hui",
+    "today": "Hoje",
     "strategy": "Estratégia",
     "create": "Criar",
     "contents": "Os meus conteúdos",
@@ -13,7 +13,7 @@
     "pepites": "Pepitas",
     "settings": "Definições",
     "widgets": "Widgets",
-    "webinars": "Événements live",
+    "webinars": "Eventos ao vivo",
     "support": "Ajuda",
     "dashboard": "Painel",
     "tasks": "Tarefas",
@@ -559,10 +559,10 @@
     "noAccount": "Ainda não tens conta?",
     "createAccount": "Criar uma conta",
     "copyright": "© {year} Tipote. Todos os direitos reservados.",
-    "legalCgu": "CGU",
+    "legalCgu": "Termos",
     "legalCgv": "CGV",
-    "legalPrivacy": "Confidentialité",
-    "legalMentions": "Mentions légales",
+    "legalPrivacy": "Privacidade",
+    "legalMentions": "Menções legais",
     "legalCookies": "Cookies",
     "errFillCredentials": "Preenche o teu email e palavra-passe.",
     "errInvalidCredentials": "Email ou palavra-passe incorretos.",
@@ -578,15 +578,15 @@
   },
   "forgotPasswordPage": {
     "title": "Palavra-passe esquecida",
-    "description": "Entre ton email et nous t'enverrons un lien pour définir un nouveau mot de passe.",
+    "description": "Introduz o teu email e enviar-te-emos um link para definires uma nova palavra-passe.",
     "labelEmail": "Email",
     "sending": "A enviar…",
-    "sendLink": "Envoyer le lien",
-    "errFillEmail": "Merci de renseigner ton email.",
+    "sendLink": "Enviar o link",
+    "errFillEmail": "Por favor, indica o teu email.",
     "errSendFailed": "Falha no envio. Tenta novamente.",
-    "errRateLimit": "Trop de tentatives. Merci de patienter quelques minutes avant de réessayer.",
-    "successSent": "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé. Pense à vérifier tes spams.",
-    "errUnexpected": "Erreur inattendue. Merci de réessayer.",
+    "errRateLimit": "Demasiadas tentativas. Por favor, espera alguns minutos antes de tentar novamente.",
+    "successSent": "Se existir uma conta para este email, foi enviado um link de redefinição. Não te esqueças de verificar a pasta de spam.",
+    "errUnexpected": "Erro inesperado. Por favor tenta novamente.",
     "backToLogin": "Voltar ao início de sessão",
     "desc": "Introduz o teu email para receber um link de redefinição.",
     "placeholder": "o.teu@email.com",
@@ -614,10 +614,10 @@
     "successResent": "Novo link enviado! Verifica a tua caixa de entrada."
   },
   "resetPasswordPage": {
-    "loading": "Chargement…",
-    "loadingDesc": "On prépare la page de réinitialisation du mot de passe.",
-    "title": "Définir un nouveau mot de passe",
-    "description": "Choisis un nouveau mot de passe pour ton compte Tipote.",
+    "loading": "A carregar…",
+    "loadingDesc": "Estamos a preparar a página de redefinição da palavra-passe.",
+    "title": "Definir uma nova palavra-passe",
+    "description": "Escolhe uma nova palavra-passe para a tua conta Tipote.",
     "labelNewPassword": "Nova palavra-passe",
     "labelConfirm": "Confirmar a palavra-passe",
     "hintMinLength": "Mínimo 8 caracteres.",
@@ -708,12 +708,12 @@
     "invalid": "Valor inválido"
   },
   "dashboard": {
-    "focusTitle": "Focus du jour",
-    "upToDate": "Tu es à jour 🎉 Tu peux avancer sur ta stratégie ou créer du contenu.",
-    "seeStrategy": "Voir stratégie",
-    "createContent": "Créer du contenu",
-    "nextAction": "Prochaine action à faire",
-    "allTasks": "Voir toutes les tâches",
+    "focusTitle": "Foco do dia",
+    "upToDate": "Estás em dia 🎉 Podes avançar na tua estratégia ou criar conteúdo.",
+    "seeStrategy": "Ver estratégia",
+    "createContent": "Criar conteúdo",
+    "nextAction": "Próxima ação a fazer",
+    "allTasks": "Ver todas as tarefas",
     "title": "Painel",
     "subtitle": "Visão geral do teu projeto",
     "welcome": "Bem-vindo",
@@ -2421,7 +2421,7 @@
     "oneStepBody": "Começa pela tarefa mais pequena possível. O objetivo: um 1.º ✅ hoje."
   },
   "dashboardLayout": {
-    "detailedAnalytics": "Analytics détaillés"
+    "detailedAnalytics": "Analytics detalhados"
   },
   "executionStats": {
     "loadingStats": "A carregar estatísticas…",
