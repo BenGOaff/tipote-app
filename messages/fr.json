@@ -978,7 +978,13 @@
       "theme": "Thème",
       "themeLight": "Clair",
       "themeDark": "Sombre",
-      "themeSystem": "Système"
+      "themeSystem": "Système",
+      "editOffer": "Modifier l'offre",
+      "editingOffer": "Modification de l'offre",
+      "saveOffer": "Enregistrer l'offre",
+      "generatedOfferSaved": "Offre générée mise à jour",
+      "priceMin": "Prix min (€)",
+      "priceMax": "Prix max (€)"
     },
     "positioningTab": {
       "nicheTitle": "Ma formule de niche",

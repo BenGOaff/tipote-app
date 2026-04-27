@@ -978,7 +978,13 @@
       "theme": "السمة",
       "themeLight": "فاتح",
       "themeDark": "داكن",
-      "themeSystem": "النظام"
+      "themeSystem": "النظام",
+      "editOffer": "تعديل العرض",
+      "editingOffer": "تعديل العرض",
+      "saveOffer": "حفظ العرض",
+      "generatedOfferSaved": "تم تحديث العرض المُنشأ",
+      "priceMin": "أدنى سعر (€)",
+      "priceMax": "أقصى سعر (€)"
     },
     "positioningTab": {
       "nicheTitle": "صيغة تخصصي",

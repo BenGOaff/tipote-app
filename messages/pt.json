@@ -1151,7 +1151,13 @@
       "theme": "Tema",
       "themeLight": "Claro",
       "themeDark": "Escuro",
-      "themeSystem": "Sistema"
+      "themeSystem": "Sistema",
+      "editOffer": "Editar oferta",
+      "editingOffer": "A editar a oferta",
+      "saveOffer": "Guardar oferta",
+      "generatedOfferSaved": "Oferta gerada atualizada",
+      "priceMin": "Preço mín (€)",
+      "priceMax": "Preço máx (€)"
     },
     "positioningTab": {
       "nicheTitle": "A minha fórmula de nicho",

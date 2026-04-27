@@ -376,6 +376,11 @@ export async function GET(_req: Request) {
 }
 
 // ─── PATCH ───────────────────────────────────────────────────────────────────
+// Two distinct shapes share this endpoint:
+//   1. { selectedIndex, pyramid? }            — user picked a pyramid set
+//   2. { offerIndex: number, offer: {...} }   — user edited a single offer
+//                                                inside selected_pyramid.offers
+// Branch on body shape so the existing "select pyramid" path stays intact.
 
 export async function PATCH(req: Request) {
   try {
@@ -386,6 +391,63 @@ export async function PATCH(req: Request) {
     const userId = sessionData.session.user.id;
     const projectId = await getActiveProjectId(supabase, userId);
     const body = (await req.json().catch(() => ({}))) as AnyRecord;
+
+    // ── Variant 2: edit a single offer inside selected_pyramid.offers ──
+    // The settings page surfaces pyramid offers as "Mes offres générées" and
+    // needs to update name / promise / price / format / description without
+    // touching the pyramid selection.
+    if (typeof body.offerIndex === "number" && isRecord(body.offer)) {
+      const offerIndex = body.offerIndex as number;
+      const incoming = body.offer as AnyRecord;
+
+      let planQuery = supabase.from("business_plan").select("plan_json").eq("user_id", userId);
+      if (projectId) planQuery = planQuery.eq("project_id", projectId);
+      const { data: planRow } = await planQuery.maybeSingle();
+      const basePlan: AnyRecord = isRecord(planRow?.plan_json) ? (planRow?.plan_json as AnyRecord) : {};
+
+      const pyramid = asRecord(basePlan.selected_pyramid) ?? asRecord(basePlan.selected_offer_pyramid);
+      if (!pyramid) {
+        return NextResponse.json({ error: "No selected pyramid to edit" }, { status: 404 });
+      }
+      const offers = asArray(pyramid.offers).slice();
+      if (offerIndex < 0 || offerIndex >= offers.length) {
+        return NextResponse.json({ error: "offerIndex out of range" }, { status: 400 });
+      }
+
+      // Merge fields the editor surface allows. Anything not whitelisted
+      // (e.g. internal AI-generated metadata) is preserved untouched.
+      const previous = asRecord(offers[offerIndex]) ?? {};
+      const next: AnyRecord = { ...previous };
+      if (typeof incoming.name === "string") next.name = cleanString(incoming.name, 200);
+      if (typeof incoming.level === "string") next.level = cleanString(incoming.level, 60);
+      if (typeof incoming.promise === "string") next.promise = cleanString(incoming.promise, 800);
+      if (typeof incoming.description === "string") next.description = cleanString(incoming.description, 4000);
+      if (typeof incoming.format === "string") next.format = cleanString(incoming.format, 200);
+      if ("price_min" in incoming) {
+        const pm = toNumber(incoming.price_min);
+        if (pm === null) delete next.price_min; else next.price_min = pm;
+      }
+      if ("price_max" in incoming) {
+        const px = toNumber(incoming.price_max);
+        if (px === null) delete next.price_max; else next.price_max = px;
+      }
+      offers[offerIndex] = next;
+
+      const updatedPyramid = { ...pyramid, offers };
+      const nextPlan: AnyRecord = {
+        ...basePlan,
+        selected_pyramid: updatedPyramid,
+        selected_offer_pyramid: updatedPyramid,
+        updated_at: new Date().toISOString(),
+      };
+
+      await upsertByProject({
+        supabase, table: "business_plan", userId, projectId,
+        data: { plan_json: nextPlan, updated_at: nextPlan.updated_at },
+      });
+
+      return NextResponse.json({ success: true, offer: next });
+    }
 
     const selectedIndex = typeof body.selectedIndex === "number" ? body.selectedIndex : null;
     if (selectedIndex === null || selectedIndex < 0) {
