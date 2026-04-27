@@ -41,8 +41,9 @@ import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTutorial } from "@/hooks/useTutorial";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+// SidebarProvider / AppSidebar intentionally NOT imported — the WYSIWYG editor
+// is fullscreen so the global sidebar is hidden while editing (same pattern
+// as PageBuilder / hosted-pages editor).
 import {
   ALLOWED_SHARE_NETWORKS,
   BRAND_FONT_CHOICES,
@@ -696,24 +697,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
+  // Loading state — purposely fullscreen (no sidebar) so the editor never
+  // flashes a sidebar that's about to disappear. Mirrors PageBuilder /
+  // hosted-pages editor: the WYSIWYG owns the entire viewport.
   if (loading) return (
-    <SidebarProvider>
-      <div className="h-screen flex w-full">
-        <AppSidebar />
-        <main className="flex-1 flex items-center justify-center bg-background">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </main>
-      </div>
-    </SidebarProvider>
+    <div className="h-screen flex items-center justify-center bg-background">
+      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+    </div>
   );
   if (!quiz) return null;
   const pc = primaryColor;
 
   return (
-    <SidebarProvider>
-     <SioTagsProvider>
+   <SioTagsProvider>
       <div className="h-screen flex w-full">
-        <AppSidebar />
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
       {/* First-visit onboarding banner */}
       {showOnboarding && (
@@ -1453,7 +1450,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       )}
         </main>
       </div>
-     </SioTagsProvider>
-    </SidebarProvider>
+   </SioTagsProvider>
   );
 }
