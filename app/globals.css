@@ -107,16 +107,17 @@
     --gradient-hero: linear-gradient(135deg, hsl(233 64% 61% / 0.95) 0%, hsl(230 41% 28% / 0.9) 100%);
 
     /* ── Shadows ──
-       The "soft" tier is the new SaaS-grade default for cards (kawaak /
-       waalaxy feel). "card" = at-rest, "card-hover" = subtle elevation on
-       hover. The legacy sm/md/lg are kept as-is for backwards compat. */
+       SaaS-grade defaults for cards / interactive surfaces. soft = subtle
+       at-rest tier; card = default card (now more visible — kawaak-style
+       depth so cards "lift" off the white page bg); card-hover = lift
+       on hover. Legacy sm/md/lg kept for back-compat. */
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1);
     --shadow-lg: 0 10px 25px -5px hsl(233 64% 61% / 0.15);
     --shadow-glow: 0 0 20px hsl(233 64% 61% / 0.3);
-    --shadow-soft: 0 1px 2px hsl(220 13% 50% / 0.04), 0 1px 3px hsl(220 13% 50% / 0.06);
-    --shadow-card: 0 1px 3px hsl(220 13% 50% / 0.04), 0 4px 12px hsl(220 13% 50% / 0.06);
-    --shadow-card-hover: 0 2px 6px hsl(220 13% 50% / 0.06), 0 8px 24px hsl(220 13% 50% / 0.08);
+    --shadow-soft: 0 1px 2px hsl(220 13% 50% / 0.05), 0 1px 3px hsl(220 13% 50% / 0.07);
+    --shadow-card: 0 1px 2px hsl(220 13% 50% / 0.05), 0 6px 16px hsl(220 13% 50% / 0.10);
+    --shadow-card-hover: 0 2px 4px hsl(220 13% 50% / 0.06), 0 12px 28px hsl(220 13% 50% / 0.14);
 
     /* ── Sidebar ──
        Sidebar bg matches `--card` (gray-blue tint) so the sidebar reads

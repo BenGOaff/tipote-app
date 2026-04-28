@@ -274,29 +274,30 @@ export default function SurveyFormClient() {
         <AppSidebar />
         <main className="flex-1 overflow-auto bg-background flex flex-col">
           <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("createTitle")}</h1>} />
+          {/* Width matches /quiz/new: max-w-[1200px] so the survey-creation
+              entry feels like a sibling of quiz-creation, not a stripped-down
+              modal. The 3-tab card still keeps an inner cap (max-w-3xl) on
+              tab content so forms stay readable. */}
           <div className="flex-1 p-4 sm:p-5 lg:p-6">
-            <div className="space-y-4 max-w-3xl mx-auto">
+            <div className="space-y-4 max-w-[1200px] mx-auto w-full">
               {(generating || importing) && <AIGeneratingOverlay />}
 
+              {/* Pill tabs (kawaak / tipote settings style) — clean, modern,
+                  no dated underline. Lets the default shadcn TabsList +
+                  TabsTrigger styles do the work. */}
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList className="w-full sm:w-auto bg-transparent border-b rounded-none justify-start gap-0 h-auto p-0">
-          <TabsTrigger
-            value="ai"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5"
-          >
+        <TabsList className="h-auto p-1 gap-1">
+          <TabsTrigger value="ai" className="gap-1.5 px-4 py-2">
             <Sparkles className="h-4 w-4" />
             {t("tabAi")}
           </TabsTrigger>
-          <TabsTrigger
-            value="import"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5"
-          >
+          <TabsTrigger value="import" className="gap-1.5 px-4 py-2">
             <Upload className="h-4 w-4" />
             {t("tabImport")}
           </TabsTrigger>
           <TabsTrigger
             value="manual"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5"
+            className="gap-1.5 px-4 py-2"
             onClick={(e) => {
               e.preventDefault();
               handleCreateManual();
