@@ -68,6 +68,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
+import { SettingsAchievements } from "@/components/settings/SettingsAchievements";
 import { AIContent } from "@/components/ui/ai-content";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -2667,6 +2668,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
 {/* ABONNEMENT */}
       <TabsContent value="pricing" className="space-y-6">
+        {/* Mes badges — gamified summary derived live from existing
+            data. Sits on the abonnement tab since it pairs with the
+            user's "where they are in the journey" narrative the same
+            tab already tells via plan / billing. */}
+        <SettingsAchievements />
         <BillingSection email={userEmail} />
       </TabsContent>
     </Tabs>
