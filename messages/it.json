@@ -625,7 +625,12 @@
     "clickClose": "Clicca per chiudere",
     "alreadyOpen": "Già aperto",
     "ariaOpen": "Apri gemma",
-    "networkError": "Errore di rete"
+    "networkError": "Errore di rete",
+    "revealKicker": "Nuova gemma",
+    "revealHeadline": "È appena arrivata una gemma!",
+    "revealTap": "Tocca per rivelare",
+    "revealClose": "Chiudi",
+    "revealCta": "Fantastico, grazie!"
   },
   "templates": {
     "title": "Template Systeme.io",

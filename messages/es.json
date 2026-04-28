@@ -625,7 +625,12 @@
     "clickClose": "Haz clic para cerrar",
     "alreadyOpen": "Ya abierto",
     "ariaOpen": "Abrir joya",
-    "networkError": "Error de red"
+    "networkError": "Error de red",
+    "revealKicker": "Nueva joya",
+    "revealHeadline": "¡Acaba de caer una joya!",
+    "revealTap": "Toca para revelar",
+    "revealClose": "Cerrar",
+    "revealCta": "¡Genial, gracias!"
   },
   "templates": {
     "title": "Plantillas Systeme.io",

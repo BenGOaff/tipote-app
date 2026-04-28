@@ -109,11 +109,46 @@ const config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
         },
+        // Pépite reveal — mobile-game card-pull entrance. The card
+        // arrives from below with a small overshoot, then idles with a
+        // gentle hover.
+        "pepite-pop": {
+          "0%":   { transform: "translateY(40px) scale(0.6)", opacity: "0" },
+          "60%":  { transform: "translateY(-8px) scale(1.04)", opacity: "1" },
+          "100%": { transform: "translateY(0) scale(1)", opacity: "1" },
+        },
+        "pepite-float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%":      { transform: "translateY(-6px)" },
+        },
+        "pepite-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 12px hsl(var(--primary) / 0.45))" },
+          "50%":      { filter: "drop-shadow(0 0 28px hsl(var(--primary) / 0.75))" },
+        },
+        // Sparkle ring — the bright halo behind the card when it idles.
+        "pepite-halo": {
+          "0%":   { transform: "scale(0.6)", opacity: "0" },
+          "60%":  { transform: "scale(1.15)", opacity: "0.7" },
+          "100%": { transform: "scale(1.4)", opacity: "0" },
+        },
+        // Sparkle particles flying outward — the gaming "card pull"
+        // burst. Each particle picks its own delay + angle via inline
+        // style; this keyframe just handles the radial flight.
+        "pepite-spark": {
+          "0%":   { transform: "translate(0,0) scale(0)", opacity: "0" },
+          "30%":  { opacity: "1" },
+          "100%": { transform: "translate(var(--sx), var(--sy)) scale(1)", opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 1.6s infinite",
+        "pepite-pop": "pepite-pop 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both",
+        "pepite-float": "pepite-float 3.4s ease-in-out infinite",
+        "pepite-glow": "pepite-glow 2.4s ease-in-out infinite",
+        "pepite-halo": "pepite-halo 2s ease-out infinite",
+        "pepite-spark": "pepite-spark 1.2s ease-out forwards",
       },
     },
   },

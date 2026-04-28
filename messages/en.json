@@ -625,7 +625,12 @@
     "clickClose": "Click to close",
     "alreadyOpen": "Already open",
     "ariaOpen": "Open gem",
-    "networkError": "Network error"
+    "networkError": "Network error",
+    "revealKicker": "New gem",
+    "revealHeadline": "A gem just dropped!",
+    "revealTap": "Tap to reveal",
+    "revealClose": "Close",
+    "revealCta": "Awesome, thanks!"
   },
   "templates": {
     "title": "Systeme.io Templates",

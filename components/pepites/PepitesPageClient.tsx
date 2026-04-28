@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PepiteRevealModal } from "./PepiteRevealModal";
 
 type PepiteItem = {
   userPepiteId: string;
@@ -194,6 +195,11 @@ export default function PepitesPageClient() {
   const [items, setItems] = useState<PepiteItem[]>([]);
   const [current, setCurrent] = useState<PepiteItem | null>(null);
 
+  // Reveal modal — opens when a brand-new pépite has just landed
+  // (current && seenAt === null). One-shot per page load: once dismissed
+  // it doesn't reopen automatically.
+  const [revealItem, setRevealItem] = useState<PepiteItem | null>(null);
+
   // admin gate (users ne voient pas le bouton)
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -241,6 +247,11 @@ export default function PepitesPageClient() {
 
         const exists = list.some((x) => x.userPepiteId === cur.userPepiteId);
         if (!exists) setItems([cur, ...list]);
+
+        // Trigger the reveal animation only for truly fresh pépites
+        // the user has never opened. Already-seen "current" pépites
+        // skip the spectacle and render normally in the grid.
+        if (!cur.seenAt) setRevealItem(cur);
       } else {
         setCurrent(null);
       }
@@ -402,6 +413,27 @@ export default function PepitesPageClient() {
             />
           ))}
         </div>
+      )}
+
+      {revealItem && (
+        <PepiteRevealModal
+          item={revealItem}
+          onClose={() => {
+            // Persist "seen" so refresh / next visit doesn't replay
+            // the cinematic. Optimistically update local state too so
+            // the inline card loses its "unread" highlight instantly.
+            const id = revealItem.userPepiteId;
+            fetch("/api/pepites/seen", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ userPepiteId: id }),
+            }).catch(() => {
+              // fail-open — UI already moved on
+            });
+            handleSeen(id);
+            setRevealItem(null);
+          }}
+        />
       )}
     </div>
   );
