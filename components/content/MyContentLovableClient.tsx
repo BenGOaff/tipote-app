@@ -23,6 +23,7 @@ import { PageContainer, PageHeading, SectionCard } from "@/components/ui/page-sh
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TopPerformerBadge, TrendingBadge } from "@/components/ui/highlight-badge";
 import { Input } from "@/components/ui/input";
 
 import {
@@ -316,6 +317,31 @@ export default function MyContentLovableClient({
     const metaTime = (content.meta as any)?.scheduled_time;
     setPlanTime(typeof metaTime === "string" && metaTime.trim() ? metaTime : "09:00");
   };
+
+  // Top-performer (highest leads count) and recently-trending quiz IDs.
+  // Used to show contextual badges on a single row each — never on more
+  // than one or they stop meaning anything.
+  const topQuizId = useMemo(() => {
+    let best: { id: string; leads: number } | null = null;
+    for (const qz of quizzes) {
+      if ((qz.leads_count ?? 0) < 3) continue; // sample threshold
+      if (!best || (qz.leads_count ?? 0) > best.leads) best = { id: qz.id, leads: qz.leads_count ?? 0 };
+    }
+    return best?.id ?? null;
+  }, [quizzes]);
+
+  const trendingQuizIds = useMemo(() => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    return new Set(
+      quizzes
+        .filter(
+          (qz) =>
+            (qz.leads_count ?? 0) >= 3 &&
+            new Date(qz.created_at).getTime() > sevenDaysAgo,
+        )
+        .map((qz) => qz.id),
+    );
+  }, [quizzes]);
 
   const filtered = useMemo(() => {
     let result = initialItems;
@@ -810,6 +836,11 @@ export default function MyContentLovableClient({
                                     >
                                       {isActive ? "Actif" : "Brouillon"}
                                     </Badge>
+                                    {/* Contextual highlight: at most one
+                                        per row, top-performer wins over
+                                        trending if both apply. */}
+                                    {topQuizId === qz.id && <TopPerformerBadge />}
+                                    {trendingQuizIds.has(qz.id) && topQuizId !== qz.id && <TrendingBadge />}
                                   </div>
                                   <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                     <span className="inline-flex items-center gap-1">
