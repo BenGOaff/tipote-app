@@ -120,7 +120,7 @@ type QuizData = {
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
 };
-type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null };
+type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null };
 interface SurveyDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview.
@@ -400,6 +400,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             brand_color_primary: rawProfile.brand_color_base ?? null,
             brand_logo_url: rawProfile.brand_logo_url ?? null,
             plan: rawProfile.plan ?? null,
+            privacy_url: rawProfile.privacy_url ?? null,
           }
         : null;
       setProfile(prof);
@@ -807,8 +808,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          {/* Readiness ring — survey-mode (thank-you CTA replaces results). */}
-          {(() => {
+          {/* Pre-publish gauge only — once a survey is live the ring
+              becomes confusing. Hide on active. */}
+          {status !== "active" && (() => {
             const r = computeReadiness({
               mode: "survey",
               title,
@@ -816,7 +818,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               cta_text: ctaText,
               cta_url: ctaUrl,
               questions: editQuestions,
-              privacy_url: privacyUrl,
+              // Match runtime: profile-level privacy URL counts.
+              privacy_url: privacyUrl || profile?.privacy_url || "",
               status,
             });
             return (

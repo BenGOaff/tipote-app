@@ -83,7 +83,7 @@ type QuizData = {
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
 };
-type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null };
+type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null };
 interface QuizDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview.
@@ -364,6 +364,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             brand_color_primary: rawProfile.brand_color_base ?? null,
             brand_logo_url: rawProfile.brand_logo_url ?? null,
             plan: rawProfile.plan ?? null,
+            privacy_url: rawProfile.privacy_url ?? null,
           }
         : null;
       setProfile(prof);
@@ -755,10 +756,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          {/* Readiness ring — passive nudge: how close is the quiz to
-              publishable. Computed from local edit state so it ticks up
-              live as the user fills fields. Hidden on small screens. */}
-          {(() => {
+          {/* Readiness ring — pre-publish nudge only. Hidden once the
+              quiz is live so creators don't get a "your published
+              work is incomplete" feeling. */}
+          {status !== "active" && (() => {
             const r = computeReadiness({
               mode: "quiz",
               title,
@@ -767,7 +768,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               cta_url: ctaUrl,
               questions: editQuestions,
               results: editResults,
-              privacy_url: privacyUrl,
+              // Match runtime: profile-level privacy URL counts as set.
+              privacy_url: privacyUrl || profile?.privacy_url || "",
               status,
             });
             return (
