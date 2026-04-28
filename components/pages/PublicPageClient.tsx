@@ -828,11 +828,44 @@ function sanitizeEditorArtifacts(html: string): string {
   return html;
 }
 
+/**
+ * Self-heal user-entered URLs in already-published snapshots.
+ *
+ * Background: pages published before lib/pageBuilder.ts started calling
+ * ensureExternalUrl() may have hrefs like `monsite.com/privacy` baked
+ * into the HTML. Inside the iframe (srcDoc → about:srcdoc) those become
+ * relative paths, the navigation fails, and Chrome shows its
+ * "Cette page a été bloquée" wall.
+ *
+ * Rather than force every creator to re-publish, we walk the snapshot
+ * once at render time and prepend "https://" to any <a href> that has
+ * no protocol, leading slash, or anchor. Anchors (#capture), in-app
+ * paths (/foo), and proper protocols (https:, mailto:, tel:) pass
+ * through untouched. javascript:/data: URIs already have a protocol so
+ * we don't accidentally promote them — the existing sanitiser handles
+ * those separately.
+ */
+function normalizeAnchorHrefs(html: string): string {
+  return html.replace(
+    /(<a\b[^>]*\bhref=)(["'])([^"']*)\2/gi,
+    (match, prefix, quote, url) => {
+      const trimmed = url.trim();
+      if (!trimmed) return match;
+      if (trimmed.startsWith("#")) return match;
+      if (trimmed.startsWith("/")) return match;
+      if (/^[a-z][a-z0-9+\-.]*:/i.test(trimmed)) return match;
+      return `${prefix}${quote}https://${trimmed}${quote}`;
+    },
+  );
+}
+
 // Inject a small script into the HTML that intercepts CTA clicks
 // and posts a message to the parent to open the capture overlay.
 // IMPORTANT: Does NOT re-inject legal footer or capture form (already in html_snapshot from render.ts).
 function injectCaptureScript(page: PublicPageData): string {
   let html = sanitizeEditorArtifacts(page.html_snapshot || "");
+  // Self-heal protocol-less hrefs left over from earlier publishes.
+  html = normalizeAnchorHrefs(html);
 
   // Inject tracking pixels into <head>
   const trackingSnippets = buildTrackingSnippets(page);
@@ -845,18 +878,52 @@ function injectCaptureScript(page: PublicPageData): string {
     }
   }
 
-  // Click tracking script — tracks all CTA clicks (all page types)
+  // Click tracking + external-link hardening.
+  //
+  // External link hardening: srcDoc iframes have an opaque origin, and
+  // some visitors' popup-blockers / extensions silently swallow the
+  // new-tab open even though target="_blank" is set. When that happens,
+  // Chrome falls back to navigating the iframe itself; if the target
+  // URL responds with X-Frame-Options: DENY (typical for WordPress
+  // PDFs, admin pages, etc.), the iframe lands on
+  // chrome-error://chromewebdata/ and the visitor sees Chrome's blocked
+  // wall — exactly Marie Paule's case.
+  //
+  // Fix: intercept clicks on absolute http/https links inside the
+  // iframe and route them through window.open (with noopener), falling
+  // back to window.top navigation thanks to the allow-top-navigation
+  // sandbox flag. This keeps the link working regardless of the
+  // visitor's popup settings.
   const clickTrackScript = `<script>
 (function(){
-  var tracked = false;
   document.addEventListener('click', function(e) {
     var el = e.target.closest('a, button, [role="button"], .cta-primary, .cta-button, .tp-cta');
     if (!el) return;
-    var href = el.getAttribute('href') || '';
-    // Skip pure anchor links (handled separately)
-    if (href === '#' || href === '#capture') return;
-    if (!tracked || true) {
+    var href = el.getAttribute && el.getAttribute('href') || '';
+
+    // Click tracking ping — kept best-effort.
+    if (href !== '#' && href !== '#capture') {
       try { parent.postMessage('tipote:click', '*'); } catch(ex) {}
+    }
+
+    // External-link hardening: only for absolute http(s) URLs on an
+    // <a> element. Anchors, relative paths, mailto:/tel: etc. fall
+    // through to default browser behaviour.
+    if (el.tagName !== 'A') return;
+    if (!/^https?:\\/\\//i.test(href)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    var win = null;
+    try {
+      win = window.open(href, '_blank', 'noopener,noreferrer');
+    } catch(ex) { /* popup blocked by extension */ }
+    if (!win) {
+      // Popup blocked — bring the user out of the sandboxed iframe
+      // by navigating the top window instead. allow-top-navigation
+      // makes this safe even with the strict sandbox.
+      try { window.top.location.href = href; }
+      catch(ex) { window.location.href = href; }
     }
   }, true);
 })();
