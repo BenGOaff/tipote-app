@@ -2086,6 +2086,13 @@
     "humorous": "Humorous",
     "generatingBtn": "Generating...",
     "generateBtn": "Generate content",
+    "aiOverlayTitle": "Tipote is writing your content…",
+    "aiRotating": {
+      "1": "Digging into the angle that hits your audience…",
+      "2": "Shaping the hook so it lands on line one…",
+      "3": "Polishing the voice so it sounds like you…",
+      "4": "Just a few seconds more — promise it's worth it ✨"
+    },
     "titleLabel": "Title *",
     "titlePlaceholder": "E.g.: LinkedIn post about productivity",
     "contentLabel": "Content",

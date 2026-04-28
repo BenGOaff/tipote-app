@@ -2347,6 +2347,13 @@
     "humorous": "Humorístico",
     "generatingBtn": "Geração em curso...",
     "generateBtn": "Gerar o conteúdo",
+    "aiOverlayTitle": "Tipote está a escrever o teu conteúdo…",
+    "aiRotating": {
+      "1": "Procuro o ângulo que fala mesmo à tua audiência…",
+      "2": "Estruturo o início para prender desde a primeira linha…",
+      "3": "Polo o tom para que se pareça contigo…",
+      "4": "Mais uns segundos — promete que vale a pena ✨"
+    },
     "titleLabel": "Título *",
     "titlePlaceholder": "Ex.: Post LinkedIn sobre produtividade",
     "contentLabel": "Conteúdo",

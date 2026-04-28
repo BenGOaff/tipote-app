@@ -2086,6 +2086,13 @@
     "humorous": "Humoristique",
     "generatingBtn": "Génération en cours...",
     "generateBtn": "Générer le contenu",
+    "aiOverlayTitle": "Tipote rédige ton contenu…",
+    "aiRotating": {
+      "1": "Je creuse ton angle pour parler à ton audience…",
+      "2": "Je structure pour que ça accroche dès la première ligne…",
+      "3": "Je polis le ton pour qu'il te ressemble…",
+      "4": "Encore quelques secondes — promis ça vaut le coup ✨"
+    },
     "titleLabel": "Titre *",
     "titlePlaceholder": "Ex: Post LinkedIn sur la productivité",
     "contentLabel": "Contenu",

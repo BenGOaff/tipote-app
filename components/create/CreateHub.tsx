@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 
 import { useToast } from "@/hooks/use-toast";
+import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 
 import {
   Sparkles,
@@ -33,7 +34,6 @@ import {
   Save,
   CalendarDays,
   ArrowLeft,
-  Loader2,
   Wand2,
 } from "lucide-react";
 
@@ -270,29 +270,33 @@ export default function CreateHub({ profile, plan }: Props) {
           />
 
           <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
-            {/* Type Selection */}
+            {/* Type Selection — tinted cards with subtle hover lift so
+                the "what do I want to make?" choice feels deliberate. */}
             <Card className="p-6">
               <h3 className="text-lg font-bold mb-4">{t('contentType')}</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {contentTypes.map((type) => (
-                  <button
-                    key={type.id}
-                    onClick={() => setSelectedType(type.id)}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      selectedType === type.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    type="button"
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-lg ${type.color} flex items-center justify-center mb-3`}
+                {contentTypes.map((type) => {
+                  const isSelected = selectedType === type.id;
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => setSelectedType(type.id)}
+                      className={`group p-4 rounded-xl border-2 transition-all text-left will-change-transform ${
+                        isSelected
+                          ? "border-primary bg-primary/5 shadow-card"
+                          : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-card"
+                      }`}
+                      type="button"
                     >
-                      <type.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <p className="font-medium">{t(type.labelKey)}</p>
-                  </button>
-                ))}
+                      <div
+                        className={`w-10 h-10 rounded-lg ${type.color} flex items-center justify-center mb-3 transition-transform group-hover:scale-105`}
+                      >
+                        <type.icon className="w-5 h-5 text-white" />
+                      </div>
+                      <p className="font-medium">{t(type.labelKey)}</p>
+                    </button>
+                  );
+                })}
               </div>
             </Card>
 
@@ -360,23 +364,18 @@ export default function CreateHub({ profile, plan }: Props) {
                   disabled={isGenerating || !aiTopic.trim()}
                   className="w-full"
                   type="button"
+                  size="lg"
                 >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {t('generatingBtn')}
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="w-4 h-4 mr-2" />
-                      {t('generateBtn')}
-                    </>
-                  )}
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  {t('generateBtn')}
                 </Button>
               </div>
             </Card>
 
-            {/* Content Form */}
+            {/* Content Form — content textarea re-mounts under the
+                value's identity so the AI-generated payload slides in
+                rather than popping. Subtle but reinforces the "magic"
+                feel of the AI handing the user their draft. */}
             <Card className="p-6 space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="title">{t('titleLabel')}</Label>
@@ -396,7 +395,12 @@ export default function CreateHub({ profile, plan }: Props) {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={12}
-                  className="resize-none"
+                  className={`resize-none ${content ? "animate-quiz-step-in" : ""}`}
+                  // Re-trigger the slide-in keyframe each time the
+                  // content length jumps (AI delivery), without
+                  // re-running on every keystroke (length stays stable
+                  // beyond a few chars while typing).
+                  key={content.length > 100 ? "ai-delivered" : "manual"}
                 />
               </div>
             </Card>
@@ -432,6 +436,22 @@ export default function CreateHub({ profile, plan }: Props) {
           </div>
         </main>
       </div>
+
+      {/* AI generation overlay — fullscreen mascot + rotating messages
+          while the API call is in flight. Sits over everything so the
+          user can't double-submit. The rotating sublines come from
+          the createHub.aiRotatingMessages translations. */}
+      {isGenerating && (
+        <AIGeneratingOverlay
+          message={t('aiOverlayTitle')}
+          rotatingMessages={[
+            t('aiRotating.1'),
+            t('aiRotating.2'),
+            t('aiRotating.3'),
+            t('aiRotating.4'),
+          ]}
+        />
+      )}
     </SidebarProvider>
   );
 }

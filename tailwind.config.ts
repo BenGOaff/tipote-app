@@ -139,6 +139,13 @@ const config = {
           "30%":  { opacity: "1" },
           "100%": { transform: "translate(var(--sx), var(--sy)) scale(1)", opacity: "0" },
         },
+        // Step-in animation reused across surfaces that re-mount
+        // content as the user advances (rotating subtitles in the AI
+        // overlay, future onboarding step, etc.). Soft rise + fade.
+        "quiz-step-in": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -149,6 +156,7 @@ const config = {
         "pepite-glow": "pepite-glow 2.4s ease-in-out infinite",
         "pepite-halo": "pepite-halo 2s ease-out infinite",
         "pepite-spark": "pepite-spark 1.2s ease-out forwards",
+        "quiz-step-in": "quiz-step-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },
