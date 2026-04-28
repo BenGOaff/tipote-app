@@ -52,7 +52,7 @@ export default function AppShell({
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+        <main className="flex-1 overflow-auto bg-background flex flex-col">
           {/* Header — no border-b (removed per design) */}
           <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
             {/* Left: sidebar reopen button (when collapsed) + page title */}
