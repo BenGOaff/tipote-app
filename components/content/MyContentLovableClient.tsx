@@ -683,8 +683,8 @@ export default function MyContentLovableClient({
                           onClick={() => setActiveFolder(folder.id)}
                           className="group text-left"
                         >
-                          <Card className="p-5 transition-all hover:shadow-md hover:border-primary/30 cursor-pointer h-full">
-                            <div className={`w-11 h-11 rounded-xl ${folder.bgColor} flex items-center justify-center mb-3`}>
+                          <Card className="group p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-hover hover:border-primary/40 cursor-pointer h-full will-change-transform">
+                            <div className={`w-11 h-11 rounded-xl ${folder.bgColor} flex items-center justify-center mb-3 transition-transform group-hover:scale-105`}>
                               <FIcon className={`w-5 h-5 ${folder.color}`} />
                             </div>
                             <div className="font-semibold text-sm group-hover:text-primary transition-colors">
