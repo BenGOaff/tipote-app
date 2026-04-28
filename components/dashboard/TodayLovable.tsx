@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Greeting } from "@/components/ui/greeting";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 import {
   ArrowRight,
@@ -885,9 +887,19 @@ export default function TodayLovable() {
           <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>} />
 
           <div className="flex-1 p-4 sm:p-5 lg:p-6"><div className="max-w-[1200px] mx-auto w-full space-y-5">
+            {/* Personal hero — mascot + time-of-day greeting. Stays
+                visible during loading so the dashboard never feels
+                empty while the data fetches. */}
+            <Greeting subtitle />
+
             {loading ? (
-              <div className="py-20 text-center text-muted-foreground text-sm">
-                {t("loading")}
+              <div className="space-y-5">
+                <SkeletonCard />
+                <div className="grid md:grid-cols-2 gap-6">
+                  <SkeletonCard withAvatar />
+                  <SkeletonCard withAvatar />
+                </div>
+                <SkeletonCard />
               </div>
             ) : (
               <>
