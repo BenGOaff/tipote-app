@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { greet, greetSubtitle, dailySeed } from "@/lib/copy";
+import { Mascot, type MascotExpression } from "@/components/ui/mascot";
 
 let cachedName: string | null = null;
 let inFlight: Promise<void> | null = null;
@@ -52,9 +53,23 @@ type Props = {
   subtitle?: boolean;
   /** Optional className override on the root <div>. */
   className?: string;
+  /** Hide the mascot — useful when the page already has its own
+   *  hero illustration and a face would be redundant. */
+  hideMascot?: boolean;
 };
 
-export function Greeting({ subtitle = false, className }: Props) {
+// Pick the mascot expression from the time of day so the same hero
+// feels different morning vs. evening. Stable across renders within a
+// session — no re-roll surprises.
+function pickMascotExpression(): MascotExpression {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "wave";       // morning hello
+  if (hour >= 12 && hour < 18) return "happy";    // afternoon energy
+  if (hour >= 18 && hour < 23) return "hello";    // evening warm
+  return "sleepy";                                  // late night / early
+}
+
+export function Greeting({ subtitle = false, className, hideMascot = false }: Props) {
   // Hydrate-safe: render the no-name greeting first, swap to the
   // personalised one once we have the data. Avoids a flash of the
   // wrong name and never causes a hydration mismatch.
@@ -72,17 +87,25 @@ export function Greeting({ subtitle = false, className }: Props) {
 
   const headline = greet(name);
   const seed = dailySeed();
+  const expression = pickMascotExpression();
 
   return (
     <div className={className}>
-      <h1 className="text-3xl sm:text-4xl font-display font-extrabold leading-[1.1] text-foreground tracking-tight">
-        {headline}
-      </h1>
-      {subtitle && (
-        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mt-1.5">
-          {greetSubtitle(seed)}
-        </p>
-      )}
+      <div className="flex items-center gap-3 sm:gap-4">
+        {!hideMascot && (
+          <Mascot expression={expression} size={56} className="shrink-0 hidden sm:block" />
+        )}
+        <div className="min-w-0">
+          <h1 className="text-3xl sm:text-4xl font-display font-extrabold leading-[1.1] text-foreground tracking-tight">
+            {headline}
+          </h1>
+          {subtitle && (
+            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mt-1.5">
+              {greetSubtitle(seed)}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
