@@ -568,7 +568,9 @@
       "articles": "Articles",
       "videos": "Videos"
     },
-    "empty": "No content found.",
+    "empty": "No content yet",
+    "emptyDesc": "Kick off your first idea — the AI turns a quick brief into a post, email, article or video script in seconds.",
+    "emptyCta": "Create my first content",
     "status": {
       "published": "Published",
       "draft": "Draft",

@@ -741,7 +741,9 @@
       "articles": "Artigos",
       "videos": "Vídeos"
     },
-    "empty": "Sem conteúdos.",
+    "empty": "Ainda sem conteúdos",
+    "emptyDesc": "Lance sua primeira ideia — a IA transforma um briefing em post, email, artigo ou roteiro de vídeo em segundos.",
+    "emptyCta": "Criar meu primeiro conteúdo",
     "status": {
       "published": "Publicado",
       "draft": "Rascunho",
