@@ -625,7 +625,12 @@
     "clickClose": "انقر للإغلاق",
     "alreadyOpen": "مفتوح بالفعل",
     "ariaOpen": "فتح الجوهرة",
-    "networkError": "خطأ في الشبكة"
+    "networkError": "خطأ في الشبكة",
+    "revealKicker": "جوهرة جديدة",
+    "revealHeadline": "وصلت جوهرة للتو!",
+    "revealTap": "اضغط للكشف",
+    "revealClose": "إغلاق",
+    "revealCta": "رائع، شكرًا!"
   },
   "templates": {
     "title": "قوالب Systeme.io",

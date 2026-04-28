@@ -798,7 +798,12 @@
     "clickClose": "Clique para fechar",
     "alreadyOpen": "Já aberta",
     "ariaOpen": "Abrir a pepita",
-    "networkError": "Erro de rede"
+    "networkError": "Erro de rede",
+    "revealKicker": "Nova pepita",
+    "revealHeadline": "Uma pepita acabou de chegar!",
+    "revealTap": "Toque para revelar",
+    "revealClose": "Fechar",
+    "revealCta": "Demais, obrigado!"
   },
   "templates": {
     "title": "Templates Systeme.io",

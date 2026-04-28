@@ -625,7 +625,12 @@
     "clickClose": "Cliquer pour refermer",
     "alreadyOpen": "Déjà ouverte",
     "ariaOpen": "Ouvrir la pépite",
-    "networkError": "Erreur réseau"
+    "networkError": "Erreur réseau",
+    "revealKicker": "Nouvelle pépite",
+    "revealHeadline": "Une pépite vient d'arriver !",
+    "revealTap": "Touche pour révéler",
+    "revealClose": "Fermer",
+    "revealCta": "Génial, merci !"
   },
   "templates": {
     "title": "Templates Systeme.io",
