@@ -165,14 +165,25 @@ export default async function StrategyPage() {
 
   if (!user) redirect("/");
 
-  // ✅ Guard onboarding : évite les boucles "onboarding ↔ stratégie"
-  const { data: onboardingRow, error: onboardingError } = await supabase
+  // ✅ Guard onboarding (multi-projet safe): aligné sur la logique
+  // anti-loop du middleware. Un user peut avoir plusieurs lignes
+  // business_profiles (un par projet). L'ancien code utilisait
+  // .maybeSingle() filtré par user_id seul → renvoyait une PostgREST
+  // error dès qu'il y avait >1 ligne, qui était interprétée comme
+  // "onboarding non fait" et redirigeait vers /onboarding. Mais le
+  // middleware (qui scanne *toutes* les lignes) laissait passer parce
+  // qu'au moins un profil était complété → /onboarding voit que c'est
+  // fait, renvoie vers /dashboard, bouclé.
+  // Fix: on regarde si AU MOINS UNE ligne business_profiles a
+  // onboarding_completed=true pour ce user. Si oui, on continue.
+  const { data: onboardingRows, error: onboardingError } = await supabase
     .from("business_profiles")
     .select("onboarding_completed")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .eq("onboarding_completed", true)
+    .limit(1);
 
-  if (onboardingError || !onboardingRow?.onboarding_completed) {
+  if (onboardingError || !onboardingRows || onboardingRows.length === 0) {
     redirect("/onboarding");
   }
 
