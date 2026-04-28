@@ -12,6 +12,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { ensureExternalUrl } from "@/lib/url";
 import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
 
@@ -407,7 +408,7 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
             <p style={{ fontSize: "0.75rem", color: "#999", textAlign: "center", marginTop: 12 }}>
               {txt.dataProtected}{" "}
               {page.legal_privacy_url && (
-                <a href={page.legal_privacy_url} target="_blank" rel="noopener" style={{ color: "#999", textDecoration: "underline" }}>
+                <a href={ensureExternalUrl(page.legal_privacy_url)} target="_blank" rel="noopener noreferrer" style={{ color: "#999", textDecoration: "underline" }}>
                   {txt.privacyPolicy}
                 </a>
               )}
