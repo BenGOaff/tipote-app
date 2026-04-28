@@ -122,30 +122,63 @@ function PepiteCard(props: {
     <button
       type="button"
       onClick={handleToggle}
-      className="text-left w-full focus:outline-none"
+      className="text-left w-full focus:outline-none group"
       aria-label={t("ariaOpen")}
       title={open ? t("clickClose") : t("clickOpen")}
     >
       <Card
         className={cx(
-          "rounded-2xl border bg-card shadow-sm p-5 transition-colors",
-          highlight ? "border-primary/30 bg-primary/5" : "",
+          // Mobile-game collection card vibe to mirror the reveal
+          // animation: subtle gradient surface, lift on hover, and an
+          // animated pulsing ring on items the user hasn't opened yet.
+          "relative rounded-2xl border bg-card p-5 shadow-card overflow-hidden",
+          "transition-all duration-300 will-change-transform",
+          "group-hover:-translate-y-1 group-hover:shadow-card-hover",
+          highlight ? "border-primary/40 ring-1 ring-primary/20" : "border-border/60",
+          !item.seenAt ? "before:absolute before:inset-0 before:rounded-2xl before:pointer-events-none before:ring-2 before:ring-primary/30 before:animate-pepite-glow" : "",
         )}
       >
+        {/* Soft top accent — gradient bar so the card has a "minted" feel */}
+        <div
+          aria-hidden
+          className={cx(
+            "absolute top-0 left-0 right-0 h-1 rounded-t-2xl",
+            !item.seenAt
+              ? "bg-gradient-to-r from-primary via-fuchsia-500 to-amber-400"
+              : "bg-gradient-to-r from-primary/30 to-primary/10",
+          )}
+        />
+
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">{formatDate(item.assignedAt, locale)}</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {formatDate(item.assignedAt, locale)}
+            </span>
 
             {/* ✅ pas de truncation */}
-            <h3 className="mt-1 text-base font-semibold leading-snug whitespace-normal break-words">
+            <h3 className="mt-2 text-base font-semibold leading-snug whitespace-normal break-words text-foreground">
               {title}
             </h3>
           </div>
 
           <div className="relative flex items-center shrink-0">
-            <Sparkles className="h-5 w-5 text-primary" />
-            {!item.seenAt ? <span className="ml-2 text-xs font-medium text-primary">✨</span> : null}
+            <div
+              className={cx(
+                "w-9 h-9 rounded-xl flex items-center justify-center",
+                !item.seenAt
+                  ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                  : "bg-muted/60 text-muted-foreground",
+              )}
+            >
+              <Sparkles className="h-4 w-4" />
+            </div>
+            {!item.seenAt && (
+              <span
+                aria-hidden
+                className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-card"
+              />
+            )}
           </div>
         </div>
 
