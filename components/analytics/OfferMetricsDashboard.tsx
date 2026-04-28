@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AIContent } from "@/components/ui/ai-content";
+import { Mascot } from "@/components/ui/mascot";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -109,11 +110,11 @@ export const OfferMetricsDashboard = ({
 
   if (!hasData) {
     return (
-      <Card className="p-8 text-center">
-        <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium mb-2">Aucune donnée encore</h3>
-        <p className="text-muted-foreground mb-4">
-          Commence par saisir tes données dans l&apos;onglet « Saisir mes données » pour voir tes résultats.
+      <Card className="p-12 text-center flex flex-col items-center gap-3">
+        <Mascot expression="hello" size={88} tone="soft" />
+        <h3 className="text-lg font-semibold">Pas encore de données à analyser</h3>
+        <p className="text-sm text-muted-foreground max-w-md">
+          Saisis tes premières données mensuelles (visiteurs, leads, ventes) dans l&apos;onglet « Saisir mes données ». Tipote te livre l&apos;analyse dès la première saisie.
         </p>
       </Card>
     );

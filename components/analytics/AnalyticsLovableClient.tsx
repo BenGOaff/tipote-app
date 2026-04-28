@@ -8,9 +8,10 @@ import { PageBanner } from "@/components/PageBanner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
+import { Mascot } from "@/components/ui/mascot";
 
-import { BarChart3, History, Loader2, Pencil, Target } from "lucide-react";
+import { BarChart3, History, Pencil, Target } from "lucide-react";
 
 import { useOfferMetrics } from "@/hooks/useOfferMetrics";
 import { OfferMetricsForm } from "@/components/analytics/OfferMetricsForm";
@@ -99,9 +100,7 @@ export default function AnalyticsLovableClient() {
         {/* ── TAB 2: Saisir mes donnees ── */}
         <TabsContent value="saisie" className="mt-6">
           {offerState.isLoading ? (
-            <Card className="p-6">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-            </Card>
+            <SkeletonCard className="h-[420px]" />
           ) : (
             <OfferMetricsForm
               offers={offerState.offers}
@@ -122,15 +121,20 @@ export default function AnalyticsLovableClient() {
         {/* ── TAB 3: Historique ── */}
         <TabsContent value="historique" className="mt-6">
           {offerState.isLoading ? (
-            <Card className="p-6">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-            </Card>
+            <div className="space-y-3">
+              <SkeletonCard className="h-[120px]" />
+              <SkeletonCard className="h-[120px]" />
+            </div>
           ) : offerState.sortedMonths.length === 0 ? (
-            <Card className="p-12 text-center">
-              <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucun historique</h3>
-              <p className="text-muted-foreground mb-4">Saisis tes données pour voir l&apos;historique ici.</p>
-              <Button onClick={() => setActiveTab("saisie")}>Saisir mes données</Button>
+            <Card className="p-12 text-center flex flex-col items-center gap-3">
+              <Mascot expression="search" size={88} tone="soft" />
+              <h3 className="text-lg font-semibold">Aucun historique pour l&apos;instant</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Saisis tes données mensuelles dans l&apos;onglet ci-dessus — chaque mois s&apos;ajoutera ici pour suivre ta progression.
+              </p>
+              <Button onClick={() => setActiveTab("saisie")} className="rounded-full mt-2">
+                Saisir mes données
+              </Button>
             </Card>
           ) : (
             <div className="space-y-4">
