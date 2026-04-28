@@ -11,6 +11,7 @@
 // - Unique designs that don't look like generic AI output
 
 import { buildLayoutCSS, type LayoutConfig } from "./pageLayout";
+import { ensureExternalUrl } from "./url";
 
 /** True when the raw config is empty or missing — means "use legacy hardcoded CSS". */
 function hasExplicitLayout(cfg: unknown): boolean {
@@ -1244,7 +1245,9 @@ function sectionHero(d: Record<string, any>, t: PageStrings): string {
   const benefits: string[] = Array.isArray(d.benefits) ? d.benefits.filter((b: any) => typeof b === "string" && b.trim()) : [];
   const ctaText = esc(safe(d.cta_text || t.defaultCtaCapture));
   const ctaSub = esc(safe(d.cta_subtitle || ""));
-  const privacyUrl = safe(d.legal_privacy_url || "");
+  // Normalised so consent-checkbox link doesn't fall back to a relative
+  // path when the creator typed "monsite.com/privacy" without protocol.
+  const privacyUrl = ensureExternalUrl(d.legal_privacy_url || "");
   const socialProof = esc(safe(d.social_proof_text || ""));
 
   const bullets = benefits.slice(0, 5).map(b =>
@@ -1289,7 +1292,7 @@ function sectionHeroSales(d: Record<string, any>, t?: PageStrings): string {
   const eyebrow = esc(safe(d.hero_eyebrow || ""));
   const ctaText = esc(safe(d.cta_text || (t || PAGE_I18N.fr).defaultCtaSales));
   const ctaSub = esc(safe(d.cta_subtitle || ""));
-  const payUrl = safe(d.payment_url || d.cta_url || "#");
+  const payUrl = ensureExternalUrl(d.payment_url || d.cta_url || "#");
 
   return `<section id="sc-hero" class="tp-hero">
   <div style="max-width:var(--container);margin:0 auto;text-align:center;position:relative;z-index:1;padding:0 40px">
@@ -1449,7 +1452,7 @@ function sectionPricing(d: Record<string, any>): string {
   const old = esc(safe(d.price_old || ""));
   const note = esc(safe(d.price_note || ""));
   const ctaText = esc(safe(d.cta_text || "Je rejoins maintenant"));
-  const payUrl = safe(d.payment_url || d.cta_url || "#");
+  const payUrl = ensureExternalUrl(d.payment_url || d.cta_url || "#");
 
   // Multi-tier pricing
   const tiers: Array<{ label?: string; price?: string; period?: string; description?: string; features?: string[] }> =
@@ -1546,7 +1549,7 @@ function sectionFinalCta(d: Record<string, any>, isCapture: boolean, t?: PageStr
   if (!title && !desc) return "";
 
   // For capture: button scrolls to hero form. For sales: links to payment.
-  const href = isCapture ? "#tipote-capture-form" : safe(d.payment_url || d.cta_url || "#");
+  const href = isCapture ? "#tipote-capture-form" : ensureExternalUrl(d.payment_url || d.cta_url || "#");
 
   return `<section id="sc-final-cta" class="tp-final-cta">
   ${title ? `<h2 data-editable="true">${title}</h2>` : ""}
@@ -1568,9 +1571,13 @@ function buildFooter(d: Record<string, any>, t?: PageStrings): string {
   const footerText = safe(d.footer_text || "");
   const links: string[] = [];
 
-  if (d.legal_mentions_url) links.push(`<a href="${esc(safe(d.legal_mentions_url))}" target="_blank" rel="noopener">Mentions l&#233;gales</a>`);
-  if (d.legal_cgv_url) links.push(`<a href="${esc(safe(d.legal_cgv_url))}" target="_blank" rel="noopener">CGV</a>`);
-  if (d.legal_privacy_url) links.push(`<a href="${esc(safe(d.legal_privacy_url))}" target="_blank" rel="noopener">${strings.footerPrivacy}</a>`);
+  // Normalise user-entered URLs — creators routinely type "monsite.com/mentions"
+  // without a protocol; without ensureExternalUrl that becomes a relative
+  // link inside the snapshot iframe (about:srcdoc/...) and Chrome blocks
+  // the navigation. ensureExternalUrl prepends "https://" when missing.
+  if (d.legal_mentions_url) links.push(`<a href="${esc(ensureExternalUrl(d.legal_mentions_url))}" target="_blank" rel="noopener">Mentions l&#233;gales</a>`);
+  if (d.legal_cgv_url) links.push(`<a href="${esc(ensureExternalUrl(d.legal_cgv_url))}" target="_blank" rel="noopener">CGV</a>`);
+  if (d.legal_privacy_url) links.push(`<a href="${esc(ensureExternalUrl(d.legal_privacy_url))}" target="_blank" rel="noopener">${strings.footerPrivacy}</a>`);
 
   return `<footer class="tp-footer">
   ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" class="tp-footer-logo" data-tipote-img-id="footer-logo">` : (logoText ? `<div class="tp-footer-brand">${esc(logoText)}</div>` : "")}
@@ -1625,7 +1632,7 @@ function sectionShowcaseNav(d: Record<string, any>, t?: PageStrings): string {
   const logoText = esc(safe(d.logo_text || ""));
   const navItems: string[] = Array.isArray(d.nav_links) ? d.nav_links.filter((s: any) => typeof s === "string" && s.trim()) : [];
   const ctaText = esc(safe(d.cta_text || "Contact"));
-  const ctaUrl = safe(d.cta_url || d.payment_url || "#sc-contact");
+  const ctaUrl = ensureExternalUrl(d.cta_url || d.payment_url || "#sc-contact");
 
   const mobileLinks = navItems.map(item => `<a href="#sc-${esc(safe(item)).toLowerCase().replace(/\s+/g, "-")}">${esc(safe(item))}</a>`).join("");
 
@@ -1659,9 +1666,9 @@ function sectionShowcaseHero(d: Record<string, any>, t?: PageStrings): string {
   const subtitle = esc(safe(d.hero_subtitle || ""));
   const desc = esc(safe(d.hero_description || ""));
   const ctaText = esc(safe(d.cta_text || strings.discover));
-  const ctaUrl = safe(d.cta_url || d.payment_url || "#sc-services");
+  const ctaUrl = ensureExternalUrl(d.cta_url || d.payment_url || "#sc-services");
   const secondaryCtaText = esc(safe(d.secondary_cta_text || ""));
-  const secondaryCtaUrl = safe(d.secondary_cta_url || "#sc-contact");
+  const secondaryCtaUrl = ensureExternalUrl(d.secondary_cta_url || "#sc-contact");
 
   return `<section id="sc-hero" style="background:linear-gradient(135deg,var(--gray-900) 0%,#0f172a 100%);color:var(--white);padding:100px 0 80px;text-align:center;position:relative;overflow:hidden">
   <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 0%,var(--brand-25) 0%,transparent 70%);pointer-events:none"></div>
@@ -1727,7 +1734,7 @@ function sectionContact(d: Record<string, any>, t?: PageStrings): string {
   const title = esc(safe(d.contact_title || ""));
   const desc = esc(safe(d.contact_description || ""));
   const ctaText = esc(safe(d.contact_cta_text || d.cta_text || strings.contactCta));
-  const ctaUrl = safe(d.contact_cta_url || d.cta_url || d.payment_url || "#");
+  const ctaUrl = ensureExternalUrl(d.contact_cta_url || d.cta_url || d.payment_url || "#");
   const email = esc(safe(d.contact_email || ""));
   const phone = esc(safe(d.contact_phone || ""));
   const address = esc(safe(d.contact_address || ""));

@@ -828,11 +828,44 @@ function sanitizeEditorArtifacts(html: string): string {
   return html;
 }
 
+/**
+ * Self-heal user-entered URLs in already-published snapshots.
+ *
+ * Background: pages published before lib/pageBuilder.ts started calling
+ * ensureExternalUrl() may have hrefs like `monsite.com/privacy` baked
+ * into the HTML. Inside the iframe (srcDoc → about:srcdoc) those become
+ * relative paths, the navigation fails, and Chrome shows its
+ * "Cette page a été bloquée" wall.
+ *
+ * Rather than force every creator to re-publish, we walk the snapshot
+ * once at render time and prepend "https://" to any <a href> that has
+ * no protocol, leading slash, or anchor. Anchors (#capture), in-app
+ * paths (/foo), and proper protocols (https:, mailto:, tel:) pass
+ * through untouched. javascript:/data: URIs already have a protocol so
+ * we don't accidentally promote them — the existing sanitiser handles
+ * those separately.
+ */
+function normalizeAnchorHrefs(html: string): string {
+  return html.replace(
+    /(<a\b[^>]*\bhref=)(["'])([^"']*)\2/gi,
+    (match, prefix, quote, url) => {
+      const trimmed = url.trim();
+      if (!trimmed) return match;
+      if (trimmed.startsWith("#")) return match;
+      if (trimmed.startsWith("/")) return match;
+      if (/^[a-z][a-z0-9+\-.]*:/i.test(trimmed)) return match;
+      return `${prefix}${quote}https://${trimmed}${quote}`;
+    },
+  );
+}
+
 // Inject a small script into the HTML that intercepts CTA clicks
 // and posts a message to the parent to open the capture overlay.
 // IMPORTANT: Does NOT re-inject legal footer or capture form (already in html_snapshot from render.ts).
 function injectCaptureScript(page: PublicPageData): string {
   let html = sanitizeEditorArtifacts(page.html_snapshot || "");
+  // Self-heal protocol-less hrefs left over from earlier publishes.
+  html = normalizeAnchorHrefs(html);
 
   // Inject tracking pixels into <head>
   const trackingSnippets = buildTrackingSnippets(page);

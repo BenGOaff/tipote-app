@@ -18,6 +18,7 @@ const URL_PROTOCOL_RE = /^[a-z][a-z0-9+\-.]*:/i;
 /**
  * Make sure a user-entered URL is safe to drop in an <a href>:
  *   - If empty / whitespace only → returns "" so the caller can hide the link.
+ *   - If starts with "#" → returned as-is (in-page anchor).
  *   - If starts with "//" → prepends "https:" (protocol-relative).
  *   - If starts with "/" → returned as-is (true in-app relative links).
  *   - If has any protocol already (https:, mailto:, tel:, ftp:…) → returned as-is.
@@ -30,6 +31,7 @@ const URL_PROTOCOL_RE = /^[a-z][a-z0-9+\-.]*:/i;
 export function ensureExternalUrl(raw: string | null | undefined): string {
   const s = (raw ?? "").trim();
   if (!s) return "";
+  if (s.startsWith("#")) return s;
   if (s.startsWith("//")) return `https:${s}`;
   if (s.startsWith("/")) return s;
   if (URL_PROTOCOL_RE.test(s)) return s;
