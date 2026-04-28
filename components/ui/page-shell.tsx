@@ -85,11 +85,11 @@ export function PageHeading({ title, subtitle, actions, eyebrow, className }: Pa
             {eyebrow}
           </div>
         ) : null}
-        <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-foreground tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-display font-extrabold leading-[1.1] text-foreground tracking-tight">
           {title}
         </h1>
         {subtitle ? (
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">{subtitle}</p>
+          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl">{subtitle}</p>
         ) : null}
       </div>
       {actions ? <div className="flex items-center gap-2 flex-wrap">{actions}</div> : null}
