@@ -117,12 +117,15 @@ export function PepiteRevealModal({
         if (phase === "front" && e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Tagline above the card */}
-      <div className="absolute top-[18%] sm:top-[15%] left-0 right-0 px-6 text-center pointer-events-none">
+      {/* Tagline above the card. Pushed lower on the smallest phones
+          (top-[10%]) so the X close button at top-4 doesn't sit on
+          top of the headline; eased back up as the viewport gets
+          taller so the proportions feel right on a tablet/desktop. */}
+      <div className="absolute top-[10%] sm:top-[15%] left-0 right-0 px-6 text-center pointer-events-none">
         <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">
           {t("revealKicker")}
         </p>
-        <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-foreground">
+        <h2 className="mt-2 text-xl sm:text-3xl font-bold text-foreground line-clamp-2">
           {phase === "front" ? title : t("revealHeadline")}
         </h2>
       </div>
