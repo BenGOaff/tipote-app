@@ -878,18 +878,52 @@ function injectCaptureScript(page: PublicPageData): string {
     }
   }
 
-  // Click tracking script — tracks all CTA clicks (all page types)
+  // Click tracking + external-link hardening.
+  //
+  // External link hardening: srcDoc iframes have an opaque origin, and
+  // some visitors' popup-blockers / extensions silently swallow the
+  // new-tab open even though target="_blank" is set. When that happens,
+  // Chrome falls back to navigating the iframe itself; if the target
+  // URL responds with X-Frame-Options: DENY (typical for WordPress
+  // PDFs, admin pages, etc.), the iframe lands on
+  // chrome-error://chromewebdata/ and the visitor sees Chrome's blocked
+  // wall — exactly Marie Paule's case.
+  //
+  // Fix: intercept clicks on absolute http/https links inside the
+  // iframe and route them through window.open (with noopener), falling
+  // back to window.top navigation thanks to the allow-top-navigation
+  // sandbox flag. This keeps the link working regardless of the
+  // visitor's popup settings.
   const clickTrackScript = `<script>
 (function(){
-  var tracked = false;
   document.addEventListener('click', function(e) {
     var el = e.target.closest('a, button, [role="button"], .cta-primary, .cta-button, .tp-cta');
     if (!el) return;
-    var href = el.getAttribute('href') || '';
-    // Skip pure anchor links (handled separately)
-    if (href === '#' || href === '#capture') return;
-    if (!tracked || true) {
+    var href = el.getAttribute && el.getAttribute('href') || '';
+
+    // Click tracking ping — kept best-effort.
+    if (href !== '#' && href !== '#capture') {
       try { parent.postMessage('tipote:click', '*'); } catch(ex) {}
+    }
+
+    // External-link hardening: only for absolute http(s) URLs on an
+    // <a> element. Anchors, relative paths, mailto:/tel: etc. fall
+    // through to default browser behaviour.
+    if (el.tagName !== 'A') return;
+    if (!/^https?:\\/\\//i.test(href)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    var win = null;
+    try {
+      win = window.open(href, '_blank', 'noopener,noreferrer');
+    } catch(ex) { /* popup blocked by extension */ }
+    if (!win) {
+      // Popup blocked — bring the user out of the sandboxed iframe
+      // by navigating the top window instead. allow-top-navigation
+      // makes this safe even with the strict sandbox.
+      try { window.top.location.href = href; }
+      catch(ex) { window.location.href = href; }
     }
   }, true);
 })();
