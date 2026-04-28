@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Mascot } from "@/components/ui/mascot";
 import { useToast } from "@/hooks/use-toast";
 import { callStrategySSE } from "@/lib/strategySSE";
 
@@ -644,25 +645,43 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
           <div className="flex-1 p-4 sm:p-5 lg:p-6">
             <div className="max-w-[1200px] mx-auto w-full space-y-5">
-            {/* Bandeau "plan en cours" */}
+            {/* Bandeau "plan en cours" — moment d'attente où l'IA
+                construit la stratégie. La mascotte en mode "thinking"
+                + un dégradé soft transforme l'attente en moment
+                attachant plutôt qu'en placeholder austère. */}
             {(props.mode === "generating" ||
               (!props.planTasksCount &&
                 (!props.offerSets || props.offerSets.length === 0))) && (
-              <Card className="p-4 bg-primary/5 border-primary/20">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium text-primary">
+              <Card className="relative overflow-hidden p-5 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 shadow-card">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="shrink-0 self-start sm:self-center">
+                    <Mascot
+                      expression={isGeneratingPlan ? "thinking" : "hello"}
+                      size={72}
+                      tone="soft"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground">
                       {t("generatingBanner.title")}
+                      {isGeneratingPlan && (
+                        <span className="inline-flex ml-1 gap-0.5" aria-hidden>
+                          <span className="w-1 h-1 rounded-full bg-primary animate-pulse" style={{ animationDelay: "0ms" }} />
+                          <span className="w-1 h-1 rounded-full bg-primary animate-pulse" style={{ animationDelay: "150ms" }} />
+                          <span className="w-1 h-1 rounded-full bg-primary animate-pulse" style={{ animationDelay: "300ms" }} />
+                        </span>
+                      )}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mt-0.5">
                       {t("generatingBanner.desc")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Button
                       onClick={handleGeneratePlan}
                       disabled={isGeneratingPlan}
                       size="sm"
+                      className="rounded-full"
                     >
                       {isGeneratingPlan ? t("generatingBanner.generating") : t("generatingBanner.generate")}
                     </Button>
@@ -670,6 +689,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => router.refresh()}
+                      className="rounded-full"
                     >
                       {t("generatingBanner.refresh")}
                     </Button>
