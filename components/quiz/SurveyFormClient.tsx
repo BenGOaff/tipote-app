@@ -209,6 +209,10 @@ export default function SurveyFormClient() {
         return;
       }
       toast.success(t("aiGenerated"));
+      // Subtle celebration when the AI delivers — feels like the assistant
+      // just handed something over.
+      const { celebrate } = await import("@/lib/celebrate");
+      celebrate({ intensity: "subtle", origin: "top-right" });
       await saveSurveyAndRedirect({
         title: String(survey.title || t("manualDefaultTitle")),
         introduction: survey.introduction ? String(survey.introduction) : null,
