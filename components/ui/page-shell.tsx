@@ -143,7 +143,10 @@ export function SectionCard({
         "rounded-xl",
         variantClass,
         paddingMap[padding],
-        interactive && "transition-shadow hover:shadow-card-hover",
+        // Subtle "lift on hover" (kawaak-style) when the card is the
+        // user's click target. Stays soft enough that non-interactive
+        // cards next to it don't feel jealous.
+        interactive && "transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer",
         className,
       )}
       {...rest}
