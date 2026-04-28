@@ -42,14 +42,19 @@
 
 @layer base {
   :root {
-    /* ── Core palette ── */
-    --background: 225 33% 98%;        /* #F6F7FB */
+    /* ── Core palette ──
+       Inverted from the previous setup so the page background is the
+       cleanest, brightest surface (pure white) and recessed surfaces
+       (sidebar, cards) carry the gray-blue tint. This gives the app a
+       waalaxy / kawaak feel where cards "embed" into the page rather
+       than "lift" off it via shadow. */
+    --background: 0 0% 100%;          /* #FFFFFF — page bg, brightest */
     --foreground: 231 41% 31%;        /* #2E386E — default text color */
 
-    --card: 0 0% 100%;
+    --card: 225 33% 97%;              /* #F4F5FA — gray-blue card surface */
     --card-foreground: 231 41% 31%;
 
-    --popover: 0 0% 100%;
+    --popover: 0 0% 100%;             /* keep popovers / dropdowns white */
     --popover-foreground: 231 41% 31%;
 
     /* ── Primary: #5D6CDB ── */
@@ -88,8 +93,8 @@
        surface       : default page-level surface (card bg)
        surface-muted : "subdued" panels (filter strips, helper boxes)
        surface-soft  : tinted blocks (icon circles, feature highlights) */
-    --surface: 0 0% 100%;
-    --surface-muted: 220 33% 97%;
+    --surface: 225 33% 97%;
+    --surface-muted: 225 33% 95%;
     --surface-soft: 233 64% 96%;
 
     /* ── Gradient endpoints ── */
@@ -113,14 +118,17 @@
     --shadow-card: 0 1px 3px hsl(220 13% 50% / 0.04), 0 4px 12px hsl(220 13% 50% / 0.06);
     --shadow-card-hover: 0 2px 6px hsl(220 13% 50% / 0.06), 0 8px 24px hsl(220 13% 50% / 0.08);
 
-    /* ── Sidebar ── */
-    --sidebar-background: 0 0% 100%;
+    /* ── Sidebar ──
+       Sidebar bg matches `--card` (gray-blue tint) so the sidebar reads
+       as a recessed surface alongside cards, with the white page bg
+       acting as the brightest "stage" in the middle. */
+    --sidebar-background: 225 33% 97%;
     --sidebar-foreground: 231 41% 31%;
     --sidebar-primary: 233 64% 61%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 236 79% 96%;
+    --sidebar-accent: 236 79% 92%;
     --sidebar-accent-foreground: 230 41% 28%;
-    --sidebar-border: 0 0% 90%;
+    --sidebar-border: 220 13% 90%;
     --sidebar-ring: 233 64% 61%;
   }
 

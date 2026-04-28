@@ -257,7 +257,7 @@ export default function CreateHub({ profile, plan }: Props) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+        <main className="flex-1 overflow-auto bg-background flex flex-col">
           <PageHeader
             left={
               <div className="flex items-center gap-2">

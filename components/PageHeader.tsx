@@ -34,9 +34,13 @@ type Props = {
   userEmail?: string;
 };
 
+// No border-b on the <header> below: page bg (white) and sidebar bg
+// (gray-blue) provide their own visual separation; an extra hairline on
+// top of that only adds visual noise. The header still sits above
+// scrolled content thanks to bg-background + z-10.
 export function PageHeader({ left, userEmail = "" }: Props) {
   return (
-    <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10 border-b border-border/40">
+    <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
       {/* Left: sidebar reopen + page title */}
       <div className="flex items-center gap-2 min-w-0">
         <SidebarOpenButton />

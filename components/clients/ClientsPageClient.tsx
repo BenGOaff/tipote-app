@@ -570,7 +570,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
   return (
     <SidebarProvider>
       <AppSidebar />
-      <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+      <main className="flex-1 overflow-auto bg-background flex flex-col">
         <PageHeader
           left={
             <h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>
