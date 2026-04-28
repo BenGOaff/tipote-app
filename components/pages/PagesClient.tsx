@@ -19,6 +19,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
 import { PageBanner } from "@/components/PageBanner";
 import { Button } from "@/components/ui/button";
+import { Mascot } from "@/components/ui/mascot";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { loadAllOffers, type OfferOption, levelLabel, formatPriceRange } from "@/lib/offers";
 import PageGenerateProgress, { type ProgressStep } from "./PageGenerateProgress";
@@ -870,22 +872,28 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                     </div>
 
                     {loading ? (
-                      <div className="flex items-center justify-center py-20">
-                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      // Shimmer placeholders so the layout doesn't jump
+                      // when the data arrives.
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <SkeletonCard key={i} className="h-[180px]" />
+                        ))}
                       </div>
                     ) : pages.length === 0 ? (
-                      <div className="text-center py-20">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                          <FileText className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                        <h2 className="text-lg font-semibold mb-2">{t("emptyTitle")}</h2>
-                        <p className="text-muted-foreground mb-6">{t("emptyDesc")}</p>
-                        <button
+                      // Mascot empty-state — same warm cold-start treatment as
+                      // Tiquiz / Mes Contenus so the apps feel coordinated.
+                      <div className="flex flex-col items-center text-center py-16 gap-3">
+                        <Mascot expression="celebrate" size={96} tone="soft" />
+                        <h2 className="text-lg font-semibold">{t("emptyTitle")}</h2>
+                        <p className="text-sm text-muted-foreground max-w-md">{t("emptyDesc")}</p>
+                        <Button
                           onClick={() => setView("step1")}
-                          className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium"
+                          className="rounded-full mt-2"
+                          size="lg"
                         >
+                          <Plus className="w-4 h-4 mr-1.5" />
                           {t("createFirst")}
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

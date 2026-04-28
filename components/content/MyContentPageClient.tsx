@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Mascot } from "@/components/ui/mascot";
 
 import { ContentCalendarView } from "@/components/content/ContentCalendarView";
 import { ContentItemActions } from "@/components/content/ContentItemActions";
@@ -203,7 +204,18 @@ export default function MyContentPageClient({ userEmail, initialView, items, err
 
               <TabsContent value={listTab} className="space-y-4">
                 {listItems.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-12">{t("empty")}</div>
+                  // Mascot empty-state — warmer than a one-line muted text,
+                  // and consistent with the Tiquiz Leads / Pépites pages.
+                  <div className="flex flex-col items-center text-center py-14 gap-3">
+                    <Mascot expression="hello" size={88} tone="soft" />
+                    <h3 className="text-lg font-semibold text-foreground">{t("empty")}</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">{t("emptyDesc")}</p>
+                    <Button asChild className="rounded-full mt-2">
+                      <Link href="/create">
+                        <Plus className="h-4 w-4 mr-1.5" /> {t("emptyCta")}
+                      </Link>
+                    </Button>
+                  </div>
                 ) : (
                   listItems.map((item) => {
                     const Icon = iconForType(item.type);

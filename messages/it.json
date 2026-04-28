@@ -568,7 +568,9 @@
       "articles": "Articoli",
       "videos": "Video"
     },
-    "empty": "Non hai ancora contenuti. Crea il tuo primo contenuto!",
+    "empty": "Ancora nessun contenuto",
+    "emptyDesc": "Lancia la tua prima idea: l'IA trasforma un brief in post, email, articolo o script video in pochi secondi.",
+    "emptyCta": "Crea il mio primo contenuto",
     "status": {
       "published": "Pubblicato",
       "draft": "Bozza",

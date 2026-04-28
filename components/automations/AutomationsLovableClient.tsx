@@ -7,6 +7,7 @@ import { PageBanner } from "@/components/PageBanner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Mascot } from "@/components/ui/mascot";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -497,13 +498,12 @@ export default function AutomationsLovableClient() {
             ))}
           </div>
         ) : automations.length === 0 ? (
-          /* Empty state */
+          // Mascot empty-state — same family as Mes Pages / Mes Contenus
+          // so the cold-start moment is consistent across the app.
           <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <Zap className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h4 className="font-display font-semibold text-lg mb-2">{t("empty.title")}</h4>
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center gap-3">
+              <Mascot expression="thinking" size={88} tone="soft" />
+              <h4 className="font-display font-semibold text-lg">{t("empty.title")}</h4>
               <p className="text-sm text-muted-foreground max-w-xs">{t("empty.description")}</p>
             </CardContent>
           </Card>
