@@ -19,6 +19,7 @@ import {
 import { sanitizeRichText } from "@/lib/richText";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, type QuizGender } from "@/lib/quizPersonalization";
+import { ensureExternalUrl } from "@/lib/url";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -1594,7 +1595,7 @@ export default function PublicQuizClient({
             {quiz.privacy_url && (
               <p className="text-xs text-center text-muted-foreground">
                 <a
-                  href={quiz.privacy_url}
+                  href={ensureExternalUrl(quiz.privacy_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline"
@@ -1766,7 +1767,7 @@ export default function PublicQuizClient({
           {quiz.privacy_url && (
             <p className="text-xs text-center text-muted-foreground">
               <a
-                href={quiz.privacy_url}
+                href={ensureExternalUrl(quiz.privacy_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline"
@@ -1813,7 +1814,7 @@ export default function PublicQuizClient({
               className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
               asChild
             >
-              <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
+              <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
                 {ctaText}
               </a>
             </Button>
@@ -1916,7 +1917,7 @@ export default function PublicQuizClient({
             const ctaText = interp(resultProfile?.cta_text || quiz.cta_text || "") || t.resultCtaDefault;
             return ctaUrl ? (
               <Button size="lg" className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug" asChild>
-                <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
+                <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
                   {ctaText}
                 </a>
               </Button>
@@ -1936,7 +1937,7 @@ export default function PublicQuizClient({
           {quiz.privacy_url && (
             <p className="text-xs text-center text-muted-foreground">
               <a
-                href={quiz.privacy_url}
+                href={ensureExternalUrl(quiz.privacy_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline"
@@ -1974,7 +1975,7 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
       <span>
         {before}
         <a
-          href={privacyUrl}
+          href={ensureExternalUrl(privacyUrl)}
           target="_blank"
           rel="noopener noreferrer"
           className="underline text-primary hover:text-primary/80 transition-colors"
@@ -1992,7 +1993,7 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
     <span>
       {raw}{" "}
       <a
-        href={privacyUrl}
+        href={ensureExternalUrl(privacyUrl)}
         target="_blank"
         rel="noopener noreferrer"
         className="underline text-primary hover:text-primary/80 transition-colors"
@@ -2024,7 +2025,7 @@ function TipoteFooter({ locale, customText, customUrl, logoUrl }: { locale?: str
           <img src={logoUrl} alt="" className="max-h-10 w-auto object-contain mx-auto" />
         )}
         <p className="text-xs text-muted-foreground/60">
-          <a href={customUrl} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
+          <a href={ensureExternalUrl(customUrl)} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
             {customText}
           </a>
         </p>
