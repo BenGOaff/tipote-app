@@ -118,24 +118,39 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     }
   }
 
-  // Validate section_order: only accept { mobile?: string[]; desktop?: string[] }
-  // with short safe id strings. Anything else is coerced to an empty object.
+  // Validate section_order: only accept { mobile?: string[]; desktop?: string[] }.
+  // CRITICAL: never reset to {} when the client ships null/undefined/wrong type.
+  // The previous `else updates.section_order = {}` branch silently wiped a
+  // user's custom section ordering whenever a save happened to ship a falsy
+  // value (state-init race, partial body, debounced save with stale ref…)
+  // — Marie-Paule lost her 10-section custom order this way (2026-04-29
+  // incident). We now drop the field from the update on bad input so the
+  // existing DB value is preserved.
   if ("section_order" in updates) {
     const raw = updates.section_order;
-    const cleanArr = (v: unknown): string[] => {
-      if (!Array.isArray(v)) return [];
+    const cleanArr = (v: unknown) => {
+      if (!Array.isArray(v)) return undefined; // signal: caller didn't ship a real array
       return v
         .filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 128)
         .filter((x) => /^[a-zA-Z0-9_-]+$/.test(x));
     };
     if (raw && typeof raw === "object") {
       const obj = raw as Record<string, unknown>;
-      updates.section_order = {
-        mobile: cleanArr(obj.mobile),
-        desktop: cleanArr(obj.desktop),
-      };
+      const mobile = cleanArr(obj.mobile);
+      const desktop = cleanArr(obj.desktop);
+      if (mobile === undefined && desktop === undefined) {
+        // Object present but both arrays missing → preserve DB.
+        delete updates.section_order;
+      } else {
+        updates.section_order = {
+          mobile: mobile ?? [],
+          desktop: desktop ?? [],
+        };
+      }
     } else {
-      updates.section_order = {};
+      // null / undefined / non-object → never write {}; just don't touch
+      // the column. Preserves any existing custom order.
+      delete updates.section_order;
     }
   }
 
