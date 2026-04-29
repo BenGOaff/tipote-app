@@ -22,6 +22,7 @@ import {
   Undo2, Redo2,
   GripVertical, HelpCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   DndContext,
   closestCenter,
@@ -3099,6 +3100,74 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       maxLength={160}
                       placeholder="Description pour Google..."
                     />
+                  </div>
+
+                  {/* Legal links — Mentions / CGV / Confidentialité.
+                      Saved via the column AND mirrored into content_data
+                      server-side so the footer renderer picks them up.
+                      The Import button pulls them from the user's
+                      business profile (Réglages → Mentions légales). */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-white/60 flex items-center gap-1">
+                        <FileText className="w-3 h-3" /> Liens légaux du footer
+                      </label>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const r = await fetch("/api/profile");
+                            const j = await r.json().catch(() => null);
+                            const p = j?.ok ? j.profile : null;
+                            const t = String(p?.terms_url ?? "").trim();
+                            const c = String(p?.cgv_url ?? "").trim();
+                            const pv = String(p?.privacy_url ?? "").trim();
+                            if (!t && !c && !pv) {
+                              toast.warning("Aucune URL trouvée dans tes réglages. Renseigne-les d'abord dans Réglages → Mentions légales.");
+                              return;
+                            }
+                            // Apply each non-empty value via the same
+                            // debounced save path the inputs use, so
+                            // the public footer rebuilds automatically.
+                            if (t) handleSettingUpdate("legal_mentions_url", t);
+                            if (c) handleSettingUpdate("legal_cgv_url", c);
+                            if (pv) handleSettingUpdate("legal_privacy_url", pv);
+                            toast.success("URLs légales importées depuis tes réglages.");
+                          } catch {
+                            toast.error("Impossible de récupérer les URLs depuis les réglages.");
+                          }
+                        }}
+                        className="text-[10px] text-white/70 hover:text-white underline underline-offset-2"
+                      >
+                        Importer depuis mes réglages
+                      </button>
+                    </div>
+                    <div className="space-y-1.5">
+                      <input
+                        type="url"
+                        value={page.legal_mentions_url || ""}
+                        onChange={(e) => handleSettingUpdate("legal_mentions_url", e.target.value)}
+                        placeholder="Mentions légales — https://…"
+                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
+                      />
+                      <input
+                        type="url"
+                        value={page.legal_cgv_url || ""}
+                        onChange={(e) => handleSettingUpdate("legal_cgv_url", e.target.value)}
+                        placeholder="CGV — https://…"
+                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
+                      />
+                      <input
+                        type="url"
+                        value={page.legal_privacy_url || ""}
+                        onChange={(e) => handleSettingUpdate("legal_privacy_url", e.target.value)}
+                        placeholder="Politique de confidentialité — https://…"
+                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
+                      />
+                    </div>
+                    <p className="text-[10px] text-white/40 mt-1">
+                      Les liens apparaîtront dans le footer. Vide les champs pour les retirer.
+                    </p>
                   </div>
 
                   {/* Systeme.io tag */}

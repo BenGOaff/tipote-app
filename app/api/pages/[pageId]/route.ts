@@ -139,6 +139,35 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     }
   }
 
+  // Mirror legal_*_url column writes into content_data so the renderer
+  // (lib/pageBuilder.ts → buildFooter) picks them up. The columns are
+  // a public-API convenience but the actual footer rendering reads
+  // content_data.legal_*_url. Without this mirror, the editor saves
+  // the URLs to the column and the visitor never sees them on the
+  // live page (Marie-Paule, 2026-04-29).
+  const LEGAL_URL_FIELDS = ["legal_mentions_url", "legal_cgv_url", "legal_privacy_url"] as const;
+  const legalUrlInPatch = LEGAL_URL_FIELDS.some((f) => f in updates);
+  if (legalUrlInPatch) {
+    // Snapshot of which fields the client is changing (or clearing —
+    // empty string explicitly removes the link).
+    const legalPatch: Record<string, string> = {};
+    for (const f of LEGAL_URL_FIELDS) {
+      if (f in updates) legalPatch[f] = String(updates[f] ?? "");
+    }
+    // Merge into updates.content_data, lazily fetching the current
+    // value when the client didn't ship one with this PATCH.
+    if (!updates.content_data) {
+      const { data: row } = await supabase
+        .from("hosted_pages")
+        .select("content_data")
+        .eq("id", pageId)
+        .eq("user_id", session.user.id)
+        .single();
+      updates.content_data = (row as { content_data?: Record<string, unknown> } | null)?.content_data ?? {};
+    }
+    updates.content_data = { ...(updates.content_data as Record<string, unknown>), ...legalPatch };
+  }
+
   // Re-render html_snapshot from content_data — but ONLY when the client did
   // not provide one. The page editor's inline-text / image / structural edits
   // mutate the iframe DOM directly without round-tripping through content_data,
