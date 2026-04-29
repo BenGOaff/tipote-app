@@ -197,6 +197,31 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
+    // Fan out legal URLs to all the user's hosted pages whenever
+    // any of privacy_url / terms_url / cgv_url is in this patch.
+    // Settings is the source of truth — pages mirror it (column +
+    // content_data + html_snapshot rebuild) so the live footer
+    // updates without the user having to open the page editor.
+    // Non-blocking: the response returns immediately, the rebuild
+    // chews through the user's pages in the background.
+    const legalUrlTouched =
+      "privacy_url" in patch || "terms_url" in patch || "cgv_url" in patch;
+    if (legalUrlTouched) {
+      (async () => {
+        try {
+          const { syncLegalUrlsToUserPages } = await import("@/lib/pages/syncLegalUrls");
+          const result = await syncLegalUrlsToUserPages(user.id, {
+            privacy_url: patch.privacy_url,
+            terms_url: patch.terms_url,
+            cgv_url: patch.cgv_url,
+          });
+          console.log("[profile] legal URL fan-out:", { userId: user.id, ...result });
+        } catch (e) {
+          console.error("[profile] legal URL fan-out failed:", e);
+        }
+      })();
+    }
+
     // Auto-register SIO webhooks when API key is saved/changed (non-blocking)
     if (patch.sio_user_api_key !== undefined) {
       const apiKey = String(patch.sio_user_api_key ?? "").trim();
