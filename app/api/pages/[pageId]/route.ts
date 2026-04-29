@@ -11,6 +11,7 @@ import { buildLinkinbioPage, type LinkinbioPageData } from "@/lib/linkinbioBuild
 import { sanitizeHtmlSnapshot } from "@/lib/sanitizeHtml";
 import { parseLayoutConfig } from "@/lib/pageLayout";
 import { checkPublishedSlugAvailable } from "@/lib/hostedPageSlug";
+import { applySectionOrderToHtml } from "@/lib/pages/applySectionOrderToHtml";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,10 +73,42 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (key in body) updates[key] = body[key];
   }
 
+  // ── Defensive guard against client-side wipe bugs ──────────────
+  // Pattern observed in production (Marie-Paule, 2026-04-29):
+  //   1) PageBuilder sends a partial PATCH whose state hadn't fully
+  //      hydrated (debounced save, race during boot, …) so a JSONB
+  //      field is shipped as null / undefined / wrong-type
+  //   2) Our previous code wrote that null straight to the column,
+  //      OR routed it through a sanitizer that returned a default
+  //      (e.g. parseLayoutConfig(null) → DEFAULT_LAYOUT) and wrote
+  //      that, silently overwriting the user's custom value
+  // Fix: drop any JSONB / structured field from the patch when its
+  // value is null / undefined / not-the-right-type. The field is
+  // never written, the existing DB value is preserved. Legitimate
+  // clears must ship the explicit empty value ([] / {}), not null.
+  const STRUCTURED_FIELDS_DROP_NULL = [
+    "content_data", "brand_tokens", "custom_images", "layout_config",
+    "section_order", "thank_you_ctas",
+  ] as const;
+  for (const f of STRUCTURED_FIELDS_DROP_NULL) {
+    if (f in updates && (updates[f] === null || updates[f] === undefined)) {
+      delete updates[f];
+    }
+  }
+
   // Strict validation for layout_config: never trust client JSON — the parser
   // returns a safe, enum-constrained object even if the payload is hostile.
+  // PRESERVE-ON-WIPE: if the client shipped a non-object (already filtered
+  // above) OR an object that resolves to the canonical default (no real
+  // user choice), drop the field instead of overwriting a populated DB row.
   if ("layout_config" in updates) {
-    updates.layout_config = parseLayoutConfig(updates.layout_config);
+    const raw = updates.layout_config;
+    if (!raw || typeof raw !== "object") {
+      // Belt: caught above already. Suspenders: never write a default.
+      delete updates.layout_config;
+    } else {
+      updates.layout_config = parseLayoutConfig(updates.layout_config);
+    }
   }
 
   // Slug-change guard: if the user is trying to set a slug that another user
@@ -257,7 +290,14 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
             locale: (current as any).locale || "fr",
             layoutConfig: layoutCfg || null,
           });
-          updates.html_snapshot = html;
+          // Bake the user's custom section ordering into the static
+          // snapshot. Without this, every rebuild reverts the live
+          // page to the template's default order — even though
+          // section_order is correctly stored on the row. The same
+          // CSS @media (order:N) trick the editor iframe uses at
+          // runtime, applied server-side.
+          const customOrder = (current as any).section_order ?? null;
+          updates.html_snapshot = applySectionOrderToHtml(html, customOrder);
         }
       } catch (err: any) {
         // Log instead of swallowing — a builder throw used to silently keep

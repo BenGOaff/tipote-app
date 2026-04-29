@@ -20,6 +20,7 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildPage } from "@/lib/pageBuilder";
+import { applySectionOrderToHtml } from "@/lib/pages/applySectionOrderToHtml";
 
 export type LegalUrlsFromSettings = {
   privacy_url?: string;
@@ -36,6 +37,7 @@ type HostedPageRow = {
   content_data: Record<string, unknown> | null;
   brand_tokens: Record<string, unknown> | null;
   layout_config: Record<string, unknown> | null;
+  section_order: { mobile?: string[]; desktop?: string[] } | null;
   locale: string | null;
   status: string;
 };
@@ -75,7 +77,7 @@ export async function syncLegalUrlsToUserPages(
 
   const { data: pages, error: listErr } = await supabaseAdmin
     .from("hosted_pages")
-    .select("id, user_id, page_type, template_kind, template_id, content_data, brand_tokens, layout_config, locale, status")
+    .select("id, user_id, page_type, template_kind, template_id, content_data, brand_tokens, layout_config, section_order, locale, status")
     .eq("user_id", userId)
     .neq("status", "archived");
 
@@ -109,13 +111,18 @@ export async function syncLegalUrlsToUserPages(
           row.template_kind === "vitrine" ? "showcase" :
           "capture";
         try {
-          nextHtml = buildPage({
+          const rawHtml = buildPage({
             pageType,
             contentData: nextContentData,
             brandTokens: row.brand_tokens ?? null,
             locale: row.locale ?? "fr",
             layoutConfig: row.layout_config ?? null,
           });
+          // Bake user's section ordering into the static snapshot
+          // (same trick the editor iframe uses at runtime). Without
+          // this the public footer rebuild reverts the layout to
+          // the template default.
+          nextHtml = applySectionOrderToHtml(rawHtml, row.section_order ?? null);
         } catch (buildErr) {
           // A bad template / corrupt content shouldn't block the
           // column write. Log and persist the column-only change.
