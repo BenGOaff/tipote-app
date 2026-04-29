@@ -709,6 +709,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // Belt-and-suspenders narrowing for TypeScript: both branches
+        // above either assign `page` or throw, but TS can't track that
+        // across the let-reassignment. The throw is dead code in
+        // practice — kept so the rest of the handler can read page.id
+        // without optional-chaining noise.
+        if (!page) {
+          throw new Error("Erreur lors de la sauvegarde.");
+        }
+
         // Consume credits: 5 for capture, 6 for sales
         if (!req.signal.aborted) {
           try {
