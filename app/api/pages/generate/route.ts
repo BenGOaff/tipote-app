@@ -124,6 +124,13 @@ const InputSchema = z.object({
   templateId: z.string().optional(),
   // Optional: create page from an existing event (webinar/challenge)
   eventId: z.string().uuid().optional(),
+  // Optional: REGENERATE an existing page in-place instead of creating
+  // a new row. When set, the route loads the row, verifies ownership,
+  // and replaces its content_data / html_snapshot / brand bits without
+  // touching the slug, status, leads, or stats. The history trigger
+  // (migration 20260429_hosted_pages_history) keeps the previous
+  // version retrievable.
+  targetPageId: z.string().uuid().optional(),
   // User's offer info (optional - will use profile data if not provided)
   offerName: z.string().optional(),
   offerPromise: z.string().optional(),
@@ -631,34 +638,75 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        // Retry loop for the rare case where two concurrent generations land
-        // on the same 6-char random slug suffix. 23505 = unique_violation.
-        // We regenerate the suffix from the same title and retry up to 3
-        // times before giving up with a clear error.
         let page: { id: string; slug: string } | null = null;
-        let insertError: any = null;
-        let currentRow = pageRow;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const res = await supabaseAdmin
+
+        if (input.targetPageId) {
+          // ─── REGENERATE path: update an existing row in-place ───
+          // The user clicked "Régénérer" on an existing page. We
+          // overwrite the AI-driven content fields but preserve
+          // bookkeeping that the visitor / dashboard rely on:
+          // slug (live URL), status (draft vs published), leads
+          // (FK), stats (views_count and friends), and the page's
+          // own id. The hosted_pages_history trigger snapshots the
+          // OLD state so support can roll back if needed.
+          const { data: existing, error: ownErr } = await supabaseAdmin
             .from("hosted_pages")
-            .insert(currentRow)
+            .select("id, slug, user_id")
+            .eq("id", input.targetPageId)
+            .eq("user_id", userId)
+            .maybeSingle();
+          if (ownErr || !existing) {
+            throw new Error("Cette page n'existe pas ou ne t'appartient pas.");
+          }
+
+          // Pull the editable fields out of pageRow — never touch
+          // user_id, project_id, slug, or status here.
+          const {
+            user_id: _u, project_id: _p, slug: _s, status: _st,
+            ...editableFields
+          } = pageRow;
+
+          const { data: updated, error: updErr } = await supabaseAdmin
+            .from("hosted_pages")
+            .update({ ...editableFields, updated_at: new Date().toISOString() })
+            .eq("id", existing.id)
             .select("id, slug")
             .single();
-          if (!res.error && res.data) {
-            page = res.data as any;
-            insertError = null;
+          if (updErr || !updated) {
+            throw new Error(updErr?.message || "Erreur lors de la mise à jour.");
+          }
+          page = updated as any;
+        } else {
+          // ─── CREATE path: original behaviour ───
+          // Retry loop for the rare case where two concurrent generations
+          // land on the same 6-char random slug suffix. 23505 =
+          // unique_violation. We regenerate the suffix from the same
+          // title and retry up to 3 times before giving up with a clear
+          // error.
+          let insertError: any = null;
+          let currentRow = pageRow;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const res = await supabaseAdmin
+              .from("hosted_pages")
+              .insert(currentRow)
+              .select("id, slug")
+              .single();
+            if (!res.error && res.data) {
+              page = res.data as any;
+              insertError = null;
+              break;
+            }
+            insertError = res.error;
+            if ((res.error as any)?.code === "23505" && attempt < 2) {
+              currentRow = { ...currentRow, slug: generateSlug(title) };
+              continue;
+            }
             break;
           }
-          insertError = res.error;
-          if ((res.error as any)?.code === "23505" && attempt < 2) {
-            currentRow = { ...currentRow, slug: generateSlug(title) };
-            continue;
-          }
-          break;
-        }
 
-        if (insertError || !page) {
-          throw new Error(insertError?.message || "Erreur lors de la sauvegarde.");
+          if (insertError || !page) {
+            throw new Error(insertError?.message || "Erreur lors de la sauvegarde.");
+          }
         }
 
         // Consume credits: 5 for capture, 6 for sales
