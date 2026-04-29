@@ -42,7 +42,61 @@ type PageSummary = {
   updated_at: string;
 };
 
-type View = "list" | "step1" | "step2" | "generating" | "edit" | "linkinbio-edit";
+type View = "list" | "step1" | "step2" | "duplicate-warning" | "generating" | "edit" | "linkinbio-edit";
+
+// French + English stopwords we don't want to count as "real overlap"
+// when comparing two page titles. Rough but enough to dampen the
+// 'la / le / pour / sans / your / for' noise that would otherwise
+// inflate the similarity score across unrelated pages.
+const TITLE_STOPWORDS = new Set([
+  "les","des","une","pour","sans","avec","mes","mon","ton","ta","tes","ses",
+  "que","qui","tout","tous","toutes","par","sur","dans","est","etre","cette","ces",
+  "ne","pas","plus","aux","aux","au","ou","et","de","du","la","le","en","leur",
+  "the","and","for","with","you","your","this","that","not","but","new","from",
+  "can","will","just","very","more","into","off","out","its","then",
+]);
+
+function tokenizeForSimilarity(s: string): Set<string> {
+  if (!s) return new Set();
+  return new Set(
+    s.toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "") // strip diacritics
+      .replace(/<[^>]*>/g, " ")                              // strip HTML tags from rich-text titles
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 3 && !TITLE_STOPWORDS.has(w)),
+  );
+}
+
+function titleSimilarity(a: string, b: string): number {
+  const ta = tokenizeForSimilarity(a);
+  const tb = tokenizeForSimilarity(b);
+  if (ta.size === 0 || tb.size === 0) return 0;
+  const intersection = [...ta].filter((w) => tb.has(w)).length;
+  const union = new Set([...ta, ...tb]).size;
+  return union === 0 ? 0 : intersection / union;
+}
+
+// Find the most likely duplicate among the user's existing pages.
+// We only flag matches of the SAME page_type — a capture and a sales
+// for the same offer are deliberate. Threshold 0.4 was tuned by
+// hand against the support ticket data: it catches the obvious cases
+// (4 pages with "Libère-toi de ta charge mentale...") without
+// false-positives on unrelated pages that happen to share generic
+// words like "méthode" or "guide".
+function findDuplicateCandidate(
+  candidateTitle: string,
+  pageType: string,
+  pages: PageSummary[],
+): PageSummary | null {
+  if (!candidateTitle.trim()) return null;
+  const matches = pages
+    .filter((p) => p.page_type === pageType && p.status !== "archived")
+    .map((p) => ({ page: p, score: titleSimilarity(candidateTitle, p.title) }))
+    .filter((m) => m.score >= 0.4)
+    .sort((a, b) => b.score - a.score);
+  return matches[0]?.page ?? null;
+}
 
 export default function PagesClient({ userEmail }: { userEmail: string }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -51,6 +105,13 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
   const locale = useLocale();
   const [view, setView] = useState<View>("list");
   const [pages, setPages] = useState<PageSummary[]>([]);
+  // Duplicate-detection: when the offer the user is about to generate
+  // looks too similar to an existing page (same page_type + heavy
+  // word overlap with its title), we pause the create flow and ask
+  // her to choose between editing the existing one and creating a
+  // new variant. Avoids the "I have 4 quasi-identical pages without
+  // realising it" support tickets.
+  const [duplicateMatch, setDuplicateMatch] = useState<PageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [editPage, setEditPage] = useState<any>(null);
 
@@ -189,13 +250,13 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
     setView("step2");
   }, [resetCreate, loadOffers]);
 
-  // Generate page via SSE
-  const handleGenerate = useCallback(async () => {
-    setView("generating");
-    setGenSteps([]);
-    setGenError(null);
-
-    // Build payload from offer source
+  // Generate page via SSE.
+  // skipDuplicateCheck=true is forwarded by the "Créer quand même"
+  // button in the duplicate-warning view; the default flow goes
+  // through the duplicate detection first.
+  const handleGenerate = useCallback(async (opts?: { skipDuplicateCheck?: boolean }) => {
+    // Build payload from offer source FIRST so we can read offerName
+    // / offerPromise for the similarity check below.
     const payload: Record<string, any> = { pageType: createType };
 
     if (offerSource === "event" && selectedEventId) {
@@ -259,6 +320,27 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
     if (createType === "sales" && paymentUrl) {
       payload.paymentUrl = paymentUrl;
     }
+
+    // ── Duplicate check ─────────────────────────────────────────
+    // Compare the candidate offer text against existing pages of the
+    // same type. If we find a strong overlap, pause and let the user
+    // decide between editing the existing one and creating a new
+    // variant. Skipped on explicit "create anyway" reentry.
+    if (!opts?.skipDuplicateCheck) {
+      const candidateText = [payload.offerName, payload.offerPromise, payload.theme]
+        .filter(Boolean)
+        .join(" ");
+      const match = findDuplicateCandidate(candidateText, createType, pages);
+      if (match) {
+        setDuplicateMatch(match);
+        setView("duplicate-warning");
+        return;
+      }
+    }
+
+    setView("generating");
+    setGenSteps([]);
+    setGenError(null);
 
     try {
       const res = await fetch("/api/pages/generate", {
@@ -330,7 +412,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
     } catch (err: any) {
       setGenError(err?.message || t("networkError"));
     }
-  }, [createType, offerSource, selectedOfferId, offers, selectedEventId, events, offerName, offerPromise, offerTarget, offerPrice, offerGuarantees, offerUrgency, offerBenefits, paymentUrl]);
+  }, [createType, offerSource, selectedOfferId, offers, selectedEventId, events, offerName, offerPromise, offerTarget, offerPrice, offerGuarantees, offerUrgency, offerBenefits, paymentUrl, urgencyType, urgencyDetail, hasLogo, logoPreviewUrl, offerBonuses, pages]);
 
   // Open editor
   const handleEdit = useCallback(async (pageId: string) => {
@@ -418,6 +500,57 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                 {/* ==================== GENERATING ==================== */}
                 {view === "generating" && (
                   <PageGenerateProgress steps={genSteps} error={genError} />
+                )}
+
+                {/* ==================== DUPLICATE WARNING ==================== */}
+                {/* Heuristic guard against accidental dupes (Marie Paule
+                    style: 4 quasi-identical 'charge mentale' pages). The
+                    user picks 'edit existing' or 'create anyway'. */}
+                {view === "duplicate-warning" && duplicateMatch && (
+                  <div className="max-w-lg mx-auto py-8">
+                    <button onClick={() => setView("step2")} className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1">
+                      <ArrowLeft className="w-4 h-4" /> Retour
+                    </button>
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 mb-5">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl leading-none">⚠️</span>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-base mb-1">Tu as déjà une page très similaire</h3>
+                          <p className="text-sm text-muted-foreground">
+                            « <span className="font-medium text-foreground">{(duplicateMatch.title || "").replace(/<[^>]*>/g, "").slice(0, 100)}</span> »
+                            {" — "}
+                            {duplicateMatch.status === "published" ? "publiée" : "en brouillon"}, modifiée le {new Date(duplicateMatch.updated_at).toLocaleDateString("fr-FR")}.
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Veux-tu la <strong>modifier</strong> (recommandé) ou <strong>créer une nouvelle variante</strong> ?
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const id = duplicateMatch.id;
+                          setDuplicateMatch(null);
+                          handleEdit(id);
+                        }}
+                        className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        Modifier la page existante
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDuplicateMatch(null);
+                          handleGenerate({ skipDuplicateCheck: true });
+                        }}
+                        className="w-full px-4 py-3 border rounded-xl font-medium hover:bg-muted transition-colors"
+                      >
+                        Créer une nouvelle variante quand même
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 {/* ==================== STEP 1: Type choice ==================== */}
@@ -841,7 +974,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
 
                         {/* Generate button */}
                         <button
-                          onClick={handleGenerate}
+                          onClick={() => handleGenerate()}
                           disabled={(offerSource === "scratch" && !offerName.trim()) || (offerSource === "event" && !selectedEventId)}
                           className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
