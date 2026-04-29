@@ -162,7 +162,11 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
   useEffect(() => {
     if (serverPage) return;
 
-    fetch(`/api/pages/public/${encodeURIComponent(slug)}`)
+    // cache: 'no-store' — bypass any browser/CDN/SW cache so an edit
+    // made seconds ago in the dashboard is visible on the public page
+    // immediately. The /api/pages/public/[slug] response now sets a
+    // matching Cache-Control: no-store header.
+    fetch(`/api/pages/public/${encodeURIComponent(slug)}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.ok && data.page) {

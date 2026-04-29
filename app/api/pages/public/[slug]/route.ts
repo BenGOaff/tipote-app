@@ -194,6 +194,19 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
         ...pagePublic,
         address_form: addressForm,
       },
+    }, {
+      // Force every layer (browser, service worker, Cloudflare/Vercel
+      // edge) to revalidate. Without this, an edit on the editor
+      // updates the DB instantly but the visitor keeps seeing a
+      // cached html_snapshot from minutes-to-hours ago — which is
+      // exactly the 'I don't see my modifications' bug Marie Paule
+      // hit on 2026-04-29 even after clearing her browser cache.
+      headers: {
+        "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "CDN-Cache-Control": "no-store",
+        "Vercel-CDN-Cache-Control": "no-store",
+      },
     });
   } catch (err: any) {
     console.error("[public-page-api] Unexpected error for slug:", slug, err?.message, err?.stack?.slice(0, 300));
