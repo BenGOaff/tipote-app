@@ -89,9 +89,20 @@ export function getPlanLimits(plan: string | null | undefined): PlanLimits {
   return PLAN_LIMITS[normalizePlanId(plan)];
 }
 
-/** True if the user is on any paying tier. Used to bypass all free-tier gates. */
+/**
+ * True if the user is on any paying tier. PERMISSIVE BY DESIGN: anything
+ * that isn't explicitly "free" (or empty/null) is treated as paid. This
+ * way, if a new plan tier ships in the DB before this file is updated,
+ * paying creators don't get locked out by accident.
+ *
+ * The `free` sentinel is the only value that triggers the lock; every
+ * other plan slug (basic / pro / elite / beta / future tiers) bypasses
+ * the free-tier gates wholesale.
+ */
 export function isPaidPlan(plan: string | null | undefined): boolean {
-  return normalizePlanId(plan) !== "free";
+  const s = (plan ?? "").trim().toLowerCase();
+  if (s === "" || s === "free") return false;
+  return true;
 }
 
 /**
