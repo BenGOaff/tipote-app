@@ -195,17 +195,27 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
         address_form: addressForm,
       },
     }, {
-      // Force every layer (browser, service worker, Cloudflare/Vercel
-      // edge) to revalidate. Without this, an edit on the editor
-      // updates the DB instantly but the visitor keeps seeing a
-      // cached html_snapshot from minutes-to-hours ago — which is
-      // exactly the 'I don't see my modifications' bug Marie Paule
-      // hit on 2026-04-29 even after clearing her browser cache.
+      // Hosted-page resilience: visitor-grade caching at the CDN edge
+      // with stale-while-revalidate so the public page stays UP even
+      // when the origin (Next.js / DB) is down for a deploy or crash.
+      //   - max-age=0     → browser always revalidates with the edge,
+      //                     so a creator save is visible to her users
+      //                     within a heartbeat
+      //   - s-maxage=60   → Cloudflare/Vercel edge caches for 60s,
+      //                     amortising origin load and giving a
+      //                     buffer for short hiccups
+      //   - stale-while-revalidate=86400 → if the origin is
+      //                     unreachable for up to 24h, the edge keeps
+      //                     serving the last known good copy. This
+      //                     turns a 60s deploy window into zero
+      //                     visitor downtime.
+      // Pair with a Cloudflare Cache Rule on /p/* and /q/*:
+      //   Edge TTL: override 60s, Browser TTL: override 0s,
+      //   Serve stale content while revalidating: enabled.
       headers: {
-        "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "CDN-Cache-Control": "no-store",
-        "Vercel-CDN-Cache-Control": "no-store",
+        "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
+        "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+        "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
       },
     });
   } catch (err: any) {
