@@ -710,7 +710,9 @@ export default function PublicQuizClient({
 
     const load = async () => {
       try {
-        const res = await fetch(`/api/quiz/${quizId}/public`);
+        // cache:'no-store' so an editor save is visible to visitors
+        // immediately (matches the no-store header set server-side).
+        const res = await fetch(`/api/quiz/${quizId}/public`, { cache: "no-store" });
         const json = await res.json();
         if (!json?.ok || !json.quiz) {
           setError(getT(json?.quiz?.locale).quizUnavailable);

@@ -417,6 +417,17 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       // Creator-level branding fallback — PublicQuizClient resolves the final
       // look by overlaying per-quiz `brand_*` on top of these.
       brand_fallback: brandFallback,
+    }, {
+      // Force the entire delivery chain to revalidate (browser, edge,
+      // service-worker). Without this an editor save updates the DB
+      // instantly but visitors keep seeing a cached payload — same
+      // bug class as the hosted_pages public route fixed earlier.
+      headers: {
+        "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "CDN-Cache-Control": "no-store",
+        "Vercel-CDN-Cache-Control": "no-store",
+      },
     });
   } catch (e) {
     return NextResponse.json(

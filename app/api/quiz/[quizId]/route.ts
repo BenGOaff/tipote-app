@@ -132,20 +132,41 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Validate brand_font against whitelist (null = clear).
+    // Validate brand_font against whitelist.
+    //   - null  → explicit clear, accepted
+    //   - valid string → kept as-is
+    //   - invalid type / unknown font → DROPPED (was: silently coerced
+    //     to null, which wiped the user's choice. Same wipe pattern
+    //     that hit Marie-Paule on hosted_pages.section_order on
+    //     2026-04-29 — never overwrite a user-set field with a
+    //     defaulted-to-null value because the input was malformed).
     if ("brand_font" in patch) {
       const val = patch.brand_font;
-      if (val !== null && (typeof val !== "string" || !BRAND_FONT_CHOICES.includes(val as typeof BRAND_FONT_CHOICES[number]))) {
-        patch.brand_font = null;
+      if (val === null) {
+        // explicit clear, allowed
+      } else if (typeof val === "string" && BRAND_FONT_CHOICES.includes(val as typeof BRAND_FONT_CHOICES[number])) {
+        // valid value, allowed
+      } else {
+        // bad input — preserve DB value
+        delete patch.brand_font;
       }
     }
 
-    // Validate hex colors (null = clear, otherwise must be #rgb or #rrggbb).
+    // Validate hex colors. Same anti-wipe rule:
+    //   - null → explicit clear
+    //   - valid hex → kept
+    //   - anything else → DROPPED (was: coerced to null = wipe)
     const hexRe = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
     for (const key of ["brand_color_primary", "brand_color_background"] as const) {
       if (key in patch) {
         const val = patch[key];
-        if (val !== null && (typeof val !== "string" || !hexRe.test(val))) patch[key] = null;
+        if (val === null) {
+          // explicit clear, allowed
+        } else if (typeof val === "string" && hexRe.test(val)) {
+          // valid hex, allowed
+        } else {
+          delete patch[key];
+        }
       }
     }
 
@@ -166,8 +187,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     // Share networks: enum-filter + dedupe.
+    // Anti-wipe: only persist when the client actually sends an array
+    // (explicit clear via [] is fine; null/undefined/wrong-type drops
+    // the field so a partial save can't blank the user's pick).
     if ("share_networks" in body) {
-      patch.share_networks = sanitizeShareNetworks(body.share_networks);
+      if (Array.isArray(body.share_networks)) {
+        patch.share_networks = sanitizeShareNetworks(body.share_networks);
+      }
+      // else: drop — preserve DB value
     }
 
     // Slug: sanitize + verify uniqueness (case-insensitive) against other quizzes.

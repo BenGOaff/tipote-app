@@ -65,11 +65,18 @@ export async function syncLegalUrlsToUserPages(
   };
 
   // Filter to fields the caller actually touched (settings can patch
-  // just one of the three). Empty string is meaningful — it clears
-  // the link on every page.
+  // just one of the three). Empty string is INTENTIONALLY ignored to
+  // protect against partial save / state-init races that would
+  // otherwise blast away every page's legal link en masse. If a user
+  // really wants to remove a link, they can do it per-page from the
+  // editor's Settings panel — that's a deliberate per-row action and
+  // not subject to the auto fan-out.
   const provided: Record<string, string> = {};
   for (const [k, v] of Object.entries(pageFields)) {
-    if (typeof v === "string") provided[k] = v.trim();
+    if (typeof v !== "string") continue;
+    const trimmed = v.trim();
+    if (trimmed.length === 0) continue;
+    provided[k] = trimmed;
   }
   if (Object.keys(provided).length === 0) {
     return { updated: 0, failed: 0 };
