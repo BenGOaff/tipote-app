@@ -134,8 +134,14 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
     return result;
   }, [leads, search, sourceFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  // Split visible/locked so pagination only walks unlocked rows. Locked
+  // leads land in a single blurred block below — one cadenas, one CTA, no
+  // per-row noise.
+  const unlockedFiltered = useMemo(() => filtered.filter((l) => !l.locked), [filtered]);
+  const lockedFiltered = useMemo(() => filtered.filter((l) => l.locked), [filtered]);
+
+  const totalPages = Math.max(1, Math.ceil(unlockedFiltered.length / PAGE_SIZE));
+  const paginated = unlockedFiltered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const allOnPageSelected = paginated.length > 0 && paginated.every((l) => selectedIds.has(l.id));
 
@@ -263,29 +269,10 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
               </Card>
             )}
 
-            {/* Free-tier upsell — only shown if there are actually locked leads.
-                Wording is concrete ("X leads bloqués") so the value of upgrading
-                is obvious and the banner doesn't nag paying users. */}
-            {lockedCount > 0 && plan === "free" && (
-              <Card className="p-4 border-amber-300/60 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
-                  <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-amber-900 dark:text-amber-100">
-                    {lockedCount} lead{lockedCount > 1 ? "s" : ""} verrouillé{lockedCount > 1 ? "s" : ""}
-                  </p>
-                  <p className="text-sm text-amber-800/80 dark:text-amber-200/80">
-                    Le plan gratuit affiche les 10 premiers leads par fenêtre de 30 jours. Passe en plan payant pour tout débloquer (lecture, export, sync Systeme.io).
-                  </p>
-                </div>
-                <Button asChild className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
-                  <Link href="/settings?tab=billing">
-                    <Sparkles className="h-4 w-4 mr-2" /> Débloquer
-                  </Link>
-                </Button>
-              </Card>
-            )}
+            {/* The free-tier upsell lives below the table as a single
+                blurred block (see lockedFiltered render below). No separate
+                banner here — that pattern was redundant with the visual
+                lock block and added noise above the fold. */}
 
             {/* Stats bar */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -459,14 +446,16 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                 </table>
               </div>
 
-              {/* Pagination */}
+              {/* Pagination — counts visible leads only; locked leads are
+                  surfaced in the dedicated block below so they don't muddy
+                  the page numbers. */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
                   <p className="text-sm text-muted-foreground">
                     {t("showing", {
                       from: page * PAGE_SIZE + 1,
-                      to: Math.min((page + 1) * PAGE_SIZE, filtered.length),
-                      total: filtered.length,
+                      to: Math.min((page + 1) * PAGE_SIZE, unlockedFiltered.length),
+                      total: unlockedFiltered.length,
                     })}
                   </p>
                   <div className="flex gap-1">
@@ -492,6 +481,68 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                 </div>
               )}
             </Card>
+
+            {/* Free-tier locked block — single visual statement: 5 sample
+                rows blurred behind a centered cadenas + CTA. Server already
+                returned `••••••` masks for each row, so the blur is purely
+                decorative (DevTools / DOM inspection won't lift it).
+                Hidden entirely for paid creators (lockedFiltered is empty). */}
+            {lockedFiltered.length > 0 && (
+              <Card className="overflow-hidden relative border-amber-300/60">
+                <div aria-hidden className="select-none pointer-events-none filter blur-md opacity-60">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="p-3 w-10"></th>
+                        <th className="p-3 text-left font-medium text-muted-foreground">{t("colEmail")}</th>
+                        <th className="p-3 text-left font-medium text-muted-foreground hidden sm:table-cell">{t("colName")}</th>
+                        <th className="p-3 text-left font-medium text-muted-foreground hidden md:table-cell">{t("colSource")}</th>
+                        <th className="p-3 text-left font-medium text-muted-foreground hidden md:table-cell">{t("colDate")}</th>
+                        <th className="p-3 text-left font-medium text-muted-foreground">{t("colExported")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lockedFiltered.slice(0, 5).map((lead) => (
+                        <tr key={lead.id} className="border-b">
+                          <td className="p-3"></td>
+                          <td className="p-3 font-medium">{lead.email}</td>
+                          <td className="p-3 hidden sm:table-cell text-muted-foreground">
+                            {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                          </td>
+                          <td className="p-3 hidden md:table-cell">
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {sourceLabel(lead.source, t)}
+                            </Badge>
+                          </td>
+                          <td className="p-3 hidden md:table-cell text-muted-foreground">
+                            {formatDate(lead.created_at, "fr")}
+                          </td>
+                          <td className="p-3"></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-amber-50/85 via-amber-50/95 to-amber-100/95 dark:from-amber-950/85 dark:via-amber-950/95 dark:to-amber-900/95">
+                  <div className="text-center max-w-sm px-6 py-8">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/15 flex items-center justify-center mb-3">
+                      <Lock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-amber-900 dark:text-amber-50">
+                      {lockedFiltered.length} lead{lockedFiltered.length > 1 ? "s" : ""} verrouillé{lockedFiltered.length > 1 ? "s" : ""}
+                    </h3>
+                    <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1">
+                      Le plan gratuit affiche 10 leads par fenêtre de 30 jours. Passe en plan payant pour tout débloquer.
+                    </p>
+                    <Button asChild className="mt-4 bg-amber-600 hover:bg-amber-700 text-white">
+                      <Link href="/settings?tab=billing">
+                        <Sparkles className="h-4 w-4 mr-2" /> Débloquer tous mes leads
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
           </div>
         </main>
