@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft, Copy, Eye, CheckCircle, Share2,
+  ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Sparkles, TrendingUp, Star, MessageCircle,
 } from "lucide-react";
@@ -40,6 +40,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
+import { interpolateText } from "@/lib/quizPersonalization";
+
+const PREVIEW_DEMO_NAME = "Alex";
+
+function cleanPlaceholdersForLabel(text: string | null | undefined): string {
+  return interpolateText(text, { name: "", gender: "x" });
+}
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTutorial } from "@/hooks/useTutorial";
@@ -371,6 +378,26 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const thanksRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Back-to-top FAB (Marie's #1, ported from QuizDetailClient).
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const onScroll = () => setShowBackToTop(el.scrollTop > 400);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+  const scrollPreviewToTop = useCallback(() => {
+    previewRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // Display-only placeholder substitution for the preview canvas.
+  const previewInterpolate = useCallback(
+    (text: string) => interpolateText(text, { name: PREVIEW_DEMO_NAME, gender: "x" }),
+    [],
+  );
+
   const scrollToSection = (id: string) => {
     let el: HTMLDivElement | null = null;
     if (id === "intro") el = introRef.current;
@@ -684,6 +711,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Public URL — prefer custom slug when set, fall back to UUID
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
+  // Owner-side preview URL — kept separate so "Copy link" never copies the
+  // preview variant. ?preview_name=Alex pre-fills firstName + skips capture.
+  const previewUrl = `${publicUrl}?preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("toastLinkCopied")); setTimeout(() => setCopied(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
@@ -832,6 +862,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             <button onClick={() => setDevice("desktop")} className={`p-1.5 rounded-md ${device === "desktop" ? "bg-background shadow-sm" : ""}`}><Monitor className="w-4 h-4" /></button>
             <button onClick={() => setDevice("mobile")} className={`p-1.5 rounded-md ${device === "mobile" ? "bg-background shadow-sm" : ""}`}><Smartphone className="w-4 h-4" /></button>
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(previewUrl, "_blank", "noopener")}
+            title="Ouvrir en mode aperçu (aucune réponse enregistrée)"
+          >
+            <Eye className="w-4 h-4 mr-1" />
+            Aperçu
+          </Button>
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : tc("save")}
           </Button>
@@ -866,7 +905,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         key={`q-${i}`}
                         id={`q-${i}`}
                         index={i}
-                        label={q.question_text ? q.question_text.slice(0, 35) + (q.question_text.length > 35 ? "…" : "") : "Question vide"}
+                        label={(() => {
+                          const plain = cleanPlaceholdersForLabel(q.question_text).replace(/<[^>]*>/g, "").trim();
+                          return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : "Question vide";
+                        })()}
                         onClick={() => scrollToSection(`q-${i}`)}
                         onRemove={() => removeQuestion(i)}
                         canDelete={editQuestions.length > 1}
@@ -1066,7 +1108,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     </div>
                   )}
                   <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
@@ -1114,7 +1156,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           </select>
                         </div>
 
-                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
+                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
 
                         {qType === "rating_scale" && (() => {
                           const min = typeof cfg.min === "number" ? cfg.min : 0;
@@ -1196,7 +1238,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                     </div>
                                   )}
                                   <div className="p-5 space-y-2">
-                                    <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
+                                    <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
                                     {qType === "image_choice" && (
                                       <input
                                         type="url"
@@ -1308,6 +1350,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               </div>
             </div>
           </main>
+
+          {/* Back-to-top FAB (Marie's #1, ported from Tiquiz). */}
+          {showBackToTop && (
+            <button
+              type="button"
+              onClick={scrollPreviewToTop}
+              aria-label="Revenir en haut"
+              title="Revenir en haut"
+              className="fixed bottom-6 right-6 z-30 w-11 h-11 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </button>
+          )}
         </div>
       )}
 

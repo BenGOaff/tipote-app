@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft, Copy, Eye, CheckCircle, Share2,
+  ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles,
 } from "lucide-react";
@@ -40,6 +40,15 @@ import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
+import { interpolateText } from "@/lib/quizPersonalization";
+
+/** Same demo name used across both repos to substitute {name} placeholders
+ *  in the editor preview canvas — gender-neutral, short, works in fr/en. */
+const PREVIEW_DEMO_NAME = "Alex";
+
+function cleanPlaceholdersForLabel(text: string | null | undefined): string {
+  return interpolateText(text, { name: "", gender: "x" });
+}
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTutorial } from "@/hooks/useTutorial";
@@ -333,6 +342,29 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const bonusRef = useRef<HTMLDivElement>(null);
   const resultRefs = useRef<(HTMLDivElement | null)[]>([]);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Back-to-top FAB. Mirror of the same button on Tiquiz — long quizzes
+  // run dozens of screens and the browser scrollbar is hard to spot.
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const onScroll = () => setShowBackToTop(el.scrollTop > 400);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+  const scrollPreviewToTop = useCallback(() => {
+    previewRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // Display-only substitution: replaces {name} / {m|f|x} with a demo name
+  // in the preview canvas so the creator sees what visitors will see. The
+  // raw template stays in the edit buffer — clicking still shows {name}.
+  const previewInterpolate = useCallback(
+    (text: string) => interpolateText(text, { name: PREVIEW_DEMO_NAME, gender: "x" }),
+    [],
+  );
 
   const scrollToSection = (id: string) => {
     let el: HTMLDivElement | null = null;
@@ -673,6 +705,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // Public URL — prefer custom slug when set, fall back to UUID
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
+  // Owner-side preview URL — kept separate from publicUrl so "Copy link"
+  // never copies the preview variant. ?preview_name=Alex pre-fills the
+  // visitor's first name and skips capture in PublicQuizClient.
+  const previewUrl = `${publicUrl}?preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("toastLinkCopied")); setTimeout(() => setCopied(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
@@ -782,6 +818,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             <button onClick={() => setDevice("desktop")} className={`p-1.5 rounded-md ${device === "desktop" ? "bg-background shadow-sm" : ""}`}><Monitor className="w-4 h-4" /></button>
             <button onClick={() => setDevice("mobile")} className={`p-1.5 rounded-md ${device === "mobile" ? "bg-background shadow-sm" : ""}`}><Smartphone className="w-4 h-4" /></button>
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(previewUrl, "_blank", "noopener")}
+            title="Ouvrir en mode aperçu (aucun lead enregistré)"
+          >
+            <Eye className="w-4 h-4 mr-1" />
+            Aperçu
+          </Button>
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : tc("save")}
           </Button>
@@ -816,7 +861,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         key={`q-${i}`}
                         id={`q-${i}`}
                         index={i}
-                        label={q.question_text ? q.question_text.slice(0, 35) + (q.question_text.length > 35 ? "…" : "") : "Question vide"}
+                        label={(() => {
+                          // Strip {name}/{m|f|x} placeholders + HTML before truncating
+                          // (Marie's #5: sidebar showed literal "{name}, ..." text).
+                          const plain = cleanPlaceholdersForLabel(q.question_text).replace(/<[^>]*>/g, "").trim();
+                          return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : "Question vide";
+                        })()}
                         onClick={() => scrollToSection(`q-${i}`)}
                         onRemove={() => removeQuestion(i)}
                         canDelete={editQuestions.length > 1}
@@ -839,7 +889,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {editResults.map((r, i) => (
                   <div key={i} className="flex items-center gap-1 group">
                     <button onClick={() => scrollToSection(`r-${i}`)} className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
-                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{r.title || t("emptyResult")}
+                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{cleanPlaceholdersForLabel(r.title).replace(/<[^>]*>/g, "").trim() || t("emptyResult")}
                     </button>
                     {editResults.length > 1 && <button onClick={() => removeResult(i)} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10"><Trash2 className="w-3 h-3" /></button>}
                   </div>
@@ -1101,7 +1151,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                   )}
                   <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
@@ -1127,11 +1177,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
                         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>Questions {qi + 1}/{editQuestions.length}</p>
-                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
+                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
-                              <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
+                              <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
                               <div className="flex items-center gap-1.5 mt-2">
                                 <span className="text-xs" style={{ color: `${pc}99` }}>+1 point pour le</span>
                                 <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
@@ -1215,7 +1265,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <RichTextEdit
                         value={bonusDescription}
                         onChange={setBonusDescription}
-                        onGenderize={genderize}
+                        onGenderize={genderize} previewTransform={previewInterpolate}
                         className="text-sm font-medium"
                         placeholder={t("bonusDescPlaceholder")}
                       />
@@ -1229,7 +1279,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <RichTextEdit
                         value={shareMessage}
                         onChange={setShareMessage}
-                        onGenderize={genderize}
+                        onGenderize={genderize} previewTransform={previewInterpolate}
                         className="text-sm bg-background border rounded-lg"
                         placeholder={`Je viens de faire le quiz "${title || "…"}" !`}
                       />
@@ -1263,8 +1313,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {editResults.map((r, ri) => (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
-                    <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} availableVars={personalizationVars} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("resultTitlePlaceholder")} />
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
+                    <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("resultTitlePlaceholder")} />
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} previewTransform={previewInterpolate} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <InlineEdit
@@ -1274,7 +1324,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           placeholder="Titre du bloc insight…"
                         />
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} className="text-sm leading-relaxed" placeholder="Insight…" />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder="Insight…" />
                     </div>
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
@@ -1286,11 +1336,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           placeholder="Titre du bloc projection…"
                         />
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} className="text-sm leading-relaxed" placeholder="Projection…" />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder="Projection…" />
                     </div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
-                        <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} availableVars={personalizationVars} className="text-white font-semibold text-center" placeholder="Texte du CTA…" />
+                        <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-white font-semibold text-center" placeholder="Texte du CTA…" />
                       </button>
                       <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder="URL du CTA (https://…)" />
                     </div>
@@ -1317,6 +1367,21 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </div>
             </div>
           </main>
+
+          {/* Back-to-top FAB. Anchored bottom-right, only renders once the
+              creator scrolls past one viewport — keeps the editor uncluttered
+              for short quizzes. */}
+          {showBackToTop && (
+            <button
+              type="button"
+              onClick={scrollPreviewToTop}
+              aria-label="Revenir en haut"
+              title="Revenir en haut"
+              className="fixed bottom-6 right-6 z-30 w-11 h-11 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </button>
+          )}
         </div>
       )}
 

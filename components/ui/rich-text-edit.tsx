@@ -35,10 +35,19 @@ interface RichTextEditProps {
    * the field with the folded `{m|f|x}` variant. Formatting is lost.
    */
   onGenderize?: (plainText: string) => Promise<string | null>;
+  /**
+   * Optional transform applied to `value` ONLY in display mode (not while
+   * editing). Used by the quiz editor to substitute {name} / {m|f|x}
+   * placeholders with a demo first name so the creator sees what real
+   * visitors will see, while still being able to edit the raw template by
+   * clicking the field. Identity passthrough when omitted.
+   */
+  previewTransform?: (value: string) => string;
 }
 
 export function RichTextEdit({
   value, onChange, className, placeholder, style, singleLine, onGenderize,
+  previewTransform,
 }: RichTextEditProps) {
   const t = useTranslations("richTextEditor");
   const ref = useRef<HTMLDivElement>(null);
@@ -181,7 +190,7 @@ export function RichTextEdit({
       {isEmpty ? (
         <span className="opacity-40 italic">{placeholder}</span>
       ) : (
-        <div dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }} />
+        <div dangerouslySetInnerHTML={{ __html: sanitizeRichText(previewTransform ? previewTransform(value) : value) }} />
       )}
       <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
       {onGenderize && !isEmpty && (
