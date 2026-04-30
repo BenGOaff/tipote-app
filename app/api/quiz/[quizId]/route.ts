@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sanitizeRichText } from "@/lib/richText";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
+import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +31,12 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const [quizRes, questionsRes, resultsRes, leadsRes] = await Promise.all([
+    const [quizRes, questionsRes, resultsRes, leadsRes, planRes] = await Promise.all([
       supabase.from("quizzes").select("*").eq("id", quizId).eq("user_id", user.id).maybeSingle(),
       supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("sort_order"),
       supabase.from("quiz_results").select("*").eq("quiz_id", quizId).order("sort_order"),
       supabase.from("quiz_leads").select("*, quiz_results(title)").eq("quiz_id", quizId).order("created_at", { ascending: false }),
+      supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle(),
     ]);
 
     if (!quizRes.data) {
@@ -46,11 +49,39 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       resultTitleMap.set(r.id, r.title);
     }
 
-    const leads = (leadsRes.data ?? []).map((l: any) => ({
-      ...l,
-      result_title: l.quiz_results?.title ?? resultTitleMap.get(l.result_id) ?? null,
-      quiz_results: undefined,
-    }));
+    const plan = String((planRes.data as { plan?: string | null } | null)?.plan ?? "free");
+
+    // Free-tier lock — the rolling 30d window must be computed against ALL the
+    // creator's quiz_leads (across every quiz they own), not just this quiz's
+    // slice, otherwise switching between quizzes would silently change which
+    // leads are visible.
+    let lockedIds = new Set<string>();
+    if (!isPaidPlan(plan)) {
+      const { data: ownedQuizzes } = await supabase
+        .from("quizzes")
+        .select("id")
+        .eq("user_id", user.id);
+      const ownedQuizIds = (ownedQuizzes ?? []).map((q: { id: string }) => q.id);
+      if (ownedQuizIds.length > 0) {
+        const { data: timeline } = await supabase
+          .from("quiz_leads")
+          .select("id, created_at")
+          .in("quiz_id", ownedQuizIds);
+        lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+      }
+    }
+
+    const leads = (leadsRes.data ?? []).map((l: any) => {
+      const enriched = {
+        ...l,
+        result_title: l.quiz_results?.title ?? resultTitleMap.get(l.result_id) ?? null,
+        quiz_results: undefined,
+      };
+      const locked = lockedIds.has(l.id);
+      return locked
+        ? redactLockedLead({ ...enriched, locked: true } as unknown as LeadLike & { locked: true })
+        : { ...enriched, locked: false };
+    });
 
     return NextResponse.json({
       ok: true,
@@ -63,6 +94,8 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         results: resultsRes.data ?? [],
       },
       leads,
+      plan,
+      locked_count: lockedIds.size,
     });
   } catch (e) {
     return NextResponse.json(

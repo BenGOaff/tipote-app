@@ -11,6 +11,8 @@ import {
   decryptLeadPII,
   blindIndex,
 } from "@/lib/piiCrypto";
+import { computeLockedLeadIds, redactLockedLead } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -60,8 +62,55 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
-    // Decrypt PII fields for each lead
+    // Free-tier lock: the rolling-window rule is GLOBAL, so a paginated slice
+    // can't decide on its own whether a row is locked. Pull the full id+ts
+    // timeline once (cheap — no decryption), compute lock IDs, then apply
+    // them on the slice we're returning.
+    const { data: planRow } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+    const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+    const paid = isPaidPlan(plan);
+
+    let lockedIds = new Set<string>();
+    let lockedTotal = 0;
+    if (!paid) {
+      let timelineQuery = supabase
+        .from("leads")
+        .select("id, created_at")
+        .eq("user_id", user.id);
+      if (projectId) timelineQuery = timelineQuery.eq("project_id", projectId);
+      if (source) timelineQuery = timelineQuery.eq("source", source);
+      const { data: timeline } = await timelineQuery;
+      lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+      lockedTotal = lockedIds.size;
+    }
+
+    // Decrypt PII fields for each lead, then redact if locked. Locked rows
+    // never leave the server with plaintext PII, so the client-side blur is
+    // pure decoration — no DevTools / Network-tab leak path.
     const leads = (data ?? []).map((row: any) => {
+      const locked = lockedIds.has(row.id);
+      if (locked) {
+        return redactLockedLead({
+          id: row.id,
+          email: null,
+          first_name: null,
+          last_name: null,
+          phone: null,
+          source: row.source,
+          source_id: row.source_id,
+          source_name: row.source_name,
+          quiz_result_title: null,
+          quiz_answers: null,
+          exported_sio: row.exported_sio,
+          meta: null,
+          created_at: row.created_at,
+          locked: true,
+        } as any);
+      }
       const pii = decryptLeadPII(row, dek);
       return {
         id: row.id,
@@ -73,6 +122,7 @@ export async function GET(req: NextRequest) {
         exported_sio: row.exported_sio,
         meta: row.meta,
         created_at: row.created_at,
+        locked: false,
       };
     });
 
@@ -83,6 +133,8 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       totalPages: Math.ceil((count ?? 0) / limit),
+      plan,
+      locked_count: lockedTotal,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Server error" }, { status: 500 });

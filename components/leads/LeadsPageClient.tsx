@@ -47,7 +47,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  Lock,
+  Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 
 export type Lead = {
   id: string;
@@ -62,11 +65,15 @@ export type Lead = {
   exported_sio: boolean;
   meta: Record<string, unknown> | null;
   created_at: string;
+  /** Server-redacted: email/PII are `••••••` masks. UI just adds a CSS blur. */
+  locked?: boolean;
 };
 
 type Props = {
   leads: Lead[];
   error?: string;
+  plan?: string;
+  lockedCount?: number;
 };
 
 const SOURCES = ["quiz", "landing_page", "website", "manual"] as const;
@@ -89,7 +96,7 @@ function formatDate(dateStr: string, locale: string): string {
   }
 }
 
-export default function LeadsPageClient({ leads: initialLeads, error }: Props) {
+export default function LeadsPageClient({ leads: initialLeads, error, plan = "free", lockedCount = 0 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("leads");
@@ -256,6 +263,30 @@ export default function LeadsPageClient({ leads: initialLeads, error }: Props) {
               </Card>
             )}
 
+            {/* Free-tier upsell — only shown if there are actually locked leads.
+                Wording is concrete ("X leads bloqués") so the value of upgrading
+                is obvious and the banner doesn't nag paying users. */}
+            {lockedCount > 0 && plan === "free" && (
+              <Card className="p-4 border-amber-300/60 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
+                  <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-amber-900 dark:text-amber-100">
+                    {lockedCount} lead{lockedCount > 1 ? "s" : ""} verrouillé{lockedCount > 1 ? "s" : ""}
+                  </p>
+                  <p className="text-sm text-amber-800/80 dark:text-amber-200/80">
+                    Le plan gratuit affiche les 10 premiers leads par fenêtre de 30 jours. Passe en plan payant pour tout débloquer (lecture, export, sync Systeme.io).
+                  </p>
+                </div>
+                <Button asChild className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
+                  <Link href="/settings?tab=billing">
+                    <Sparkles className="h-4 w-4 mr-2" /> Débloquer
+                  </Link>
+                </Button>
+              </Card>
+            )}
+
             {/* Stats bar */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card className="p-4 text-center">
@@ -361,45 +392,68 @@ export default function LeadsPageClient({ leads: initialLeads, error }: Props) {
                         </td>
                       </tr>
                     ) : (
-                      paginated.map((lead) => (
-                        <tr
-                          key={lead.id}
-                          className="border-b hover:bg-muted/30 cursor-pointer transition-colors"
-                          onClick={() => openDetail(lead)}
-                        >
-                          <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedIds.has(lead.id)}
-                              onCheckedChange={() => toggleSelect(lead.id)}
-                            />
-                          </td>
-                          <td className="p-3">
-                            <span className="font-medium">{lead.email}</span>
-                          </td>
-                          <td className="p-3 hidden sm:table-cell text-muted-foreground">
-                            {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
-                          </td>
-                          <td className="p-3 hidden md:table-cell">
-                            <Badge variant="secondary" className="text-xs capitalize">
-                              {sourceLabel(lead.source, t)}
-                            </Badge>
-                          </td>
-                          <td className="p-3 hidden md:table-cell text-muted-foreground">
-                            {formatDate(lead.created_at, "fr")}
-                          </td>
-                          <td className="p-3">
-                            <Badge
-                              className={
-                                lead.exported_sio
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                  : "bg-muted text-muted-foreground"
-                              }
-                            >
-                              {lead.exported_sio ? t("yes") : t("no")}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))
+                      paginated.map((lead) => {
+                        // Server already returned `••••••` masks; CSS blur is
+                        // decoration. Locked rows can't be selected (so bulk
+                        // actions ignore them) and don't open the detail
+                        // sheet.
+                        const blur = lead.locked ? "blur-sm select-none pointer-events-none" : "";
+                        return (
+                          <tr
+                            key={lead.id}
+                            className={`border-b transition-colors ${
+                              lead.locked
+                                ? "opacity-80 bg-amber-50/30 dark:bg-amber-950/10"
+                                : "hover:bg-muted/30 cursor-pointer"
+                            }`}
+                            onClick={() => !lead.locked && openDetail(lead)}
+                          >
+                            <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.has(lead.id)}
+                                onCheckedChange={() => toggleSelect(lead.id)}
+                                disabled={lead.locked}
+                              />
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                {lead.locked && (
+                                  <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                )}
+                                <span className={`font-medium ${blur}`}>{lead.email}</span>
+                              </div>
+                            </td>
+                            <td className={`p-3 hidden sm:table-cell text-muted-foreground ${blur}`}>
+                              {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                            </td>
+                            <td className="p-3 hidden md:table-cell">
+                              <Badge variant="secondary" className="text-xs capitalize">
+                                {sourceLabel(lead.source, t)}
+                              </Badge>
+                            </td>
+                            <td className="p-3 hidden md:table-cell text-muted-foreground">
+                              {formatDate(lead.created_at, "fr")}
+                            </td>
+                            <td className="p-3">
+                              {lead.locked ? (
+                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                                  <Lock className="h-3 w-3 mr-1" /> Verrouillé
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  className={
+                                    lead.exported_sio
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                      : "bg-muted text-muted-foreground"
+                                  }
+                                >
+                                  {lead.exported_sio ? t("yes") : t("no")}
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

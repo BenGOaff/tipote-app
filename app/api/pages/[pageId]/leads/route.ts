@@ -7,9 +7,14 @@ import { createClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getUserDEK } from "@/lib/piiKeys";
 import { encryptLeadPII } from "@/lib/piiCrypto";
+import { computeLockedLeadIds, isNewLeadLocked } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const MASK = "••••••";
+const MASK_EMAIL = "•••@•••.•••";
 
 type RouteContext = { params: Promise<{ pageId: string }> };
 
@@ -149,9 +154,32 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     supabase,
   }).catch(() => {});
 
-  // Systeme.io sync (non-blocking)
+  // Systeme.io sync (non-blocking) — gated for free creators so we never
+  // push a lead that the creator can't read in their own dashboard. Without
+  // this, paying for SIO would let them lift the blur out-of-band.
   if (page.sio_capture_tag) {
-    syncLeadToSystemeIo({ pageId, userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase, projectId: page.project_id }).catch(() => {});
+    (async () => {
+      try {
+        const { data: planRow } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", page.user_id)
+          .maybeSingle();
+        const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+        if (!isPaidPlan(plan)) {
+          const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const { count } = await supabase
+            .from("page_leads")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", page.user_id)
+            .gte("created_at", since);
+          if (isNewLeadLocked(count ?? 0, plan)) return;
+        }
+        await syncLeadToSystemeIo({ pageId, userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase, projectId: page.project_id });
+      } catch {
+        // fail-open
+      }
+    })();
   }
 
   return NextResponse.json({ ok: true });
@@ -193,11 +221,48 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
   const rows = leads ?? [];
 
+  // Free-tier lock — computed against ALL the creator's page_leads (across
+  // every page they own). Same `oldest 10 in rolling 30d window` rule.
+  const { data: planRow } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", session.user.id)
+    .maybeSingle();
+  const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+  let lockedIds = new Set<string>();
+  if (!isPaidPlan(plan)) {
+    const { data: timeline } = await supabase
+      .from("page_leads")
+      .select("id, created_at")
+      .eq("user_id", session.user.id);
+    lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+  }
+
+  const gatedRows = rows.map((l: any) =>
+    lockedIds.has(l.id)
+      ? {
+          id: l.id,
+          email: MASK_EMAIL,
+          first_name: MASK,
+          phone: MASK,
+          sio_synced: l.sio_synced,
+          utm_source: null,
+          utm_medium: null,
+          utm_campaign: null,
+          referrer: null,
+          created_at: l.created_at,
+          locked: true,
+        }
+      : { ...l, locked: false },
+  );
+
   // CSV export: GET /api/pages/[pageId]/leads?format=csv
   const url = new URL(req.url);
   if (url.searchParams.get("format") === "csv") {
     const header = "Email,Prénom,Téléphone,Synchronisé SIO,Source UTM,Medium UTM,Campagne UTM,Référent,Date\n";
-    const csvRows = rows.map((l: any) =>
+    // Skip locked leads from CSV — `••••••` masks would just pollute it.
+    const exportable = gatedRows.filter((l: any) => !l.locked);
+    const csvRows = exportable.map((l: any) =>
       [
         escapeCsv(l.email),
         escapeCsv(l.first_name),
@@ -223,7 +288,12 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     });
   }
 
-  return NextResponse.json({ ok: true, leads: rows });
+  return NextResponse.json({
+    ok: true,
+    leads: gatedRows,
+    plan,
+    locked_count: lockedIds.size,
+  });
 }
 
 function escapeCsv(val: any): string {

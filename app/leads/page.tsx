@@ -6,7 +6,12 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { getUserDEK } from "@/lib/piiKeys";
 import { decryptLeadPII } from "@/lib/piiCrypto";
+import { computeLockedLeadIds } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 import LeadsPageClient from "@/components/leads/LeadsPageClient";
+
+const MASK = "••••••";
+const MASK_EMAIL = "•••@•••.•••";
 
 export default async function LeadsPage() {
   const supabase = await getSupabaseServerClient();
@@ -29,10 +34,44 @@ export default async function LeadsPage() {
 
   const { data, error } = await query;
 
+  // Free-tier lock: compute which leads the creator is allowed to see in
+  // clear text. Locked rows skip decryption entirely so plaintext PII never
+  // reaches the client bundle — the eventual UI blur is decoration on top.
+  const { data: planRow } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", session.user.id)
+    .maybeSingle();
+  const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+  const lockedIds = isPaidPlan(plan)
+    ? new Set<string>()
+    : computeLockedLeadIds(
+        (data ?? []).map((l: any) => ({ id: String(l.id), created_at: String(l.created_at) })),
+        plan,
+      );
+
   const leads = (data ?? []).map((l: any) => {
+    const id = String(l.id);
+    if (lockedIds.has(id)) {
+      return {
+        id,
+        email: MASK_EMAIL,
+        first_name: MASK,
+        last_name: MASK,
+        phone: MASK,
+        quiz_answers: null,
+        source: l.source ?? "quiz",
+        source_name: l.source_name ?? null,
+        quiz_result_title: MASK,
+        exported_sio: l.exported_sio ?? false,
+        meta: null,
+        created_at: String(l.created_at),
+        locked: true as const,
+      };
+    }
     const pii = decryptLeadPII(l, dek);
     return {
-      id: String(l.id),
+      id,
       ...pii,
       quiz_answers: (pii.quiz_answers ?? null) as Array<{ question_text: string; answer_text: string }> | null,
       source: l.source ?? "quiz",
@@ -41,6 +80,7 @@ export default async function LeadsPage() {
       exported_sio: l.exported_sio ?? false,
       meta: l.meta ?? null,
       created_at: String(l.created_at),
+      locked: false as const,
     };
   });
 
@@ -48,6 +88,8 @@ export default async function LeadsPage() {
     <LeadsPageClient
       leads={leads}
       error={error?.message}
+      plan={plan}
+      lockedCount={lockedIds.size}
     />
   );
 }

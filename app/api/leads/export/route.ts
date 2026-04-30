@@ -6,6 +6,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { getUserDEK } from "@/lib/piiKeys";
 import { decryptLeadPII } from "@/lib/piiCrypto";
+import { computeLockedLeadIds } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -49,10 +51,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
-    const leads = (data ?? []).map((row: any) => {
-      const pii = decryptLeadPII(row, dek);
-      return { ...row, ...pii };
-    });
+    // Free-tier export = unlocked leads only. The same rolling-window lock
+    // computation as the listing API; locked rows are filtered out before
+    // we even decrypt them, so plain-text PII never reaches the CSV buffer.
+    const { data: planRow } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+    const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+    let lockedIds = new Set<string>();
+    if (!isPaidPlan(plan)) {
+      let timelineQuery = supabase
+        .from("leads")
+        .select("id, created_at")
+        .eq("user_id", user.id);
+      if (projectId) timelineQuery = timelineQuery.eq("project_id", projectId);
+      const { data: timeline } = await timelineQuery;
+      lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+    }
+
+    const leads = (data ?? [])
+      .filter((row: any) => !lockedIds.has(row.id))
+      .map((row: any) => {
+        const pii = decryptLeadPII(row, dek);
+        return { ...row, ...pii };
+      });
 
     const headers = [
       "Email",

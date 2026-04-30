@@ -16,6 +16,7 @@ import { searchResourceChunks } from "@/lib/resources";
 import { universalSchemaToPrompt } from "@/lib/templates/universalSchema";
 import { buildCopywritingKnowledge } from "@/lib/knowledge/salesPageKnowledge";
 import { buildNichePrompt } from "@/lib/knowledge/nicheRecommendations";
+import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -248,6 +249,36 @@ export async function POST(req: NextRequest) {
   }
 
   const input = parsed.data;
+
+  // Free-tier creation gate: 1 hosted page per active project. Regenerations
+  // (`input.targetPageId` present) update an existing row and don't count.
+  if (!input.targetPageId) {
+    const { data: planRow } = await supabaseAdmin
+      .from("profiles")
+      .select("plan")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!isPaidPlan((planRow as { plan?: string | null } | null)?.plan)) {
+      const projectId = await getActiveProjectId(supabase, userId).catch(() => null);
+      let countQuery = supabaseAdmin
+        .from("hosted_pages")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .neq("status", "archived");
+      if (projectId) countQuery = countQuery.eq("project_id", projectId);
+      const { count } = await countQuery;
+      if ((count ?? 0) >= FREE_LIMITS.maxPages) {
+        return new Response(
+          JSON.stringify({
+            error: `Le plan gratuit est limité à ${FREE_LIMITS.maxPages} page. Passe en plan payant pour en créer plus.`,
+            code: "FREE_PLAN_PAGE_LIMIT",
+            upgrade_url: "/settings?tab=billing",
+          }),
+          { status: 403, headers: { "content-type": "application/json" } },
+        );
+      }
+    }
+  }
 
   // Check credits: 5 for capture, 6 for sales/showcase
   const creditCost = input.pageType === "capture" ? 5 : 6;

@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getUserDEK } from "@/lib/piiKeys";
 import { encryptLeadPII } from "@/lib/piiCrypto";
+import { isNewLeadLocked } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -559,6 +561,33 @@ export async function POST(req: NextRequest, context: RouteContext) {
       // Fire & forget: don't await so the response is fast
       (async () => {
         try {
+          // Free-tier guard: if this brand-new lead is already locked for the
+          // creator (rolling-window cap reached), don't push it to SIO either
+          // — paying for SIO would otherwise be a trivial way to lift the
+          // blur the leads UI applies.
+          const { data: planRow } = await admin
+            .from("profiles")
+            .select("plan")
+            .eq("id", quiz.user_id)
+            .maybeSingle();
+          const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+          if (!isPaidPlan(plan)) {
+            const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: ownedQuizzes } = await admin
+              .from("quizzes")
+              .select("id")
+              .eq("user_id", quiz.user_id);
+            const ownedQuizIds = (ownedQuizzes ?? []).map((q: { id: string }) => q.id);
+            if (ownedQuizIds.length > 0) {
+              const { count } = await admin
+                .from("quiz_leads")
+                .select("id", { count: "exact", head: true })
+                .in("quiz_id", ownedQuizIds)
+                .gte("created_at", since);
+              if (isNewLeadLocked(count ?? 0, plan)) return;
+            }
+          }
+
           // Get the result's SIO config (tag, course, community)
           const { data: result } = await admin
             .from("quiz_results")
