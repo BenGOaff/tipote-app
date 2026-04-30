@@ -418,15 +418,15 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       // look by overlaying per-quiz `brand_*` on top of these.
       brand_fallback: brandFallback,
     }, {
-      // Force the entire delivery chain to revalidate (browser, edge,
-      // service-worker). Without this an editor save updates the DB
-      // instantly but visitors keep seeing a cached payload — same
-      // bug class as the hosted_pages public route fixed earlier.
+      // Same cache strategy as hosted_pages: edge SWR for resilience.
+      // - max-age=0: browser always revalidates → creator sees fresh
+      // - s-maxage=60: edge caches 60s → cheap origin protection
+      // - stale-while-revalidate=86400: edge serves last-good for up
+      //   to 24h when origin is down (deploy / crash / maintenance).
       headers: {
-        "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "CDN-Cache-Control": "no-store",
-        "Vercel-CDN-Cache-Control": "no-store",
+        "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
+        "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+        "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
       },
     });
   } catch (e) {
