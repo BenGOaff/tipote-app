@@ -249,12 +249,40 @@ async function persistOfferPyramids(params: {
 
   if (!rows.length) return;
 
-  // Delete existing pyramids for this user/project, then insert fresh
+  // Snapshot + delete + insert + restore-on-fail (Marie-Paule guard).
+  // Without this, a transient insert failure after a successful delete
+  // leaves the user with ZERO offer pyramids while the caller sees no
+  // error (delete was un-checked, insert error gets thrown but the
+  // delete already happened — no rollback).
+  let snapQuery = supabaseAdmin.from("offer_pyramids").select("*").eq("user_id", userId);
+  if (projectId) snapQuery = snapQuery.eq("project_id", projectId);
+  const { data: snapshot, error: snapErr } = await snapQuery;
+  if (snapErr) throw snapErr;
+  const snapshotRows = snapshot ?? [];
+
   let delQuery = supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
   if (projectId) delQuery = delQuery.eq("project_id", projectId);
-  await delQuery;
-  const { error } = await supabaseAdmin.from("offer_pyramids").insert(rows);
-  if (error) throw error;
+  const { error: delErr } = await delQuery;
+  if (delErr) throw delErr;
+
+  const { error: insErr } = await supabaseAdmin.from("offer_pyramids").insert(rows);
+  if (insErr) {
+    // Try to restore the user's previous pyramids so we don't leave them
+    // in a worse state than before. Best-effort: if Supabase is down, the
+    // original error still surfaces and the caller can retry.
+    if (snapshotRows.length > 0) {
+      const restorePayload = snapshotRows.map((r) => {
+        const { created_at: _ca, updated_at: _ua, ...rest } = r as Record<string, unknown>;
+        void _ca; void _ua;
+        return rest;
+      });
+      const { error: restoreErr } = await supabaseAdmin.from("offer_pyramids").insert(restorePayload);
+      if (restoreErr) {
+        console.error("[offer-pyramid] CATASTROPHIC: restore also failed:", restoreErr.message);
+      }
+    }
+    throw insErr;
+  }
 }
 
 // ─── Read pyramids from DB and reconstruct pyramid sets ─────────────────────
