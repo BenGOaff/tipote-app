@@ -152,6 +152,28 @@ function normalizeSubscriptionCollection(
 }
 
 /**
+/**
+ * Find a contact by email. Returns null when not found. Used by the SIO
+ * reconciliation cron to handle profiles that don't have sio_contact_id
+ * stored locally (legacy or migrated users).
+ *
+ * GET /contacts?email=<x>&limit=10
+ */
+export async function findContactByEmail(email: string): Promise<{ id: number } | null> {
+  const lower = email.trim().toLowerCase();
+  if (!lower) return null;
+  const raw = await systemeIoRequest<{ items?: Array<{ id: number; email?: string }> } | any>(
+    `/contacts`,
+    { method: 'GET', query: { email: lower, limit: 10 } },
+  );
+  const items: Array<{ id: number; email?: string }> = Array.isArray(raw)
+    ? raw
+    : Array.isArray(raw?.items) ? raw.items : [];
+  const exact = items.find((c) => String(c.email ?? '').toLowerCase() === lower);
+  return exact ? { id: Number(exact.id) } : null;
+}
+
+/**
  * Liste les subscriptions d'un contact donné.
  *
  * GET /payment/subscriptions?contact=<id>&limit=<10-100>&order=asc|desc
