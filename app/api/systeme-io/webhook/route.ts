@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { timingSafeEqual } from "crypto";
+import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
@@ -307,13 +308,15 @@ function toBigIntNumber(v: unknown): number | null {
 
 // ---------- Body parsing (JSON OU x-www-form-urlencoded) ----------
 // ⚠️ NE PAS faire req.json() puis req.text() (body consommé).
-async function readBodyAny(req: NextRequest): Promise<any> {
+// Returns BOTH the raw text (kept for HMAC signature verification) and
+// the parsed body in JSON or form-urlencoded shape.
+async function readBodyAny(req: NextRequest): Promise<{ raw: string; parsed: any }> {
   const raw = await req.text().catch(() => "");
-  if (!raw) return null;
+  if (!raw) return { raw: "", parsed: null };
 
   // 1) JSON
   try {
-    return JSON.parse(raw);
+    return { raw, parsed: JSON.parse(raw) };
   } catch {
     // 2) x-www-form-urlencoded
     try {
@@ -326,9 +329,9 @@ async function readBodyAny(req: NextRequest): Promise<any> {
         hasAny = true;
       });
 
-      return hasAny ? obj : null;
+      return { raw, parsed: hasAny ? obj : null };
     } catch {
-      return null;
+      return { raw, parsed: null };
     }
   }
 }
@@ -535,12 +538,27 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const secret = req.nextUrl.searchParams.get("secret");
-    if (!secretMatches(secret, WEBHOOK_SECRET)) {
-      return NextResponse.json({ error: "Invalid or missing secret" }, { status: 401 });
-    }
+    // Read raw body first so we can HMAC-verify it before parsing.
+    const { raw: rawText, parsed: rawBody } = await readBodyAny(req);
 
-    const rawBody = await readBodyAny(req);
+    // Auth: HMAC signature when SYSTEME_IO_WEBHOOK_SIGNING_SECRET is set
+    // (defense-in-depth — closes URL-secret leak vector). When it's not
+    // set we fall back to the legacy ?secret= shape so rotating SIO's
+    // webhook config isn't a hard cutover.
+    const sigMode = getSignatureMode();
+    if (sigMode.mode === "required") {
+      const sigHeader = req.headers.get("x-webhook-signature");
+      const verdict = verifySioSignature(rawText, sigHeader);
+      if (!verdict.ok) {
+        console.warn(`[Systeme.io webhook] HMAC verification failed: ${verdict.reason}`);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } else {
+      const secret = req.nextUrl.searchParams.get("secret");
+      if (!secretMatches(secret, WEBHOOK_SECRET)) {
+        return NextResponse.json({ error: "Invalid or missing secret" }, { status: 401 });
+      }
+    }
 
     // Log every incoming webhook call for debugging (helps trace missed buyers)
     console.log(
