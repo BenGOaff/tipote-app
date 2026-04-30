@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getUserDEK } from "@/lib/piiKeys";
 import { encryptLeadPII } from "@/lib/piiCrypto";
-import { computeLockedLeadIds } from "@/lib/leadLock";
+import { computeLockedLeadIds, isNewLeadLocked } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 
 export const runtime = "nodejs";
@@ -154,9 +154,32 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     supabase,
   }).catch(() => {});
 
-  // Systeme.io sync (non-blocking)
+  // Systeme.io sync (non-blocking) — gated for free creators so we never
+  // push a lead that the creator can't read in their own dashboard. Without
+  // this, paying for SIO would let them lift the blur out-of-band.
   if (page.sio_capture_tag) {
-    syncLeadToSystemeIo({ pageId, userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase, projectId: page.project_id }).catch(() => {});
+    (async () => {
+      try {
+        const { data: planRow } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", page.user_id)
+          .maybeSingle();
+        const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+        if (!isPaidPlan(plan)) {
+          const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const { count } = await supabase
+            .from("page_leads")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", page.user_id)
+            .gte("created_at", since);
+          if (isNewLeadLocked(count ?? 0, plan)) return;
+        }
+        await syncLeadToSystemeIo({ pageId, userId: page.user_id, email, firstName: body?.first_name || "", tagName: page.sio_capture_tag, supabase, projectId: page.project_id });
+      } catch {
+        // fail-open
+      }
+    })();
   }
 
   return NextResponse.json({ ok: true });
