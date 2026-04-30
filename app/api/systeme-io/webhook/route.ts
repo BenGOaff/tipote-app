@@ -30,6 +30,63 @@ const supabaseAnon = createClient(
   { auth: { persistSession: false } },
 );
 
+// ---------- Idempotency helpers (mirror of tiquiz commit cac4795) ----------
+//
+// SIO retries aggressively on any non-2xx response and even on some 2xx ones
+// where its delivery layer doesn't see our reply. Without dedup, a retried
+// NEW_SALE could fire a second magic-link email, double-write the
+// plan_change_log entry, or re-grant a plan that was just cancelled. We key
+// on the SIO order id (stable per sale, surfaces in every event tied to it).
+
+/** Stable event_id derived from the order id. Returns null when absent. */
+function buildEventId(rawBody: any): string | null {
+  const orderId =
+    rawBody?.order?.id ??
+    rawBody?.data?.order?.id ??
+    rawBody?.order_id ??
+    rawBody?.orderId ??
+    null;
+  return orderId != null ? `sio_order_${String(orderId)}` : null;
+}
+
+/** Check whether the event was ALREADY successfully processed. Best-effort:
+ *  if webhook_logs lacks the event_id/status columns on an old deploy, we
+ *  fall through and let the regular flow run rather than blocking. */
+async function alreadyProcessed(eventId: string | null): Promise<boolean> {
+  if (!eventId) return false;
+  try {
+    const { data } = await supabaseAdmin
+      .from("webhook_logs")
+      .select("id")
+      .eq("event_id", eventId)
+      .eq("status", "processed")
+      .limit(1)
+      .maybeSingle();
+    return Boolean(data);
+  } catch {
+    return false;
+  }
+}
+
+/** Write a `processed` row so the next retry of the same event short-
+ *  circuits in `alreadyProcessed`. Best-effort — webhook_logs failures
+ *  must not break the response. */
+async function markProcessed(eventId: string | null, eventType: string | null, payload: any) {
+  if (!eventId) return;
+  try {
+    await supabaseAdmin.from("webhook_logs").insert({
+      source: "systeme_io",
+      event_id: eventId,
+      event_type: eventType,
+      payload,
+      status: "processed",
+      received_at: new Date().toISOString(),
+    } as any);
+  } catch {
+    // best-effort
+  }
+}
+
 // ---------- Zod schemas ----------
 
 const zNumOrStr = z.union([z.number(), z.string()]);
@@ -509,6 +566,17 @@ export async function POST(req: NextRequest) {
       // table may not exist — that's fine
     }
 
+    // ── Idempotency ──────────────────────────────────────────────────
+    // Must run before any branch that mutates state. A retried event
+    // (SIO retries on any non-2xx OR when its delivery layer doesn't
+    // see our reply) would otherwise re-fire side-effects: a second
+    // magic link, a duplicated plan_change_log row, etc.
+    const eventId = buildEventId(rawBody);
+    if (await alreadyProcessed(eventId)) {
+      console.log(`[Systeme.io webhook] Duplicate retry event_id=${eventId} — skipping`);
+      return NextResponse.json({ ok: true, duplicate: true, event_id: eventId });
+    }
+
     // ── Event-type routing ─────────────────────────────────────────
     // Previously the entire flow assumed every incoming event was a NEW_SALE
     // and would proceed straight to upsertProfile, which meant a SIO
@@ -538,6 +606,7 @@ export async function POST(req: NextRequest) {
       const found = await findUserByEmail(cancelEmail);
       if (!found) {
         console.log(`[Systeme.io webhook] Terminal event ${eventType} for unknown user ${cancelEmail} — skip`);
+        await markProcessed(eventId, eventType, rawBody);
         return NextResponse.json({ ok: true, skipped: "unknown_user", email: cancelEmail });
       }
 
@@ -546,6 +615,7 @@ export async function POST(req: NextRequest) {
       const oldPlan = String((priorProfile as { plan?: string | null } | null)?.plan ?? "free").trim().toLowerCase();
 
       if (!oldPlan || oldPlan === "free") {
+        await markProcessed(eventId, eventType, rawBody);
         return NextResponse.json({ ok: true, skipped: "already_free", email: cancelEmail });
       }
 
@@ -553,6 +623,7 @@ export async function POST(req: NextRequest) {
         // Beta = lifetime — never downgraded by webhook. Loud log so any hit
         // is visible in Vercel logs.
         console.warn(`[Systeme.io webhook] REFUSED downgrade for lifetime plan ${oldPlan} email=${cancelEmail} event=${eventType}`);
+        await markProcessed(eventId, eventType, rawBody);
         return NextResponse.json({ ok: true, skipped: "lifetime_plan", plan: oldPlan, email: cancelEmail });
       }
 
@@ -579,6 +650,7 @@ export async function POST(req: NextRequest) {
       }
 
       console.log(`[Systeme.io webhook] Downgraded ${cancelEmail} ${oldPlan} → free (${eventType})`);
+      await markProcessed(eventId, eventType, rawBody);
       return NextResponse.json({ ok: true, downgraded: true, email: cancelEmail, old_plan: oldPlan, new_plan: "free", event_type: eventType });
     }
 
@@ -802,6 +874,7 @@ export async function POST(req: NextRequest) {
       if (oldPlan && LIFETIME_PLANS.has(oldPlan.trim().toLowerCase())) {
         console.warn(`[Systeme.io webhook] REFUSED upgrade overwrite for lifetime plan ${oldPlan} email=${resolvedEmail} new=${plan}`);
         // Still return ok=true so SIO doesn't retry forever.
+        await markProcessed(eventId, eventType, rawBody);
         return NextResponse.json({ ok: true, skipped: "lifetime_plan", plan: oldPlan, email: resolvedEmail });
       }
 
@@ -834,6 +907,7 @@ export async function POST(req: NextRequest) {
       // ✅ Envoie le magic link de connexion au client
       await sendMagicLink(resolvedEmail);
 
+      await markProcessed(eventId, eventType, rawBody);
       return NextResponse.json({
         status: "ok",
         action: "profile_updated",
@@ -898,6 +972,7 @@ export async function POST(req: NextRequest) {
         const oldPlan = String((existingBefore as { plan?: string | null } | null)?.plan ?? "").trim().toLowerCase();
         if (oldPlan && LIFETIME_PLANS.has(oldPlan)) {
           console.warn(`[Systeme.io webhook] REFUSED upgrade overwrite for lifetime plan ${oldPlan} email=${email}`);
+          await markProcessed(eventId, eventType, rawBody);
           return NextResponse.json({ status: "ok", skipped: "lifetime_plan", plan: oldPlan, email: email.toLowerCase() });
         }
       } catch { /* best effort */ }
@@ -917,6 +992,7 @@ export async function POST(req: NextRequest) {
       // ✅ Envoie le magic link de connexion au client
       await sendMagicLink(email.toLowerCase());
 
+      await markProcessed(eventId, eventType, rawBody);
       return NextResponse.json({
         status: "ok",
         mode: "simple_test",
