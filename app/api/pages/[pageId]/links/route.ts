@@ -125,6 +125,13 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     if (key in body) updates[key] = body[key];
   }
 
+  // Marie-Paule guard: social_links is the only structured field in the
+  // allow-list. If a buggy client sends null / undefined / non-array, drop
+  // it from the patch so the existing array of links isn't silently wiped.
+  if ("social_links" in updates && !Array.isArray(updates.social_links)) {
+    delete updates.social_links;
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
