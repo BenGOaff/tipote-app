@@ -226,20 +226,27 @@ export async function PATCH(request: NextRequest, context: Ctx) {
       data = check.data;
     }
 
-    // Sync tag assignments
+    // Sync tag assignments — snapshot+restore-on-fail so a transient
+    // insert error after a successful delete doesn't strip the task of
+    // all its tags silently (Marie-Paule guard, mirrored from quiz PATCH).
     if (hasTagUpdate) {
       const tagIds = ((body as Record<string, unknown>).tag_ids as string[]).filter(
         (tid) => typeof tid === "string" && tid.length > 0,
       );
 
-      // Remove all existing assignments for this task
-      await supabaseAdmin
+      const { data: snapshot } = await supabaseAdmin
+        .from("task_tag_assignments")
+        .select("*")
+        .eq("task_id", id);
+      const snapshotRows = snapshot ?? [];
+
+      const { error: delErr } = await supabaseAdmin
         .from("task_tag_assignments")
         .delete()
         .eq("task_id", id);
-
-      // Insert new ones (only tags owned by this user)
-      if (tagIds.length > 0) {
+      if (delErr) {
+        console.error("[tasks PATCH] tag_assignments delete failed:", delErr.message);
+      } else if (tagIds.length > 0) {
         const { data: validTags } = await supabaseAdmin
           .from("task_tags")
           .select("id")
@@ -248,9 +255,19 @@ export async function PATCH(request: NextRequest, context: Ctx) {
 
         const validIds = (validTags ?? []).map((t) => t.id);
         if (validIds.length > 0) {
-          await supabaseAdmin
+          const { error: insErr } = await supabaseAdmin
             .from("task_tag_assignments")
             .insert(validIds.map((tagId) => ({ task_id: id, tag_id: tagId })));
+          if (insErr && snapshotRows.length > 0) {
+            console.error("[tasks PATCH] tag_assignments insert failed, restoring:", insErr.message);
+            await supabaseAdmin
+              .from("task_tag_assignments")
+              .insert(snapshotRows.map((r: Record<string, unknown>) => {
+                const { created_at: _ca, ...rest } = r;
+                void _ca;
+                return rest;
+              }));
+          }
         }
       }
     }

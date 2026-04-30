@@ -59,15 +59,40 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     const existingIds = items.filter((it) => it.id).map((it) => it.id!);
 
-    // Delete items no longer in the list
-    if (existingIds.length > 0) {
-      await supabase
+    // Marie-Paule guard: refuse to wipe a non-empty template via an
+    // empty / fully-filtered items array. The editor never legitimately
+    // produces this; a hydration race that did would silently delete
+    // every item in the template. Caller gets a clear 400 + can reload.
+    if (items.length === 0) {
+      const { count: existingCount } = await supabase
         .from("client_template_items")
-        .delete()
-        .eq("template_id", id)
-        .not("id", "in", `(${existingIds.join(",")})`);
-    } else {
-      await supabase.from("client_template_items").delete().eq("template_id", id);
+        .select("id", { count: "exact", head: true })
+        .eq("template_id", id);
+      if ((existingCount ?? 0) > 0) {
+        console.error(`[client-templates PATCH] REFUSED empty-items wipe for template ${id} (${existingCount} existing rows)`);
+        return NextResponse.json(
+          {
+            error: "EMPTY_ITEMS_WIPE_REFUSED",
+            message: "Refus de remplacer tous les items par une liste vide. Recharge la page pour récupérer ta dernière version.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    // Delete items no longer in the list. Errors are now surfaced — a
+    // silent delete failure used to leave both the old and new rows
+    // alive (constraint violations on next upsert). We log + continue
+    // since the per-item upserts below are idempotent on `id`.
+    const { error: delErr } = existingIds.length > 0
+      ? await supabase
+          .from("client_template_items")
+          .delete()
+          .eq("template_id", id)
+          .not("id", "in", `(${existingIds.join(",")})`)
+      : await supabase.from("client_template_items").delete().eq("template_id", id);
+    if (delErr) {
+      console.error(`[client-templates PATCH] item delete failed for template ${id}:`, delErr.message);
     }
 
     // Upsert each item
