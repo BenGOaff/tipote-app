@@ -100,10 +100,15 @@ interface QuizDetailClientProps { quizId: string; }
 // `{masc|fem|incl}` interpolation format used by the public renderer.
 // Pass `availableVars` to display "+ {name}" / "+ {m|f|x}" chips that insert
 // personalization placeholders at the caret — driven by the quiz's ask_* flags.
-function InlineEdit({ value, onChange, multiline, className, placeholder, style, onGenderize, availableVars }: {
+function InlineEdit({ value, onChange, multiline, className, placeholder, style, onGenderize, availableVars, previewTransform }: {
   value: string; onChange: (v: string) => void; multiline?: boolean; className?: string; placeholder?: string; style?: React.CSSProperties;
   onGenderize?: (current: string) => Promise<string | null>;
   availableVars?: QuizVarFlags;
+  /** Display-mode-only substitution. Same shape as the RichTextEdit prop:
+   *  receives the raw value (with placeholders), returns the version to
+   *  render. Identity passthrough when omitted. Edit mode always shows
+   *  the raw value so the placeholders stay editable. */
+  previewTransform?: (value: string) => string;
 }) {
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
@@ -162,7 +167,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
   }
   return (
     <div onClick={() => setEditing(true)} style={style} className={`${className || ""} cursor-text rounded-lg hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 px-2 py-1 transition-all group relative min-h-[1.2em]`}>
-      {value || <span className="opacity-40 italic">{placeholder}</span>}
+      {(previewTransform ? previewTransform(value) : value) || <span className="opacity-40 italic">{placeholder}</span>}
       <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
       {onGenderize && (
         <button
