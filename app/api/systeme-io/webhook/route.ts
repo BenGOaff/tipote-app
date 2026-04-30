@@ -201,6 +201,23 @@ function inferPlanFromOffer(offerId: string): StoredPlan | null {
   return null;
 }
 
+// Plans Tipote refuses to downgrade automatically. `beta` is granted manually
+// for lifetime access — Ben's current entire user base. SIO can NEVER bring
+// these accounts back to `free`. The only legitimate revocation is the admin
+// endpoint. basic/pro/elite are subscriptions and CAN be downgraded.
+const LIFETIME_PLANS: ReadonlySet<string> = new Set(["beta"]);
+
+// Events that confirm the end of a paid subscription — downgrade to `free`
+// (UNLESS the user is on a lifetime plan, see above). SIO documents
+// `SALE_CANCELED`; the rest is defensive against future variants and partner
+// integrations re-emitting different strings.
+const TERMINAL_EVENT_RE = /CANCEL|REFUND|EXPIR|CHARGEBACK/i;
+
+// Transient payment problems — DO NOT downgrade. SIO will fire a definitive
+// CANCEL/REFUND later if the issue doesn't recover. Keeps flapping users from
+// getting downgraded mid-retry-cycle.
+const TRANSIENT_FAILURE_RE = /FAIL|DECLIN|DISPUT/i;
+
 // ---------- Utils ----------
 
 function toStringId(v: unknown): string {
@@ -476,6 +493,79 @@ export async function POST(req: NextRequest) {
       // table may not exist — that's fine
     }
 
+    // ── Event-type routing ─────────────────────────────────────────
+    // Previously the entire flow assumed every incoming event was a NEW_SALE
+    // and would proceed straight to upsertProfile, which meant a SIO
+    // SALE_CANCELED would either fail Zod parsing (and 400) or worse, hit
+    // the safety-net "default to beta" path and silently UPGRADE a cancelled
+    // customer. Both are wrong. Now we split:
+    //   - transient failures (FAIL / DECLIN / DISPUT)  → log + skip
+    //   - terminal events (CANCEL / REFUND / EXPIR / CHARGEBACK) → downgrade
+    //   - everything else → continue to the existing NEW_SALE flow
+    const headerEventType = req.headers.get("x-webhook-event");
+    const bodyEventType = (rawBody?.type ?? rawBody?.event ?? rawBody?.event_type ?? rawBody?.eventName ?? rawBody?.data?.type ?? "") as string;
+    const eventType = String(headerEventType || bodyEventType || "").trim();
+
+    if (eventType && TRANSIENT_FAILURE_RE.test(eventType)) {
+      console.log(`[Systeme.io webhook] Ignoring transient failure type=${eventType}`);
+      return NextResponse.json({ ok: true, skipped: "transient_failure", event_type: eventType });
+    }
+
+    if (eventType && TERMINAL_EVENT_RE.test(eventType)) {
+      const cancelEmail = (rawBody?.contact?.email ?? rawBody?.data?.contact?.email ?? rawBody?.customer?.email ?? rawBody?.data?.customer?.email ?? rawBody?.email ?? "")
+        .toString().trim().toLowerCase();
+      if (!cancelEmail) {
+        console.warn(`[Systeme.io webhook] Terminal event ${eventType} with no email — skip`);
+        return NextResponse.json({ ok: false, skipped: "no_email" }, { status: 200 });
+      }
+
+      const found = await findUserByEmail(cancelEmail);
+      if (!found) {
+        console.log(`[Systeme.io webhook] Terminal event ${eventType} for unknown user ${cancelEmail} — skip`);
+        return NextResponse.json({ ok: true, skipped: "unknown_user", email: cancelEmail });
+      }
+
+      const { data: priorProfile } = await supabaseAdmin
+        .from("profiles").select("plan").eq("id", found.id).maybeSingle();
+      const oldPlan = String((priorProfile as { plan?: string | null } | null)?.plan ?? "free").trim().toLowerCase();
+
+      if (!oldPlan || oldPlan === "free") {
+        return NextResponse.json({ ok: true, skipped: "already_free", email: cancelEmail });
+      }
+
+      if (LIFETIME_PLANS.has(oldPlan)) {
+        // Beta = lifetime — never downgraded by webhook. Loud log so any hit
+        // is visible in Vercel logs.
+        console.warn(`[Systeme.io webhook] REFUSED downgrade for lifetime plan ${oldPlan} email=${cancelEmail} event=${eventType}`);
+        return NextResponse.json({ ok: true, skipped: "lifetime_plan", plan: oldPlan, email: cancelEmail });
+      }
+
+      // basic / pro / elite → free
+      const { error: downErr } = await supabaseAdmin
+        .from("profiles")
+        .update({ plan: "free", updated_at: new Date().toISOString() })
+        .eq("id", found.id);
+      if (downErr) {
+        console.error(`[Systeme.io webhook] Downgrade FAILED for ${cancelEmail}:`, downErr);
+        return NextResponse.json({ error: "Downgrade failed" }, { status: 500 });
+      }
+
+      try {
+        await supabaseAdmin.from("plan_change_log").insert({
+          target_user_id: found.id,
+          target_email: cancelEmail,
+          old_plan: oldPlan,
+          new_plan: "free",
+          reason: `systeme_io:${eventType}`,
+        } as any);
+      } catch {
+        // best-effort audit
+      }
+
+      console.log(`[Systeme.io webhook] Downgraded ${cancelEmail} ${oldPlan} → free (${eventType})`);
+      return NextResponse.json({ ok: true, downgraded: true, email: cancelEmail, old_plan: oldPlan, new_plan: "free", event_type: eventType });
+    }
+
     // ✅ Try both formats: real Systeme.io (root-level) and legacy (data-wrapped)
     const parsedSysteme = systemeNewSaleSchema.safeParse(rawBody);
     const parsedLegacy = !parsedSysteme.success ? legacyNewSaleSchema.safeParse(rawBody) : null;
@@ -678,7 +768,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Lire l'ancien plan AVANT upsert (pour le log d'audit)
+      // Lire l'ancien plan AVANT upsert (pour le log d'audit + garde lifetime)
       let oldPlan: string | null = null;
       try {
         const { data: existingBefore } = await supabaseAdmin
@@ -688,6 +778,16 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
         oldPlan = existingBefore?.plan ?? null;
       } catch { /* best effort */ }
+
+      // Beta = lifetime — never overwritten by webhook, even on a NEW_SALE.
+      // Edge case: a beta user buys an additional monthly offer somehow.
+      // We keep the beta plan, log loudly, and short-circuit. If Ben truly
+      // needs to change a beta account's plan, he uses the admin endpoint.
+      if (oldPlan && LIFETIME_PLANS.has(oldPlan.trim().toLowerCase())) {
+        console.warn(`[Systeme.io webhook] REFUSED upgrade overwrite for lifetime plan ${oldPlan} email=${resolvedEmail} new=${plan}`);
+        // Still return ok=true so SIO doesn't retry forever.
+        return NextResponse.json({ ok: true, skipped: "lifetime_plan", plan: oldPlan, email: resolvedEmail });
+      }
 
       await upsertProfile({
         userId,
@@ -769,6 +869,22 @@ export async function POST(req: NextRequest) {
         last_name: last_name ?? null,
         sio_contact_id: sio_contact_id ?? null,
       });
+
+      // Lifetime shield — never overwrite a beta plan via webhook, even on
+      // the simple_test payload path. Mirror of the same guard in the
+      // canonical sale flow above.
+      try {
+        const { data: existingBefore } = await supabaseAdmin
+          .from("profiles")
+          .select("plan")
+          .eq("id", userId)
+          .maybeSingle();
+        const oldPlan = String((existingBefore as { plan?: string | null } | null)?.plan ?? "").trim().toLowerCase();
+        if (oldPlan && LIFETIME_PLANS.has(oldPlan)) {
+          console.warn(`[Systeme.io webhook] REFUSED upgrade overwrite for lifetime plan ${oldPlan} email=${email}`);
+          return NextResponse.json({ status: "ok", skipped: "lifetime_plan", plan: oldPlan, email: email.toLowerCase() });
+        }
+      } catch { /* best effort */ }
 
       await upsertProfile({
         userId,
