@@ -305,13 +305,43 @@ async function syncOfferPyramidsFlagship(args: { userId: string; projectId?: str
   if (high) rows.push(mkRow("high_ticket", high));
   if (!rows.length) return;
 
+  // Snapshot + delete + insert + restore-on-fail (Marie-Paule guard).
+  // This sync is fire-and-forget from the caller, so a silent failure
+  // here is exactly the worst case: the user clicks "apply suggestion"
+  // and their existing offer-pyramid disappears with no toast, no log,
+  // nothing. Snapshot + restore turns this into a no-op on failure.
   try {
+    let snapQuery = supabaseAdmin.from("offer_pyramids").select("*").eq("user_id", userId);
+    if (projectId) snapQuery = snapQuery.eq("project_id", projectId);
+    const { data: snapshot } = await snapQuery;
+    const snapshotRows = snapshot ?? [];
+
     let delQuery = supabaseAdmin.from("offer_pyramids").delete().eq("user_id", userId);
     if (projectId) delQuery = delQuery.eq("project_id", projectId);
-    await delQuery;
-    await supabaseAdmin.from("offer_pyramids").insert(rows);
-  } catch {
-    // silent best-effort
+    const { error: delErr } = await delQuery;
+    if (delErr) {
+      console.error("[coach/actions/apply] offer_pyramids delete failed:", delErr.message);
+      return;
+    }
+
+    const { error: insErr } = await supabaseAdmin.from("offer_pyramids").insert(rows);
+    if (insErr) {
+      console.error("[coach/actions/apply] offer_pyramids insert failed, restoring snapshot:", insErr.message);
+      if (snapshotRows.length > 0) {
+        const restorePayload = snapshotRows.map((r) => {
+          const { created_at: _ca, updated_at: _ua, ...rest } = r as Record<string, unknown>;
+          void _ca; void _ua;
+          return rest;
+        });
+        const { error: restoreErr } = await supabaseAdmin.from("offer_pyramids").insert(restorePayload);
+        if (restoreErr) {
+          console.error("[coach/actions/apply] CATASTROPHIC: restore also failed:", restoreErr.message);
+        }
+      }
+    }
+  } catch (e) {
+    // Outer try keeps the fire-and-forget contract — caller never throws.
+    console.error("[coach/actions/apply] sync failure:", e);
   }
 }
 
