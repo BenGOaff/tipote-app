@@ -89,6 +89,27 @@ export function getPlanLimits(plan: string | null | undefined): PlanLimits {
   return PLAN_LIMITS[normalizePlanId(plan)];
 }
 
+/** True if the user is on any paying tier. Used to bypass all free-tier gates. */
+export function isPaidPlan(plan: string | null | undefined): boolean {
+  return normalizePlanId(plan) !== "free";
+}
+
+/**
+ * Free-tier ceilings beyond AI credits / social connections.
+ * Creators on free see-but-can't-touch leads past these caps; the lock is
+ * enforced server-side (see `lib/leadLock.ts`) so no PII leaks via DevTools.
+ */
+export const FREE_LIMITS = {
+  /** Max active quizzes (mode='quiz') a free user can own per project */
+  maxQuizzes: 1,
+  /** Max active surveys (mode='survey') a free user can own per project */
+  maxSurveys: 1,
+  /** Max published hosted pages a free user can own per project */
+  maxPages: 1,
+  /** Visible leads per rolling 30-day window — captures keep coming, the rest are blurred */
+  visibleLeadsPerMonth: 10,
+} as const;
+
 /**
  * Check if a user can connect a new social platform.
  * Returns { allowed: true } if OK, or { allowed: false, max } if limit reached.

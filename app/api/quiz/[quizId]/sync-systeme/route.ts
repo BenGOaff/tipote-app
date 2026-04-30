@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { computeLockedLeadIds } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -114,16 +116,58 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Get quiz leads
-    const { data: leads } = await supabase
+    const { data: leadsRaw } = await supabase
       .from("quiz_leads")
-      .select("id, email, first_name, last_name, phone, country")
+      .select("id, email, first_name, last_name, phone, country, created_at")
       .eq("quiz_id", quizId);
 
-    if (!leads || leads.length === 0) {
+    if (!leadsRaw || leadsRaw.length === 0) {
       return NextResponse.json({
         ok: true,
         synced: 0,
         message: "Aucun lead à synchroniser.",
+      });
+    }
+
+    // Free-tier guard: locked leads must NOT leave the platform — paying for
+    // Systeme.io sync would otherwise be a trivial workaround to bypass the
+    // blur in the leads UI. Lock is computed against the creator's full
+    // quiz_leads timeline (across all their quizzes), same rule used in the
+    // listing/export endpoints.
+    const { data: planRow } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+    const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+    let leads = leadsRaw;
+    let skippedLocked = 0;
+    if (!isPaidPlan(plan)) {
+      const { data: ownedQuizzes } = await supabase
+        .from("quizzes")
+        .select("id")
+        .eq("user_id", user.id);
+      const ownedQuizIds = (ownedQuizzes ?? []).map((q: { id: string }) => q.id);
+      if (ownedQuizIds.length > 0) {
+        const { data: timeline } = await supabase
+          .from("quiz_leads")
+          .select("id, created_at")
+          .in("quiz_id", ownedQuizIds);
+        const lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+        const before = leads.length;
+        leads = leads.filter((l: { id: string }) => !lockedIds.has(l.id));
+        skippedLocked = before - leads.length;
+      }
+    }
+
+    if (leads.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        synced: 0,
+        skipped_locked: skippedLocked,
+        message: skippedLocked > 0
+          ? `${skippedLocked} lead(s) verrouillé(s) — passe en plan payant pour les synchroniser.`
+          : "Aucun lead à synchroniser.",
       });
     }
 
@@ -272,6 +316,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       synced,
       errors,
       total: leads.length,
+      skipped_locked: skippedLocked,
       tagId,
       tagName,
       errorDetails: errorDetails.length > 0 ? errorDetails.slice(0, 10) : undefined,

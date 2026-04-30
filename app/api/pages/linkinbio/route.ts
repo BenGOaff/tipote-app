@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { buildLinkinbioPage, type LinkinbioPageData } from "@/lib/linkinbioBuilder";
+import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,32 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = session.user.id;
+
+  // Free-tier creation gate: 1 hosted page per user (link-in-bio counts).
+  {
+    const { data: planRow } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!isPaidPlan((planRow as { plan?: string | null } | null)?.plan)) {
+      const { count } = await supabase
+        .from("hosted_pages")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .neq("status", "archived");
+      if ((count ?? 0) >= FREE_LIMITS.maxPages) {
+        return NextResponse.json(
+          {
+            error: `Le plan gratuit est limité à ${FREE_LIMITS.maxPages} page. Passe en plan payant pour en créer plus.`,
+            code: "FREE_PLAN_PAGE_LIMIT",
+            upgrade_url: "/settings?tab=billing",
+          },
+          { status: 403 },
+        );
+      }
+    }
+  }
 
   // Fetch user's branding & profile
   const { data: profile } = await supabase

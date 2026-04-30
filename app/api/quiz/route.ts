@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,40 @@ export async function POST(req: NextRequest) {
     // gate sharing behind a bonus for them ("no viral but share at end").
     const mode = body.mode === "survey" ? "survey" : "quiz";
     const isSurvey = mode === "survey";
+
+    // Free-tier creation gate: 1 quiz + 1 sondage per active project.
+    // Existing items are grandfathered — we only block the next CREATE.
+    {
+      const { data: planRow } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!isPaidPlan((planRow as { plan?: string | null } | null)?.plan)) {
+        let countQuery = supabase
+          .from("quizzes")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("mode", mode);
+        if (projectId) countQuery = countQuery.eq("project_id", projectId);
+        const { count } = await countQuery;
+
+        const cap = isSurvey ? FREE_LIMITS.maxSurveys : FREE_LIMITS.maxQuizzes;
+        if ((count ?? 0) >= cap) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: isSurvey ? "FREE_PLAN_SURVEY_LIMIT" : "FREE_PLAN_QUIZ_LIMIT",
+              message: isSurvey
+                ? `Le plan gratuit est limité à ${cap} sondage. Passe en plan payant pour en créer plus.`
+                : `Le plan gratuit est limité à ${cap} quiz. Passe en plan payant pour en créer plus.`,
+            },
+            { status: 403 },
+          );
+        }
+      }
+    }
 
     // Insert quiz
     const { data: quiz, error: quizError } = await supabase
