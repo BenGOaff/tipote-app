@@ -113,7 +113,11 @@
     "promptLink": "رابط الوصلة (https://…، mailto:…)",
     "invalidUrlFull": "رابط غير صالح: لا يُسمح إلا بـ https وmailto وtel والمسارات النسبية.",
     "promptImage": "رابط الصورة (https://… أو /مسار)",
-    "invalidUrl": "رابط غير صالح."
+    "invalidUrl": "رابط غير صالح.",
+    "aiRewriteTitle": "إعادة الصياغة بالذكاء الاصطناعي بنبرة الاختبار",
+    "aiRewriteNoResult": "لم يقترح الذكاء الاصطناعي شيئًا. حاول مجددًا.",
+    "aiRewriteDismiss": "الاحتفاظ بالنص",
+    "aiRewriteAgain": "إعادة التوليد"
   },
   "tasksPage": {
     "title": "المهام",

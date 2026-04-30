@@ -177,7 +177,11 @@
     "paragraph": "Parágrafo",
     "code": "Código",
     "quote": "Citação",
-    "image": "Imagem"
+    "image": "Imagem",
+    "aiRewriteTitle": "Reformular com IA no tom do quiz",
+    "aiRewriteNoResult": "A IA não propôs nada. Tenta de novo.",
+    "aiRewriteDismiss": "Manter o meu texto",
+    "aiRewriteAgain": "Regenerar"
   },
   "tasksPage": {
     "title": "As minhas tarefas",

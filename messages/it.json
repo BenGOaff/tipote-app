@@ -113,7 +113,11 @@
     "promptLink": "URL del link (https://…, mailto:…)",
     "invalidUrlFull": "URL non valido: sono ammessi solo https, mailto, tel e percorsi relativi.",
     "promptImage": "URL dell'immagine (https://… o /percorso)",
-    "invalidUrl": "URL non valido."
+    "invalidUrl": "URL non valido.",
+    "aiRewriteTitle": "Riformulare con l'IA nel tono del quiz",
+    "aiRewriteNoResult": "L'IA non ha proposto nulla. Riprova.",
+    "aiRewriteDismiss": "Mantieni il testo",
+    "aiRewriteAgain": "Rigenera"
   },
   "tasksPage": {
     "title": "Attività",

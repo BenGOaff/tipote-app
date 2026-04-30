@@ -135,15 +135,19 @@ interface SurveyDetailClientProps { quizId: string; }
 // `{masc|fem|incl}` interpolation format used by the public renderer.
 // Pass `availableVars` to display "+ {name}" / "+ {m|f|x}" chips that insert
 // personalization placeholders at the caret — driven by the quiz's ask_* flags.
-function InlineEdit({ value, onChange, multiline, className, placeholder, style, onGenderize, availableVars, previewTransform }: {
+function InlineEdit({ value, onChange, multiline, className, placeholder, style, onGenderize, availableVars, previewTransform, onAIRewrite }: {
   value: string; onChange: (v: string) => void; multiline?: boolean; className?: string; placeholder?: string; style?: React.CSSProperties;
   onGenderize?: (current: string) => Promise<string | null>;
   availableVars?: QuizVarFlags;
   /** Display-mode-only substitution. Identity passthrough when omitted. */
   previewTransform?: (value: string) => string;
+  /** Optional ✨ button asking the parent for 3 reformulations. */
+  onAIRewrite?: (plainText: string) => Promise<string[] | null>;
 }) {
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
+  const [rewriting, setRewriting] = useState(false);
+  const [aiProposals, setAiProposals] = useState<string[] | null>(null);
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
 
@@ -159,6 +163,31 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
     } finally {
       setGenderizing(false);
     }
+  };
+
+  const handleAIRewrite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onAIRewrite || rewriting) return;
+    const current = value?.trim();
+    if (!current) return;
+    setRewriting(true);
+    try {
+      const proposals = await onAIRewrite(current);
+      setAiProposals(proposals && proposals.length > 0 ? proposals : []);
+    } finally {
+      setRewriting(false);
+    }
+  };
+
+  const applyProposal = (p: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(p);
+    setAiProposals(null);
+  };
+
+  const dismissProposals = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAiProposals(null);
   };
 
   // Insert at caret (or append) and keep the field in edit mode with the
@@ -198,19 +227,59 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
     );
   }
   return (
-    <div onClick={() => setEditing(true)} style={style} className={`${className || ""} cursor-text rounded-lg hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 px-2 py-1 transition-all group relative min-h-[1.2em]`}>
-      {(previewTransform ? previewTransform(value) : value) || <span className="opacity-40 italic">{placeholder}</span>}
-      <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-      {onGenderize && (
-        <button
-          type="button"
-          onClick={handleGenderize}
-          disabled={genderizing || !value?.trim()}
-          title="Générer les variantes de genre (Il / Elle / Iel)"
-          className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
-        >
-          {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-        </button>
+    <div className="relative">
+      <div onClick={() => { if (!aiProposals) setEditing(true); }} style={style} className={`${className || ""} cursor-text rounded-lg hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 px-2 py-1 transition-all group relative min-h-[1.2em]`}>
+        {(previewTransform ? previewTransform(value) : value) || <span className="opacity-40 italic">{placeholder}</span>}
+        <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {onGenderize && (
+          <button
+            type="button"
+            onClick={handleGenderize}
+            disabled={genderizing || !value?.trim()}
+            title="Générer les variantes de genre (Il / Elle / Iel)"
+            className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
+          >
+            {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          </button>
+        )}
+        {onAIRewrite && value?.trim() && (
+          <button
+            type="button"
+            onClick={handleAIRewrite}
+            disabled={rewriting}
+            title="Reformuler avec l'IA dans le ton du sondage"
+            className={`absolute top-1 ${onGenderize ? "right-11" : "right-6"} p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity`}
+          >
+            {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          </button>
+        )}
+      </div>
+      {aiProposals !== null && (
+        <div className="mt-2 rounded-xl border bg-background shadow-sm p-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          {aiProposals.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-2 py-1.5">L'IA n'a rien proposé. Réessaie.</p>
+          ) : (
+            aiProposals.map((p, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => applyProposal(p, e)}
+                className="block w-full text-left px-3 py-2 text-sm rounded-lg border bg-background hover:bg-primary/5 hover:border-primary/40 transition-colors"
+              >
+                {p}
+              </button>
+            ))
+          )}
+          <div className="flex justify-between items-center pt-1">
+            <button type="button" onClick={dismissProposals} className="text-[11px] text-muted-foreground hover:underline px-2">Garder mon texte</button>
+            {aiProposals.length > 0 && (
+              <button type="button" onClick={handleAIRewrite} disabled={rewriting} className="text-[11px] text-primary hover:underline px-2 inline-flex items-center gap-1">
+                {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                Régénérer
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -399,6 +468,32 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     (text: string) => interpolateText(text, { name: PREVIEW_DEMO_NAME, gender: "x" }),
     [],
   );
+
+  // AI rewrite on every text field of the survey (Marie's #4 — same
+  // pattern as the quiz editor but without result-* kinds since surveys
+  // don't have result profiles).
+  const aiRewrite = useCallback(async (plain: string, fieldKind: string): Promise<string[] | null> => {
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/rewrite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: plain, fieldKind }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error ?? data?.message ?? "Erreur IA");
+        return null;
+      }
+      return Array.isArray(data.proposals) ? data.proposals : null;
+    } catch {
+      toast.error("Erreur IA");
+      return null;
+    }
+  }, [quizId]);
+  const aiRewriteTitle = useCallback((p: string) => aiRewrite(p, "title"), [aiRewrite]);
+  const aiRewriteIntro = useCallback((p: string) => aiRewrite(p, "intro"), [aiRewrite]);
+  const aiRewriteQuestion = useCallback((p: string) => aiRewrite(p, "question"), [aiRewrite]);
+  const aiRewriteOption = useCallback((p: string) => aiRewrite(p, "option"), [aiRewrite]);
 
   const scrollToSection = (id: string) => {
     let el: HTMLDivElement | null = null;
@@ -1109,8 +1204,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
-                  <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+                  <InlineEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
@@ -1158,7 +1253,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           </select>
                         </div>
 
-                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
+                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
 
                         {qType === "rating_scale" && (() => {
                           const min = typeof cfg.min === "number" ? cfg.min : 0;
@@ -1240,7 +1335,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                     </div>
                                   )}
                                   <div className="p-5 space-y-2">
-                                    <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
+                                    <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
                                     {qType === "image_choice" && (
                                       <input
                                         type="url"

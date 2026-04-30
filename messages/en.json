@@ -113,7 +113,11 @@
     "promptLink": "Link URL (https://…, mailto:…)",
     "invalidUrlFull": "Invalid URL: only https, mailto, tel and relative paths are allowed.",
     "promptImage": "Image URL (https://… or /path)",
-    "invalidUrl": "Invalid URL."
+    "invalidUrl": "Invalid URL.",
+    "aiRewriteTitle": "Rewrite with AI in the quiz tone",
+    "aiRewriteNoResult": "The AI returned nothing. Try again.",
+    "aiRewriteDismiss": "Keep my text",
+    "aiRewriteAgain": "Regenerate"
   },
   "tasksPage": {
     "title": "Tasks",
