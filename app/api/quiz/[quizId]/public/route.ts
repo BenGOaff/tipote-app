@@ -9,7 +9,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getUserDEK } from "@/lib/piiKeys";
 import { encryptLeadPII } from "@/lib/piiCrypto";
 
-export const dynamic = "force-dynamic";
+// No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
+// overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
 export const maxDuration = 30;
 
 type RouteContext = { params: Promise<{ quizId: string }> };

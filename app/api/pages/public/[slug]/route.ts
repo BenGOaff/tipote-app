@@ -7,7 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
+// overriding the edge-SWR headers below and forcing `cf-cache-status: DYNAMIC`.
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
