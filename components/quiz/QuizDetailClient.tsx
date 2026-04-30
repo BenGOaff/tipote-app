@@ -100,7 +100,7 @@ interface QuizDetailClientProps { quizId: string; }
 // `{masc|fem|incl}` interpolation format used by the public renderer.
 // Pass `availableVars` to display "+ {name}" / "+ {m|f|x}" chips that insert
 // personalization placeholders at the caret — driven by the quiz's ask_* flags.
-function InlineEdit({ value, onChange, multiline, className, placeholder, style, onGenderize, availableVars, previewTransform }: {
+function InlineEdit({ value, onChange, multiline, className, placeholder, style, onGenderize, availableVars, previewTransform, onAIRewrite }: {
   value: string; onChange: (v: string) => void; multiline?: boolean; className?: string; placeholder?: string; style?: React.CSSProperties;
   onGenderize?: (current: string) => Promise<string | null>;
   availableVars?: QuizVarFlags;
@@ -109,9 +109,14 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
    *  render. Identity passthrough when omitted. Edit mode always shows
    *  the raw value so the placeholders stay editable. */
   previewTransform?: (value: string) => string;
+  /** Optional ✨ button that asks the parent for 3 reformulations of the
+   *  current plain-text value. Same signature as the RichTextEdit prop. */
+  onAIRewrite?: (plainText: string) => Promise<string[] | null>;
 }) {
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
+  const [rewriting, setRewriting] = useState(false);
+  const [aiProposals, setAiProposals] = useState<string[] | null>(null);
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
 
@@ -127,6 +132,31 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
     } finally {
       setGenderizing(false);
     }
+  };
+
+  const handleAIRewrite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onAIRewrite || rewriting) return;
+    const current = value?.trim();
+    if (!current) return;
+    setRewriting(true);
+    try {
+      const proposals = await onAIRewrite(current);
+      setAiProposals(proposals && proposals.length > 0 ? proposals : []);
+    } finally {
+      setRewriting(false);
+    }
+  };
+
+  const applyProposal = (p: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(p);
+    setAiProposals(null);
+  };
+
+  const dismissProposals = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAiProposals(null);
   };
 
   // Insert at caret (or append) and keep the field in edit mode with the
@@ -166,19 +196,59 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
     );
   }
   return (
-    <div onClick={() => setEditing(true)} style={style} className={`${className || ""} cursor-text rounded-lg hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 px-2 py-1 transition-all group relative min-h-[1.2em]`}>
-      {(previewTransform ? previewTransform(value) : value) || <span className="opacity-40 italic">{placeholder}</span>}
-      <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-      {onGenderize && (
-        <button
-          type="button"
-          onClick={handleGenderize}
-          disabled={genderizing || !value?.trim()}
-          title="Générer les variantes de genre (Il / Elle / Iel)"
-          className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
-        >
-          {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-        </button>
+    <div className="relative">
+      <div onClick={() => { if (!aiProposals) setEditing(true); }} style={style} className={`${className || ""} cursor-text rounded-lg hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 px-2 py-1 transition-all group relative min-h-[1.2em]`}>
+        {(previewTransform ? previewTransform(value) : value) || <span className="opacity-40 italic">{placeholder}</span>}
+        <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {onGenderize && (
+          <button
+            type="button"
+            onClick={handleGenderize}
+            disabled={genderizing || !value?.trim()}
+            title="Générer les variantes de genre (Il / Elle / Iel)"
+            className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
+          >
+            {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          </button>
+        )}
+        {onAIRewrite && value?.trim() && (
+          <button
+            type="button"
+            onClick={handleAIRewrite}
+            disabled={rewriting}
+            title="Reformuler avec l'IA dans le ton du quiz"
+            className={`absolute top-1 ${onGenderize ? "right-11" : "right-6"} p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity`}
+          >
+            {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          </button>
+        )}
+      </div>
+      {aiProposals !== null && (
+        <div className="mt-2 rounded-xl border bg-background shadow-sm p-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          {aiProposals.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-2 py-1.5">L'IA n'a rien proposé. Réessaie.</p>
+          ) : (
+            aiProposals.map((p, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => applyProposal(p, e)}
+                className="block w-full text-left px-3 py-2 text-sm rounded-lg border bg-background hover:bg-primary/5 hover:border-primary/40 transition-colors"
+              >
+                {p}
+              </button>
+            ))
+          )}
+          <div className="flex justify-between items-center pt-1">
+            <button type="button" onClick={dismissProposals} className="text-[11px] text-muted-foreground hover:underline px-2">Garder mon texte</button>
+            {aiProposals.length > 0 && (
+              <button type="button" onClick={handleAIRewrite} disabled={rewriting} className="text-[11px] text-primary hover:underline px-2 inline-flex items-center gap-1">
+                {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                Régénérer
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
