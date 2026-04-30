@@ -21,6 +21,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { buildPage } from "@/lib/pageBuilder";
 import { applySectionOrderToHtml } from "@/lib/pages/applySectionOrderToHtml";
+import { preserveInlineEdits } from "@/lib/pages/preserveInlineEdits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   // ── Load current state ────────────────────────────────────────
   const { data: row, error } = await supabaseAdmin
     .from("hosted_pages")
-    .select("id, user_id, page_type, template_kind, template_id, content_data, brand_tokens, layout_config, section_order, locale")
+    .select("id, user_id, page_type, template_kind, template_id, content_data, brand_tokens, layout_config, section_order, html_snapshot, locale")
     .eq("id", pageId)
     .single();
 
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
     brand_tokens: Record<string, unknown> | null;
     layout_config: Record<string, unknown> | null;
     section_order: { mobile?: string[]; desktop?: string[] } | null;
+    html_snapshot: string | null;
     locale: string | null;
   };
   const pageType: "capture" | "sales" | "showcase" =
@@ -94,7 +96,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const nextHtml = applySectionOrderToHtml(rawHtml, r.section_order ?? null);
+  // Compose: 1) bake section order CSS, 2) carry inline edits across.
+  // We never want an admin rebuild to wipe a user's customised text;
+  // the operator can always force a clean rebuild by passing
+  // ?force=1 (kept simple — no flag here yet, default is preserve).
+  let nextHtml = applySectionOrderToHtml(rawHtml, r.section_order ?? null);
+  nextHtml = preserveInlineEdits(r.html_snapshot, nextHtml);
 
   // ── Persist ───────────────────────────────────────────────────
   const { error: updErr } = await supabaseAdmin

@@ -12,6 +12,7 @@ import { sanitizeHtmlSnapshot } from "@/lib/sanitizeHtml";
 import { parseLayoutConfig } from "@/lib/pageLayout";
 import { checkPublishedSlugAvailable } from "@/lib/hostedPageSlug";
 import { applySectionOrderToHtml } from "@/lib/pages/applySectionOrderToHtml";
+import { preserveInlineEdits, hasInlineEdits } from "@/lib/pages/preserveInlineEdits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -291,13 +292,24 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
             layoutConfig: layoutCfg || null,
           });
           // Bake the user's custom section ordering into the static
-          // snapshot. Without this, every rebuild reverts the live
-          // page to the template's default order — even though
-          // section_order is correctly stored on the row. The same
-          // CSS @media (order:N) trick the editor iframe uses at
-          // runtime, applied server-side.
+          // snapshot.
           const customOrder = (current as any).section_order ?? null;
-          updates.html_snapshot = applySectionOrderToHtml(html, customOrder);
+          let nextHtml = applySectionOrderToHtml(html, customOrder);
+          // CRITICAL: carry the user's inline-edits forward. Without
+          // this, every chat-driven save / brand swap / legal-URL
+          // sync silently overwrites textual customisations the user
+          // typed directly in the iframe — exactly the
+          // Marie-Paule 2026-04-29 incident, ~9 days of writing lost.
+          // We extract `data-editable` text nodes (keyed by id) from
+          // the OLD snapshot and re-inject into the freshly built
+          // one. AI-driven structural changes still come through;
+          // user TEXT survives.
+          const oldHtml = (current as any).html_snapshot as string | null;
+          if (hasInlineEdits(oldHtml)) {
+            nextHtml = preserveInlineEdits(oldHtml, nextHtml);
+            console.log("[pages/PATCH] inline edits preserved across rebuild", { pageId });
+          }
+          updates.html_snapshot = nextHtml;
         }
       } catch (err: any) {
         // Log instead of swallowing — a builder throw used to silently keep

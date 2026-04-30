@@ -21,6 +21,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildPage } from "@/lib/pageBuilder";
 import { applySectionOrderToHtml } from "@/lib/pages/applySectionOrderToHtml";
+import { preserveInlineEdits } from "@/lib/pages/preserveInlineEdits";
 
 export type LegalUrlsFromSettings = {
   privacy_url?: string;
@@ -38,6 +39,7 @@ type HostedPageRow = {
   brand_tokens: Record<string, unknown> | null;
   layout_config: Record<string, unknown> | null;
   section_order: { mobile?: string[]; desktop?: string[] } | null;
+  html_snapshot: string | null;
   locale: string | null;
   status: string;
 };
@@ -84,7 +86,7 @@ export async function syncLegalUrlsToUserPages(
 
   const { data: pages, error: listErr } = await supabaseAdmin
     .from("hosted_pages")
-    .select("id, user_id, page_type, template_kind, template_id, content_data, brand_tokens, layout_config, section_order, locale, status")
+    .select("id, user_id, page_type, template_kind, template_id, content_data, brand_tokens, layout_config, section_order, html_snapshot, locale, status")
     .eq("user_id", userId)
     .neq("status", "archived");
 
@@ -129,7 +131,14 @@ export async function syncLegalUrlsToUserPages(
           // (same trick the editor iframe uses at runtime). Without
           // this the public footer rebuild reverts the layout to
           // the template default.
-          nextHtml = applySectionOrderToHtml(rawHtml, row.section_order ?? null);
+          let withOrder = applySectionOrderToHtml(rawHtml, row.section_order ?? null);
+          // CRITICAL: never overwrite the user's inline-edited text
+          // when fanning out a settings change. We re-inject every
+          // `data-editable` text node from the existing snapshot
+          // into the freshly built one — only the legal links get
+          // updated, every other custom text stays exactly as it was.
+          withOrder = preserveInlineEdits(row.html_snapshot, withOrder);
+          nextHtml = withOrder;
         } catch (buildErr) {
           // A bad template / corrupt content shouldn't block the
           // column write. Log and persist the column-only change.
