@@ -116,6 +116,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Lifetime / beta shield — these accounts have no recurring subscription
+    // to cancel and were promised lifetime access. Refuse the call defensively
+    // even if some UI happens to expose the button.
+    const currentPlan = String(profile?.plan ?? '').trim().toLowerCase();
+    if (currentPlan === 'beta') {
+      return NextResponse.json(
+        { error: 'LIFETIME_PLAN', message: 'Beta accounts have lifetime access — nothing to cancel.' },
+        { status: 400 },
+      );
+    }
+
     if (!contactId && email) {
       const { data, error } = await supabaseAdmin
         .from('profiles')
@@ -203,29 +214,43 @@ export async function POST(req: NextRequest) {
     });
 
     // 6) Mise à jour du profil dans Supabase
-    // ✅ FIX: Annulation => plan "free" (pas "basic"). Recalcul crédits.
+    //
+    // BUG FIX (2026-04-30): we used to flip plan→free here unconditionally,
+    // including for cancelValue === "WhenBillingCycleEnds". That kicked
+    // paying users out of paid features mid-period, BEFORE the date they
+    // actually paid for. Now we only revoke locally on "Now" cancellations.
+    // For grace-period cancels we keep the plan intact and let SIO fire
+    // SALE_CANCELED at period end — the webhook handler (added 2026-04-30)
+    // will then flip plan→free at the correct moment.
     const targetUserId = profile?.id ?? session.user.id;
-    const newPlan = body.newPlan || "free";
+    const isImmediate = cancelValue === 'Now';
+    const oldPlan = profile?.plan ?? null;
+    const newPlan = isImmediate ? (body.newPlan || "free") : oldPlan;
 
-    // Log l"annulation
     try {
       await supabaseAdmin.from("plan_change_log").insert({
         target_user_id: targetUserId,
         target_email: email,
-        old_plan: profile?.plan ?? null,
+        old_plan: oldPlan,
         new_plan: newPlan,
-        reason: `billing_cancel (${cancelValue})`,
+        reason: isImmediate
+          ? `billing_cancel (${cancelValue})`
+          : `billing_cancel_requested (${cancelValue})`,
       } as any);
     } catch { /* best effort */ }
 
-    const { error: updateError } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        plan: newPlan,
-        product_id: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", targetUserId);
+    let updateError: { message?: string } | null = null;
+    if (isImmediate) {
+      const { error } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          plan: newPlan,
+          product_id: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", targetUserId);
+      updateError = error ?? null;
+    }
 
     if (updateError) {
       console.error(
@@ -234,11 +259,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ Recalculer les crédits pour le nouveau plan
-    try {
-      await ensureUserCredits(targetUserId);
-    } catch (e) {
-      console.error("[Billing/cancel] Failed to recalculate credits", e);
+    // Credits only get recalculated on immediate cancellations — until the
+    // grace period ends, the user keeps their paid quota.
+    if (isImmediate) {
+      try {
+        await ensureUserCredits(targetUserId);
+      } catch (e) {
+        console.error("[Billing/cancel] Failed to recalculate credits", e);
+      }
     }
 
     return NextResponse.json(
@@ -249,6 +277,7 @@ export async function POST(req: NextRequest) {
         contactId,
         profileId: targetUserId,
         newPlan,
+        downgraded_immediately: isImmediate,
       },
       { status: 200 },
     );
