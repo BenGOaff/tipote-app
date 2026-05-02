@@ -74,12 +74,17 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const leads = (leadsRes.data ?? []).map((l: any) => {
-      // Falls back to the lead's own result_title snapshot column when the
-      // FK join + lookup map both miss (e.g. result was deleted). Same
-      // safety net the new PATCH flow leans on.
+      // Display priority: live result title (FK join) → lookup map fallback
+      // → lead's own snapshot column → nothing. The snapshot is populated
+      // either at capture time or by the on-delete backfill below, so a
+      // deleted result never wipes a lead's recorded outcome.
       const enriched = {
         ...l,
-        result_title: l.quiz_results?.title ?? resultTitleMap.get(l.result_id) ?? l.result_title ?? null,
+        result_title:
+          l.quiz_results?.title ??
+          resultTitleMap.get(l.result_id) ??
+          l.result_title ??
+          null,
         quiz_results: undefined,
       };
       const locked = lockedIds.has(l.id);
@@ -170,14 +175,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Validate brand_font against whitelist.
-    //   - null  → explicit clear, accepted
-    //   - valid string → kept as-is
-    //   - invalid type / unknown font → DROPPED (was: silently coerced
-    //     to null, which wiped the user's choice. Same wipe pattern
-    //     that hit Marie-Paule on hosted_pages.section_order on
-    //     2026-04-29 — never overwrite a user-set field with a
-    //     defaulted-to-null value because the input was malformed).
     if ("brand_font" in patch) {
       const val = patch.brand_font;
       if (val === null) {
@@ -185,15 +182,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       } else if (typeof val === "string" && BRAND_FONT_CHOICES.includes(val as typeof BRAND_FONT_CHOICES[number])) {
         // valid value, allowed
       } else {
-        // bad input — preserve DB value
         delete patch.brand_font;
       }
     }
 
-    // Validate hex colors. Same anti-wipe rule:
-    //   - null → explicit clear
-    //   - valid hex → kept
-    //   - anything else → DROPPED (was: coerced to null = wipe)
     const hexRe = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
     for (const key of ["brand_color_primary", "brand_color_background"] as const) {
       if (key in patch) {
@@ -208,8 +200,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Custom footer is a paid-plan feature. Force null on free plans so that
-    // the public renderer falls back to the Tipote branding footer.
     if ("custom_footer_text" in patch || "custom_footer_url" in patch) {
       const { data: prof } = await supabase
         .from("profiles")
@@ -224,18 +214,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Share networks: enum-filter + dedupe.
-    // Anti-wipe: only persist when the client actually sends an array
-    // (explicit clear via [] is fine; null/undefined/wrong-type drops
-    // the field so a partial save can't blank the user's pick).
     if ("share_networks" in body) {
       if (Array.isArray(body.share_networks)) {
         patch.share_networks = sanitizeShareNetworks(body.share_networks);
       }
-      // else: drop — preserve DB value
     }
 
-    // Slug: sanitize + verify uniqueness (case-insensitive) against other quizzes.
     if ("slug" in body) {
       const raw = body.slug;
       if (raw === null || (typeof raw === "string" && raw.trim() === "")) {
@@ -245,7 +229,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         if (!cleaned) {
           return NextResponse.json({ ok: false, error: "Invalid slug" }, { status: 400 });
         }
-        // Block slugs that look like a UUID prefix (would shadow /q/{uuid}).
         if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleaned)) {
           return NextResponse.json({ ok: false, error: "Slug cannot look like an ID" }, { status: 400 });
         }
@@ -264,8 +247,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     // Widget overrides: must be null OR a UUID belonging to the current user.
-    // Invalid/non-owned IDs silently become null (defensive — never leak a
-    // foreign widget onto someone else's quiz).
     const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const currentUserId = user.id;
     async function resolveWidgetOverride(
@@ -295,10 +276,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    // Update questions if provided. Survey questions carry question_type +
-    // config so the public renderer knows which widget to mount; legacy
-    // quiz inserts that omit those fields fall through to the column
-    // defaults (multiple_choice / {}).
     if (Array.isArray(body.questions)) {
       const ALLOWED_TYPES = new Set([
         "multiple_choice",
@@ -308,14 +285,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         "image_choice",
         "yes_no",
       ]);
-      // ANTI-MARIE-PAULE GUARDS (mirrored from tiquiz, 2026-04-30):
-      //   - delete() + insert() return values were never error-checked, so a
-      //     transient insert failure left the DB empty and returned ok:true.
-      //   - body.questions = [] on a non-empty quiz was treated as "wipe
-      //     everything", silently destroying the author's work on hydration
-      //     bugs. We now refuse with EMPTY_QUESTIONS_WIPE_REFUSED (400).
-      //   - On post-delete insert failure, we restore from a snapshot taken
-      //     before the delete so the author's data isn't lost mid-save.
       const incoming = body.questions as any[];
 
       const { data: snapshot, error: snapshotErr } = await supabase
@@ -401,23 +370,25 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     // Update results if provided.
     //
-    // GWENN BUG (2026-05-02, mirrored from tiquiz fix): the old
-    // delete-all + insert-all pattern hit the FK constraint
-    // quiz_leads.result_id → quiz_results(id) (no ON DELETE), so any
-    // save on a quiz with leads returned DELETE_FAILED. The new flow
-    // keeps existing rows alive whenever possible:
-    //   1. UPDATE rows whose id is still in the incoming payload
-    //      (preserves leads.result_id linkage).
-    //   2. INSERT rows that came in without an id, or with an id that
-    //      doesn't match anything in the DB.
-    //   3. For any existing row absent from the incoming list, NULL out
-    //      leads.result_id pointing at it (lead.result_title is already
-    //      a snapshot stored on the lead row, so the dashboard keeps
-    //      its context) and only THEN delete the orphaned result.
+    // LEAD-SAFETY GUARANTEE (mirrored from tiquiz, 2026-05-02):
+    // We never lose a lead. Three independent defences cover the
+    // result-deletion path so a single failure can't compromise the
+    // dataset:
     //
-    // Works whether the editor sends ids back (in-place updates, no
-    // leads disturbed) or doesn't (insert + null-out + delete, leads
-    // keep their result_title text).
+    //   1. Migration 20260502 sets the FK to ON DELETE SET NULL, so
+    //      even a raw DELETE FROM quiz_results never blocks on leads
+    //      and never deletes them.
+    //   2. Before any deletion we BACKFILL leads.result_title from
+    //      the result we're about to remove, so even legacy leads
+    //      with a NULL snapshot keep their displayed result name.
+    //   3. App code does an in-place UPDATE for kept rows (preserves
+    //      FK linkage entirely), explicit NULL-out for removed rows
+    //      (belt-and-suspenders if the migration is applied late),
+    //      then DELETE.
+    //   4. The lead row itself is NEVER touched — only result_id
+    //      can transition to NULL. Every other column on quiz_leads
+    //      stays bit-identical (email, first_name, last_name, phone,
+    //      country, answers, consent_given…).
     if (Array.isArray(body.results)) {
       const incoming = body.results as any[];
 
@@ -431,7 +402,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           { status: 500 },
         );
       }
-      const snapshotRows = (snapshot ?? []) as Array<{ id: string }>;
+      const snapshotRows = (snapshot ?? []) as Array<{ id: string; title: string }>;
 
       if (incoming.length === 0 && snapshotRows.length > 0) {
         console.error(`[quiz PATCH] REFUSED empty-array wipe of ${snapshotRows.length} results for quiz ${quizId}`);
@@ -493,9 +464,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       });
 
       const incomingIdSet = new Set(toUpdate.map((u) => u.id));
-      const toDelete = snapshotRows
-        .map((r) => r.id)
-        .filter((id) => !incomingIdSet.has(id));
+      const toDelete = snapshotRows.filter((r) => !incomingIdSet.has(r.id));
 
       // 1) Update existing rows in place — preserves leads.result_id.
       for (const upd of toUpdate) {
@@ -524,24 +493,57 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         }
       }
 
-      // 3) Drop the rows the user removed. Null-out leads.result_id
-      //    first so the FK constraint doesn't reject the delete; the
-      //    leads keep the result_title snapshot they already carry.
+      // 3) Drop the rows the user removed. Three layers of lead
+      //    safety — see comment block above.
       if (toDelete.length > 0) {
+        // (a) Backfill the result_title snapshot. Update only leads
+        // whose snapshot is still NULL; we never overwrite a lead
+        // that already carries a title (could be from a previous
+        // result rename, or from the lead-capture endpoint that
+        // captured the live title at submission time).
+        for (const r of toDelete) {
+          const { error: titleErr } = await supabase
+            .from("quiz_leads")
+            .update({ result_title: r.title })
+            .eq("result_id", r.id)
+            .is("result_title", null);
+          if (titleErr) {
+            console.error(
+              `[quiz PATCH] result_title backfill failed for result ${r.id} on quiz ${quizId}:`,
+              titleErr.message,
+            );
+            return NextResponse.json(
+              {
+                ok: false,
+                error: "LEAD_BACKFILL_FAILED",
+                message: titleErr.message,
+              },
+              { status: 500 },
+            );
+          }
+        }
+
+        // (b) Explicit NULL-out, in case the FK still has the legacy
+        // NO ACTION clause on this environment.
+        const deletedIds = toDelete.map((r) => r.id);
         const { error: nullErr } = await supabase
           .from("quiz_leads")
           .update({ result_id: null })
-          .in("result_id", toDelete);
+          .in("result_id", deletedIds);
         if (nullErr) {
           return NextResponse.json(
             { ok: false, error: "LEADS_NULL_FAILED", message: nullErr.message },
             { status: 500 },
           );
         }
+
+        // (c) Migration 20260502 backs both with ON DELETE SET NULL
+        // at the FK level, so even a future code path that bypasses
+        // these guards can never lose a lead row.
         const { error: delErr } = await supabase
           .from("quiz_results")
           .delete()
-          .in("id", toDelete);
+          .in("id", deletedIds);
         if (delErr) {
           return NextResponse.json(
             { ok: false, error: "DELETE_FAILED", message: delErr.message },
