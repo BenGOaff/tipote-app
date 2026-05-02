@@ -10,6 +10,12 @@
 //   - Image insertion is hidden (no room to show one in a single line)
 //   - Alignment stays available — it's a purely visual block toggle that works
 //     on a one-line title just as well as on a paragraph.
+//
+// Paste handling: every paste is forced to plain text (Word, Google Docs,
+// Notion all dump their own fonts/colors/sizes into contentEditable
+// otherwise). The user keeps their typed text; the editor's typography wins.
+// Combined with the toolbar that gives the same outcome as a Tally /
+// Typeform paste flow.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -151,6 +157,23 @@ export function RichTextEdit({
     }
   };
 
+  // Force every paste to plain text. The browser's contentEditable
+  // default eagerly accepts inline styles from Word, Google Docs and
+  // Notion (font-family, sizes, colors, borders…) which then fight
+  // with Tipote's typography. The author keeps the toolbar to apply
+  // bold / italic / alignment explicitly — same model as Tally /
+  // Typeform. Bonus: this also drops Word's NBSP runs and weird
+  // smart-paragraph breaks that were eating French typography
+  // (e.g. spaces before `:`).
+  const onPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const text = e.clipboardData?.getData("text/plain") ?? "";
+    if (!text) return;
+    if (typeof document !== "undefined") {
+      document.execCommand("insertText", false, text);
+    }
+  };
+
   const onInsertLink = () => {
     const url = window.prompt(t("promptLink"));
     if (!url) return;
@@ -209,6 +232,7 @@ export function RichTextEdit({
           suppressContentEditableWarning
           onBlur={commit}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           className={`${baseCls} w-full bg-white/90 border-2 border-primary/40 outline-none`}
           style={style}
           data-placeholder={placeholder}

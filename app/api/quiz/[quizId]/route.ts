@@ -15,6 +15,8 @@ export const dynamic = "force-dynamic";
 // sanitizes client-side before every save).
 const RICH_TEXT_FIELDS = ["introduction", "capture_heading", "capture_subtitle"] as const;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type RouteContext = { params: Promise<{ quizId: string }> };
 
 // GET — quiz with questions, results, and leads count
@@ -72,9 +74,12 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const leads = (leadsRes.data ?? []).map((l: any) => {
+      // Falls back to the lead's own result_title snapshot column when the
+      // FK join + lookup map both miss (e.g. result was deleted). Same
+      // safety net the new PATCH flow leans on.
       const enriched = {
         ...l,
-        result_title: l.quiz_results?.title ?? resultTitleMap.get(l.result_id) ?? null,
+        result_title: l.quiz_results?.title ?? resultTitleMap.get(l.result_id) ?? l.result_title ?? null,
         quiz_results: undefined,
       };
       const locked = lockedIds.has(l.id);
@@ -394,7 +399,25 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Update results if provided — same anti-Marie-Paule guards as questions above.
+    // Update results if provided.
+    //
+    // GWENN BUG (2026-05-02, mirrored from tiquiz fix): the old
+    // delete-all + insert-all pattern hit the FK constraint
+    // quiz_leads.result_id → quiz_results(id) (no ON DELETE), so any
+    // save on a quiz with leads returned DELETE_FAILED. The new flow
+    // keeps existing rows alive whenever possible:
+    //   1. UPDATE rows whose id is still in the incoming payload
+    //      (preserves leads.result_id linkage).
+    //   2. INSERT rows that came in without an id, or with an id that
+    //      doesn't match anything in the DB.
+    //   3. For any existing row absent from the incoming list, NULL out
+    //      leads.result_id pointing at it (lead.result_title is already
+    //      a snapshot stored on the lead row, so the dashboard keeps
+    //      its context) and only THEN delete the orphaned result.
+    //
+    // Works whether the editor sends ids back (in-place updates, no
+    // leads disturbed) or doesn't (insert + null-out + delete, leads
+    // keep their result_title text).
     if (Array.isArray(body.results)) {
       const incoming = body.results as any[];
 
@@ -408,7 +431,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           { status: 500 },
         );
       }
-      const snapshotRows: any[] = snapshot ?? [];
+      const snapshotRows = (snapshot ?? []) as Array<{ id: string }>;
 
       if (incoming.length === 0 && snapshotRows.length > 0) {
         console.error(`[quiz PATCH] REFUSED empty-array wipe of ${snapshotRows.length} results for quiz ${quizId}`);
@@ -422,58 +445,106 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         );
       }
 
-      const sanitized = incoming.map((r: any, i: number) => ({
-        quiz_id: quizId,
-        title: String(r.title ?? ""),
-        description: typeof r.description === "string" ? sanitizeRichText(r.description) : null,
-        insight: typeof r.insight === "string" ? sanitizeRichText(r.insight) : null,
-        projection: typeof r.projection === "string" ? sanitizeRichText(r.projection) : null,
-        cta_text: r.cta_text ?? null,
-        cta_url: r.cta_url ?? null,
-        sio_tag_name: r.sio_tag_name ?? null,
-        sio_course_id: r.sio_course_id ?? null,
-        sio_community_id: r.sio_community_id ?? null,
-        sort_order: i,
-      }));
+      const existingIds = new Set(snapshotRows.map((r) => r.id));
 
-      const { error: deleteErr } = await supabase
-        .from("quiz_results")
-        .delete()
-        .eq("quiz_id", quizId);
-      if (deleteErr) {
-        return NextResponse.json(
-          { ok: false, error: "DELETE_FAILED", message: deleteErr.message },
-          { status: 500 },
-        );
+      interface SanitizedResult {
+        quiz_id: string;
+        title: string;
+        description: string | null;
+        insight: string | null;
+        projection: string | null;
+        cta_text: string | null;
+        cta_url: string | null;
+        sio_tag_name: string | null;
+        sio_course_id: string | null;
+        sio_community_id: string | null;
+        sort_order: number;
       }
 
-      if (sanitized.length > 0) {
-        const { error: insertErr } = await supabase.from("quiz_results").insert(sanitized);
-        if (insertErr) {
-          console.error(`[quiz PATCH] Result insert failed for quiz ${quizId}, attempting snapshot restore:`, insertErr.message);
-          if (snapshotRows.length > 0) {
-            const restorePayload = snapshotRows.map((r: any) => {
-              const { created_at: _ca, updated_at: _ua, ...rest } = r;
-              void _ca; void _ua;
-              return rest;
-            });
-            const { error: restoreErr } = await supabase.from("quiz_results").insert(restorePayload);
-            if (restoreErr) {
-              console.error(`[quiz PATCH] CATASTROPHIC: results snapshot restore also failed for quiz ${quizId}:`, restoreErr.message);
-              return NextResponse.json(
-                {
-                  ok: false,
-                  error: "INSERT_AND_RESTORE_FAILED",
-                  message: "Sauvegarde des résultats échouée et restauration aussi. Ton éditeur a la version actuelle — ne quitte pas la page et réessaie.",
-                  insert_error: insertErr.message,
-                  restore_error: restoreErr.message,
-                },
-                { status: 500 },
-              );
-            }
-          }
+      const toUpdate: Array<{ id: string; data: SanitizedResult }> = [];
+      const toInsert: SanitizedResult[] = [];
+
+      incoming.forEach((r: any, i: number) => {
+        const sanitized: SanitizedResult = {
+          quiz_id: quizId,
+          title: String(r.title ?? ""),
+          description:
+            typeof r.description === "string" ? sanitizeRichText(r.description) : null,
+          insight:
+            typeof r.insight === "string" ? sanitizeRichText(r.insight) : null,
+          projection:
+            typeof r.projection === "string" ? sanitizeRichText(r.projection) : null,
+          cta_text: r.cta_text == null ? null : String(r.cta_text),
+          cta_url: r.cta_url == null ? null : String(r.cta_url),
+          sio_tag_name: r.sio_tag_name == null ? null : String(r.sio_tag_name),
+          sio_course_id: r.sio_course_id == null ? null : String(r.sio_course_id),
+          sio_community_id:
+            r.sio_community_id == null ? null : String(r.sio_community_id),
+          sort_order: i,
+        };
+
+        const incomingId =
+          typeof r.id === "string" && UUID_RE.test(r.id) ? r.id : null;
+        if (incomingId && existingIds.has(incomingId)) {
+          toUpdate.push({ id: incomingId, data: sanitized });
+        } else {
+          toInsert.push(sanitized);
+        }
+      });
+
+      const incomingIdSet = new Set(toUpdate.map((u) => u.id));
+      const toDelete = snapshotRows
+        .map((r) => r.id)
+        .filter((id) => !incomingIdSet.has(id));
+
+      // 1) Update existing rows in place — preserves leads.result_id.
+      for (const upd of toUpdate) {
+        const { error: upErr } = await supabase
+          .from("quiz_results")
+          .update(upd.data)
+          .eq("id", upd.id);
+        if (upErr) {
           return NextResponse.json(
-            { ok: false, error: "INSERT_FAILED_RESTORED", message: `Sauvegarde des résultats échouée (${insertErr.message}), ta version précédente a été restaurée.` },
+            { ok: false, error: "UPDATE_FAILED", message: upErr.message },
+            { status: 500 },
+          );
+        }
+      }
+
+      // 2) Insert truly-new rows.
+      if (toInsert.length > 0) {
+        const { error: insErr } = await supabase
+          .from("quiz_results")
+          .insert(toInsert);
+        if (insErr) {
+          return NextResponse.json(
+            { ok: false, error: "INSERT_FAILED", message: insErr.message },
+            { status: 500 },
+          );
+        }
+      }
+
+      // 3) Drop the rows the user removed. Null-out leads.result_id
+      //    first so the FK constraint doesn't reject the delete; the
+      //    leads keep the result_title snapshot they already carry.
+      if (toDelete.length > 0) {
+        const { error: nullErr } = await supabase
+          .from("quiz_leads")
+          .update({ result_id: null })
+          .in("result_id", toDelete);
+        if (nullErr) {
+          return NextResponse.json(
+            { ok: false, error: "LEADS_NULL_FAILED", message: nullErr.message },
+            { status: 500 },
+          );
+        }
+        const { error: delErr } = await supabase
+          .from("quiz_results")
+          .delete()
+          .in("id", toDelete);
+        if (delErr) {
+          return NextResponse.json(
+            { ok: false, error: "DELETE_FAILED", message: delErr.message },
             { status: 500 },
           );
         }
