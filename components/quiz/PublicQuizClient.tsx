@@ -83,6 +83,7 @@ type PublicQuizData = {
   virality_enabled: boolean;
   bonus_description: string | null;
   bonus_image_url?: string | null;
+  bonus_intro_text?: string | null;
   share_message: string | null;
   share_networks?: string[] | null;
   locale: string | null;
@@ -969,7 +970,18 @@ export default function PublicQuizClient({
 
       // If the creator set up a bonus-on-share, show the intermediate step so
       // the visitor can unlock it before seeing their results.
-      const hasBonusFlow = Boolean(quiz?.virality_enabled && (quiz?.bonus_description || "").trim());
+      // JB feedback 2026-05-02: the bonus step used to require a non-empty
+      // bonus_description. JB had only set a bonus image (and would later
+      // set a custom intro text), and his bonus step never appeared. Now
+      // any of {description, image, custom intro} qualifies — virality
+      // remains the master switch.
+      const hasBonusFlow = Boolean(
+        quiz?.virality_enabled && (
+          (quiz?.bonus_description || "").trim() ||
+          (quiz?.bonus_image_url || "").trim() ||
+          (quiz?.bonus_intro_text || "").trim()
+        ),
+      );
       setStep(hasBonusFlow ? "bonus" : "result");
     } catch {
       // Network-level failure (offline, DNS, etc.) — same treatment: show
@@ -1680,6 +1692,10 @@ export default function PublicQuizClient({
   // results (where it often got missed).
   if (step === "bonus") {
     const bonusText = (quiz.bonus_description || "").trim();
+    // JB feedback 2026-05-02: when bonus_intro_text is set, render it
+    // verbatim instead of the localized template — creators want full
+    // control over the share-to-unlock paragraph.
+    const customBonusIntro = (quiz.bonus_intro_text || "").trim();
     const allowedNetworks = (quiz.share_networks && quiz.share_networks.length > 0)
       ? quiz.share_networks
       : ["x", "facebook", "linkedin", "whatsapp", "threads"];
@@ -1704,8 +1720,8 @@ export default function PublicQuizClient({
             <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
               {t.bonusStepHeading}
             </h2>
-            <p className="text-muted-foreground text-base leading-relaxed">
-              {t.bonusStepIntro(bonusText)}
+            <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
+              {customBonusIntro || t.bonusStepIntro(bonusText)}
             </p>
           </div>
 

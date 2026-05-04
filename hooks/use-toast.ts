@@ -3,7 +3,10 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// Cleanup delay after a toast closes — was 1_000_000 ms (16 min, the
+// known shadcn copy-paste bug). 1 s is plenty since the user can't see
+// closed toasts anyway.
+const TOAST_REMOVE_DELAY = 1000;
 
 type ToasterToast = ToastProps & {
   id: string;
