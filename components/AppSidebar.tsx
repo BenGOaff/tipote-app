@@ -14,6 +14,7 @@ import {
   Users,
   Briefcase,
   Video,
+  PlayCircle,
   Bell,
   PanelLeftClose,
   HelpCircle,
@@ -83,6 +84,7 @@ const MAIN_ITEM_CONFIG = [
   { key: "leads" as const, url: "/leads", icon: Users, spotlightId: "leads" },
   { key: "clients" as const, url: "/clients", icon: Briefcase, spotlightId: "clients" },
   { key: "webinars" as const, url: "/webinars", icon: Video, spotlightId: "webinars" },
+  { key: "popquiz" as const, url: "/popquizzes", icon: PlayCircle, spotlightId: "popquiz" },
   { key: "widgets" as const, url: "/widgets", icon: Bell, spotlightId: "widgets" },
 ];
 
