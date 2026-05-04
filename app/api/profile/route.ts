@@ -245,6 +245,44 @@ export async function PATCH(req: NextRequest) {
       })();
     }
 
+    // Live strategy invalidation : si l'user touche un champ qui nourrit
+    // le prompt stratégie, on marque le plan existant comme "stale" pour
+    // que la page /strategy affiche un bandeau "Recalculer". On ne
+    // déclenche PAS la regen ici (trop lourd, latence sur la PATCH).
+    //
+    // Béné feedback Monique 2026-05-04 : la stratégie ne se rafraîchissait
+    // pas avec les nouvelles infos. Premier pas vers le pipeline live.
+    const STRATEGY_AFFECTING_FIELDS = [
+      "revenue_goal_monthly", "niche", "mission", "business_maturity",
+      "offers", "has_offers", "main_goal", "main_goals", "biggest_blocker",
+      "time_available", "business_model", "persona", "target_audience_short",
+    ] as const;
+    const strategyAffected = STRATEGY_AFFECTING_FIELDS.some((k) => k in patch);
+    if (strategyAffected) {
+      (async () => {
+        try {
+          const { data: existing } = await supabase
+            .from("business_plan")
+            .select("plan_json")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          const planJson = (existing as { plan_json?: Record<string, unknown> } | null)?.plan_json;
+          if (planJson && typeof planJson === "object") {
+            const next = { ...planJson, is_stale: true, stale_since: new Date().toISOString() };
+            await upsertByProject({
+              supabase,
+              table: "business_plan",
+              userId: user.id,
+              projectId,
+              data: { plan_json: next, updated_at: new Date().toISOString() },
+            });
+          }
+        } catch (e) {
+          console.warn("[profile] strategy stale-flag failed (non-blocking):", e);
+        }
+      })();
+    }
+
     return NextResponse.json({ ok: true, profile: data ?? null }, { status: 200 });
   } catch (e) {
     console.error("[PATCH /api/profile] Unexpected error:", e);

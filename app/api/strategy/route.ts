@@ -1222,11 +1222,21 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
     // ai is already validated above (pre-stream check)
 
     /**
-     * 4) Nettoyage anti-régression :
-     * Si on NE DOIT PAS générer d'offres (affiliate OU a déjà une offre ET satisfait),
-     * on supprime les offres existantes du plan pour éviter UI "unknown offers".
+     * 4) Nettoyage anti-régression — restreint aux affiliates UNIQUEMENT.
+     *
+     * Historique : ce bloc supprimait offer_pyramids + selected_pyramid dès
+     * que `!shouldGenerateOffers` était vrai (i.e. user a déjà des offres
+     * OU est affiliate). Bug Monique 2026-05-04 : un user satisfait de ses
+     * offres tombait dans `!shouldGenerateOffers`, on lui supprimait son
+     * `selected_pyramid`, et le PostForm (qui lit ses offres depuis ce
+     * champ via lib/offers.ts) affichait « Aucune offre trouvée » au lieu
+     * de proposer ses propres offres.
+     *
+     * INVARIANT : on ne touche JAMAIS aux données générées/sauvegardées
+     * pour un créateur qui a ses propres offres. Le cleanup ne s'applique
+     * qu'aux affiliates, pour qui la pyramide d'offres n'a aucun sens.
      */
-    if (!shouldGenerateOffers) {
+    if (isAffiliate) {
       try {
         const base = isRecord(existingPlanJson) ? (existingPlanJson as AnyRecord) : {};
         const hadOffers = Array.isArray(base.offer_pyramids) && base.offer_pyramids.length > 0;
@@ -2063,6 +2073,11 @@ ${competitorContext ? "- Intègre les insights de l'analyse concurrentielle dans
 
     const nextPlan: AnyRecord = {
       ...basePlan,
+      // Stale-flag : la PATCH /api/profile pose is_stale=true sur le plan
+      // existant quand un champ de prompt change. Une regen complète
+      // remet à jour, on efface le flag.
+      is_stale: false,
+      stale_since: null,
       ...(cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel
         ? { revenue_goal: cleanString(basePlan.revenue_goal, 240) || revenueGoalLabel }
         : {}),

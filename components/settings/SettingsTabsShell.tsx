@@ -1215,8 +1215,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
       setResetting(true);
 
-      const res = await fetch("/api/account/reset", { method: "POST" });
-      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      // Per-project reset first; fall back to global reset if the user
+      // has only one Tipote (same outcome anyway in that case).
+      let res = await fetch("/api/profile/reset", { method: "POST" });
+      let json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+      if (!res.ok && json?.error === "ONLY_ONE_PROJECT") {
+        res = await fetch("/api/account/reset", { method: "POST" });
+        json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      }
 
       if (!res.ok || !json?.ok) {
         toast({
