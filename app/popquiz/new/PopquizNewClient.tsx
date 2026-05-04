@@ -362,8 +362,8 @@ export default function PopquizNewClient({
   const handle = publishedSlug ?? publishedId ?? "";
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
-  const publishedUrl = handle ? `${origin}/p/${handle}` : "";
-  const embedUrl = handle ? `${origin}/embed/p/${handle}` : "";
+  const publishedUrl = handle ? `${origin}/pq/${handle}` : "";
+  const embedUrl = handle ? `${origin}/embed/pq/${handle}` : "";
   const embedSnippet = embedUrl ? buildEmbedSnippet(embedUrl) : "";
 
   async function copyPublishedUrl() {
@@ -466,7 +466,7 @@ export default function PopquizNewClient({
             </Label>
             <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
               <span className="px-2.5 flex items-center text-xs text-muted-foreground bg-muted/50 border-r">
-                /p/
+                /pq/
               </span>
               <input
                 id="slug"

@@ -96,7 +96,7 @@ export default async function PopquizzesListPage() {
                 </div>
                 {p.is_published ? (
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/p/${p.id}`} target="_blank">
+                    <Link href={`/pq/${p.id}`} target="_blank">
                       Voir
                     </Link>
                   </Button>
