@@ -99,6 +99,11 @@ type StrategyLovableProps = {
 
   // nouveau (optionnel) : permet d'afficher un etat 'plan en cours'
   mode?: "ready" | "generating";
+
+  // Live strategy : true quand un champ de profil/diag a changé après
+  // la dernière génération du plan. Le composant affiche alors un
+  // bandeau invitant à recalculer pour intégrer les nouvelles données.
+  isStale?: boolean;
 };
 
 function toStr(v: unknown): string {
@@ -152,6 +157,46 @@ export default function StrategyLovable(props: StrategyLovableProps) {
 
   // ✅ NEW : génération plan (tolérant)
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+
+  /**
+   * Recalcule la stratégie EN FORÇANT (force=true). Permet à un user qui
+   * a déjà un plan de le rafraîchir après mise à jour de son profil ou
+   * saisie de stats mensuelles.
+   *
+   * Béné feedback Monique 2026-05-04 : la stratégie était figée au
+   * premier onboarding. Ce bouton ferme la promesse "Tipote suit en
+   * live" en attendant l'auto-trigger sur changement de stats.
+   */
+  const handleRecalculatePlan = useCallback(async () => {
+    if (isGeneratingPlan) return;
+    setIsGeneratingPlan(true);
+    try {
+      await callStrategySSE({ force: true });
+      await fetch("/api/tasks/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }).catch(() => null);
+      toast({
+        title: "Stratégie recalculée",
+        description: "Ton plan a été mis à jour avec les dernières données.",
+      });
+      router.refresh();
+      setTimeout(() => {
+        try {
+          router.refresh();
+        } catch {}
+      }, 1200);
+    } catch (e) {
+      toast({
+        title: "Recalcul impossible",
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  }, [isGeneratingPlan, router, toast]);
 
   const handleGeneratePlan = useCallback(async () => {
     if (isGeneratingPlan) return;
@@ -698,6 +743,33 @@ export default function StrategyLovable(props: StrategyLovableProps) {
               </Card>
             )}
 
+            {/* Stale banner — apparaît quand un champ de profil/diagnostic
+                a changé après la dernière génération du plan. Invite à
+                recalculer pour intégrer les nouvelles infos sans bloquer
+                l'utilisation de la stratégie actuelle. */}
+            {props.isStale && !isGeneratingPlan && (
+              <Card className="p-4 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/50">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                      Tes infos ont changé
+                    </p>
+                    <p className="text-xs text-amber-800/80 dark:text-amber-100/70 mt-0.5">
+                      Recalcule ta stratégie pour qu&apos;elle prenne en compte tes dernières modifications de profil et de stats.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleRecalculatePlan}
+                    disabled={isGeneratingPlan}
+                    className="rounded-full shrink-0"
+                  >
+                    {isGeneratingPlan ? "Recalcul…" : "Recalculer maintenant"}
+                  </Button>
+                </div>
+              </Card>
+            )}
+
             {/* Strategic Overview — consistent banner */}
             <PageBanner
               icon={<Target className="w-5 h-5" />}
@@ -716,10 +788,22 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                   </Button>
                 </div>
               ) : (
-                <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleStartEditing}>
-                  <Pencil className="w-4 h-4 mr-1" />
-                  {t("customize")}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary-foreground hover:bg-primary-foreground/10"
+                    onClick={handleRecalculatePlan}
+                    disabled={isGeneratingPlan}
+                    title="Recalculer la stratégie en tenant compte des dernières infos de profil et de stats."
+                  >
+                    {isGeneratingPlan ? "Recalcul…" : "Recalculer"}
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleStartEditing}>
+                    <Pencil className="w-4 h-4 mr-1" />
+                    {t("customize")}
+                  </Button>
+                </div>
               )}
             </PageBanner>
 

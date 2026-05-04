@@ -527,6 +527,7 @@ export default async function StrategyPage() {
         initialSelectedOffers={initialSelectedOffers}
         planTasksCount={planTasksCount}
         currentMonthRevenue={currentMonthRevenue}
+        isStale={(planJson as AnyRecord)?.is_stale === true}
       />
     </>
   );

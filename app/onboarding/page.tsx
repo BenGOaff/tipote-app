@@ -62,7 +62,12 @@ export default async function OnboardingPage() {
     }
   }
 
-  // Check if onboarding already completed for the active project
+  // Onboarding completion — STRICTLY scoped to the active project.
+  //
+  // Bug Monique 2026-05-04 : un fallback "any project completed" sautait
+  // l'onboarding du 2e projet. Nouvelle règle : si on a un projet actif,
+  // on consulte uniquement sa ligne business_profiles. Le fallback ne
+  // s'applique qu'aux comptes legacy sans projet (cookie absent).
   let isCompleted = false;
   let firstName: string | null = null;
 
@@ -78,10 +83,22 @@ export default async function OnboardingPage() {
       isCompleted = data.onboarding_completed === true;
       firstName = data.first_name ?? null;
     }
-  }
 
-  // Fallback: check by user_id only (cookie mismatch, beta users, or project-scoped miss)
-  if (!isCompleted) {
+    // Si pas de ligne pour ce projet, on lit quand même le first_name
+    // d'un autre projet pour pré-remplir le questionnaire (UX), mais
+    // SANS marquer l'onboarding comme complété.
+    if (!firstName) {
+      const { data: anyRow } = await supabase
+        .from("business_profiles")
+        .select("first_name")
+        .eq("user_id", user.id)
+        .not("first_name", "is", null)
+        .limit(1)
+        .maybeSingle();
+      firstName = (anyRow as { first_name?: string | null } | null)?.first_name ?? null;
+    }
+  } else {
+    // Pas de projet actif → comportement legacy (compte mono-projet).
     const { data: rows } = await supabase
       .from("business_profiles")
       .select("onboarding_completed, first_name")
@@ -91,7 +108,7 @@ export default async function OnboardingPage() {
 
     if (rows && rows.length > 0) {
       isCompleted = true;
-      firstName = firstName ?? rows[0].first_name ?? null;
+      firstName = rows[0].first_name ?? null;
     }
   }
 

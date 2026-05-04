@@ -237,7 +237,7 @@ export default function ProfileSection() {
 
   const onReset = async () => {
     const ok1 = window.confirm(
-      "⚠️ Réinitialiser mon Tipote ?\n\nTous les contenus, tâches et personnalisations seront supprimés. C'est définitif.",
+      "⚠️ Réinitialiser CE Tipote ?\n\nTous les contenus, tâches et personnalisations de ce Tipote seront supprimés. Tes autres Tipote (s'il y en a) ne sont PAS affectés. C'est définitif.",
     );
     if (!ok1) return;
 
@@ -246,8 +246,17 @@ export default function ProfileSection() {
 
     setResetting(true);
     try {
-      const res = await fetch("/api/account/reset", { method: "POST" });
-      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      // Per-project reset first — wipes only the active project. If the
+      // user has only one Tipote, the endpoint refuses with
+      // ONLY_ONE_PROJECT and we fall back to the global reset (same
+      // outcome since "all my Tipote" == "the one I have").
+      let res = await fetch("/api/profile/reset", { method: "POST" });
+      let json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+      if (!res.ok && json?.error === "ONLY_ONE_PROJECT") {
+        res = await fetch("/api/account/reset", { method: "POST" });
+        json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      }
 
       if (!res.ok || !json?.ok) {
         toast({
@@ -413,13 +422,14 @@ export default function ProfileSection() {
               <h3 className="text-sm font-semibold text-red-700">Zone danger</h3>
             </div>
 
-            <p className="text-sm font-medium text-slate-900">Réinitialiser mon Tipote</p>
+            <p className="text-sm font-medium text-slate-900">Réinitialiser ce Tipote</p>
 
             <p className="text-xs leading-relaxed text-slate-600">
-              Tu as changé de voie ou tu t&apos;es perdu en cours de route ? Tu veux repartir à zéro avec ton Tipote et le
-              lancer dans une autre direction ? Clique sur ce bouton. Attention : tous les contenus, toutes les tâches et
-              toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartiras de zéro. C&apos;est
-              définitif, tu ne pourras pas revenir en arrière.
+              Tu as changé de voie ou tu t&apos;es perdu en cours de route ? Tu veux repartir à zéro avec ce Tipote et
+              le lancer dans une autre direction ? Clique sur ce bouton. Attention : tous les contenus, toutes les tâches
+              et toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartiras de zéro.
+              <strong> Si tu as plusieurs Tipote, seul celui que tu utilises maintenant est réinitialisé — les autres
+              ne sont pas touchés.</strong> C&apos;est définitif, tu ne pourras pas revenir en arrière.
             </p>
           </div>
 

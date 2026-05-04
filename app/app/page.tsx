@@ -31,7 +31,13 @@ export default async function TodayPage() {
   const cookieStore = await cookies();
   const activeProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value?.trim() ?? "";
 
-  // Onboarding status — check project-scoped first, then fallback to user_id only
+  // Onboarding status — STRICTLY scoped to the active project.
+  //
+  // Bug Monique 2026-05-04 : un fallback "any project completed" sautait
+  // l'onboarding du 2e projet d'un user dès que son 1er projet l'avait
+  // complété. Nouveau comportement : si on a un projet actif, on vérifie
+  // *uniquement* ce projet ; le fallback ne sert qu'aux vieux comptes
+  // sans cookie de projet actif (legacy single-project).
   let onboardingCompleted = false;
 
   if (activeProjectId) {
@@ -42,11 +48,11 @@ export default async function TodayPage() {
       .eq("project_id", activeProjectId)
       .maybeSingle();
 
-    if (data?.onboarding_completed) onboardingCompleted = true;
-  }
-
-  // Fallback: check any business_profiles row for this user (handles cookie mismatch / multiple rows)
-  if (!onboardingCompleted) {
+    onboardingCompleted = data?.onboarding_completed === true;
+  } else {
+    // Pas de projet actif (compte créé avant le multi-projet, ou cookie
+    // expiré) → on prend la première ligne complétée pour ne pas
+    // bloquer l'accès dashboard d'un user existant.
     const { data: rows } = await supabase
       .from("business_profiles")
       .select("onboarding_completed")
