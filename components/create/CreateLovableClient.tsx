@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 import { useTranslations } from 'next-intl';
-import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList, CalendarDays, MessageCircleQuestion } from "lucide-react";
+import { Sparkles, FileText, Mail, Video, MessageSquare, Package, Route, ClipboardList, CalendarDays, MessageCircleQuestion, PlayCircle } from "lucide-react";
 
 import { ContentTypeCard } from "@/components/create/ContentTypeCard";
 
@@ -39,6 +39,10 @@ const contentTypes = [
   // prompt (NPS, CSAT, audience research…), question-type picker, no result
   // profiles. Routes straight to /survey/new like quizzes route to /quiz/new.
   { id: "survey", labelKey: "survey", descriptionKey: "surveyDesc", icon: MessageCircleQuestion, color: "bg-purple-500" },
+  // Popquiz : quiz interactif déclenché à des timestamps précis dans une
+  // vidéo. Formulaire dédié à /popquiz/new (upload vidéo OU URL +
+  // sélection de quizzes existants à incruster).
+  { id: "popquiz", labelKey: "popquiz", descriptionKey: "popquizDesc", icon: PlayCircle, color: "bg-pink-500" },
   { id: "strategy", labelKey: "contentStrategy", descriptionKey: "contentStrategyDesc", icon: CalendarDays, color: "bg-amber-500" },
 ] as const;
 
@@ -731,6 +735,10 @@ export default function CreateLovableClient() {
                           // /survey/new (AI / Import / Manual tabs) instead
                           // of the inline content form.
                           router.push("/survey/new");
+                        } else if (type.id === "popquiz") {
+                          // Popquiz a son propre flow (upload vidéo + cues),
+                          // direction /popquiz/new.
+                          router.push("/popquiz/new");
                         } else {
                           setSelectedType(type.id);
                         }

@@ -14,7 +14,6 @@
     "settings": "Definições",
     "widgets": "Widgets",
     "webinars": "Eventos ao vivo",
-    "popquiz": "Popquiz de vídeo",
     "support": "Ajuda",
     "dashboard": "Painel",
     "tasks": "Tarefas",
@@ -2612,7 +2611,9 @@
     "cannotLoadContentShort": "Não foi possível carregar o conteúdo.",
     "editPost": "Editar o post",
     "survey": "Inquérito",
-    "surveyDesc": "Faz perguntas ao teu público (NPS, satisfação, pesquisa)."
+    "surveyDesc": "Faz perguntas ao teu público (NPS, satisfação, pesquisa).",
+    "popquiz": "Popquiz de vídeo",
+    "popquizDesc": "Insere os teus quizzes num vídeo para captar a atenção no momento certo."
   },
   "leads": {
     "title": "Os meus leads",

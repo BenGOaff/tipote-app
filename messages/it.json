@@ -14,7 +14,6 @@
     "settings": "Impostazioni",
     "widgets": "Widgets",
     "webinars": "Webinar",
-    "popquiz": "Popquiz video",
     "support": "Aiuto"
   },
   "sidebar": {
@@ -2311,7 +2310,9 @@
     "cannotLoadContentShort": "Impossibile caricare il contenuto.",
     "editPost": "Modifica post",
     "survey": "Sondaggio",
-    "surveyDesc": "Fai domande al tuo pubblico (NPS, soddisfazione, ricerca)."
+    "surveyDesc": "Fai domande al tuo pubblico (NPS, soddisfazione, ricerca).",
+    "popquiz": "Popquiz video",
+    "popquizDesc": "Inserisci i tuoi quiz in un video per coinvolgere al momento giusto."
   },
   "leads": {
     "title": "I Miei Lead",
