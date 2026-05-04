@@ -290,8 +290,8 @@ export default function PopquizEditClient({
   const handle = popquiz.slug ?? popquiz.id;
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
-  const publicUrl = `${origin}/p/${handle}`;
-  const embedUrl = `${origin}/embed/p/${handle}`;
+  const publicUrl = `${origin}/pq/${handle}`;
+  const embedUrl = `${origin}/embed/pq/${handle}`;
   const embedSnippet = buildEmbedSnippet(embedUrl);
 
   async function copyPublicUrl() {
@@ -402,7 +402,7 @@ export default function PopquizEditClient({
             </Label>
             <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
               <span className="px-2.5 flex items-center text-xs text-muted-foreground bg-muted/50 border-r">
-                /p/
+                /pq/
               </span>
               <input
                 id="slug"
