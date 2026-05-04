@@ -164,6 +164,7 @@ type QuizTranslations = {
   skipShare: string;
   continueToResult: string;
   bonusUnlockedContinue: string;
+  restartQuiz: string;
   confirmShareAfterCopy: string;
   confirmShareHint: string;
   sharingTooFast: string;
@@ -226,6 +227,7 @@ const translations: Record<string, QuizTranslations> = {
     skipShare: "Non merci, voir mes résultats",
     continueToResult: "Voir mes résultats",
     bonusUnlockedContinue: "Bonus débloqué ! Voir mes résultats",
+    restartQuiz: "Recommencer le quiz",
     confirmShareAfterCopy: "J’ai partagé le lien",
     confirmShareHint: "Colle le lien dans le réseau de ton choix puis reviens ici.",
     sharingTooFast: "Hmm, tu as fermé la fenêtre de partage trop vite. Partage vraiment pour recevoir ton bonus.",
@@ -283,6 +285,7 @@ const translations: Record<string, QuizTranslations> = {
     skipShare: "Non merci, voir mes résultats",
     continueToResult: "Voir mes résultats",
     bonusUnlockedContinue: "Bonus débloqué ! Voir mes résultats",
+    restartQuiz: "Recommencer le quiz",
     confirmShareAfterCopy: "J’ai partagé le lien",
     confirmShareHint: "Collez le lien dans le réseau de votre choix puis revenez ici.",
     sharingTooFast: "Hmm, vous avez fermé la fenêtre de partage trop vite. Partagez vraiment pour recevoir votre bonus.",
@@ -331,6 +334,7 @@ const translations: Record<string, QuizTranslations> = {
     skipShare: "No thanks, see my results",
     continueToResult: "See my results",
     bonusUnlockedContinue: "Bonus unlocked! See my results",
+    restartQuiz: "Restart the quiz",
     confirmShareAfterCopy: "I shared the link",
     confirmShareHint: "Paste the link on your network of choice, then come back here.",
     sharingTooFast: "Looks like you closed the share window too quickly. Share for real to get your bonus.",
@@ -379,6 +383,7 @@ const translations: Record<string, QuizTranslations> = {
     skipShare: "No gracias, ver mis resultados",
     continueToResult: "Ver mis resultados",
     bonusUnlockedContinue: "¡Bonus desbloqueado! Ver mis resultados",
+    restartQuiz: "Reiniciar el cuestionario",
     confirmShareAfterCopy: "He compartido el enlace",
     confirmShareHint: "Pega el enlace en la red que quieras y vuelve aquí.",
     sharingTooFast: "Parece que cerraste la ventana demasiado rápido. Comparte de verdad para recibir tu bonus.",
@@ -427,6 +432,7 @@ const translations: Record<string, QuizTranslations> = {
     skipShare: "Nein danke, Ergebnis zeigen",
     continueToResult: "Mein Ergebnis sehen",
     bonusUnlockedContinue: "Bonus freigeschaltet! Ergebnis sehen",
+    restartQuiz: "Quiz neu starten",
     confirmShareAfterCopy: "Ich habe den Link geteilt",
     confirmShareHint: "Füge den Link in deinem Netzwerk ein und komm dann hierher zurück.",
     sharingTooFast: "Du hast das Fenster zu schnell geschlossen. Teile wirklich, um deinen Bonus zu erhalten.",
@@ -475,6 +481,7 @@ const translations: Record<string, QuizTranslations> = {
     skipShare: "Não, obrigado, ver meus resultados",
     continueToResult: "Ver meus resultados",
     bonusUnlockedContinue: "Bônus desbloqueado! Ver meus resultados",
+    restartQuiz: "Reiniciar o quiz",
     confirmShareAfterCopy: "Eu compartilhei o link",
     confirmShareHint: "Cole o link na rede da sua escolha e depois volte aqui.",
     sharingTooFast: "Parece que você fechou a janela rápido demais. Compartilhe de verdade para receber seu bônus.",
@@ -523,6 +530,7 @@ const translations: Record<string, QuizTranslations> = {
     skipShare: "No grazie, mostra i risultati",
     continueToResult: "Vedi i miei risultati",
     bonusUnlockedContinue: "Bonus sbloccato! Vedi i miei risultati",
+    restartQuiz: "Ricomincia il quiz",
     confirmShareAfterCopy: "Ho condiviso il link",
     confirmShareHint: "Incolla il link sul social che preferisci e poi torna qui.",
     sharingTooFast: "Hai chiuso la finestra troppo in fretta. Condividi davvero per ricevere il bonus.",
@@ -571,6 +579,7 @@ const translations: Record<string, QuizTranslations> = {
     skipShare: "لا شكراً، أرني النتائج",
     continueToResult: "أرني نتائجي",
     bonusUnlockedContinue: "تم فتح المكافأة! أرني نتائجي",
+    restartQuiz: "أعد بدء الاختبار",
     confirmShareAfterCopy: "لقد شاركت الرابط",
     confirmShareHint: "ألصق الرابط على الشبكة التي تختارها ثم عد إلى هنا.",
     sharingTooFast: "أغلقت نافذة المشاركة بسرعة. شارك فعلاً لتستلم مكافأتك.",
@@ -2001,6 +2010,27 @@ export default function PublicQuizClient({
               </a>
             </p>
           )}
+
+          {/* JB feedback 2026-05-02: surface an explicit Restart link so
+              visitors can re-take the quiz on demand. The sessionStorage
+              persistence we added blocked refresh-to-replay; this clears
+              the saved session and hard-reloads the page. */}
+          {!previewData && (
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  sessionStorage.removeItem(sessionKey);
+                } catch {
+                  /* ignore */
+                }
+                if (typeof window !== "undefined") window.location.reload();
+              }}
+              className="block w-full text-xs text-center text-muted-foreground/70 hover:text-foreground underline transition-colors"
+            >
+              {t.restartQuiz}
+            </button>
+          )}
           </div>
         <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
       </div>
@@ -2011,9 +2041,19 @@ export default function PublicQuizClient({
 }
 
 /** Renders consent text with the privacy policy phrase as a clickable link when a URL is available. */
+// Set of every locale's default consent text. Used by the heuristic in
+// ConsentText below to detect "the stored consent_text was just the
+// editor's pre-fill, not a user customisation" so we can fall back to
+// the viewer-locale default. JB feedback 2026-05-02.
+const ALL_DEFAULT_CONSENTS: ReadonlySet<string> = new Set(
+  Object.values(translations).map((entry) => entry.defaultConsent.trim()),
+);
+
 function ConsentText({ text, privacyUrl, locale }: { text: string | null; privacyUrl: string | null; locale: string | null }) {
   const t = getT(locale);
-  const raw = text || t.defaultConsent;
+  const trimmed = text?.trim() ?? "";
+  const isStoredDefault = trimmed.length === 0 || ALL_DEFAULT_CONSENTS.has(trimmed);
+  const raw = isStoredDefault ? t.defaultConsent : text!;
 
   if (!privacyUrl) return <span>{raw}</span>;
 

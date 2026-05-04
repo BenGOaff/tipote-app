@@ -307,6 +307,11 @@ export default function MyContentLovableClient({
   // Funnel state
   const [funnels, setFunnels] = useState<FunnelListItem[]>(initialFunnels);
   const [deleteFunnelConfirm, setDeleteFunnelConfirm] = useState<FunnelListItem | null>(null);
+  // JB feedback 2026-05-02: the quiz card lost its delete affordance in a
+  // refactor. Mirroring the funnels pattern restores it: dropdown with
+  // Modifier + Supprimer, plus a confirm dialog so a click can't wipe a
+  // quiz with leads accidentally.
+  const [deleteQuizConfirm, setDeleteQuizConfirm] = useState<QuizListItem | null>(null);
   const [funnelLeads, setFunnelLeads] = useState<{ pageId: string; leads: any[] } | null>(null);
   const [loadingLeads, setLoadingLeads] = useState(false);
 
@@ -857,14 +862,80 @@ export default function MyContentLovableClient({
                                   </div>
                                 </div>
                               </div>
-                              <Button variant="outline" size="sm" asChild>
-                                <Link href={`/quiz/${qz.id}`}>{t("ui.manage")}</Link>
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/quiz/${qz.id}`}>
+                                      <Edit className="w-4 h-4 mr-2" /> Gérer
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  {isActive && (
+                                    <DropdownMenuItem asChild>
+                                      <a
+                                        href={`/q/${qz.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        <ExternalLink className="w-4 h-4 mr-2" /> Voir en ligne
+                                      </a>
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => setDeleteQuizConfirm(qz)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </Card>
                         );
                       })}
                     </div>
+                  )}
+
+                  {deleteQuizConfirm && (
+                    <Dialog open onOpenChange={() => setDeleteQuizConfirm(null)}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Supprimer ce quiz ?</DialogTitle>
+                          <DialogDescription>
+                            &laquo; {deleteQuizConfirm.title || (deleteQuizConfirm.mode === "survey" ? "Sondage sans titre" : "Quiz sans titre")} &raquo; et tous ses leads associ&eacute;s seront supprim&eacute;s d&eacute;finitivement. Cette action est irr&eacute;versible.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setDeleteQuizConfirm(null)}>
+                            Annuler
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={async () => {
+                              const id = deleteQuizConfirm.id;
+                              setDeleteQuizConfirm(null);
+                              try {
+                                const res = await fetch(`/api/quiz/${id}`, { method: "DELETE" });
+                                if (res.ok) {
+                                  router.refresh();
+                                  toast({ title: "Quiz supprimé" });
+                                } else {
+                                  toast({ title: "Suppression échouée", variant: "destructive" as const });
+                                }
+                              } catch {
+                                toast({ title: "Suppression échouée", variant: "destructive" as const });
+                              }
+                            }}
+                          >
+                            Supprimer
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </div>
               ) : activeFolder === "funnels" ? (
