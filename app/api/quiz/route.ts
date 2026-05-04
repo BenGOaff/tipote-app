@@ -144,6 +144,7 @@ export async function POST(req: NextRequest) {
         consent_text: body.consent_text ?? defaultConsent,
         virality_enabled: isSurvey ? false : Boolean(body.virality_enabled),
         bonus_description: isSurvey ? null : (body.bonus_description ?? null),
+        bonus_intro_text: isSurvey ? null : (body.bonus_intro_text ?? null),
         share_message: body.share_message ?? null,
         locale: body.locale ?? "fr",
         sio_share_tag_name: body.sio_share_tag_name ?? null,

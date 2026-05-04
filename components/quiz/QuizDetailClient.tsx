@@ -84,6 +84,7 @@ type QuizData = {
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
+  bonus_intro_text: string | null;
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
@@ -413,6 +414,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
+  const [bonusIntroText, setBonusIntroText] = useState("");
   const [bonusImageUrl, setBonusImageUrl] = useState<string | null>(null);
   const [uploadingBonusImage, setUploadingBonusImage] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
@@ -631,6 +633,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
+      setBonusIntroText(q.bonus_intro_text ?? "");
       setBonusImageUrl(q.bonus_image_url ?? null);
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
       setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
@@ -871,6 +874,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           capture_phone: capturePhone, capture_country: captureCountry,
           ask_first_name: askFirstName, ask_gender: askGender,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
+          bonus_intro_text: bonusIntroText.trim() || null,
           bonus_image_url: bonusImageUrl,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, status,
@@ -1551,6 +1555,22 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         className="text-sm font-medium"
                         placeholder={t("bonusDescPlaceholder")}
                       />
+                      {/* JB feedback 2026-05-02: optional override that
+                          replaces the templated "Partage le quiz pour
+                          recevoir <bonus> avec tes résultats" with a fully
+                          custom paragraph. Empty = keep the default. */}
+                      <div className="text-left space-y-1 pt-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          Message personnalisé (optionnel)
+                        </p>
+                        <textarea
+                          value={bonusIntroText}
+                          onChange={(e) => setBonusIntroText(e.target.value)}
+                          placeholder="Laisse vide pour garder le message par défaut, ou écris ton propre message ici."
+                          rows={3}
+                          className="w-full text-sm bg-background border rounded-lg px-3 py-2 resize-y"
+                        />
+                      </div>
                     </div>
 
                     {/* Pre-filled share message — inline editable */}
