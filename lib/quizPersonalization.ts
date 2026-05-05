@@ -47,9 +47,13 @@ export function interpolateText(
     return match;
   });
 
+  // Bug Gwenn 2026-05-04 (port from tiquiz) : `\s+([.,;:!?»)])` matchait
+  // U+00A0 et arrachait le NBSP que applyFrenchTypography ajoutait avant
+  // les deux-points français. On restreint le strip aux espaces ASCII /
+  // tabulations — le NBSP reste, l'apparence "X : Y" est préservée.
   const cleaned = replaced
     .split("\n")
-    .map((line) => line.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;:!?»)])/g, "$1").trim())
+    .map((line) => line.replace(/[ \t]{2,}/g, " ").replace(/[ \t]+([.,;:!?»)])/g, "$1").trim())
     .join("\n");
 
   return cleaned.replace(new RegExp(ESC_OPEN, "g"), "{").replace(new RegExp(ESC_CLOSE, "g"), "}");
