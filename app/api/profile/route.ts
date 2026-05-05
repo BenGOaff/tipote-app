@@ -124,7 +124,28 @@ export async function GET() {
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
 
-    return NextResponse.json({ ok: true, profile: data ?? null }, { status: 200 });
+    // Décrypte la clé SIO pour la renvoyer au front (l'éditeur en a
+    // besoin pour pré-remplir le champ password-masqué). Le front
+    // affiche la clé en type=password — l'utilisateur doit cliquer 👁
+    // pour la lire en clair. Côté DB elle reste en ciphertext.
+    let profileOut = data ?? null;
+    if (profileOut) {
+      const enc = (profileOut as { sio_user_api_key_enc?: string | null }).sio_user_api_key_enc;
+      if (enc) {
+        try {
+          const { resolveSioApiKey } = await import("@/lib/sio/resolveApiKey");
+          const plain = await resolveSioApiKey(supabase, user.id, projectId);
+          profileOut = { ...profileOut, sio_user_api_key: plain ?? "" };
+        } catch (e) {
+          console.error("[profile.GET] SIO decrypt failed:", e);
+          // Fail-safe : on retourne le profil sans la clé plutôt que
+          // de bloquer le chargement complet du settings.
+          profileOut = { ...profileOut, sio_user_api_key: "" };
+        }
+      }
+    }
+
+    return NextResponse.json({ ok: true, profile: profileOut }, { status: 200 });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
@@ -182,13 +203,42 @@ export async function PATCH(req: NextRequest) {
     };
     if (projectId) row.project_id = projectId;
 
+    // SIO API key encryption at rest. Béné 2026-05-04 : avant ce
+    // commit la clé partait en clair dans la DB. On encrypte
+    // (AES-256-GCM par-user-DEK, lib/piiCrypto) et on stocke dans
+    // sio_user_api_key_enc. La colonne plaintext est nullée pour
+    // que le ciphertext soit la seule représentation persistée.
+    const writePatch: Record<string, unknown> = { ...patch };
+    if (writePatch.sio_user_api_key !== undefined) {
+      const raw = String(writePatch.sio_user_api_key ?? "").trim();
+      if (raw) {
+        try {
+          const { encryptSioApiKey } = await import("@/lib/sio/resolveApiKey");
+          writePatch.sio_user_api_key_enc = await encryptSioApiKey(
+            supabase, user.id, raw,
+          );
+          writePatch.sio_user_api_key = null;
+        } catch (e) {
+          console.error("[profile] SIO encrypt failed (storing plaintext as fallback):", e);
+          // Fail-safe : si l'encryption casse (env mal configuré, DEK
+          // indisponible), on laisse le plaintext partir comme avant
+          // pour ne pas bloquer l'utilisateur — la régression de sécu
+          // est strictement bornée à ce cas dégradé.
+        }
+      } else {
+        // L'utilisateur a vidé le champ → clear les DEUX colonnes.
+        writePatch.sio_user_api_key = null;
+        writePatch.sio_user_api_key_enc = null;
+      }
+    }
+
     // Update-then-insert scoped by user + project (safe for multi-project)
     const { data, error } = await upsertByProject({
       supabase,
       table: "business_profiles",
       userId: user.id,
       projectId,
-      data: { ...patch, updated_at: new Date().toISOString() },
+      data: { ...writePatch, updated_at: new Date().toISOString() },
       select: "*",
     });
 

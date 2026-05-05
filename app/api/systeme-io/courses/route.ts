@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { sioUserRequest } from "@/lib/sio/userApiClient";
+import { resolveSioApiKey } from "@/lib/sio/resolveApiKey";
 
 export const dynamic = "force-dynamic";
 
@@ -15,14 +16,7 @@ export async function GET() {
     if (!user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
     const projectId = await getActiveProjectId(supabase, user.id);
-    let profileQuery = supabase
-      .from("business_profiles")
-      .select("sio_user_api_key")
-      .eq("user_id", user.id);
-    if (projectId) profileQuery = profileQuery.eq("project_id", projectId);
-    const { data: profile } = await profileQuery.maybeSingle();
-
-    const apiKey = String(profile?.sio_user_api_key ?? "").trim();
+    const apiKey = (await resolveSioApiKey(supabase, user.id, projectId)) ?? "";
     if (!apiKey) {
       return NextResponse.json({ ok: false, error: "NO_API_KEY", courses: [] }, { status: 400 });
     }

@@ -11,6 +11,7 @@ import { encryptLeadPII } from "@/lib/piiCrypto";
 import { isNewLeadLocked } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
+import { resolveSioApiKey } from "@/lib/sio/resolveApiKey";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -637,15 +638,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
             .eq("id", resultId)
             .maybeSingle();
 
-          // Get the quiz owner's API key (scoped by project)
-          let profileQuery = admin
-            .from("business_profiles")
-            .select("sio_user_api_key")
-            .eq("user_id", quiz.user_id);
-          if (quiz.project_id) profileQuery = profileQuery.eq("project_id", quiz.project_id);
-          const { data: profile } = await profileQuery.maybeSingle();
-
-          const apiKey = String(profile?.sio_user_api_key ?? "").trim();
+          // Get the quiz owner's API key (scoped by project, decrypted)
+          const apiKey = (await resolveSioApiKey(admin, quiz.user_id, quiz.project_id)) ?? "";
           if (!apiKey) return;
 
           const tagName = String(result?.sio_tag_name ?? "").trim();
@@ -757,14 +751,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (shareTagName && quiz.user_id) {
         (async () => {
           try {
-            let shareProfileQuery = admin
-              .from("business_profiles")
-              .select("sio_user_api_key")
-              .eq("user_id", quiz.user_id);
-            if (quiz.project_id) shareProfileQuery = shareProfileQuery.eq("project_id", quiz.project_id);
-            const { data: profile } = await shareProfileQuery.maybeSingle();
-
-            const apiKey = String(profile?.sio_user_api_key ?? "").trim();
+            const apiKey = (await resolveSioApiKey(admin, quiz.user_id, quiz.project_id)) ?? "";
             if (!apiKey) return;
 
             await applyTagToContact(apiKey, email, shareTagName);

@@ -103,6 +103,7 @@ async function resetBusinessProfile(userId: string, projectId: string) {
     "competitor_analysis_summary",
     "privacy_url", "terms_url", "cgv_url",
     "sio_user_api_key",
+    "sio_user_api_key_enc",
     "linkedin_url", "instagram_url", "youtube_url", "website_url",
     "activities_list", "primary_activity", "business_model",
     "target_audience_short", "time_available_hours_week",

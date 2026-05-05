@@ -134,6 +134,7 @@ async function bestEffortResetBusinessProfileAdmin(userId: string) {
     "terms_url",
     "cgv_url",
     "sio_user_api_key",
+    "sio_user_api_key_enc",
     "linkedin_url",
     "instagram_url",
     "youtube_url",

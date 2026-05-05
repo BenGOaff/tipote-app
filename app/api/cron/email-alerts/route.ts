@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail, canSendEmailToday } from "@/lib/email";
+import { resolveSioApiKey } from "@/lib/sio/resolveApiKey";
 
 const INTERNAL_KEY = process.env.NOTIFICATIONS_INTERNAL_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
@@ -258,16 +259,22 @@ export async function GET(req: NextRequest) {
   // Users who have a SIO key configured: test it periodically.
   // If it fails (401/403), send an alert so they can re-enter it before losing leads.
   try {
+    // Sélection : on couvre les rows qui ont SOIT le ciphertext
+    // (sio_user_api_key_enc) SOIT le plaintext legacy, pour traverser
+    // la période de migration sans rater d'utilisateurs.
     const { data: profiles } = await supabaseAdmin
       .from("business_profiles")
-      .select("user_id, project_id, sio_user_api_key")
-      .not("sio_user_api_key", "is", null)
-      .neq("sio_user_api_key", "");
+      .select("user_id, project_id")
+      .or("sio_user_api_key_enc.not.is.null,sio_user_api_key.not.is.null");
 
     const uniqueUsers = new Map<string, { apiKey: string; projectId: string | null }>();
     for (const p of profiles ?? []) {
-      const key = String(p.sio_user_api_key ?? "").trim();
-      if (key && !uniqueUsers.has(p.user_id)) {
+      if (uniqueUsers.has(p.user_id)) continue;
+      // resolveSioApiKey gère le ciphertext (decrypt) ou le plaintext
+      // legacy de manière transparente, et retourne null si rien n'est
+      // configuré (ce qui peut arriver si une row a un _enc corrompu).
+      const key = await resolveSioApiKey(supabaseAdmin, p.user_id, p.project_id);
+      if (key) {
         uniqueUsers.set(p.user_id, { apiKey: key, projectId: p.project_id });
       }
     }

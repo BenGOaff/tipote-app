@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { computeLockedLeadIds } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
+import { resolveSioApiKey } from "@/lib/sio/resolveApiKey";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -78,16 +79,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // Get user's Systeme.io API key (scoped by active project)
+    // Get user's Systeme.io API key (scoped by active project, decrypted)
     const projectId = await getActiveProjectId(supabase, user.id);
-    let profileQuery = supabase
-      .from("business_profiles")
-      .select("sio_user_api_key")
-      .eq("user_id", user.id);
-    if (projectId) profileQuery = profileQuery.eq("project_id", projectId);
-    const { data: profile } = await profileQuery.maybeSingle();
-
-    const apiKey = String(profile?.sio_user_api_key ?? "").trim();
+    const apiKey = (await resolveSioApiKey(supabase, user.id, projectId)) ?? "";
     if (!apiKey) {
       return NextResponse.json(
         {
