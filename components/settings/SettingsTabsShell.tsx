@@ -15,6 +15,9 @@ import {
   Facebook,
   Link as LinkIcon,
   AlertTriangle,
+  Workflow,
+  Tag as TagIcon,
+  ExternalLink,
   RotateCcw,
   Plus,
   Trash2,
@@ -28,6 +31,7 @@ import {
   Target,
   Pencil,
   Eye,
+  EyeOff,
   BookOpen,
   AtSign,
   Bell,
@@ -319,6 +323,9 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const [sioApiKey, setSioApiKey] = useState("");
   const [sioApiKeyName, setSioApiKeyName] = useState("");
+  // La clé SIO est sensible — on la masque par défaut, l'utilisateur
+  // peut la révéler ponctuellement via le toggle 👁 à côté du champ.
+  const [sioApiKeyVisible, setSioApiKeyVisible] = useState(false);
   const [pendingSio, startSioTransition] = useTransition();
 
   const [contentLocale, setContentLocale] = useState("fr");
@@ -1502,15 +1509,31 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </div>
             <div className="space-y-2">
               <Label>{tSP("connections.sioLabel")}</Label>
-              <Input
-                type="text"
-                autoComplete="off"
-                placeholder={tSP("connections.sioPlaceholder")}
-                value={sioApiKey}
-                onChange={(e) => setSioApiKey(e.target.value)}
-                disabled={profileLoading}
-                className="font-mono tracking-wider"
-              />
+              {/* Bug Béné 2026-05-04 : la clé SIO s'affichait en clair
+                  (type="text"), n'importe qui regardant l'écran la voyait.
+                  type="password" la masque par défaut ; bouton 👁 pour
+                  révéler ponctuellement. autoComplete="new-password" pour
+                  empêcher Chrome de proposer un autoremplissage. */}
+              <div className="relative">
+                <Input
+                  type={sioApiKeyVisible ? "text" : "password"}
+                  autoComplete="new-password"
+                  placeholder={tSP("connections.sioPlaceholder")}
+                  value={sioApiKey}
+                  onChange={(e) => setSioApiKey(e.target.value)}
+                  disabled={profileLoading}
+                  className="font-mono tracking-wider pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSioApiKeyVisible((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={sioApiKeyVisible ? "Masquer la clé" : "Afficher la clé"}
+                  title={sioApiKeyVisible ? "Masquer" : "Afficher"}
+                >
+                  {sioApiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1518,6 +1541,98 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <Save className="w-4 h-4 mr-2" />
             {pendingSio ? tSP("connections.saving") : tSP("connections.save")}
           </Button>
+        </Card>
+
+        {/* Bloc d'explication "comment automatiser après capture" — porté
+            de Tiquiz (Béné 2026-05-04). Sur Tipote on couvre AUSSI les
+            quizzes ET les pages de capture / hosted-pages, parce que les
+            deux poussent des contacts taggés dans Systeme.io via la même
+            mécanique. Le bloc reste générique — il décrit le pattern,
+            pas un type de contenu en particulier. */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Workflow className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold">{tSP("connections.autoTitle")}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-6">
+            {tSP("connections.autoDesc")}
+          </p>
+
+          <div className="space-y-5 text-sm">
+            <div className="flex gap-3">
+              <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
+                1
+              </div>
+              <div className="space-y-1.5">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <TagIcon className="h-4 w-4" />
+                  {tSP("connections.autoStep1Title")}
+                </div>
+                <p className="text-muted-foreground">{tSP("connections.autoStep1P1")}</p>
+                <p className="text-muted-foreground">{tSP("connections.autoStep1P2")}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
+                2
+              </div>
+              <div className="space-y-1.5">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <Workflow className="h-4 w-4" />
+                  {tSP("connections.autoStep2Title")}
+                </div>
+                <p className="text-muted-foreground">{tSP("connections.autoStep2P1")}</p>
+                <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                  <li>{tSP("connections.autoStep2Trigger")}</li>
+                  <li>
+                    {tSP("connections.autoStep2Actions")}
+                    <ul className="list-[circle] pl-5 mt-1 space-y-0.5">
+                      <li>{tSP("connections.autoStep2A1")}</li>
+                      <li>{tSP("connections.autoStep2A2")}</li>
+                      <li>{tSP("connections.autoStep2A3")}</li>
+                      <li>{tSP("connections.autoStep2A4")}</li>
+                      <li>{tSP("connections.autoStep2A5")}</li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
+                3
+              </div>
+              <div className="space-y-1.5">
+                <div className="font-semibold">{tSP("connections.autoStep3Title")}</div>
+                <p className="text-muted-foreground">{tSP("connections.autoStep3P")}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30 p-3">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-semibold text-amber-900 dark:text-amber-200">
+                  {tSP("connections.autoTestTitle")}
+                </div>
+                <p className="text-amber-900/80 dark:text-amber-200/80 text-[13px]">
+                  {tSP("connections.autoTestP")}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-1 flex flex-wrap gap-3 text-[13px]">
+              <a
+                href="https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                {tSP("connections.autoLinkSio")}
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
         </Card>
       </TabsContent>
 
