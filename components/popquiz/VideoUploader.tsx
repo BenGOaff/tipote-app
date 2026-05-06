@@ -1,40 +1,39 @@
 "use client";
 
-// Direct video upload widget. Production-grade pipeline now:
+// Direct video upload widget. Production-grade pipeline:
 //
-//   1. Probe the file client-side via a hidden <video> element to
-//      pull duration + a poster frame at t=2s (or 10% of duration,
-//      whichever is smaller). Pure client work, no roundtrip.
-//   2. Upload the poster JPEG to Supabase Storage with the regular
-//      single-shot upload (it's tiny).
-//   3. Resumable upload of the source file via TUS
-//      (tus-js-client) against Supabase's /storage/v1/upload/resumable
-//      endpoint. Survives network drops, retries on transient
-//      errors with exponential backoff, exposes real progress in
-//      bytes — not just a spinner.
-//   4. Generate signed URLs for the editor preview.
+//   1. Probe the file client-side via a hidden <video> element to pull
+//      duration + a poster frame at t=2s (or 10% of duration). Pure
+//      client work, no roundtrip.
+//   2. Ask the backend (/api/popquiz/upload-token) for two short-lived
+//      tus tokens — one for the source file, one for the thumbnail —
+//      both bound to the same freshly-minted videoId.
+//   3. Resumable upload of source + thumbnail via tus-js-client to our
+//      self-hosted tus server (tus.<app>.com → nginx → /opt/popquiz-tus
+//      → /srv/popquiz-videos/...). Survives network drops, retries
+//      with exponential backoff, exposes byte-level progress.
+//   4. Surface a temporary preview URL signed by the same backend.
 //
-// The host (PopquizNewClient) gets back the storage paths +
-// duration. The API stores the paths; lib/popquiz/repo.ts mints
-// fresh signed URLs at fetch time so the player never has to know
-// about Supabase Storage.
+// The host (PopquizNewClient) gets back the storage paths + duration.
+// The API stores the paths; lib/popquiz/repo.ts mints fresh nginx
+// secure_link URLs at fetch time so the player never has to know
+// about the storage layout.
 
 import { useEffect, useRef, useState } from "react";
 import * as tus from "tus-js-client";
 import { CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { toast } from "sonner";
 
 export interface UploadedVideo {
-  // raw/<auth.uid>/<videoId>/source.<ext>
+  // tipote/raw/<auth.uid>/<videoId>/source.<ext>
   path: string;
-  // raw/<auth.uid>/<videoId>/thumbnail.jpg — null if extraction failed.
+  // tipote/raw/<auth.uid>/<videoId>/thumbnail.jpg — null if extraction failed.
   thumbnailPath: string | null;
   fileName: string;
-  // 1 h signed URL the editor preview streams from. Server mints
-  // its own when it serves the public play page.
+  // Short-lived signed URL the editor preview streams from. Server
+  // mints its own when serving the public play page.
   signedUrl: string;
   thumbnailUrl: string | null;
   durationMs: number | null;
@@ -46,25 +45,31 @@ interface ProbeResult {
   durationMs: number | null;
 }
 
-function genVideoId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `video-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function extOf(name: string): string {
-  const i = name.lastIndexOf(".");
-  if (i < 0 || i === name.length - 1) return "mp4";
-  return name.slice(i + 1).toLowerCase().replace(/[^a-z0-9]/g, "");
+interface UploadTokenResponse {
+  ok: boolean;
+  videoId: string;
+  uploadUrl: string;
+  source: {
+    token: string;
+    expiresAt: number;
+    ext: string;
+    storagePath: string;
+  };
+  thumbnail: {
+    token: string;
+    expiresAt: number;
+    ext: string;
+    storagePath: string;
+  } | null;
+  error?: string;
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
   if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} Go`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} Go`;
 }
 
 async function probeFile(file: File): Promise<ProbeResult> {
@@ -120,6 +125,47 @@ async function probeFile(file: File): Promise<ProbeResult> {
   });
 }
 
+// Resumable upload helper. Wraps tus.Upload in a Promise so the main
+// flow can `await` it and we can inject byte-level progress without
+// callbacks bleeding into the UI state machine.
+function tusUpload({
+  file,
+  endpoint,
+  token,
+  onProgress,
+  uploadRef,
+}: {
+  file: File | Blob;
+  endpoint: string;
+  token: string;
+  onProgress?: (sent: number, total: number) => void;
+  uploadRef?: { current: tus.Upload | null };
+}): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      endpoint,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: 6 * 1024 * 1024,
+      onError: (err) => {
+        if (uploadRef) uploadRef.current = null;
+        reject(err);
+      },
+      onProgress: (sent, total) => onProgress?.(sent, total),
+      onSuccess: () => {
+        if (uploadRef) uploadRef.current = null;
+        resolve();
+      },
+    });
+    if (uploadRef) uploadRef.current = upload;
+    upload.start();
+  });
+}
+
 type Phase =
   | { kind: "idle" }
   | { kind: "preparing" }
@@ -156,107 +202,82 @@ export function VideoUploader({
 
     setPhase({ kind: "preparing" });
     try {
-      const supabase = getSupabaseBrowserClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        setError("Tu dois être connecté pour importer une vidéo.");
-        setPhase({ kind: "idle" });
-        return;
-      }
-
       const { thumb, durationMs } = await probeFile(file);
 
-      const videoId = genVideoId();
-      const userId = session.user.id;
-      const path = `raw/${userId}/${videoId}/source.${extOf(file.name)}`;
-      const thumbPath = thumb
-        ? `raw/${userId}/${videoId}/thumbnail.jpg`
-        : null;
-
-      if (thumb && thumbPath) {
-        const { error: thumbError } = await supabase.storage
-          .from("popquiz-videos")
-          .upload(thumbPath, thumb, {
-            contentType: "image/jpeg",
-            upsert: true,
-          });
-        if (thumbError) {
-          console.warn("Thumbnail upload failed:", thumbError.message);
-        }
+      const tokenRes = await fetch("/api/popquiz/upload-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          fileName: file.name,
+          fileSize: file.size,
+          thumbnail: thumb !== null,
+        }),
+      });
+      const tokenJson = (await tokenRes.json()) as UploadTokenResponse;
+      if (!tokenRes.ok || !tokenJson.ok) {
+        throw new Error(tokenJson.error || "Impossible de préparer l'import.");
       }
 
       setPhase({ kind: "uploading", sent: 0, total: file.size, pct: 0 });
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!supabaseUrl) {
-        throw new Error(
-          "Configuration Supabase manquante (NEXT_PUBLIC_SUPABASE_URL).",
-        );
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        const upload = new tus.Upload(file, {
-          endpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
-          retryDelays: [0, 3000, 5000, 10000, 20000],
-          headers: {
-            authorization: `Bearer ${session.access_token}`,
-            "x-upsert": "true",
-          },
-          uploadDataDuringCreation: true,
-          removeFingerprintOnSuccess: true,
-          metadata: {
-            bucketName: "popquiz-videos",
-            objectName: path,
-            contentType: file.type || "video/mp4",
-            cacheControl: "3600",
-          },
-          chunkSize: 6 * 1024 * 1024,
-          onError: (err) => {
-            uploadRef.current = null;
-            reject(err);
-          },
-          onProgress: (sent, total) => {
-            setPhase({
-              kind: "uploading",
-              sent,
-              total,
-              pct: total > 0 ? Math.round((sent / total) * 100) : 0,
-            });
-          },
-          onSuccess: () => {
-            uploadRef.current = null;
-            resolve();
-          },
-        });
-        uploadRef.current = upload;
-        upload.start();
+      await tusUpload({
+        file,
+        endpoint: tokenJson.uploadUrl,
+        token: tokenJson.source.token,
+        uploadRef,
+        onProgress: (sent, total) => {
+          setPhase({
+            kind: "uploading",
+            sent,
+            total,
+            pct: total > 0 ? Math.round((sent / total) * 100) : 0,
+          });
+        },
       });
 
       setPhase({ kind: "finalizing" });
-      const { data: signed, error: signError } = await supabase.storage
-        .from("popquiz-videos")
-        .createSignedUrl(path, 3600);
-      if (signError || !signed?.signedUrl) {
+
+      // Thumbnail is best-effort: failure shouldn't block the editor.
+      // The player has its own poster fallback.
+      if (thumb && tokenJson.thumbnail) {
+        try {
+          await tusUpload({
+            file: thumb,
+            endpoint: tokenJson.uploadUrl,
+            token: tokenJson.thumbnail.token,
+          });
+        } catch (e) {
+          console.warn("[popquiz] thumbnail upload failed:", e);
+        }
+      }
+
+      const previewRes = await fetch("/api/popquiz/playback-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          path: tokenJson.source.storagePath,
+          thumbnailPath: tokenJson.thumbnail?.storagePath ?? null,
+        }),
+      });
+      const previewJson = (await previewRes.json()) as {
+        ok: boolean;
+        signedUrl?: string;
+        thumbnailUrl?: string | null;
+        error?: string;
+      };
+      if (!previewRes.ok || !previewJson.ok || !previewJson.signedUrl) {
         throw new Error(
-          signError?.message ?? "Impossible de générer un lien de lecture.",
+          previewJson.error ?? "Impossible de générer un lien de lecture.",
         );
       }
 
-      let thumbnailUrl: string | null = null;
-      if (thumbPath) {
-        const { data: thumbSigned } = await supabase.storage
-          .from("popquiz-videos")
-          .createSignedUrl(thumbPath, 3600);
-        thumbnailUrl = thumbSigned?.signedUrl ?? null;
-      }
-
       onUploaded({
-        path,
-        thumbnailPath: thumbPath,
+        path: tokenJson.source.storagePath,
+        thumbnailPath: tokenJson.thumbnail?.storagePath ?? null,
         fileName: file.name,
-        signedUrl: signed.signedUrl,
-        thumbnailUrl,
+        signedUrl: previewJson.signedUrl,
+        thumbnailUrl: previewJson.thumbnailUrl ?? null,
         durationMs,
         bytes: file.size,
       });
@@ -265,7 +286,8 @@ export function VideoUploader({
     } catch (e) {
       const raw = e instanceof Error ? e.message : "Erreur lors de l'import";
       const friendly =
-        raw.toLowerCase().includes("exceeded") || raw.toLowerCase().includes("size")
+        raw.toLowerCase().includes("exceeded") ||
+        raw.toLowerCase().includes("size")
           ? "Fichier trop volumineux. La taille maximale acceptée est 20 Go."
           : raw.toLowerCase().includes("abort")
             ? "Import annulé."
@@ -324,7 +346,7 @@ export function VideoUploader({
               {formatBytes(phase.sent)} / {formatBytes(phase.total)}
             </p>
           </div>
-          <span className="text-sm font-mono tabular-nums">{phase.pct} %</span>
+          <span className="text-sm font-mono tabular-nums">{phase.pct} %</span>
           <Button
             size="sm"
             variant="ghost"
@@ -336,9 +358,6 @@ export function VideoUploader({
           </Button>
         </div>
         <Progress value={phase.pct} className="h-1.5" />
-        <p className="text-[11px] text-muted-foreground">
-          Résumable en cas de coupure réseau — garde l'onglet ouvert.
-        </p>
       </div>
     );
   }
@@ -394,7 +413,7 @@ export function VideoUploader({
           Glisse une vidéo ici ou clique pour choisir
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          MP4, WebM, MOV — jusqu’à 20 Go.
+          MP4, WebM, MOV — jusqu&apos;à 20 Go.
         </p>
         <input
           ref={inputRef}
@@ -407,9 +426,7 @@ export function VideoUploader({
           }}
         />
       </div>
-      {error ? (
-        <p className="text-xs text-destructive">{error}</p>
-      ) : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }

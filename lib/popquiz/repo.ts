@@ -14,6 +14,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isSelfHostedPath, signedPlaybackUrl } from "./playback";
 import type {
   CueBehavior,
   Popquiz,
@@ -166,10 +167,14 @@ function applyBrandingToTheme(
   };
 }
 
-// For source='upload' videos, mint signed URLs for the source file
-// and (when present) the auto-extracted thumbnail. Other sources
-// pass through unchanged — their externalUrl / thumbnailUrl are
-// already public.
+// For source='upload' videos, mint a short-lived URL for the source
+// file and (when present) the auto-extracted thumbnail.
+//
+// Two backends coexist while we migrate off Supabase Storage:
+//   - new pipeline: storage_path starts with "<app>/" → nginx
+//     secure_link URL (self-hosted /srv/popquiz-videos)
+//   - legacy: storage_path starts with "raw/" → Supabase signed URL
+// The check is purely path-based, so no DB migration is needed.
 async function attachUploadSignedUrls(
   popquiz: Popquiz,
   storedThumbnailPath: string | null,
@@ -177,21 +182,12 @@ async function attachUploadSignedUrls(
   const v = popquiz.video;
   if (v.source !== "upload") return popquiz;
 
-  let signedSrc: string | null = v.externalUrl;
-  if (v.storagePath) {
-    const { data } = await supabaseAdmin.storage
-      .from("popquiz-videos")
-      .createSignedUrl(v.storagePath, SIGNED_URL_TTL_SECONDS);
-    if (data?.signedUrl) signedSrc = data.signedUrl;
-  }
-
-  let signedThumb: string | null = v.thumbnailUrl;
-  if (storedThumbnailPath) {
-    const { data } = await supabaseAdmin.storage
-      .from("popquiz-videos")
-      .createSignedUrl(storedThumbnailPath, SIGNED_URL_TTL_SECONDS);
-    if (data?.signedUrl) signedThumb = data.signedUrl;
-  }
+  const signedSrc = v.storagePath
+    ? await mintPlaybackUrl(v.storagePath)
+    : v.externalUrl;
+  const signedThumb = storedThumbnailPath
+    ? await mintPlaybackUrl(storedThumbnailPath)
+    : v.thumbnailUrl;
 
   return {
     ...popquiz,
@@ -201,6 +197,21 @@ async function attachUploadSignedUrls(
       thumbnailUrl: signedThumb,
     },
   };
+}
+
+async function mintPlaybackUrl(storagePath: string): Promise<string | null> {
+  if (isSelfHostedPath(storagePath)) {
+    try {
+      return signedPlaybackUrl(storagePath, SIGNED_URL_TTL_SECONDS);
+    } catch (e) {
+      console.error("[popquiz] secure_link signing failed:", e);
+      return null;
+    }
+  }
+  const { data } = await supabaseAdmin.storage
+    .from("popquiz-videos")
+    .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
+  return data?.signedUrl ?? null;
 }
 
 function rowToPopquiz(
