@@ -73,6 +73,10 @@ import { useToast } from "@/hooks/use-toast";
 import SetPasswordForm from "@/components/SetPasswordForm";
 import BillingSection from "@/components/settings/BillingSection";
 import { SettingsAchievements } from "@/components/settings/SettingsAchievements";
+import {
+  SalesArgumentsEditor,
+  type SalesArgumentsValue,
+} from "@/components/settings/SalesArgumentsEditor";
 import { AIContent } from "@/components/ui/ai-content";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -123,6 +127,21 @@ type OfferItem = {
   target: string;
   format: string;
   pricing?: PricingTier[];
+  // Pre-distilled selling points generated via /api/offers/sales-arguments.
+  // Optional — undefined means "never generated yet". Persisted by the
+  // profile save endpoint (whitelisted in its zod schema).
+  sales_arguments?: {
+    generated_at?: string;
+    persona_signature?: string;
+    offer_signature?: string;
+    model?: string;
+    bullets?: Array<{
+      benefit: string;
+      consequence: string;
+      angle?: string;
+      hook_idea?: string;
+    }>;
+  } | null;
 };
 
 type ProfileRow = {
@@ -444,6 +463,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               description: String(o?.description ?? ""),
               target: String(o?.target ?? ""),
               format: String(o?.format ?? ""),
+              sales_arguments:
+                o?.sales_arguments && typeof o.sales_arguments === "object"
+                  ? o.sales_arguments
+                  : null,
             }))
           : [];
         setOffers(loadedOffers);
@@ -1965,6 +1988,47 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     className="min-h-[60px]"
                   />
                 </div>
+                <SalesArgumentsEditor
+                  offerIndex={idx}
+                  offerReady={
+                    Boolean(offer.name?.trim()) &&
+                    (Boolean(offer.promise?.trim()) ||
+                      Boolean(offer.description?.trim()))
+                  }
+                  value={
+                    offer.sales_arguments
+                      ? ({
+                          generated_at: offer.sales_arguments.generated_at,
+                          bullets: Array.isArray(offer.sales_arguments.bullets)
+                            ? offer.sales_arguments.bullets.map((b) => ({
+                                benefit: b.benefit ?? "",
+                                consequence: b.consequence ?? "",
+                                angle: b.angle ?? "story",
+                                hook_idea: b.hook_idea ?? "",
+                              }))
+                            : [],
+                        } as SalesArgumentsValue)
+                      : null
+                  }
+                  onChange={(next) => {
+                    setOffers((prev) =>
+                      prev.map((o, i) =>
+                        i === idx
+                          ? {
+                              ...o,
+                              sales_arguments: next
+                                ? {
+                                    generated_at: next.generated_at,
+                                    bullets: next.bullets,
+                                  }
+                                : null,
+                            }
+                          : o,
+                      ),
+                    );
+                  }}
+                  disabled={profileLoading}
+                />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">{tSP("reglages.offerFormat")}</Label>
