@@ -92,6 +92,17 @@ export function isFresh(
   );
 }
 
+// Append a pre-distilled selling-points block to an already-built
+// prompt. Cheap wrapper that lets every content endpoint plug in the
+// cache without each prompt builder needing to know about it.
+export function withSalesArguments(
+  prompt: string,
+  block: string | null | undefined,
+): string {
+  if (!block || !block.trim()) return prompt;
+  return `${prompt}\n\n${block}`;
+}
+
 // Renders the bullets into a compact prompt block. Picked up by the
 // content prompt builders so Claude sees pre-distilled selling points
 // instead of having to re-derive them from raw offer + persona.

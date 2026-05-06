@@ -30,6 +30,8 @@ export type FunnelOfferContext = {
   is_flagship?: boolean | null;
   updated_at?: string | null;
   pricing?: FunnelPricingTier[] | null;
+  // Pre-distilled selling points (see lib/salesArguments).
+  sales_arguments_block?: string | null;
 };
 
 export type FunnelManual = {
@@ -143,6 +145,12 @@ function buildPremiumJsonPrompt(params: FunnelPromptParams): string {
     lines.push("OFFRE (source) :");
     lines.push(oneLine(JSON.stringify(params.offer)));
     lines.push("");
+    // Pre-distilled selling points (see lib/salesArguments).
+    const saBlock = (params.offer as any)?.sales_arguments_block;
+    if (saBlock && typeof saBlock === "string" && saBlock.trim()) {
+      lines.push(saBlock.trim());
+      lines.push("");
+    }
   }
 
   if (params.mode === "from_scratch" && params.manual) {
@@ -209,6 +217,11 @@ function buildLegacyTextPrompt(params: FunnelPromptParams): string {
     lines.push("Offre (source):");
     lines.push(JSON.stringify(params.offer, null, 0));
     lines.push("");
+    const saBlock = (params.offer as any)?.sales_arguments_block;
+    if (saBlock && typeof saBlock === "string" && saBlock.trim()) {
+      lines.push(saBlock.trim());
+      lines.push("");
+    }
   }
 
   if (params.mode === "from_scratch" && params.manual) {

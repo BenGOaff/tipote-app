@@ -30,6 +30,11 @@ export type OfferSourceContext = {
   price_max?: number | null;
   link?: string | null;
   pricing?: OfferPricingTier[] | null;
+  // Pre-distilled selling points (formatted by formatBulletsForPrompt).
+  // Injected verbatim in prompts so Claude doesn't redo the
+  // benefit-derivation work it already did once via /api/offers/sales-
+  // arguments. Empty/null means the offer has no cached arguments.
+  sales_arguments_block?: string | null;
 };
 
 export type OfferPromptParams = {
@@ -290,6 +295,12 @@ export function buildOfferPrompt(params: OfferPromptParams): string {
           "Tu disposes d'une offre existante. Tu dois la développer et la rendre exploitable.",
           "Données source (JSON):",
           compactJson(sourceOffer),
+          // Pre-distilled selling points (see lib/salesArguments).
+          ...((sourceOffer as any)?.sales_arguments_block &&
+          typeof (sourceOffer as any).sales_arguments_block === "string" &&
+          (sourceOffer as any).sales_arguments_block.trim()
+            ? ["", (sourceOffer as any).sales_arguments_block.trim()]
+            : []),
           "",
           "RÈGLES OFFRE SOURCE :",
           "- Ne demande pas le thème: il est déduit de l'offre source.",

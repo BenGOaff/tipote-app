@@ -35,6 +35,9 @@ export type OfferContext = {
 
   // ✅ important pour “public etc”
   target?: string | null; // audience / public
+
+  // Pre-distilled selling points (see lib/salesArguments).
+  sales_arguments_block?: string | null;
 };
 
 export type EmailPromptParams = {
@@ -114,6 +117,11 @@ function offerSummaryBlock(args: {
     if (format) out.push(`Format: ${format}`);
     if (delivery) out.push(`Livraison: ${delivery}`);
     if (description) out.push(`Description: ${description}`);
+    // Pre-distilled selling points — injected verbatim so Claude
+    // doesn't redo the bullet derivation that's already cached on
+    // the offer (see lib/salesArguments).
+    const sa = (offer as any).sales_arguments_block;
+    if (sa && typeof sa === "string" && sa.trim()) out.push("", sa.trim());
     return out;
   }
 

@@ -21,6 +21,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 
 import { buildPromptByType } from "@/lib/prompts/content";
+import { formatBulletsForPrompt } from "@/lib/salesArguments";
 import { buildSocialPostPrompt } from "@/lib/prompts/content/socialPost";
 import { buildVideoScriptPrompt, type VideoDurationId, type VideoPlatform } from "@/lib/prompts/content/video";
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
@@ -1114,6 +1115,13 @@ function parseOffersFromBusinessProfile(userId: string, profile: any): OfferSour
 
     const link = safeStringOrNull((o as any).link) ?? safeStringOrNull((o as any).url) ?? safeStringOrNull((o as any).sales_page_url) ?? null;
 
+    // Pre-distilled selling points: format the bullets here so every
+    // downstream prompt builder gets a ready-to-inject string instead
+    // of having to know about the salesArguments shape.
+    const sales_arguments_block = formatBulletsForPrompt(
+      (o as any)?.sales_arguments ?? null,
+    );
+
     out.push({
       id,
       name,
@@ -1128,6 +1136,7 @@ function parseOffersFromBusinessProfile(userId: string, profile: any): OfferSour
       link,
       is_flagship: (typeof (o as any).is_flagship === "boolean" ? (o as any).is_flagship : null) as any,
       updated_at: safeStringOrNull((o as any).updated_at) ?? null,
+      sales_arguments_block: sales_arguments_block || null,
     } as any);
   }
 
@@ -2053,7 +2062,14 @@ export async function POST(req: Request) {
           }
         }
 
-        if (offerCtxLines.length) {
+        // Append the pre-distilled selling-points cache. Pulled by
+        // /api/offers/sales-arguments and stored on the offer; the
+        // model gets ready-to-use bullets instead of having to
+        // re-derive them from raw promise/description on every post.
+        const salesArgsBlock =
+          (offerContextForPost as any)?.sales_arguments_block ?? null;
+
+        if (offerCtxLines.length || salesArgsBlock) {
           return (
             base +
             "\n\n" +
@@ -2061,7 +2077,8 @@ export async function POST(req: Request) {
             "- Si c'est un post promo, ancre le copy sur la promesse et le résultat concret.\n" +
             "- Ne pas inventer de prix si absent.\n" +
             "- CTA clair. Si offerLink est présent, l'utiliser.\n\n" +
-            offerCtxLines.join("\n")
+            offerCtxLines.join("\n") +
+            (salesArgsBlock ? "\n\n" + salesArgsBlock : "")
           );
         }
 
