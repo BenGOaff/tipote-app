@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { Button } from "@/components/ui/button";
+import { DeletePopquizButton } from "./DeletePopquizButton";
 
 export const metadata = { title: "Mes Popquiz – Tipote" };
 
@@ -94,6 +95,9 @@ export default async function PopquizzesListPage() {
                     {p.completions_count ?? 0} terminés
                   </p>
                 </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/popquiz/${p.id}`}>Modifier</Link>
+                </Button>
                 {p.is_published ? (
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/pq/${p.id}`} target="_blank">
@@ -101,6 +105,7 @@ export default async function PopquizzesListPage() {
                     </Link>
                   </Button>
                 ) : null}
+                <DeletePopquizButton popquizId={p.id} popquizTitle={p.title} />
               </li>
             );
           })}

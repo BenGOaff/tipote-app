@@ -245,12 +245,27 @@ export default function PopquizEditClient({
     );
   }
 
-  async function handleSave() {
+  /**
+   * Sauvegarde du popquiz. `nextPublished` permet aux boutons d'action
+   * de forcer l'état de publication au moment du save (au lieu de
+   * dépendre d'un toggle séparé que l'utilisateur risque de manquer).
+   *   • undefined → garde l'état actuel (rare, pas exposé en UI)
+   *   • true      → "Publier" / "Enregistrer les modifications" (publié)
+   *   • false     → "Enregistrer brouillon" / "Dépublier"
+   *
+   * Gwenn 2026-05-04 : avant ce refactor, la publication passait par un
+   * minuscule toggle Eye/EyeOff au milieu de la card "Statut", facile à
+   * rater. Le bouton du bas s'appelait "Enregistrer" sans expliquer
+   * qu'il publiait aussi. Nouveau : deux boutons explicites
+   * contextualisés à l'état courant.
+   */
+  async function handleSave(nextPublished?: boolean) {
     setError(null);
     if (!title.trim()) {
       setError("Le titre ne peut pas être vide.");
       return;
     }
+    const willPublish = nextPublished ?? isPublished;
     setSaving(true);
     try {
       const res = await fetch(`/api/popquiz/${popquiz.id}`, {
@@ -260,7 +275,7 @@ export default function PopquizEditClient({
           title,
           slug: slug.trim(),
           description: description.trim() || null,
-          is_published: isPublished,
+          is_published: willPublish,
           cues: cues.map((c) => ({
             quiz_id: c.quizId,
             timestamp_ms: c.timestampMs,
@@ -273,7 +288,16 @@ export default function PopquizEditClient({
         setError(json.error ?? "Erreur lors de la sauvegarde");
         return;
       }
-      toast.success("Modifications enregistrées");
+      // Sync local state to what was sent so les boutons reflètent
+      // immédiatement le nouveau statut sans attendre router.refresh().
+      setIsPublished(willPublish);
+      if (willPublish && !popquiz.isPublished) {
+        toast.success("Popquiz publié — partage le lien à ton audience");
+      } else if (!willPublish && popquiz.isPublished) {
+        toast.success("Popquiz dépublié — il n'est plus visible publiquement");
+      } else {
+        toast.success("Modifications enregistrées");
+      }
       // Soft-refresh so the server-rendered shell picks up the new
       // slug / publish state without a full reload.
       router.refresh();
@@ -419,31 +443,32 @@ export default function PopquizEditClient({
             </p>
           </div>
 
+          {/* Badge de statut informatif (lecture seule). La publication
+              passe désormais par les boutons d'action en bas de page,
+              plus visibles et explicites. */}
           <div className="flex items-start gap-3 rounded-md border bg-muted/30 px-3 py-2">
-            <button
-              type="button"
-              onClick={() => setIsPublished((v) => !v)}
-              className={`mt-0.5 size-9 grid place-items-center rounded-full transition-colors ${
+            <span
+              className={`mt-0.5 size-9 grid place-items-center rounded-full ${
                 isPublished
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-emerald-500 text-white"
                   : "bg-muted text-muted-foreground"
               }`}
-              aria-label={isPublished ? "Dépublier" : "Publier"}
+              aria-hidden
             >
               {isPublished ? (
                 <Eye className="size-4" />
               ) : (
                 <EyeOff className="size-4" />
               )}
-            </button>
+            </span>
             <div className="flex-1">
               <p className="text-sm font-medium">
                 {isPublished ? "Publié" : "Brouillon"}
               </p>
               <p className="text-xs text-muted-foreground">
                 {isPublished
-                  ? "Toute personne avec le lien peut voir la vidéo."
-                  : "Seul toi peux voir la vidéo tant qu'elle n'est pas publiée."}
+                  ? "Toute personne avec le lien peut voir la vidéo. Utilise « Dépublier » plus bas pour la cacher."
+                  : "Personne d'autre que toi ne peut voir la vidéo. Utilise « Publier » plus bas pour la rendre visible."}
               </p>
             </div>
           </div>
@@ -597,7 +622,11 @@ export default function PopquizEditClient({
         </CardContent>
       </Card>
 
-      {popquiz.isPublished ? (
+      {/* On utilise l'état client (isPublished) plutôt que la prop server
+          (popquiz.isPublished) pour que la carte de partage apparaisse
+          IMMÉDIATEMENT après un clic sur "Publier", sans attendre que
+          router.refresh() ait re-fetché le SSR. */}
+      {isPublished ? (
         <Card>
           <CardContent className="py-5 space-y-4">
             <div>
@@ -683,23 +712,57 @@ export default function PopquizEditClient({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 justify-end">
+      {/* Barre d'actions contextualisée à l'état de publication.
+          Gwenn 2026-05-04 : avant, un seul bouton "Enregistrer" et un
+          toggle œil minuscule rendaient la publication non évidente.
+          Nouveau : deux actions explicites côte à côte, dont la
+          principale (Publier / Enregistrer modifs) en bouton primaire. */}
+      <div className="flex flex-wrap items-center gap-2 justify-end">
         <Button
-          variant="outline"
+          variant="ghost"
           disabled={saving}
-          onClick={() => router.push("/quizzes")}
+          onClick={() => router.push("/popquizzes")}
           type="button"
+          className="mr-auto"
         >
-          Retour aux projets
+          ← Retour à mes popquiz
         </Button>
-        <Button disabled={saving} onClick={handleSave} type="button">
-          {isPublished ? (
-            <Save className="size-4 mr-2" />
-          ) : (
-            <Sparkles className="size-4 mr-2" />
-          )}
-          {saving ? "Enregistrement…" : "Enregistrer"}
-        </Button>
+
+        {isPublished ? (
+          <>
+            <Button
+              variant="outline"
+              disabled={saving}
+              onClick={() => handleSave(false)}
+              type="button"
+              title="Repasser ce popquiz en brouillon (plus accessible publiquement)"
+            >
+              <EyeOff className="size-4 mr-2" />
+              {saving ? "…" : "Dépublier"}
+            </Button>
+            <Button disabled={saving} onClick={() => handleSave(true)} type="button">
+              <Save className="size-4 mr-2" />
+              {saving ? "Enregistrement…" : "Enregistrer les modifications"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="outline"
+              disabled={saving}
+              onClick={() => handleSave(false)}
+              type="button"
+              title="Sauvegarder en brouillon (pas encore visible publiquement)"
+            >
+              <Save className="size-4 mr-2" />
+              {saving ? "…" : "Enregistrer brouillon"}
+            </Button>
+            <Button disabled={saving} onClick={() => handleSave(true)} type="button">
+              <Sparkles className="size-4 mr-2" />
+              {saving ? "Publication…" : "Publier"}
+            </Button>
+          </>
+        )}
       </div>
     </AppShell>
   );
