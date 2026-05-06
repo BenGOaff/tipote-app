@@ -30,6 +30,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -44,14 +45,21 @@ import {
   Time,
   TimeSlider,
   useMediaState,
+  useMediaRemote,
   type MediaPlayerInstance,
 } from "@vidstack/react";
 import {
+  Check,
+  Gauge,
   Loader2,
   Maximize2,
   Minimize2,
   Pause,
+  PictureInPicture2,
   Play,
+  Rewind,
+  Share2,
+  FastForward,
   Volume2,
   VolumeX,
   X,
@@ -177,7 +185,169 @@ function FullscreenToggle() {
   );
 }
 
-function CustomControls({ cues }: { cues: PopquizCue[] }) {
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+
+// Vidstack lets us drive the player imperatively via a remote so the
+// state-machine stays the source of truth. The current rate is read
+// from the same remote — no local state to drift out of sync.
+function PlaybackRateMenu() {
+  const remote = useMediaRemote();
+  const rate = useMediaState("playbackRate");
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Vitesse de lecture"
+        aria-expanded={open}
+        className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 relative"
+      >
+        <Gauge className="size-4 text-white" />
+        {rate !== 1 ? (
+          <span className="absolute -bottom-0.5 right-1 text-[9px] font-bold text-white bg-[var(--pq-accent,#5D6CDB)] rounded px-1 leading-none py-px">
+            {rate}×
+          </span>
+        ) : null}
+      </button>
+      {open ? (
+        <div
+          className="absolute right-0 bottom-full mb-2 w-32 rounded-lg bg-black/90 backdrop-blur-md ring-1 ring-white/10 py-1 shadow-2xl pointer-events-auto"
+          role="menu"
+        >
+          {PLAYBACK_RATES.map((r) => {
+            const active = Math.abs(rate - r) < 0.001;
+            return (
+              <button
+                key={r}
+                type="button"
+                role="menuitemradio"
+                aria-checked={active}
+                onClick={() => {
+                  remote.changePlaybackRate(r);
+                  setOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors ${
+                  active
+                    ? "text-white bg-white/10"
+                    : "text-white/80 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <span>{r === 1 ? "Normal" : `${r}×`}</span>
+                {active ? <Check className="size-3.5" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SkipButton({
+  delta,
+  label,
+}: {
+  delta: number;
+  label: string;
+}) {
+  const remote = useMediaRemote();
+  const current = useMediaState("currentTime");
+  const duration = useMediaState("duration");
+  const Icon = delta < 0 ? Rewind : FastForward;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const target = Math.max(
+          0,
+          Math.min((duration || 0), (current || 0) + delta),
+        );
+        remote.seek(target);
+      }}
+      aria-label={label}
+      className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 hidden sm:grid"
+    >
+      <Icon className="size-4 text-white" />
+    </button>
+  );
+}
+
+// Picture-in-Picture is gated behind canPictureInPicture so we don't
+// flash a dead button on browsers that don't support it (mobile Safari
+// + Firefox Linux for now).
+function PiPButton() {
+  const remote = useMediaRemote();
+  const can = useMediaState("canPictureInPicture");
+  const isOn = useMediaState("pictureInPicture");
+  if (!can) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => remote.togglePictureInPicture()}
+      aria-label={isOn ? "Quitter le mode mini-fenêtre" : "Mode mini-fenêtre"}
+      aria-pressed={isOn}
+      className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 hidden sm:grid"
+    >
+      <PictureInPicture2 className="size-4 text-white" />
+    </button>
+  );
+}
+
+// Native share when available (mobile), copy-link fallback otherwise.
+// Title falls back to popquiz title; URL is the page URL — that's the
+// public play page, which is exactly what we want shared.
+function ShareButton({ title }: { title: string }) {
+  const [feedback, setFeedback] = useState<"idle" | "copied">("idle");
+
+  async function onClick() {
+    if (typeof window === "undefined") return;
+    const url = window.location.href;
+    const navAny = navigator as Navigator & {
+      share?: (data: { title?: string; url?: string }) => Promise<void>;
+    };
+    try {
+      if (typeof navAny.share === "function") {
+        await navAny.share({ title, url });
+        return;
+      }
+    } catch {
+      // user cancel — fall through to clipboard
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setFeedback("copied");
+      setTimeout(() => setFeedback("idle"), 1800);
+    } catch {
+      // last-resort: nothing we can do
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Partager"
+      className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 relative"
+    >
+      <Share2 className="size-4 text-white" />
+      {feedback === "copied" ? (
+        <span className="absolute -top-8 right-0 whitespace-nowrap text-[11px] bg-black/90 text-white rounded px-2 py-1 shadow-lg pointer-events-none">
+          Lien copié
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function CustomControls({
+  cues,
+  shareTitle,
+}: {
+  cues: PopquizCue[];
+  shareTitle: string;
+}) {
   return (
     <Controls.Root className="absolute inset-0 pointer-events-none z-10">
       <Controls.Group className="absolute bottom-0 left-0 right-0 px-3 sm:px-4 pb-2 sm:pb-3 pt-12 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-auto opacity-0 data-[visible]:opacity-100 transition-opacity duration-300">
@@ -193,13 +363,18 @@ function CustomControls({ cues }: { cues: PopquizCue[] }) {
         </div>
         <div className="flex items-center gap-1.5 mt-1">
           <PlayPauseSmall />
+          <SkipButton delta={-10} label="Reculer de 10 secondes" />
+          <SkipButton delta={10} label="Avancer de 10 secondes" />
           <div className="text-[11px] font-medium text-white/90 font-mono ml-1 tabular-nums">
             <Time type="current" />
             <span className="text-white/40 mx-1">/</span>
             <Time type="duration" />
           </div>
           <div className="flex-1" />
+          <PlaybackRateMenu />
           <MuteToggle />
+          <ShareButton title={shareTitle} />
+          <PiPButton />
           <FullscreenToggle />
         </div>
       </Controls.Group>
@@ -315,7 +490,7 @@ export function PopquizPlayer({
 
         <CenterPlayVisual />
         <BufferingOverlay />
-        <CustomControls cues={cues} />
+        <CustomControls cues={cues} shareTitle={popquiz.title || "Popquiz"} />
 
         {onDurationChange ? (
           <DurationReporter onChange={onDurationChange} />

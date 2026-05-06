@@ -413,120 +413,184 @@ export async function POST(req: Request) {
       userContext,
     });
 
-    // 7. Call Claude
-    let raw: string;
-    try {
-      const estimatedItems = duration * platforms.length;
-      const maxTokens = Math.min(16000, Math.max(4000, estimatedItems * 200));
-      raw = await callClaude({
-        apiKey,
-        system: systemPrompt,
-        user: userPrompt,
-        maxTokens,
-        temperature: 0.7,
-      });
-    } catch (aiErr: any) {
-      console.error("Claude API error:", aiErr?.message);
-      return NextResponse.json(
-        { error: `Erreur IA: ${aiErr?.message || "Service indisponible"}` },
-        { status: 502 },
-      );
-    }
+    // 7. Stream the long part (Claude generation + DB save).
+    //
+    // 30-day plans take 60-120s on Sonnet; Cloudflare cuts proxied
+    // requests at ~100s, so a synchronous JSON response gets killed
+    // server-side mid-flight. Switching to SSE keeps the connection
+    // alive thanks to a heartbeat ping every 15s, and the client gets
+    // the final `done` event with the same payload as before.
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (event: string, data: unknown) => {
+          try {
+            controller.enqueue(
+              encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+            );
+          } catch {
+            /* controller closed by abort */
+          }
+        };
+        const heartbeat = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode(": ping\n\n"));
+          } catch {
+            /* controller closed */
+          }
+        }, 15000);
 
-    if (!raw.trim()) {
-      return NextResponse.json(
-        { error: "L'IA n'a pas retourné de contenu. Réessaye." },
-        { status: 500 },
-      );
-    }
+        try {
+          send("started", { ts: Date.now() });
 
-    // 8. Parse JSON response
-    const jsonStr = extractJsonFromText(raw);
-    let parsed: any;
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      console.error("Strategy JSON parse error. Raw:", raw.slice(0, 500));
-      return NextResponse.json(
-        { error: "Réponse IA invalide (JSON malformé)" },
-        { status: 500 },
-      );
-    }
+          let raw: string;
+          try {
+            const estimatedItems = duration * platforms.length;
+            const maxTokens = Math.min(16000, Math.max(4000, estimatedItems * 200));
+            raw = await callClaude({
+              apiKey,
+              system: systemPrompt,
+              user: userPrompt,
+              maxTokens,
+              temperature: 0.7,
+            });
+          } catch (aiErr: any) {
+            console.error("Claude API error:", aiErr?.message);
+            send("error", {
+              error: `Erreur IA: ${aiErr?.message || "Service indisponible"}`,
+              status: 502,
+            });
+            return;
+          }
 
-    if (!parsed.title || !Array.isArray(parsed.days) || parsed.days.length === 0) {
-      console.error("Strategy invalid structure:", JSON.stringify(parsed).slice(0, 500));
-      return NextResponse.json(
-        { error: "Structure de stratégie invalide" },
-        { status: 500 },
-      );
-    }
+          if (!raw.trim()) {
+            send("error", {
+              error: "L'IA n'a pas retourné de contenu. Réessaye.",
+              status: 500,
+            });
+            return;
+          }
 
-    // Clean days
-    const days = parsed.days.map((d: any, i: number) => ({
-      day: d.day ?? i + 1,
-      theme: typeof d.theme === "string" ? d.theme : `Jour ${i + 1}`,
-      contentType: typeof d.contentType === "string" ? d.contentType : "post",
-      platform: typeof d.platform === "string" ? d.platform : platforms[0],
-      hook: typeof d.hook === "string" ? d.hook : "",
-      cta: typeof d.cta === "string" ? d.cta : "",
-    }));
+          const jsonStr = extractJsonFromText(raw);
+          let parsed: any;
+          try {
+            parsed = JSON.parse(jsonStr);
+          } catch {
+            console.error("Strategy JSON parse error. Raw:", raw.slice(0, 500));
+            send("error", {
+              error: "Réponse IA invalide (JSON malformé)",
+              status: 500,
+            });
+            return;
+          }
 
-    const strategy = {
-      title: typeof parsed.title === "string" ? parsed.title : `Plan contenu ${duration} jours`,
-      days,
-    };
+          if (
+            !parsed.title ||
+            !Array.isArray(parsed.days) ||
+            parsed.days.length === 0
+          ) {
+            console.error(
+              "Strategy invalid structure:",
+              JSON.stringify(parsed).slice(0, 500),
+            );
+            send("error", {
+              error: "Structure de stratégie invalide",
+              status: 500,
+            });
+            return;
+          }
 
-    // 9. Save strategy plan as a content_item so it appears in "Mes Stratégies"
-    let strategyItemId: string | null = null;
-    try {
-      const planText = formatPlanAsText(strategy);
-      const metaObj = { strategy_plan: strategy };
+          const days = parsed.days.map((d: any, i: number) => ({
+            day: d.day ?? i + 1,
+            theme: typeof d.theme === "string" ? d.theme : `Jour ${i + 1}`,
+            contentType:
+              typeof d.contentType === "string" ? d.contentType : "post",
+            platform:
+              typeof d.platform === "string" ? d.platform : platforms[0],
+            hook: typeof d.hook === "string" ? d.hook : "",
+            cta: typeof d.cta === "string" ? d.cta : "",
+          }));
 
-      // Try EN schema first (content_type column)
-      const { data: enRow, error: enErr } = await supabase
-        .from("content_item")
-        .insert({
-          user_id: userId,
-          content_type: "strategy",
-          title: strategy.title,
-          content: planText,
-          status: "draft",
-          meta: metaObj,
-          ...(projectId ? { project_id: projectId } : {}),
-        } as any)
-        .select("id")
-        .single();
+          const strategy = {
+            title:
+              typeof parsed.title === "string"
+                ? parsed.title
+                : `Plan contenu ${duration} jours`,
+            days,
+          };
 
-      if (!enErr && enRow?.id) {
-        strategyItemId = String(enRow.id);
-      } else {
-        // Fallback: FR schema (type column)
-        const { data: frRow } = await supabase
-          .from("content_item")
-          .insert({
-            user_id: userId,
-            type: "strategy",
-            titre: strategy.title,
-            contenu: planText,
-            statut: "draft",
-            meta: metaObj,
-            ...(projectId ? { project_id: projectId } : {}),
-          } as any)
-          .select("id")
-          .single();
+          let strategyItemId: string | null = null;
+          try {
+            const planText = formatPlanAsText(strategy);
+            const metaObj = { strategy_plan: strategy };
 
-        if (frRow?.id) {
-          strategyItemId = String(frRow.id);
+            const { data: enRow, error: enErr } = await supabase
+              .from("content_item")
+              .insert({
+                user_id: userId,
+                content_type: "strategy",
+                title: strategy.title,
+                content: planText,
+                status: "draft",
+                meta: metaObj,
+                ...(projectId ? { project_id: projectId } : {}),
+              } as any)
+              .select("id")
+              .single();
+
+            if (!enErr && enRow?.id) {
+              strategyItemId = String(enRow.id);
+            } else {
+              const { data: frRow } = await supabase
+                .from("content_item")
+                .insert({
+                  user_id: userId,
+                  type: "strategy",
+                  titre: strategy.title,
+                  contenu: planText,
+                  statut: "draft",
+                  meta: metaObj,
+                  ...(projectId ? { project_id: projectId } : {}),
+                } as any)
+                .select("id")
+                .single();
+
+              if (frRow?.id) strategyItemId = String(frRow.id);
+            }
+          } catch {
+            // Non-blocking — plan is still returned even if DB save fails
+          }
+
+          send("done", { ok: true, strategy, strategyItemId });
+        } catch (e: any) {
+          console.error("Content strategy stream error:", e);
+          send("error", {
+            error: e?.message || "Erreur interne",
+            status: 500,
+          });
+        } finally {
+          clearInterval(heartbeat);
+          try {
+            controller.close();
+          } catch {
+            /* already closed */
+          }
         }
-      }
-    } catch {
-      // Non-blocking — plan is still returned even if DB save fails
-    }
+      },
+    });
 
-    // 10. Return the plan (no credit consumed here — credits per content piece)
-    return NextResponse.json({ ok: true, strategy, strategyItemId });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        // nginx wants this to flush each chunk to the client immediately
+        // rather than buffering up the whole response.
+        "X-Accel-Buffering": "no",
+        Connection: "keep-alive",
+      },
+    });
   } catch (e: any) {
-    console.error("Content strategy error:", e);
+    console.error("Content strategy early error:", e);
     return NextResponse.json(
       { error: e?.message || "Erreur interne" },
       { status: 500 },

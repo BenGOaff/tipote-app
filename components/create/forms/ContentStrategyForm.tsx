@@ -242,6 +242,75 @@ async function safeFetchJson(
   return json;
 }
 
+// SSE consumer for /api/content/strategy. The endpoint heartbeats every
+// 15s while Claude generates so Cloudflare's 100s proxy timeout doesn't
+// kill the request — but to the caller it still feels like a single
+// "give me the plan" call. Resolves with the `done` event payload, or
+// throws on `error` event / network failure.
+async function fetchStrategySSE(
+  url: string,
+  opts: RequestInit,
+  msgFor: { server: (status: number) => string; generic: (status: number) => string },
+): Promise<any> {
+  const res = await fetch(url, opts);
+  if (!res.ok || !res.body) {
+    // Server bailed before opening the stream (auth, validation…).
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      const j = await res.json().catch(() => null);
+      throw new Error(j?.error || msgFor.generic(res.status));
+    }
+    throw new Error(msgFor.server(res.status));
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  // Parse SSE frames as they arrive. A frame ends with a blank line;
+  // a frame can have multiple `data:` lines (we join with \n) and an
+  // optional `event:` line (defaults to "message").
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let sep: number;
+    while ((sep = buffer.indexOf("\n\n")) !== -1) {
+      const frame = buffer.slice(0, sep);
+      buffer = buffer.slice(sep + 2);
+
+      let eventName = "message";
+      const dataLines: string[] = [];
+      for (const line of frame.split("\n")) {
+        if (!line || line.startsWith(":")) continue; // comment / heartbeat
+        if (line.startsWith("event:")) {
+          eventName = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          dataLines.push(line.slice(5).trimStart());
+        }
+      }
+      if (dataLines.length === 0) continue;
+
+      let payload: any = null;
+      try {
+        payload = JSON.parse(dataLines.join("\n"));
+      } catch {
+        continue;
+      }
+
+      if (eventName === "done") return payload;
+      if (eventName === "error") {
+        throw new Error(payload?.error || msgFor.generic(payload?.status ?? 500));
+      }
+      // "started" / other progress events — ignored for now, hooks in
+      // later if we want to surface progress in the UI.
+    }
+  }
+
+  throw new Error(msgFor.generic(0));
+}
+
 /**
  * Call /api/content/generate for a single content piece.
  * Returns the jobId (content is generated async on server).
@@ -559,7 +628,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
 
     setGenerating(true);
     try {
-      const json = await safeFetchJson("/api/content/strategy", {
+      const json = await fetchStrategySSE("/api/content/strategy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

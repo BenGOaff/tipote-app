@@ -159,9 +159,22 @@ export function formatPriceRange(offer: OfferOption): string | null {
 }
 
 /**
- * Load all offers and merge them into a single list.
+ * Load offers used by content-creation forms.
+ *
+ * Historically merged two sources (selected_pyramid + business_profiles.offers),
+ * but the strategic pyramid is a *brainstorm* artifact — listing it next to
+ * the user's real offers polluted the picker with fake-looking entries
+ * (Béné feedback 2026-05-06: "Tipote hallucine des offres qui n'existent pas").
+ *
+ * Default behaviour now returns ONLY user-validated offers from
+ * business_profiles.offers. Pass { includePyramid: true } if you ever need
+ * the legacy merged list (e.g. for the strategy view itself).
  */
-export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
+export async function loadAllOffers(
+  supabase: any,
+  opts: { includePyramid?: boolean } = {},
+): Promise<OfferOption[]> {
+  const includePyramid = opts.includePyramid === true;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -172,6 +185,8 @@ export async function loadAllOffers(supabase: any): Promise<OfferOption[]> {
   const userId = user.id;
 
   // ---- Source 1: business_plan.plan_json.selected_pyramid (AI-generated offers) ----
+  // Skipped by default — see docstring above.
+  if (includePyramid)
   try {
     let planRow: any = null;
     const { data, error } = await supabase
