@@ -1,6 +1,16 @@
-# CAHIER DES CHARGES Tipote — Version Avril 2026 (État actuel du produit)
+# CAHIER DES CHARGES Tipote — Version Mai 2026 (État actuel du produit)
 
 Application Web SaaS multilingue (FR/EN/ES/IT/AR) pour analyse business, planification stratégique, génération de contenus IA et publication automatisée sur les réseaux sociaux.
+
+> **Notes de version Mai 2026** — synthèse des évolutions depuis la version d'Avril :
+> - **Module Popquiz** : nouveau type de contenu (vidéo + quiz incrustés à des timestamps précis), accessible depuis `/create`. Mirror du module développé sur Tiquiz, scopé multi-projet via `project_id`. Plan gratuit limité à 1 popquiz par projet.
+> - **Sécurité** : la clé API Systeme.io est désormais **chiffrée at rest** (AES-256-GCM, DEK per-user, pipeline `lib/piiCrypto`). Migration progressive — le code lit `_enc` en priorité, retombe sur la colonne plaintext historique pendant la transition. UI : champ `type="password"` + toggle 👁.
+> - **Stratégie « live »** : flag `is_stale` posé sur `business_plan.plan_json` quand un champ profil critique change (revenue_goal, niche, has_offers…). La page `/strategy` affiche un bandeau ambré « Tes infos ont changé » avec un bouton « Recalculer maintenant » qui force la regen via `/api/strategy?force=true`.
+> - **Reset par projet** : nouveau endpoint `POST /api/profile/reset` qui wipe uniquement le projet actif (vs `/api/account/reset` qui wipe le compte entier). Refuse l'opération si l'user n'a qu'un seul projet (utiliser le reset compte). UI : bouton « Réinitialiser ce Tipote » dans Settings → Compte.
+> - **Onboarding multi-profil** : la vérif d'onboarding est désormais STRICTEMENT scopée à `(user_id, project_id)`. Plus de fallback « any project completed » qui sautait l'onboarding du 2e Tipote.
+> - **Quiz** : nouvelle colonne `bonus_intro_text` (paragraphe custom de l'étape de partage qui remplace le templeté). `hasBonusFlow` accepte désormais image bonus seule. Bouton « Recommencer » sur l'étape résultat. Fallback consent_text par locale du visiteur. Color picker dans `RichTextEdit` (palette de swatches + input couleur custom + reset). Fix contraste invisible blanc-sur-blanc en mode édition. Bandeau bonus_image fix.
+> - **Régression majeure corrigée** : le bloc `/api/strategy` qui supprimait `selected_pyramid` quand `hasOffersEffective=true` est désormais restreint aux `isAffiliate=true`. Avant : « Aucune offre trouvée » sur tous les `PostForm` une fois la stratégie générée.
+> - **Garde-fous** : `docs/INVARIANTS.md` documente les zones cassables (5 invariants : lead-safety, scope onboarding, reset par projet, typo FR, offres user-authored).
 
 ---
 
@@ -28,6 +38,7 @@ La "mémoire" Tipote est structurée (profil \+ diagnostic \+ persona \+ storyte
 - Calendrier éditorial centralisé  
 - Constructeur de pages (capture, vente, vitrine, link-in-bio)
 - Système de quiz avec capture de leads
+- **Module Popquiz** (Mai 2026) : vidéo (YouTube/Vimeo/upload TUS resumable jusqu'à 2 GB) avec quiz interactifs incrustés à des timestamps précis, embed iframe pour intégration externe (`/embed/pq/{id}`)
 - Gestion des leads avec chiffrement AES-256
 - Gestion des clients (suivi, notes, statuts, processus d'accompagnement)
 - Templates Systeme.io  
