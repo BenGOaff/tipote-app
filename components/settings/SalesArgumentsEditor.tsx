@@ -179,60 +179,75 @@ export function SalesArgumentsEditor({
   }
 
   return (
-    <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-3">
+    <div className="relative rounded-xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-background to-primary/5 shadow-sm overflow-hidden">
+      {/* Decorative corner accent so the block reads as a Tipote-branded
+          "magic" affordance rather than a generic collapsed list. */}
+      <div className="absolute -top-8 -right-8 size-24 rounded-full bg-primary/10 blur-2xl pointer-events-none" />
+
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 text-left"
+        className="relative w-full flex items-center justify-between gap-3 text-left p-4 hover:bg-primary/5 transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-primary shrink-0" />
-          <span className="text-sm font-semibold">Puces promesses</span>
-          {hasBullets ? (
-            <span className="text-[11px] text-muted-foreground">
-              ({bullets.length})
-            </span>
-          ) : (
-            <span className="text-[11px] text-muted-foreground italic">
-              non générées
-            </span>
-          )}
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="size-9 rounded-lg bg-primary/15 grid place-items-center shrink-0 ring-1 ring-primary/20">
+            <Sparkles className="size-4 text-primary" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-bold text-foreground">
+                Puces promesses
+              </span>
+              {hasBullets ? (
+                <span className="text-[11px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                  {bullets.length} puces
+                </span>
+              ) : (
+                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/15 rounded-full px-2 py-0.5">
+                  À générer
+                </span>
+              )}
+            </div>
+            <p className="text-[12px] text-muted-foreground leading-snug mt-0.5">
+              Bénéfice + conséquence concrète, réutilisés partout (posts,
+              emails, pages de vente…).
+            </p>
+          </div>
         </div>
         {open ? (
-          <ChevronDown className="size-4 text-muted-foreground" />
+          <ChevronDown className="size-5 text-primary shrink-0" />
         ) : (
-          <ChevronRight className="size-4 text-muted-foreground" />
+          <ChevronRight className="size-5 text-primary shrink-0" />
         )}
       </button>
 
       {open ? (
-        <div className="space-y-3 pt-1">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <span className="font-medium text-foreground/80">
-              bénéfice + conséquence concrète du bénéfice
-            </span>
-            . L&apos;IA génère 10 puces en variant l&apos;angle (avant/après,
-            contraste, histoire…). Tu peux les éditer avant qu&apos;elles soient
-            réutilisées dans tes posts, emails, articles, pages de vente, etc.
+        <div className="relative space-y-3 px-4 pb-4 pt-1 border-t border-primary/15">
+          <p className="text-xs text-muted-foreground leading-relaxed pt-2">
+            L&apos;IA génère 10 puces en variant l&apos;angle (avant/après,
+            contraste, histoire…) à partir de ta promesse, ton persona et ton
+            storytelling. Tu gardes la main : édite, supprime, ajoute. Une
+            génération automatique = <strong>1 crédit</strong>. Les
+            modifications manuelles sont <strong>gratuites</strong>.
           </p>
 
           {!hasBullets ? (
             <Button
               type="button"
-              size="sm"
+              size="lg"
               onClick={() => handleGenerate(false)}
               disabled={disabled || generating || !offerReady}
-              className="w-full"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
             >
               {generating ? (
                 <>
-                  <Loader2 className="size-4 animate-spin mr-1.5" />
+                  <Loader2 className="size-4 animate-spin mr-2" />
                   Génération en cours…
                 </>
               ) : (
                 <>
-                  <Wand2 className="size-4 mr-1.5" />
-                  Auto-générer les arguments avec l&apos;IA
+                  <Wand2 className="size-4 mr-2" />
+                  Auto-générer mes 10 puces avec l&apos;IA (1 crédit)
                 </>
               )}
             </Button>
@@ -334,6 +349,7 @@ export function SalesArgumentsEditor({
                   variant="outline"
                   onClick={() => handleGenerate(true)}
                   disabled={disabled || generating || !offerReady}
+                  className="border-primary/40 text-primary hover:bg-primary/10"
                 >
                   {generating ? (
                     <>
@@ -343,7 +359,7 @@ export function SalesArgumentsEditor({
                   ) : (
                     <>
                       <RefreshCw className="size-4 mr-1.5" />
-                      Régénérer toutes les puces
+                      Régénérer (1 crédit)
                     </>
                   )}
                 </Button>
@@ -360,7 +376,7 @@ export function SalesArgumentsEditor({
                       Enregistrement…
                     </>
                   ) : (
-                    "Enregistrer les puces"
+                    "Enregistrer les modifications"
                   )}
                 </Button>
               </div>

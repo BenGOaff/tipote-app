@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
-import { ensureUserCredits } from "@/lib/credits";
+import { consumeCredits, ensureUserCredits } from "@/lib/credits";
 import { callClaude, getClaudeApiKey } from "@/lib/claude";
 import {
   buildSalesArgumentsPrompt,
@@ -201,7 +201,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: saved.error }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, salesArguments: args });
+  // 1 credit per generation. We charge AFTER successful persist so a
+  // failed write doesn't burn credits. PATCH (manual edits) stays free.
+  let creditsLeft: number | null = null;
+  try {
+    const snap = await consumeCredits(userId, 1, {
+      feature: "offer_sales_arguments_generate",
+      offer_name: typeof offer?.name === "string" ? offer.name : null,
+    });
+    creditsLeft = snap?.total_remaining ?? null;
+  } catch (e) {
+    console.error("[sales-arguments] consumeCredits failed:", e);
+  }
+
+  return NextResponse.json({ ok: true, salesArguments: args, creditsLeft });
 }
 
 export async function PATCH(req: NextRequest) {

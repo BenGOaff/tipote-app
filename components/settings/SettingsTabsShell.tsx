@@ -534,8 +534,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
     let cancelled = false;
     (async () => {
       setGeneratedOffersLoading(true);
+      // Hard cap on the request: no point spinning forever if the
+      // strategy endpoint is slow / unavailable. Béné regression
+      // 2026-05-06 — section was stuck on a spinner for users who
+      // had explicitly deleted their pyramid.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8_000);
       try {
-        const res = await fetch("/api/strategy/offer-pyramid");
+        const res = await fetch("/api/strategy/offer-pyramid", { signal: ctrl.signal });
         const json = await res.json().catch(() => null);
         if (cancelled) return;
         const pyramid = json?.selected_pyramid;
@@ -577,6 +583,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         }
         if (flat.length > 0) setGeneratedOffers(flat);
       } catch { /* ignore */ }
+      finally { clearTimeout(timer); }
       if (!cancelled) setGeneratedOffersLoading(false);
     })();
     return () => { cancelled = true; };
@@ -2149,7 +2156,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         </Card>
 
         {/* Generated offers (from AI strategy) */}
-        {(generatedOffers.length > 0 || generatedOffersLoading) && (
+        {/* Section IA-generated pyramid offers : on l'affiche UNIQUEMENT
+            si l'user en a au moins une. Si la pyramide est vide ou supprimée,
+            on retire complètement la section (évite "section inutile qui
+            mouline" — Béné 2026-05-06). */}
+        {generatedOffers.length > 0 && (
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
