@@ -1,12 +1,17 @@
-// List page for the caller's popquizzes. Mirrors /quizzes but with
-// the popquiz-specific shape (one video per row).
+// List page for the caller's popquizzes. Server component qui fait
+// la fetch + délègue le rendu à PopquizzesClient (côté client) pour
+// l'interactivité (filtres, suppression, popover embed).
+//
+// Tipote spec : la liste est scopée par projet actif (multi-projet).
+// Visuel aligné sur /quizzes pour la cohérence inter-listes.
 
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
-import { Button } from "@/components/ui/button";
-import { DeletePopquizButton } from "./DeletePopquizButton";
+import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
+import AppShell from "@/components/AppShell";
+import { PopquizzesClient, type PopquizListItem } from "./PopquizzesClient";
 
 export const metadata = { title: "Mes Popquiz – Tipote" };
 
@@ -14,15 +19,6 @@ interface VideoLite {
   source: string;
   thumbnail_url: string | null;
   status: string;
-}
-
-interface PopquizListRow {
-  id: string;
-  title: string;
-  is_published: boolean;
-  views_count: number | null;
-  completions_count: number | null;
-  video: VideoLite | VideoLite[] | null;
 }
 
 function firstVideo(
@@ -38,79 +34,59 @@ export default async function PopquizzesListPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/");
 
   const projectId = await getActiveProjectId(supabase, user.id);
+
+  // Liste scopée par projet actif (multi-projet Tipote).
   let listQuery = supabase
     .from("popquizzes")
     .select(
-      `id, title, is_published, views_count, completions_count,
+      `id, title, slug, is_published, views_count, completions_count,
        video:popquiz_videos!inner(source, thumbnail_url, status)`,
     )
     .eq("user_id", user.id);
   if (projectId) listQuery = listQuery.eq("project_id", projectId);
-  const { data } = await listQuery.order("created_at", { ascending: false });
 
-  const popquizzes = (data ?? []) as unknown as PopquizListRow[];
+  // Plan vit dans `profiles` (filter sur `id`, pas `user_id`) et nécessite
+  // un admin client pour bypass RLS, comme pour POST /api/popquiz.
+  let plan: string | null = "free";
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+    plan = (profile as { plan?: string | null } | null)?.plan ?? "free";
+  } catch {
+    // fail-open
+  }
+
+  const { data: rows } = await listQuery.order("created_at", { ascending: false });
+
+  const popquizzes: PopquizListItem[] = (rows ?? []).map((r: any) => {
+    const v = firstVideo(r.video);
+    return {
+      id: String(r.id),
+      title: String(r.title ?? ""),
+      slug: typeof r.slug === "string" ? r.slug : null,
+      is_published: r.is_published === true,
+      views_count: Number(r.views_count ?? 0),
+      completions_count: Number(r.completions_count ?? 0),
+      thumbnail_url: v?.thumbnail_url ?? null,
+      source: v?.source ?? "?",
+    };
+  });
+
+  const isPaid = isPaidPlan(plan);
 
   return (
-    <main className="mx-auto max-w-4xl p-6 space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Mes Popquiz</h1>
-          <p className="text-sm text-muted-foreground">
-            Quiz qui se déclenchent dans une vidéo.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/popquiz/new">Nouveau Popquiz</Link>
-        </Button>
-      </header>
-
-      {popquizzes.length === 0 ? (
-        <div className="rounded-lg border bg-card p-12 text-center space-y-3">
-          <p className="text-muted-foreground">Aucun popquiz pour l'instant.</p>
-          <Button asChild>
-            <Link href="/popquiz/new">Créer le premier</Link>
-          </Button>
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {popquizzes.map((p) => {
-            const v = firstVideo(p.video);
-            return (
-              <li
-                key={p.id}
-                className="flex items-center gap-3 rounded-lg border bg-card p-3"
-              >
-                <div className="size-12 rounded bg-muted flex items-center justify-center text-[10px] uppercase text-muted-foreground shrink-0">
-                  {v?.source ?? "?"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{p.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.is_published ? "Publié" : "Brouillon"}
-                    {" · "}
-                    {p.views_count ?? 0} vues ·{" "}
-                    {p.completions_count ?? 0} terminés
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/popquiz/${p.id}`}>Modifier</Link>
-                </Button>
-                {p.is_published ? (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/pq/${p.id}`} target="_blank">
-                      Voir
-                    </Link>
-                  </Button>
-                ) : null}
-                <DeletePopquizButton popquizId={p.id} popquizTitle={p.title} />
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </main>
+    <AppShell userEmail={user.email ?? ""} headerTitle="Mes Popquiz">
+      <PopquizzesClient
+        popquizzes={popquizzes}
+        isPaid={isPaid}
+        maxFree={FREE_LIMITS.maxPopquizzes}
+      />
+    </AppShell>
   );
 }
