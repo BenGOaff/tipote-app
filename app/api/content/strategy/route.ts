@@ -40,23 +40,45 @@ function getClaudeApiKey(): string {
   );
 }
 
+// Streamed call: we read Anthropic's SSE chunks as they arrive instead
+// of waiting for the full response. Two wins:
+//   - 30-day plans (16k tokens, 60-120s) no longer hit a synchronous
+//     timeout — there's no total budget, only an *idle* budget (no
+//     chunk for N seconds = bail).
+//   - Each delta lets us heartbeat the downstream client (see the
+//     onDelta callback used by the SSE handler) so Cloudflare's 100s
+//     proxy timeout doesn't kill us mid-flight.
+//
+// Idle timeout is intentionally generous (90s): Anthropic sometimes
+// pauses mid-generation when the model hits a tricky bit of JSON. We
+// only want to abort if the connection is *actually* dead.
 async function callClaude(args: {
   apiKey: string;
   system: string;
   user: string;
   maxTokens?: number;
   temperature?: number;
+  onDelta?: (chunk: string, totalLen: number) => void;
 }): Promise<string> {
   const model = resolveClaudeModel();
-
-  const timeoutMsRaw = process.env.TIPOTE_CLAUDE_TIMEOUT_MS ?? process.env.CLAUDE_TIMEOUT_MS ?? "";
-  const timeoutMs = (() => {
-    const n = Number(String(timeoutMsRaw).trim() || "NaN");
-    return Number.isFinite(n) ? Math.max(10_000, Math.min(240_000, Math.floor(n))) : 120_000;
+  const idleTimeoutMs = (() => {
+    const raw =
+      process.env.TIPOTE_CLAUDE_IDLE_TIMEOUT_MS ??
+      process.env.CLAUDE_IDLE_TIMEOUT_MS ??
+      "";
+    const n = Number(String(raw).trim() || "NaN");
+    return Number.isFinite(n)
+      ? Math.max(15_000, Math.min(180_000, Math.floor(n)))
+      : 90_000;
   })();
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+  const armIdleTimer = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => controller.abort(), idleTimeoutMs);
+  };
+  armIdleTimer();
 
   let res: Response;
   try {
@@ -71,36 +93,98 @@ async function callClaude(args: {
       body: JSON.stringify({
         model,
         max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
-        temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
+        temperature:
+          typeof args.temperature === "number" ? args.temperature : 0.7,
         system: args.system,
         messages: [{ role: "user", content: args.user }],
+        stream: true,
       }),
     });
   } catch (e: any) {
+    if (idleTimer) clearTimeout(idleTimer);
     const name = String(e?.name ?? "");
-    const msg = String(e?.message ?? "");
-    if (name === "AbortError" || /aborted|abort/i.test(msg)) {
-      throw new Error(`Claude API timeout after ${timeoutMs}ms`);
+    if (name === "AbortError") {
+      throw new Error(`Claude API idle timeout (${idleTimeoutMs}ms)`);
     }
     throw e;
-  } finally {
-    clearTimeout(timer);
   }
 
-  if (!res.ok) {
+  if (!res.ok || !res.body) {
+    if (idleTimer) clearTimeout(idleTimer);
     const t = await res.text().catch(() => "");
     throw new Error(`Claude API error (${res.status}): ${t || res.statusText}`);
   }
 
-  const json = (await res.json()) as any;
-  const parts = Array.isArray(json?.content) ? json.content : [];
-  const text = parts
-    .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
-    .filter(Boolean)
-    .join("\n")
-    .trim();
+  // Parse Anthropic's SSE stream. Events we care about:
+  //   - content_block_delta (delta.text_delta) → append to buffer
+  //   - message_stop → end of stream
+  // Other events (message_start, content_block_start/stop, ping…)
+  // are ignored, but each one resets the idle timer.
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let raw = "";
+  let textAccum = "";
 
-  return text || "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      armIdleTimer();
+      raw += decoder.decode(value, { stream: true });
+
+      let sep: number;
+      while ((sep = raw.indexOf("\n\n")) !== -1) {
+        const frame = raw.slice(0, sep);
+        raw = raw.slice(sep + 2);
+        let eventName = "message";
+        const dataLines: string[] = [];
+        for (const line of frame.split("\n")) {
+          if (!line || line.startsWith(":")) continue;
+          if (line.startsWith("event:")) eventName = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+        }
+        if (dataLines.length === 0) continue;
+        let payload: any = null;
+        try {
+          payload = JSON.parse(dataLines.join("\n"));
+        } catch {
+          continue;
+        }
+        if (eventName === "content_block_delta") {
+          const txt =
+            payload?.delta?.type === "text_delta"
+              ? String(payload.delta.text ?? "")
+              : "";
+          if (txt) {
+            textAccum += txt;
+            args.onDelta?.(txt, textAccum.length);
+          }
+        } else if (eventName === "error") {
+          throw new Error(
+            payload?.error?.message
+              ? `Claude API stream error: ${payload.error.message}`
+              : "Claude API stream error",
+          );
+        } else if (eventName === "message_stop") {
+          // Drain done — the outer loop will exit on the next read().
+        }
+      }
+    }
+  } catch (e: any) {
+    if (e?.name === "AbortError") {
+      throw new Error(`Claude API idle timeout (${idleTimeoutMs}ms)`);
+    }
+    throw e;
+  } finally {
+    if (idleTimer) clearTimeout(idleTimer);
+    try {
+      reader.releaseLock();
+    } catch {
+      /* already released */
+    }
+  }
+
+  return textAccum.trim();
 }
 
 /* ───────── Labels ───────── */
@@ -453,6 +537,13 @@ export async function POST(req: Request) {
               user: userPrompt,
               maxTokens,
               temperature: 0.7,
+              // Forward Claude's deltas as progress events. Each delta
+              // doubles as a content-aware heartbeat so Cloudflare keeps
+              // the proxy connection alive — much more reliable than a
+              // fixed-interval ping when generations exceed 100s.
+              onDelta: (_chunk, totalLen) => {
+                send("progress", { received: totalLen });
+              },
             });
           } catch (aiErr: any) {
             console.error("Claude API error:", aiErr?.message);

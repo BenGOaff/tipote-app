@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 import { PostActionButtons } from "@/components/content/PostActionButtons";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
 import { ScheduleModal } from "@/components/content/ScheduleModal";
@@ -1077,6 +1078,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   if (step === "config") {
     return (
       <div className="space-y-6">
+        {generating ? <AIGeneratingOverlay /> : null}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="w-5 h-5" />
@@ -1359,6 +1361,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
   // ═════════════════════════════════════════════
   return (
     <div className="space-y-6">
+      {generating ? <AIGeneratingOverlay /> : null}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onClose}>
