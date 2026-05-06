@@ -341,3 +341,23 @@
 .tipote-quiz-rich [style*="text-align: left"] { text-align: left; }
 
 
+/* ───────────────────────────────────────────
+ * Popquiz player — fix YouTube/Vimeo iframe
+ * ───────────────────────────────────────────
+ *
+ * Vidstack rend la vidéo YouTube/Vimeo dans un <media-provider> qui
+ * contient un <iframe>. Sans intervention l'iframe capte tous les
+ * pointer events et notre <PlayButton> superposé (z-[1]) ne reçoit
+ * jamais le clic — la lecture ne démarre pas.
+ *
+ * Vidstack contrôle YouTube/Vimeo via son API (.play() / postMessage),
+ * donc l'iframe n'a pas besoin de recevoir les clics directement.
+ *
+ * Scopé à `.popquiz-player media-provider iframe` pour ne PAS
+ * affecter l'iframe du quiz overlay (PopquizQuizIframe) qui doit
+ * rester interactif — le visiteur clique sur les options de quiz.
+ */
+.popquiz-player media-provider iframe {
+  pointer-events: none;
+}
+
