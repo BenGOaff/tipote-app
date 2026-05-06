@@ -266,7 +266,7 @@ export function VideoUploader({
       const raw = e instanceof Error ? e.message : "Erreur lors de l'import";
       const friendly =
         raw.toLowerCase().includes("exceeded") || raw.toLowerCase().includes("size")
-          ? "Fichier trop volumineux pour ton plan Supabase. Augmente la limite ou choisis une vidéo plus légère."
+          ? "Fichier trop volumineux. La taille maximale acceptée est 5 Go."
           : raw.toLowerCase().includes("abort")
             ? "Import annulé."
             : raw;
@@ -394,7 +394,7 @@ export function VideoUploader({
           Glisse une vidéo ici ou clique pour choisir
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          MP4, WebM, MOV. Upload résumable — survit aux coupures réseau.
+          MP4, WebM, MOV — jusqu’à 5 Go. Upload résumable, survit aux coupures réseau.
         </p>
         <input
           ref={inputRef}
