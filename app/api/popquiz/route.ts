@@ -21,6 +21,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { parseVideoUrl } from "@/lib/popquiz";
 import { sanitizeSlug } from "@/lib/quizBranding";
+import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +97,50 @@ export async function POST(req: NextRequest) {
       { ok: false, error: "title is required" },
       { status: 400 },
     );
+  }
+
+  // Free plan : 1 popquiz max par projet (même politique que les quiz /
+  // sondages / pages). L'user peut supprimer son popquiz pour en créer
+  // un autre, ou passer payant pour en cumuler. Béné 2026-05-04.
+  // Le plan vit dans `profiles` (pas `business_profiles`) — on lit via
+  // admin pour bypass RLS, comme partout ailleurs.
+  let plan: string | null = "free";
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+    plan = (profile as { plan?: string | null } | null)?.plan ?? "free";
+  } catch {
+    // fail-open : si la lecture casse, on laisse passer (mieux qu'un
+    // créateur payant bloqué par un glitch côté admin).
+  }
+
+  if (!isPaidPlan(plan)) {
+    let countQuery = supabase
+      .from("popquizzes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    // À ce stade projectId n'existe pas encore (on le calcule plus
+    // bas). On le recalcule ici pour scoper le compteur au projet
+    // actif — sinon un user multi-projet free pourrait être bloqué
+    // par les popquizzes des autres projets.
+    const earlyProjectId = await getActiveProjectId(supabase, user.id);
+    if (earlyProjectId) countQuery = countQuery.eq("project_id", earlyProjectId);
+    const { count } = await countQuery;
+
+    if ((count ?? 0) >= FREE_LIMITS.maxPopquizzes) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "FREE_PLAN_POPQUIZ_LIMIT",
+          message:
+            "Le plan gratuit est limité à 1 popquiz. Supprime celui en cours ou passe en plan payant pour en créer d'autres.",
+        },
+        { status: 403 },
+      );
+    }
   }
 
   const url = String(body.url ?? "").trim();

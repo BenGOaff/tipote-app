@@ -117,6 +117,8 @@ export const FREE_LIMITS = {
   maxSurveys: 1,
   /** Max published hosted pages a free user can own per project */
   maxPages: 1,
+  /** Max popquizzes (vidéo + cuepoints) a free user can own per project */
+  maxPopquizzes: 1,
   /** Visible leads per rolling 30-day window — captures keep coming, the rest are blurred */
   visibleLeadsPerMonth: 10,
 } as const;

@@ -342,7 +342,11 @@ export default function PopquizNewClient({
       });
       const json = await res.json();
       if (!json.ok) {
-        setError(json.error ?? "Erreur lors de la sauvegarde");
+        const friendly =
+          json.error === "FREE_PLAN_POPQUIZ_LIMIT"
+            ? json.message ?? "Limite du plan gratuit atteinte."
+            : json.error ?? "Erreur lors de la sauvegarde";
+        setError(friendly);
         return;
       }
       if (publish) {
