@@ -482,6 +482,25 @@ export function PopquizPlayer({
               src={posterUrl}
               alt=""
               className="absolute inset-0 w-full h-full object-cover bg-black"
+              // YouTube's maxresdefault.jpg is missing on SD / older
+              // videos and returns a 120-byte 1×1 stub. Fall back to
+              // hqdefault.jpg (480×360, always available) when the load
+              // fails or returns a tiny image.
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                if (img.src.includes("/maxresdefault.")) {
+                  img.src = img.src.replace("/maxresdefault.", "/hqdefault.");
+                }
+              }}
+              onLoad={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                if (
+                  img.src.includes("/maxresdefault.") &&
+                  img.naturalWidth < 200
+                ) {
+                  img.src = img.src.replace("/maxresdefault.", "/hqdefault.");
+                }
+              }}
             />
           ) : null}
         </MediaProvider>

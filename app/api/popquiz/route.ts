@@ -204,7 +204,11 @@ export async function POST(req: NextRequest) {
     // blocks creation.
     let thumbnailUrl: string | null = null;
     if (parsed.source === "youtube" && parsed.externalId) {
-      thumbnailUrl = `https://i.ytimg.com/vi/${parsed.externalId}/hqdefault.jpg`;
+      // maxresdefault is 1280×720 when the upload is HD, missing on
+      // older / SD videos. We fall back to hqdefault (480×360) at
+      // render time via an onError handler in the player. Lighter than
+      // making an extra request just to probe availability.
+      thumbnailUrl = `https://i.ytimg.com/vi/${parsed.externalId}/maxresdefault.jpg`;
     } else if (parsed.source === "vimeo" && parsed.externalId) {
       try {
         const oembed = await fetch(
