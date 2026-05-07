@@ -10,8 +10,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  isValidAccentColor,
+  isValidEmoji,
+} from "@/lib/projects/visualIdentity";
 
 export const dynamic = "force-dynamic";
+
+const PROJECT_SELECT =
+  "id, name, is_default, created_at, accent_color, icon_emoji, use_branding_logo";
 
 // ────────────────────────────────────────────
 // GET : liste des projets + plan actuel
@@ -28,7 +35,7 @@ export async function GET() {
     // Projets du user
     const { data: projects, error: projErr } = await supabase
       .from("projects")
-      .select("id, name, is_default, created_at")
+      .select(PROJECT_SELECT)
       .eq("user_id", user.id)
       .order("is_default", { ascending: false })
       .order("created_at", { ascending: true });
@@ -118,7 +125,7 @@ export async function POST(req: NextRequest) {
         name: parsed.data.name,
         is_default: false,
       })
-      .select("id, name, is_default, created_at")
+      .select(PROJECT_SELECT)
       .single();
 
     if (insertErr) {
@@ -147,12 +154,27 @@ export async function POST(req: NextRequest) {
 }
 
 // ────────────────────────────────────────────
-// PATCH : renommer un projet
+// PATCH : update name / accent_color / icon_emoji / use_branding_logo
 // ────────────────────────────────────────────
-const RenameSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().trim().min(1).max(100),
-});
+// All fields optional — caller can update one or several at once. We
+// validate accent_color and icon_emoji against our curated palettes
+// (lib/projects/visualIdentity) so a malformed value never reaches DB.
+const PatchSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string().trim().min(1).max(100).optional(),
+    accent_color: z.string().nullable().optional(),
+    icon_emoji: z.string().nullable().optional(),
+    use_branding_logo: z.boolean().optional(),
+  })
+  .refine((v) => {
+    return (
+      v.name !== undefined ||
+      v.accent_color !== undefined ||
+      v.icon_emoji !== undefined ||
+      v.use_branding_logo !== undefined
+    );
+  }, "Aucun champ à mettre à jour");
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -170,7 +192,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
     }
 
-    const parsed = RenameSchema.safeParse(body);
+    const parsed = PatchSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { ok: false, error: parsed.error.flatten().fieldErrors },
@@ -178,12 +200,47 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // Validate the visual identity against our curated palettes —
+    // null means "reset to default", anything else must be one of
+    // ACCENT_COLORS / PROJECT_EMOJI.
+    const update: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (parsed.data.name !== undefined) update.name = parsed.data.name;
+    if (parsed.data.accent_color !== undefined) {
+      if (
+        parsed.data.accent_color !== null &&
+        !isValidAccentColor(parsed.data.accent_color)
+      ) {
+        return NextResponse.json(
+          { ok: false, error: "accent_color non supporté" },
+          { status: 400 },
+        );
+      }
+      update.accent_color = parsed.data.accent_color;
+    }
+    if (parsed.data.icon_emoji !== undefined) {
+      if (
+        parsed.data.icon_emoji !== null &&
+        !isValidEmoji(parsed.data.icon_emoji)
+      ) {
+        return NextResponse.json(
+          { ok: false, error: "icon_emoji non supporté" },
+          { status: 400 },
+        );
+      }
+      update.icon_emoji = parsed.data.icon_emoji;
+    }
+    if (parsed.data.use_branding_logo !== undefined) {
+      update.use_branding_logo = parsed.data.use_branding_logo;
+    }
+
     const { data, error } = await supabase
       .from("projects")
-      .update({ name: parsed.data.name, updated_at: new Date().toISOString() })
+      .update(update)
       .eq("id", parsed.data.id)
       .eq("user_id", user.id)
-      .select("id, name, is_default, created_at")
+      .select(PROJECT_SELECT)
       .single();
 
     if (error) {

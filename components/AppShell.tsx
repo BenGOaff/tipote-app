@@ -6,6 +6,7 @@ import { PanelLeftOpen } from "lucide-react";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
+import { SessionResetGate } from "@/components/projects/SessionResetGate";
 import { HeaderCredits } from "@/components/HeaderCredits";
 import { NotificationBell } from "@/components/NotificationBell";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
@@ -49,6 +50,10 @@ export default function AppShell({
 }: Props) {
   return (
     <SidebarProvider>
+      {/* Reset the active-project cookie on every fresh browser
+          session so the user reopens Tipote on their principal
+          project. Stays as-is during the same session. */}
+      <SessionResetGate />
       <div className="min-h-screen flex w-full">
         <AppSidebar />
 
