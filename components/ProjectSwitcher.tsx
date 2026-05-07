@@ -18,6 +18,7 @@ import {
   Pencil,
   Crown,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
 import {
@@ -65,6 +66,7 @@ export function ProjectSwitcher() {
   const [showUpsellDialog, setShowUpsellDialog] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [targetProject, setTargetProject] = useState<Project | null>(null);
 
   const [newName, setNewName] = useState("");
@@ -441,26 +443,77 @@ export function ProjectSwitcher() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog : Supprimer */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      {/* Dialog : Supprimer — danger zone */}
+      <Dialog
+        open={showDeleteDialog}
+        onOpenChange={(o) => {
+          setShowDeleteDialog(o);
+          if (!o) setDeleteConfirmText("");
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("deleteTitle")}</DialogTitle>
+            <div className="flex items-center gap-2">
+              <span className="size-9 rounded-full bg-destructive/15 grid place-items-center ring-1 ring-destructive/30">
+                <AlertTriangle className="size-5 text-destructive" />
+              </span>
+              <DialogTitle className="text-destructive">
+                Zone de danger
+              </DialogTitle>
+            </div>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {t("deleteDesc", { name: targetProject?.name ?? "" })}
-          </p>
-          <DialogFooter>
+          <div className="space-y-3">
+            <p className="text-sm">
+              Tu es sur le point de supprimer le projet{" "}
+              <span className="font-bold">{targetProject?.name}</span>. C&apos;est
+              comme supprimer un de tes comptes Tipote.
+            </p>
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-destructive">
+                Ce qui sera définitivement supprimé :
+              </p>
+              <ul className="text-xs text-foreground/80 space-y-0.5 list-disc ml-4">
+                <li>Ton positionnement, ton persona, tes offres</li>
+                <li>Tous tes contenus (posts, emails, articles, pages)</li>
+                <li>Tous tes quiz, sondages et popquizzes du projet</li>
+                <li>Tous les leads et clients liés à ce projet</li>
+                <li>Tes connexions réseaux sociaux et automations</li>
+                <li>Tes pages publiées (les URLs renverront 404)</li>
+              </ul>
+              <p className="text-[11px] text-muted-foreground pt-1">
+                Aucun autre de tes projets ne sera affecté.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">
+                Pour confirmer, recopie le nom du projet :{" "}
+                <span className="font-mono font-bold">
+                  {targetProject?.name}
+                </span>
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={targetProject?.name ?? ""}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
             <DialogClose asChild>
               <Button variant="outline">{tc("cancel")}</Button>
             </DialogClose>
             <Button
               variant="destructive"
               onClick={handleDelete}
-              disabled={submitting}
+              disabled={
+                submitting ||
+                deleteConfirmText.trim() !== (targetProject?.name ?? "").trim()
+              }
             >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {t("deleteConfirm")}
+              Supprimer définitivement
             </Button>
           </DialogFooter>
         </DialogContent>
