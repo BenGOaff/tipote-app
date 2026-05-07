@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
 import { buildEmbedSnippet } from "@/components/popquiz/EmbedCodeDialog";
+import { ThumbnailPicker } from "@/components/popquiz/ThumbnailPicker";
 import type { Popquiz, PopquizCue } from "@/lib/popquiz";
 import { toast } from "sonner";
 
@@ -192,6 +193,19 @@ export default function PopquizEditClient({
   const [slug, setSlug] = useState(popquiz.slug ?? "");
   const [description, setDescription] = useState(popquiz.description ?? "");
   const [isPublished, setIsPublished] = useState(popquiz.isPublished);
+
+  // Thumbnail state — preview URL + source flag. The thumbnailUrl is
+  // the signed playback URL minted by lib/popquiz/repo.ts; we just
+  // detect "is this the custom one?" from the path it points at.
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
+    popquiz.video.thumbnailUrl ?? null,
+  );
+  const [thumbnailSource, setThumbnailSource] = useState<"auto" | "custom">(
+    typeof popquiz.video.thumbnailUrl === "string" &&
+      popquiz.video.thumbnailUrl.includes("thumbnail-custom")
+      ? "custom"
+      : "auto",
+  );
 
   const initialCues: DraftCue[] = popquiz.cues.map<DraftCue>((c) => ({
     localId: c.id,
@@ -416,6 +430,18 @@ export default function PopquizEditClient({
               nouveau.
             </p>
           </div>
+
+          <ThumbnailPicker
+            popquizId={popquiz.id}
+            currentUrl={thumbnailUrl}
+            currentSource={thumbnailSource}
+            enabled={popquiz.video.source === "upload"}
+            onUpdated={({ source, thumbnailUrl: nextUrl }) => {
+              setThumbnailSource(source);
+              if (nextUrl) setThumbnailUrl(nextUrl);
+            }}
+          />
+
 
           <div className="space-y-1.5">
             <Label htmlFor="slug">
