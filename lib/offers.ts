@@ -220,16 +220,38 @@ export async function loadAllOffers(
 
   // ---- Source 2: business_profiles.offers (user's own/affiliate offers) ----
   try {
-    // Use .limit(1) instead of .maybeSingle() to avoid PGRST116 error
-    // when user has multiple business_profiles rows (multi-project)
+    // Multi-project users have one business_profiles row per project.
+    // Without a project filter, .order(updated_at).limit(1) might return
+    // the WRONG row — e.g. a row whose offers array has been wiped while
+    // a more meaningful one (with the user's actual offers) sits behind
+    // because it hasn't been touched in a while.
+    //
+    // Order of preference:
+    //   1. row matching the active project (best signal of "current" data)
+    //   2. row with offers (any project)
+    //   3. most recent row
+    let activeProjectId: string | null = null;
+    try {
+      const mod = await import("@/lib/projects/activeProject");
+      activeProjectId = await mod.getActiveProjectId(supabase, userId);
+    } catch {
+      /* projects module not present in this app */
+    }
+
     const { data: profiles } = await supabase
       .from("business_profiles")
-      .select("offers")
+      .select("offers, project_id, updated_at")
       .eq("user_id", userId)
-      .order("updated_at", { ascending: false })
-      .limit(1);
+      .order("updated_at", { ascending: false });
 
-    const profile = profiles?.[0] ?? null;
+    const rows = Array.isArray(profiles) ? profiles : [];
+    const profile =
+      (activeProjectId
+        ? rows.find((r: any) => r.project_id === activeProjectId)
+        : null) ??
+      rows.find((r: any) => Array.isArray(r.offers) && r.offers.length > 0) ??
+      rows[0] ??
+      null;
 
     if (profile && Array.isArray(profile.offers)) {
       const existingNames = new Set(allOffers.map((o) => o.name.toLowerCase().trim()));
