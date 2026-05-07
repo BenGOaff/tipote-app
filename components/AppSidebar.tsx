@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ProjectIndicatorSidebar } from "@/components/projects/ProjectIndicatorSidebar";
 import { usePepitesUnread } from "@/lib/pepites/usePepitesUnread";
 import { Button } from "@/components/ui/button";
 
@@ -263,6 +264,11 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        {/* "Tu es ici" : project indicator between Aide and Langue,
+            visible only for multi-project users. Mono-project users
+            wouldn't gain anything from it. */}
+        <ProjectIndicatorSidebar />
 
         <div className="px-1 pt-1">
           <LanguageSwitcher variant="sidebar" />
