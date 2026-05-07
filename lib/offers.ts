@@ -221,23 +221,15 @@ export async function loadAllOffers(
   // ---- Source 2: business_profiles.offers (user's own/affiliate offers) ----
   try {
     // Multi-project users have one business_profiles row per project.
-    // Without a project filter, .order(updated_at).limit(1) might return
-    // the WRONG row — e.g. a row whose offers array has been wiped while
-    // a more meaningful one (with the user's actual offers) sits behind
-    // because it hasn't been touched in a while.
+    // Without smarter selection, .order(updated_at).limit(1) returns the
+    // WRONG row when the most recent one is empty (e.g. user bumped a
+    // project's updated_at by tweaking an unrelated field).
     //
-    // Order of preference:
-    //   1. row matching the active project (best signal of "current" data)
-    //   2. row with offers (any project)
-    //   3. most recent row
-    let activeProjectId: string | null = null;
-    try {
-      const mod = await import("@/lib/projects/activeProject");
-      activeProjectId = await mod.getActiveProjectId(supabase, userId);
-    } catch {
-      /* projects module not present in this app */
-    }
-
+    // We can't filter by active project from here because loadAllOffers
+    // is called from client components and getActiveProjectId imports
+    // next/headers (server-only). So we apply a content-based fallback:
+    // among all the user's profile rows, pick the one that actually has
+    // offers, falling back to the most recent row otherwise.
     const { data: profiles } = await supabase
       .from("business_profiles")
       .select("offers, project_id, updated_at")
@@ -245,28 +237,8 @@ export async function loadAllOffers(
       .order("updated_at", { ascending: false });
 
     const rows = Array.isArray(profiles) ? profiles : [];
-    const activeRow = activeProjectId
-      ? rows.find((r: any) => r.project_id === activeProjectId) ?? null
-      : null;
-    const activeRowHasOffers =
-      activeRow && Array.isArray(activeRow.offers) && activeRow.offers.length > 0;
-    const anyRowWithOffers = rows.find(
-      (r: any) => Array.isArray(r.offers) && r.offers.length > 0,
-    );
-
-    // Priority order:
-    //   1. active project, IF it actually has offers
-    //   2. any project that has offers (Monique-bug: she saisied her
-    //      offers on project A, then bumped project B's updated_at by
-    //      tweaking another field — without this fallback, /content/new
-    //      shows "Aucune offre" even though her offers exist somewhere)
-    //   3. active project even empty (keeps semantic alignment with the
-    //      rest of the app when she really has 0 offers anywhere)
-    //   4. last resort: most recently updated row
     const profile =
-      (activeRowHasOffers ? activeRow : null) ??
-      anyRowWithOffers ??
-      activeRow ??
+      rows.find((r: any) => Array.isArray(r.offers) && r.offers.length > 0) ??
       rows[0] ??
       null;
 
