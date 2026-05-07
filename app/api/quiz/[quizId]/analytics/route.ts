@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -149,6 +150,75 @@ export async function GET(
       ? Math.round((exportedSio / leadsCount) * 1000) / 10
       : 0;
 
+  // ── Funnel: drop-off per question ──
+  // We count distinct sessions that VIEWED each question. Drop-off
+  // between Q[n] and Q[n+1] = (views[n] - views[n+1]) / views[n].
+  // The ratio is enough to flag the worst-performing question; we
+  // expose absolute counts too so the UI can show "47% on Q3".
+  let funnel: {
+    questionIndex: number;
+    views: number;
+    answers: number;
+    dropFromPrevious: number;
+  }[] = [];
+  let totalSessions = 0;
+  try {
+    let qEventsQuery = supabaseAdmin
+      .from("quiz_question_events")
+      .select("question_index, session_id, event")
+      .eq("quiz_id", quizId)
+      .order("question_index", { ascending: true })
+      .limit(50000);
+    if (period.sinceISO) qEventsQuery = qEventsQuery.gte("created_at", period.sinceISO);
+
+    const { data: qEvents } = await qEventsQuery;
+    const rows = (qEvents ?? []) as {
+      question_index: number;
+      session_id: string;
+      event: "view" | "answer";
+    }[];
+
+    // Distinct sessions per (qIdx, event). Sets are O(1) hash inserts
+    // and fit comfortably in memory at our volume (50k rows cap).
+    const viewsByQ = new Map<number, Set<string>>();
+    const answersByQ = new Map<number, Set<string>>();
+    for (const r of rows) {
+      const targetMap = r.event === "answer" ? answersByQ : viewsByQ;
+      let bucket = targetMap.get(r.question_index);
+      if (!bucket) {
+        bucket = new Set();
+        targetMap.set(r.question_index, bucket);
+      }
+      bucket.add(r.session_id);
+    }
+
+    const allQs = Array.from(
+      new Set([...viewsByQ.keys(), ...answersByQ.keys()]),
+    ).sort((a, b) => a - b);
+
+    let prevViews = 0;
+    for (const qIdx of allQs) {
+      const v = viewsByQ.get(qIdx)?.size ?? 0;
+      const a = answersByQ.get(qIdx)?.size ?? 0;
+      const drop =
+        qIdx === allQs[0] || prevViews === 0
+          ? 0
+          : Math.round(((prevViews - v) / prevViews) * 1000) / 10;
+      funnel.push({
+        questionIndex: qIdx,
+        views: v,
+        answers: a,
+        dropFromPrevious: Math.max(0, drop),
+      });
+      prevViews = v;
+    }
+    totalSessions = funnel[0]?.views ?? 0;
+  } catch (e) {
+    // Table might not exist yet on a fresh deploy — fail-open with
+    // an empty funnel rather than 500 the whole analytics endpoint.
+    console.warn("[quiz/analytics] funnel build failed:", e);
+  }
+
   return NextResponse.json({
     ok: true,
     quiz: {
@@ -167,5 +237,7 @@ export async function GET(
     },
     resultDistribution,
     leadsByDay,
+    funnel,
+    totalFunnelSessions: totalSessions,
   });
 }

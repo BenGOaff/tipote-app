@@ -32,11 +32,13 @@ import {
 } from "recharts";
 import {
   Activity,
+  AlertTriangle,
   ArrowLeft,
   BarChart3,
   Eye,
   Loader2,
   Send,
+  TrendingDown,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -44,6 +46,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 type Period = "7" | "30" | "90" | "all";
+
+interface FunnelStep {
+  questionIndex: number;
+  views: number;
+  answers: number;
+  /** % of visitors lost compared to the previous question */
+  dropFromPrevious: number;
+}
 
 interface AnalyticsResponse {
   ok: boolean;
@@ -59,6 +69,8 @@ interface AnalyticsResponse {
   };
   resultDistribution: { title: string; count: number; pct: number }[];
   leadsByDay: { date: string; count: number }[];
+  funnel?: FunnelStep[];
+  totalFunnelSessions?: number;
   error?: string;
 }
 
@@ -287,7 +299,129 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
           )}
         </Card>
       </div>
+
+      <FunnelSection
+        funnel={data.funnel ?? []}
+        totalSessions={data.totalFunnelSessions ?? 0}
+      />
     </div>
+  );
+}
+
+function FunnelSection({
+  funnel,
+  totalSessions,
+}: {
+  funnel: FunnelStep[];
+  totalSessions: number;
+}) {
+  if (funnel.length === 0) {
+    return (
+      <Card className="p-4">
+        <h2 className="text-sm font-semibold mb-1 flex items-center gap-2">
+          <TrendingDown className="size-4 text-primary" />
+          Funnel par question
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Aucune donnée pour cette période. Le tracking par question
+          commence à enregistrer dès la prochaine visite.
+        </p>
+      </Card>
+    );
+  }
+
+  const baseline = funnel[0]!.views;
+  // Worst drop-off (excluding Q1 where it's always 0). Highlighted in
+  // the UI so the user knows immediately which question to fix.
+  let worstIdx = -1;
+  let worstDrop = -1;
+  for (let i = 1; i < funnel.length; i++) {
+    if (funnel[i]!.dropFromPrevious > worstDrop) {
+      worstDrop = funnel[i]!.dropFromPrevious;
+      worstIdx = i;
+    }
+  }
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div>
+          <h2 className="text-sm font-semibold flex items-center gap-2">
+            <TrendingDown className="size-4 text-primary" />
+            Funnel par question
+          </h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Nombre de sessions distinctes qui ont vu chaque question.
+            La barre rétrécit à chaque abandon.
+          </p>
+        </div>
+        <div className="text-xs text-muted-foreground tabular-nums">
+          {totalSessions} session{totalSessions > 1 ? "s" : ""} commencées
+        </div>
+      </div>
+
+      {worstIdx > 0 && worstDrop >= 15 ? (
+        <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 flex items-start gap-2">
+          <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-900 dark:text-amber-100">
+            Question {funnel[worstIdx]!.questionIndex + 1} fait perdre{" "}
+            <span className="font-bold">{worstDrop}%</span> des visiteurs
+            par rapport à la précédente. C&apos;est le point chaud à
+            reformuler en priorité.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="space-y-1.5">
+        {funnel.map((step, i) => {
+          const ratio = baseline > 0 ? step.views / baseline : 0;
+          const isWorst = i === worstIdx && worstDrop >= 15;
+          const widthPct = Math.max(6, ratio * 100);
+          const completionPct =
+            baseline > 0 ? Math.round(ratio * 1000) / 10 : 0;
+          return (
+            <div
+              key={step.questionIndex}
+              className="flex items-center gap-3 text-xs"
+            >
+              <div className="w-20 shrink-0 text-muted-foreground tabular-nums">
+                Q{step.questionIndex + 1}
+              </div>
+              <div className="flex-1 relative h-7 rounded-md bg-muted/40 overflow-hidden">
+                <div
+                  className={`h-full ${
+                    isWorst
+                      ? "bg-amber-400/70"
+                      : i === 0
+                        ? "bg-primary/70"
+                        : "bg-primary/40"
+                  } transition-all`}
+                  style={{ width: `${widthPct}%` }}
+                />
+                <span className="absolute inset-0 flex items-center px-2 font-medium tabular-nums">
+                  {step.views} ({completionPct}%)
+                </span>
+              </div>
+              <div className="w-16 shrink-0 text-right tabular-nums">
+                {step.dropFromPrevious > 0 ? (
+                  <span
+                    className={
+                      isWorst
+                        ? "text-amber-700 dark:text-amber-300 font-semibold"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    -{step.dropFromPrevious}%
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
 
