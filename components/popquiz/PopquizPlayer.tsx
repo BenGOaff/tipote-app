@@ -172,6 +172,42 @@ function MuteToggle() {
   );
 }
 
+// Poster overlay that gets out of the way the moment playback actually
+// starts. Without this, our own `absolute inset-0` styling overrode
+// Vidstack's `data-visible` toggle and the poster kept covering the
+// YouTube/Vimeo iframe even though the video was playing behind it
+// (audio audible, cues firing — visually still on the thumbnail).
+function PosterOverlay({ posterUrl }: { posterUrl: string }) {
+  const started = useMediaState("started");
+  if (started) return null;
+  return (
+    <Poster
+      src={posterUrl}
+      alt=""
+      className="absolute inset-0 w-full h-full object-cover bg-black"
+      // YouTube's maxresdefault.jpg is missing on SD / older
+      // videos and returns a 120-byte 1×1 stub. Fall back to
+      // hqdefault.jpg (480×360, always available) when the load
+      // fails or returns a tiny image.
+      onError={(e) => {
+        const img = e.currentTarget as HTMLImageElement;
+        if (img.src.includes("/maxresdefault.")) {
+          img.src = img.src.replace("/maxresdefault.", "/hqdefault.");
+        }
+      }}
+      onLoad={(e) => {
+        const img = e.currentTarget as HTMLImageElement;
+        if (
+          img.src.includes("/maxresdefault.") &&
+          img.naturalWidth < 200
+        ) {
+          img.src = img.src.replace("/maxresdefault.", "/hqdefault.");
+        }
+      }}
+    />
+  );
+}
+
 function FullscreenToggle() {
   const isFs = useMediaState("fullscreen");
   return (
@@ -477,32 +513,7 @@ export function PopquizPlayer({
         }}
       >
         <MediaProvider>
-          {posterUrl ? (
-            <Poster
-              src={posterUrl}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover bg-black"
-              // YouTube's maxresdefault.jpg is missing on SD / older
-              // videos and returns a 120-byte 1×1 stub. Fall back to
-              // hqdefault.jpg (480×360, always available) when the load
-              // fails or returns a tiny image.
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                if (img.src.includes("/maxresdefault.")) {
-                  img.src = img.src.replace("/maxresdefault.", "/hqdefault.");
-                }
-              }}
-              onLoad={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                if (
-                  img.src.includes("/maxresdefault.") &&
-                  img.naturalWidth < 200
-                ) {
-                  img.src = img.src.replace("/maxresdefault.", "/hqdefault.");
-                }
-              }}
-            />
-          ) : null}
+          {posterUrl ? <PosterOverlay posterUrl={posterUrl} /> : null}
         </MediaProvider>
 
         <PlayButton className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none" />
