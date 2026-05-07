@@ -31,6 +31,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -38,6 +39,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ProjectIdentityBadge } from "@/components/projects/ProjectIdentityBadge";
+import {
+  ProjectIdentityEditor,
+  type ProjectIdentityValue,
+} from "@/components/projects/ProjectIdentityEditor";
 import { useToast } from "@/hooks/use-toast";
 
 import { getActiveProjectCookie, switchProject } from "@/lib/projects/client";
@@ -47,6 +53,11 @@ type Project = {
   name: string;
   is_default: boolean;
   created_at: string;
+  // Visual identity (commit A) — optional, all default to null/false
+  // until the user customises them in Settings → Mes projets.
+  accent_color?: string | null;
+  icon_emoji?: string | null;
+  use_branding_logo?: boolean | null;
 };
 
 const ELITE_UPGRADE_URL = "https://www.tipote.com/tipote-elite-mensuel";
@@ -70,6 +81,15 @@ export function ProjectSwitcher() {
   const [targetProject, setTargetProject] = useState<Project | null>(null);
 
   const [newName, setNewName] = useState("");
+  // Edit dialog (formerly "rename") now covers name + visual identity.
+  // The dialog seeds this state from the targeted project on open and
+  // saves the lot in one PATCH on submit.
+  const [identityDraft, setIdentityDraft] = useState<ProjectIdentityValue>({
+    name: "",
+    accent_color: null,
+    icon_emoji: null,
+    use_branding_logo: false,
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -165,27 +185,49 @@ export function ProjectSwitcher() {
   const handleRenameClick = (proj: Project) => {
     setTargetProject(proj);
     setNewName(proj.name);
+    setIdentityDraft({
+      name: proj.name,
+      accent_color: proj.accent_color ?? null,
+      icon_emoji: proj.icon_emoji ?? null,
+      use_branding_logo: proj.use_branding_logo ?? false,
+    });
     setShowRenameDialog(true);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleRename = async () => {
     if (!targetProject) return;
-    const trimmed = newName.trim();
-    if (!trimmed || trimmed === targetProject.name) return;
+    const trimmedName = identityDraft.name.trim();
+    if (!trimmedName) return;
 
     setSubmitting(true);
     try {
       const res = await fetch("/api/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: targetProject.id, name: trimmed }),
+        body: JSON.stringify({
+          id: targetProject.id,
+          name: trimmedName,
+          accent_color: identityDraft.accent_color,
+          icon_emoji: identityDraft.icon_emoji,
+          use_branding_logo: identityDraft.use_branding_logo,
+        }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || tc("error"));
 
       setProjects((prev) =>
-        prev.map((p) => (p.id === targetProject.id ? { ...p, name: trimmed } : p)),
+        prev.map((p) =>
+          p.id === targetProject.id
+            ? {
+                ...p,
+                name: trimmedName,
+                accent_color: identityDraft.accent_color,
+                icon_emoji: identityDraft.icon_emoji,
+                use_branding_logo: identityDraft.use_branding_logo,
+              }
+            : p,
+        ),
       );
       toast({ title: t("toastRenamed") });
       setShowRenameDialog(false);
@@ -259,11 +301,29 @@ export function ProjectSwitcher() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors text-sm font-medium max-w-[220px]"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-background hover:bg-accent transition-colors text-sm font-medium max-w-[240px]"
             title={t("switchTooltip")}
+            style={
+              activeProject?.accent_color
+                ? {
+                    borderColor: `${activeProject.accent_color}66`,
+                    boxShadow: `inset 0 0 0 1px ${activeProject.accent_color}1a`,
+                  }
+                : undefined
+            }
           >
-            <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="truncate">{activeProject?.name ?? t("defaultName")}</span>
+            {activeProject ? (
+              <ProjectIdentityBadge
+                project={activeProject}
+                size="md"
+                nameOverride={activeProject.name || t("defaultName")}
+              />
+            ) : (
+              <span className="flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-muted-foreground" />
+                <span className="truncate">{t("defaultName")}</span>
+              </span>
+            )}
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
           </button>
         </DropdownMenuTrigger>
@@ -288,7 +348,7 @@ export function ProjectSwitcher() {
                 ) : (
                   <div className="w-4 h-4 flex-shrink-0" />
                 )}
-                <span className="truncate">{proj.name}</span>
+                <ProjectIdentityBadge project={proj} size="sm" />
                 {proj.is_default && (
                   <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded flex-shrink-0">
                     {t("defaultBadge")}
@@ -416,28 +476,31 @@ export function ProjectSwitcher() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog : Renommer */}
+      {/* Dialog : Modifier le projet (nom + couleur + icône + logo) */}
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("renameTitle")}</DialogTitle>
+            <DialogTitle>Modifier le projet</DialogTitle>
+            <DialogDescription className="sr-only">
+              Personnalise le nom, la couleur et l&apos;icône.
+            </DialogDescription>
           </DialogHeader>
-          <Input
-            ref={inputRef}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleRename();
-            }}
-            maxLength={100}
+          <ProjectIdentityEditor
+            initial={identityDraft}
+            brandingLogoUrl={null}
+            onChange={setIdentityDraft}
+            disabled={submitting}
           />
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <DialogClose asChild>
               <Button variant="outline">{tc("cancel")}</Button>
             </DialogClose>
-            <Button onClick={handleRename} disabled={!newName.trim() || submitting}>
+            <Button
+              onClick={handleRename}
+              disabled={!identityDraft.name.trim() || submitting}
+            >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {t("renameBtn")}
+              Enregistrer
             </Button>
           </DialogFooter>
         </DialogContent>
