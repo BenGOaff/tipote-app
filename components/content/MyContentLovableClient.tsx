@@ -71,6 +71,7 @@ import {
   ExternalLink,
   Download,
   Loader2,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -872,6 +873,11 @@ export default function MyContentLovableClient({
                                   <DropdownMenuItem asChild>
                                     <Link href={`/quiz/${qz.id}`}>
                                       <Edit className="w-4 h-4 mr-2" /> Gérer
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/quiz/${qz.id}/analytics`}>
+                                      <BarChart3 className="w-4 h-4 mr-2" /> Statistiques
                                     </Link>
                                   </DropdownMenuItem>
                                   {isActive && (
