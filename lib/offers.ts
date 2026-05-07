@@ -245,11 +245,28 @@ export async function loadAllOffers(
       .order("updated_at", { ascending: false });
 
     const rows = Array.isArray(profiles) ? profiles : [];
+    const activeRow = activeProjectId
+      ? rows.find((r: any) => r.project_id === activeProjectId) ?? null
+      : null;
+    const activeRowHasOffers =
+      activeRow && Array.isArray(activeRow.offers) && activeRow.offers.length > 0;
+    const anyRowWithOffers = rows.find(
+      (r: any) => Array.isArray(r.offers) && r.offers.length > 0,
+    );
+
+    // Priority order:
+    //   1. active project, IF it actually has offers
+    //   2. any project that has offers (Monique-bug: she saisied her
+    //      offers on project A, then bumped project B's updated_at by
+    //      tweaking another field — without this fallback, /content/new
+    //      shows "Aucune offre" even though her offers exist somewhere)
+    //   3. active project even empty (keeps semantic alignment with the
+    //      rest of the app when she really has 0 offers anywhere)
+    //   4. last resort: most recently updated row
     const profile =
-      (activeProjectId
-        ? rows.find((r: any) => r.project_id === activeProjectId)
-        : null) ??
-      rows.find((r: any) => Array.isArray(r.offers) && r.offers.length > 0) ??
+      (activeRowHasOffers ? activeRow : null) ??
+      anyRowWithOffers ??
+      activeRow ??
       rows[0] ??
       null;
 
