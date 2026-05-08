@@ -178,9 +178,12 @@ export default function ComptaConnections() {
             <h3 className="font-semibold text-lg">Mes connexions</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Connecte tes outils de paiement pour que Tipote suive
-              automatiquement tes encaissements. <strong>On
-              synchronise une fois par jour</strong> ; clique sur le
-              bouton ci-dessous pour forcer une mise à jour immédiate.
+              automatiquement tes encaissements.{" "}
+              <strong>Connecte uniquement ce que tu utilises</strong>{" "}
+              — Stripe seul, PayPal seul, ou les deux si tu vends sur
+              les deux plateformes. <strong>On synchronise une fois
+              par jour</strong> ; clique sur le bouton ci-dessous pour
+              forcer une mise à jour immédiate.
             </p>
           </div>
         </div>
@@ -584,8 +587,9 @@ function PaypalConnectForm({
             </a>
           </li>
           <li>
-            Nom : <code className="px-1 bg-muted rounded">Tipote – Compta (lecture)</code>
-            {" — "}Type : <code className="px-1 bg-muted rounded">Merchant</code>
+            Nom : <code className="px-1 bg-muted rounded">Tipote Compta</code>
+            {" "}(PayPal n&apos;accepte ni tirets ni parenthèses){" — "}
+            Type : <code className="px-1 bg-muted rounded">Merchant</code>
           </li>
           <li>
             Sur la page de l&apos;app : <strong>scroll vers le bas</strong> jusqu&apos;à

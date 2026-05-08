@@ -80,9 +80,13 @@ export async function probePaypalCredentials(
     return { ok: false, error: e instanceof Error ? e.message : "Erreur inconnue" };
   }
 
-  // Probe transaction search avec une fenêtre minuscule
+  // Probe transaction search avec une fenêtre suffisamment large.
+  // PayPal renvoie "Data for the given start date is not available"
+  // si la fenêtre est trop courte ou trop récente (problème observé
+  // avec une fenêtre de 60 secondes). 30 jours est sûr et le 200
+  // OK confirme que la feature Transaction Search est bien activée.
   const end = new Date();
-  const start = new Date(end.getTime() - 60 * 1000);
+  const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
   const params = new URLSearchParams({
     start_date: start.toISOString(),
     end_date: end.toISOString(),
@@ -101,6 +105,17 @@ export async function probePaypalCredentials(
       error:
         "Ton app PayPal n'a pas la feature \"Transaction Search\" activée. Va sur developer.paypal.com → ton app → Live API features → coche Transaction Search → enregistre.",
     };
+  }
+  // Le 404 INVALID_REQUEST sur une fenêtre récente peut signifier que
+  // le compte PayPal est trop récent (compte créé il y a moins de 30
+  // jours) ou n'a aucune transaction. On laisse passer comme un OK —
+  // l'auth fonctionne, le sync vrai retentera avec sa propre logique
+  // de fallback de fenêtre.
+  if (
+    res.status === 404 &&
+    txt.includes("Data for the given start date is not available")
+  ) {
+    return { ok: true };
   }
   return { ok: false, error: `PayPal ${res.status}: ${txt.slice(0, 200)}` };
 }
@@ -154,6 +169,7 @@ export async function fetchAllPaypalTransactions(
 
     let page = 1;
     let totalPages = 1;
+    let windowEmpty = false;
     while (page <= totalPages) {
       const params = new URLSearchParams({
         start_date: winStart,
@@ -168,6 +184,19 @@ export async function fetchAllPaypalTransactions(
       });
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
+        // 404 INVALID_REQUEST "Data for the given start date is not
+        // available" = PayPal n'a pas de données pour cette fenêtre.
+        // Ça arrive quand le compte est plus jeune que la date de
+        // début du sync 24 mois. On skip cette fenêtre, on n'échoue
+        // pas tout le sync — la prochaine fenêtre (plus récente)
+        // marchera dès que le compte aura été créé.
+        if (
+          res.status === 404 &&
+          txt.includes("Data for the given start date is not available")
+        ) {
+          windowEmpty = true;
+          break;
+        }
         throw new Error(`PayPal txns ${res.status}: ${txt.slice(0, 300)}`);
       }
       const json = (await res.json()) as PaypalSearchResponse;
@@ -179,6 +208,7 @@ export async function fetchAllPaypalTransactions(
       totalPages = json.total_pages ?? 1;
       page += 1;
     }
+    void windowEmpty;
 
     cursor += windowMs;
   }
