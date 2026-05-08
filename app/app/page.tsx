@@ -31,24 +31,47 @@ export default async function TodayPage() {
   const cookieStore = await cookies();
   const activeProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value?.trim() ?? "";
 
-  // Onboarding status — STRICTLY scoped to the active project.
+  // Onboarding status — scoped to the active project.
   //
   // Bug Monique 2026-05-04 : un fallback "any project completed" sautait
   // l'onboarding du 2e projet d'un user dès que son 1er projet l'avait
-  // complété. Nouveau comportement : si on a un projet actif, on vérifie
-  // *uniquement* ce projet ; le fallback ne sert qu'aux vieux comptes
-  // sans cookie de projet actif (legacy single-project).
+  // complété. On vérifie *uniquement* le projet actif, mais on ajoute
+  // une heuristique permissive : si la row a déjà du contenu réel
+  // (niche + au moins une offre), on considère que l'user est sorti
+  // de l'onboarding même si le flag n'a jamais été flippé. Backfill
+  // silencieux du flag pour que la check soit propre la prochaine fois.
+  //
+  // Bug Flo 2026-05-08 : 70 contenus créés, niche + 3 offres saisies,
+  // mais onboarding_completed resté à false → redirigée sur l'onboarding
+  // à chaque login. L'heuristique ci-dessous la libère sans toucher
+  // au flow d'onboarding nominal.
   let onboardingCompleted = false;
 
   if (activeProjectId) {
     const { data } = await supabase
       .from("business_profiles")
-      .select("onboarding_completed")
+      .select("onboarding_completed, niche, offers")
       .eq("user_id", userId)
       .eq("project_id", activeProjectId)
       .maybeSingle();
 
-    onboardingCompleted = data?.onboarding_completed === true;
+    const flagged = data?.onboarding_completed === true;
+    const hasNiche = !!data?.niche?.toString().trim();
+    const offersArr = Array.isArray(data?.offers) ? data!.offers : [];
+    const hasOffer = offersArr.length > 0;
+    const looksOnboarded = hasNiche && hasOffer;
+
+    onboardingCompleted = flagged || looksOnboarded;
+
+    // Backfill the flag if the heuristic kicked in — keeps the DB
+    // consistent and avoids re-running the heuristic on every visit.
+    if (!flagged && looksOnboarded) {
+      void supabase
+        .from("business_profiles")
+        .update({ onboarding_completed: true })
+        .eq("user_id", userId)
+        .eq("project_id", activeProjectId);
+    }
   } else {
     // Pas de projet actif (compte créé avant le multi-projet, ou cookie
     // expiré) → on prend la première ligne complétée pour ne pas
