@@ -144,7 +144,33 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
   }, [activeConnections, detectedPlatform, showPublish]);
 
   React.useEffect(() => {
-    if (planOpen) setPlanDate(scheduledDate ?? "");
+    if (!planOpen) return;
+    // Same fallback as MyContentLovable's openPlan : if the content
+    // has no scheduled_date yet, seed today/tomorrow + a sensible
+    // quick slot so the calendar shows a visibly selected day
+    // (otherwise the "today highlight" gets mistaken for "selected"
+    // → submit button stays disabled, user confused).
+    if (scheduledDate) {
+      setPlanDate(scheduledDate);
+      return;
+    }
+    const fresh = new Date();
+    const hh = fresh.getHours();
+    const targetTime =
+      hh < 9 ? "09:00" :
+      hh < 12 ? "12:00" :
+      hh < 14 ? "14:00" :
+      hh < 18 ? "18:00" :
+      "09:00";
+    const targetDay = hh < 18 ? fresh : new Date(fresh.getTime() + 24 * 60 * 60 * 1000);
+    const ymd =
+      String(targetDay.getFullYear()) +
+      "-" +
+      String(targetDay.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(targetDay.getDate()).padStart(2, "0");
+    setPlanDate(ymd);
+    setPlanTime(targetTime);
   }, [planOpen, scheduledDate]);
 
   const onDuplicate = async () => {

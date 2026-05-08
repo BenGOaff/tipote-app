@@ -320,10 +320,37 @@ export default function MyContentLovableClient({
 
   const openPlan = (content: ContentListItem) => {
     setPlanningContent(content);
-    setPlanDate(toYmdOrEmpty(content.scheduled_date));
-    // Pré-remplir l'heure depuis meta.scheduled_time si disponible
+    const existingDate = toYmdOrEmpty(content.scheduled_date);
     const metaTime = (content.meta as any)?.scheduled_time;
-    setPlanTime(typeof metaTime === "string" && metaTime.trim() ? metaTime : "09:00");
+
+    // Default seed when the content has never been scheduled. Without
+    // this, planDate stays "" and the DateTimePicker shows the day's
+    // "today highlight" that an user mistakes for "already selected"
+    // → bouton Planifier grisé sans qu'il comprenne pourquoi (Béné
+    // regression 2026-05-08). Pick the next sensible quick slot,
+    // rolling over to tomorrow 09:00 if every slot today has passed.
+    const fresh = new Date();
+    const hh = fresh.getHours();
+    const targetTime =
+      hh < 9 ? "09:00" :
+      hh < 12 ? "12:00" :
+      hh < 14 ? "14:00" :
+      hh < 18 ? "18:00" :
+      "09:00"; // late evening → tomorrow 09:00
+    const targetDay = hh < 18 ? fresh : new Date(fresh.getTime() + 24 * 60 * 60 * 1000);
+    const fallbackDate =
+      String(targetDay.getFullYear()) +
+      "-" +
+      String(targetDay.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(targetDay.getDate()).padStart(2, "0");
+
+    setPlanDate(existingDate || fallbackDate);
+    setPlanTime(
+      typeof metaTime === "string" && metaTime.trim()
+        ? metaTime
+        : targetTime,
+    );
   };
 
   // Top-performer (highest leads count) and recently-trending quiz IDs.

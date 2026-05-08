@@ -76,10 +76,16 @@ function Calendar({
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
         ),
 
-        // Day states
+        // Day states. We want a strong contrast between "today" (a
+        // soft hint) and "selected" (the day the user has actually
+        // picked) — Béné regression 2026-05-08: a faint background on
+        // today made users think the day was already selected.
+        // Selected = full primary fill + ring; today = just a thin
+        // primary outline.
         selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        today: "bg-accent text-accent-foreground",
+          "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+        today:
+          "ring-1 ring-primary/40 text-primary font-semibold",
         outside:
           "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
         disabled: "text-muted-foreground opacity-50",
