@@ -1,18 +1,22 @@
 // lib/compta/fiscal-config.ts
 //
 // Seuils fiscaux et taux applicables aux différents statuts compta
-// pour les users français. Versionnés par année — hardcodé pour 2026
-// au lancement, le cron de la phase 1g (à venir) ira chercher les
-// valeurs officielles sur service-public.fr / urssaf.fr et alertera
-// l'admin Tipote en cas de changement.
+// pour les users français.
+//
+// Lecture : la table `fiscal_thresholds` (alimentée par Béné via
+// l'admin + le seed initial) est la source de vérité. Les constantes
+// `FALLBACK_*` ci-dessous sont là au cas où la DB serait vide (cold
+// start sur un projet pas encore migré) — elles ne doivent JAMAIS
+// servir en prod si la migration 20260508_fiscal_thresholds.sql a
+// été appliquée.
 //
 // Sources officielles (à vérifier à chaque mise à jour) :
 //   • Franchise TVA  : service-public.fr/professionnels-entreprises/vosdroits/F32353
 //   • Plafonds micro : service-public.fr/professionnels-entreprises/vosdroits/F23267
 //   • Taux IS         : economie.gouv.fr/entreprises/impot-societes-IS
-//
-// Toutes les valeurs sont en euros (entiers). Pas de cents — les
-// seuils sont définis "officiellement" en euros pleins.
+
+import "server-only";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export interface VatThreshold {
   /** Seuil de base (franchise applicable l'année N) */
@@ -21,37 +25,82 @@ export interface VatThreshold {
   major: number;
 }
 
-export const VAT_THRESHOLDS_2026 = {
-  /** Vente de marchandises, vente à consommer sur place, fourniture
-   *  de logement (BIC) — seuils élevés. */
+export interface VatThresholdsByActivity {
+  vente: VatThreshold;
+  services_bic: VatThreshold;
+  services_bnc: VatThreshold;
+}
+
+const FALLBACK_VAT_THRESHOLDS_FR: VatThresholdsByActivity = {
   vente: { base: 85_000, major: 93_500 },
-  /** Prestations de services artisanales / commerciales (BIC) */
   services_bic: { base: 37_500, major: 41_250 },
-  /** Prestations libérales / intellectuelles (BNC) */
   services_bnc: { base: 37_500, major: 41_250 },
-} as const;
+};
+
+const CATEGORY_TO_KEY: Record<string, keyof VatThresholdsByActivity> = {
+  vat_franchise_vente: "vente",
+  vat_franchise_services_bic: "services_bic",
+  vat_franchise_services_bnc: "services_bnc",
+};
+
+/** Charge les seuils franchise TVA pour (country, year) depuis la
+ *  DB. Fallback aux valeurs hardcodées si la DB ne renvoie rien
+ *  pour cette combinaison (migration pas encore appliquée, par
+ *  exemple). Retourne aussi un flag `source` pour que la UI sache
+ *  d'où vient l'info. */
+export async function getVatThresholds(
+  country: string = "FR",
+  year: number = new Date().getUTCFullYear(),
+): Promise<{ thresholds: VatThresholdsByActivity; source: "db" | "fallback" }> {
+  try {
+    const { data } = await supabaseAdmin
+      .from("fiscal_thresholds")
+      .select("category, base_value, major_value")
+      .eq("country", country)
+      .eq("fiscal_year", year);
+
+    if (!data || data.length === 0) {
+      return { thresholds: FALLBACK_VAT_THRESHOLDS_FR, source: "fallback" };
+    }
+
+    const out: Partial<VatThresholdsByActivity> = {};
+    for (const row of data as Array<{ category: string; base_value: number; major_value: number | null }>) {
+      const key = CATEGORY_TO_KEY[row.category];
+      if (!key) continue;
+      out[key] = {
+        base: Number(row.base_value),
+        major: Number(row.major_value ?? row.base_value),
+      };
+    }
+
+    // Si certaines catégories manquent dans la DB, on complète avec
+    // le fallback pour ne pas laisser un attribut undefined.
+    return {
+      thresholds: { ...FALLBACK_VAT_THRESHOLDS_FR, ...out },
+      source: Object.keys(out).length === 3 ? "db" : "fallback",
+    };
+  } catch (e) {
+    console.warn("[fiscal-config] DB read failed, fallback hardcoded:", e);
+    return { thresholds: FALLBACK_VAT_THRESHOLDS_FR, source: "fallback" };
+  }
+}
 
 /** Renvoie le seuil applicable à un type d'activité auto-entrepreneur,
- *  ou null si pas applicable (statut différent, activité inconnue).
- *  Pour `mixte`, on prend les seuils services (les plus restrictifs
- *  sur la composante prestations) — le détail vente vs prestations
- *  doit être tenu par l'user dans son livre des recettes officiel.
- */
-export function getVatThresholdFor(
+ *  ou null si pas applicable. Pour `mixte`, on prend les seuils
+ *  services (les plus restrictifs sur la composante prestations). */
+export function pickThresholdForActivity(
+  thresholds: VatThresholdsByActivity,
   activityType: string | null | undefined,
 ): VatThreshold | null {
   switch (activityType) {
     case "vente":
-      return VAT_THRESHOLDS_2026.vente;
+      return thresholds.vente;
     case "services_bic":
-      return VAT_THRESHOLDS_2026.services_bic;
+      return thresholds.services_bic;
     case "services_bnc":
-      return VAT_THRESHOLDS_2026.services_bnc;
+      return thresholds.services_bnc;
     case "mixte":
-      // Côté prudent : on applique les seuils services (plus bas).
-      // L'user pourra dépasser ce chiffre s'il fait majoritairement
-      // de la vente, mais on préfère alerter trop tôt que trop tard.
-      return VAT_THRESHOLDS_2026.services_bic;
+      return thresholds.services_bic;
     default:
       return null;
   }
@@ -78,9 +127,7 @@ export function getVatThresholdLabel(
 }
 
 /** Fenêtre glissante de 12 mois — convention LF franchise TVA :
- *  on regarde les 12 mois civils précédents, ou plus précisément
- *  le CA accumulé sur "année N en cours" et "année N-1 totale" pour
- *  comparer aux seuils base et major. Pour le MVP, on simplifie à
- *  12 mois glissants côté Tipote ; l'user vérifie en détail sur
- *  son livre des recettes. */
+ *  on regarde les 12 mois civils précédents. Pour le MVP, on
+ *  simplifie à 12 mois glissants côté Tipote ; l'user vérifie en
+ *  détail sur son livre des recettes. */
 export const ROLLING_WINDOW_MONTHS = 12;

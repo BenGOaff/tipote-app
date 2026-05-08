@@ -23,7 +23,8 @@ import {
   convertToEurCents,
 } from "@/lib/compta/forex";
 import {
-  getVatThresholdFor,
+  getVatThresholds,
+  pickThresholdForActivity,
   getVatThresholdLabel,
   ROLLING_WINDOW_MONTHS,
 } from "@/lib/compta/fiscal-config";
@@ -189,7 +190,9 @@ export async function GET() {
     months.push({ month: k, amount_eur_cents: b?.eurCents ?? 0, count: b?.count ?? 0 });
   }
 
-  // 7. Jauge franchise TVA — uniquement pour AE
+  // 7. Jauge franchise TVA — uniquement pour AE. Lecture des seuils
+  // depuis fiscal_thresholds (table source de vérité, alimentée par
+  // l'admin + cron de check). Fallback hardcodé si la table est vide.
   let vatThreshold: {
     activity_label: string;
     base_eur: number;
@@ -199,9 +202,11 @@ export async function GET() {
     percent_major: number;
     over_base: boolean;
     over_major: boolean;
+    source: "db" | "fallback";
   } | null = null;
   if (status === "auto_entrepreneur") {
-    const t = getVatThresholdFor(aeActivity);
+    const { thresholds, source } = await getVatThresholds("FR");
+    const t = pickThresholdForActivity(thresholds, aeActivity);
     if (t) {
       const currentEur = rollingEurCents / 100; // conversion cents→€
       vatThreshold = {
@@ -213,6 +218,7 @@ export async function GET() {
         percent_major: t.major > 0 ? Math.round((currentEur / t.major) * 1000) / 10 : 0,
         over_base: currentEur > t.base,
         over_major: currentEur > t.major,
+        source,
       };
     }
   }
