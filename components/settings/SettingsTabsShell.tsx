@@ -99,7 +99,7 @@ function PinterestIcon({ className }: { className?: string }) {
   );
 }
 
-type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "pricing";
+type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "pricing" | "compta";
 
 type Props = {
   userEmail: string;
@@ -108,7 +108,7 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources") return s;
+  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources" || s === "compta") return s;
   // compat ancien: tab=billing, tab=ai
   if (s === "billing" || s === "pricing" || s === "ai") return "pricing";
   return "profile";

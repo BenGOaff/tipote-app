@@ -11,6 +11,7 @@ import {
   Target,
   Palette,
   CreditCard,
+  Calculator,
   LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -76,6 +77,7 @@ export function UserAvatarMenu({ userEmail }: Props) {
     { key: "positioning", icon: Target, tab: "positioning" },
     { key: "branding", icon: Palette, tab: "branding" },
     { key: "subscription", icon: CreditCard, tab: "pricing" },
+    { key: "compta", icon: Calculator, tab: "compta" },
   ] as const;
 
   return (
