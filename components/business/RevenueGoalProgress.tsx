@@ -20,8 +20,6 @@ import {
   Target,
   Loader2,
   ArrowRight,
-  TrendingUp,
-  TrendingDown,
   Sparkles,
 } from "lucide-react";
 
@@ -240,37 +238,6 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
           />
         </div>
       </div>
-
-      {/* Comparaison avec N-1 si on a la donnée */}
-      {summary.has_last_year_data && summary.delta_month_vs_last_year_pct !== null ? (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground border-t pt-2">
-          {summary.delta_month_vs_last_year_pct > 0 ? (
-            <>
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-              <span>
-                <strong className="text-emerald-600">
-                  +{summary.delta_month_vs_last_year_pct.toFixed(1)} %
-                </strong>{" "}
-                vs même mois {summary.fiscal_year - 1} ({formatEur(summary.last_year_same_month_eur)})
-              </span>
-            </>
-          ) : summary.delta_month_vs_last_year_pct < 0 ? (
-            <>
-              <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-              <span>
-                <strong className="text-destructive">
-                  {summary.delta_month_vs_last_year_pct.toFixed(1)} %
-                </strong>{" "}
-                vs même mois {summary.fiscal_year - 1} ({formatEur(summary.last_year_same_month_eur)})
-              </span>
-            </>
-          ) : (
-            <span>
-              Stable vs même mois {summary.fiscal_year - 1}
-            </span>
-          )}
-        </div>
-      ) : null}
     </Card>
   );
 }
