@@ -33,6 +33,7 @@ import {
   emptyComptaSlice,
 } from "@/lib/compta/types";
 import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
+import ComptaConnections from "@/components/settings/ComptaConnections";
 
 interface Props {
   /** Slice du profil business courant. Tous les champs sont optionnels —
@@ -339,25 +340,26 @@ function ConfiguredSummary({
         <SummaryDetails slice={slice} />
       </Card>
 
+      {/* Section "Mes connexions" — Stripe en 1c, Mollie/PayPal en 1d */}
+      <ComptaConnections />
+
       <Card className="p-6 space-y-4">
         <div className="flex items-start gap-3">
           <Sparkles className="h-6 w-6 text-primary shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-lg">Module en construction</h3>
+            <h3 className="font-semibold text-lg">À venir</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Ta config est enregistrée. On déploie progressivement
-              les fonctionnalités qui s&apos;appuient dessus.
+              Une fois tes connexions actives, on déploiera progressivement :
             </p>
           </div>
         </div>
 
         <div className="space-y-2 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Prochaines étapes :</p>
           <ul className="space-y-1 list-disc list-inside ml-1">
-            <li>Connecter Stripe, PayPal, Mollie pour suivre tes encaissements</li>
-            <li>Voir ton chiffre d&apos;affaires en temps réel</li>
-            <li>Être prévenu·e quand tu approches d&apos;un seuil de TVA</li>
-            <li>Recevoir le calendrier fiscal personnalisé</li>
+            <li>Tableau de bord — chiffre d&apos;affaires depuis le 1er janvier + sur 12 mois glissants</li>
+            <li>Alerte quand tu approches d&apos;un seuil de TVA</li>
+            <li>Calendrier fiscal personnalisé (URSSAF, TVA, IS…)</li>
+            <li>Saisies manuelles pour les paiements par virement / espèces</li>
             {status === "sasu" ? (
               <li>Exporter le FEC pour ton comptable</li>
             ) : null}
