@@ -123,8 +123,21 @@ export async function syncConnection(
   // (user_id, provider, provider_transaction_id). En cas de conflit,
   // on met à jour les champs qui peuvent évoluer (status, refund…)
   // mais pas paid_at / amount qui sont immuables côté provider.
+  //
+  // Dédup côté JS avant l'upsert : Postgres refuse "ON CONFLICT DO
+  // UPDATE command cannot affect row a second time" si on envoie 2x
+  // le même provider_transaction_id dans le même batch. Ça arrive
+  // notamment avec PayPal qui peut renvoyer une transaction à la
+  // frontière de 2 fenêtres de pagination (boundaries inclusives).
+  // On garde la dernière occurrence — généralement la plus à jour.
   if (transactions.length > 0) {
-    const rows = transactions.map((t) => ({
+    const uniqueByProviderTxId = new Map<string, NormalizedTransaction>();
+    for (const t of transactions) {
+      uniqueByProviderTxId.set(t.providerTransactionId, t);
+    }
+    const dedupedTransactions = Array.from(uniqueByProviderTxId.values());
+
+    const rows = dedupedTransactions.map((t) => ({
       user_id: connection.user_id,
       project_id: connection.project_id,
       connection_id: connection.id,

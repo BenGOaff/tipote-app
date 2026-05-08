@@ -35,6 +35,7 @@ import {
 import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 import ComptaConnections from "@/components/settings/ComptaConnections";
 import ComptaManualTransactions from "@/components/settings/ComptaManualTransactions";
+import ComptaDashboard from "@/components/settings/ComptaDashboard";
 
 interface Props {
   /** Slice du profil business courant. Tous les champs sont optionnels —
@@ -341,6 +342,9 @@ function ConfiguredSummary({
         <SummaryDetails slice={slice} />
       </Card>
 
+      {/* Tableau de bord — CA YTD + 12 mois + jauge TVA (1f) */}
+      <ComptaDashboard />
+
       {/* Section "Mes connexions" — Stripe + PayPal + Mollie (phases 1c/1d) */}
       <ComptaConnections />
 
@@ -353,19 +357,18 @@ function ConfiguredSummary({
           <div>
             <h3 className="font-semibold text-lg">À venir</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Une fois tes encaissements remontés, on déploiera progressivement :
+              Prochaine étape qui s&apos;appuie sur ces données :
             </p>
           </div>
         </div>
 
         <div className="space-y-2 text-sm text-muted-foreground">
           <ul className="space-y-1 list-disc list-inside ml-1">
-            <li>Tableau de bord — chiffre d&apos;affaires depuis le 1er janvier + sur 12 mois glissants</li>
-            <li>Alerte quand tu approches d&apos;un seuil de TVA</li>
             <li>Calendrier fiscal personnalisé (URSSAF, TVA, IS…)</li>
             {status === "sasu" ? (
               <li>Exporter le FEC pour ton comptable</li>
             ) : null}
+            <li>Mise à jour automatique des seuils fiscaux chaque année</li>
           </ul>
         </div>
       </Card>
