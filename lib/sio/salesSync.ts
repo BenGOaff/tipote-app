@@ -64,12 +64,14 @@ export async function listUserSales(
   let nextPath: string | null = `/sales?createdAt[after]=${encodeURIComponent(sinceISO)}&itemsPerPage=100`;
   let safety = 5;
   while (nextPath && safety-- > 0) {
-    const res = await sioUserRequest<any>(apiKey, nextPath);
+    const path: string = nextPath;
+    const res = await sioUserRequest<Record<string, unknown>>(apiKey, path);
     if (!res.ok || !res.data) break;
-    const items: any[] = Array.isArray(res.data?.items)
-      ? res.data.items
-      : Array.isArray(res.data)
-        ? res.data
+    const data = res.data as any;
+    const items: any[] = Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data)
+        ? data
         : [];
     for (const item of items) {
       const amount =
@@ -110,9 +112,12 @@ export async function listUserSales(
           typeof item?.status === "string" ? item.status : undefined,
       });
     }
+    const view = (data?.["hydra:view"] ?? null) as
+      | { "hydra:next"?: string }
+      | null;
     nextPath =
-      typeof res.data?.["hydra:view"]?.["hydra:next"] === "string"
-        ? res.data["hydra:view"]["hydra:next"].replace(/^\/api/, "")
+      typeof view?.["hydra:next"] === "string"
+        ? view["hydra:next"].replace(/^\/api/, "")
         : null;
   }
   return sales;

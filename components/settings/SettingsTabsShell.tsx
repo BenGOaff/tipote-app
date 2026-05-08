@@ -77,6 +77,7 @@ import {
   SalesArgumentsEditor,
   type SalesArgumentsValue,
 } from "@/components/settings/SalesArgumentsEditor";
+import { SioProductPicker } from "@/components/settings/SioProductPicker";
 import { AIContent } from "@/components/ui/ai-content";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -2088,22 +2089,18 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     <Sparkles className="size-3 text-primary" />
                     Lier à un produit Systeme.io (optionnel)
                   </Label>
-                  <Input
-                    placeholder="ID produit Systeme.io (ex: 12345)"
-                    value={offer.sio_product_id ?? ""}
-                    onChange={(e) =>
-                      updateOffer(
-                        idx,
-                        "sio_product_id" as any,
-                        e.target.value.trim() || null,
-                      )
+                  <SioProductPicker
+                    value={offer.sio_product_id ?? null}
+                    onChange={(next) =>
+                      updateOffer(idx, "sio_product_id" as any, next)
                     }
                     disabled={profileLoading}
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Sur Systeme.io → ouvre ton produit → l&apos;ID est dans
-                    l&apos;URL. Permet à Tipote d&apos;attribuer chaque vente à la
-                    bonne offre dans tes analytics.
+                    Choisis ton produit dans la liste — Tipote attribuera
+                    chaque vente à la bonne offre dans tes analytics. Si
+                    tu ne le lies pas, on essaie de matcher
+                    automatiquement par nom ou par prix.
                   </p>
                 </div>
 
