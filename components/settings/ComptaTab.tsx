@@ -34,6 +34,7 @@ import {
 } from "@/lib/compta/types";
 import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 import ComptaConnections from "@/components/settings/ComptaConnections";
+import ComptaManualTransactions from "@/components/settings/ComptaManualTransactions";
 
 interface Props {
   /** Slice du profil business courant. Tous les champs sont optionnels —
@@ -340,8 +341,11 @@ function ConfiguredSummary({
         <SummaryDetails slice={slice} />
       </Card>
 
-      {/* Section "Mes connexions" — Stripe en 1c, Mollie/PayPal en 1d */}
+      {/* Section "Mes connexions" — Stripe + PayPal + Mollie (phases 1c/1d) */}
       <ComptaConnections />
+
+      {/* Section "Saisies manuelles" — virements / espèces / chèques (1e) */}
+      <ComptaManualTransactions />
 
       <Card className="p-6 space-y-4">
         <div className="flex items-start gap-3">
@@ -349,7 +353,7 @@ function ConfiguredSummary({
           <div>
             <h3 className="font-semibold text-lg">À venir</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Une fois tes connexions actives, on déploiera progressivement :
+              Une fois tes encaissements remontés, on déploiera progressivement :
             </p>
           </div>
         </div>
@@ -359,7 +363,6 @@ function ConfiguredSummary({
             <li>Tableau de bord — chiffre d&apos;affaires depuis le 1er janvier + sur 12 mois glissants</li>
             <li>Alerte quand tu approches d&apos;un seuil de TVA</li>
             <li>Calendrier fiscal personnalisé (URSSAF, TVA, IS…)</li>
-            <li>Saisies manuelles pour les paiements par virement / espèces</li>
             {status === "sasu" ? (
               <li>Exporter le FEC pour ton comptable</li>
             ) : null}
