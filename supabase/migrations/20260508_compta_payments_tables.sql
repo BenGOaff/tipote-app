@@ -102,9 +102,10 @@ CREATE INDEX IF NOT EXISTS transactions_user_paid_idx
   ON public.transactions(user_id, paid_at DESC);
 CREATE INDEX IF NOT EXISTS transactions_user_provider_paid_idx
   ON public.transactions(user_id, provider, paid_at DESC);
--- Pour les agrégations par mois (CA YTD, 12 mois glissants…)
-CREATE INDEX IF NOT EXISTS transactions_user_month_idx
-  ON public.transactions(user_id, date_trunc('month', paid_at));
+-- Note : pas d'index sur date_trunc('month', paid_at) — la fonction
+-- n'est pas IMMUTABLE en Postgres. L'index (user_id, paid_at DESC)
+-- couvre les agrégations par mois via range scan : un WHERE paid_at
+-- BETWEEN '2026-01-01' AND '2026-02-01' utilise déjà l'index.
 
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
