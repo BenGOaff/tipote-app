@@ -169,8 +169,18 @@ export function ProjectSwitcher() {
       toast({ title: t("toastCreated"), description: t("toastCreatedDesc", { name: trimmed }) });
       setShowCreateDialog(false);
 
-      // Switcher vers le nouveau projet (redirige vers onboarding)
-      switchProject(json.project.id);
+      // Set the active-project cookie + send the user straight to
+      // /onboarding for THIS new project. We do this from the
+      // creation handler (instead of forcing the redirect from the
+      // middleware) so legacy users whose first project has
+      // onboarding_completed = false or NULL are not dragged into
+      // an onboarding loop just by visiting the app.
+      try {
+        document.cookie = `tipote_active_project=${json.project.id};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
+      } catch {
+        /* fail-open: middleware will sort it out on the next req */
+      }
+      window.location.href = "/onboarding";
     } catch (e) {
       toast({
         title: t("toastCreateError"),

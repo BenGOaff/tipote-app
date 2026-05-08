@@ -216,25 +216,17 @@ export async function middleware(req: NextRequest) {
         return res;
       }
 
-      // The cookie points to a SPECIFIC project (the user explicitly
-      // switched to it via ProjectSwitcher) but that project hasn't
-      // completed its onboarding yet → force the redirect.
+      // Cookie points to un-onboarded project (or no cookie), but another project IS completed.
+      // IMPORTANT: do NOT overwrite the cookie here. The user may have intentionally
+      // switched to this project via the project selector. Overwriting would lock them
+      // out of switching projects. Just allow through — the app handles per-project state.
+      // Only set cookie if there is NO cookie at all (e.g. first visit after login).
       //
-      // This is the multi-project flow: an Elite user creates a new
-      // project for, say, the health niche, switches to it, and must
-      // re-do the onboarding (persona / offers / positioning) from
-      // scratch — each project is fully independent. Without this
-      // redirect they'd land on the dashboard with the *previous*
-      // project's data while their cookie says otherwise — confusing.
-      if (activeProjectId && activeMatch && !activeMatch.onboarding_completed) {
-        const url = req.nextUrl.clone();
-        url.pathname = "/onboarding";
-        return NextResponse.redirect(url);
-      }
-
-      // No active cookie + at least one completed project → seed the
-      // cookie with that project's id (kept short so the next browser
-      // session resets to the user's principal project).
+      // CRITICAL — DO NOT reintroduce a "force-redirect to onboarding when activeMatch
+      // is un-onboarded" branch here. We had it once, it broke every legacy user whose
+      // first project happened to have onboarding_completed = false or NULL: they all
+      // got dumped onto /onboarding even though they had years of content. The new-
+      // project flow handles the redirect explicitly from the ProjectSwitcher instead.
       if (completedProfile) {
         if (!activeProjectId && completedProfile.project_id) {
           res.cookies.set(ACTIVE_PROJECT_COOKIE, completedProfile.project_id, {
