@@ -27,6 +27,7 @@ import {
   fetchAllPaypalTransactions,
   type PaypalCredentials,
 } from "@/lib/compta/providers/paypal";
+import { fetchAllMolliePayments } from "@/lib/compta/providers/mollie";
 
 /** Combien de mois on remonte au tout premier sync d'une connexion.
  *  24 mois = 12 mois pour la jauge franchise TVA glissante + 12 mois
@@ -103,6 +104,8 @@ export async function syncConnection(
     } else if (connection.provider === "paypal") {
       const creds = parsePaypalCredentials(decryptedSecret);
       transactions = await fetchAllPaypalTransactions(creds, sinceUnix);
+    } else if (connection.provider === "mollie") {
+      transactions = await fetchAllMolliePayments(decryptedSecret, sinceUnix);
     } else {
       throw new Error(`Provider non géré : ${connection.provider}`);
     }

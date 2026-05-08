@@ -75,6 +75,7 @@ export default function ComptaConnections() {
   const [syncPending, startSyncTransition] = useTransition();
   const [showStripeForm, setShowStripeForm] = useState(false);
   const [showPaypalForm, setShowPaypalForm] = useState(false);
+  const [showMollieForm, setShowMollieForm] = useState(false);
   const { toast } = useToast();
 
   async function reload() {
@@ -158,6 +159,7 @@ export default function ComptaConnections() {
 
   const stripeConn = connections.find((c) => c.provider === "stripe" && !c.disabled_at);
   const paypalConn = connections.find((c) => c.provider === "paypal" && !c.disabled_at);
+  const mollieConn = connections.find((c) => c.provider === "mollie" && !c.disabled_at);
   const activeCount = connections.filter((c) => !c.disabled_at).length;
 
   if (loading) {
@@ -254,8 +256,32 @@ export default function ComptaConnections() {
           />
         )}
 
-        {/* Mollie — arrive plus tard */}
-        <DisabledConnectButton providerKey="mollie" label="Mollie" />
+        {/* Mollie */}
+        {mollieConn ? (
+          <ConnectionCard
+            connection={mollieConn}
+            onDisconnect={() => disconnect(mollieConn.id)}
+          />
+        ) : showMollieForm ? (
+          <MollieConnectForm
+            onConnected={async () => {
+              setShowMollieForm(false);
+              await reload();
+              toast({
+                title: "Mollie connecté",
+                description: "Synchronisation initiale en cours (24 mois). Ça peut prendre quelques minutes.",
+              });
+            }}
+            onCancel={() => setShowMollieForm(false)}
+          />
+        ) : (
+          <ConnectButton
+            providerKey="mollie"
+            label="Connecter Mollie"
+            description="Récupère automatiquement tes encaissements Mollie (jusqu'à 24 mois d'historique)."
+            onClick={() => setShowMollieForm(true)}
+          />
+        )}
       </div>
     </Card>
   );
@@ -671,6 +697,150 @@ function PaypalConnectForm({
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={pending || !clientId.trim() || !secret.trim()}>
+          {pending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Connexion…
+            </>
+          ) : (
+            "Connecter"
+          )}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Annuler
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Form pour connecter Mollie — clé API simple (live_… ou test_…)
+ * ────────────────────────────────────────────────────────────────── */
+
+function MollieConnectForm({
+  onConnected,
+  onCancel,
+}: {
+  onConnected: () => void;
+  onCancel: () => void;
+}) {
+  const [apiKey, setApiKey] = useState("");
+  const [visible, setVisible] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/compta/connections/mollie", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: apiKey.trim() }),
+        });
+        const json = (await res.json().catch(() => null)) as
+          | { ok?: boolean; error?: string; mode?: string }
+          | null;
+        if (!json?.ok) {
+          setError(json?.error ?? "Erreur");
+          return;
+        }
+        onConnected();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Erreur réseau");
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-lg border border-border p-4 space-y-4 bg-muted/20">
+      <div className="space-y-1">
+        <h4 className="font-semibold text-sm">Connecter Mollie</h4>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Copie ta <strong>Live API key</strong> depuis ton dashboard
+          Mollie. Tu peux la révoquer à tout moment.
+        </p>
+      </div>
+
+      {/* Guide pas-à-pas */}
+      <div className="text-xs text-muted-foreground space-y-1.5 bg-background border border-border rounded p-3">
+        <p className="font-semibold text-foreground">Comment trouver la clé en 30 secondes :</p>
+        <ol className="list-decimal list-inside space-y-1 ml-1">
+          <li>
+            Ouvre{" "}
+            <a
+              href="https://my.mollie.com/dashboard/developers/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline inline-flex items-center gap-1"
+            >
+              my.mollie.com → Developers → API keys
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </li>
+          <li>
+            Repère la section <strong>Live API key</strong>. Clique
+            sur l&apos;icône œil pour la révéler, puis copie-la.
+          </li>
+          <li>
+            Colle-la dans le champ ci-dessous. La clé commence par{" "}
+            <code className="px-1 bg-muted rounded">live_</code> en
+            production, <code className="px-1 bg-muted rounded">test_</code>{" "}
+            si tu testes en sandbox.
+          </li>
+        </ol>
+      </div>
+
+      {/* Note de sécurité — Mollie n'a pas de clé restreinte */}
+      <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded p-3 space-y-1">
+        <p className="font-semibold text-amber-900">À savoir</p>
+        <p className="text-amber-900/80 leading-relaxed">
+          Contrairement à Stripe, Mollie ne propose pas de clé en
+          lecture seule — la clé donne accès complet à ton compte
+          Mollie côté API. Tipote l&apos;utilise <strong>uniquement
+          en lecture</strong> pour récupérer tes paiements. Tu peux
+          la révoquer instantanément depuis ton dashboard Mollie pour
+          couper l&apos;accès.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="mollie-key">API key Mollie</Label>
+        <div className="relative">
+          <Input
+            id="mollie-key"
+            type={visible ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder="live_…"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            disabled={pending}
+            className="font-mono pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setVisible((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={visible ? "Masquer la clé" : "Afficher la clé"}
+          >
+            {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+        {error ? (
+          <div className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded p-2">
+            {error}
+          </div>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Stockée chiffrée (AES-256) côté Tipote. Jamais affichée en clair après cette saisie.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button type="submit" disabled={pending || !apiKey.trim()}>
           {pending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
