@@ -17,6 +17,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plug,
@@ -67,6 +74,7 @@ export default function ComptaConnections() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [syncPending, startSyncTransition] = useTransition();
   const [showStripeForm, setShowStripeForm] = useState(false);
+  const [showPaypalForm, setShowPaypalForm] = useState(false);
   const { toast } = useToast();
 
   async function reload() {
@@ -125,8 +133,10 @@ export default function ComptaConnections() {
     )
       return;
     try {
-      const res = await fetch("/api/compta/connections/stripe", {
-        method: "DELETE",
+      // Endpoint générique — déconnecte n'importe quel provider
+      // (Stripe, PayPal, Mollie quand il sera là).
+      const res = await fetch("/api/compta/connections/disconnect", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ connectionId: id }),
       });
@@ -147,6 +157,7 @@ export default function ComptaConnections() {
   }
 
   const stripeConn = connections.find((c) => c.provider === "stripe" && !c.disabled_at);
+  const paypalConn = connections.find((c) => c.provider === "paypal" && !c.disabled_at);
   const activeCount = connections.filter((c) => !c.disabled_at).length;
 
   if (loading) {
@@ -213,9 +224,35 @@ export default function ComptaConnections() {
           />
         )}
 
-        {/* Placeholders pour Mollie / PayPal — arrivent en 1d */}
+        {/* PayPal — actif en 1d */}
+        {paypalConn ? (
+          <ConnectionCard
+            connection={paypalConn}
+            onDisconnect={() => disconnect(paypalConn.id)}
+          />
+        ) : showPaypalForm ? (
+          <PaypalConnectForm
+            onConnected={async () => {
+              setShowPaypalForm(false);
+              await reload();
+              toast({
+                title: "PayPal connecté",
+                description: "Synchronisation initiale en cours (24 mois). Ça peut prendre quelques minutes.",
+              });
+            }}
+            onCancel={() => setShowPaypalForm(false)}
+          />
+        ) : (
+          <ConnectButton
+            providerKey="paypal"
+            label="Connecter PayPal"
+            description="Récupère automatiquement tes encaissements PayPal (jusqu'à 24 mois d'historique)."
+            onClick={() => setShowPaypalForm(true)}
+          />
+        )}
+
+        {/* Mollie — arrive plus tard */}
         <DisabledConnectButton providerKey="mollie" label="Mollie" />
-        <DisabledConnectButton providerKey="paypal" label="PayPal" />
       </div>
     </Card>
   );
@@ -454,6 +491,182 @@ function StripeConnectForm({
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={pending || !key.trim()}>
+          {pending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Connexion…
+            </>
+          ) : (
+            "Connecter"
+          )}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Annuler
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Form pour connecter PayPal — clientId + secret + mode (live/sandbox)
+ * ────────────────────────────────────────────────────────────────── */
+
+function PaypalConnectForm({
+  onConnected,
+  onCancel,
+}: {
+  onConnected: () => void;
+  onCancel: () => void;
+}) {
+  const [clientId, setClientId] = useState("");
+  const [secret, setSecret] = useState("");
+  const [mode, setMode] = useState<"live" | "sandbox">("live");
+  const [secretVisible, setSecretVisible] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/compta/connections/paypal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientId: clientId.trim(),
+            secret: secret.trim(),
+            mode,
+          }),
+        });
+        const json = (await res.json().catch(() => null)) as
+          | { ok?: boolean; error?: string; mode?: string }
+          | null;
+        if (!json?.ok) {
+          setError(json?.error ?? "Erreur");
+          return;
+        }
+        onConnected();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Erreur réseau");
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-lg border border-border p-4 space-y-4 bg-muted/20">
+      <div className="space-y-1">
+        <h4 className="font-semibold text-sm">Connecter PayPal</h4>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          PayPal demande une <strong>app développeur</strong> avec une
+          paire (Client ID, Secret). Tu gardes le contrôle — tu peux
+          révoquer l&apos;app à tout moment depuis ton dashboard
+          developer.paypal.com.
+        </p>
+      </div>
+
+      {/* Guide pas-à-pas */}
+      <div className="text-xs text-muted-foreground space-y-1.5 bg-background border border-border rounded p-3">
+        <p className="font-semibold text-foreground">Comment créer l&apos;app en 1 minute :</p>
+        <ol className="list-decimal list-inside space-y-1 ml-1">
+          <li>
+            Ouvre{" "}
+            <a
+              href="https://developer.paypal.com/dashboard/applications/live"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline inline-flex items-center gap-1"
+            >
+              developer.paypal.com → Apps & Credentials → Create App
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </li>
+          <li>
+            Nom : <code className="px-1 bg-muted rounded">Tipote – Compta (lecture)</code>
+            {" — "}Type : <code className="px-1 bg-muted rounded">Merchant</code>
+          </li>
+          <li>
+            Sur la page de l&apos;app : <strong>scroll vers le bas</strong> jusqu&apos;à
+            <em>Live API features</em>, et <strong>active</strong> la case{" "}
+            <code className="px-1 bg-muted rounded">Transaction Search</code>.
+            Sans ça, on ne peut pas lire l&apos;historique. Clique <em>Save</em>.
+          </li>
+          <li>
+            Copie le <strong>Client ID</strong> et le <strong>Secret</strong> (tu dois cliquer
+            <em> Show</em> pour révéler le secret) et colle-les ci-dessous.
+          </li>
+        </ol>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="paypal-mode">Mode</Label>
+        <Select value={mode} onValueChange={(v) => setMode(v as "live" | "sandbox")}>
+          <SelectTrigger id="paypal-mode">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="live">Live (production — vraies ventes)</SelectItem>
+            <SelectItem value="sandbox">Sandbox (test — pour valider l&apos;intégration)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {mode === "sandbox"
+            ? "Mode test : les ventes ne seront pas réelles, utile pour valider la connexion."
+            : "Mode production : Tipote synchronisera tes vraies ventes."}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="paypal-client-id">Client ID</Label>
+        <Input
+          id="paypal-client-id"
+          type="text"
+          autoComplete="off"
+          placeholder="AY1234abcd..."
+          value={clientId}
+          onChange={(e) => setClientId(e.target.value)}
+          disabled={pending}
+          className="font-mono"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="paypal-secret">Secret</Label>
+        <div className="relative">
+          <Input
+            id="paypal-secret"
+            type={secretVisible ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder="EH1234abcd..."
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            disabled={pending}
+            className="font-mono pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setSecretVisible((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={secretVisible ? "Masquer le secret" : "Afficher le secret"}
+          >
+            {secretVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Stocké chiffré (AES-256) côté Tipote. Jamais affiché en clair après cette saisie.
+        </p>
+      </div>
+
+      {error ? (
+        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded p-2">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-2">
+        <Button type="submit" disabled={pending || !clientId.trim() || !secret.trim()}>
           {pending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -18,7 +18,9 @@ const STRIPE_BASE = "https://api.stripe.com/v1";
 const PAGE_SIZE = 100;
 
 export interface NormalizedTransaction {
-  provider: "stripe";
+  /** Le provider est posé par le syncEngine au moment de l'upsert
+   *  (depuis `connection.provider`), pas par le normalizer — qui
+   *  ignore d'où il a été appelé. */
   providerTransactionId: string; // ch_xxx
   amountCents: number;
   currency: string; // ISO 4217
@@ -183,7 +185,6 @@ function normalizeCharge(c: StripeCharge): NormalizedTransaction {
   }
 
   return {
-    provider: "stripe",
     providerTransactionId: c.id,
     amountCents: c.amount,
     currency: (c.currency || "eur").toUpperCase(),

@@ -23,6 +23,10 @@ import {
   fetchAllStripeCharges,
   type NormalizedTransaction,
 } from "@/lib/compta/providers/stripe";
+import {
+  fetchAllPaypalTransactions,
+  type PaypalCredentials,
+} from "@/lib/compta/providers/paypal";
 
 /** Combien de mois on remonte au tout premier sync d'une connexion.
  *  24 mois = 12 mois pour la jauge franchise TVA glissante + 12 mois
@@ -74,9 +78,12 @@ export async function syncConnection(
     return { ...out, ok: true, error: "connection disabled — skipped" };
   }
 
-  let apiKey: string;
+  // Décryptage : pour Stripe c'est une simple string (la Restricted
+  // Key). Pour PayPal c'est un JSON {clientId, secret, mode}. Le
+  // chiffrement traite les deux pareil — la sémantique est gérée ici.
+  let decryptedSecret: string;
   try {
-    apiKey = decrypt(connection.api_key_encrypted);
+    decryptedSecret = decrypt(connection.api_key_encrypted);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Decrypt failed";
     await admin
@@ -92,7 +99,10 @@ export async function syncConnection(
   let transactions: NormalizedTransaction[] = [];
   try {
     if (connection.provider === "stripe") {
-      transactions = await fetchAllStripeCharges(apiKey, sinceUnix);
+      transactions = await fetchAllStripeCharges(decryptedSecret, sinceUnix);
+    } else if (connection.provider === "paypal") {
+      const creds = parsePaypalCredentials(decryptedSecret);
+      transactions = await fetchAllPaypalTransactions(creds, sinceUnix);
     } else {
       throw new Error(`Provider non géré : ${connection.provider}`);
     }
@@ -115,7 +125,9 @@ export async function syncConnection(
       user_id: connection.user_id,
       project_id: connection.project_id,
       connection_id: connection.id,
-      provider: t.provider,
+      // Le provider est dérivé de la connexion (source autoritaire),
+      // pas de la transaction normalisée — qui ne le connait pas.
+      provider: connection.provider,
       provider_transaction_id: t.providerTransactionId,
       amount_cents: t.amountCents,
       currency: t.currency,
@@ -195,6 +207,27 @@ export async function syncAllActiveConnections(
     if (!outcome.ok) failed += 1;
   }
   return { outcomes, total: outcomes.length, failed };
+}
+
+/** Pour PayPal, la "clé" stockée est un JSON {clientId, secret, mode}.
+ *  Cette fonction le parse en throw si le format est cassé (ne devrait
+ *  pas arriver — le POST /paypal valide avant d'encrypt). */
+function parsePaypalCredentials(decrypted: string): PaypalCredentials {
+  try {
+    const parsed = JSON.parse(decrypted) as Partial<PaypalCredentials>;
+    if (!parsed.clientId || !parsed.secret) {
+      throw new Error("Credentials PayPal incomplets en base.");
+    }
+    return {
+      clientId: parsed.clientId,
+      secret: parsed.secret,
+      mode: parsed.mode === "sandbox" ? "sandbox" : "live",
+    };
+  } catch (e) {
+    throw new Error(
+      "Format de credentials PayPal invalide en base — reconnecte ton compte.",
+    );
+  }
 }
 
 function computeSinceMs(connection: PaymentConnectionRow): number {
