@@ -80,6 +80,10 @@ const UpdateSchema = z.object({
 
   sio_user_api_key: z.string().trim().max(200).optional(),
   sio_api_key_name: z.string().trim().max(100).optional(),
+  // ID affilié Tipote — utilisé sur le footer du popquiz public
+  // pour rediriger vers tipote.fr/part-tiquiz?sa=<id> et toucher
+  // des commissions. Format SIO : "sa" + 32 hex.
+  tipote_affiliate_id: z.string().trim().max(200).optional(),
 
   content_locale: z.string().trim().max(10).optional(),
   address_form: z.enum(["tu", "vous"]).optional(),

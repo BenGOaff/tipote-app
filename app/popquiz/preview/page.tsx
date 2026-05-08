@@ -37,6 +37,7 @@ const DEMO: Popquiz = {
     logoUrl: null,
     websiteUrl: null,
     primaryColor: null,
+    tipoteAffiliateId: null,
   },
   video: {
     id: "video-1",

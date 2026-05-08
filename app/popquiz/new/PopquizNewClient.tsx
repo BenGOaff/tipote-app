@@ -260,7 +260,7 @@ export default function PopquizNewClient({
       locale: "fr",
       isPublished: false,
       theme: null,
-      branding: { logoUrl: null, websiteUrl: null, primaryColor: null },
+      branding: { logoUrl: null, websiteUrl: null, primaryColor: null, tipoteAffiliateId: null },
       video,
       cues: cues.map<PopquizCue>((c, i) => ({
         id: c.localId,

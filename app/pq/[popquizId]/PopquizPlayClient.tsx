@@ -25,6 +25,17 @@ function prettyHost(url: string): string {
   }
 }
 
+// URL de découverte Tiquiz côté tipote.fr. Si le créateur a posé son
+// ID affilié SIO dans Settings, on le propage en query string ?sa=<id>
+// pour que les inscriptions qui en découlent lui rapportent une
+// commission. Sinon le lien reste fonctionnel (visite directe), juste
+// non trackée.
+function tiquizDiscoveryUrl(affiliateId: string | null): string {
+  const base = "https://www.tipote.fr/part-tiquiz";
+  if (!affiliateId) return base;
+  return `${base}?sa=${encodeURIComponent(affiliateId)}`;
+}
+
 export default function PopquizPlayClient({
   popquiz,
 }: {
@@ -57,18 +68,30 @@ export default function PopquizPlayClient({
           renderOverlay={({ cue }) => <PopquizQuizIframe quizId={cue.quizId} />}
         />
 
-        {branding.websiteUrl ? (
-          <footer className="text-center pt-1">
+        <footer className="text-center pt-1 space-y-1">
+          {branding.websiteUrl ? (
             <a
               href={branding.websiteUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-white/60 hover:text-white/90 transition-colors"
+              className="block text-xs text-white/60 hover:text-white/90 transition-colors"
             >
               {prettyHost(branding.websiteUrl)}
             </a>
-          </footer>
-        ) : null}
+          ) : null}
+          {/* Footer "via Tiquiz" — affiché en permanence pour donner
+              de la visibilité au produit. Trackable (commission au
+              créateur) seulement si l'ID affilié est posé dans
+              Settings → Connexions → Systeme.io. */}
+          <a
+            href={tiquizDiscoveryUrl(branding.tipoteAffiliateId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-[11px] text-white/40 hover:text-white/70 transition-colors"
+          >
+            Cette vidéo vous est proposée via Tiquiz
+          </a>
+        </footer>
       </div>
     </div>
   );

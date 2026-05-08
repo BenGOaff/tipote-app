@@ -74,6 +74,10 @@ interface ProfileBrandRow {
   brand_website_url: string | null;
 }
 
+interface AffiliateRow {
+  tipote_affiliate_id: string | null;
+}
+
 const FULL_SELECT = `
   id,
   user_id,
@@ -141,11 +145,15 @@ function mapCue(row: CueRow): PopquizCue {
   };
 }
 
-function mapBranding(profile: ProfileBrandRow | null): PopquizBranding {
+function mapBranding(
+  profile: ProfileBrandRow | null,
+  affiliateId: string | null,
+): PopquizBranding {
   return {
     logoUrl: profile?.brand_logo_url?.trim() || null,
     websiteUrl: profile?.brand_website_url?.trim() || null,
     primaryColor: profile?.brand_color_primary?.trim() || null,
+    tipoteAffiliateId: affiliateId?.trim() || null,
   };
 }
 
@@ -244,13 +252,32 @@ function rowToPopquiz(
 async function fetchOwnerBranding(
   userId: string | null,
 ): Promise<PopquizBranding> {
-  if (!userId) return mapBranding(null);
-  const { data } = await supabaseAdmin
-    .from("profiles")
-    .select("brand_logo_url, brand_color_primary, brand_website_url")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return mapBranding(data ?? null);
+  if (!userId) return mapBranding(null, null);
+  // Branding (logo / couleur / site) vit sur `profiles` ; l'ID
+  // affilié Tipote vit sur `business_profiles` (à côté de la clé
+  // SIO). On fait les 2 requêtes en // pour ne pas allonger le TTFB
+  // de la page publique. Pour les users multi-projets, on prend la
+  // première ligne business_profiles avec un affiliate_id non-null —
+  // si l'user en a configuré plusieurs différents on respecte celui
+  // qui sort en premier (généralement le projet par défaut).
+  const [{ data: profile }, { data: bp }] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("brand_logo_url, brand_color_primary, brand_website_url")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("business_profiles")
+      .select("tipote_affiliate_id")
+      .eq("user_id", userId)
+      .not("tipote_affiliate_id", "is", null)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  return mapBranding(
+    (profile as ProfileBrandRow | null) ?? null,
+    (bp as AffiliateRow | null)?.tipote_affiliate_id ?? null,
+  );
 }
 
 const UUID_RE =

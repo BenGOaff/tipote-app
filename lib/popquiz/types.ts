@@ -54,6 +54,10 @@ export interface PopquizBranding {
   logoUrl: string | null;
   websiteUrl: string | null;
   primaryColor: string | null;
+  /** Tipote affiliate ID (Systeme.io "sa..." identifier). Surfaced
+   *  on the public play page footer to track commissions on the
+   *  "Cette vidéo vous est proposée via Tiquiz" link. */
+  tipoteAffiliateId: string | null;
 }
 
 export interface Popquiz {

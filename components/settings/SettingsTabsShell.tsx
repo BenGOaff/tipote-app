@@ -160,6 +160,7 @@ type ProfileRow = {
   cgv_url?: string | null;
   sio_user_api_key?: string | null;
   sio_api_key_name?: string | null;
+  tipote_affiliate_id?: string | null;
   content_locale?: string | null;
   address_form?: string | null;
   linkedin_url?: string | null;
@@ -352,6 +353,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   // peut la révéler ponctuellement via le toggle 👁 à côté du champ.
   const [sioApiKeyVisible, setSioApiKeyVisible] = useState(false);
   const [pendingSio, startSioTransition] = useTransition();
+  const [tipoteAffiliateId, setTipoteAffiliateId] = useState("");
 
   const [contentLocale, setContentLocale] = useState("fr");
   const [addressForm, setAddressForm] = useState("tu");
@@ -437,6 +439,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setCgvUrl(row?.cgv_url ?? "");
         setSioApiKey(row?.sio_user_api_key ?? "");
         setSioApiKeyName(row?.sio_api_key_name ?? "");
+        setTipoteAffiliateId(row?.tipote_affiliate_id ?? "");
         setContentLocale(row?.content_locale ?? "fr");
         setAddressForm(row?.address_form ?? "tu");
         setLinkedinUrl(row?.linkedin_url ?? "");
@@ -1109,9 +1112,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const sioDirty = useMemo(() => {
     return (
       (initialProfile?.sio_user_api_key ?? "") !== sioApiKey ||
-      (initialProfile?.sio_api_key_name ?? "") !== sioApiKeyName
+      (initialProfile?.sio_api_key_name ?? "") !== sioApiKeyName ||
+      (initialProfile?.tipote_affiliate_id ?? "") !== tipoteAffiliateId
     );
-  }, [initialProfile, sioApiKey, sioApiKeyName]);
+  }, [initialProfile, sioApiKey, sioApiKeyName, tipoteAffiliateId]);
 
   const saveSioKey = () => {
     startSioTransition(async () => {
@@ -1119,7 +1123,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const res = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sio_user_api_key: sioApiKey, sio_api_key_name: sioApiKeyName }),
+          body: JSON.stringify({
+            sio_user_api_key: sioApiKey,
+            sio_api_key_name: sioApiKeyName,
+            tipote_affiliate_id: tipoteAffiliateId,
+          }),
         });
 
         const json = (await res.json().catch(() => null)) as any;
@@ -1129,6 +1137,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setInitialProfile(row);
         setSioApiKey(row?.sio_user_api_key ?? "");
         setSioApiKeyName(row?.sio_api_key_name ?? "");
+        setTipoteAffiliateId(row?.tipote_affiliate_id ?? "");
 
         toast({ title: tSP("connections.sioSaved") });
       } catch (e: any) {
@@ -1579,6 +1588,68 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 >
                   {sioApiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bloc affilié Tipote — sous la clé SIO car même contexte
+              "compte Systeme.io". L'ID affilié vit dans l'URL des
+              liens de partage tipote.fr/part-tiquiz?sa=<id> et permet
+              au créateur de toucher des commissions sur les nouveaux
+              inscrits Tiquiz qui découvrent l'outil via son popquiz. */}
+          <div className="mt-6 pt-6 border-t space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="tipote-affiliate-id" className="font-semibold">
+                Touche des commissions sur tes popquiz
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Sur chaque popquiz publié, un discret <em>« Cette vidéo vous est proposée via Tiquiz »</em> redirige vers la page de présentation de Tiquiz. Si tu colles ton identifiant affilié Systeme.io ci-dessous, chaque inscription qui en découle te rapporte une commission — automatiquement.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tipote-affiliate-id">Mon identifiant affilié Tipote</Label>
+              <Input
+                id="tipote-affiliate-id"
+                type="text"
+                autoComplete="off"
+                placeholder="sa00078783172001..."
+                value={tipoteAffiliateId}
+                onChange={(e) => setTipoteAffiliateId(e.target.value)}
+                disabled={profileLoading}
+                className="font-mono text-sm"
+              />
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>
+                  <strong>Où trouver mon ID ?</strong> Connecte-toi à Systeme.io
+                  → Programme d&apos;affiliation → mon lien d&apos;affilié pour Tipote.
+                  Ton lien ressemble à <code className="px-1 py-0.5 rounded bg-muted">https://systeme.io/fr?sa=sa0007878317...</code>{" "}
+                  — colle ici uniquement la partie qui commence par <code className="px-1 py-0.5 rounded bg-muted">sa</code> (sans le <code>?sa=</code> ni l&apos;URL).
+                </p>
+                <p>
+                  Pas encore inscrit·e au programme ?{" "}
+                  <a
+                    href="https://www.tipote.fr/part-tiquiz"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-primary hover:text-primary/80"
+                  >
+                    Découvrir le programme d&apos;affiliation Tipote
+                  </a>
+                  {" · "}
+                  <a
+                    href="https://www.tipote.fr/conditions-generales-affiliation"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-primary hover:text-primary/80"
+                  >
+                    Conditions générales
+                  </a>
+                </p>
+                <p className="italic">
+                  Si tu laisses ce champ vide, le footer reste visible mais
+                  sans tracking — les inscriptions ne te rapporteront rien.
+                </p>
               </div>
             </div>
           </div>
