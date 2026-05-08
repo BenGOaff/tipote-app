@@ -60,6 +60,10 @@ interface DashboardData {
     refund_rate_ytd_pct: number;
     month_refunded_eur_cents: number;
     month_gross_eur_cents: number;
+    month_sales_eur_cents: number;
+    month_affiliate_eur_cents: number;
+    ytd_sales_eur_cents: number;
+    ytd_affiliate_eur_cents: number;
     customers_current_month_count: number;
     customers_last_month_count: number;
     new_customers_count: number;
@@ -290,6 +294,32 @@ export default function ComptaDashboard() {
               </ResponsiveContainer>
             </div>
           </Card>
+
+          {/* Décomposition ventes vs commissions affiliation
+              (visible seulement si l'user a effectivement des
+              commissions — sinon ça ferait double emploi avec la
+              card "Ce mois-ci" tout en haut). */}
+          {m.month_affiliate_eur_cents > 0 || m.ytd_affiliate_eur_cents > 0 ? (
+            <Card className="p-5 space-y-3">
+              <h3 className="font-semibold">Ventes directes vs commissions d&apos;affiliation</h3>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Pour distinguer ce que tu vends toi-même de ce que tu
+                touches en commission sur les ventes des autres.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <SalesAffiliateSplit
+                  label="Ce mois-ci"
+                  salesCents={m.month_sales_eur_cents}
+                  affiliateCents={m.month_affiliate_eur_cents}
+                />
+                <SalesAffiliateSplit
+                  label="Depuis janvier"
+                  salesCents={m.ytd_sales_eur_cents}
+                  affiliateCents={m.ytd_affiliate_eur_cents}
+                />
+              </div>
+            </Card>
+          ) : null}
 
           {/* Décomposition mois en cours */}
           <div className="grid gap-3 lg:grid-cols-2">
@@ -609,4 +639,65 @@ function VatGaugeCard({ t }: { t: NonNullable<DashboardData["vat_threshold"]> })
 
 function monthName(d: Date): string {
   return new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(d);
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Mini composant : décomposition ventes / commissions
+ * ────────────────────────────────────────────────────────────────── */
+
+function SalesAffiliateSplit({
+  label,
+  salesCents,
+  affiliateCents,
+}: {
+  label: string;
+  salesCents: number;
+  affiliateCents: number;
+}) {
+  const total = salesCents + affiliateCents;
+  const salesPct = total > 0 ? Math.round((salesCents / total) * 100) : 0;
+  const affiliatePct = 100 - salesPct;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{label}</p>
+      <div className="flex items-baseline gap-2">
+        <span className="text-xl font-bold tabular-nums">{formatEur(total)}</span>
+        <span className="text-xs text-muted-foreground">au total</span>
+      </div>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-primary" />
+            Ventes directes
+          </span>
+          <span className="tabular-nums">
+            <strong>{formatEur(salesCents)}</strong>{" "}
+            <span className="text-muted-foreground">({salesPct} %)</span>
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            Commissions
+          </span>
+          <span className="tabular-nums">
+            <strong>{formatEur(affiliateCents)}</strong>{" "}
+            <span className="text-muted-foreground">({affiliatePct} %)</span>
+          </span>
+        </div>
+        {/* Barre de proportion */}
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden flex">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${salesPct}%` }}
+          />
+          <div
+            className="h-full bg-amber-500 transition-all"
+            style={{ width: `${affiliatePct}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }

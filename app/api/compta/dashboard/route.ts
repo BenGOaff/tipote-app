@@ -39,6 +39,8 @@ interface UnifiedRow {
   customer_key: string;
   description_normalized: string;
   is_recurring: boolean;
+  /** sale (vente directe) | affiliate (commission) | other */
+  category: string;
 }
 
 /** Heuristique récurrence : détectée via le texte de la description.
@@ -96,7 +98,7 @@ export async function GET() {
   let txQ = supabaseAdmin
     .from("transactions")
     .select(
-      "id, paid_at, amount_cents, refunded_cents, currency, status, provider, customer_email, customer_name, description",
+      "id, paid_at, amount_cents, refunded_cents, currency, status, provider, customer_email, customer_name, description, category",
     )
     .eq("user_id", user.id)
     .gte("paid_at", sinceISO)
@@ -111,7 +113,7 @@ export async function GET() {
   const sinceDate = sinceISO.slice(0, 10);
   let manQ = supabaseAdmin
     .from("manual_transactions")
-    .select("id, amount_cents, currency, source_label, paid_at, customer_name, description")
+    .select("id, amount_cents, currency, source_label, category, paid_at, customer_name, description")
     .eq("user_id", user.id)
     .gte("paid_at", sinceDate);
   if (projectId) manQ = manQ.eq("project_id", projectId);
@@ -143,6 +145,7 @@ export async function GET() {
       customer_key: customerKey(r.customer_email, r.customer_name),
       description_normalized: normalizeDescription(r.description),
       is_recurring: isRecurring(r.description),
+      category: (r as { category?: string }).category || "sale",
     });
   }
   for (const r of manRows ?? []) {
@@ -159,6 +162,7 @@ export async function GET() {
       customer_key: customerKey(null, r.customer_name),
       description_normalized: normalizeDescription(r.description ?? r.source_label),
       is_recurring: false, // saisie manuelle = ponctuelle par défaut
+      category: (r as { category?: string }).category || "sale",
     });
   }
 
@@ -192,6 +196,15 @@ export async function GET() {
   let mrrCurrent = 0;
   let mrrLastMonth = 0;
 
+  // Décomposition ventes directes vs commissions affiliation (pour
+  // le mois courant ET YTD). Permet à l'user de voir d'un coup
+  // d'œil "j'ai fait 3k de ventes + 2k de commissions" plutôt
+  // qu'un seul chiffre agrégé.
+  let monthSalesEur = 0;
+  let monthAffiliateEur = 0;
+  let ytdSalesEur = 0;
+  let ytdAffiliateEur = 0;
+
   const customersCurrentMonth = new Set<string>();
   const customersLastMonth = new Set<string>();
   const customersBeforeCurrentMonth = new Set<string>();
@@ -221,6 +234,8 @@ export async function GET() {
       monthEur += netEur;
       monthGrossEur += r.amount_eur_cents;
       monthRefundedEur += r.refunded_eur_cents;
+      if (r.category === "affiliate") monthAffiliateEur += netEur;
+      else monthSalesEur += netEur;
       if (r.customer_key) customersCurrentMonth.add(r.customer_key);
       if (r.is_recurring) {
         mrrCurrent += netEur;
@@ -249,6 +264,8 @@ export async function GET() {
       ytdEur += netEur;
       ytdGrossEur += r.amount_eur_cents;
       ytdRefundedEur += r.refunded_eur_cents;
+      if (r.category === "affiliate") ytdAffiliateEur += netEur;
+      else ytdSalesEur += netEur;
     }
     if (inLastYearYtd) lastYearYtdEur += netEur;
 
@@ -410,6 +427,12 @@ export async function GET() {
       refund_rate_ytd_pct: refundRateYtd,
       month_refunded_eur_cents: monthRefundedEur,
       month_gross_eur_cents: monthGrossEur,
+
+      // Décomposition ventes vs commissions
+      month_sales_eur_cents: monthSalesEur,
+      month_affiliate_eur_cents: monthAffiliateEur,
+      ytd_sales_eur_cents: ytdSalesEur,
+      ytd_affiliate_eur_cents: ytdAffiliateEur,
 
       // Clients
       customers_current_month_count: customersCurrentMonth.size,

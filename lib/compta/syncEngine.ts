@@ -29,6 +29,27 @@ import {
 } from "@/lib/compta/providers/paypal";
 import { fetchAllMolliePayments } from "@/lib/compta/providers/mollie";
 
+/** Heuristique de catégorisation auto : si la description ressemble à
+ *  une commission d'affiliation (Systeme.io, Awin, etc.) → 'affiliate'.
+ *  Sinon → 'sale' par défaut. L'user peut surcharger manuellement
+ *  ensuite. On reste large pour ne pas rater les variantes en plusieurs
+ *  langues / formulations. */
+function detectCategory(description: string | null | undefined): "sale" | "affiliate" | "other" {
+  if (!description) return "sale";
+  const d = description.toLowerCase();
+  // Marqueurs explicites d'affiliation
+  if (
+    d.includes("affiliat") || // affiliate, affiliation, affiliated…
+    d.includes("affilié") ||
+    d.includes("commission") ||
+    d.includes("kickback") ||
+    /\baff\.?\b/.test(d)
+  ) {
+    return "affiliate";
+  }
+  return "sale";
+}
+
 /** Combien de mois on remonte au tout premier sync d'une connexion.
  *  24 mois = 12 mois pour la jauge franchise TVA glissante + 12 mois
  *  N-1 pour les comparaisons et les déclarations rétroactives. */
@@ -137,6 +158,25 @@ export async function syncConnection(
     }
     const dedupedTransactions = Array.from(uniqueByProviderTxId.values());
 
+    // Préservation de la catégorie pour les rows existantes : on lit
+    // les catégories actuellement en DB pour les transactions qu'on
+    // s'apprête à upsert. Si une row existe déjà, on garde sa valeur
+    // (= l'user l'a peut-être surchargée manuellement). Sinon on
+    // applique la détection auto.
+    const existingTxIds = dedupedTransactions.map((t) => t.providerTransactionId);
+    const existingCategories = new Map<string, string>();
+    if (existingTxIds.length > 0) {
+      const { data: existing } = await admin
+        .from("transactions")
+        .select("provider_transaction_id, category")
+        .eq("user_id", connection.user_id)
+        .eq("provider", connection.provider)
+        .in("provider_transaction_id", existingTxIds);
+      for (const r of (existing ?? []) as Array<{ provider_transaction_id: string; category: string }>) {
+        existingCategories.set(r.provider_transaction_id, r.category);
+      }
+    }
+
     const rows = dedupedTransactions.map((t) => ({
       user_id: connection.user_id,
       project_id: connection.project_id,
@@ -144,6 +184,11 @@ export async function syncConnection(
       // Le provider est dérivé de la connexion (source autoritaire),
       // pas de la transaction normalisée — qui ne le connait pas.
       provider: connection.provider,
+      // Catégorisation : on préserve la valeur existante (édition user
+      // possible) ; pour les nouvelles rows on détecte automatiquement
+      // depuis la description.
+      category:
+        existingCategories.get(t.providerTransactionId) ?? detectCategory(t.description),
       provider_transaction_id: t.providerTransactionId,
       amount_cents: t.amountCents,
       currency: t.currency,

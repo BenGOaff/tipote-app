@@ -17,6 +17,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 export const dynamic = "force-dynamic";
 
 const SOURCE_LABELS = ["virement", "especes", "cheque", "autre"] as const;
+const CATEGORIES = ["sale", "affiliate", "other"] as const;
 
 const PostBody = z.object({
   // Montant TTC en euros (string ou number côté front, normalisé en
@@ -25,6 +26,9 @@ const PostBody = z.object({
   amount: z.union([z.string(), z.number()]),
   currency: z.string().trim().min(3).max(3).default("EUR"),
   source_label: z.enum(SOURCE_LABELS),
+  // Nature du revenu : vente directe (défaut), commission affiliation,
+  // autre. Permet au dashboard de distinguer ventes et commissions.
+  category: z.enum(CATEGORIES).optional().default("sale"),
   paid_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format YYYY-MM-DD attendu"),
   customer_name: z.string().trim().max(200).optional().nullable(),
   description: z.string().trim().max(1000).optional().nullable(),
@@ -51,7 +55,7 @@ export async function GET() {
 
   let q = supabaseAdmin
     .from("manual_transactions")
-    .select("id, amount_cents, currency, source_label, paid_at, customer_name, description, created_at, updated_at")
+    .select("id, amount_cents, currency, source_label, category, paid_at, customer_name, description, created_at, updated_at")
     .eq("user_id", user.id);
   if (projectId) q = q.eq("project_id", projectId);
 
@@ -110,11 +114,12 @@ export async function POST(req: NextRequest) {
       amount_cents: amountCents,
       currency: body.currency.toUpperCase(),
       source_label: body.source_label,
+      category: body.category,
       paid_at: body.paid_at,
       customer_name: body.customer_name?.trim() || null,
       description: body.description?.trim() || null,
     })
-    .select("id, amount_cents, currency, source_label, paid_at, customer_name, description, created_at, updated_at")
+    .select("id, amount_cents, currency, source_label, category, paid_at, customer_name, description, created_at, updated_at")
     .single();
 
   if (error || !data) {

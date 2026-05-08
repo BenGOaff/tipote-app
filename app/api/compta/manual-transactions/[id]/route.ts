@@ -16,11 +16,13 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 
 const SOURCE_LABELS = ["virement", "especes", "cheque", "autre"] as const;
+const CATEGORIES = ["sale", "affiliate", "other"] as const;
 
 const PatchBody = z.object({
   amount: z.union([z.string(), z.number()]).optional(),
   currency: z.string().trim().min(3).max(3).optional(),
   source_label: z.enum(SOURCE_LABELS).optional(),
+  category: z.enum(CATEGORIES).optional(),
   paid_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   customer_name: z.string().trim().max(200).nullable().optional(),
   description: z.string().trim().max(1000).nullable().optional(),
@@ -78,6 +80,7 @@ export async function PATCH(
   }
   if (body.currency !== undefined) patch.currency = body.currency.toUpperCase();
   if (body.source_label !== undefined) patch.source_label = body.source_label;
+  if (body.category !== undefined) patch.category = body.category;
   if (body.paid_at !== undefined) patch.paid_at = body.paid_at;
   if (body.customer_name !== undefined)
     patch.customer_name = body.customer_name?.trim() || null;
@@ -94,7 +97,7 @@ export async function PATCH(
     .update(patch)
     .eq("id", id)
     .eq("user_id", user.id) // garde-fou ownership
-    .select("id, amount_cents, currency, source_label, paid_at, customer_name, description, created_at, updated_at")
+    .select("id, amount_cents, currency, source_label, category, paid_at, customer_name, description, created_at, updated_at")
     .maybeSingle();
 
   if (error) {

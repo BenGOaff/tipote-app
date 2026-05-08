@@ -39,11 +39,22 @@ interface ManualTransaction {
   amount_cents: number;
   currency: string;
   source_label: string;
+  category?: "sale" | "affiliate" | "other";
   paid_at: string;
   customer_name: string | null;
   description: string | null;
   created_at: string;
   updated_at: string;
+}
+
+const CATEGORY_OPTIONS: ReadonlyArray<{ value: "sale" | "affiliate" | "other"; label: string; hint: string }> = [
+  { value: "sale", label: "Vente", hint: "Tu as vendu un produit / une prestation" },
+  { value: "affiliate", label: "Commission affiliation", hint: "Tu touches une commission sur la vente d'un autre" },
+  { value: "other", label: "Autre", hint: "Autre revenu (remboursement reçu, etc.)" },
+];
+
+function categoryLabel(value: string | undefined): string {
+  return CATEGORY_OPTIONS.find((c) => c.value === value)?.label ?? "Vente";
 }
 
 const SOURCE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
@@ -209,6 +220,7 @@ function ManualTransactionRow({
   onDelete: () => void;
 }) {
   const isNegative = item.amount_cents < 0;
+  const isAffiliate = item.category === "affiliate";
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
       <div className="flex-1 min-w-0">
@@ -216,6 +228,11 @@ function ManualTransactionRow({
           <span className={`font-semibold tabular-nums ${isNegative ? "text-destructive" : ""}`}>
             {formatAmount(item.amount_cents, item.currency)}
           </span>
+          {isAffiliate ? (
+            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">
+              Commission
+            </span>
+          ) : null}
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
             {sourceLabel(item.source_label)}
           </span>
@@ -272,6 +289,9 @@ function ManualTransactionForm({ initial, onCancel, onSaved }: FormProps) {
   );
   const [currency, setCurrency] = useState(initial?.currency ?? "EUR");
   const [sourceLabelValue, setSourceLabelValue] = useState(initial?.source_label ?? "virement");
+  const [category, setCategory] = useState<"sale" | "affiliate" | "other">(
+    initial?.category ?? "sale",
+  );
   const [paidAt, setPaidAt] = useState(initial?.paid_at ?? new Date().toISOString().slice(0, 10));
   const [customerName, setCustomerName] = useState(initial?.customer_name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -302,6 +322,7 @@ function ManualTransactionForm({ initial, onCancel, onSaved }: FormProps) {
             amount: trimmedAmount,
             currency,
             source_label: sourceLabelValue,
+            category,
             paid_at: paidAt,
             customer_name: customerName.trim() || null,
             description: description.trim() || null,
@@ -384,7 +405,7 @@ function ManualTransactionForm({ initial, onCancel, onSaved }: FormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="mt-source">Type de paiement</Label>
+          <Label htmlFor="mt-source">Mode de paiement</Label>
           <Select value={sourceLabelValue} onValueChange={setSourceLabelValue}>
             <SelectTrigger id="mt-source">
               <SelectValue />
@@ -397,6 +418,32 @@ function ManualTransactionForm({ initial, onCancel, onSaved }: FormProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2 sm:col-span-2">
+          <Label>Nature du revenu</Label>
+          <p className="text-xs text-muted-foreground">
+            Pour distinguer tes ventes directes de tes commissions d&apos;affiliation
+            dans le tableau de bord.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setCategory(opt.value)}
+                disabled={pending}
+                className={`text-left rounded-md border px-3 py-2 text-xs transition-colors ${
+                  category === opt.value
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                    : "border-border hover:border-primary/40 hover:bg-muted/40"
+                }`}
+              >
+                <div className="font-semibold">{opt.label}</div>
+                <div className="text-muted-foreground mt-0.5">{opt.hint}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="space-y-2">
