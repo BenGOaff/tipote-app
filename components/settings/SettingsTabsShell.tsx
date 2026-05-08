@@ -127,6 +127,11 @@ type OfferItem = {
   target: string;
   format: string;
   pricing?: PricingTier[];
+  // Optional binding to a Systeme.io product. When set, the SIO sales
+  // sync (cron + manual /api/analytics/sio-sync) attributes new sales
+  // to this offer with 100% confidence. When empty, the matcher falls
+  // back to name → fuzzy → unique price heuristic.
+  sio_product_id?: string | null;
   // Pre-distilled selling points generated via /api/offers/sales-arguments.
   // Optional — undefined means "never generated yet". Persisted by the
   // profile save endpoint (whitelisted in its zod schema).
@@ -463,6 +468,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               description: String(o?.description ?? ""),
               target: String(o?.target ?? ""),
               format: String(o?.format ?? ""),
+              sio_product_id:
+                typeof o?.sio_product_id === "string" && o.sio_product_id.trim()
+                  ? o.sio_product_id.trim()
+                  : null,
               sales_arguments:
                 o?.sales_arguments && typeof o.sales_arguments === "object"
                   ? o.sales_arguments
@@ -807,8 +816,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const removeOffer = (idx: number) => setOffers((prev) => prev.filter((_, i) => i !== idx));
 
-  const updateOffer = (idx: number, field: keyof OfferItem, value: string) => {
-    setOffers((prev) => prev.map((o, i) => (i === idx ? { ...o, [field]: value } : o)));
+  const updateOffer = (
+    idx: number,
+    field: keyof OfferItem,
+    value: string | null,
+  ) => {
+    setOffers((prev) =>
+      prev.map((o, i) => (i === idx ? { ...o, [field]: value as any } : o)),
+    );
   };
 
   const addPricingTier = (offerIdx: number) => {
@@ -2062,6 +2077,34 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       </ul>
                     </div>
                   </div>
+                </div>
+
+                {/* Optional Systeme.io product binding — used by the
+                    SIO sales sync to attribute revenue to this offer
+                    with 100% confidence. Without it, the matcher
+                    falls back to name → fuzzy → unique price. */}
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Sparkles className="size-3 text-primary" />
+                    Lier à un produit Systeme.io (optionnel)
+                  </Label>
+                  <Input
+                    placeholder="ID produit Systeme.io (ex: 12345)"
+                    value={offer.sio_product_id ?? ""}
+                    onChange={(e) =>
+                      updateOffer(
+                        idx,
+                        "sio_product_id" as any,
+                        e.target.value.trim() || null,
+                      )
+                    }
+                    disabled={profileLoading}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Sur Systeme.io → ouvre ton produit → l&apos;ID est dans
+                    l&apos;URL. Permet à Tipote d&apos;attribuer chaque vente à la
+                    bonne offre dans tes analytics.
+                  </p>
                 </div>
 
                 {/* Pricing tiers */}

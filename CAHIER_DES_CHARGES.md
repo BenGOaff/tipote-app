@@ -26,6 +26,7 @@ Application Web SaaS multilingue (FR/EN/ES/IT/AR) pour analyse business, planifi
 > - **Programmation de contenu** : refonte du `ScheduleModal` + composant réutilisable `DateTimePicker` (calendar branded primary + slots 09/12/14/18 + time custom + summary lisible "vendredi 15 mai 2026, 14h00"). **Validation past dates côté client + serveur** ; le picker grise les slots passés du jour ; auto-seed today + prochain créneau quand la row n'a pas de `scheduled_date`. Le pipeline cron `/api/n8n/scheduled-posts` reste : timezone Europe/Paris, claim atomique via `FOR UPDATE SKIP LOCKED`, reset stuck >10min, refresh tokens auto, publication directe LinkedIn/Facebook.
 > - **JB feedback** : `quizzes.bonus_unlocked_message` (TEXT, optionnel) override le « Bonus unlocked! Check your inbox. » par défaut — utilité : livrer un code promo inline sans dépendre d'un tag SIO ou d'un email transactionnel. UI dans QuizDetailClient sous "Message après partage". `ALL_DEFAULT_CONSENTS` étendu : la phrase admin `"En renseignant ton email, tu acceptes notre politique de confidentialité."` (pre-fill historique du QuizForm) est désormais reconnue comme un default → fallback automatique sur la locale du viewer.
 > - **Bucket Supabase manquant** : création de `public-assets` (public, 10 Mo, mime types image whitelist + RLS read-public/write-authenticated). Avant : tous les uploads de logo + bonus image échouaient silencieusement (bucket inexistant en prod, supposition perdue lors d'une restauration projet).
+> - **Sync ventes Systeme.io → Tipote analytics** : nouveau pipeline qui pull `GET /api/sales` côté SIO via la clé API user, match chaque vente à une offre Tipote (cascade : `sio_product_id` explicite > nom exact > fuzzy nom > prix unique), agrège par offre + mois et upserts dans `offer_metrics`. Endpoint manuel `POST /api/analytics/sio-sync` (bouton "Synchroniser Systeme.io" sur `/analytics`) + cron quotidien `/api/cron/sio-sync-sales` (35 jours fenêtre, séquentiel, journalisation détaillée). Champ optionnel `business_profiles.offers[i].sio_product_id` éditable dans Settings → Mes offres pour binder une offre Tipote à un produit SIO précis. Modules : `lib/sio/salesSync.ts`, `lib/sio/syncRunner.ts`. Plan stratégique en **3 phases (Fondations / Croissance / Scaling)** — la nomenclature 90 jours / 30-60-90 a été retirée de tous les copywriting, prompts et messages utilisateur.
 
 ---
 
@@ -1251,6 +1252,22 @@ Les 50 dernières ventes SIO sont injectées dans le contexte du coach IA :
 
 - `sio_sales` — historique des ventes (montant, client, offre, statut)
 - `sio_webhook_registrations` — webhooks enregistrés par user (event_type, secret_token, statut)
+
+### 9.8. Sync ventes → analytics (pull périodique)
+
+Pour calculer le CA, le nombre de ventes par offre et la progression vers l'objectif `business_profiles.revenue_goal_monthly` sans demander à l'user de saisir manuellement, on pull `GET /api/sales` SIO :
+
+- **Manuel** : `POST /api/analytics/sio-sync` (bouton "Synchroniser Systeme.io" dans `/analytics`)
+- **Automatique** : cron quotidien `GET /api/cron/sio-sync-sales` (auth `X-Cron-Secret`, fenêtre 35 jours, séquentiel pour rester sous les rate-limits SIO, journalise sales/revenue/failures par user)
+
+**Matching SIO product → offre Tipote** (cascade dans `lib/sio/salesSync.ts`) :
+1. `sio_product_id` explicite renseigné dans Settings → Mes offres → binding 100% fiable
+2. Nom de produit exact (insensible à la casse, normalisation espace)
+3. Nom fuzzy (substring) — uniquement si une seule offre matche, sinon abstention
+4. Prix unique — si une seule offre Tipote a exactement ce montant
+5. Sinon → unmatched (compté dans `unmatchedRevenue` du résumé, exclu de l'agrégation par offre)
+
+**Idempotence** : avant chaque upsert, on remet à 0 `sales_count` + `revenue` pour les couples (offer, month) touchés, puis on insère les fresh totals. Les compteurs saisis manuellement (`visitors`, `signups`) sont préservés. UNIQUE `(user_id, offer_name, month)` empêche les doublons. Le free plan SIO supporte l'API depuis 2026 — fonctionnalité accessible à tous les users qui ont configuré leur clé.
 
 ---
 

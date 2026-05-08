@@ -16,6 +16,7 @@ import { BarChart3, History, Pencil, Target } from "lucide-react";
 import { useOfferMetrics } from "@/hooks/useOfferMetrics";
 import { OfferMetricsForm } from "@/components/analytics/OfferMetricsForm";
 import { OfferMetricsDashboard } from "@/components/analytics/OfferMetricsDashboard";
+import { SioSyncButton } from "@/components/analytics/SioSyncButton";
 
 import { format, Locale } from "date-fns";
 import { fr, enUS, es, it, ar } from "date-fns/locale";
@@ -53,6 +54,15 @@ export default function AnalyticsLovableClient() {
       title={t("title")}
     >
       <PageBanner icon={<BarChart3 className="w-5 h-5" />} title={t("subtitle")} subtitle={t("description")} />
+
+      {/* Quick action : pull les ventes Systeme.io à la volée. Le
+          cron quotidien (`/api/cron/sio-sync-sales`) fait pareil
+          chaque nuit, ce bouton est pour les users qui viennent de
+          faire une vente et veulent la voir dans leurs analytics
+          tout de suite. */}
+      <div className="mb-3 flex justify-end">
+        <SioSyncButton onSynced={() => offerState.fetchAll?.()} />
+      </div>
 
       {/* 3 Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

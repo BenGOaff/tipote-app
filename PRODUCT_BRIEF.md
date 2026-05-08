@@ -59,6 +59,7 @@ Variations à utiliser selon le canal :
 | « Je connecte Zapier / Make / Buffer et ça plante tous les 2 mois » | Fatigue technique | Publication directe via OAuth officiel sur les 7 réseaux, sans intermédiaire |
 | « J'ai des leads quelque part dans Systeme.io mais je sais pas qui c'est ni d'où ils viennent » | Opacité | Tableau leads centralisé, taggés par source (quiz, page de capture, popquiz…), avec sync auto vers Systeme.io |
 | « Ma stratégie devient obsolète après 2 mois » | Pas mesurable, pas actualisé | Flag « stratégie à jour ? » + bouton « Recalculer » qui re-génère tout en tenant compte des dernières infos profil/stats |
+| « Je dois ressaisir mes ventes manuellement pour suivre mon CA » | Saisie chronophage, oublis | Sync automatique des ventes Systeme.io chaque nuit (cron) + bouton « Synchroniser maintenant ». Tipote calcule le CA, le nombre de ventes par offre et la progression vers ton objectif revenu mensuel à partir de la vraie donnée business |
 
 ## 5. Différenciateurs (à mettre en avant vs concurrents)
 

@@ -52,6 +52,10 @@ const OfferItemSchema = z.object({
   description: z.string().trim().max(2000).optional().default(""),
   target: z.string().trim().max(500).optional().default(""),
   format: z.string().trim().max(200).optional().default(""),
+  // Optional binding for the Systeme.io sales sync. Stored alongside
+  // the offer so the matcher in lib/sio/salesSync can attribute SIO
+  // sales to the right offer with 100% confidence.
+  sio_product_id: z.string().trim().max(80).nullable().optional(),
   sales_arguments: SalesArgumentsSchema,
 });
 
