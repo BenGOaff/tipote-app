@@ -1,84 +1,134 @@
 "use client";
 
-// Onglet Compta dans Paramètres — country gate avant le vrai dashboard.
+// Onglet Compta dans Paramètres — étape 1b.
 //
-// État affiché selon la valeur de `country` (lue + sauvegardée dans
-// business_profiles.country, partagée avec l'onboarding) :
-//   • vide             → mini sélecteur "Tu vis dans quel pays ?"
-//   • France (synonymes) → placeholder "module en construction"
-//   • autre            → message "bientôt disponible pour [pays]"
+// 4 états successifs (l'user passe de l'un à l'autre au fur et à mesure
+// qu'il configure) :
 //
-// Les vrais écrans compta (statut + connexions PSP + dashboard CA…)
-// arrivent dans les sous-commits 1b → 1e ; pour l'instant on prépare
-// juste la porte d'entrée.
+//   1. country vide              → CountryGateForm
+//   2. country ≠ France          → UnsupportedCountry
+//   3. France + statut non set   → ComptaConfigForm (choix + sous-config)
+//   4. France + statut configuré → SummaryAndPlaceholder (résumé +
+//      bouton "Modifier" + listing des fonctionnalités à venir)
+//
+// Le vrai dashboard (CA, alertes seuils, calendrier fiscal, exports)
+// arrive dans les sous-commits 1c → 1e. Pour l'instant on prépare la
+// porte d'entrée et on collecte les infos nécessaires.
 
 import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Globe, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { Globe, Loader2, ShieldCheck, Sparkles, Pencil, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   COUNTRY_OPTIONS,
   isFrenchCountry,
   SUPPORTED_COUNTRIES,
 } from "@/lib/compta/countries";
+import {
+  type AccountingStatus,
+  type ComptaProfileSlice,
+  emptyComptaSlice,
+} from "@/lib/compta/types";
+import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 
 interface Props {
-  /** Valeur actuelle de business_profiles.country pour le projet actif. */
-  country: string | null;
-  /** Notifie le parent (SettingsTabsShell) après une sauvegarde réussie
-   *  pour qu'il rafraîchisse son état local. */
-  onCountrySaved: (next: string) => void;
+  /** Slice du profil business courant. Tous les champs sont optionnels —
+   *  un profil neuf vit avec toutes les valeurs à null/false. */
+  profile: ComptaProfileSlice | null;
+  /** Appelé après chaque sauvegarde réussie, avec le profil refresh
+   *  renvoyé par /api/profile. Le parent met à jour son état. */
+  onProfileUpdated: (next: ComptaProfileSlice) => void;
 }
 
-export default function ComptaTab({ country, onCountrySaved }: Props) {
+export default function ComptaTab({ profile, onProfileUpdated }: Props) {
   const [pending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
   const { toast } = useToast();
 
-  function saveCountry(next: string) {
-    if (!next) return;
-    startTransition(async () => {
-      try {
-        const res = await fetch("/api/profile", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ country: next }),
-        });
-        const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-        if (!json?.ok) throw new Error(json?.error ?? "Erreur");
-        onCountrySaved(next);
-      } catch (e) {
-        toast({
-          title: "Oups",
-          description: e instanceof Error ? e.message : "Impossible d'enregistrer",
-          variant: "destructive",
-        });
-      }
-    });
-  }
+  const slice: ComptaProfileSlice = { ...emptyComptaSlice(), ...(profile ?? {}) };
+  const { country, accounting_status: status } = slice;
 
   const hasCountry = (country ?? "").trim().length > 0;
   const isFrance = isFrenchCountry(country);
+
+  function patchProfile(patch: Partial<ComptaProfileSlice>): Promise<void> {
+    return new Promise<void>((resolve) => {
+      startTransition(async () => {
+        try {
+          const res = await fetch("/api/profile", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(patch),
+          });
+          const json = (await res.json().catch(() => null)) as
+            | { ok?: boolean; profile?: ComptaProfileSlice; error?: string }
+            | null;
+          if (!json?.ok) throw new Error(json?.error ?? "Erreur");
+          if (json.profile) {
+            onProfileUpdated({ ...emptyComptaSlice(), ...json.profile });
+          }
+          setEditing(false);
+        } catch (e) {
+          toast({
+            title: "Oups",
+            description: e instanceof Error ? e.message : "Impossible d'enregistrer",
+            variant: "destructive",
+          });
+        } finally {
+          resolve();
+        }
+      });
+    });
+  }
 
   return (
     <div className="space-y-6">
       <DisclaimerBanner />
 
       {!hasCountry ? (
-        <CountryGateForm pending={pending} onSave={saveCountry} />
-      ) : isFrance ? (
-        <FrancePlaceholder />
+        <CountryGateForm
+          pending={pending}
+          onSave={(c) => patchProfile({ country: c })}
+        />
+      ) : !isFrance ? (
+        <UnsupportedCountry
+          country={country!}
+          pending={pending}
+          onSave={(c) => patchProfile({ country: c })}
+        />
+      ) : !status || editing ? (
+        <Card className="p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <Sparkles className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-lg">
+                {editing ? "Modifier ma configuration" : "Configure ta compta"}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Pour t&apos;aider à anticiper tes seuils, échéances et
+                déclarations, dis-moi sous quel statut tu exerces.
+              </p>
+            </div>
+          </div>
+          <ComptaConfigForm
+            initial={slice}
+            pending={pending}
+            onSave={patchProfile}
+            onCancel={editing ? () => setEditing(false) : undefined}
+          />
+        </Card>
       ) : (
-        <UnsupportedCountry country={country!} pending={pending} onSave={saveCountry} />
+        <ConfiguredSummary slice={slice} onEdit={() => setEditing(true)} />
       )}
     </div>
   );
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Bandeau permanent — Tipote ≠ comptable
+ * Bandeau permanent "Tipote ≠ comptable"
  * ────────────────────────────────────────────────────────────────── */
 
 function DisclaimerBanner() {
@@ -205,41 +255,7 @@ function CountryGateForm({
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Placeholder France — le vrai dashboard arrive en sous-commits
- * ────────────────────────────────────────────────────────────────── */
-
-function FrancePlaceholder() {
-  return (
-    <Card className="p-6 space-y-4">
-      <div className="flex items-start gap-3">
-        <Sparkles className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-        <div>
-          <h3 className="font-semibold text-lg">Module en construction</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Tu es en France : tu auras bientôt l&apos;accès complet à
-            l&apos;aide compta. On déploie le module pas-à-pas pour
-            qu&apos;il soit fiable dès le 1ᵉʳ jour.
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-2 text-sm text-muted-foreground">
-        <p className="font-medium text-foreground">Ce qui arrive :</p>
-        <ul className="space-y-1 list-disc list-inside ml-1">
-          <li>Configurer ton statut (particulier / auto-entrepreneur / SASU)</li>
-          <li>Connecter Stripe, PayPal, Mollie pour suivre tes encaissements</li>
-          <li>Voir ton chiffre d&apos;affaires en temps réel</li>
-          <li>Être prévenu·e quand tu approches d&apos;un seuil de TVA</li>
-          <li>Recevoir le calendrier fiscal personnalisé (URSSAF, TVA, IS…)</li>
-          <li>Exporter le FEC pour ton comptable</li>
-        </ul>
-      </div>
-    </Card>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────
- * Pays non encore supporté + possibilité de corriger la saisie
+ * Pays non supporté
  * ────────────────────────────────────────────────────────────────── */
 
 function UnsupportedCountry({
@@ -291,4 +307,200 @@ function UnsupportedCountry({
       </div>
     </Card>
   );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Résumé après config + placeholder
+ * ────────────────────────────────────────────────────────────────── */
+
+function ConfiguredSummary({
+  slice,
+  onEdit,
+}: {
+  slice: ComptaProfileSlice;
+  onEdit: () => void;
+}) {
+  const status = slice.accounting_status as AccountingStatus;
+  return (
+    <div className="space-y-4">
+      <Card className="p-6 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+              Mon statut
+            </p>
+            <h3 className="font-semibold text-lg mt-1">{statusLabel(status)}</h3>
+          </div>
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Pencil className="h-3.5 w-3.5 mr-2" />
+            Modifier
+          </Button>
+        </div>
+        <SummaryDetails slice={slice} />
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <Sparkles className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-lg">Module en construction</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Ta config est enregistrée. On déploie progressivement
+              les fonctionnalités qui s&apos;appuient dessus.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Prochaines étapes :</p>
+          <ul className="space-y-1 list-disc list-inside ml-1">
+            <li>Connecter Stripe, PayPal, Mollie pour suivre tes encaissements</li>
+            <li>Voir ton chiffre d&apos;affaires en temps réel</li>
+            <li>Être prévenu·e quand tu approches d&apos;un seuil de TVA</li>
+            <li>Recevoir le calendrier fiscal personnalisé</li>
+            {status === "sasu" ? (
+              <li>Exporter le FEC pour ton comptable</li>
+            ) : null}
+          </ul>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
+  const rows: Array<{ label: string; value: string; href?: string; hrefLabel?: string }> = [];
+
+  if (slice.accounting_status === "particulier") {
+    rows.push({
+      label: "Nature des revenus",
+      value: particulierRevenueLabel(slice.particulier_revenue_type),
+      href: "https://www.impots.gouv.fr/particulier/professions-non-salariees-revenus-fonciers-pme",
+      hrefLabel: "Aide impots.gouv.fr",
+    });
+  } else if (slice.accounting_status === "auto_entrepreneur") {
+    rows.push({ label: "Activité", value: aeActivityLabel(slice.ae_activity_type) });
+    rows.push({ label: "Début d'activité", value: slice.ae_started_at ?? "Non renseigné" });
+    rows.push({ label: "ACRE", value: slice.ae_acre ? "Oui" : "Non" });
+    rows.push({
+      label: "Versement libératoire",
+      value: slice.ae_versement_liberatoire ? "Oui" : "Non",
+    });
+    rows.push({
+      label: "Franchise TVA",
+      value: slice.ae_vat_franchise ? "Oui" : "Non (TVA collectée)",
+    });
+  } else if (slice.accounting_status === "sasu") {
+    rows.push({
+      label: "SIREN",
+      value: slice.sasu_siren ?? "Non renseigné",
+      href: slice.sasu_siren
+        ? `https://annuaire-entreprises.data.gouv.fr/entreprise/${slice.sasu_siren}`
+        : undefined,
+      hrefLabel: "Voir sur annuaire-entreprises",
+    });
+    rows.push({
+      label: "Exercice fiscal",
+      value: slice.sasu_fiscal_year_calendar
+        ? "Année civile (jan → déc)"
+        : `Décalé (début ${monthLabel(slice.sasu_fiscal_year_start_month)})`,
+    });
+    rows.push({ label: "Régime TVA", value: vatRegimeLabel(slice.sasu_vat_regime) });
+    rows.push({
+      label: "TVA intracommunautaire",
+      value: slice.sasu_vat_intra_enabled ? "Activée (DES requise)" : "Non",
+    });
+    rows.push({
+      label: "Dirigeant rémunéré",
+      value: slice.sasu_dirigeant_remunere ? "Oui (URSSAF + DSN)" : "Non (dividendes uniquement)",
+    });
+  }
+
+  return (
+    <dl className="text-sm divide-y border-t border-b">
+      {rows.map((row, i) => (
+        <div key={i} className="py-2.5 flex items-center justify-between gap-3">
+          <dt className="text-muted-foreground">{row.label}</dt>
+          <dd className="font-medium text-right flex items-center gap-2">
+            <span>{row.value}</span>
+            {row.href ? (
+              <a
+                href={row.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:text-primary/80 inline-flex items-center gap-0.5"
+                title={row.hrefLabel}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : null}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Helpers de labels
+ * ────────────────────────────────────────────────────────────────── */
+
+function statusLabel(s: AccountingStatus): string {
+  switch (s) {
+    case "particulier":
+      return "Particulier";
+    case "auto_entrepreneur":
+      return "Auto-entrepreneur";
+    case "sasu":
+      return "SASU";
+  }
+}
+
+function particulierRevenueLabel(v: ComptaProfileSlice["particulier_revenue_type"]): string {
+  switch (v) {
+    case "bnc_accessoire":
+      return "Activités libérales accessoires (BNC)";
+    case "bic_accessoire":
+      return "Vente / services commerciaux accessoires (BIC)";
+    case "autre":
+      return "Autre";
+    default:
+      return "Non renseigné";
+  }
+}
+
+function aeActivityLabel(v: ComptaProfileSlice["ae_activity_type"]): string {
+  switch (v) {
+    case "vente":
+      return "Vente de marchandises";
+    case "services_bic":
+      return "Prestations commerciales / artisanales (BIC)";
+    case "services_bnc":
+      return "Prestations libérales / intellectuelles (BNC)";
+    case "mixte":
+      return "Activité mixte";
+    default:
+      return "Non renseigné";
+  }
+}
+
+function vatRegimeLabel(v: ComptaProfileSlice["sasu_vat_regime"]): string {
+  switch (v) {
+    case "reel_mensuel":
+      return "Réel normal mensuel";
+    case "reel_trimestriel":
+      return "Réel normal trimestriel";
+    case "simplifie":
+      return "Simplifié";
+    default:
+      return "Non renseigné";
+  }
+}
+
+function monthLabel(m: number | null | undefined): string {
+  if (!m || m < 1 || m > 12) return "—";
+  return [
+    "janvier", "février", "mars", "avril", "mai", "juin",
+    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+  ][m - 1] ?? "—";
 }

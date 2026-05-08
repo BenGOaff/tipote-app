@@ -122,6 +122,31 @@ const UpdateSchema = z.object({
     })
     .optional(),
 
+  // ─── Module Compta (étape 1b) ─────────────────────────────────
+  // Statut principal — null efface la config, sinon une des 3 valeurs.
+  accounting_status: z.enum(["particulier", "auto_entrepreneur", "sasu"]).nullable().optional(),
+
+  // Particulier
+  particulier_revenue_type: z.enum(["bnc_accessoire", "bic_accessoire", "autre"]).nullable().optional(),
+
+  // Auto-entrepreneur
+  ae_activity_type: z.enum(["vente", "services_bic", "services_bnc", "mixte"]).nullable().optional(),
+  ae_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  ae_acre: z.boolean().optional(),
+  ae_versement_liberatoire: z.boolean().optional(),
+  ae_vat_franchise: z.boolean().optional(),
+
+  // SASU — SIREN strict 9 chiffres ; côté front on l'aide en bloquant
+  // les caractères non numériques mais on revalide en zod côté serveur.
+  sasu_siren: z.string().regex(/^\d{9}$/).nullable().optional(),
+  sasu_fiscal_year_calendar: z.boolean().optional(),
+  sasu_fiscal_year_start_month: z.number().int().min(1).max(12).nullable().optional(),
+  sasu_vat_regime: z.enum(["reel_mensuel", "reel_trimestriel", "simplifie"]).nullable().optional(),
+  sasu_vat_intra_enabled: z.boolean().optional(),
+  sasu_dirigeant_remunere: z.boolean().optional(),
+  // accounting_status_configured_at est défini côté serveur dans le PATCH
+  // ci-dessous, pas accepté en input.
+
   // Auto-comments automation
   auto_comment_style_ton: z.string().trim().max(40).optional(),
   auto_comment_langage: z
@@ -237,6 +262,16 @@ export async function PATCH(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
     if (projectId) row.project_id = projectId;
+
+    // Si l'user (re)définit son accounting_status, on stamp la
+    // date côté serveur — l'input client ne peut pas la spoofer.
+    // Quand on bascule explicitement à null (effacer la config), on
+    // remet aussi le timestamp à null pour rester cohérent.
+    if (Object.prototype.hasOwnProperty.call(patch, "accounting_status")) {
+      const next = (patch as { accounting_status?: unknown }).accounting_status;
+      (patch as Record<string, unknown>).accounting_status_configured_at =
+        next ? new Date().toISOString() : null;
+    }
 
     // SIO API key encryption at rest. Béné 2026-05-04 : avant ce
     // commit la clé partait en clair dans la DB. On encrypte

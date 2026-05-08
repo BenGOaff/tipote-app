@@ -164,6 +164,21 @@ type ProfileRow = {
   sio_api_key_name?: string | null;
   tipote_affiliate_id?: string | null;
   country?: string | null;
+  // Module Compta (étape 1b)
+  accounting_status?: "particulier" | "auto_entrepreneur" | "sasu" | null;
+  accounting_status_configured_at?: string | null;
+  particulier_revenue_type?: "bnc_accessoire" | "bic_accessoire" | "autre" | null;
+  ae_activity_type?: "vente" | "services_bic" | "services_bnc" | "mixte" | null;
+  ae_started_at?: string | null;
+  ae_acre?: boolean | null;
+  ae_versement_liberatoire?: boolean | null;
+  ae_vat_franchise?: boolean | null;
+  sasu_siren?: string | null;
+  sasu_fiscal_year_calendar?: boolean | null;
+  sasu_fiscal_year_start_month?: number | null;
+  sasu_vat_regime?: "reel_mensuel" | "reel_trimestriel" | "simplifie" | null;
+  sasu_vat_intra_enabled?: boolean | null;
+  sasu_dirigeant_remunere?: boolean | null;
   content_locale?: string | null;
   address_form?: string | null;
   linkedin_url?: string | null;
@@ -357,9 +372,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [sioApiKeyVisible, setSioApiKeyVisible] = useState(false);
   const [pendingSio, startSioTransition] = useTransition();
   const [tipoteAffiliateId, setTipoteAffiliateId] = useState("");
-  // Pays — utilisé par l'onglet Compta (gating). Lecture/écriture
-  // partagées avec le reste du profil business via /api/profile.
-  const [country, setCountry] = useState<string>("");
 
   const [contentLocale, setContentLocale] = useState("fr");
   const [addressForm, setAddressForm] = useState("tu");
@@ -446,7 +458,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setSioApiKey(row?.sio_user_api_key ?? "");
         setSioApiKeyName(row?.sio_api_key_name ?? "");
         setTipoteAffiliateId(row?.tipote_affiliate_id ?? "");
-        setCountry(row?.country ?? "");
         setContentLocale(row?.content_locale ?? "fr");
         setAddressForm(row?.address_form ?? "tu");
         setLinkedinUrl(row?.linkedin_url ?? "");
@@ -2996,14 +3007,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <BillingSection email={userEmail} />
       </TabsContent>
 
-      {/* COMPTA — country gate puis dashboard.
-          Pour l'instant uniquement le gating ; le vrai dashboard
-          (statut + connexions PSP + CA + calendrier fiscal) arrive
-          dans les sous-commits 1b → 1e. */}
+      {/* COMPTA — country gate + config statut/sous-type.
+          Le vrai dashboard (CA, alertes seuils, calendrier fiscal,
+          exports) arrive dans les sous-commits 1c → 1e. */}
       <TabsContent value="compta" className="space-y-6">
         <ComptaTab
-          country={country}
-          onCountrySaved={(next) => setCountry(next)}
+          profile={initialProfile as any}
+          onProfileUpdated={(next) =>
+            setInitialProfile((prev) => ({ ...(prev ?? {}), ...(next as any) }))
+          }
         />
       </TabsContent>
     </Tabs>
