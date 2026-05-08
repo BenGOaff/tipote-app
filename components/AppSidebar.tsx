@@ -15,6 +15,7 @@ import {
   Briefcase,
   Video,
   Bell,
+  Calculator,
   PanelLeftClose,
   HelpCircle,
 } from "lucide-react";
@@ -85,6 +86,7 @@ const MAIN_ITEM_CONFIG = [
   { key: "clients" as const, url: "/clients", icon: Briefcase, spotlightId: "clients" },
   { key: "webinars" as const, url: "/webinars", icon: Video, spotlightId: "webinars" },
   { key: "widgets" as const, url: "/widgets", icon: Bell, spotlightId: "widgets" },
+  { key: "compta" as const, url: "/compta", icon: Calculator, spotlightId: "compta" },
 ];
 
 function PepitesSidebarItem() {
