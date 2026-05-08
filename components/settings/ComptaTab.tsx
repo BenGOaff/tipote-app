@@ -1,25 +1,23 @@
 "use client";
 
-// Onglet Compta — état initial "country gate" :
+// Onglet Compta dans Paramètres — country gate avant le vrai dashboard.
 //
-//   • Si l'user n'a pas encore renseigné son pays → on affiche un
-//     petit sélecteur. Sauvegarde immédiate dans business_profiles.country
-//     (réutilise le champ existant rempli à l'onboarding).
-//   • Si pays = France (ou synonymes) → on affiche le placeholder
-//     "module en construction" pour l'instant ; le vrai dashboard
-//     arrive dans les sous-commits suivants (1b → 1e).
-//   • Sinon → message d'attente "bientôt dispo pour [pays]". Pas de
-//     waitlist email — Béné filtrera par pays dans son admin pour
-//     prévenir les concernés à l'ouverture de chaque pays.
+// État affiché selon la valeur de `country` (lue + sauvegardée dans
+// business_profiles.country, partagée avec l'onboarding) :
+//   • vide             → mini sélecteur "Tu vis dans quel pays ?"
+//   • France (synonymes) → placeholder "module en construction"
+//   • autre            → message "bientôt disponible pour [pays]"
+//
+// Les vrais écrans compta (statut + connexions PSP + dashboard CA…)
+// arrivent dans les sous-commits 1b → 1e ; pour l'instant on prépare
+// juste la porte d'entrée.
 
 import { useState, useTransition } from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
-import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Calculator, Globe, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Globe, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   COUNTRY_OPTIONS,
@@ -28,11 +26,14 @@ import {
 } from "@/lib/compta/countries";
 
 interface Props {
-  initialCountry: string | null;
+  /** Valeur actuelle de business_profiles.country pour le projet actif. */
+  country: string | null;
+  /** Notifie le parent (SettingsTabsShell) après une sauvegarde réussie
+   *  pour qu'il rafraîchisse son état local. */
+  onCountrySaved: (next: string) => void;
 }
 
-export default function ComptaPageClient({ initialCountry }: Props) {
-  const [country, setCountry] = useState(initialCountry ?? "");
+export default function ComptaTab({ country, onCountrySaved }: Props) {
   const [pending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -40,72 +41,49 @@ export default function ComptaPageClient({ initialCountry }: Props) {
     if (!next) return;
     startTransition(async () => {
       try {
-        const res = await fetch("/api/compta/country", {
-          method: "POST",
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ country: next }),
         });
         const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
         if (!json?.ok) throw new Error(json?.error ?? "Erreur");
-        setCountry(next);
+        onCountrySaved(next);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Impossible d'enregistrer";
-        toast({ title: "Oups", description: msg, variant: "destructive" });
+        toast({
+          title: "Oups",
+          description: e instanceof Error ? e.message : "Impossible d'enregistrer",
+          variant: "destructive",
+        });
       }
     });
   }
 
-  // 3 états selon le pays
-  const hasCountry = country.trim().length > 0;
+  const hasCountry = (country ?? "").trim().length > 0;
   const isFrance = isFrenchCountry(country);
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <main className="flex-1 overflow-auto bg-background flex flex-col">
-          <PageHeader
-            left={
-              <h1 className="text-lg font-display font-bold truncate flex items-center gap-2">
-                <Calculator className="h-5 w-5 text-primary" />
-                Compta
-              </h1>
-            }
-          />
+    <div className="space-y-6">
+      <DisclaimerBanner />
 
-          <div className="flex-1 p-4 sm:p-5 lg:p-6">
-            <div className="max-w-[900px] mx-auto w-full space-y-5">
-              {/* Bandeau permanent — clarifie ce que Tipote fait, et
-                  surtout ce qu'il NE fait pas. Présent à tous les
-                  états pour ne pas faire croire qu'on remplace un
-                  comptable. */}
-              <DisclaimerBanner />
-
-              {!hasCountry ? (
-                <CountryGateForm
-                  pending={pending}
-                  onSave={saveCountry}
-                />
-              ) : isFrance ? (
-                <FrancePlaceholder />
-              ) : (
-                <UnsupportedCountry country={country} onChange={saveCountry} />
-              )}
-            </div>
-          </div>
-        </main>
-      </div>
-    </SidebarProvider>
+      {!hasCountry ? (
+        <CountryGateForm pending={pending} onSave={saveCountry} />
+      ) : isFrance ? (
+        <FrancePlaceholder />
+      ) : (
+        <UnsupportedCountry country={country!} pending={pending} onSave={saveCountry} />
+      )}
+    </div>
   );
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Bandeau "Tipote ≠ comptable"
+ * Bandeau permanent — Tipote ≠ comptable
  * ────────────────────────────────────────────────────────────────── */
 
 function DisclaimerBanner() {
   return (
-    <Card className="p-4 bg-amber-50 border-amber-200">
+    <Card className="p-6 bg-amber-50 border-amber-200">
       <div className="flex items-start gap-3">
         <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="space-y-1">
@@ -142,7 +120,7 @@ function DisclaimerBanner() {
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Sélecteur "Tu vis dans quel pays ?"
+ * Sélecteur de pays
  * ────────────────────────────────────────────────────────────────── */
 
 function CountryGateForm({
@@ -167,7 +145,7 @@ function CountryGateForm({
       <div className="flex items-start gap-3">
         <Globe className="h-6 w-6 text-primary shrink-0 mt-0.5" />
         <div>
-          <h2 className="font-semibold text-lg">Tu vis dans quel pays ?</h2>
+          <h3 className="font-semibold text-lg">Tu vis dans quel pays ?</h3>
           <p className="text-sm text-muted-foreground mt-1">
             La compta dépend du pays (régimes, seuils, calendrier
             fiscal…). Choisis le tien pour voir les bonnes infos.
@@ -175,7 +153,7 @@ function CountryGateForm({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="compta-country">Pays de résidence</Label>
           <select
@@ -197,17 +175,14 @@ function CountryGateForm({
 
         {draft === "Autre" ? (
           <div className="space-y-2">
-            <Label htmlFor="compta-country-other">
-              Précise ton pays
-            </Label>
-            <input
+            <Label htmlFor="compta-country-other">Précise ton pays</Label>
+            <Input
               id="compta-country-other"
               type="text"
               value={otherText}
               onChange={(e) => setOtherText(e.target.value)}
               disabled={pending}
               placeholder="Ex : Norvège"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               required
               maxLength={120}
             />
@@ -230,7 +205,7 @@ function CountryGateForm({
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Placeholder France — sera remplacé par le vrai dashboard en 1c
+ * Placeholder France — le vrai dashboard arrive en sous-commits
  * ────────────────────────────────────────────────────────────────── */
 
 function FrancePlaceholder() {
@@ -239,7 +214,7 @@ function FrancePlaceholder() {
       <div className="flex items-start gap-3">
         <Sparkles className="h-6 w-6 text-primary shrink-0 mt-0.5" />
         <div>
-          <h2 className="font-semibold text-lg">Module en construction</h2>
+          <h3 className="font-semibold text-lg">Module en construction</h3>
           <p className="text-sm text-muted-foreground mt-1">
             Tu es en France : tu auras bientôt l&apos;accès complet à
             l&apos;aide compta. On déploie le module pas-à-pas pour
@@ -264,16 +239,17 @@ function FrancePlaceholder() {
 }
 
 /* ──────────────────────────────────────────────────────────────────
- * Pays non encore supporté — message + possibilité de corriger si
- * l'user s'est trompé
+ * Pays non encore supporté + possibilité de corriger la saisie
  * ────────────────────────────────────────────────────────────────── */
 
 function UnsupportedCountry({
   country,
-  onChange,
+  pending,
+  onSave,
 }: {
   country: string;
-  onChange: (country: string) => void;
+  pending: boolean;
+  onSave: (country: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const supportedLabels = SUPPORTED_COUNTRIES.map((c) => c.label).join(", ");
@@ -283,9 +259,9 @@ function UnsupportedCountry({
       <div className="flex items-start gap-3">
         <Globe className="h-6 w-6 text-muted-foreground shrink-0 mt-0.5" />
         <div>
-          <h2 className="font-semibold text-lg">
+          <h3 className="font-semibold text-lg">
             Bientôt disponible pour {country}
-          </h2>
+          </h3>
           <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
             L&apos;aide compta Tipote n&apos;est aujourd&apos;hui
             disponible que pour : <strong>{supportedLabels}</strong>.
@@ -300,15 +276,9 @@ function UnsupportedCountry({
         </div>
       </div>
 
-      <div className="border-t pt-3">
+      <div className="border-t pt-4">
         {editing ? (
-          <CountryGateForm
-            pending={false}
-            onSave={(c) => {
-              onChange(c);
-              setEditing(false);
-            }}
-          />
+          <CountryGateForm pending={pending} onSave={onSave} />
         ) : (
           <button
             type="button"

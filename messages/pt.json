@@ -14,7 +14,6 @@
     "settings": "Definições",
     "widgets": "Widgets",
     "webinars": "Eventos ao vivo",
-    "compta": "Contabilidade",
     "support": "Ajuda",
     "dashboard": "Painel",
     "tasks": "Tarefas",
@@ -387,7 +386,8 @@
       "settings": "Definições",
       "branding": "Branding",
       "ai": "IA & Créditos",
-      "pricing": "Subscrição"
+      "pricing": "Subscrição",
+      "compta": "Contabilidade"
     },
     "language": {
       "uiTitle": "Idioma da interface",

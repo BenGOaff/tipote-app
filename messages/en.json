@@ -14,7 +14,6 @@
     "settings": "Settings",
     "widgets": "Widgets",
     "webinars": "Live events",
-    "compta": "Accounting",
     "support": "Help"
   },
   "sidebar": {
@@ -301,7 +300,8 @@
       "settings": "Preferences",
       "branding": "Branding",
       "ai": "AI & Credits",
-      "pricing": "Subscription"
+      "pricing": "Subscription",
+      "compta": "Accounting"
     },
     "language": {
       "uiTitle": "Interface language",

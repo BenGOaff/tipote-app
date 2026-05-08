@@ -14,7 +14,6 @@
     "settings": "Ajustes",
     "widgets": "Widgets",
     "webinars": "Webinarios",
-    "compta": "Contabilidad",
     "support": "Ayuda"
   },
   "sidebar": {
@@ -301,7 +300,8 @@
       "settings": "Preferencias",
       "branding": "Branding",
       "ai": "IA y Créditos",
-      "pricing": "Suscripción"
+      "pricing": "Suscripción",
+      "compta": "Contabilidad"
     },
     "language": {
       "uiTitle": "Idioma de la interfaz",
