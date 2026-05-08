@@ -240,7 +240,7 @@ export async function POST(req: NextRequest) {
         void notifySocialDisconnected({
           userId,
           platform: itemPlatform,
-          reason: errorMsg ?? null ?? undefined,
+          reason: errorMsg ?? undefined,
         });
       }
 
