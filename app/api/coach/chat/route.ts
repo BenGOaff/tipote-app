@@ -17,6 +17,7 @@ import { buildCoachSystemPrompt } from "@/lib/prompts/coach/system";
 import { searchResourceChunks, type ResourceChunkMatch } from "@/lib/resources";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { buildBusinessContext } from "@/lib/compta/businessContext";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -1270,6 +1271,17 @@ TONE & STYLE:
     const nicheMissionBlock = formatNicheMissionBlock(businessProfileRes.data);
     const competitorBlock = formatCompetitorBlock(competitorRes.data);
 
+    // Business context unifié — chiffres réels du user (CA mois/an,
+    // objectif, abonnements, churn). Source partagée avec /app et
+    // l'onglet Compta. Fail-open : si une query plante, on injecte
+    // un bloc vide pour ne pas casser le coach.
+    const businessContext = await buildBusinessContext(user.id, projectId).catch(
+      (e) => {
+        console.warn("[coach.chat] buildBusinessContext failed:", e);
+        return { text: "", data: null as any };
+      },
+    );
+
     // For teaser mode, build smart observations
     const teaserObservations = isTeaser
       ? buildTeaserObservations({
@@ -1305,30 +1317,11 @@ TONE & STYLE:
       "",
       competitorBlock || "ANALYSE CONCURRENTIELLE: (aucune)",
       "",
-      // Revenue block
-      (() => {
-        const lines: string[] = ["REVENUS & OBJECTIF:"];
-        const goalStr = typeof revenueGoalMonthly === "string" ? revenueGoalMonthly.trim() : typeof revenueGoalMonthly === "number" ? `${revenueGoalMonthly}€` : "";
-        if (goalStr) lines.push(`- Objectif mensuel: ${goalStr}`);
-        if (revenueData.length > 0) {
-          const totalRevenue = revenueData.reduce((s: number, r: any) => s + (parseFloat(r.revenue) || 0), 0);
-          const totalSales = revenueData.reduce((s: number, r: any) => s + (parseInt(r.sales_count) || 0), 0);
-          const totalVisitors = revenueData.reduce((s: number, r: any) => s + (parseInt(r.visitors) || 0), 0);
-          lines.push(`- CA ce mois: ${totalRevenue.toFixed(0)}€`);
-          lines.push(`- Ventes ce mois: ${totalSales}`);
-          if (totalVisitors > 0) lines.push(`- Visiteurs ce mois: ${totalVisitors}`);
-          if (goalStr) {
-            const goalNum = parseFloat(goalStr.replace(/[^0-9.,]/g, "").replace(",", "."));
-            if (goalNum > 0) {
-              const pct = Math.round((totalRevenue / goalNum) * 100);
-              lines.push(`- Progression vers objectif: ${pct}%`);
-            }
-          }
-        } else if (goalStr) {
-          lines.push("- Pas encore de données de revenus ce mois.");
-        }
-        return lines.length > 1 ? lines.join("\n") : "REVENUS: (pas de données)";
-      })(),
+      // Business context unifié — CA réel toutes sources (Stripe / PayPal /
+      // Mollie / saisies manuelles / SIO en fallback) + objectif + churn +
+      // nouveaux clients. Source partagée avec /app, /strategy et l'onglet
+      // Compta — l'IA voit les mêmes chiffres que l'user.
+      businessContext.text || "BUSINESS CONTEXT: (pas de données)",
       "",
       checkInBlock ? checkInBlock : "CHECK-IN: (none)",
       "",

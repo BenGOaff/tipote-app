@@ -880,8 +880,12 @@ async function generateStarterStrategyGoals(params: {
   locale: "fr" | "en";
   businessProfile: AnyRecord;
   onboardingFacts: Record<string, unknown>;
+  /** Contexte business optionnel à injecter dans le prompt (CA réel,
+   *  abonnés, churn). Quand fourni, l'IA cale ses recommandations
+   *  sur les vrais chiffres au lieu de raisonner dans le vide. */
+  businessContextText?: string;
 }): Promise<{ strategy_summary: string; strategy_goals: any[]; dashboard_focus?: string[] } | null> {
-  const { ai, locale, businessProfile, onboardingFacts } = params;
+  const { ai, locale, businessProfile, onboardingFacts, businessContextText } = params;
 
   const lang = safeLocaleLabel(locale);
 
@@ -947,6 +951,7 @@ ${JSON.stringify(
   null,
   2,
 )}
+${businessContextText ? `\n${businessContextText}\n` : ""}
 `.trim();
 
   try {
@@ -1014,6 +1019,20 @@ export async function POST(req: Request) {
 
     userId = session.user.id;
     projectId = await getActiveProjectId(supabase, userId);
+
+    // Business context unifié — chiffres réels du user (CA mois/an,
+    // objectif, abonnés, churn). Injecté dans les userPrompts des
+    // générateurs de stratégie pour que les recommandations soient
+    // calibrées sur les vrais chiffres au lieu de raisonner dans le
+    // vide. Fail-open : on ignore l'erreur pour ne pas bloquer la
+    // génération de plan si la lib compta plante.
+    const { buildBusinessContext } = await import("@/lib/compta/businessContext");
+    const businessContextBlock = await buildBusinessContext(userId, projectId)
+      .then((c) => c.text)
+      .catch((e) => {
+        console.warn("[strategy] buildBusinessContext failed:", e);
+        return "";
+      });
 
     // ✅ Read request body (force flag from front-end onboarding finalization)
     const reqBody = (await req.json().catch(() => ({}))) as { force?: boolean };
@@ -1284,6 +1303,7 @@ ${competitorAnalysis.positioning_matrix ? `Matrice de positionnement : ${competi
           locale,
           businessProfile: businessProfile as AnyRecord,
           onboardingFacts: onboardingFacts ?? {},
+          businessContextText: businessContextBlock,
         });
 
         if (starter) {
@@ -1371,7 +1391,7 @@ Tu dois répondre en JSON strict uniquement, sans texte autour.`.trim();
       const userPrompt = `META
 - has_offers_effective: ${String(hasOffersEffective)}
 - offers_satisfaction: ${offersSatisfactionRaw || "unknown"}
-
+${businessContextBlock ? `\n${businessContextBlock}\n` : ""}
 SOURCE PRIORITAIRE — Diagnostic (si présent) :
 - diagnostic_profile :
 ${JSON.stringify((businessProfile as any).diagnostic_profile ?? (businessProfile as any).diagnosticProfile ?? null, null, 2)}

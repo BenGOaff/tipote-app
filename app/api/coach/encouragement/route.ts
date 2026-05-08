@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { buildBusinessContext } from "@/lib/compta/businessContext";
 
 function toStr(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
@@ -107,12 +108,20 @@ Exemples de MAUVAISES phrases (à éviter) :
 - "C'est top, tu as fini « Définir le persona » !" (citation brute)
 - "Tu y es presque ! 85% complété." (chiffres sans contexte)`;
 
+    // Business context unifié — pour que la phrase d'encouragement
+    // colle aux chiffres réels de l'user (ex : "+15% vs le mois
+    // dernier" si pertinent, "objectif déjà atteint" si bouclé).
+    const businessContext = await buildBusinessContext(userId, projectId).catch(
+      () => ({ text: "", data: null as any }),
+    );
+
     const userPrompt = `Contexte business :
 - Objectif actuel : ${focus || "Développer son activité"}
 - Progression : ${done} tâches terminées sur ${total}
 
 Tâches récemment accomplies :
 ${doneList}
+${businessContext.text ? `\n${businessContext.text}` : ""}
 
 Écris ta phrase d'encouragement :`;
 
