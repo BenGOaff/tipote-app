@@ -295,10 +295,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     let addressForm = "tu";
     let fallbackPrivacyUrl = "";
     let brandFallback: { brand_font: string | null; brand_color_base: string | null; brand_logo_url: string | null } = { brand_font: null, brand_color_base: null, brand_logo_url: null };
+    let tipoteAffiliateId: string | null = null;
     if (quizUserId) {
       let bpQuery = admin
         .from("business_profiles")
-        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url")
+        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url, tipote_affiliate_id")
         .eq("user_id", quizUserId);
       if (quizProjectId) bpQuery = bpQuery.eq("project_id", quizProjectId);
       const { data: bp } = await bpQuery.maybeSingle();
@@ -309,6 +310,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         brand_color_base: (bp as any)?.brand_color_base ?? null,
         brand_logo_url: (bp as any)?.brand_logo_url ?? null,
       };
+      tipoteAffiliateId = String((bp as any)?.tipote_affiliate_id ?? "").trim() || null;
     }
 
     // Increment view count (non-blocking)
@@ -457,7 +459,14 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       ok: true,
       toast_widget_id: toastWidgetId,
       share_widget_id: shareWidgetId,
-      quiz: { ...renderedQuiz, address_form: addressForm, privacy_url: effectivePrivacyUrl || null },
+      quiz: {
+        ...renderedQuiz,
+        address_form: addressForm,
+        privacy_url: effectivePrivacyUrl || null,
+        // Surfacé pour que le footer Tiquiz par défaut puisse y attacher
+        // ?sa=<id> et faire toucher des commissions au créateur.
+        tipote_affiliate_id: tipoteAffiliateId,
+      },
       questions: renderedQuestions,
       results: renderedResults,
       // Creator-level branding fallback — PublicQuizClient resolves the final

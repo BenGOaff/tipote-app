@@ -1622,9 +1622,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>
                   <strong>Où trouver mon ID ?</strong> Connecte-toi à Systeme.io
-                  → Programme d&apos;affiliation → mon lien d&apos;affilié pour Tipote.
-                  Ton lien ressemble à <code className="px-1 py-0.5 rounded bg-muted">https://systeme.io/fr?sa=sa0007878317...</code>{" "}
-                  — colle ici uniquement la partie qui commence par <code className="px-1 py-0.5 rounded bg-muted">sa</code> (sans le <code>?sa=</code> ni l&apos;URL).
+                  → <em>Tableau de bord affilié</em> → en haut à droite tu vois
+                  ton <em>identifiant affilié</em> (qui commence par{" "}
+                  <code className="px-1 py-0.5 rounded bg-muted">sa</code>).
+                  Copie-le, colle-le ici, c&apos;est tout.
                 </p>
                 <p>
                   Pas encore inscrit·e au programme ?{" "}
