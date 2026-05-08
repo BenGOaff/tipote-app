@@ -63,16 +63,31 @@ export const useOfferMetrics = () => {
     quizzes: [],
   });
 
+  // Totaux PSP + saisies manuelles (compta module). Quand l'user a
+  // synchronisé Stripe / PayPal / Mollie ou ajouté des saisies, ces
+  // chiffres reflètent ses VRAIS encaissements — ils prennent le pas
+  // sur les agrégats offer_metrics qui peuvent être stales (saisies
+  // manuelles abandonnées).
+  const [comptaTotals, setComptaTotals] = useState<{
+    has_data: boolean;
+    sales_count: number;
+    revenue_eur: number;
+    affiliate_revenue_eur: number;
+    month_count: number;
+  } | null>(null);
+
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [offersResult, metricsRes] = await Promise.all([
+      const [offersResult, metricsRes, comptaRes] = await Promise.all([
         loadAllOffers(supabase),
         fetch("/api/analytics/offer-metrics").then((r) => r.json()),
+        fetch("/api/analytics/compta-totals").then((r) => r.json()).catch(() => null),
       ]);
 
       setOffers(offersResult);
       setMetrics(metricsRes?.metrics ?? []);
+      if (comptaRes?.ok) setComptaTotals(comptaRes);
     } catch (error) {
       console.error("Error fetching offer metrics:", error);
       toast({ title: "Erreur", description: "Impossible de charger les métriques", variant: "destructive" });
@@ -244,12 +259,30 @@ export const useOfferMetrics = () => {
     };
   }, [getMonthMetrics]);
 
-  // Grand totals across ALL months
+  // Grand totals across ALL months.
+  //
+  // Quand l'user a synchronisé un PSP (Stripe / PayPal / Mollie) ou
+  // ajouté des saisies manuelles, on prend SES VRAIS chiffres pour les
+  // ventes + le CA — ce sont ceux qui font foi côté compta. Sinon
+  // (compta pas configurée) on retombe sur les agrégats offer_metrics
+  // historiques.
+  //
+  // Visitors / signups / email stats restent toujours sourcés depuis
+  // offer_metrics — ces métriques ne sont pas dans transactions.
   const grandTotals = useMemo(() => {
     const totalVisitors = offerMetrics.reduce((s, m) => s + m.visitors, 0);
     const totalSignups = offerMetrics.reduce((s, m) => s + m.signups, 0);
-    const totalSales = offerMetrics.reduce((s, m) => s + m.sales_count, 0);
-    const totalRevenue = offerMetrics.reduce((s, m) => s + m.revenue, 0);
+    const offerMetricsSales = offerMetrics.reduce((s, m) => s + m.sales_count, 0);
+    const offerMetricsRevenue = offerMetrics.reduce((s, m) => s + m.revenue, 0);
+
+    // Source de vérité pour les ventes / CA : compta si dispo, sinon
+    // offer_metrics. Le mois count suit la même logique.
+    const useCompta = comptaTotals?.has_data === true;
+    const totalSales = useCompta ? comptaTotals!.sales_count : offerMetricsSales;
+    const totalRevenue = useCompta ? comptaTotals!.revenue_eur : offerMetricsRevenue;
+    const monthCount = useCompta
+      ? Math.max(comptaTotals!.month_count, sortedMonths.length)
+      : sortedMonths.length;
 
     // Average email stats across all months
     const emailRows = metrics.filter((m) => m.offer_name === "__email_stats__");
@@ -266,14 +299,17 @@ export const useOfferMetrics = () => {
       signups: totalSignups,
       sales: totalSales,
       revenue: totalRevenue,
+      // Compta-only : revenue d'affiliation à part (commissions)
+      affiliateRevenue: comptaTotals?.affiliate_revenue_eur ?? 0,
+      revenueSource: useCompta ? ("compta" as const) : ("offer_metrics" as const),
       captureRate: totalVisitors > 0 ? (totalSignups / totalVisitors) * 100 : 0,
       salesConversion: totalSignups > 0 ? (totalSales / totalSignups) * 100 : 0,
       avgEmailOpenRate: avgOpenRate,
       avgEmailClickRate: avgClickRate,
       latestEmailListSize: latestEmailRow?.email_list_size ?? 0,
-      monthCount: sortedMonths.length,
+      monthCount,
     };
-  }, [offerMetrics, metrics, sortedMonths]);
+  }, [offerMetrics, metrics, sortedMonths, comptaTotals]);
 
   useEffect(() => {
     fetchAll();

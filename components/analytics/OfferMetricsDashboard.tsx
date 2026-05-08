@@ -27,6 +27,14 @@ interface OfferMetricsDashboardProps {
     signups: number;
     sales: number;
     revenue: number;
+    /** Revenu d'affiliation séparé (= commissions) — 0 si l'user n'a
+     *  pas activé la compta ou n'a pas de commissions catégorisées. */
+    affiliateRevenue: number;
+    /** Source des chiffres : "compta" si les transactions PSP /
+     *  saisies manuelles sont la source de vérité, "offer_metrics"
+     *  si on retombe sur les agrégats historiques. Permet d'afficher
+     *  un badge "synchronisé" dans la UI. */
+    revenueSource: "compta" | "offer_metrics";
     captureRate: number;
     salesConversion: number;
     avgEmailOpenRate: number;
@@ -124,10 +132,17 @@ export const OfferMetricsDashboard = ({
     <div className="space-y-6">
       {/* ── Grand Totals ── */}
       <div>
-        <h3 className="font-bold text-base mb-3 flex items-center gap-2">
-          <Target className="w-4 h-4" />
-          Résultats totaux ({grandTotals.monthCount} mois de données)
-        </h3>
+        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+          <h3 className="font-bold text-base flex items-center gap-2">
+            <Target className="w-4 h-4" />
+            Résultats totaux ({grandTotals.monthCount} mois de données)
+          </h3>
+          {grandTotals.revenueSource === "compta" ? (
+            <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5">
+              ↗ Ventes & CA synchronisés depuis tes comptes Stripe / PayPal / Mollie
+            </span>
+          ) : null}
+        </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <Card className="p-4">
@@ -140,6 +155,11 @@ export const OfferMetricsDashboard = ({
             <p className="text-xl font-bold">{grandTotals.sales.toLocaleString(locale)}</p>
             {grandTotals.revenue > 0 && (
               <p className="text-xs text-muted-foreground mt-0.5">{grandTotals.revenue.toLocaleString(locale)} EUR de CA</p>
+            )}
+            {grandTotals.affiliateRevenue > 0 && (
+              <p className="text-[11px] text-amber-700 mt-0.5">
+                + {grandTotals.affiliateRevenue.toLocaleString(locale)} EUR de commissions
+              </p>
             )}
           </Card>
 

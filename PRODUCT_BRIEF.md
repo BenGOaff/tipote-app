@@ -60,6 +60,10 @@ Variations à utiliser selon le canal :
 | « J'ai des leads quelque part dans Systeme.io mais je sais pas qui c'est ni d'où ils viennent » | Opacité | Tableau leads centralisé, taggés par source (quiz, page de capture, popquiz…), avec sync auto vers Systeme.io |
 | « Ma stratégie devient obsolète après 2 mois » | Pas mesurable, pas actualisé | Flag « stratégie à jour ? » + bouton « Recalculer » qui re-génère tout en tenant compte des dernières infos profil/stats |
 | « Je dois ressaisir mes ventes manuellement pour suivre mon CA » | Saisie chronophage, oublis | Sync automatique des ventes Systeme.io chaque nuit (cron) + bouton « Synchroniser maintenant ». Tipote calcule le CA, le nombre de ventes par offre et la progression vers ton objectif revenu mensuel à partir de la vraie donnée business |
+| « Je sais pas où j'en suis côté compta : seuils TVA, échéances URSSAF, calendrier fiscal… » | Anxiété fiscale, peur de l'oubli | Onglet **Compta** complet (Mai 2026) : configuration statut (auto-entrepreneur / SASU / particulier), connexions Stripe / PayPal / Mollie avec sync 24 mois d'historique, jauge franchise TVA, calendrier fiscal personnalisé. Les vrais chiffres sont injectés dans le coach IA, le dashboard Aujourd'hui, la stratégie. Disclaimer permanent : Tipote ne remplace pas un comptable |
+| « Je touche des commissions d'affiliation mais je ne sais pas comment les distinguer de mes ventes » | Mélange CA réel vs commissions | Auto-détection des commissions (heuristique sur description PayPal / Stripe) + saisie manuelle pour les virements bancaires. Le dashboard Compta sépare visuellement « Ventes directes » et « Commissions affiliation » |
+| « Mon coach IA me sort toujours les mêmes conseils génériques alors qu'il pourrait voir mes vrais chiffres » | Frustration, confiance érodée | Le coach Tipote (chat + encouragement quotidien + génération stratégie) reçoit automatiquement le contexte business : CA mois en cours, progression vers l'objectif, abonnés perdus, comparaison N-1. Conseils calibrés sur les chiffres |
+| « Mon compte LinkedIn s'est déconnecté il y a 3 semaines, j'ai perdu 5 posts programmés sans le savoir » | Sentiment de trahison, perte de visibilité | Email d'alerte immédiat dès la détection d'un token révoqué (sur n'importe quel réseau). Email aussi quand un post programmé finit en échec après 5 retries — avec lien direct vers l'éditeur pour le reprogrammer |
 
 ## 5. Différenciateurs (à mettre en avant vs concurrents)
 
@@ -159,13 +163,39 @@ Variations à utiliser selon le canal :
 - **Clé API chiffrée at rest** (AES-256-GCM, DEK per-user) — sécurité bancaire
 
 ### 7.6. Pilotage & insight
-- **Analytics** par contenu, plateforme, période, offre
+- **Analytics** par contenu, plateforme, période, offre — alimentés par les vraies ventes synchronisées (cf. 7.7)
 - **Diagnostic IA** : analyse statistique avec recommandations (Basic+)
-- **Coach IA contextuel** (Pro/Elite) : pose des questions, le coach connaît tout ton business
+- **Coach IA contextuel** (Pro/Elite) : pose des questions, le coach connaît TOUT ton business — y compris ton CA réel du mois, ton avancée vers ton objectif, le nombre d'abonnés perdus, etc. Conseils calibrés sur les chiffres, pas génériques
 - **Pépites** : insights traduits automatiquement en 5 langues, multi-format
-- **Notifications temps réel**
+- **Notifications temps réel** — incluant alertes business (50% / 100% objectif mensuel atteint, abonnés perdus à recontacter)
+- **Email de mi-parcours** automatique quand on est en retard sur l'objectif (≤10 jours restants et <50% atteint)
 
-### 7.7. Multi-projets (Elite)
+### 7.7. Compta + Suivi business (Mai 2026)
+- **Onglet Compta** dans Paramètres avec configuration du statut (particulier / auto-entrepreneur / SASU avec IS et TVA), incluant SIREN, régime TVA, ACRE, versement libératoire, TVA intra
+- **Connexions Stripe / PayPal / Mollie** avec une Restricted Key (Stripe) ou OAuth client_credentials (PayPal) ou clé API (Mollie). **Sync 24 mois d'historique** au premier branchement + sync delta quotidien
+- **Saisies manuelles** pour les paiements hors PSP (virement, espèces, chèque)
+- **Catégorisation automatique** ventes directes vs commissions d'affiliation (heuristique sur description + override manuel)
+- **Tableau de bord business** : CA mensuel/annuel, comparaison N vs N-1, MRR (revenus récurrents), abonnés actifs / nouveaux / perdus, taux de remboursement, top produits du mois, jauge franchise TVA pour les auto-entrepreneurs (vente / services BIC / services BNC / mixte)
+- **Jauge "objectif mensuel"** affichée sur le dashboard Aujourd'hui, sur la page Stratégie ET dans l'onglet Compta — 1 source unique partout
+- **Calendrier fiscal personnalisé** avec liens directs vers urssaf.fr et impots.gouv.fr
+- **Conversion EUR automatique** des transactions en USD/GBP/CHF/CAD via Frankfurter (open data BCE)
+- **Mise à jour annuelle automatique des seuils fiscaux** : un cron checke chaque jour service-public.fr / urssaf.fr — si les seuils ont changé, alerte email à l'admin Tipote pour validation manuelle
+- **Disclaimer permanent** : Tipote aide à anticiper, ne remplace ni un comptable ni les déclarations officielles
+- **Pour le moment dispo en France uniquement** ; pour les autres pays (Belgique, Suisse, Québec, Portugal, Espagne…), un message "bientôt disponible" + on les prévient dès l'ouverture
+
+### 7.8. Lien d'affiliation Tiquiz / Tipote
+- **Footer "Cette vidéo vous est proposée via Tiquiz"** sur tous les popquiz publics (sauf si l'user a configuré un footer custom — paid plans)
+- **Footer "Ce quiz vous est proposé via Tiquiz"** sur les quiz publics free / sans footer custom
+- **Auto-tracking de la commission** via le paramètre `?sa=<id>` quand l'user a posé son ID affilié Systeme.io dans Settings → Connexions
+- **Embed iframe** des popquiz inclut aussi le footer (visible chez les hôtes externes — vraie portée Tiquiz)
+
+### 7.9. Sécurité & alertes connexions sociales
+- **Email immédiat** quand un compte social (LinkedIn / Facebook / IG / X / TikTok / Pinterest / Threads) se déconnecte (token révoqué, expiré, mot de passe changé)
+- **Email** quand un post programmé bascule en échec après 5 tentatives — avec aperçu du post et lien direct vers l'éditeur pour le reprogrammer
+- **Détection automatique** de "token mort" pendant la publication (détection 401/invalid_grant) — pas d'attente du cron quotidien
+- **Dédup 3 jours** par compte pour ne pas spammer en cas d'échecs en cascade
+
+### 7.10. Multi-projets (Elite)
 - Une instance Tipote par projet/marque/sub-business
 - Chaque projet a sa propre clé Systeme.io, son onboarding, ses contenus
 - Switch d'un clic

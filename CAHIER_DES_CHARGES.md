@@ -28,6 +28,28 @@ Application Web SaaS multilingue (FR/EN/ES/IT/AR) pour analyse business, planifi
 > - **Bucket Supabase manquant** : création de `public-assets` (public, 10 Mo, mime types image whitelist + RLS read-public/write-authenticated). Avant : tous les uploads de logo + bonus image échouaient silencieusement (bucket inexistant en prod, supposition perdue lors d'une restauration projet).
 > - **Sync ventes Systeme.io → Tipote analytics** : nouveau pipeline qui pull `GET /api/sales` côté SIO via la clé API user, match chaque vente à une offre Tipote (cascade : `sio_product_id` explicite > nom exact > fuzzy nom > prix unique), agrège par offre + mois et upserts dans `offer_metrics`. Endpoint manuel `POST /api/analytics/sio-sync` (bouton "Synchroniser Systeme.io" sur `/analytics`) + cron quotidien `/api/cron/sio-sync-sales` (35 jours fenêtre, séquentiel, journalisation détaillée). Champ optionnel `business_profiles.offers[i].sio_product_id` éditable dans Settings → Mes offres pour binder une offre Tipote à un produit SIO précis. Modules : `lib/sio/salesSync.ts`, `lib/sio/syncRunner.ts`. Plan stratégique en **3 phases (Fondations / Croissance / Scaling)** — la nomenclature 90 jours / 30-60-90 a été retirée de tous les copywriting, prompts et messages utilisateur.
 
+> **Notes de version 8 mai 2026** — sprint compta + cross-app :
+>
+> - **Lien d'affiliation Tiquiz** : footer permanent *« Cette vidéo vous est proposée via Tiquiz »* sur tous les popquiz publics (`/pq/[id]`) et leur version embed iframe (`/embed/pq/[id]`), redirige vers `https://www.tipote.fr/part-tiquiz?sa=<id>`. Idem côté quiz publics free / sans footer custom : *« Ce quiz vous est proposé via Tiquiz »*. Tracking commission via le paramètre `?sa=<sa…>` (format Systeme.io) que l'user pose dans Settings → Connexions → Systeme.io → champ "Mon identifiant affilié Tipote". Stocké sur `business_profiles.tipote_affiliate_id`. Migration `20260508_tipote_affiliate_id`.
+> - **Notifications de déconnexion sociale + post raté** : email Resend immédiat dès qu'un token social meurt (LinkedIn / Facebook / IG / X / TikTok / Pinterest / Threads / Reddit). Détection 401 / `invalid_grant` / "revoked" dans `lib/refreshSocialToken.ts` + `app/api/n8n/publish-callback/route.ts`. Email aussi quand un post programmé bascule définitivement en `failed` (après 5 retries) avec aperçu du contenu et lien direct vers l'éditeur. Helper unique `lib/social/notifications.ts` avec dédup 3 jours par (user, platform). Nouvelle colonne `social_connections.disconnected_at` (migration `20260508_social_disconnected_at`) reset à `null` à chaque reconnexion OAuth (modifié dans les 9 callbacks OAuth).
+> - **Module Compta complet (France uniquement)** : nouvel onglet dans Paramètres (`/settings?tab=compta`) construit en 7 commits.
+>   - **1a — Country gate** : business_profiles.country existant → 3 états (vide → sélecteur, France → suite, autre → "bientôt disponible pour ce pays"). Helper `lib/compta/countries.ts`.
+>   - **1b — Configuration statut + sous-type** : 3 statuts au lancement (particulier / auto-entrepreneur / SASU avec IS et TVA), chacun avec ses sous-champs (activité AE, ACRE, versement libératoire, franchise TVA / SIREN, exercice fiscal calendaire ou décalé, régime TVA réel mensuel/trimestriel/simplifié, TVA intra, dirigeant rémunéré). 14 colonnes ajoutées sur `business_profiles` (migration `20260508_compta_status_config`). Composant `ComptaConfigForm` avec sélecteur 3 cartes + sous-formulaire dynamique. Liens vers service-public.fr / urssaf.fr / annuaire-entreprises.data.gouv.fr.
+>   - **1c — Connexion Stripe** : Restricted Key (lecture seule), sync initial 24 mois + cron daily `/api/cron/sync-payments` à 5h (delta depuis `last_sync_at - 1h`). 3 nouvelles tables : `payment_connections` (clé chiffrée), `transactions` (normalisée toutes sources, idempotence via `UNIQUE (user_id, provider, provider_transaction_id)`), `manual_transactions` (saisies hors PSP). RLS read-self. Migration `20260508_compta_payments_tables`. Modules : `lib/compta/syncEngine.ts`, `lib/compta/providers/stripe.ts`. Endpoints : `/api/compta/connections` (GET liste), `/api/compta/connections/stripe` (POST connect / DELETE), `/api/compta/connections/sync-now` (manual refresh), `/api/compta/connections/disconnect` (générique).
+>   - **1d — PayPal + Mollie** : OAuth client_credentials pour PayPal (avec mode live/sandbox + détection feature "Transaction Search" obligatoire) et clé API simple pour Mollie (note de sécurité car pas de Restricted Key). Pagination par fenêtres de 30 jours pour PayPal (limite 31j API), curseur `_links.next.href` pour Mollie. Dédup pré-upsert par `provider_transaction_id` (Postgres rejette `ON CONFLICT DO UPDATE` sur même row 2× dans le même batch). Modules : `lib/compta/providers/paypal.ts`, `lib/compta/providers/mollie.ts`.
+>   - **1e — Saisies manuelles** : CRUD complet pour les paiements hors PSP (virement / espèces / chèque / autre). UI `ComptaManualTransactions` avec liste + form édition inline. Endpoints : `/api/compta/manual-transactions` (GET + POST), `/api/compta/manual-transactions/[id]` (PATCH + DELETE).
+>   - **1f — Tableau de bord business** : 4 cards (CA mois, depuis janvier, MRR estimé via heuristique description, taux de remboursement) + graph N vs N-1 sur 12 mois (recharts BarChart) + décomposition clients (nouveaux / abonnés / perdus avec churn estimé) + top 5 produits (group by description normalisée) + jauge franchise TVA pour les AE. Conversion EUR via `https://api.frankfurter.app` (open data BCE, cache 1h). Endpoint `/api/compta/dashboard`. Composant `ComptaDashboard.tsx`. **Vocabulaire 100% français normal** ("revenus récurrents" et non MRR, "depuis janvier" et non YTD, "clients perdus" et non churn).
+>   - **1g — Seuils fiscaux DB-backed + admin** : nouvelle table `fiscal_thresholds` versionnée par (country, fiscal_year, category) avec seed 2026 FR (vente 85k/93,5k, services BIC/BNC 37,5k/41,25k). Migration `20260508_fiscal_thresholds`. Refactor `lib/compta/fiscal-config.ts` en async DB-read avec fallback hardcodé. Page admin `/admin/compta/fiscal-thresholds` (réservée aux `ADMIN_EMAILS`) pour éditer en ligne avec UI groupée par (pays, année). Cron quotidien `/api/cron/check-fiscal-thresholds` à 6h qui fetch chaque source_url officielle, cherche les valeurs stockées en DB normalisées (NBSP / variantes "85 000" / "85,000" / "85000"), envoie un email aux admins si une valeur a disparu de la page. Permet de mettre à jour les seuils chaque LF sans release Tipote.
+>   - **1h — Catégorisation ventes vs commissions affiliation** : colonne `category` sur `transactions` et `manual_transactions` (sale / affiliate / other, défaut sale). Détection auto au sync via heuristique sur description (`affiliation`, `commission`, `kickback`). Préservation des overrides user (lecture des catégories existantes avant chaque upsert). Migration `20260508_compta_transaction_category`. UI : 3 cartes cliquables dans le form de saisie manuelle, badge "Commission" sur les rows, nouvelle card dans le dashboard "Ventes directes vs commissions" (mois courant + YTD avec barre bicolore).
+> - **Connexion CA réel partout dans Tipote (cross-app)** :
+>   - Helper unifié `lib/compta/businessSummary.ts` → `getMonthlyRevenueSummary(userId, projectId)` qui agrège transactions PSP + saisies manuelles + fallback `offer_metrics` (pour les users SIO-only). Renvoie CA mois / YTD / comparaison N-1 / objectif / progression / jours restants.
+>   - Widget `RevenueGoalProgress` (`components/business/`) affiché en haut de **Aujourd'hui** (`/app`), de la **page Stratégie** (`/strategy` — la mini-jauge utilise désormais aussi cette source) et de l'**onglet Compta** (`/settings?tab=compta`). Vocabulaire naturel : *"Plus que 4 774 € à faire en 14 jours — c'est jouable"*, couleurs adaptatives (vert si atteint, ambre si retard).
+>   - **Coach IA contextualisé** : helper `lib/compta/businessContext.ts` qui formate un bloc texte injectable dans les prompts. Injecté dans `/api/coach/chat` (remplace l'ancien bloc REVENUS inline qui ne lisait que offer_metrics), `/api/coach/encouragement` (phrase quotidienne calibrée sur la progression réelle), `/api/strategy` (génération de stratégie + pyramide d'offres voient le CA réel pour proposer des paliers réalistes).
+>   - **Page Mes Clients** enrichie : pour chaque client, matched par email avec les transactions PSP, on affiche le total encaissé + badge "Abonné" (paiement récurrent dans les 30j) ou "A arrêté son abo" (churn potentiel). Helper `lib/compta/clientRevenue.ts`, composant `ClientRevenueBadges`.
+>   - **Page Analytics** : les "Résultats totaux" (Ventes + CA) lisent maintenant `transactions` + `manual_transactions` quand l'user a la compta configurée, avec badge "↗ Ventes & CA synchronisés depuis Stripe / PayPal / Mollie". Affiche aussi les commissions d'affiliation séparément si présentes. Endpoint `/api/analytics/compta-totals`. Visitors / signups / email stats restent sourcés depuis offer_metrics.
+>   - **Cron daily milestones business** : nouveau cron `/api/cron/business-milestones` à 9h qui détecte 3 moments business utiles : 🎯 objectif atteint (≥100%), 📈 mi-parcours objectif (50-99% à partir du 10 du mois), ⚠️ alerte churn (au moins 1 abonné parti ce mois). 1 email max par (user, type, mois) — idempotence via la table `notifications` avec `meta.period`. Respecte `email_preferences.milestones` + rate-limit global.
+> - **Sécurité serveur Hostinger** : nettoyage anti-malware (cron pourri résiduel `/tmp/.est1/.b4nd1d0` lié à un compromis ancien), désactivation `PasswordAuthentication` côté SSH, rotation de la clé SSH user (la clé `id_ed25519` historique dans `~/.ssh/authorized_keys` n'était pas reconnue par Béné → remplacée par une nouvelle paire `tipote_vps` ed25519). Crons Tipote dédoublonnés (`awk '!seen[$0]++'`).
+
 ---
 
 ## 1\. PRÉSENTATION DU PRODUIT
@@ -554,6 +576,23 @@ Repository d'insights et de pépites business multilingues.
 - Consommation par type de contenu  
 - Actions : Acheter crédits, Upgrade/Downgrade, Gérer abonnement
 
+**Onglet Compta (France uniquement, Mai 2026) :**
+
+URL : `/settings?tab=compta`. Disponible uniquement pour les users avec `business_profiles.country` reconnu comme France (synonymes tolérés : "France", "FR", "française"…). Les autres pays voient un message "bientôt disponible".
+
+Bandeau permanent en haut : *"Tipote t'aide à anticiper, pas à déclarer. Cet onglet ne remplace ni un comptable ni les déclarations officielles."*
+
+Composé de plusieurs sections empilées :
+
+1. **Progression vers l'objectif mensuel** (`RevenueGoalProgress`) — jauge avec montant fait / objectif, message contextuel ("plus que 4 774 € à faire en 14 jours"), couleurs adaptatives.
+2. **Tableau de bord business** (`ComptaDashboard`) — 4 cards en haut (CA mois en cours avec delta vs N-1, depuis janvier avec delta, revenus récurrents = MRR, taux de remboursement) + graph 12 mois N vs N-1 + 2 cards (Mes clients ce mois-ci avec nouveaux/abonnés/perdus, Mes meilleures ventes top 5) + jauge franchise TVA pour les AE.
+3. **Décomposition ventes directes vs commissions d'affiliation** — affichée uniquement si l'user a au moins une commission catégorisée (`category = 'affiliate'`). Split en EUR + barre de proportion bicolore mois courant + YTD.
+4. **Mes connexions** — cartes Stripe / PayPal / Mollie avec statut (synchronisé il y a Xh / synchronisation initiale en cours / erreur / déconnecté). Boutons "Synchroniser maintenant" et "Déconnecter". Form de connexion avec guide pas-à-pas pour chaque PSP. Note de sécurité spéciale pour Mollie (pas de Restricted Key — clé give read+write).
+5. **Saisies manuelles** — CRUD pour les paiements hors PSP (virement / espèces / chèque / autre). Form avec choix de catégorie (Vente / Commission affiliation / Autre).
+6. **Configuration du statut** (`ComptaConfigForm`) — sélecteur 3 cartes (Particulier / Auto-entrepreneur / SASU) avec sous-formulaire dynamique (SIREN validé 9 chiffres, exercice fiscal, régime TVA, ACRE, versement libératoire, etc.). Liens vers service-public.fr / urssaf.fr / annuaire-entreprises.data.gouv.fr.
+
+Cron de synchronisation des transactions : `/api/cron/sync-payments` à 5h du matin (delta depuis `last_sync_at - 1h`). Cron daily milestones : `/api/cron/business-milestones` à 9h. Cron de check des seuils fiscaux : `/api/cron/check-fiscal-thresholds` à 6h.
+
 ### 4.14. Constructeur de Pages (/pages)
 
 Constructeur complet de landing pages hébergées, inspiré de Systeme.io avec branding Tipote.
@@ -844,7 +883,7 @@ Pages dynamiques via `/legal/[slug]` :
 
 ### 4.21. Backoffice Admin (/admin)
 
-Accès restreint aux emails admin.
+Accès restreint aux emails listés dans `lib/adminEmails.ts` (`isAdminEmail()`).
 
 **Fonctionnalités :**
 
@@ -854,6 +893,7 @@ Accès restreint aux emails admin.
 - Attribution de crédits bonus  
 - Opérations en masse  
 - Logs de changements de plan (audit trail)
+- **Édition des seuils fiscaux** (`/admin/compta/fiscal-thresholds`, Mai 2026) — gestion centralisée des seuils TVA / taux IS pour les users compta, par (pays, année, catégorie). Édition inline avec URL source officielle, date d'effet, notes. Bouton "Ajouter un seuil" pour seeder 2027/2028 ou nouveau pays. L'impact est immédiat côté users (le dashboard compta relit la DB à chaque chargement). Le cron `check-fiscal-thresholds` envoie un email aux admins quand une valeur stockée n'est plus présente sur la page officielle (= changement détecté à valider).
 
 ---
 
@@ -975,8 +1015,17 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Analytics :**
 
-- `offer_metrics` — métriques par offre par mois (alimenté auto par webhooks SIO NEW_SALE)
+- `offer_metrics` — métriques par offre par mois (alimenté auto par webhooks SIO NEW_SALE et par le sync `/api/cron/sio-sync-sales`)
 - `analytics_entries` — données analytics manuelles
+
+**Compta (Mai 2026) :**
+
+- `payment_connections` — connexions PSP user (Stripe / PayPal / Mollie) ; `provider`, `api_key_encrypted` (AES-256-GCM, single string ou JSON pour PayPal multi-creds), `last_sync_at`, `initial_sync_done_at`, `last_sync_error`, `disabled_at` (soft-delete pour reconnexion). UNIQUE (user_id, project_id, provider).
+- `transactions` — encaissements normalisés toutes sources (Stripe / PayPal / Mollie). Idempotence : UNIQUE (user_id, provider, provider_transaction_id) + dédup pré-upsert pour éviter "ON CONFLICT DO UPDATE 2× même row". Champs : amount_cents, currency, status (paid / partial_refund / refunded / failed / pending), refunded_cents, customer_email, customer_name, description, paid_at, refunded_at, metadata (JSONB), category (sale / affiliate / other — auto-détectée puis éditable), synced_at. RLS read-self.
+- `manual_transactions` — saisies hors PSP (virement / espèces / chèque / autre) ; mêmes colonnes business + source_label + category. RLS self-all.
+- `fiscal_thresholds` — table source de vérité pour les seuils TVA / taux IS / cotisations par (country, fiscal_year, category). UNIQUE (country, fiscal_year, category). Seed 2026 FR (vat_franchise_vente / services_bic / services_bnc). RLS read-all (les seuils sont publics). Édité via `/admin/compta/fiscal-thresholds`, vérifié par cron `/api/cron/check-fiscal-thresholds`.
+- Colonnes ajoutées sur `business_profiles` (Mai 2026) : `country` (déjà existant, mais utilisé maintenant pour le country gate compta), `tipote_affiliate_id` (ID `sa…` Systeme.io pour le tracking commission du footer), `accounting_status` + `accounting_status_configured_at`, `particulier_revenue_type`, `ae_activity_type` + `ae_started_at` + `ae_acre` + `ae_versement_liberatoire` + `ae_vat_franchise`, `sasu_siren` + `sasu_fiscal_year_calendar` + `sasu_fiscal_year_start_month` + `sasu_vat_regime` + `sasu_vat_intra_enabled` + `sasu_dirigeant_remunere`.
+- Colonne ajoutée sur `social_connections` : `disconnected_at TIMESTAMPTZ` (Mai 2026) — marker de déconnexion détectée, reset à NULL à chaque reconnexion OAuth.
 
 **Systeme.io (utilisateur) :**
 
@@ -1310,7 +1359,10 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 - **Constructeur de pages** (capture, vente, vitrine, link-in-bio)  
 - **Système de quiz** avec capture de leads  
 - **Gestion des leads** avec chiffrement AES-256
-- **Gestion des clients** (suivi, notes, statuts, accompagnements avec suivi financier et progression)
+- **Gestion des clients** (suivi, notes, statuts, accompagnements avec suivi financier et progression) — **enrichie Mai 2026** : badge "Abonné" / "A arrêté son abo" + total encaissé par client (matché par email avec les transactions PSP)
+- **Module Compta** (Mai 2026, France) — onglet dans Paramètres avec configuration statut (particulier / auto-entrepreneur / SASU + IS + TVA), connexions Stripe / PayPal / Mollie (sync 24 mois historique + cron daily), saisies manuelles (virement / espèces / chèque), tableau de bord business (CA mois/an, MRR, churn, refund rate, top produits, jauge franchise TVA), catégorisation ventes vs commissions affiliation, calendrier fiscal personnalisé. Connecté au coach IA, à la page Aujourd'hui, à la stratégie et à la page Analytics
+- **Lien d'affiliation Tiquiz** (Mai 2026) — footer permanent sur les popquiz publics + embed iframe + quiz publics free, redirige vers `tipote.fr/part-tiquiz?sa=<id>` avec tracking commission via l'ID affilié SIO du créateur
+- **Notifications de déconnexion sociale + post raté** (Mai 2026) — email immédiat dès qu'un token social meurt (LinkedIn / FB / IG / X / TikTok / Pinterest / Threads / Reddit) ou qu'un post programmé bascule en `failed`
 - Calendrier éditorial (édition des posts programmés)  
 - Système de crédits (achat \+ consommation)  
 - Templates Systeme.io  
