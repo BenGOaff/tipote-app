@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CalendarDays, CheckCircle2 } from "lucide-react";
-import { useTranslations, useLocale } from 'next-intl';
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarDays, CheckCircle2, Clock } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import { format } from "date-fns";
+import { fr as frLocale, enUS, es, de, it, ptBR, arSA } from "date-fns/locale";
 
 type ScheduleStep = "pick" | "confirmed";
 
@@ -30,25 +32,22 @@ type Props = {
   defaultTime?: string;
 };
 
-function formatDateLocale(dateStr: string, locale: string): string {
-  try {
-    const d = new Date(dateStr + "T00:00:00");
-    return d.toLocaleDateString(locale, {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
+// Quick-pick time slots that cover most marketing use cases. The
+// "custom" input below lets the user pick anything else if they need
+// to. 4 slots fit on one column without scroll.
+const QUICK_TIMES = ["09:00", "12:00", "14:00", "18:00"] as const;
+
+function dateFnsLocale(loc: string) {
+  if (loc.startsWith("fr")) return frLocale;
+  if (loc.startsWith("es")) return es;
+  if (loc.startsWith("de")) return de;
+  if (loc.startsWith("it")) return it;
+  if (loc.startsWith("pt")) return ptBR;
+  if (loc.startsWith("ar")) return arSA;
+  return enUS;
 }
 
 // ── Date/time helpers ───────────────────────────────────────────
-// All logic stays in the user's local timezone. The DB stores UTC,
-// the conversion happens upstream (onConfirm callback) ; the modal
-// only needs to make sure the picked slot is truly in the future
-// from the user's perspective.
 
 function toLocalDateISO(d: Date): string {
   const y = d.getFullYear();
@@ -63,29 +62,28 @@ function toLocalTimeHHMM(d: Date): string {
   return `${h}:${m}`;
 }
 
-function addMinutes(d: Date, minutes: number): Date {
-  const x = new Date(d);
-  x.setMinutes(x.getMinutes() + minutes);
-  return x;
+function parseLocalDateISO(iso: string): Date | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
+function combineDateTime(dateISO: string, timeHHMM: string): Date | null {
+  const d = parseLocalDateISO(dateISO);
+  if (!d) return null;
+  const [hh, mm] = timeHHMM.split(":").map(Number);
+  d.setHours(hh ?? 0, mm ?? 0, 0, 0);
+  return d;
 }
 
 function roundUpToHalfHour(d: Date): string {
   const next = new Date(d);
-  // Bump to the next :00 or :30 slot, with at least 5 min buffer so
-  // we don't get caught between minutes.
   next.setSeconds(0, 0);
   next.setMinutes(next.getMinutes() + 5);
   const m = next.getMinutes();
   next.setMinutes(m <= 30 ? 30 : 60);
   return toLocalTimeHHMM(next);
-}
-
-function isInPast(date: string, time: string, now: Date): boolean {
-  if (!date || !time) return false;
-  const [hh, mm] = time.split(":").map(Number);
-  const [y, mo, d] = date.split("-").map(Number);
-  const picked = new Date(y, (mo ?? 1) - 1, d, hh ?? 0, mm ?? 0, 0, 0);
-  return picked.getTime() <= now.getTime();
 }
 
 export function ScheduleModal({
@@ -96,19 +94,16 @@ export function ScheduleModal({
   defaultDate,
   defaultTime,
 }: Props) {
-  const t = useTranslations('scheduleModal');
+  const t = useTranslations("scheduleModal");
   const locale = useLocale();
+  const dfLocale = dateFnsLocale(locale);
 
   const [step, setStep] = React.useState<ScheduleStep>("pick");
-  const [date, setDate] = React.useState(defaultDate ?? "");
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [time, setTime] = React.useState(defaultTime ?? "09:00");
   const [saving, setSaving] = React.useState(false);
   const [confirmedDate, setConfirmedDate] = React.useState("");
   const [confirmedTime, setConfirmedTime] = React.useState("");
-  // Used to refresh "is the slot in the past?" while the modal is
-  // open — without this, an user who leaves the modal idle for 5 min
-  // and comes back could schedule for a slot that just turned into
-  // the past while they were tabbed out.
   const [now, setNow] = React.useState<Date>(() => new Date());
 
   // Reset on open
@@ -117,10 +112,10 @@ export function ScheduleModal({
       setStep("pick");
       const fresh = new Date();
       setNow(fresh);
-      setDate(defaultDate ?? fresh.toISOString().slice(0, 10));
-      // If no time prefill and the slot 09:00 has already passed
-      // today, default to "next round half-hour from now" instead so
-      // the user starts on a valid slot.
+      const seed = defaultDate
+        ? parseLocalDateISO(defaultDate)
+        : new Date(fresh.getFullYear(), fresh.getMonth(), fresh.getDate());
+      setSelectedDate(seed);
       const hh = fresh.getHours();
       const fallbackTime = hh >= 9 ? roundUpToHalfHour(fresh) : "09:00";
       setTime(defaultTime ?? fallbackTime);
@@ -128,24 +123,28 @@ export function ScheduleModal({
     }
   }, [open, defaultDate, defaultTime]);
 
-  // Keep `now` fresh while the modal is up.
   React.useEffect(() => {
     if (!open) return;
     const id = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(id);
   }, [open]);
 
-  const handleConfirm = async () => {
-    if (!date) return;
-    // Final guard — disable + this check both protect against a
-    // browser that ignores the min attributes (Safari < 14, some FF
-    // builds with native datepicker disabled, etc.).
-    if (isInPast(date, time, now)) return;
-    setSaving(true);
+  const dateISO = selectedDate ? toLocalDateISO(selectedDate) : "";
+  const todayISO = toLocalDateISO(now);
+  const isToday = dateISO === todayISO;
+  const minTime = isToday
+    ? toLocalTimeHHMM(new Date(now.getTime() + 60 * 1000))
+    : undefined;
+  const combined = dateISO ? combineDateTime(dateISO, time) : null;
+  const slotInPast = combined ? combined.getTime() <= now.getTime() : false;
+  const ready = !!dateISO && !!time && !slotInPast;
 
+  const handleConfirm = async () => {
+    if (!ready) return;
+    setSaving(true);
     try {
-      await onConfirm(date, time);
-      setConfirmedDate(date);
+      await onConfirm(dateISO, time);
+      setConfirmedDate(dateISO);
       setConfirmedTime(time);
       setStep("confirmed");
     } catch {
@@ -155,100 +154,161 @@ export function ScheduleModal({
     }
   };
 
-  // Min date = today (in the user's locale). For the time field, we
-  // additionally clamp to "now + 1 minute" when the selected day is
-  // today, so the user can't pick this morning at 10am at 16h30.
-  const todayISO = toLocalDateISO(now);
-  const isToday = date === todayISO;
-  const minTime = isToday ? toLocalTimeHHMM(addMinutes(now, 1)) : undefined;
-  const slotInPast = isInPast(date, time, now);
+  const formattedSummary = combined
+    ? format(combined, "EEEE d MMMM yyyy, HH'h'mm", { locale: dfLocale })
+    : "";
+
+  // disable past days in the calendar (yesterday + before).
+  const disabledDays = { before: new Date(now.getFullYear(), now.getMonth(), now.getDate()) };
 
   return (
-    <Dialog open={open} onOpenChange={step === "confirmed" ? onOpenChange : saving ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog
+      open={open}
+      onOpenChange={
+        step === "confirmed" ? onOpenChange : saving ? undefined : onOpenChange
+      }
+    >
+      <DialogContent className="max-w-[640px] p-0 overflow-hidden">
         {step === "pick" && (
           <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-primary" />
-                {t('title', { platform: platformLabel })}
+            <DialogHeader className="px-6 pt-6 pb-3 border-b border-border/50">
+              <DialogTitle className="flex items-center gap-2 text-lg">
+                <span className="size-9 grid place-items-center rounded-lg bg-primary/15 ring-1 ring-primary/25">
+                  <CalendarDays className="h-4 w-4 text-primary" />
+                </span>
+                {t("title", { platform: platformLabel })}
               </DialogTitle>
-              <DialogDescription>
-                {t('description')}
+              <DialogDescription className="pl-12">
+                {t("description")}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="schedule-date">{t('dateLabel')}</Label>
-                <Input
-                  id="schedule-date"
-                  type="date"
-                  value={date}
-                  min={todayISO}
-                  onChange={(e) => setDate(e.target.value)}
+            <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] divide-y sm:divide-y-0 sm:divide-x divide-border/50">
+              {/* Calendar (left) */}
+              <div className="p-2 sm:p-3 flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate ?? undefined}
+                  onSelect={(d) => d && setSelectedDate(d)}
+                  disabled={disabledDays}
+                  locale={dfLocale}
+                  weekStartsOn={1}
+                  className="rounded-md"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="schedule-time">{t('timeLabel')}</Label>
-                <Input
-                  id="schedule-time"
-                  type="time"
-                  value={time}
-                  min={minTime}
-                  onChange={(e) => setTime(e.target.value)}
-                />
-              </div>
+              {/* Time picker (right) */}
+              <div className="p-4 space-y-4 sm:max-w-[220px]">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                    {t("timeLabel")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {QUICK_TIMES.map((slot) => {
+                      const isPicked = time === slot;
+                      const isPast =
+                        isToday &&
+                        combineDateTime(dateISO, slot)!.getTime() <= now.getTime();
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setTime(slot)}
+                          disabled={isPast}
+                          className={`px-2.5 py-1.5 rounded-md text-sm font-medium transition border ${
+                            isPicked
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background border-border hover:border-primary/40 hover:bg-primary/5"
+                          } ${isPast ? "opacity-40 cursor-not-allowed" : ""}`}
+                        >
+                          {slot}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-              {slotInPast ? (
-                <p className="text-xs text-destructive" role="alert">
-                  Tu ne peux pas programmer dans le passé. Choisis une
-                  date et une heure à venir.
-                </p>
-              ) : null}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <Clock className="size-3" />
+                    {t("customTimeLabel") ?? "Heure personnalisée"}
+                  </p>
+                  <Input
+                    type="time"
+                    value={time}
+                    min={minTime}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                {slotInPast ? (
+                  <p
+                    className="text-xs text-destructive bg-destructive/10 rounded-md px-2 py-1.5"
+                    role="alert"
+                  >
+                    Tu ne peux pas programmer dans le passé.
+                  </p>
+                ) : null}
+              </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-                {t('cancel')}
-              </Button>
-              <Button
-                onClick={handleConfirm}
-                disabled={!date || saving || slotInPast}
-                className=""
-              >
-                {saving ? t('scheduling') : t('schedule')}
-              </Button>
-            </DialogFooter>
+            {/* Summary + actions */}
+            <div className="px-6 py-4 bg-muted/30 border-t border-border/50">
+              {formattedSummary ? (
+                <p className="text-sm mb-3">
+                  <span className="text-muted-foreground">
+                    {t("scheduledFor") ?? "Programmé pour"} :{" "}
+                  </span>
+                  <span className="font-semibold">{formattedSummary}</span>
+                </p>
+              ) : null}
+              <DialogFooter className="gap-2 sm:gap-2 sm:justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={saving}
+                >
+                  {t("cancel")}
+                </Button>
+                <Button onClick={handleConfirm} disabled={!ready || saving}>
+                  {saving ? t("scheduling") : t("schedule")}
+                </Button>
+              </DialogFooter>
+            </div>
           </>
         )}
 
         {step === "confirmed" && (
-          <>
+          <div className="p-6">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
-                {t('confirmedTitle')}
+                {t("confirmedTitle")}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="rounded-lg border bg-green-50 p-4 text-sm text-green-800">
-              {t('confirmedBody', { platform: platformLabel, date: formatDateLocale(confirmedDate, locale), time: confirmedTime })}
+            <div className="rounded-lg border bg-green-50 p-4 text-sm text-green-800 mt-3">
+              {t("confirmedBody", {
+                platform: platformLabel,
+                date: format(
+                  parseLocalDateISO(confirmedDate) ?? new Date(),
+                  "EEEE d MMMM yyyy",
+                  { locale: dfLocale },
+                ),
+                time: confirmedTime,
+              })}
               <br />
               <br />
-              {t('confirmedHint')}
+              {t("confirmedHint")}
             </div>
 
-            <DialogFooter>
-              <Button
-                onClick={() => onOpenChange(false)}
-                className=""
-              >
-                {t('understood')}
+            <DialogFooter className="mt-4">
+              <Button onClick={() => onOpenChange(false)}>
+                {t("understood")}
               </Button>
             </DialogFooter>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
