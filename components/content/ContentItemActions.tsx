@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { DateTimePicker } from "@/components/content/DateTimePicker";
 import { toast } from "@/components/ui/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -107,6 +108,7 @@ const PLATFORM_CONFIG: Record<string, { label: string; color: string; icon: Reac
 export function ContentItemActions({ id, title, status, scheduledDate, contentPreview, channel, type }: Props) {
   const router = useRouter();
   const t = useTranslations('contentActions');
+  const locale = useLocale();
   const [busy, setBusy] = React.useState<"delete" | "duplicate" | "plan" | "unplan" | null>(null);
 
   const [planOpen, setPlanOpen] = React.useState(false);
@@ -310,16 +312,15 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor={planInputId}>{t('dateLabel')}</Label>
-              <Input id={planInputId} type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${planInputId}-time`}>{t('timeLabel')}</Label>
-              <Input id={`${planInputId}-time`} type="time" value={planTime} onChange={(e) => setPlanTime(e.target.value)} />
-            </div>
-          </div>
+          <DateTimePicker
+            value={{ date: planDate, time: planTime }}
+            onChange={(next) => {
+              setPlanDate(next.date);
+              setPlanTime(next.time);
+            }}
+            locale={locale}
+            showSummary
+          />
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy === "plan"}>Annuler</AlertDialogCancel>

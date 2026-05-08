@@ -11,7 +11,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { DateTimePicker } from "@/components/content/DateTimePicker";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -287,6 +288,7 @@ export default function MyContentLovableClient({
 }: Props) {
   const router = useRouter();
   const t = useTranslations("myContent");
+  const locale = useLocale();
   const tc = useTranslations("common");
 
   const [view, setView] = useState<"list" | "calendar">(initialView);
@@ -1398,28 +1400,15 @@ export default function MyContentLovableClient({
                   </div>
                 )}
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="plan-date">{t("ui.publishDate")}</Label>
-                    <Input
-                      id="plan-date"
-                      type="date"
-                      value={planDate}
-                      min={new Date().toISOString().slice(0, 10)}
-                      onChange={(e) => setPlanDate(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="plan-time">{t("ui.publishTime")}</Label>
-                    <Input
-                      id="plan-time"
-                      type="time"
-                      value={planTime}
-                      onChange={(e) => setPlanTime(e.target.value)}
-                    />
-                  </div>
-                </div>
+                <DateTimePicker
+                  value={{ date: planDate, time: planTime }}
+                  onChange={(next) => {
+                    setPlanDate(next.date);
+                    setPlanTime(next.time);
+                  }}
+                  locale={locale}
+                  showSummary
+                />
 
                 <DialogFooter className="gap-2 sm:gap-0">
                   <Button variant="outline" onClick={() => setPlanningContent(null)} disabled={busy === "plan"}>
