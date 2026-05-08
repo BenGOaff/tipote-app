@@ -257,7 +257,7 @@ Voici tes 3 prochaines étapes pour démarrer du bon pied :<br/><br/>
 <strong>1. Connecte un réseau social</strong><br/>
 Pour programmer tes publications automatiquement.<br/><br/>
 <strong>2. Génère ta stratégie</strong><br/>
-L'IA analyse ton profil et te propose un plan d'action sur 90 jours.<br/><br/>
+L'IA analyse ton profil et te propose un plan d'action en 3 phases (Fondations, Croissance, Scaling).<br/><br/>
 <strong>3. Crée ton premier contenu</strong><br/>
 Post, email, page de capture… tout est généré pour toi en quelques clics.<br/><br/>
 On est là pour t'accompagner à chaque étape.`,
@@ -266,7 +266,7 @@ Here are your 3 next steps to get started:<br/><br/>
 <strong>1. Connect a social network</strong><br/>
 To schedule your posts automatically.<br/><br/>
 <strong>2. Generate your strategy</strong><br/>
-AI analyzes your profile and suggests a 90-day action plan.<br/><br/>
+AI analyzes your profile and suggests a 3-phase action plan (Foundations, Growth, Scaling).<br/><br/>
 <strong>3. Create your first content</strong><br/>
 Post, email, landing page… everything is generated for you in a few clicks.<br/><br/>
 We're here to support you every step of the way.`,

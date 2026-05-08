@@ -1659,7 +1659,7 @@
       "currentPhase": "Fase atual",
       "revenueGoal": "Objetivo de faturação",
       "daysRemaining": "Dias restantes",
-      "outOf90": "Em 90 dias"
+      "outOf90": "Na fase atual"
     },
     "noTasks": "Sem tarefas nesta fase de momento.",
     "moreTasks": "Ver as outras {count} tarefas",

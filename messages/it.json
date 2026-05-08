@@ -1398,7 +1398,7 @@
       "currentPhase": "Fase attuale",
       "revenueGoal": "Obiettivo di fatturato",
       "daysRemaining": "Giorni rimanenti",
-      "outOf90": "Su 90 giorni"
+      "outOf90": "Nella fase corrente"
     },
     "noTasks": "Nessuna attività in questa fase ancora.",
     "moreTasks": "Vedi altre {count} attività",

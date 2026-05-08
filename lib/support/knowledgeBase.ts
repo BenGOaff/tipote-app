@@ -147,7 +147,7 @@ Les crédits supplémentaires n'expirent pas et sont consommés après les créd
 
 **Section principale (sidebar) :**
 - Aujourd'hui (/app) — Dashboard avec prochaine tâche + stats
-- Ma Stratégie (/strategy) — Pyramide d'offres + plan 30/90j + persona
+- Ma Stratégie (/strategy) — Pyramide d'offres + plan en 3 phases (Fondations / Croissance / Scaling) + persona
 - Créer (/create) — Hub de création (8 types de contenu)
 - Mes Contenus (/contents) — Liste + calendrier éditorial
 - Templates (/templates) — Templates Systeme.io

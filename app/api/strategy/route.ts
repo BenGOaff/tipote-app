@@ -135,7 +135,7 @@ function buildRefusalsPromptSection(businessProfile: AnyRecord): string {
 🚫 REFUS ABSOLUS DE L'UTILISATEUR (NON-NÉGOCIABLES) :
 ${refusals.map((r) => `- ${r}`).join("\n")}
 
-⚠️ INSTRUCTION CRITIQUE : Tu ne dois JAMAIS proposer, recommander ou inclure dans la stratégie, les offres, ou le plan 90 jours quoi que ce soit qui corresponde aux refus ci-dessus. Si l'utilisateur a dit "Pas de création de formation", tu ne proposes AUCUNE formation. Si "Pas de réseaux sociaux", tu ne proposes AUCUNE action sur les réseaux. Ces refus sont ABSOLUS et PRIORITAIRES sur toute autre considération.
+⚠️ INSTRUCTION CRITIQUE : Tu ne dois JAMAIS proposer, recommander ou inclure dans la stratégie, les offres, ou le plan en 3 phases (Fondations / Croissance / Scaling) quoi que ce soit qui corresponde aux refus ci-dessus. Si l'utilisateur a dit "Pas de création de formation", tu ne proposes AUCUNE formation. Si "Pas de réseaux sociaux", tu ne proposes AUCUNE action sur les réseaux. Ces refus sont ABSOLUS et PRIORITAIRES sur toute autre considération.
 `;
 }
 

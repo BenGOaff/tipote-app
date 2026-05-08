@@ -52,7 +52,7 @@ Variations à utiliser selon le canal :
 
 | Pain | Ressenti par le prospect | Réponse Tipote |
 |---|---|---|
-| « J'ai pas de stratégie, je publie au feeling » | Anxiété, sentiment d'éparpillement | Plan stratégique sur 90 jours généré automatiquement après l'onboarding, mis à jour en live quand le profil change |
+| « J'ai pas de stratégie, je publie au feeling » | Anxiété, sentiment d'éparpillement | Plan stratégique en 3 phases (Fondations, Croissance, Scaling) généré automatiquement après l'onboarding, mis à jour en live quand le profil change |
 | « Je passe 2h à écrire un post LinkedIn » | Frustration, procrastination | Génération de posts/emails/articles/scripts en moins de 30s, à partir d'un brief de 10 mots ou d'une offre existante |
 | « ChatGPT sort toujours le même style passe-partout » | Démotivation, abandon | La mémoire Tipote (profil + persona + storytelling + ton de voix) est injectée dans CHAQUE prompt → résultats personnalisés |
 | « Je sais pas QUAND publier ni À QUEL RYTHME » | Inertie | Calendrier éditorial avec planification automatique sur les meilleurs créneaux par plateforme |
@@ -69,7 +69,7 @@ Variations à utiliser selon le canal :
 
 ### vs Buffer / Hootsuite / Later (planners de réseaux sociaux)
 - Tipote **génère** le contenu, pas seulement le programmer
-- Tipote a **une stratégie** derrière : pas juste « publier 3 fois par semaine » mais « publier sur cet axe parce que c'est la phase 1 de ton plan 90j »
+- Tipote a **une stratégie** derrière : pas juste « publier 3 fois par semaine » mais « publier sur cet axe parce qu'on est en phase Fondations de ton plan »
 - Tipote intègre **leads + clients + Systeme.io** dans le même outil
 
 ### vs Notion AI / Jasper / Copy.ai (générateurs de contenu)
@@ -87,7 +87,7 @@ Variations à utiliser selon le canal :
 ### Jour 1 — Onboarding
 1. L'user se connecte (Google / email magic-link)
 2. Onboarding type Typeform de 10-15 minutes : niche, mission, audience cible, offres existantes, objectif de revenu mensuel, blocage principal, temps disponible par semaine
-3. Tipote génère **automatiquement** : un persona client, une « storytelling » de marque (axes narratifs), un plan d'action sur 90 jours découpé en 3 phases (Fondations, Croissance, Scale), une pyramide d'offres si l'user n'en a pas, et 30+ tâches concrètes à cocher
+3. Tipote génère **automatiquement** : un persona client, une « storytelling » de marque (axes narratifs), un plan d'action en 3 phases (Fondations, Croissance, Scaling) — sans durée fixe, chaque phase dure le temps nécessaire à atteindre ses jalons —, une pyramide d'offres si l'user n'en a pas, et 30+ tâches concrètes à cocher
 
 ### Jour 1 (suite) — Première création
 1. L'user va sur `/create`

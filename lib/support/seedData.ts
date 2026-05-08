@@ -284,7 +284,7 @@ Tipote® est une application web SaaS tout-en-un conçue pour les entrepreneurs 
 Contrairement aux outils IA génériques (ChatGPT, etc.) qui repartent de zéro à chaque conversation, **Tipote mémorise tout votre profil business** :
 - Votre activité, vos offres, votre audience cible
 - Votre style de communication et votre tonalité
-- Vos objectifs à 90 jours
+- Vos objectifs business et vos jalons par phase (Fondations / Croissance / Scaling)
 - Votre positionnement et différenciation
 
 Chaque contenu généré est **réellement personnalisé** pour votre business.
@@ -292,7 +292,7 @@ Chaque contenu généré est **réellement personnalisé** pour votre business.
 ### Les grandes fonctionnalités
 
 1. **Onboarding intelligent** — Un questionnaire complet qui crée votre profil business
-2. **Plan stratégique IA** — Un plan d'action 30/60/90 jours avec pyramide d'offres
+2. **Plan stratégique IA** — Un plan d'action en 3 phases (Fondations / Croissance / Scaling) avec pyramide d'offres
 3. **Création de contenu IA** — Posts, emails, articles, vidéos, quiz, pages et plus
 4. **Publication directe** — Publiez sur LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok et Pinterest en un clic
 5. **Automatisations** — Auto-commentaires, comment-to-DM, comment-to-email
@@ -320,7 +320,7 @@ Tipote® is an all-in-one SaaS web application designed for entrepreneurs who wa
 Unlike generic AI tools (ChatGPT, etc.) that start from scratch every conversation, **Tipote remembers your entire business profile**:
 - Your business, offers, target audience
 - Your communication style and tone
-- Your 90-day goals
+- Your business goals and milestones per phase (Foundations / Growth / Scaling)
 - Your positioning and differentiation
 
 Every generated content is **truly personalized** for your business.
@@ -328,7 +328,7 @@ Every generated content is **truly personalized** for your business.
 ### Main features
 
 1. **Smart onboarding** — A complete questionnaire that creates your business profile
-2. **AI strategic plan** — A 30/60/90-day action plan with offer pyramid
+2. **AI strategic plan** — A 3-phase action plan (Foundations / Growth / Scaling) with offer pyramid
 3. **AI content creation** — Posts, emails, articles, videos, quizzes, pages and more
 4. **Direct publishing** — Publish on LinkedIn, Facebook, Instagram, Threads, Twitter/X, TikTok and Pinterest in one click
 5. **Automations** — Auto-comments, comment-to-DM, comment-to-email
@@ -358,7 +358,7 @@ A diferencia de herramientas genéricas, **Tipote memoriza todo tu perfil de neg
 ### Funcionalidades principales
 
 1. **Onboarding inteligente** — Cuestionario completo que crea tu perfil
-2. **Plan estratégico IA** — Plan de acción 30/60/90 días
+2. **Plan estratégico IA** — Plan de acción en 3 fases (Cimientos / Crecimiento / Escalado)
 3. **Creación de contenido IA** — Posts, emails, artículos, vídeos y más
 4. **Publicación directa** — Publica en 7 redes sociales en un clic
 5. **Automatizaciones** — Auto-comentarios, comment-to-DM
@@ -374,7 +374,7 @@ Tipote® è un'applicazione web SaaS tutto-in-uno progettata per imprenditori ch
 ### Le funzionalità principali
 
 1. **Onboarding intelligente** — Questionario completo che crea il tuo profilo
-2. **Piano strategico IA** — Piano d'azione 30/60/90 giorni
+2. **Piano strategico IA** — Piano d'azione in 3 fasi (Fondamenta / Crescita / Scaling)
 3. **Creazione contenuti IA** — Post, email, articoli, video e altro
 4. **Pubblicazione diretta** — Pubblica su 7 social network in un clic
 5. **Automazioni** — Auto-commenti, comment-to-DM
@@ -390,7 +390,7 @@ Tipote® هو تطبيق ويب SaaS متكامل مصمم لرواد الأعم
 ### الميزات الرئيسية
 
 1. **إعداد ذكي** — استبيان كامل ينشئ ملفك التجاري
-2. **خطة استراتيجية بالذكاء الاصطناعي** — خطة عمل 30/60/90 يومًا
+2. **خطة استراتيجية بالذكاء الاصطناعي** — خطة عمل من 3 مراحل (الأسس / النمو / التوسع)
 3. **إنشاء محتوى بالذكاء الاصطناعي** — منشورات ورسائل ومقالات وفيديوهات
 4. **نشر مباشر** — انشر على 7 شبكات اجتماعية بنقرة واحدة
 5. **أتمتة** — تعليقات تلقائية
@@ -449,7 +449,7 @@ Tipote utilise vos réponses pour :
 1. **Créer votre persona client idéal** détaillé
 2. **Diagnostiquer** les forces et faiblesses de votre business
 3. **Proposer 3 à 5 pyramides d'offres** (vous en choisissez une)
-4. **Générer un plan d'action 30/60/90 jours** avec des tâches concrètes
+4. **Générer un plan d'action en 3 phases** (Fondations / Croissance / Scaling) avec des tâches concrètes
 
 Vous êtes ensuite redirigé vers votre **dashboard "Aujourd'hui"**.
 
@@ -490,7 +490,7 @@ Tipote uses your answers to:
 1. **Create your ideal customer persona**
 2. **Diagnose** your business strengths and weaknesses
 3. **Propose 3-5 offer pyramids** (you choose one)
-4. **Generate a 30/60/90-day action plan** with concrete tasks
+4. **Generate a 3-phase action plan** (Foundations / Growth / Scaling) with concrete tasks
 
 You're then redirected to your **"Today" dashboard**.
 
@@ -592,7 +592,7 @@ Tipote traite vos réponses avec l'**IA stratégique (GPT)** pour :
 2. ✅ Produire un **diagnostic business** (forces, faiblesses, leviers)
 3. ✅ Proposer **3 à 5 pyramides d'offres** adaptées
 4. ✅ Vous laisser **choisir et personnaliser** votre pyramide
-5. ✅ Générer un **plan d'action 30/60/90 jours**
+5. ✅ Générer un **plan d'action en 3 phases (Fondations / Croissance / Scaling)**
 6. ✅ Créer automatiquement les **tâches** associées
 
 > **Astuce :** Prenez votre temps pour répondre honnêtement. Plus vos réponses sont détaillées, meilleure sera la stratégie générée.
@@ -631,7 +631,7 @@ The questionnaire is **Typeform-style**: one question at a time, visual progress
 
 ### After onboarding
 
-Tipote processes your answers with **strategic AI (GPT)** to create your persona, business diagnosis, offer pyramid, and 30/60/90-day action plan.
+Tipote processes your answers with **strategic AI (GPT)** to create your persona, business diagnosis, offer pyramid, and 3-phase action plan (Foundations / Growth / Scaling).
 
 > **See also:** [Understanding your strategic plan](/support/article/strategic-plan) • [The offer pyramid](/support/article/offer-pyramid)`,
       es: `## El onboarding de Tipote
