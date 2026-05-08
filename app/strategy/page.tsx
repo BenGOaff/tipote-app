@@ -397,28 +397,14 @@ export default async function StrategyPage() {
   const doneTasks = tasks.filter((t) => (t.status ?? "").toLowerCase() === "done").length;
   const progressAll = totalTasks ? clamp01(doneTasks / totalTasks) : 0;
 
-  // ✅ Revenue actuel du mois en cours (depuis offer_metrics)
-  const now = new Date();
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-31`;
-  let currentMonthRevenue = 0;
-  try {
-    const { data: revenueRows } = await supabaseAdmin
-      .from("offer_metrics")
-      .select("revenue")
-      .eq("user_id", user.id)
-      .eq("is_paid", true)
-      .gte("month", monthStart)
-      .lte("month", monthEnd)
-      .neq("offer_name", "__email_stats__");
-    if (revenueRows) {
-      for (const r of revenueRows) {
-        currentMonthRevenue += Number(r.revenue) || 0;
-      }
-    }
-  } catch {
-    // fail-open
-  }
+  // CA du mois en cours — source unifiée (transactions PSP + saisies
+  // manuelles + fallback offer_metrics si l'user n'a connecté que SIO).
+  // Ce helper est partagé avec /api/business/monthly-summary, le widget
+  // RevenueGoalProgress sur Aujourd'hui et l'onglet Compta — un seul
+  // endroit pour la logique CA mensuel.
+  const { getMonthlyRevenueSummary } = await import("@/lib/compta/businessSummary");
+  const revenueSummary = await getMonthlyRevenueSummary(user.id, projectId, supabaseAdmin);
+  const currentMonthRevenue = revenueSummary.current_month_eur;
 
   // Build phase assignment from plan_json structure (d30/d60/d90)
   const plan90ForPhases =

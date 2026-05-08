@@ -10,6 +10,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
 import { PageBanner } from "@/components/PageBanner";
+import RevenueGoalProgress from "@/components/business/RevenueGoalProgress";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -921,6 +922,14 @@ export default function TodayLovable() {
                     </Button>
                   </PageBanner>
                 )}
+
+                {/* ================================================= */}
+                {/* BLOC 1a — Progression vers l'objectif du mois      */}
+                {/* Connecte le CA réel (Stripe / PayPal / Mollie /    */}
+                {/* saisies manuelles / SIO) à l'objectif mensuel posé */}
+                {/* à l'onboarding. Reste invisible si pas d'objectif. */}
+                {/* ================================================= */}
+                <RevenueGoalProgress />
 
                 {/* ================================================= */}
                 {/* BLOC 1b — Contenus programmés aujourd'hui           */}

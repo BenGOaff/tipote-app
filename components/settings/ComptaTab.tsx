@@ -36,6 +36,7 @@ import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 import ComptaConnections from "@/components/settings/ComptaConnections";
 import ComptaManualTransactions from "@/components/settings/ComptaManualTransactions";
 import ComptaDashboard from "@/components/settings/ComptaDashboard";
+import RevenueGoalProgress from "@/components/business/RevenueGoalProgress";
 
 interface Props {
   /** Slice du profil business courant. Tous les champs sont optionnels —
@@ -342,7 +343,11 @@ function ConfiguredSummary({
         <SummaryDetails slice={slice} />
       </Card>
 
-      {/* Tableau de bord — CA YTD + 12 mois + jauge TVA (1f) */}
+      {/* Progression vers l'objectif mensuel — connecté au CA réel
+          (transactions PSP + saisies manuelles + fallback offer_metrics). */}
+      <RevenueGoalProgress />
+
+      {/* Tableau de bord business — CA mois/an, MRR, churn, top produits (1f) */}
       <ComptaDashboard />
 
       {/* Section "Mes connexions" — Stripe + PayPal + Mollie (phases 1c/1d) */}
