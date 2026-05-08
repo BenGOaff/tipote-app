@@ -58,26 +58,32 @@ interface CheckIssue {
   details: string;
 }
 
+// Regex unique pour normaliser tous les types d'espaces non-standard
+// vers un espace simple : NBSP (U+00A0) et narrow NBSP (U+202F).
+const NBSP_REGEX = /[  ]/g;
+
 /** Construit toutes les variantes plausibles d'une valeur numérique
  *  qu'on pourrait trouver dans une page web FR ou EN. Couvre :
- *    85000, 85 000, 85.000, 85,000, 85 000 €, 85,000 €, 85 000 EUR,
- *    85k, etc. La vérification passe si AU MOINS UNE de ces
- *  variantes est trouvée dans le HTML.
+ *    85000, 85 000, 85,000, 85k.
+ *  Toutes les variantes sont déjà normalisées (NBSP → espace standard)
+ *  pour matcher contre un HTML lui aussi normalisé.
  */
 function valueVariants(n: number): string[] {
   const integer = Math.round(n);
-  return [
+  const fr = integer.toLocaleString("fr-FR").replace(NBSP_REGEX, " ");
+  const en = integer.toLocaleString("en-US");
+  const variants = [
     String(integer), // "85000"
-    integer.toLocaleString("fr-FR").replace(/ | /g, " "), // "85 000"
-    integer.toLocaleString("fr-FR").replace(/ | /g, " "), // "85 000" (NBSP)
-    integer.toLocaleString("fr-FR").replace(/ | /g, " "), // narrow NBSP
-    integer.toLocaleString("en-US"), // "85,000"
-    `${integer}.${"000"}`, // certains formats DE/NL
-  ].filter((v, i, arr) => arr.indexOf(v) === i);
+    fr, // "85 000"
+    en, // "85,000"
+    `${Math.round(integer / 1000)}k`, // "85k"
+  ];
+  return Array.from(new Set(variants));
 }
 
-/** Fetch + recherche string. On normalise les espaces insécables pour
- *  ne pas rater une variante NBSP. */
+/** Fetch + recherche string. Normalise le HTML pour matching robuste :
+ *  espaces insécables → espace standard, balises HTML enlevées pour
+ *  ne chercher que dans le texte visible. */
 async function pageContainsValues(
   url: string,
   values: number[],
@@ -93,22 +99,19 @@ async function pageContainsValues(
       return { ok: false, missing: values, status: res.status };
     }
     const html = await res.text();
-    // Normalisation pour matching robuste : NBSP / NNBSP → espace
-    // standard, suppression des balises HTML pour ne chercher que
-    // dans le texte visible.
     const normalized = html
       .replace(/<[^>]+>/g, " ")
-      .replace(/[  ]/g, " ")
+      .replace(NBSP_REGEX, " ")
       .replace(/\s+/g, " ");
 
     const missing: number[] = [];
     for (const v of values) {
-      const variants = valueVariants(v).map((s) => s.replace(/[  ]/g, " "));
+      const variants = valueVariants(v);
       const found = variants.some((variant) => normalized.includes(variant));
       if (!found) missing.push(v);
     }
     return { ok: missing.length === 0, missing, status: 200 };
-  } catch (e) {
+  } catch {
     return {
       ok: false,
       missing: values,
@@ -159,7 +162,6 @@ export async function GET(req: NextRequest) {
 
     const result = await pageContainsValues(url, expectedValues);
     if (result.status !== 200) {
-      // Page inaccessible — on signale UNE issue pour le groupe
       issues.push({
         id: group[0]!.id,
         country: group[0]!.country,
@@ -172,7 +174,6 @@ export async function GET(req: NextRequest) {
       continue;
     }
     if (!result.ok) {
-      // Au moins une valeur n'a pas été retrouvée
       for (const r of group) {
         const localExpected = [r.base_value, r.major_value].filter(
           (v): v is number => typeof v === "number" && v > 0,
@@ -195,7 +196,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Si rien à signaler, on s'arrête là
   if (issues.length === 0) {
     return NextResponse.json({
       ok: true,
