@@ -91,6 +91,10 @@ export async function GET(req: NextRequest) {
           refresh_token_encrypted: refreshTokenEncrypted,
           token_expires_at: tokenExpiresAt,
           scopes: tokens.scope ?? "openid profile email w_member_social",
+          // Reset le marker de déconnexion à chaque reconnexion OAuth.
+          // Si l'user vient ici, c'est qu'il a refait le tour OAuth →
+          // le token est valide à nouveau, donc le compte est "live".
+          disconnected_at: null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,project_id,platform" }

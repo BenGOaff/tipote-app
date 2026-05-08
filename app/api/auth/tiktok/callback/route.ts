@@ -113,6 +113,7 @@ export async function GET(req: NextRequest) {
           refresh_token_encrypted: refreshTokenEncrypted,
           token_expires_at: tokenExpiresAt,
           scopes: tokens.scope ?? SCOPES_STR,
+          disconnected_at: null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,project_id,platform" }

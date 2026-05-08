@@ -9,6 +9,10 @@ import { refreshAccessToken as refreshPinterestToken } from "@/lib/pinterest";
 import { refreshAccessToken as refreshTikTokToken } from "@/lib/tiktok";
 import { refreshAccessToken as refreshLinkedInToken } from "@/lib/linkedin";
 import { refreshInstagramLongLivedToken } from "@/lib/meta";
+import {
+  notifySocialDisconnected,
+  looksLikeAuthError,
+} from "@/lib/social/notifications";
 
 type RefreshResult = {
   ok: boolean;
@@ -132,6 +136,29 @@ export async function refreshSocialToken(
   } catch (err: any) {
     const msg = err?.message || "Token refresh failed";
     console.error(`[refreshSocialToken] ${platform} refresh failed:`, msg);
+
+    // Si le refresh échoue avec une erreur qui ressemble à du "token
+    // mort" (invalid_grant, 401, revoked…), on notifie tout de suite
+    // l'user pour qu'il reconnecte AVANT que ses posts programmés ne
+    // commencent à s'empiler en échec. Idempotent + dédup 3 jours
+    // côté helper donc ne peut pas spammer même si on rappelle ici à
+    // chaque retry.
+    if (looksLikeAuthError(msg)) {
+      const { data: conn } = await supabaseAdmin
+        .from("social_connections")
+        .select("user_id")
+        .eq("id", connectionId)
+        .maybeSingle();
+      if (conn?.user_id) {
+        await notifySocialDisconnected({
+          userId: conn.user_id,
+          platform,
+          connectionId,
+          reason: msg,
+        });
+      }
+    }
+
     return { ok: false, error: msg };
   }
 }

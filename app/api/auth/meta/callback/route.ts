@@ -215,6 +215,7 @@ export async function GET(req: NextRequest) {
       refresh_token_encrypted: null,
       token_expires_at: tokenExpiresAt,
       scopes: "pages_show_list,pages_manage_posts,pages_read_engagement,pages_read_user_content,pages_manage_metadata,pages_manage_engagement",
+      disconnected_at: null,
       updated_at: new Date().toISOString(),
     };
 

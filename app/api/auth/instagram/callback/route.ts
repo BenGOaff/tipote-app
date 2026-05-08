@@ -161,6 +161,7 @@ export async function GET(req: NextRequest) {
       refresh_token_encrypted: null,
       token_expires_at: tokenExpiresAt,
       scopes: "instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_messages,instagram_business_content_publish",
+      disconnected_at: null,
       updated_at: new Date().toISOString(),
     };
 

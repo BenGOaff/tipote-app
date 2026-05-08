@@ -167,6 +167,7 @@ export async function GET(req: NextRequest) {
       refresh_token_encrypted: null,
       token_expires_at: tokenExpiresAt,
       scopes: "pages_messaging,pages_manage_metadata,pages_read_engagement,pages_show_list",
+      disconnected_at: null,
       updated_at: new Date().toISOString(),
     };
 

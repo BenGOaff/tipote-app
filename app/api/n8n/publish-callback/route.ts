@@ -9,6 +9,11 @@ import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
 import { createNotification } from "@/lib/notifications";
+import {
+  notifyPostPublishFailed,
+  notifySocialDisconnected,
+  looksLikeAuthError,
+} from "@/lib/social/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -203,6 +208,55 @@ export async function POST(req: NextRequest) {
         .from("content_item")
         .update({ statut: newStatus, meta: failedMeta } as any)
         .eq("id", contentId);
+    }
+
+    // Notifications email (Bug Béné 2026-05-08 : on prévient l'user
+    // dès qu'on détecte un problème, sans attendre qu'il s'en rende
+    // compte par hasard).
+    //
+    // 1) Si l'erreur ressemble à du 401/token mort, on notifie la
+    //    déconnexion sociale → l'user reçoit un email "Reconnecte X"
+    //    immédiatement, dès le 1er échec, pour qu'il puisse agir
+    //    avant que les posts suivants ne s'empilent. Le helper est
+    //    idempotent (dédup 3 jours) donc on peut rappeler à chaque
+    //    retry sans spammer.
+    //
+    // 2) Si le post atteint son cap de retries (status='failed'), on
+    //    envoie EN PLUS un email "ton post n'a pas pu être publié"
+    //    ciblé sur ce contenu, avec un lien direct vers l'éditeur.
+    try {
+      // Charger user_id + project_id + content snippet (pour l'email)
+      const { data: ci } = await supabaseAdmin
+        .from("content_item")
+        .select("user_id, project_id, content, contenu, channel, canal")
+        .eq("id", contentId)
+        .maybeSingle();
+
+      const userId = ci?.user_id ?? null;
+      const itemPlatform = (platform || ci?.channel || ci?.canal || "") as string;
+      const snippet = (ci?.content || ci?.contenu || "") as string;
+
+      if (userId && itemPlatform && looksLikeAuthError(errorMsg)) {
+        void notifySocialDisconnected({
+          userId,
+          platform: itemPlatform,
+          reason: errorMsg ?? null ?? undefined,
+        });
+      }
+
+      if (userId && itemPlatform && newStatus === "failed") {
+        void notifyPostPublishFailed({
+          userId,
+          platform: itemPlatform,
+          contentId,
+          contentSnippet: snippet,
+          errorMessage: errorMsg ?? null,
+          projectId: ci?.project_id ?? null,
+        });
+      }
+    } catch (notifErr) {
+      // Non bloquant
+      console.error("[publish-callback] notify failed:", notifErr);
     }
   }
 
