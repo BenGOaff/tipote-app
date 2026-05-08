@@ -3,8 +3,10 @@
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import ClientsPageClient from "@/components/clients/ClientsPageClient";
+import { getClientRevenueStatsByEmail } from "@/lib/compta/clientRevenue";
 
 export default async function ClientsPage() {
   const supabase = await getSupabaseServerClient();
@@ -65,19 +67,46 @@ export default async function ClientsPage() {
     }
   }
 
+  // Stats compta par client (matché par email avec les transactions
+  // PSP). Si un client n'a pas d'email saisi côté Tipote, on ne peut
+  // pas relier — c'est documenté dans l'UI.
+  const emails = (clients ?? [])
+    .map((c: any) => c.email)
+    .filter((e: any): e is string => !!e);
+  const revenueStats = await getClientRevenueStatsByEmail(
+    supabaseAdmin,
+    session.user.id,
+    emails,
+    projectId,
+  );
+
   return (
     <ClientsPageClient
-      clients={(clients ?? []).map((c: any) => ({
-        id: String(c.id),
-        name: c.name ?? "",
-        email: c.email ?? null,
-        phone: c.phone ?? null,
-        status: c.status ?? "active",
-        notes: c.notes ?? null,
-        lead_id: c.lead_id ?? null,
-        created_at: String(c.created_at),
-        process_summaries: processSummaries[c.id] ?? [],
-      }))}
+      clients={(clients ?? []).map((c: any) => {
+        const stats = c.email
+          ? revenueStats.get(String(c.email).toLowerCase().trim())
+          : undefined;
+        return {
+          id: String(c.id),
+          name: c.name ?? "",
+          email: c.email ?? null,
+          phone: c.phone ?? null,
+          status: c.status ?? "active",
+          notes: c.notes ?? null,
+          lead_id: c.lead_id ?? null,
+          created_at: String(c.created_at),
+          process_summaries: processSummaries[c.id] ?? [],
+          revenue_stats: stats
+            ? {
+                total_eur_cents: stats.total_eur_cents,
+                last_paid_at: stats.last_paid_at,
+                is_subscriber: stats.is_subscriber,
+                is_churned: stats.is_churned,
+                transactions_count: stats.transactions_count,
+              }
+            : null,
+        };
+      })}
       templates={templates}
       error={clientsError?.message}
     />

@@ -75,6 +75,16 @@ export type Client = {
   lead_id: string | null;
   created_at: string;
   process_summaries?: ProcessSummary[];
+  /** Stats compta calculées depuis les transactions PSP (matched par
+   *  email). null si l'user n'a pas saisi l'email du client OU si le
+   *  client n'a aucun encaissement enregistré. */
+  revenue_stats?: {
+    total_eur_cents: number;
+    last_paid_at: string | null;
+    is_subscriber: boolean;
+    is_churned: boolean;
+    transactions_count: number;
+  } | null;
 };
 
 type ProcessItem = {
@@ -142,6 +152,53 @@ const TEMPLATE_COLORS = [
   "#6366f1", "#ec4899", "#f59e0b", "#10b981",
   "#3b82f6", "#ef4444", "#8b5cf6", "#14b8a6",
 ];
+
+/* ──────────────────────────────────────────────────────────────────
+ * Badges de revenu par client (montant total + statut abonné)
+ * Affiché sur la carte client si on a réussi à matcher l'email avec
+ * des transactions PSP.
+ * ────────────────────────────────────────────────────────────────── */
+
+function ClientRevenueBadges({
+  stats,
+}: {
+  stats: NonNullable<Client["revenue_stats"]>;
+}) {
+  const totalEur = stats.total_eur_cents / 100;
+  const formatted = new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(totalEur);
+
+  const isNegative = totalEur < 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 mb-2 text-xs">
+      <span
+        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-semibold ${
+          isNegative
+            ? "bg-destructive/10 text-destructive"
+            : "bg-emerald-50 text-emerald-700"
+        }`}
+        title={`${stats.transactions_count} encaissement${stats.transactions_count > 1 ? "s" : ""}`}
+      >
+        {formatted}
+      </span>
+      {stats.is_subscriber ? (
+        <span className="inline-flex items-center rounded-md px-2 py-0.5 bg-primary/10 text-primary font-medium">
+          Abonné
+        </span>
+      ) : null}
+      {stats.is_churned ? (
+        <span className="inline-flex items-center rounded-md px-2 py-0.5 bg-amber-100 text-amber-700 font-medium">
+          A arrêté son abo
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 // ─── Main component ─────────────────────────────────────────
 export default function ClientsPageClient({ clients: initialClients, templates: initialTemplates, error }: Props) {
@@ -695,6 +752,9 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                             {t(`status_${client.status}`)}
                           </Badge>
                         </div>
+                        {client.revenue_stats && client.revenue_stats.total_eur_cents !== 0 ? (
+                          <ClientRevenueBadges stats={client.revenue_stats} />
+                        ) : null}
                         {client.process_summaries && client.process_summaries.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mb-2">
                             {client.process_summaries.map((ps, i) => (
