@@ -1006,6 +1006,12 @@ export async function POST(req: Request) {
   let projectId: string | null;
   let forceRegenerate: boolean;
   let locale: "fr" | "en";
+  // Business context unifié — chiffres réels du user (CA mois/an,
+  // objectif, abonnés, churn). Hissé hors du try pre-validate pour
+  // rester accessible dans le bloc streaming où on génère vraiment
+  // la stratégie. Fail-open : "" par défaut, l'IA ignore juste le
+  // bloc si vide.
+  let businessContextBlock = "";
 
   try {
     supabase = await getSupabaseServerClient();
@@ -1020,14 +1026,10 @@ export async function POST(req: Request) {
     userId = session.user.id;
     projectId = await getActiveProjectId(supabase, userId);
 
-    // Business context unifié — chiffres réels du user (CA mois/an,
-    // objectif, abonnés, churn). Injecté dans les userPrompts des
-    // générateurs de stratégie pour que les recommandations soient
-    // calibrées sur les vrais chiffres au lieu de raisonner dans le
-    // vide. Fail-open : on ignore l'erreur pour ne pas bloquer la
-    // génération de plan si la lib compta plante.
+    // Calcul du contexte business — assigné à la `let` déclarée
+    // au-dessus du try pour rester accessible dans le bloc streaming.
     const { buildBusinessContext } = await import("@/lib/compta/businessContext");
-    const businessContextBlock = await buildBusinessContext(userId, projectId)
+    businessContextBlock = await buildBusinessContext(userId, projectId)
       .then((c) => c.text)
       .catch((e) => {
         console.warn("[strategy] buildBusinessContext failed:", e);
