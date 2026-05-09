@@ -125,7 +125,19 @@ const UpdateSchema = z.object({
   // ─── Module Compta (étape 1b) ─────────────────────────────────
   // Statut principal — null efface la config, sinon une des 3 valeurs.
   accounting_status: z
-    .enum(["particulier", "auto_entrepreneur", "sasu", "sas", "sarl", "eurl"])
+    .enum([
+      // FR
+      "particulier",
+      "auto_entrepreneur",
+      "sasu",
+      "sas",
+      "sarl",
+      "eurl",
+      // CH
+      "independant_ch",
+      "sarl_ch",
+      "sa_ch",
+    ])
     .nullable()
     .optional(),
 
@@ -154,6 +166,23 @@ const UpdateSchema = z.object({
   // qui réutilise les colonnes sasu_*.
   eurl_is_election: z.boolean().optional(),
   sarl_gerant_majoritaire: z.boolean().optional(),
+
+  // Suisse — phase 1n
+  ch_canton: z
+    .enum([
+      "AG", "AI", "AR", "BE", "BL", "BS", "FR", "GE", "GL", "GR", "JU", "LU",
+      "NE", "NW", "OW", "SG", "SH", "SO", "SZ", "TG", "TI", "UR", "VD", "VS",
+      "ZG", "ZH",
+    ])
+    .nullable()
+    .optional(),
+  ch_vat_assujetti: z.boolean().optional(),
+  ch_vat_periodicity: z
+    .enum(["mensuelle", "trimestrielle", "semestrielle", "annuelle"])
+    .nullable()
+    .optional(),
+  ch_vat_method: z.enum(["effective", "tdfn"]).nullable().optional(),
+  ch_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   // accounting_status_configured_at est défini côté serveur dans le PATCH
   // ci-dessous, pas accepté en input.
 

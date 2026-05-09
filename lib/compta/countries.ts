@@ -19,6 +19,17 @@ const FRANCE_SYNONYMS = new Set([
   "french",
 ]);
 
+const SWITZERLAND_SYNONYMS = new Set([
+  "suisse",
+  "ch",
+  "suiss",
+  "schweiz",
+  "switzerland",
+  "svizzera",
+  "helvetia",
+  "che",
+]);
+
 function normalize(s: string | null | undefined): string {
   return (s ?? "")
     .toLowerCase()
@@ -34,14 +45,30 @@ export function isFrenchCountry(country: string | null | undefined): boolean {
   return FRANCE_SYNONYMS.has(normalize(country));
 }
 
-/** Liste des pays pour lesquels Tipote propose la compta. Au lancement
- *  uniquement la France ; on ajoutera Belgique, Suisse, Québec,
- *  Portugal, Espagne, etc. au fur et à mesure du développement. */
+export function isSwissCountry(country: string | null | undefined): boolean {
+  if (!country) return false;
+  return SWITZERLAND_SYNONYMS.has(normalize(country));
+}
+
+/** Code pays normalisé (FR/CH/null). Évite de dispatcher sur le
+ *  texte brut dans toute l'app. */
+export function detectCountryCode(country: string | null | undefined): "FR" | "CH" | null {
+  if (isFrenchCountry(country)) return "FR";
+  if (isSwissCountry(country)) return "CH";
+  return null;
+}
+
+/** Liste des pays pour lesquels Tipote propose la compta. */
 export const SUPPORTED_COUNTRIES: ReadonlyArray<{ code: string; label: string; synonyms: ReadonlyArray<string> }> = [
   {
     code: "FR",
     label: "France",
     synonyms: Array.from(FRANCE_SYNONYMS),
+  },
+  {
+    code: "CH",
+    label: "Suisse",
+    synonyms: Array.from(SWITZERLAND_SYNONYMS),
   },
 ];
 

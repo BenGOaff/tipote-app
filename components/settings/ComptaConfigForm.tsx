@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Save, ExternalLink, Building2, User, Briefcase, ArrowLeft } from "lucide-react";
+import { CH_CANTONS_ORDERED } from "@/lib/compta/ch_cantons";
 import {
   type AccountingStatus,
   type ParticulierRevenueType,
@@ -35,6 +36,9 @@ import {
 
 interface Props {
   initial: ComptaProfileSlice;
+  /** Pays détecté côté parent (FR ou CH) — détermine quelles
+   *  cartes de statut on propose (6 FR ou 3 CH). */
+  country: "FR" | "CH";
   /** Si fourni, l'user édite une config existante → bouton "Annuler". */
   onCancel?: () => void;
   /** Patch à envoyer à /api/profile. Le parent gère le fetch + le toast. */
@@ -44,6 +48,7 @@ interface Props {
 
 export default function ComptaConfigForm({
   initial,
+  country,
   onCancel,
   onSave,
   pending,
@@ -105,6 +110,19 @@ export default function ComptaConfigForm({
       if (isAtIS && !draft.sasu_vat_regime) {
         next.sasu_vat_regime = "Choisis ton régime de TVA.";
       }
+    } else if (
+      status === "independant_ch" ||
+      status === "sarl_ch" ||
+      status === "sa_ch"
+    ) {
+      // Statuts CH — validations pragmatiques.
+      // Canton recommandé mais pas bloquant (l'user peut compléter
+      // plus tard ; le calendrier tombe sur les dates fédérales par
+      // défaut sinon). En revanche si l'user a coché "assujetti TVA",
+      // il doit choisir une périodicité.
+      if (draft.ch_vat_assujetti && !draft.ch_vat_periodicity) {
+        next.ch_vat_periodicity = "Choisis la périodicité de tes décomptes TVA.";
+      }
     }
 
     setErrors(next);
@@ -161,6 +179,30 @@ export default function ComptaConfigForm({
       if (status === "sarl") {
         patch.sarl_gerant_majoritaire = draft.sarl_gerant_majoritaire;
       }
+    } else if (
+      status === "independant_ch" ||
+      status === "sarl_ch" ||
+      status === "sa_ch"
+    ) {
+      // Statuts CH — on stocke les colonnes ch_*. Pour Sàrl/SA on
+      // réutilise aussi les colonnes sasu_fiscal_year_* pour la
+      // clôture de l'exercice (l'écrasante majorité des Sàrl CH
+      // clôturent au 31/12 mais on laisse l'option ouverte).
+      patch.ch_canton = draft.ch_canton;
+      patch.ch_vat_assujetti = draft.ch_vat_assujetti;
+      patch.ch_vat_periodicity = draft.ch_vat_assujetti
+        ? draft.ch_vat_periodicity ?? "trimestrielle"
+        : null;
+      patch.ch_vat_method = draft.ch_vat_assujetti
+        ? draft.ch_vat_method ?? "effective"
+        : null;
+      patch.ch_started_at = draft.ch_started_at;
+      if (status === "sarl_ch" || status === "sa_ch") {
+        patch.sasu_fiscal_year_calendar = draft.sasu_fiscal_year_calendar;
+        patch.sasu_fiscal_year_start_month = draft.sasu_fiscal_year_calendar
+          ? null
+          : draft.sasu_fiscal_year_start_month;
+      }
     }
 
     await onSave(patch);
@@ -170,6 +212,7 @@ export default function ComptaConfigForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <StatusPicker
         value={status}
+        country={country}
         onChange={(s) => {
           setStatus(s);
           setErrors({});
@@ -200,6 +243,12 @@ export default function ComptaConfigForm({
       status === "sarl" ||
       status === "eurl" ? (
         <SasuFields draft={draft} update={update} errors={errors} status={status} />
+      ) : null}
+
+      {status === "independant_ch" ||
+      status === "sarl_ch" ||
+      status === "sa_ch" ? (
+        <SuisseFields draft={draft} update={update} errors={errors} status={status} />
       ) : null}
 
       {status ? (
@@ -235,15 +284,79 @@ export default function ComptaConfigForm({
 
 function StatusPicker({
   value,
+  country,
   onChange,
 }: {
   value: AccountingStatus | null;
+  country: "FR" | "CH";
   onChange: (v: AccountingStatus) => void;
 }) {
-  // 6 cartes : 3 statuts "perso/solo" + 3 sociétés à l'IS. On garde
-  // toutes les options dans une seule grille à 3 colonnes pour ne
-  // pas multiplier les sections — l'user pige direct ce qui le
-  // concerne (sa carte est colorée).
+  // Rend des cartes différentes selon le pays détecté côté parent.
+  // FR : 6 statuts (particulier / AE / EURL / SASU / SAS / SARL).
+  // CH : 4 statuts (particulier / Indépendant / Sàrl / SA).
+  // L'user pige direct ce qui le concerne (sa carte est colorée).
+
+  if (country === "CH") {
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Sans société dédiée
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<User className="h-5 w-5" />}
+              title="Particulier"
+              desc="Revenus accessoires (en plus d'un emploi ou pas d'autre activité). Tout passe par ta déclaration d'impôt cantonale + fédérale annuelle."
+              selected={value === "particulier"}
+              onClick={() => onChange("particulier")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="Indépendant (raison individuelle)"
+              desc="Tu exerces sous ton propre nom (Einzelfirma). AVS trimestrielle, TVA si CA > 100'000 CHF, déclaration d'impôt personnelle."
+              selected={value === "independant_ch"}
+              onClick={() => onChange("independant_ch")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Société commerciale
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="Sàrl"
+              desc="Société à responsabilité limitée. Comptes annuels, IBO (impôt sur le bénéfice), TVA si > 100'000 CHF."
+              selected={value === "sarl_ch"}
+              onClick={() => onChange("sarl_ch")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="SA"
+              desc="Société anonyme. Capital min. CHF 100'000. Mêmes obligations comptables qu'une Sàrl, structure plus formelle."
+              selected={value === "sa_ch"}
+              onClick={() => onChange("sa_ch")}
+            />
+          </div>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground italic">
+          Les particularités cantonales (taux IBO, AVS, allocations
+          familiales) varient selon les 26 cantons. Tipote affiche
+          le calendrier fédéral + les dates butoir de déclaration
+          de TON canton (à indiquer plus bas). Pour les taux exacts
+          d&apos;imposition, ton fiduciaire reste la référence.
+        </p>
+      </div>
+    );
+  }
+
+  // FR (défaut)
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
@@ -859,6 +972,260 @@ function SasuFields({
       />
     </Card>
   );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Suisse (phase 1n)
+ * ────────────────────────────────────────────────────────────────── */
+
+function SuisseFields({
+  draft,
+  update,
+  errors,
+  status,
+}: {
+  draft: ComptaProfileSlice;
+  update: <K extends keyof ComptaProfileSlice>(key: K, value: ComptaProfileSlice[K]) => void;
+  errors: Record<string, string>;
+  status: "independant_ch" | "sarl_ch" | "sa_ch";
+}) {
+  const isCorporate = status === "sarl_ch" || status === "sa_ch";
+
+  return (
+    <Card className="p-5 space-y-5">
+      {/* Disclaimer cantonal — Tipote couvre les 26 cantons sur les
+          dates butoir et le portail, mais pas les taux d'imposition. */}
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>Important Suisse :</strong> Tipote calcule tes
+        échéances en fonction de ton canton (date butoir de
+        déclaration d&apos;impôt + portail). Les taux d&apos;imposition
+        (IBO, IRPP) varient selon les 26 cantons et leurs communes —
+        ton fiduciaire reste la référence pour les calculs exacts.
+      </div>
+
+      {/* Canton — sélecteur des 26 valeurs ISO 3166-2 CH-XX */}
+      <div className="space-y-2">
+        <Label htmlFor="ch-canton">Ton canton</Label>
+        <p className="text-xs text-muted-foreground">
+          Détermine la date butoir de ta déclaration d&apos;impôt et
+          le portail vers lequel on te dirige.
+        </p>
+        <select
+          id="ch-canton"
+          value={draft.ch_canton ?? ""}
+          onChange={(e) => update("ch_canton", e.target.value || null)}
+          className="w-full h-9 rounded-md border bg-background px-3 text-sm"
+        >
+          <option value="">— Choisis ton canton —</option>
+          {CH_CANTONS_ORDERED.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.code} — {c.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Date de début d'activité (optionnel) */}
+      <div className="space-y-2">
+        <Label htmlFor="ch-started">
+          Date de début d&apos;activité{" "}
+          <span className="text-muted-foreground font-normal">(optionnel)</span>
+        </Label>
+        <input
+          id="ch-started"
+          type="date"
+          value={draft.ch_started_at ?? ""}
+          onChange={(e) => update("ch_started_at", e.target.value || null)}
+          className="rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      {/* SIREN-équivalent CH = numéro IDE (CHE-XXX.XXX.XXX). On
+          réutilise sasu_siren pour stocker l'IDE des Sàrl/SA — la
+          colonne est TEXT, pas de problème. Validation côté zod
+          reste sur le pattern \d{9} pour FR ; côté CH on accepte
+          des formats plus libres. Pour MVP : on demande l'IDE
+          mais on ne le valide pas strictement. */}
+      {isCorporate ? (
+        <div className="space-y-2">
+          <Label htmlFor="ch-ide">
+            Numéro IDE (Numéro d&apos;identification d&apos;entreprise)
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            Format CHE-XXX.XXX.XXX. Tu le trouves sur ton extrait du
+            registre du commerce ou sur{" "}
+            <a
+              href="https://www.uid.admin.ch/Search.aspx?lang=fr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              uid.admin.ch
+            </a>
+            .
+          </p>
+          <Input
+            id="ch-ide"
+            value={draft.sasu_siren ?? ""}
+            onChange={(e) => update("sasu_siren", e.target.value || null)}
+            placeholder="CHE-123.456.789"
+          />
+        </div>
+      ) : null}
+
+      {/* Exercice fiscal — pour Sàrl/SA. Réutilise les colonnes
+          sasu_fiscal_year_*. */}
+      {isCorporate ? (
+        <div className="space-y-2">
+          <Label>Exercice comptable</Label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => update("sasu_fiscal_year_calendar", true)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                draft.sasu_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Année civile (jan → déc)
+            </button>
+            <button
+              type="button"
+              onClick={() => update("sasu_fiscal_year_calendar", false)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                !draft.sasu_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Décalé
+            </button>
+          </div>
+          {!draft.sasu_fiscal_year_calendar ? (
+            <div className="space-y-1 pt-2">
+              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <select
+                value={draft.sasu_fiscal_year_start_month ?? ""}
+                onChange={(e) =>
+                  update("sasu_fiscal_year_start_month", parseInt(e.target.value, 10) || null)
+                }
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
+              >
+                <option value="">—</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                  <option key={m} value={m}>
+                    {monthName(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Assujettissement TVA — seuil unique CHF 100'000/an */}
+      <BoolRow
+        id="ch-vat-assujetti"
+        title="Assujetti à la TVA suisse ?"
+        desc="L'assujettissement devient obligatoire dès que ton CA mondial dépasse CHF 100'000 / an. En dessous, tu peux rester non-assujetti (ou opter volontairement)."
+        helpHref="https://www.estv.admin.ch/estv/fr/accueil/tva.html"
+        helpLabel="Seuils TVA suisses"
+        checked={!!draft.ch_vat_assujetti}
+        onChange={(b) => update("ch_vat_assujetti", b)}
+      />
+
+      {/* Périodicité TVA + méthode (visibles seulement si assujetti) */}
+      {draft.ch_vat_assujetti ? (
+        <>
+          <div className="space-y-2 pt-3 border-t">
+            <Label>Périodicité du décompte TVA</Label>
+            <p className="text-xs text-muted-foreground">
+              Détermine les dates butoir de tes décomptes (T1→31 mai,
+              T2→31 août, T3→30 nov, T4→28 fév pour le trimestriel).
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {(
+                [
+                  { v: "trimestrielle", label: "Trimestrielle", hint: "défaut" },
+                  { v: "mensuelle", label: "Mensuelle", hint: "rare" },
+                  { v: "semestrielle", label: "Semestrielle", hint: "TDFN" },
+                  { v: "annuelle", label: "Annuelle", hint: "petits CA" },
+                ] as const
+              ).map((opt) => {
+                const active = (draft.ch_vat_periodicity ?? "trimestrielle") === opt.v;
+                return (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => update("ch_vat_periodicity", opt.v)}
+                    className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary font-medium"
+                        : "border-border hover:bg-muted/40"
+                    }`}
+                  >
+                    <div>{opt.label}</div>
+                    <div className="text-[10px] text-muted-foreground font-normal">
+                      ({opt.hint})
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {errors.ch_vat_periodicity ? (
+              <p className="text-xs text-destructive">{errors.ch_vat_periodicity}</p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Méthode de décompte</Label>
+            <p className="text-xs text-muted-foreground">
+              Effective = TVA déductible classique (chaque facture
+              fournisseur). TDFN = Taux de la Dette Fiscale Nette =
+              taux forfaitaire selon ta branche d&apos;activité (plus
+              simple, mais souvent moins avantageux).
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {(
+                [
+                  { v: "effective", label: "Effective", hint: "défaut" },
+                  { v: "tdfn", label: "TDFN", hint: "forfaitaire par branche" },
+                ] as const
+              ).map((opt) => {
+                const active = (draft.ch_vat_method ?? "effective") === opt.v;
+                return (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => update("ch_vat_method", opt.v)}
+                    className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary font-medium"
+                        : "border-border hover:bg-muted/40"
+                    }`}
+                  >
+                    <div>{opt.label}</div>
+                    <div className="text-[10px] text-muted-foreground font-normal">
+                      ({opt.hint})
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      ) : null}
+    </Card>
+  );
+}
+
+function monthName(m: number): string {
+  const months = [
+    "janvier", "février", "mars", "avril", "mai", "juin",
+    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+  ];
+  return months[m - 1] ?? "";
 }
 
 /* ──────────────────────────────────────────────────────────────────

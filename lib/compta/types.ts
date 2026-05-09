@@ -5,12 +5,17 @@
 // les divergences de chaînes magiques entre back et front.
 
 export type AccountingStatus =
+  // FR
   | "particulier"
   | "auto_entrepreneur"
   | "sasu"
   | "sas"
   | "sarl"
-  | "eurl";
+  | "eurl"
+  // CH (phase 1n)
+  | "independant_ch"
+  | "sarl_ch"
+  | "sa_ch";
 
 export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "particulier",
@@ -19,6 +24,73 @@ export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "sas",
   "sarl",
   "eurl",
+  "independant_ch",
+  "sarl_ch",
+  "sa_ch",
+];
+
+/** Helpers Suisse : 3 statuts, traités en bloc. */
+export function isSwissStatus(status: AccountingStatus | null): boolean {
+  return (
+    status === "independant_ch" ||
+    status === "sarl_ch" ||
+    status === "sa_ch"
+  );
+}
+
+/** Société suisse à l'IBO (= IS local) : Sàrl ou SA. L'indépendant
+ *  CH est imposé sur son revenu personnel. */
+export function isSwissCorporate(status: AccountingStatus | null): boolean {
+  return status === "sarl_ch" || status === "sa_ch";
+}
+
+/** Périodicité de décompte TVA suisse. */
+export type ChVatPeriodicity =
+  | "mensuelle"
+  | "trimestrielle"
+  | "semestrielle"
+  | "annuelle";
+
+export const CH_VAT_PERIODICITIES: ReadonlyArray<ChVatPeriodicity> = [
+  "mensuelle",
+  "trimestrielle",
+  "semestrielle",
+  "annuelle",
+];
+
+export type ChVatMethod = "effective" | "tdfn";
+
+export const CH_VAT_METHODS: ReadonlyArray<ChVatMethod> = ["effective", "tdfn"];
+
+/** Liste des cantons suisses (codes ISO 3166-2 CH-XX). Utilisée
+ *  par le sélecteur dans ComptaConfigForm. */
+export const CH_CANTONS: ReadonlyArray<{ code: string; label: string }> = [
+  { code: "GE", label: "Genève" },
+  { code: "VD", label: "Vaud" },
+  { code: "VS", label: "Valais" },
+  { code: "FR", label: "Fribourg" },
+  { code: "NE", label: "Neuchâtel" },
+  { code: "JU", label: "Jura" },
+  { code: "BE", label: "Berne" },
+  { code: "ZH", label: "Zurich" },
+  { code: "BS", label: "Bâle-Ville" },
+  { code: "BL", label: "Bâle-Campagne" },
+  { code: "SO", label: "Soleure" },
+  { code: "AG", label: "Argovie" },
+  { code: "LU", label: "Lucerne" },
+  { code: "ZG", label: "Zoug" },
+  { code: "SZ", label: "Schwytz" },
+  { code: "UR", label: "Uri" },
+  { code: "OW", label: "Obwald" },
+  { code: "NW", label: "Nidwald" },
+  { code: "GL", label: "Glaris" },
+  { code: "SH", label: "Schaffhouse" },
+  { code: "AR", label: "Appenzell Rh.-Ext." },
+  { code: "AI", label: "Appenzell Rh.-Int." },
+  { code: "SG", label: "Saint-Gall" },
+  { code: "GR", label: "Grisons" },
+  { code: "TG", label: "Thurgovie" },
+  { code: "TI", label: "Tessin" },
 ];
 
 /** Sociétés à l'IS — partagent la même grille fiscale (TVA, IS,
@@ -176,6 +248,12 @@ export interface ComptaProfileSlice {
   eurl_is_election: boolean;
   /** SARL : true si gérant majoritaire (TNS) — affecte la DSN. */
   sarl_gerant_majoritaire: boolean;
+  // Suisse (phase 1n)
+  ch_canton: string | null;
+  ch_vat_assujetti: boolean;
+  ch_vat_periodicity: ChVatPeriodicity | null;
+  ch_vat_method: ChVatMethod | null;
+  ch_started_at: string | null; // ISO date YYYY-MM-DD
 }
 
 /** Valeurs par défaut quand on construit une slice à partir d'un row
@@ -201,5 +279,10 @@ export function emptyComptaSlice(): ComptaProfileSlice {
     sasu_dirigeant_remunere: false,
     eurl_is_election: false,
     sarl_gerant_majoritaire: false,
+    ch_canton: null,
+    ch_vat_assujetti: false,
+    ch_vat_periodicity: null,
+    ch_vat_method: null,
+    ch_started_at: null,
   };
 }

@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   COUNTRY_OPTIONS,
   isFrenchCountry,
+  isSwissCountry,
   SUPPORTED_COUNTRIES,
 } from "@/lib/compta/countries";
 import {
@@ -60,6 +61,8 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
 
   const hasCountry = (country ?? "").trim().length > 0;
   const isFrance = isFrenchCountry(country);
+  const isSwiss = isSwissCountry(country);
+  const isSupported = isFrance || isSwiss;
 
   function patchProfile(patch: Partial<ComptaProfileSlice>): Promise<void> {
     return new Promise<void>((resolve) => {
@@ -100,7 +103,7 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
           pending={pending}
           onSave={(c) => patchProfile({ country: c })}
         />
-      ) : !isFrance ? (
+      ) : !isSupported ? (
         <UnsupportedCountry
           country={country!}
           pending={pending}
@@ -122,6 +125,7 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
           </div>
           <ComptaConfigForm
             initial={slice}
+            country={isFrance ? "FR" : "CH"}
             pending={pending}
             onSave={patchProfile}
             onCancel={editing ? () => setEditing(false) : undefined}
@@ -368,11 +372,12 @@ function ConfiguredSummary({
           CFE / DSN selon le statut. Lit /api/compta/fiscal-deadlines. */}
       <FiscalCalendar />
 
-      {/* Export FEC — pour toutes les sociétés (SASU/SAS/SARL/EURL).
-          Les AE et particuliers n'ont pas d'obligation de tenir un FEC.
-          Le bouton est désactivé tant que le SIREN n'est pas renseigné
-          (obligatoire dans le nom du fichier selon la norme fiscale). */}
-      {status === "sasu" || status === "sas" || status === "sarl" || status === "eurl" ? (
+      {/* Export FEC — uniquement pour les sociétés FRANÇAISES à l'IS
+          (le format FEC est défini par le LPF français art. A47 A-1).
+          Les Sàrl/SA suisses ont leurs propres obligations comptables
+          via le Code des Obligations, pas de FEC à produire. */}
+      {isFrance &&
+      (status === "sasu" || status === "sas" || status === "sarl" || status === "eurl") ? (
         <FecExportCard hasSiren={Boolean(slice.sasu_siren)} />
       ) : null}
     </div>
@@ -483,6 +488,61 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
         value: "TNS — cotisations URSSAF travailleur indépendant",
       });
     }
+  } else if (
+    slice.accounting_status === "independant_ch" ||
+    slice.accounting_status === "sarl_ch" ||
+    slice.accounting_status === "sa_ch"
+  ) {
+    // Suisse — résumé adapté au statut + canton
+    const chLabel =
+      slice.accounting_status === "independant_ch"
+        ? "Indépendant (raison individuelle)"
+        : slice.accounting_status === "sarl_ch"
+          ? "Sàrl"
+          : "SA";
+    rows.push({ label: "Forme juridique", value: chLabel });
+    rows.push({
+      label: "Canton",
+      value: slice.ch_canton ?? "Non précisé",
+    });
+    rows.push({
+      label: "Assujetti TVA",
+      value: slice.ch_vat_assujetti
+        ? "Oui (CA > 100'000 CHF/an)"
+        : "Non (sous le seuil)",
+    });
+    if (slice.ch_vat_assujetti) {
+      rows.push({
+        label: "Périodicité TVA",
+        value:
+          slice.ch_vat_periodicity === "mensuelle"
+            ? "Mensuelle"
+            : slice.ch_vat_periodicity === "semestrielle"
+              ? "Semestrielle"
+              : slice.ch_vat_periodicity === "annuelle"
+                ? "Annuelle"
+                : "Trimestrielle (par défaut)",
+      });
+      rows.push({
+        label: "Méthode TVA",
+        value:
+          slice.ch_vat_method === "tdfn"
+            ? "Taux de la dette fiscale nette (TDFN)"
+            : "Effective (par défaut)",
+      });
+    }
+    if (slice.accounting_status === "independant_ch") {
+      rows.push({
+        label: "AVS / cotisations sociales",
+        value: "Acomptes trimestriels via ta caisse cantonale",
+      });
+    }
+    if (slice.accounting_status === "sarl_ch" || slice.accounting_status === "sa_ch") {
+      rows.push({
+        label: "Comptes annuels",
+        value: "AG d'approbation dans les 6 mois après clôture",
+      });
+    }
   }
 
   return (
@@ -528,6 +588,12 @@ function statusLabel(s: AccountingStatus): string {
       return "SARL";
     case "eurl":
       return "EURL";
+    case "independant_ch":
+      return "Indépendant (Suisse)";
+    case "sarl_ch":
+      return "Sàrl (Suisse)";
+    case "sa_ch":
+      return "SA (Suisse)";
   }
 }
 

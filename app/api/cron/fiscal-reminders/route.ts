@@ -29,6 +29,11 @@ import {
   type FiscalProfile,
   type FiscalDeadline,
 } from "@/lib/compta/fiscalCalendar";
+import {
+  computeFiscalDeadlinesCH,
+  type FiscalProfileCH,
+} from "@/lib/compta/fiscalCalendarCH";
+import { detectCountryCode } from "@/lib/compta/countries";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,18 +41,11 @@ export const maxDuration = 60;
 
 const CRON_SECRET = process.env.CRON_SECRET?.trim() || "";
 
-const FRANCE_TOKENS = ["france", "fr", "française", "francaise", "fra"];
-
 function isAuthorized(req: NextRequest): boolean {
   if (!CRON_SECRET) return false;
   const provided = req.headers.get("x-cron-secret")?.trim() || "";
   if (provided.length !== CRON_SECRET.length) return false;
   return timingSafeEqual(Buffer.from(provided), Buffer.from(CRON_SECRET));
-}
-
-function isFrance(country: string | null | undefined): boolean {
-  if (!country) return false;
-  return FRANCE_TOKENS.includes(country.trim().toLowerCase());
 }
 
 interface ReminderResult {
@@ -67,7 +65,7 @@ export async function GET(req: NextRequest) {
   const { data: profiles, error } = await supabaseAdmin
     .from("business_profiles")
     .select(
-      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire",
+      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire, ch_canton, ch_vat_assujetti, ch_vat_periodicity, ch_vat_method, ch_started_at",
     )
     .not("accounting_status", "is", null);
 
@@ -90,38 +88,52 @@ export async function GET(req: NextRequest) {
     processed += 1;
     const userId = profile.user_id as string;
     const projectId = (profile.project_id ?? null) as string | null;
-    const country = profile.country as string | null;
-    if (!isFrance(country)) continue;
+    const country = detectCountryCode(profile.country as string | null);
+    if (country !== "FR" && country !== "CH") continue;
 
     const email = emailByUserId.get(userId) ?? "";
-
-    const fp: FiscalProfile = {
-      accounting_status: profile.accounting_status as FiscalProfile["accounting_status"],
-      ae_activity_type: (profile.ae_activity_type ?? null) as string | null,
-      ae_started_at: (profile.ae_started_at ?? null) as string | null,
-      ae_versement_liberatoire: Boolean(profile.ae_versement_liberatoire),
-      ae_vat_franchise: Boolean(profile.ae_vat_franchise),
-      ae_urssaf_periodicity: (profile.ae_urssaf_periodicity ?? null) as
-        | "mensuelle"
-        | "trimestrielle"
-        | null,
-      ae_vat_regime: (profile.ae_vat_regime ?? null) as
-        | "reel_mensuel"
-        | "reel_trimestriel"
-        | "simplifie"
-        | null,
-      sasu_fiscal_year_calendar: Boolean(profile.sasu_fiscal_year_calendar),
-      sasu_fiscal_year_start_month: (profile.sasu_fiscal_year_start_month ?? null) as number | null,
-      sasu_vat_regime: (profile.sasu_vat_regime ?? null) as string | null,
-      sasu_vat_intra_enabled: Boolean(profile.sasu_vat_intra_enabled),
-      sasu_dirigeant_remunere: Boolean(profile.sasu_dirigeant_remunere),
-      eurl_is_election: Boolean(profile.eurl_is_election),
-      sarl_gerant_majoritaire: Boolean(profile.sarl_gerant_majoritaire),
-    };
-
     const now = new Date();
     const horizon = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-    const all = computeFiscalDeadlines(fp, now, horizon);
+
+    let all: FiscalDeadline[] = [];
+    if (country === "FR") {
+      const fp: FiscalProfile = {
+        accounting_status: profile.accounting_status as FiscalProfile["accounting_status"],
+        ae_activity_type: (profile.ae_activity_type ?? null) as string | null,
+        ae_started_at: (profile.ae_started_at ?? null) as string | null,
+        ae_versement_liberatoire: Boolean(profile.ae_versement_liberatoire),
+        ae_vat_franchise: Boolean(profile.ae_vat_franchise),
+        ae_urssaf_periodicity: (profile.ae_urssaf_periodicity ?? null) as
+          | "mensuelle"
+          | "trimestrielle"
+          | null,
+        ae_vat_regime: (profile.ae_vat_regime ?? null) as
+          | "reel_mensuel"
+          | "reel_trimestriel"
+          | "simplifie"
+          | null,
+        sasu_fiscal_year_calendar: Boolean(profile.sasu_fiscal_year_calendar),
+        sasu_fiscal_year_start_month: (profile.sasu_fiscal_year_start_month ?? null) as number | null,
+        sasu_vat_regime: (profile.sasu_vat_regime ?? null) as string | null,
+        sasu_vat_intra_enabled: Boolean(profile.sasu_vat_intra_enabled),
+        sasu_dirigeant_remunere: Boolean(profile.sasu_dirigeant_remunere),
+        eurl_is_election: Boolean(profile.eurl_is_election),
+        sarl_gerant_majoritaire: Boolean(profile.sarl_gerant_majoritaire),
+      };
+      all = computeFiscalDeadlines(fp, now, horizon);
+    } else {
+      const fpCh: FiscalProfileCH = {
+        accounting_status: profile.accounting_status as FiscalProfileCH["accounting_status"],
+        ch_canton: (profile.ch_canton ?? null) as string | null,
+        ch_vat_assujetti: Boolean(profile.ch_vat_assujetti),
+        ch_vat_periodicity: (profile.ch_vat_periodicity ?? null) as FiscalProfileCH["ch_vat_periodicity"],
+        ch_vat_method: (profile.ch_vat_method ?? null) as FiscalProfileCH["ch_vat_method"],
+        ch_started_at: (profile.ch_started_at ?? null) as string | null,
+        sasu_fiscal_year_calendar: Boolean(profile.sasu_fiscal_year_calendar),
+        sasu_fiscal_year_start_month: (profile.sasu_fiscal_year_start_month ?? null) as number | null,
+      };
+      all = computeFiscalDeadlinesCH(fpCh, now, horizon);
+    }
     const urgent = pickUrgentDeadlines(all, 7, now);
 
     for (const deadline of urgent) {
