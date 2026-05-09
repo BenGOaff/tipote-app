@@ -21,6 +21,7 @@ import {
   pickThresholdForActivity,
   getVatThresholdLabel,
 } from "@/lib/compta/fiscal-config";
+import { detectCountryCode } from "@/lib/compta/countries";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -352,12 +353,14 @@ export async function GET() {
   // 7. Statut compta + jauge TVA
   let bpQ = supabaseAdmin
     .from("business_profiles")
-    .select("accounting_status, ae_activity_type")
+    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti")
     .eq("user_id", user.id);
   if (projectId) bpQ = bpQ.eq("project_id", projectId);
   const { data: bp } = await bpQ.maybeSingle();
   const status = (bp as { accounting_status?: string | null } | null)?.accounting_status ?? null;
   const aeActivity = (bp as { ae_activity_type?: string | null } | null)?.ae_activity_type ?? null;
+  // Pays détecté pour adapter la TVA (taux + seuil) selon FR / CH.
+  const countryCode = detectCountryCode((bp as { country?: string | null } | null)?.country);
 
   // CA 12 mois glissants = somme des 12 derniers mois
   const rolling12Eur = unified
@@ -368,6 +371,9 @@ export async function GET() {
     })
     .reduce((s, r) => s + (r.amount_eur_cents - r.refunded_eur_cents), 0);
 
+  // Jauge "seuil TVA" — base_eur / major_eur / current_eur sont des
+  // nombres bruts (les noms de champs gardent "_eur" pour compat
+  // historique de l'UI ; le champ `currency` indique l'unité réelle).
   let vatThreshold: {
     activity_label: string;
     base_eur: number;
@@ -378,8 +384,10 @@ export async function GET() {
     over_base: boolean;
     over_major: boolean;
     source: "db" | "fallback";
+    currency?: "EUR" | "CHF";
   } | null = null;
-  if (status === "auto_entrepreneur") {
+
+  if (countryCode === "FR" && status === "auto_entrepreneur") {
     const { thresholds, source } = await getVatThresholds("FR");
     const t = pickThresholdForActivity(thresholds, aeActivity);
     if (t) {
@@ -394,8 +402,31 @@ export async function GET() {
         over_base: currentEur > t.base,
         over_major: currentEur > t.major,
         source,
+        currency: "EUR",
       };
     }
+  } else if (countryCode === "CH" && status === "independant_ch") {
+    // Suisse : seuil unique d'assujettissement TVA = CHF 100'000
+    // (CA mondial). On convertit le rolling12 EUR → CHF via forex
+    // pour l'afficher dans la bonne devise. base = major = 100k
+    // (pas de "tolérance majorée" en CH, l'assujettissement est
+    // strict dès le dépassement).
+    const { rates } = await getEurForexRates(["CHF"]);
+    const eurToChf = rates.CHF ?? 0.95; // fallback ~ taux moyen 2026
+    const currentChf = (rolling12Eur / 100) * eurToChf;
+    const threshold = 100_000;
+    vatThreshold = {
+      activity_label: "Seuil d'assujettissement TVA suisse",
+      base_eur: threshold,
+      major_eur: threshold,
+      current_eur: Math.round(currentChf * 100) / 100,
+      percent_base: threshold > 0 ? Math.round((currentChf / threshold) * 1000) / 10 : 0,
+      percent_major: threshold > 0 ? Math.round((currentChf / threshold) * 1000) / 10 : 0,
+      over_base: currentChf > threshold,
+      over_major: currentChf > threshold,
+      source: "fallback",
+      currency: "CHF",
+    };
   }
 
   // TVA collectée estimée — heuristique : si l'user a un régime TVA
@@ -404,11 +435,12 @@ export async function GET() {
   // varier selon les ventes : 5,5 / 10 / 20%). Suffisant pour la
   // card "TVA à payer" de l'onglet charges. Le FEC, lui, utilise
   // les vrais montants HT/TVA quand on les a au niveau transaction.
+  // Estimation TVA collectée — formule : ytdEur × rate / (100 + rate).
+  // Le taux dépend du pays (8.1% en CH, 20% en FR) et l'éligibilité
+  // dépend du statut + des flags TVA configurés.
   const isVatable = (() => {
-    // Toutes les sociétés à l'IS partagent la même logique TVA
-    // (sasu_vat_regime). Pour EURL, on exige aussi qu'elle ait opté
-    // pour l'IS (sinon TVA optionnelle, comme pour AE).
     const sasuVatRegime = (bp as { sasu_vat_regime?: string | null } | null)?.sasu_vat_regime;
+    // FR — sociétés à l'IS
     if (status === "sasu" || status === "sas" || status === "sarl") {
       return Boolean(sasuVatRegime);
     }
@@ -416,15 +448,27 @@ export async function GET() {
       const eurlIs = (bp as { eurl_is_election?: boolean } | null)?.eurl_is_election;
       return Boolean(eurlIs && sasuVatRegime);
     }
+    // FR — auto-entrepreneur hors franchise
     if (status === "auto_entrepreneur") {
       const franchise = (bp as { ae_vat_franchise?: boolean } | null)?.ae_vat_franchise;
       const regime = (bp as { ae_vat_regime?: string | null } | null)?.ae_vat_regime;
       return franchise === false && Boolean(regime);
     }
+    // CH — toutes les formes (Indépendant / Sàrl / SA) si l'user
+    // a coché le flag d'assujettissement.
+    if (status === "independant_ch" || status === "sarl_ch" || status === "sa_ch") {
+      return Boolean((bp as { ch_vat_assujetti?: boolean } | null)?.ch_vat_assujetti);
+    }
     return false;
   })();
+
+  // Taux TVA normal selon pays (CH = 8.1%, FR = 20%). Pour estimer
+  // la TVA collectée on assume que toutes les ventes sont au taux
+  // normal — les exceptions (5,5/2,1 FR ou 2,6/3,8 CH) sont
+  // statistiquement minoritaires sur le total CA YTD.
+  const vatRateNormal = countryCode === "CH" ? 8.1 : 20;
   const vatCollectedYtdCents = isVatable
-    ? Math.round((ytdEur * 20) / 120)
+    ? Math.round((ytdEur * vatRateNormal) / (100 + vatRateNormal))
     : 0;
 
   return NextResponse.json({

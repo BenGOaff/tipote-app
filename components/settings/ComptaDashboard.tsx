@@ -90,6 +90,10 @@ interface DashboardData {
     percent_major: number;
     over_base: boolean;
     over_major: boolean;
+    /** Devise du seuil (EUR pour FR, CHF pour CH). Les noms de
+     *  champs gardent "_eur" pour compat historique mais l'unité
+     *  réelle est ici. */
+    currency?: "EUR" | "CHF";
   } | null;
   rates: {
     currencies: string[];
@@ -575,10 +579,32 @@ function DeltaBadge({ value, label }: { value: number | null; label: string }) {
  * ────────────────────────────────────────────────────────────────── */
 
 function VatGaugeCard({ t }: { t: NonNullable<DashboardData["vat_threshold"]> }) {
+  // Suisse = seuil unique (CHF 100'000), pas de "majoré". On adapte
+  // la copie en conséquence.
+  const isCH = t.currency === "CHF";
+  const currencySymbol = isCH ? "CHF" : "€";
   const status = (() => {
-    if (t.over_major) return { color: "text-destructive", bg: "bg-destructive", text: "Seuil majoré dépassé — sortie de la franchise immédiate" };
-    if (t.over_base) return { color: "text-destructive", bg: "bg-destructive", text: "Seuil de base dépassé — passage à la TVA dans les semaines à venir" };
-    if (t.percent_base >= 80) return { color: "text-amber-600", bg: "bg-amber-500", text: "Attention, tu approches du seuil" };
+    if (t.over_major) {
+      return {
+        color: "text-destructive",
+        bg: "bg-destructive",
+        text: isCH
+          ? "Seuil dépassé — assujettissement TVA obligatoire"
+          : "Seuil majoré dépassé — sortie de la franchise immédiate",
+      };
+    }
+    if (t.over_base) {
+      return {
+        color: "text-destructive",
+        bg: "bg-destructive",
+        text: isCH
+          ? "Seuil dépassé — assujettissement TVA obligatoire"
+          : "Seuil de base dépassé — passage à la TVA dans les semaines à venir",
+      };
+    }
+    if (t.percent_base >= 80) {
+      return { color: "text-amber-600", bg: "bg-amber-500", text: "Attention, tu approches du seuil" };
+    }
     return { color: "text-emerald-600", bg: "bg-emerald-500", text: "Tu es sous le seuil" };
   })();
 
@@ -610,10 +636,10 @@ function VatGaugeCard({ t }: { t: NonNullable<DashboardData["vat_threshold"]> })
         </div>
         <div className="flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
           <span>
-            {new Intl.NumberFormat("fr-FR").format(Math.round(t.current_eur))} €
+            {new Intl.NumberFormat("fr-FR").format(Math.round(t.current_eur))} {currencySymbol}
           </span>
           <span>
-            seuil : {new Intl.NumberFormat("fr-FR").format(t.base_eur)} €
+            seuil : {new Intl.NumberFormat("fr-FR").format(t.base_eur)} {currencySymbol}
           </span>
         </div>
       </div>
