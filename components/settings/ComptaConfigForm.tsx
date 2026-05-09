@@ -36,9 +36,9 @@ import {
 
 interface Props {
   initial: ComptaProfileSlice;
-  /** Pays détecté côté parent (FR / CH / PT) — détermine quelles
-   *  cartes de statut on propose (6 FR, 4 CH, 6 PT). */
-  country: "FR" | "CH" | "PT";
+  /** Pays détecté côté parent (FR / CH / PT / BE) — détermine
+   *  quelles cartes de statut on propose. */
+  country: "FR" | "CH" | "PT" | "BE";
   /** Si fourni, l'user édite une config existante → bouton "Annuler". */
   onCancel?: () => void;
   /** Patch à envoyer à /api/profile. Le parent gère le fetch + le toast. */
@@ -130,13 +130,23 @@ export default function ComptaConfigForm({
       status === "lda_pt" ||
       status === "sa_pt"
     ) {
-      // PT : NIF format 9 chiffres si renseigné.
       if (draft.pt_nif && !/^\d{9}$/.test(draft.pt_nif)) {
         next.pt_nif = "NIF invalide (9 chiffres exactement).";
       }
-      // Si non-isento, périodicité IVA obligatoire.
       if (!draft.pt_iva_isento && !draft.pt_iva_periodicity) {
         next.pt_iva_periodicity = "Choisis la périodicité de tes déclarations IVA.";
+      }
+    } else if (
+      status === "independant_principal_be" ||
+      status === "independant_complementaire_be" ||
+      status === "srl_be" ||
+      status === "sa_be"
+    ) {
+      if (draft.be_company_number && !/^\d{10}$/.test(draft.be_company_number)) {
+        next.be_company_number = "Numéro BCE invalide (10 chiffres exactement).";
+      }
+      if (!draft.be_vat_franchise && !draft.be_vat_periodicity) {
+        next.be_vat_periodicity = "Choisis la périodicité de tes déclarations TVA.";
       }
     }
 
@@ -225,15 +235,12 @@ export default function ComptaConfigForm({
       status === "lda_pt" ||
       status === "sa_pt"
     ) {
-      // Statuts PT — colonnes pt_*. Pour LDA/SA, on réutilise
-      // aussi sasu_fiscal_year_* pour l'exercice comptable.
       patch.pt_nif = draft.pt_nif;
       patch.pt_region = draft.pt_region ?? "continente";
       patch.pt_iva_isento = draft.pt_iva_isento;
       patch.pt_iva_periodicity = draft.pt_iva_isento
         ? null
         : draft.pt_iva_periodicity ?? "trimestral";
-      // Régime fiscal seulement pour les indépendants/ENI
       if (status === "trabalhador_independente_pt" || status === "eni_pt") {
         patch.pt_tax_regime = draft.pt_tax_regime ?? "simplificado";
       }
@@ -243,6 +250,26 @@ export default function ComptaConfigForm({
         status === "lda_pt" ||
         status === "sa_pt"
       ) {
+        patch.sasu_fiscal_year_calendar = draft.sasu_fiscal_year_calendar;
+        patch.sasu_fiscal_year_start_month = draft.sasu_fiscal_year_calendar
+          ? null
+          : draft.sasu_fiscal_year_start_month;
+      }
+    } else if (
+      status === "independant_principal_be" ||
+      status === "independant_complementaire_be" ||
+      status === "srl_be" ||
+      status === "sa_be"
+    ) {
+      patch.be_region = draft.be_region;
+      patch.be_company_number = draft.be_company_number;
+      patch.be_vat_franchise = draft.be_vat_franchise;
+      patch.be_vat_periodicity = draft.be_vat_franchise
+        ? null
+        : draft.be_vat_periodicity ?? "trimestrielle";
+      patch.be_intra_eu_listing = draft.be_intra_eu_listing;
+      patch.be_started_at = draft.be_started_at;
+      if (status === "srl_be" || status === "sa_be") {
         patch.sasu_fiscal_year_calendar = draft.sasu_fiscal_year_calendar;
         patch.sasu_fiscal_year_start_month = draft.sasu_fiscal_year_calendar
           ? null
@@ -304,6 +331,13 @@ export default function ComptaConfigForm({
         <PortugalFields draft={draft} update={update} errors={errors} status={status} />
       ) : null}
 
+      {status === "independant_principal_be" ||
+      status === "independant_complementaire_be" ||
+      status === "srl_be" ||
+      status === "sa_be" ? (
+        <BelgiqueFields draft={draft} update={update} errors={errors} status={status} />
+      ) : null}
+
       {status ? (
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={pending}>
@@ -341,7 +375,7 @@ function StatusPicker({
   onChange,
 }: {
   value: AccountingStatus | null;
-  country: "FR" | "CH" | "PT";
+  country: "FR" | "CH" | "PT" | "BE";
   onChange: (v: AccountingStatus) => void;
 }) {
   // Rend des cartes différentes selon le pays détecté côté parent.
@@ -479,6 +513,74 @@ function StatusPicker({
           taux IVA différents) sont gérées via le sélecteur région
           plus bas. Pour les calculs exacts d&apos;impôt, ton
           contabilista certificado reste la référence.
+        </p>
+      </div>
+    );
+  }
+
+  if (country === "BE") {
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Sans société dédiée
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatusCard
+              icon={<User className="h-5 w-5" />}
+              title="Particulier"
+              desc="Revenus accessoires (en plus d'un emploi salarié ou pas d'autre activité). Tout passe par ta déclaration IPP via Tax-on-web."
+              selected={value === "particulier"}
+              onClick={() => onChange("particulier")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="Indépendant principal"
+              desc="Activité indépendante à titre principal (cotisations INASTI/RSVZ pleines à 20,5%). Inscrit à la BCE."
+              selected={value === "independant_principal_be"}
+              onClick={() => onChange("independant_principal_be")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="Indépendant complémentaire"
+              desc="Activité indépendante à côté d'un emploi salarié principal. Cotisations sociales réduites."
+              selected={value === "independant_complementaire_be"}
+              onClick={() => onChange("independant_complementaire_be")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Société commerciale (à l&apos;ISoc)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="SRL"
+              desc="Société à Responsabilité Limitée (ex-SPRL, réforme 2019). ISoc 25% (ou 20% PME 1re tranche), comptes annuels BNB, Biztax."
+              selected={value === "srl_be"}
+              onClick={() => onChange("srl_be")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="SA"
+              desc="Société Anonyme. Capital min. 61 500 €. Mêmes obligations ISoc/comptes annuels qu'une SRL, structure plus formelle."
+              selected={value === "sa_be"}
+              onClick={() => onChange("sa_be")}
+            />
+          </div>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground italic">
+          Tipote couvre les obligations fédérales belges (TVA via
+          Intervat, IPP/ISoc, INASTI, comptes annuels BNB, listings
+          client + intra-UE). Les particularités régionales (primes
+          PME wallonnes/flamandes/bruxelloises, TVA véhicules) ne
+          sont pas détaillées — ton comptable / expert-comptable
+          reste la référence.
         </p>
       </div>
     );
@@ -1612,6 +1714,234 @@ function PortugalFields({
           {errors.pt_iva_periodicity ? (
             <p className="text-xs text-destructive">{errors.pt_iva_periodicity}</p>
           ) : null}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function BelgiqueFields({
+  draft,
+  update,
+  errors,
+  status,
+}: {
+  draft: ComptaProfileSlice;
+  update: <K extends keyof ComptaProfileSlice>(key: K, value: ComptaProfileSlice[K]) => void;
+  errors: Record<string, string>;
+  status:
+    | "independant_principal_be"
+    | "independant_complementaire_be"
+    | "srl_be"
+    | "sa_be";
+}) {
+  const isCorporate = status === "srl_be" || status === "sa_be";
+  const isIndep =
+    status === "independant_principal_be" ||
+    status === "independant_complementaire_be";
+
+  return (
+    <Card className="p-5 space-y-5">
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>Belgique :</strong> Tipote calcule tes échéances TVA
+        (Intervat), IPP/ISoc, INASTI/RSVZ, comptes annuels BNB et
+        listings clients/intra-UE. Pour les calculs exacts d&apos;impôt
+        (taux ISoc + derrama, primes régionales, TVA véhicules), ton
+        comptable / expert-comptable reste la référence.
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="be-bce">Numéro BCE (Banque-Carrefour des Entreprises)</Label>
+        <p className="text-xs text-muted-foreground">
+          10 chiffres. Tu peux le retrouver sur{" "}
+          <a
+            href="https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            kbopub.economie.fgov.be
+          </a>
+          .
+        </p>
+        <Input
+          id="be-bce"
+          inputMode="numeric"
+          maxLength={10}
+          value={draft.be_company_number ?? ""}
+          onChange={(e) =>
+            update("be_company_number", e.target.value.replace(/\D/g, "") || null)
+          }
+          placeholder="0123456789"
+        />
+        {errors.be_company_number ? (
+          <p className="text-xs text-destructive">{errors.be_company_number}</p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Ta région</Label>
+        <p className="text-xs text-muted-foreground">
+          Affecte certaines primes / aides régionales. Le calendrier
+          fiscal lui-même reste fédéral.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          {(
+            [
+              { v: "wallonie", label: "Wallonie" },
+              { v: "flandre", label: "Flandre" },
+              { v: "bruxelles", label: "Bruxelles-Capitale" },
+            ] as const
+          ).map((opt) => {
+            const active = draft.be_region === opt.v;
+            return (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => update("be_region", opt.v)}
+                className={`text-sm rounded-md border px-3 py-2 transition ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary font-medium"
+                    : "border-border hover:bg-muted/40"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="be-started">
+          Date de début d&apos;activité{" "}
+          <span className="text-muted-foreground font-normal">(optionnel)</span>
+        </Label>
+        <input
+          id="be-started"
+          type="date"
+          value={draft.be_started_at ?? ""}
+          onChange={(e) => update("be_started_at", e.target.value || null)}
+          className="rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      {isCorporate ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Exercice comptable</Label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => update("sasu_fiscal_year_calendar", true)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                draft.sasu_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Année civile (jan → déc)
+            </button>
+            <button
+              type="button"
+              onClick={() => update("sasu_fiscal_year_calendar", false)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                !draft.sasu_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Décalé
+            </button>
+          </div>
+          {!draft.sasu_fiscal_year_calendar ? (
+            <div className="space-y-1 pt-2">
+              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <select
+                value={draft.sasu_fiscal_year_start_month ?? ""}
+                onChange={(e) =>
+                  update("sasu_fiscal_year_start_month", parseInt(e.target.value, 10) || null)
+                }
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
+              >
+                <option value="">—</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                  <option key={m} value={m}>
+                    {monthName(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <BoolRow
+        id="be-vat-franchise"
+        title="Régime de franchise TVA ?"
+        desc="Si ton CA annuel est sous 25 000 € (art. 56bis CTVA), tu peux opter pour la franchise. Tu ne factures pas la TVA et tu n'as pas de déclarations TVA à déposer."
+        helpHref="https://finances.belgium.be/fr/entreprises/tva/regime-franchise"
+        helpLabel="Plus d'infos sur la franchise TVA"
+        checked={!!draft.be_vat_franchise}
+        onChange={(b) => update("be_vat_franchise", b)}
+      />
+
+      {!draft.be_vat_franchise ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Périodicité du décompte TVA</Label>
+          <p className="text-xs text-muted-foreground">
+            Trimestrielle si CA &lt; 2,5 M€ (cas le plus courant).
+            Mensuelle au-delà. Date butoir : 20 du mois suivant la
+            période, sur Intervat.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {(
+              [
+                { v: "trimestrielle", label: "Trimestrielle", hint: "défaut, CA < 2,5 M€" },
+                { v: "mensuelle", label: "Mensuelle", hint: "CA > 2,5 M€" },
+              ] as const
+            ).map((opt) => {
+              const active = (draft.be_vat_periodicity ?? "trimestrielle") === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => update("be_vat_periodicity", opt.v)}
+                  className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    ({opt.hint})
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {errors.be_vat_periodicity ? (
+            <p className="text-xs text-destructive">{errors.be_vat_periodicity}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <BoolRow
+        id="be-intra-eu"
+        title="Tu fais des ventes vers l'UE ?"
+        desc="Si oui, tu dois déposer un listing intracommunautaire (état 723) chaque trimestre, en plus de tes déclarations TVA. Obligatoire dès 1 € facturé à un client UE assujetti."
+        helpHref="https://finances.belgium.be/fr/entreprises/tva/declaration_paiement/listings_intracommunautaires"
+        helpLabel="Plus d'infos sur le listing intra-UE"
+        checked={!!draft.be_intra_eu_listing}
+        onChange={(b) => update("be_intra_eu_listing", b)}
+      />
+
+      {isIndep ? (
+        <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Cotisations INASTI/RSVZ : acomptes trimestriels (20 mars,
+          20 juin, 20 septembre, 20 décembre), à payer auprès de ta
+          caisse d&apos;assurances sociales (Acerta, Group S, Partena,
+          Liantis, Xerius…).
         </div>
       ) : null}
     </Card>

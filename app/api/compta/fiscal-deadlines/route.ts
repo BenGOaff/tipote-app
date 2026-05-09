@@ -32,6 +32,10 @@ import {
   computeFiscalDeadlinesPT,
   type FiscalProfilePT,
 } from "@/lib/compta/fiscalCalendarPT";
+import {
+  computeFiscalDeadlinesBE,
+  type FiscalProfileBE,
+} from "@/lib/compta/fiscalCalendarBE";
 import { detectCountryCode } from "@/lib/compta/countries";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +56,7 @@ export async function GET(req: NextRequest) {
   let bpQuery = supabase
     .from("business_profiles")
     .select(
-      "country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire, ch_canton, ch_vat_assujetti, ch_vat_periodicity, ch_vat_method, ch_started_at, pt_nif, pt_region, pt_iva_isento, pt_iva_periodicity, pt_tax_regime, pt_started_at",
+      "country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire, ch_canton, ch_vat_assujetti, ch_vat_periodicity, ch_vat_method, ch_started_at, pt_nif, pt_region, pt_iva_isento, pt_iva_periodicity, pt_tax_regime, pt_started_at, be_region, be_company_number, be_vat_franchise, be_vat_periodicity, be_intra_eu_listing, be_started_at",
     )
     .eq("user_id", user.id);
   if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
@@ -65,7 +69,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, deadlines: [], reason: "no_profile" });
   }
   const country = detectCountryCode((bp as { country?: string | null }).country);
-  if (country !== "FR" && country !== "CH" && country !== "PT") {
+  if (country !== "FR" && country !== "CH" && country !== "PT" && country !== "BE") {
     return NextResponse.json({ ok: true, deadlines: [], reason: "country_not_supported" });
   }
   if (!(bp as { accounting_status?: string | null }).accounting_status) {
@@ -121,18 +125,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, deadlines, country: "CH" });
   }
 
-  // PT
-  const profile: FiscalProfilePT = {
-    accounting_status: row.accounting_status as FiscalProfilePT["accounting_status"],
-    pt_nif: (row.pt_nif ?? null) as string | null,
-    pt_region: (row.pt_region ?? null) as FiscalProfilePT["pt_region"],
-    pt_iva_isento: Boolean(row.pt_iva_isento),
-    pt_iva_periodicity: (row.pt_iva_periodicity ?? null) as FiscalProfilePT["pt_iva_periodicity"],
-    pt_tax_regime: (row.pt_tax_regime ?? null) as FiscalProfilePT["pt_tax_regime"],
-    pt_started_at: (row.pt_started_at ?? null) as string | null,
+  if (country === "PT") {
+    const profile: FiscalProfilePT = {
+      accounting_status: row.accounting_status as FiscalProfilePT["accounting_status"],
+      pt_nif: (row.pt_nif ?? null) as string | null,
+      pt_region: (row.pt_region ?? null) as FiscalProfilePT["pt_region"],
+      pt_iva_isento: Boolean(row.pt_iva_isento),
+      pt_iva_periodicity: (row.pt_iva_periodicity ?? null) as FiscalProfilePT["pt_iva_periodicity"],
+      pt_tax_regime: (row.pt_tax_regime ?? null) as FiscalProfilePT["pt_tax_regime"],
+      pt_started_at: (row.pt_started_at ?? null) as string | null,
+      sasu_fiscal_year_calendar: Boolean(row.sasu_fiscal_year_calendar),
+      sasu_fiscal_year_start_month: (row.sasu_fiscal_year_start_month ?? null) as number | null,
+    };
+    const deadlines = computeFiscalDeadlinesPT(profile, now, to);
+    return NextResponse.json({ ok: true, deadlines, country: "PT" });
+  }
+
+  // BE
+  const profile: FiscalProfileBE = {
+    accounting_status: row.accounting_status as FiscalProfileBE["accounting_status"],
+    be_region: (row.be_region ?? null) as FiscalProfileBE["be_region"],
+    be_company_number: (row.be_company_number ?? null) as string | null,
+    be_vat_franchise: Boolean(row.be_vat_franchise),
+    be_vat_periodicity: (row.be_vat_periodicity ?? null) as FiscalProfileBE["be_vat_periodicity"],
+    be_intra_eu_listing: Boolean(row.be_intra_eu_listing),
+    be_started_at: (row.be_started_at ?? null) as string | null,
     sasu_fiscal_year_calendar: Boolean(row.sasu_fiscal_year_calendar),
     sasu_fiscal_year_start_month: (row.sasu_fiscal_year_start_month ?? null) as number | null,
   };
-  const deadlines = computeFiscalDeadlinesPT(profile, now, to);
-  return NextResponse.json({ ok: true, deadlines, country: "PT" });
+  const deadlines = computeFiscalDeadlinesBE(profile, now, to);
+  return NextResponse.json({ ok: true, deadlines, country: "BE" });
 }

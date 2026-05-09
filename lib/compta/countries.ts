@@ -41,6 +41,16 @@ const PORTUGAL_SYNONYMS = new Set([
   "portuguesa",
 ]);
 
+const BELGIUM_SYNONYMS = new Set([
+  "belgique",
+  "belgie",
+  "belgium",
+  "be",
+  "bel",
+  "belge",
+  "belgian",
+]);
+
 function normalize(s: string | null | undefined): string {
   return (s ?? "")
     .toLowerCase()
@@ -66,14 +76,20 @@ export function isPortugueseCountry(country: string | null | undefined): boolean
   return PORTUGAL_SYNONYMS.has(normalize(country));
 }
 
+export function isBelgianCountry(country: string | null | undefined): boolean {
+  if (!country) return false;
+  return BELGIUM_SYNONYMS.has(normalize(country));
+}
+
 /** Code pays normalisé. Évite de dispatcher sur le texte brut dans
  *  toute l'app. */
 export function detectCountryCode(
   country: string | null | undefined,
-): "FR" | "CH" | "PT" | null {
+): "FR" | "CH" | "PT" | "BE" | null {
   if (isFrenchCountry(country)) return "FR";
   if (isSwissCountry(country)) return "CH";
   if (isPortugueseCountry(country)) return "PT";
+  if (isBelgianCountry(country)) return "BE";
   return null;
 }
 
@@ -93,6 +109,11 @@ export const SUPPORTED_COUNTRIES: ReadonlyArray<{ code: string; label: string; s
     code: "PT",
     label: "Portugal",
     synonyms: Array.from(PORTUGAL_SYNONYMS),
+  },
+  {
+    code: "BE",
+    label: "Belgique",
+    synonyms: Array.from(BELGIUM_SYNONYMS),
   },
 ];
 

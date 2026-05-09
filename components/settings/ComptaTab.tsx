@@ -27,6 +27,7 @@ import {
   isFrenchCountry,
   isSwissCountry,
   isPortugueseCountry,
+  isBelgianCountry,
   SUPPORTED_COUNTRIES,
 } from "@/lib/compta/countries";
 import {
@@ -64,7 +65,8 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
   const isFrance = isFrenchCountry(country);
   const isSwiss = isSwissCountry(country);
   const isPortugal = isPortugueseCountry(country);
-  const isSupported = isFrance || isSwiss || isPortugal;
+  const isBelgium = isBelgianCountry(country);
+  const isSupported = isFrance || isSwiss || isPortugal || isBelgium;
 
   function patchProfile(patch: Partial<ComptaProfileSlice>): Promise<void> {
     return new Promise<void>((resolve) => {
@@ -127,7 +129,7 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
           </div>
           <ComptaConfigForm
             initial={slice}
-            country={isFrance ? "FR" : isSwiss ? "CH" : "PT"}
+            country={isFrance ? "FR" : isSwiss ? "CH" : isPortugal ? "PT" : "BE"}
             pending={pending}
             onSave={patchProfile}
             onCancel={editing ? () => setEditing(false) : undefined}
@@ -376,10 +378,12 @@ function ConfiguredSummary({
 
       {/* Export FEC — uniquement pour les sociétés FRANÇAISES à l'IS
           (le format FEC est défini par le LPF français art. A47 A-1).
-          Les Sàrl/SA suisses ont leurs propres obligations comptables
-          via le Code des Obligations, pas de FEC à produire. */}
-      {isFrance &&
-      (status === "sasu" || status === "sas" || status === "sarl" || status === "eurl") ? (
+          Les Sàrl/SA suisses, LDA portugaises et SRL belges ont leurs
+          propres obligations comptables (Code des Obligations en CH,
+          PCMN en BE, normalisé via SAF-T en PT) — pas de FEC à
+          produire. Les statuts sasu/sas/sarl/eurl sont FR-only par
+          définition, donc tester le statut suffit. */}
+      {status === "sasu" || status === "sas" || status === "sarl" || status === "eurl" ? (
         <FecExportCard hasSiren={Boolean(slice.sasu_siren)} />
       ) : null}
     </div>
@@ -609,6 +613,77 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
         value: "Paiement mensuel le 20 (21,4% du revenu pertinente)",
       });
     }
+  } else if (
+    slice.accounting_status === "independant_principal_be" ||
+    slice.accounting_status === "independant_complementaire_be" ||
+    slice.accounting_status === "srl_be" ||
+    slice.accounting_status === "sa_be"
+  ) {
+    // Belgique — résumé en français, noms officiels conservés
+    // (BCE, INASTI/RSVZ, BNB, Tax-on-web, Biztax, Intervat).
+    const beLabel =
+      slice.accounting_status === "independant_principal_be"
+        ? "Indépendant à titre principal"
+        : slice.accounting_status === "independant_complementaire_be"
+          ? "Indépendant à titre complémentaire"
+          : slice.accounting_status === "srl_be"
+            ? "Société à Responsabilité Limitée (SRL)"
+            : "Société Anonyme (SA)";
+    rows.push({ label: "Forme juridique", value: beLabel });
+    rows.push({
+      label: "Numéro BCE",
+      value: slice.be_company_number ?? "Non renseigné",
+      href: slice.be_company_number
+        ? `https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html?nummer=${slice.be_company_number}`
+        : undefined,
+      hrefLabel: "Voir sur la BCE",
+    });
+    const regionLabel =
+      slice.be_region === "wallonie"
+        ? "Wallonie"
+        : slice.be_region === "flandre"
+          ? "Flandre"
+          : slice.be_region === "bruxelles"
+            ? "Bruxelles-Capitale"
+            : "Non précisé";
+    rows.push({ label: "Région", value: regionLabel });
+    rows.push({
+      label: "Régime TVA",
+      value: slice.be_vat_franchise
+        ? "Franchise (CA < 25 000 €/an)"
+        : "Assujetti — déclarations TVA via Intervat",
+    });
+    if (!slice.be_vat_franchise) {
+      rows.push({
+        label: "Périodicité TVA",
+        value:
+          slice.be_vat_periodicity === "mensuelle"
+            ? "Mensuelle (CA > 2,5 M€)"
+            : "Trimestrielle (par défaut)",
+      });
+    }
+    rows.push({
+      label: "Listing intra-UE (état 723)",
+      value: slice.be_intra_eu_listing ? "Activé (déclaration trimestrielle)" : "Non",
+    });
+    if (
+      slice.accounting_status === "independant_principal_be" ||
+      slice.accounting_status === "independant_complementaire_be"
+    ) {
+      rows.push({
+        label: "Cotisations INASTI/RSVZ",
+        value:
+          slice.accounting_status === "independant_complementaire_be"
+            ? "Acomptes trimestriels (taux réduit, activité complémentaire)"
+            : "Acomptes trimestriels (20,5% du revenu net)",
+      });
+    }
+    if (slice.accounting_status === "srl_be" || slice.accounting_status === "sa_be") {
+      rows.push({
+        label: "Comptes annuels",
+        value: "Dépôt à la BNB dans les 7 mois après l'AG",
+      });
+    }
   }
 
   return (
@@ -670,6 +745,14 @@ function statusLabel(s: AccountingStatus): string {
       return "LDA (Portugal)";
     case "sa_pt":
       return "SA (Portugal)";
+    case "independant_principal_be":
+      return "Indépendant à titre principal (Belgique)";
+    case "independant_complementaire_be":
+      return "Indépendant à titre complémentaire (Belgique)";
+    case "srl_be":
+      return "SRL (Belgique)";
+    case "sa_be":
+      return "SA (Belgique)";
   }
 }
 

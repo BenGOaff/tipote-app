@@ -143,6 +143,11 @@ const UpdateSchema = z.object({
       "lda_unipessoal_pt",
       "lda_pt",
       "sa_pt",
+      // BE
+      "independant_principal_be",
+      "independant_complementaire_be",
+      "srl_be",
+      "sa_be",
     ])
     .nullable()
     .optional(),
@@ -197,6 +202,14 @@ const UpdateSchema = z.object({
   pt_iva_periodicity: z.enum(["mensal", "trimestral"]).nullable().optional(),
   pt_tax_regime: z.enum(["simplificado", "organizada"]).nullable().optional(),
   pt_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+
+  // Belgique — phase 1p
+  be_region: z.enum(["wallonie", "flandre", "bruxelles"]).nullable().optional(),
+  be_company_number: z.string().regex(/^\d{10}$/).nullable().optional(),
+  be_vat_franchise: z.boolean().optional(),
+  be_vat_periodicity: z.enum(["mensuelle", "trimestrielle"]).nullable().optional(),
+  be_intra_eu_listing: z.boolean().optional(),
+  be_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   // accounting_status_configured_at est défini côté serveur dans le PATCH
   // ci-dessous, pas accepté en input.
 

@@ -21,7 +21,12 @@ export type AccountingStatus =
   | "eni_pt"
   | "lda_unipessoal_pt"
   | "lda_pt"
-  | "sa_pt";
+  | "sa_pt"
+  // BE (phase 1p)
+  | "independant_principal_be"
+  | "independant_complementaire_be"
+  | "srl_be"
+  | "sa_be";
 
 export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "particulier",
@@ -38,7 +43,37 @@ export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "lda_unipessoal_pt",
   "lda_pt",
   "sa_pt",
+  "independant_principal_be",
+  "independant_complementaire_be",
+  "srl_be",
+  "sa_be",
 ];
+
+/** Helpers Belgique : 4 statuts. */
+export function isBelgianStatus(status: AccountingStatus | null): boolean {
+  return (
+    status === "independant_principal_be" ||
+    status === "independant_complementaire_be" ||
+    status === "srl_be" ||
+    status === "sa_be"
+  );
+}
+
+/** Société belge à l'ISoc (= IS local). SRL ou SA. Les indépendants
+ *  sont à l'IPP (impôt personnel). */
+export function isBelgianCorporate(status: AccountingStatus | null): boolean {
+  return status === "srl_be" || status === "sa_be";
+}
+
+export type BeRegion = "wallonie" | "flandre" | "bruxelles";
+
+export const BE_REGIONS: ReadonlyArray<{ code: BeRegion; label: string }> = [
+  { code: "wallonie", label: "Wallonie" },
+  { code: "flandre", label: "Flandre" },
+  { code: "bruxelles", label: "Bruxelles-Capitale" },
+];
+
+export type BeVatPeriodicity = "mensuelle" | "trimestrielle";
 
 /** Helpers Portugal : 5 statuts. */
 export function isPortugueseStatus(status: AccountingStatus | null): boolean {
@@ -313,6 +348,13 @@ export interface ComptaProfileSlice {
   pt_iva_periodicity: PtIvaPeriodicity | null;
   pt_tax_regime: PtTaxRegime | null;
   pt_started_at: string | null;
+  // Belgique (phase 1p)
+  be_region: BeRegion | null;
+  be_company_number: string | null; // BCE 10 chiffres
+  be_vat_franchise: boolean;
+  be_vat_periodicity: BeVatPeriodicity | null;
+  be_intra_eu_listing: boolean;
+  be_started_at: string | null;
 }
 
 /** Valeurs par défaut quand on construit une slice à partir d'un row
@@ -349,5 +391,11 @@ export function emptyComptaSlice(): ComptaProfileSlice {
     pt_iva_periodicity: null,
     pt_tax_regime: null,
     pt_started_at: null,
+    be_region: null,
+    be_company_number: null,
+    be_vat_franchise: false,
+    be_vat_periodicity: null,
+    be_intra_eu_listing: false,
+    be_started_at: null,
   };
 }

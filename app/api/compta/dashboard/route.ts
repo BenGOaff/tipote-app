@@ -353,7 +353,7 @@ export async function GET() {
   // 7. Statut compta + jauge TVA
   let bpQ = supabaseAdmin
     .from("business_profiles")
-    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti, pt_iva_isento, pt_region")
+    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti, pt_iva_isento, pt_region, be_vat_franchise")
     .eq("user_id", user.id);
   if (projectId) bpQ = bpQ.eq("project_id", projectId);
   const { data: bp } = await bpQ.maybeSingle();
@@ -470,15 +470,26 @@ export async function GET() {
       const isento = (bp as { pt_iva_isento?: boolean } | null)?.pt_iva_isento;
       return isento === false;
     }
+    // BE — toutes les formes pro si pas en franchise.
+    if (
+      status === "independant_principal_be" ||
+      status === "independant_complementaire_be" ||
+      status === "srl_be" ||
+      status === "sa_be"
+    ) {
+      const franchise = (bp as { be_vat_franchise?: boolean } | null)?.be_vat_franchise;
+      return franchise === false;
+    }
     return false;
   })();
 
   // Taux TVA normal selon pays (CH 8.1%, FR 20%, PT 23/22/16% selon
-  // région). Pour estimer la TVA collectée on assume taux normal sur
-  // toutes les ventes — les exceptions sont statistiquement
+  // région, BE 21%). Pour estimer la TVA collectée on assume taux
+  // normal sur toutes les ventes — les exceptions sont statistiquement
   // minoritaires sur le CA YTD.
   const vatRateNormal = (() => {
     if (countryCode === "CH") return 8.1;
+    if (countryCode === "BE") return 21;
     if (countryCode === "PT") {
       const region = (bp as { pt_region?: string | null } | null)?.pt_region;
       if (region === "madeira") return 22;
