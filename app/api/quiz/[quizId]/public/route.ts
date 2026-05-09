@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getUserDEK } from "@/lib/piiKeys";
 import { encryptLeadPII } from "@/lib/piiCrypto";
 import { isNewLeadLocked } from "@/lib/leadLock";
@@ -267,7 +268,20 @@ async function addToSioCommunity(apiKey: string, communityId: string, contactId:
   }
 }
 
-// ── GET — public quiz data (only active quizzes) ───────────────
+// ── GET — public quiz data (active OR owner-preview) ──────────
+//
+// Bug Fabienne 2026-05-09 : avant, on filtrait `status = 'active'` direct
+// dans la query, donc un quiz en brouillon n'était jamais accessible
+// — même par son créateur en mode aperçu (`?preview_name=...`). Du
+// coup l'user voyait la bannière orange "Mode aperçu — Bonjour Alex"
+// + une page vide en dessous, et concluait "il n'y a pas d'aperçu".
+//
+// Maintenant : on fetch le quiz sans filtre status, puis on autorise
+//   • status === "active"          → tout le monde (visiteurs publics)
+//   • status === "draft" + owner   → uniquement le créateur authentifié
+// Sinon 404. La réponse "owner preview" est marquée `no-store` pour
+// échapper au cache CDN (sinon un visiteur anonyme pourrait servir
+// du draft cached).
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
@@ -280,13 +294,33 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,project_id,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_unlocked_message,share_message,share_networks,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,result_insight_heading,result_projection_heading,brand_font,brand_color_primary,brand_color_background,toast_widget_id,share_widget_id,show_consent_checkbox,mode").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_unlocked_message,share_message,share_networks,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,result_insight_heading,result_projection_heading,brand_font,brand_color_primary,brand_color_background,toast_widget_id,share_widget_id,show_consent_checkbox,mode").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
 
     if (!quizRes.data) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
+    }
+
+    const quizStatus = String((quizRes.data as { status?: string | null }).status ?? "");
+    const isActive = quizStatus === "active";
+    let isOwnerPreview = false;
+    if (!isActive) {
+      // Tente de lire l'user authentifié (silencieux si anonyme).
+      try {
+        const supabase = await getSupabaseServerClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        const ownerId = (quizRes.data as { user_id?: string | null }).user_id ?? null;
+        if (user && ownerId && user.id === ownerId) {
+          isOwnerPreview = true;
+        }
+      } catch {
+        // pas d'auth context → on tombe sur le 404 plus bas
+      }
+      if (!isOwnerPreview) {
+        return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
+      }
     }
 
     // Fetch creator's address_form + privacy_url + branding fallback from business_profiles
@@ -313,8 +347,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       tipoteAffiliateId = String((bp as any)?.tipote_affiliate_id ?? "").trim() || null;
     }
 
-    // Increment view count (non-blocking)
-    admin.from("quizzes").update({ views_count: (quizRes.data.views_count ?? 0) + 1 }).eq("id", quizId).then(() => {});
+    // Increment view count (non-blocking) — sauf en mode aperçu
+    // par le créateur (sinon il bumperait artificiellement ses stats).
+    if (!isOwnerPreview) {
+      admin.from("quizzes").update({ views_count: (quizRes.data.views_count ?? 0) + 1 }).eq("id", quizId).then(() => {});
+    }
 
     // Widget resolution: per-quiz override first, else first enabled widget
     // of the creator. An override is only honored if it still exists, still
@@ -457,6 +494,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({
       ok: true,
+      // Flag remonté quand le quiz est servi en mode aperçu (créateur
+      // sur un quiz draft). Le client affiche un toast pour informer
+      // qu'il faut publier pour partager — sinon l'user croit que tout
+      // est ok côté visiteur.
+      isDraftPreview: isOwnerPreview,
       toast_widget_id: toastWidgetId,
       share_widget_id: shareWidgetId,
       quiz: {
@@ -473,16 +515,25 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       // look by overlaying per-quiz `brand_*` on top of these.
       brand_fallback: brandFallback,
     }, {
-      // Same cache strategy as hosted_pages: edge SWR for resilience.
-      // - max-age=0: browser always revalidates → creator sees fresh
-      // - s-maxage=60: edge caches 60s → cheap origin protection
-      // - stale-while-revalidate=86400: edge serves last-good for up
-      //   to 24h when origin is down (deploy / crash / maintenance).
-      headers: {
-        "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
-        "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
-        "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
-      },
+      // Quiz public actif → cache edge SWR comme avant.
+      // Quiz draft servi à son créateur → no-store (sinon le CDN
+      // pourrait servir du contenu de brouillon à un visiteur anonyme).
+      headers: isOwnerPreview
+        ? {
+            "Cache-Control": "private, no-store, max-age=0",
+            "CDN-Cache-Control": "no-store",
+            "Vercel-CDN-Cache-Control": "no-store",
+          }
+        : {
+            // Same cache strategy as hosted_pages: edge SWR for resilience.
+            // - max-age=0: browser always revalidates → creator sees fresh
+            // - s-maxage=60: edge caches 60s → cheap origin protection
+            // - stale-while-revalidate=86400: edge serves last-good for up
+            //   to 24h when origin is down (deploy / crash / maintenance).
+            "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
+            "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+            "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+          },
     });
   } catch (e) {
     return NextResponse.json(

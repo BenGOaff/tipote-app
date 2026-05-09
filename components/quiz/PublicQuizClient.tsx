@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, ArrowLeft, Gift, CheckCircle2, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
 import {
@@ -819,6 +820,17 @@ export default function PublicQuizClient({
         if (!json?.ok || !json.quiz) {
           setError(getT(json?.quiz?.locale).quizUnavailable);
           return;
+        }
+        // Quiz draft servi à son créateur (mode aperçu) — on prévient
+        // explicitement via toast pour que l'user comprenne que la
+        // page n'est pas accessible publiquement tant qu'elle n'est
+        // pas publiée. Sinon il croit avoir un lien partageable.
+        if (json.isDraftPreview) {
+          toast.message("👁️ Aperçu de ton brouillon", {
+            description:
+              "Ce quiz n'est pas encore publié. Personne ne peut y accéder via ce lien — publie-le depuis l'éditeur pour le partager.",
+            duration: 8000,
+          });
         }
         // API returns quiz, questions, results as separate fields
         const quizData: PublicQuizData = {
