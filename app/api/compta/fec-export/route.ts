@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
   let bpQuery = supabase
     .from("business_profiles")
     .select(
-      "accounting_status, sasu_siren, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime",
+      "accounting_status, sasu_siren, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, eurl_is_election",
     )
     .eq("user_id", user.id);
   if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
@@ -78,14 +78,26 @@ export async function GET(req: NextRequest) {
     sasu_fiscal_year_calendar?: boolean | null;
     sasu_fiscal_year_start_month?: number | null;
     sasu_vat_regime?: string | null;
+    eurl_is_election?: boolean | null;
   } | null;
 
-  if (!profile || profile.accounting_status !== "sasu") {
+  // FEC obligatoire pour toute société soumise à l'IS : SASU, SAS,
+  // SARL, et EURL ayant opté pour l'IS. Pour une EURL à l'IR, le
+  // FEC n'est pas obligatoire (la liasse 2031/2035 suffit) mais on
+  // peut quand même produire le fichier pour faciliter le travail
+  // du comptable — on l'autorise donc aussi.
+  const status = profile?.accounting_status ?? null;
+  const eligible =
+    status === "sasu" ||
+    status === "sas" ||
+    status === "sarl" ||
+    status === "eurl";
+  if (!profile || !eligible) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          "Le FEC n'est obligatoire que pour les SASU (et autres sociétés à l'IS). Configure-toi en SASU dans l'onglet Compta si applicable.",
+          "Le FEC concerne les sociétés (SASU, SAS, SARL, EURL). Configure ton statut juridique dans l'onglet Compta si applicable.",
       },
       { status: 400 },
     );

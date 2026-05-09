@@ -405,8 +405,16 @@ export async function GET() {
   // card "TVA à payer" de l'onglet charges. Le FEC, lui, utilise
   // les vrais montants HT/TVA quand on les a au niveau transaction.
   const isVatable = (() => {
-    if (status === "sasu") {
-      return Boolean((bp as { sasu_vat_regime?: string | null } | null)?.sasu_vat_regime);
+    // Toutes les sociétés à l'IS partagent la même logique TVA
+    // (sasu_vat_regime). Pour EURL, on exige aussi qu'elle ait opté
+    // pour l'IS (sinon TVA optionnelle, comme pour AE).
+    const sasuVatRegime = (bp as { sasu_vat_regime?: string | null } | null)?.sasu_vat_regime;
+    if (status === "sasu" || status === "sas" || status === "sarl") {
+      return Boolean(sasuVatRegime);
+    }
+    if (status === "eurl") {
+      const eurlIs = (bp as { eurl_is_election?: boolean } | null)?.eurl_is_election;
+      return Boolean(eurlIs && sasuVatRegime);
     }
     if (status === "auto_entrepreneur") {
       const franchise = (bp as { ae_vat_franchise?: boolean } | null)?.ae_vat_franchise;

@@ -124,7 +124,10 @@ const UpdateSchema = z.object({
 
   // ─── Module Compta (étape 1b) ─────────────────────────────────
   // Statut principal — null efface la config, sinon une des 3 valeurs.
-  accounting_status: z.enum(["particulier", "auto_entrepreneur", "sasu"]).nullable().optional(),
+  accounting_status: z
+    .enum(["particulier", "auto_entrepreneur", "sasu", "sas", "sarl", "eurl"])
+    .nullable()
+    .optional(),
 
   // Particulier
   particulier_revenue_type: z.enum(["bnc_accessoire", "bic_accessoire", "autre"]).nullable().optional(),
@@ -146,6 +149,11 @@ const UpdateSchema = z.object({
   sasu_vat_regime: z.enum(["reel_mensuel", "reel_trimestriel", "simplifie"]).nullable().optional(),
   sasu_vat_intra_enabled: z.boolean().optional(),
   sasu_dirigeant_remunere: z.boolean().optional(),
+
+  // EURL / SARL — spécificités au-delà du tronc commun "société à l'IS"
+  // qui réutilise les colonnes sasu_*.
+  eurl_is_election: z.boolean().optional(),
+  sarl_gerant_majoritaire: z.boolean().optional(),
   // accounting_status_configured_at est défini côté serveur dans le PATCH
   // ci-dessous, pas accepté en input.
 

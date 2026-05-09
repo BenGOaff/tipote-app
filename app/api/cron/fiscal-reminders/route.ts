@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
   const { data: profiles, error } = await supabaseAdmin
     .from("business_profiles")
     .select(
-      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere",
+      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire",
     )
     .not("accounting_status", "is", null);
 
@@ -115,6 +115,8 @@ export async function GET(req: NextRequest) {
       sasu_vat_regime: (profile.sasu_vat_regime ?? null) as string | null,
       sasu_vat_intra_enabled: Boolean(profile.sasu_vat_intra_enabled),
       sasu_dirigeant_remunere: Boolean(profile.sasu_dirigeant_remunere),
+      eurl_is_election: Boolean(profile.eurl_is_election),
+      sarl_gerant_majoritaire: Boolean(profile.sarl_gerant_majoritaire),
     };
 
     const now = new Date();

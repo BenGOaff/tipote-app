@@ -46,9 +46,21 @@ export interface FiscalDeadline {
 }
 
 /** Sous-set du business_profiles pertinent pour le calendrier. On
- *  prend juste ce qu'on lit pour rester découplé de la table. */
+ *  prend juste ce qu'on lit pour rester découplé de la table.
+ *
+ *  Phase 1m : on accepte 6 statuts. Les colonnes `sasu_*` sont
+ *  utilisées pour TOUTES les sociétés à l'IS (sasu, sas, sarl,
+ *  eurl-IS) ; `eurl_is_election` et `sarl_gerant_majoritaire`
+ *  paramètrent les spécificités. */
 export interface FiscalProfile {
-  accounting_status: "particulier" | "auto_entrepreneur" | "sasu" | null;
+  accounting_status:
+    | "particulier"
+    | "auto_entrepreneur"
+    | "sasu"
+    | "sas"
+    | "sarl"
+    | "eurl"
+    | null;
   // AE
   ae_activity_type: string | null;
   ae_started_at: string | null;
@@ -58,12 +70,16 @@ export interface FiscalProfile {
   /** Régime TVA pour AE qui a dépassé la franchise. NULL si toujours
    *  en franchise (cas par défaut). */
   ae_vat_regime?: "reel_mensuel" | "reel_trimestriel" | "simplifie" | null;
-  // SASU
+  // Société (SASU/SAS/SARL/EURL) — colonnes sasu_* historiques
   sasu_fiscal_year_calendar: boolean;
   sasu_fiscal_year_start_month: number | null;
   sasu_vat_regime: string | null;
   sasu_vat_intra_enabled: boolean;
   sasu_dirigeant_remunere: boolean;
+  /** EURL : true si optée pour l'IS. Sinon IR par défaut. */
+  eurl_is_election?: boolean;
+  /** SARL : true si gérant majoritaire (TNS, pas de DSN). */
+  sarl_gerant_majoritaire?: boolean;
 }
 
 // ───────────────────────── Helpers date ─────────────────────────
@@ -160,7 +176,7 @@ function tvaDeclarations(
   intraEnabled: boolean,
   from: Date,
   to: Date,
-  idPrefix: "sasu" | "ae",
+  idPrefix: "sasu" | "sas" | "sarl" | "eurl" | "ae",
 ): FiscalDeadline[] {
   const out: FiscalDeadline[] = [];
 
@@ -388,9 +404,38 @@ function cfe(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[] {
   return out;
 }
 
-/** SASU avec dirigeant rémunéré — DSN mensuelle. */
-function dsnSASU(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[] {
+/** Liasse fiscale EURL à l'IR (2031 BIC ou 2035 BNC) — déposée
+ *  en téléprocédure obligatoire ~5 mai chaque année (variable
+ *  selon calendrier des jours ouvrés). */
+function liasseEurlIR(_profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[] {
+  const out: FiscalDeadline[] = [];
+  for (let year = from.getUTCFullYear(); year <= to.getUTCFullYear() + 1; year++) {
+    // 2e jour ouvré après le 1er mai → ~5 mai en pratique. On prend
+    // le 5 mai comme date prudente.
+    const due = utcDate(year, 5, 5);
+    if (due < from || due > to) continue;
+    out.push({
+      id: `eurl-liasse-ir-${year - 1}`,
+      dueDate: ymd(due),
+      kind: "ir_2042",
+      title: `Liasse fiscale EURL (2031/2035) — exercice ${year - 1}`,
+      description: `Dépose ta liasse fiscale (formulaire 2031 si BIC ou 2035 si BNC) sur impots.gouv.fr. Le bénéfice est ensuite reporté dans ta 2042 personnelle.`,
+      officialUrl: "https://www.impots.gouv.fr/professionnel",
+      severity: "important",
+    });
+  }
+  return out;
+}
+
+/** DSN — mensuelle pour les dirigeants assimilés salariés. NE
+ *  s'applique PAS aux gérants majoritaires de SARL (TNS) ni aux
+ *  dirigeants d'EURL à l'IR (TNS aussi). */
+function dsnCorporate(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[] {
   if (!profile.sasu_dirigeant_remunere) return [];
+  // SARL gérant majoritaire = TNS, pas de DSN
+  if (profile.accounting_status === "sarl" && profile.sarl_gerant_majoritaire) return [];
+  // EURL à l'IR = TNS, pas de DSN
+  if (profile.accounting_status === "eurl" && !profile.eurl_is_election) return [];
   const out: FiscalDeadline[] = [];
   for (const { year, month } of iterateMonths(from, to)) {
     // DSN du mois M est due le 15 du mois M+1 (effectif < 50).
@@ -433,18 +478,26 @@ export function computeFiscalDeadlines(
   if (!profile.accounting_status) return [];
   const out: FiscalDeadline[] = [];
 
+  // Détecte les sociétés à l'IS (SASU/SAS/SARL/EURL+IS) — mêmes
+  // obligations fiscales sauf nuances DSN.
+  const isCorporateAtIS =
+    profile.accounting_status === "sasu" ||
+    profile.accounting_status === "sas" ||
+    profile.accounting_status === "sarl" ||
+    (profile.accounting_status === "eurl" && profile.eurl_is_election === true);
+  const isEurlIR =
+    profile.accounting_status === "eurl" && profile.eurl_is_election !== true;
+
   if (profile.accounting_status === "auto_entrepreneur") {
     out.push(...urssafAE(profile, from, to));
     // AE qui a dépassé la franchise : il déclare la TVA selon son
-    // régime (par défaut simplifié). On réutilise la même logique
-    // que pour la SASU via tvaDeclarations — id préfixé "ae" pour
-    // ne pas collisionner avec d'éventuelles deadlines SASU.
+    // régime (par défaut simplifié).
     if (!profile.ae_vat_franchise && profile.ae_vat_regime) {
       out.push(...tvaDeclarations(profile.ae_vat_regime, false, from, to, "ae"));
     }
     out.push(...ir2042(profile, from, to));
     out.push(...cfe(profile, from, to));
-  } else if (profile.accounting_status === "sasu") {
+  } else if (isCorporateAtIS) {
     if (profile.sasu_vat_regime) {
       out.push(
         ...tvaDeclarations(
@@ -452,7 +505,11 @@ export function computeFiscalDeadlines(
           profile.sasu_vat_intra_enabled,
           from,
           to,
-          "sasu",
+          // idPrefix par statut pour traçabilité et stabilité des id
+          // (le tracking "fait" en localStorage et la dédup mail s'en
+          // servent). Toutes les sociétés à l'IS partagent le même
+          // pattern de deadlines TVA, mais les ids restent distincts.
+          (profile.accounting_status as "sasu" | "sas" | "sarl" | "eurl"),
         ),
       );
     }
@@ -460,7 +517,25 @@ export function computeFiscalDeadlines(
     out.push(...bilanSASU(profile, from, to));
     out.push(...ir2042(profile, from, to));
     out.push(...cfe(profile, from, to));
-    out.push(...dsnSASU(profile, from, to));
+    out.push(...dsnCorporate(profile, from, to));
+  } else if (isEurlIR) {
+    // EURL à l'IR : pas d'IS, pas de DSN. Liasse 2031/2035 + 2042
+    // perso + CFE. Dépôt des comptes annuels obligatoire aussi.
+    if (profile.sasu_vat_regime) {
+      out.push(
+        ...tvaDeclarations(
+          profile.sasu_vat_regime as "reel_mensuel" | "reel_trimestriel" | "simplifie",
+          profile.sasu_vat_intra_enabled,
+          from,
+          to,
+          "eurl",
+        ),
+      );
+    }
+    out.push(...liasseEurlIR(profile, from, to));
+    out.push(...bilanSASU(profile, from, to));
+    out.push(...ir2042(profile, from, to));
+    out.push(...cfe(profile, from, to));
   } else if (profile.accounting_status === "particulier") {
     out.push(...ir2042(profile, from, to));
   }

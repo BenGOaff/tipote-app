@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   let bpQuery = supabase
     .from("business_profiles")
     .select(
-      "country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere",
+      "country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire",
     )
     .eq("user_id", user.id);
   if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
@@ -92,6 +92,8 @@ export async function GET(req: NextRequest) {
     sasu_vat_regime: ((bp as Record<string, unknown>).sasu_vat_regime ?? null) as string | null,
     sasu_vat_intra_enabled: Boolean((bp as Record<string, unknown>).sasu_vat_intra_enabled),
     sasu_dirigeant_remunere: Boolean((bp as Record<string, unknown>).sasu_dirigeant_remunere),
+    eurl_is_election: Boolean((bp as Record<string, unknown>).eurl_is_election),
+    sarl_gerant_majoritaire: Boolean((bp as Record<string, unknown>).sarl_gerant_majoritaire),
   };
 
   const now = new Date();

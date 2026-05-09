@@ -4,13 +4,59 @@
 // Compta et le composant ComptaConfigForm. Centraliser ici évite
 // les divergences de chaînes magiques entre back et front.
 
-export type AccountingStatus = "particulier" | "auto_entrepreneur" | "sasu";
+export type AccountingStatus =
+  | "particulier"
+  | "auto_entrepreneur"
+  | "sasu"
+  | "sas"
+  | "sarl"
+  | "eurl";
 
 export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "particulier",
   "auto_entrepreneur",
   "sasu",
+  "sas",
+  "sarl",
+  "eurl",
 ];
+
+/** Sociétés à l'IS — partagent la même grille fiscale (TVA, IS,
+ *  bilan, CFE, DSN si dirigeant assimilé salarié). EURL est dans
+ *  cette catégorie UNIQUEMENT si elle a opté pour l'IS (cf.
+ *  `eurl_is_election`). Helper utilisé par fiscalCalendar.ts +
+ *  FecExportCard pour ne pas répéter la condition. */
+export function isCorporateAtIS(
+  status: AccountingStatus | null,
+  eurlIsElection: boolean,
+): boolean {
+  if (!status) return false;
+  if (status === "sasu" || status === "sas" || status === "sarl") return true;
+  if (status === "eurl" && eurlIsElection) return true;
+  return false;
+}
+
+/** Détermine si un dirigeant doit déclarer en DSN (assimilé salarié).
+ *  Cas où il NE faut PAS de DSN :
+ *    - SARL avec gérant majoritaire (TNS, URSSAF séparée)
+ *    - EURL à l'IR (gérant TNS)
+ *    - AE / particulier / dirigeant non rémunéré
+ */
+export function dirigeantAssimileSalarie(
+  status: AccountingStatus | null,
+  flags: {
+    sasuDirigeantRemunere: boolean;
+    sarlGerantMajoritaire: boolean;
+    eurlIsElection: boolean;
+  },
+): boolean {
+  if (!status) return false;
+  if (!flags.sasuDirigeantRemunere) return false;
+  if (status === "sasu" || status === "sas") return true;
+  if (status === "sarl") return !flags.sarlGerantMajoritaire;
+  if (status === "eurl") return flags.eurlIsElection && !flags.sarlGerantMajoritaire;
+  return false;
+}
 
 export type ParticulierRevenueType = "bnc_accessoire" | "bic_accessoire" | "autre";
 
@@ -116,12 +162,20 @@ export interface ComptaProfileSlice {
   /** Régime TVA pour AE qui a dépassé la franchise (sinon NULL). */
   ae_vat_regime: SasuVatRegime | null;
 
+  // Champs sasu_* sont utilisés pour TOUTES les sociétés à l'IS
+  // (sasu, sas, sarl, eurl si eurl_is_election=true). Garder les
+  // noms historiques pour ne pas casser le schéma.
   sasu_siren: string | null;
   sasu_fiscal_year_calendar: boolean;
   sasu_fiscal_year_start_month: number | null; // 1-12
   sasu_vat_regime: SasuVatRegime | null;
   sasu_vat_intra_enabled: boolean;
   sasu_dirigeant_remunere: boolean;
+  // Spécificités EURL et SARL ajoutées en phase 1m
+  /** EURL : true si l'EURL a opté pour l'IS (sinon IR par défaut). */
+  eurl_is_election: boolean;
+  /** SARL : true si gérant majoritaire (TNS) — affecte la DSN. */
+  sarl_gerant_majoritaire: boolean;
 }
 
 /** Valeurs par défaut quand on construit une slice à partir d'un row
@@ -145,5 +199,7 @@ export function emptyComptaSlice(): ComptaProfileSlice {
     sasu_vat_regime: null,
     sasu_vat_intra_enabled: false,
     sasu_dirigeant_remunere: false,
+    eurl_is_election: false,
+    sarl_gerant_majoritaire: false,
   };
 }

@@ -368,11 +368,11 @@ function ConfiguredSummary({
           CFE / DSN selon le statut. Lit /api/compta/fiscal-deadlines. */}
       <FiscalCalendar />
 
-      {/* Export FEC (1j) — réservé aux SASU (les AE / particuliers
-          n'ont pas l'obligation de tenir un FEC). On passe le SIREN
-          lu dans le slice pour pouvoir désactiver le bouton tant
-          qu'il n'est pas renseigné. */}
-      {status === "sasu" ? (
+      {/* Export FEC — pour toutes les sociétés (SASU/SAS/SARL/EURL).
+          Les AE et particuliers n'ont pas d'obligation de tenir un FEC.
+          Le bouton est désactivé tant que le SIREN n'est pas renseigné
+          (obligatoire dans le nom du fichier selon la norme fiscale). */}
+      {status === "sasu" || status === "sas" || status === "sarl" || status === "eurl" ? (
         <FecExportCard hasSiren={Boolean(slice.sasu_siren)} />
       ) : null}
     </div>
@@ -408,7 +408,25 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
           ? "Mensuelle"
           : "Trimestrielle (par défaut)",
     });
-  } else if (slice.accounting_status === "sasu") {
+  } else if (
+    slice.accounting_status === "sasu" ||
+    slice.accounting_status === "sas" ||
+    slice.accounting_status === "sarl" ||
+    slice.accounting_status === "eurl"
+  ) {
+    // Toutes les sociétés partagent les mêmes lignes de résumé
+    // (SIREN, exercice, TVA), avec en plus quelques spécificités
+    // par forme juridique.
+    const statusLabel =
+      slice.accounting_status === "sasu"
+        ? "SASU"
+        : slice.accounting_status === "sas"
+          ? "SAS"
+          : slice.accounting_status === "sarl"
+            ? "SARL"
+            : "EURL";
+    rows.push({ label: "Forme juridique", value: statusLabel });
+
     rows.push({
       label: "SIREN",
       value: slice.sasu_siren ?? "Non renseigné",
@@ -417,6 +435,22 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
         : undefined,
       hrefLabel: "Voir sur annuaire-entreprises",
     });
+
+    if (slice.accounting_status === "eurl") {
+      rows.push({
+        label: "Régime fiscal",
+        value: slice.eurl_is_election ? "IS (sur option)" : "IR (par défaut)",
+      });
+    }
+    if (slice.accounting_status === "sarl") {
+      rows.push({
+        label: "Statut du gérant",
+        value: slice.sarl_gerant_majoritaire
+          ? "Majoritaire (TNS — pas de DSN)"
+          : "Minoritaire / égalitaire (assimilé salarié)",
+      });
+    }
+
     rows.push({
       label: "Exercice fiscal",
       value: slice.sasu_fiscal_year_calendar
@@ -428,10 +462,27 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
       label: "TVA intracommunautaire",
       value: slice.sasu_vat_intra_enabled ? "Activée (DES requise)" : "Non",
     });
-    rows.push({
-      label: "Dirigeant rémunéré",
-      value: slice.sasu_dirigeant_remunere ? "Oui (URSSAF + DSN)" : "Non (dividendes uniquement)",
-    });
+    // Dirigeant rémunéré : seulement pertinent si le statut social
+    // est assimilé salarié. Pour SARL gérant majoritaire / EURL-IR,
+    // on affiche TNS à la place.
+    const isAssimile =
+      slice.accounting_status === "sasu" ||
+      slice.accounting_status === "sas" ||
+      (slice.accounting_status === "sarl" && !slice.sarl_gerant_majoritaire) ||
+      (slice.accounting_status === "eurl" && slice.eurl_is_election);
+    if (isAssimile) {
+      rows.push({
+        label: "Dirigeant rémunéré",
+        value: slice.sasu_dirigeant_remunere
+          ? "Oui (URSSAF + DSN)"
+          : "Non (dividendes uniquement)",
+      });
+    } else {
+      rows.push({
+        label: "Régime social",
+        value: "TNS — cotisations URSSAF travailleur indépendant",
+      });
+    }
   }
 
   return (
@@ -471,6 +522,12 @@ function statusLabel(s: AccountingStatus): string {
       return "Auto-entrepreneur";
     case "sasu":
       return "SASU";
+    case "sas":
+      return "SAS";
+    case "sarl":
+      return "SARL";
+    case "eurl":
+      return "EURL";
   }
 }
 

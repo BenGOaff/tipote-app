@@ -81,14 +81,28 @@ export default function ComptaConfigForm({
       if (!draft.ae_started_at) {
         next.ae_started_at = "Renseigne la date de début d'activité.";
       }
-    } else if (status === "sasu") {
+    } else if (
+      status === "sasu" ||
+      status === "sas" ||
+      status === "sarl" ||
+      status === "eurl"
+    ) {
+      // Toutes les sociétés partagent la même validation :
+      // SIREN obligatoire + exercice fiscal cohérent.
       if (!draft.sasu_siren || !SIREN_REGEX.test(draft.sasu_siren)) {
         next.sasu_siren = "SIREN invalide (9 chiffres exactement).";
       }
       if (!draft.sasu_fiscal_year_calendar && !draft.sasu_fiscal_year_start_month) {
         next.sasu_fiscal_year_start_month = "Indique le mois de début d'exercice.";
       }
-      if (!draft.sasu_vat_regime) {
+      // Régime TVA obligatoire pour les sociétés à l'IS. Pour une
+      // EURL à l'IR, la TVA reste optionnelle (souvent en franchise).
+      const isAtIS =
+        status === "sasu" ||
+        status === "sas" ||
+        status === "sarl" ||
+        (status === "eurl" && draft.eurl_is_election);
+      if (isAtIS && !draft.sasu_vat_regime) {
         next.sasu_vat_regime = "Choisis ton régime de TVA.";
       }
     }
@@ -123,7 +137,15 @@ export default function ComptaConfigForm({
       patch.ae_vat_regime = draft.ae_vat_franchise
         ? null
         : draft.ae_vat_regime ?? "simplifie";
-    } else if (status === "sasu") {
+    } else if (
+      status === "sasu" ||
+      status === "sas" ||
+      status === "sarl" ||
+      status === "eurl"
+    ) {
+      // Tronc commun pour toutes les sociétés (SIREN, exercice
+      // fiscal, TVA, dirigeant). Stocké dans les colonnes sasu_*
+      // historiques pour réutiliser la sémantique.
       patch.sasu_siren = draft.sasu_siren;
       patch.sasu_fiscal_year_calendar = draft.sasu_fiscal_year_calendar;
       patch.sasu_fiscal_year_start_month = draft.sasu_fiscal_year_calendar
@@ -132,6 +154,13 @@ export default function ComptaConfigForm({
       patch.sasu_vat_regime = draft.sasu_vat_regime;
       patch.sasu_vat_intra_enabled = draft.sasu_vat_intra_enabled;
       patch.sasu_dirigeant_remunere = draft.sasu_dirigeant_remunere;
+      // Spécificités par statut
+      if (status === "eurl") {
+        patch.eurl_is_election = draft.eurl_is_election;
+      }
+      if (status === "sarl") {
+        patch.sarl_gerant_majoritaire = draft.sarl_gerant_majoritaire;
+      }
     }
 
     await onSave(patch);
@@ -166,8 +195,11 @@ export default function ComptaConfigForm({
         />
       ) : null}
 
-      {status === "sasu" ? (
-        <SasuFields draft={draft} update={update} errors={errors} />
+      {status === "sasu" ||
+      status === "sas" ||
+      status === "sarl" ||
+      status === "eurl" ? (
+        <SasuFields draft={draft} update={update} errors={errors} status={status} />
       ) : null}
 
       {status ? (
@@ -208,31 +240,70 @@ function StatusPicker({
   value: AccountingStatus | null;
   onChange: (v: AccountingStatus) => void;
 }) {
+  // 6 cartes : 3 statuts "perso/solo" + 3 sociétés à l'IS. On garde
+  // toutes les options dans une seule grille à 3 colonnes pour ne
+  // pas multiplier les sections — l'user pige direct ce qui le
+  // concerne (sa carte est colorée).
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatusCard
-          icon={<User className="h-5 w-5" />}
-          title="Particulier"
-          desc="Tu gagnes de l'argent en plus de ton activité principale (ou aucune autre activité). Pas d'entreprise — tu déclares dans ta déclaration de revenus annuelle."
-          selected={value === "particulier"}
-          onClick={() => onChange("particulier")}
-        />
-        <StatusCard
-          icon={<Briefcase className="h-5 w-5" />}
-          title="Auto-entrepreneur"
-          desc="Tu as ouvert une micro-entreprise (régime simplifié). Tu déclares ton CA chaque mois ou trimestre sur urssaf.fr."
-          selected={value === "auto_entrepreneur"}
-          onClick={() => onChange("auto_entrepreneur")}
-        />
-        <StatusCard
-          icon={<Building2 className="h-5 w-5" />}
-          title="SASU"
-          desc="Tu as une société (SAS unipersonnelle). Tu paies l'IS, déclares la TVA, etc. Statut le plus complet."
-          selected={value === "sasu"}
-          onClick={() => onChange("sasu")}
-        />
+
+      <div>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+          Sans société dédiée
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <StatusCard
+            icon={<User className="h-5 w-5" />}
+            title="Particulier"
+            desc="Revenus accessoires (en plus d'un job ou pas d'autre activité). Déclaration dans la 2042 annuelle."
+            selected={value === "particulier"}
+            onClick={() => onChange("particulier")}
+          />
+          <StatusCard
+            icon={<Briefcase className="h-5 w-5" />}
+            title="Auto-entrepreneur"
+            desc="Micro-entreprise (régime simplifié). CA déclaré tous les mois/trimestres sur urssaf.fr."
+            selected={value === "auto_entrepreneur"}
+            onClick={() => onChange("auto_entrepreneur")}
+          />
+          <StatusCard
+            icon={<Briefcase className="h-5 w-5" />}
+            title="EURL"
+            desc="Société unipersonnelle à responsabilité limitée. Par défaut à l'IR (option IS possible). Comptabilité réelle."
+            selected={value === "eurl"}
+            onClick={() => onChange("eurl")}
+          />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+          Société à l&apos;IS
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <StatusCard
+            icon={<Building2 className="h-5 w-5" />}
+            title="SASU"
+            desc="SAS à associé unique. IS, TVA, bilan, DSN si tu te rémunères. Statut classique pour solopreneur."
+            selected={value === "sasu"}
+            onClick={() => onChange("sasu")}
+          />
+          <StatusCard
+            icon={<Building2 className="h-5 w-5" />}
+            title="SAS"
+            desc="Plusieurs associés. Mêmes obligations qu'une SASU. Président toujours assimilé salarié."
+            selected={value === "sas"}
+            onClick={() => onChange("sas")}
+          />
+          <StatusCard
+            icon={<Building2 className="h-5 w-5" />}
+            title="SARL"
+            desc="2 à 100 associés. IS par défaut. DSN seulement si gérant minoritaire (assimilé salarié)."
+            selected={value === "sarl"}
+            onClick={() => onChange("sarl")}
+          />
+        </div>
       </div>
     </div>
   );
@@ -527,16 +598,133 @@ function SasuFields({
   draft,
   update,
   errors,
+  status,
 }: {
   draft: ComptaProfileSlice;
   update: <K extends keyof ComptaProfileSlice>(key: K, value: ComptaProfileSlice[K]) => void;
   errors: Record<string, string>;
+  /** Statut courant : sasu / sas / sarl / eurl. Affecte le label
+   *  "SIREN de ta SASU" + l'affichage des champs spécifiques EURL
+   *  (option IS) et SARL (gérant majoritaire). */
+  status: "sasu" | "sas" | "sarl" | "eurl";
 }) {
+  const isEurlIR = status === "eurl" && !draft.eurl_is_election;
+  const isAtIS =
+    status === "sasu" ||
+    status === "sas" ||
+    status === "sarl" ||
+    (status === "eurl" && draft.eurl_is_election);
+
+  // Label adapté pour le SIREN selon la forme juridique.
+  const sirenLabel = (() => {
+    switch (status) {
+      case "sasu":
+        return "SIREN de ta SASU";
+      case "sas":
+        return "SIREN de ta SAS";
+      case "sarl":
+        return "SIREN de ta SARL";
+      case "eurl":
+        return "SIREN de ton EURL";
+    }
+  })();
+
   return (
     <Card className="p-5 space-y-5">
-      {/* SIREN */}
+      {/* Spécificité EURL : option IS — affiché en premier car ça
+          change la nature des autres champs (TVA notamment). */}
+      {status === "eurl" ? (
+        <div className="space-y-2">
+          <Label>Régime fiscal de ton EURL</Label>
+          <p className="text-xs text-muted-foreground">
+            Par défaut une EURL est à l&apos;IR (le bénéfice est
+            ajouté à ta déclaration personnelle via 2031/2035).
+            Tu peux opter pour l&apos;IS si tu préfères payer
+            l&apos;impôt au niveau de la société.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => update("eurl_is_election", false)}
+              className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                !draft.eurl_is_election
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              <div>IR (par défaut)</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                Liasse 2031/2035 + 2042 perso
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => update("eurl_is_election", true)}
+              className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                draft.eurl_is_election
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              <div>IS (sur option)</div>
+              <div className="text-[10px] text-muted-foreground font-normal">
+                Comme une SASU
+              </div>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Spécificité SARL : gérant majoritaire vs minoritaire */}
+      {status === "sarl" ? (
+        <div className="space-y-2">
+          <Label>Tu es gérant majoritaire ?</Label>
+          <p className="text-xs text-muted-foreground">
+            Gérant majoritaire (&gt; 50% des parts) = TNS,
+            cotisations URSSAF séparées, pas de DSN. Minoritaire
+            ou égalitaire = assimilé salarié, DSN obligatoire si
+            rémunéré.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => update("sarl_gerant_majoritaire", true)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                draft.sarl_gerant_majoritaire
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Majoritaire (TNS)
+            </button>
+            <button
+              type="button"
+              onClick={() => update("sarl_gerant_majoritaire", false)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                !draft.sarl_gerant_majoritaire
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Minoritaire / égalitaire
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {isEurlIR ? (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+          <strong>Mode EURL à l&apos;IR :</strong> ta liasse fiscale
+          (2031 ou 2035 selon ton activité) doit être télétransmise
+          au plus tard début mai chaque année. Le bénéfice est
+          ensuite reporté dans ta 2042 personnelle. Pas d&apos;IS
+          ni de DSN dans ce cas.
+        </div>
+      ) : null}
+
+      {/* SIREN — commun à toutes les formes société */}
       <div className="space-y-2">
-        <Label htmlFor="sasu-siren">SIREN de ta SASU</Label>
+        <Label htmlFor="sasu-siren">{sirenLabel}</Label>
         <p className="text-xs text-muted-foreground">
           9 chiffres. Tu le trouves sur ton extrait Kbis ou sur{" "}
           <a
