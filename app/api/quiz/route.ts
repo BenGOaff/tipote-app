@@ -181,6 +181,12 @@ export async function POST(req: NextRequest) {
     // shape (rating / star / free_text / image / yes_no / multiple_choice).
     // Quiz inserts that omit those fields fall through to the column
     // defaults, so legacy callers still work.
+    //
+    // Béné 2026-05-09 (bug Fabienne) : avant, on `console.error` les échecs
+    // sans rollback ni message côté client → l'user voyait "saved" alors
+    // que ses questions n'étaient jamais persistées, puis ouvrait son quiz
+    // et trouvait un truc vide. On supprime maintenant le quiz orphelin
+    // et on remonte l'erreur au front pour qu'il puisse retry.
     const ALLOWED_TYPES = new Set([
       "multiple_choice",
       "rating_scale",
@@ -205,7 +211,19 @@ export async function POST(req: NextRequest) {
           };
         }),
       );
-      if (qErr) console.error("[POST /api/quiz] Questions insert error:", qErr.message);
+      if (qErr) {
+        console.error("[POST /api/quiz] Questions insert error:", qErr.message);
+        // Rollback : supprime le quiz orphelin pour ne pas laisser de
+        // ligne fantôme dans la liste de l'user.
+        await supabase.from("quizzes").delete().eq("id", quiz.id);
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `Échec de l'enregistrement des questions : ${qErr.message}`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     // Insert results — surveys never have result profiles, so we skip the
@@ -228,7 +246,19 @@ export async function POST(req: NextRequest) {
           sort_order: i,
         })),
       );
-      if (rErr) console.error("[POST /api/quiz] Results insert error:", rErr.message);
+      if (rErr) {
+        console.error("[POST /api/quiz] Results insert error:", rErr.message);
+        // Rollback : supprime le quiz + ses questions déjà insérées.
+        await supabase.from("quiz_questions").delete().eq("quiz_id", quiz.id);
+        await supabase.from("quizzes").delete().eq("id", quiz.id);
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `Échec de l'enregistrement des résultats : ${rErr.message}`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     return NextResponse.json({ ok: true, quizId: quiz.id });
