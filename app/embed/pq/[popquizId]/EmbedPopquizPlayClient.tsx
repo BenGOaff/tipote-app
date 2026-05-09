@@ -1,54 +1,62 @@
 "use client";
 
-// Iframe-friendly variant of the public play client. Uses
-// `position: fixed; inset: 0` so the player always fills the iframe
-// viewport regardless of the embedding page's CSS. The player itself
-// keeps its 16:9 aspect-video, so when the snippet uses the standard
-// padding-bottom 56.25% trick, the fit is pixel-perfect.
+// Variante iframe-friendly de la page publique. Pas de wrapper
+// `fixed inset-0 bg-black` qui produisait une bordure noire moche
+// quand l'iframe n'était pas exactement en 16:9 — ici on laisse
+// l'iframe transparente et la vidéo occupe naturellement la place
+// que lui donne le code embed du créateur.
 //
-// Footer "via Tiquiz" : ajouté en absolu en bas du conteneur — un
-// vrai SaaS embed (Calendly, Typeform, Loom…) garde toujours sa
-// signature dans l'iframe pour la portée de marque. Tracking
-// d'affiliation appliqué automatiquement si le créateur a posé son
-// ID Tipote dans Settings.
+// L'apparence (bordure / ombre / bouton play / couleur du bouton)
+// est partagée avec la page publique via le helper appearance.ts —
+// rendu identique côté embed et côté lien direct.
+//
+// Footer "via Tiquiz" toujours présent (signature business). Pas
+// de titre/sous-titre/branding créateur dans l'embed pour rester
+// minimal et ne pas dupliquer ce que la page hôte affiche déjà.
 
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
 import { PopquizQuizIframe } from "@/components/popquiz/PopquizQuizIframe";
 import { usePopquizEventTracker } from "@/lib/popquiz/usePopquizEventTracker";
+import {
+  buildPlayerWrapperClassName,
+  buildPlayerWrapperStyle,
+  tiquizDiscoveryUrl,
+} from "@/lib/popquiz/appearance";
 import type { Popquiz } from "@/lib/popquiz";
-
-function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
-  const base = "https://www.tipote.fr/part-tiquiz";
-  if (!affiliateId) return base;
-  return `${base}?sa=${encodeURIComponent(affiliateId)}`;
-}
 
 export default function EmbedPopquizPlayClient({
   popquiz,
 }: {
   popquiz: Popquiz;
 }) {
+  const { branding, appearance } = popquiz;
   const onEvent = usePopquizEventTracker(popquiz.id);
+
+  const wrapperClassName = buildPlayerWrapperClassName(appearance);
+  const wrapperStyle = buildPlayerWrapperStyle(appearance);
+
   return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
-      <div className="w-full max-h-full">
-        <PopquizPlayer
-          popquiz={popquiz}
-          onEvent={onEvent}
-          renderOverlay={({ cue }) => <PopquizQuizIframe quizId={cue.quizId} />}
-        />
+    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-transparent">
+      <div className="w-full max-w-5xl mx-auto">
+        <div className={wrapperClassName} style={wrapperStyle}>
+          <PopquizPlayer
+            popquiz={popquiz}
+            onEvent={onEvent}
+            renderOverlay={({ cue }) => <PopquizQuizIframe quizId={cue.quizId} />}
+          />
+        </div>
+
+        {/* Footer "via Tiquiz" — discret, mais toujours présent dans
+            l'embed pour la portée business chez les hôtes externes. */}
+        <a
+          href={tiquizDiscoveryUrl(branding.tipoteAffiliateId)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center mt-2 text-[11px] text-foreground/40 hover:text-foreground/70 transition-colors"
+        >
+          Cette vidéo vous est proposée via Tiquiz
+        </a>
       </div>
-      {/* Signature Tiquiz — discrète mais persistante. Ne mange pas
-          de hauteur sur le player (positionnée par-dessus en bas du
-          conteneur fixé). */}
-      <a
-        href={tiquizDiscoveryUrl(popquiz.branding.tipoteAffiliateId)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-white/40 hover:text-white/70 transition-colors px-2 py-0.5 rounded bg-black/30 backdrop-blur-sm"
-      >
-        Cette vidéo vous est proposée via Tiquiz
-      </a>
     </div>
   );
 }

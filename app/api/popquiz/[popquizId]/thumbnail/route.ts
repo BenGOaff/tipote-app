@@ -90,17 +90,13 @@ export async function POST(
     );
   }
 
-  const videoId = extractVideoIdFromPath(popquiz.storagePath);
-  if (!videoId) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Vignette personnalisée disponible uniquement pour les vidéos uploadées (pas YouTube/Vimeo).",
-      },
-      { status: 400 },
-    );
-  }
+  // VideoId pour le path de stockage : pour les vidéos uploadées on
+  // l'extrait du storagePath existant (= même dossier que la vidéo
+  // source). Pour les YouTube / Vimeo / URL qui n'ont pas de
+  // storagePath, on retombe sur le popquizId — le thumbnail vit alors
+  // dans `<app>/raw/<uid>/<popquizId>/thumbnail-custom.<ext>`. Permet
+  // d'avoir une vignette custom pour TOUTE source de vidéo.
+  const videoId = extractVideoIdFromPath(popquiz.storagePath) ?? popquizId;
 
   let body: Record<string, unknown>;
   try {

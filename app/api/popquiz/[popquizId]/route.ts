@@ -106,6 +106,66 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     }
   }
 
+  // Personnalisation page publique (apparence). Tous optionnels —
+  // les defaults DB produisent un rendu propre sans config.
+  if ("display_title" in body) {
+    update.display_title =
+      typeof body.display_title === "string" && body.display_title.trim()
+        ? body.display_title.trim().slice(0, 200)
+        : null;
+  }
+  if ("display_subtitle" in body) {
+    update.display_subtitle =
+      typeof body.display_subtitle === "string" && body.display_subtitle.trim()
+        ? body.display_subtitle.trim().slice(0, 400)
+        : null;
+  }
+  if (typeof body.bg_style === "string") {
+    if (["transparent", "solid", "gradient"].includes(body.bg_style)) {
+      update.bg_style = body.bg_style;
+    }
+  }
+  if ("bg_color" in body) {
+    update.bg_color =
+      typeof body.bg_color === "string" && body.bg_color.trim()
+        ? body.bg_color.trim().slice(0, 32)
+        : null;
+  }
+  if ("bg_color_2" in body) {
+    update.bg_color_2 =
+      typeof body.bg_color_2 === "string" && body.bg_color_2.trim()
+        ? body.bg_color_2.trim().slice(0, 32)
+        : null;
+  }
+  if (typeof body.border_width === "number") {
+    update.border_width = Math.max(0, Math.min(16, Math.round(body.border_width)));
+  }
+  if ("border_color" in body) {
+    update.border_color =
+      typeof body.border_color === "string" && body.border_color.trim()
+        ? body.border_color.trim().slice(0, 32)
+        : null;
+  }
+  if (typeof body.shadow_intensity === "string") {
+    if (["none", "soft", "medium", "strong"].includes(body.shadow_intensity)) {
+      update.shadow_intensity = body.shadow_intensity;
+    }
+  }
+  if ("play_button_color" in body) {
+    update.play_button_color =
+      typeof body.play_button_color === "string" && body.play_button_color.trim()
+        ? body.play_button_color.trim().slice(0, 32)
+        : null;
+  }
+  if (typeof body.play_button_shape === "string") {
+    if (["circle", "rounded", "square"].includes(body.play_button_shape)) {
+      update.play_button_shape = body.play_button_shape;
+    }
+  }
+  if (typeof body.show_creator_branding === "boolean") {
+    update.show_creator_branding = body.show_creator_branding;
+  }
+
   if (Object.keys(update).length > 0) {
     const { error } = await supabase
       .from("popquizzes")

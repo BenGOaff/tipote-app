@@ -207,6 +207,32 @@ export default function PopquizEditClient({
       : "auto",
   );
 
+  // Apparence de la page publique (titre / fond / bordure / ombre /
+  // bouton play). Tous defaults = rendu propre minimal.
+  const [displayTitle, setDisplayTitle] = useState(
+    popquiz.appearance.displayTitle ?? "",
+  );
+  const [displaySubtitle, setDisplaySubtitle] = useState(
+    popquiz.appearance.displaySubtitle ?? "",
+  );
+  const [bgStyle, setBgStyle] = useState<"transparent" | "solid" | "gradient">(
+    popquiz.appearance.bgStyle,
+  );
+  const [bgColor, setBgColor] = useState(popquiz.appearance.bgColor ?? "#0f172a");
+  const [bgColor2, setBgColor2] = useState(popquiz.appearance.bgColor2 ?? "#1e293b");
+  const [borderWidth, setBorderWidth] = useState(popquiz.appearance.borderWidth);
+  const [borderColor, setBorderColor] = useState(popquiz.appearance.borderColor ?? "#ffffff");
+  const [shadowIntensity, setShadowIntensity] = useState<"none" | "soft" | "medium" | "strong">(
+    popquiz.appearance.shadowIntensity,
+  );
+  const [playButtonColor, setPlayButtonColor] = useState(popquiz.appearance.playButtonColor ?? "");
+  const [playButtonShape, setPlayButtonShape] = useState<"circle" | "rounded" | "square">(
+    popquiz.appearance.playButtonShape,
+  );
+  const [showCreatorBranding, setShowCreatorBranding] = useState(
+    popquiz.appearance.showCreatorBranding,
+  );
+
   const initialCues: DraftCue[] = popquiz.cues.map<DraftCue>((c) => ({
     localId: c.id,
     quizId: c.quizId,
@@ -290,6 +316,18 @@ export default function PopquizEditClient({
           slug: slug.trim(),
           description: description.trim() || null,
           is_published: willPublish,
+          // Personnalisation page publique
+          display_title: displayTitle.trim() || null,
+          display_subtitle: displaySubtitle.trim() || null,
+          bg_style: bgStyle,
+          bg_color: bgStyle === "transparent" ? null : bgColor,
+          bg_color_2: bgStyle === "gradient" ? bgColor2 : null,
+          border_width: borderWidth,
+          border_color: borderWidth > 0 ? borderColor : null,
+          shadow_intensity: shadowIntensity,
+          play_button_color: playButtonColor.trim() || null,
+          play_button_shape: playButtonShape,
+          show_creator_branding: showCreatorBranding,
           cues: cues.map((c) => ({
             quiz_id: c.quizId,
             timestamp_ms: c.timestampMs,
@@ -435,7 +473,10 @@ export default function PopquizEditClient({
             popquizId={popquiz.id}
             currentUrl={thumbnailUrl}
             currentSource={thumbnailSource}
-            enabled={popquiz.video.source === "upload"}
+            // Vignette custom dispo pour TOUTE source vidéo (upload,
+            // YouTube, Vimeo, URL) — l'image se substitue au poster
+            // automatique dès qu'elle est appliquée.
+            enabled={true}
             onUpdated={({ source, thumbnailUrl: nextUrl }) => {
               setThumbnailSource(source);
               if (nextUrl) setThumbnailUrl(nextUrl);
@@ -652,6 +693,235 @@ export default function PopquizEditClient({
           (popquiz.isPublished) pour que la carte de partage apparaisse
           IMMÉDIATEMENT après un clic sur "Publier", sans attendre que
           router.refresh() ait re-fetché le SSR. */}
+      {/* Apparence de la page publique — visible quel que soit le
+          statut (publié ou pas). Permet de personnaliser le rendu
+          AVANT de publier. */}
+      <Card>
+        <CardContent className="py-5 space-y-5">
+          <div>
+            <h2 className="text-base font-semibold">Apparence de la page publique</h2>
+            <p className="text-xs text-muted-foreground">
+              Pour le lien direct (`/pq/...`) et l&apos;embed iframe.
+              Tout est optionnel — sans config, la page affiche juste
+              la vidéo de manière propre.
+            </p>
+          </div>
+
+          {/* Titre + sous-titre */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="display-title">Titre affiché (optionnel)</Label>
+              <Input
+                id="display-title"
+                value={displayTitle}
+                onChange={(e) => setDisplayTitle(e.target.value)}
+                placeholder="Ex : La méthode pour..."
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="display-subtitle">Sous-titre (optionnel)</Label>
+              <Input
+                id="display-subtitle"
+                value={displaySubtitle}
+                onChange={(e) => setDisplaySubtitle(e.target.value)}
+                placeholder="Ex : Découvre comment en 12 minutes"
+                maxLength={400}
+              />
+            </div>
+          </div>
+
+          {/* Fond */}
+          <div className="space-y-2">
+            <Label>Fond de la page</Label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: "transparent", label: "Aucun (transparent)" },
+                { value: "solid", label: "Couleur unie" },
+                { value: "gradient", label: "Dégradé" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() =>
+                    setBgStyle(opt.value as "transparent" | "solid" | "gradient")
+                  }
+                  className={`text-xs rounded-md border px-3 py-1.5 transition ${
+                    bgStyle === opt.value
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {bgStyle !== "transparent" && (
+              <div className="flex items-center gap-3 flex-wrap pt-1">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">
+                    {bgStyle === "gradient" ? "Couleur 1" : "Couleur"}
+                  </Label>
+                  <input
+                    type="color"
+                    value={bgColor}
+                    onChange={(e) => setBgColor(e.target.value)}
+                    className="size-9 rounded border cursor-pointer"
+                  />
+                </div>
+                {bgStyle === "gradient" && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs">Couleur 2</Label>
+                    <input
+                      type="color"
+                      value={bgColor2}
+                      onChange={(e) => setBgColor2(e.target.value)}
+                      className="size-9 rounded border cursor-pointer"
+                    />
+                  </div>
+                )}
+                {/* Aperçu */}
+                <div
+                  className="h-9 flex-1 min-w-[120px] rounded border"
+                  style={{
+                    background:
+                      bgStyle === "gradient"
+                        ? `linear-gradient(135deg, ${bgColor}, ${bgColor2})`
+                        : bgColor,
+                  }}
+                  aria-label="Aperçu du fond"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Bordure */}
+          <div className="space-y-2">
+            <Label>Bordure autour de la vidéo</Label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Épaisseur</Label>
+                <select
+                  value={borderWidth}
+                  onChange={(e) => setBorderWidth(parseInt(e.target.value, 10))}
+                  className="rounded border bg-background px-2 py-1 text-xs"
+                >
+                  <option value="0">Aucune</option>
+                  <option value="1">1 px (fine)</option>
+                  <option value="2">2 px</option>
+                  <option value="4">4 px</option>
+                  <option value="8">8 px</option>
+                  <option value="12">12 px (épaisse)</option>
+                </select>
+              </div>
+              {borderWidth > 0 && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">Couleur</Label>
+                  <input
+                    type="color"
+                    value={borderColor}
+                    onChange={(e) => setBorderColor(e.target.value)}
+                    className="size-9 rounded border cursor-pointer"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ombre */}
+          <div className="space-y-2">
+            <Label>Ombre portée</Label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: "none", label: "Aucune" },
+                { value: "soft", label: "Douce" },
+                { value: "medium", label: "Moyenne" },
+                { value: "strong", label: "Forte" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() =>
+                    setShadowIntensity(opt.value as "none" | "soft" | "medium" | "strong")
+                  }
+                  className={`text-xs rounded-md border px-3 py-1.5 transition ${
+                    shadowIntensity === opt.value
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bouton play */}
+          <div className="space-y-2">
+            <Label>Bouton play (overlay vidéo)</Label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Forme</Label>
+                <div className="flex gap-1">
+                  {[
+                    { value: "circle", label: "Rond" },
+                    { value: "rounded", label: "Arrondi" },
+                    { value: "square", label: "Carré" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        setPlayButtonShape(opt.value as "circle" | "rounded" | "square")
+                      }
+                      className={`text-xs rounded-md border px-2 py-1 transition ${
+                        playButtonShape === opt.value
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-border hover:bg-muted/40"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Couleur (optionnel)</Label>
+                <input
+                  type="color"
+                  value={playButtonColor || "#ffffff"}
+                  onChange={(e) => setPlayButtonColor(e.target.value)}
+                  className="size-9 rounded border cursor-pointer"
+                />
+                {playButtonColor && (
+                  <button
+                    type="button"
+                    onClick={() => setPlayButtonColor("")}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    réinitialiser
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Branding créateur */}
+          <div className="flex items-center gap-3 pt-2 border-t">
+            <input
+              type="checkbox"
+              id="show-creator-branding"
+              checked={showCreatorBranding}
+              onChange={(e) => setShowCreatorBranding(e.target.checked)}
+              className="size-4 rounded"
+            />
+            <Label htmlFor="show-creator-branding" className="text-sm cursor-pointer">
+              Afficher mon logo et lien site sur la page publique
+            </Label>
+          </div>
+        </CardContent>
+      </Card>
+
       {isPublished ? (
         <Card>
           <CardContent className="py-5 space-y-4">

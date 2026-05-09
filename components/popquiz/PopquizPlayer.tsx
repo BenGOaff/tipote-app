@@ -114,15 +114,29 @@ function CueMarkers({ cues }: { cues: PopquizCue[] }) {
   );
 }
 
-function CenterPlayVisual() {
+function CenterPlayVisual({
+  color,
+  shape,
+}: {
+  /** Couleur custom du bouton play. null/undefined = glass blanc transparent. */
+  color: string | null | undefined;
+  /** Forme du bouton — circle / rounded / square. */
+  shape: "circle" | "rounded" | "square";
+}) {
   const paused = useMediaState("paused");
+  const radius =
+    shape === "circle" ? "9999px" : shape === "rounded" ? "16px" : "4px";
+  const bg = color || "rgba(255,255,255,0.15)";
   return (
     <div
       className={`absolute inset-0 grid place-items-center pointer-events-none transition-all duration-300 z-[5] ${
         paused ? "opacity-100 scale-100" : "opacity-0 scale-90"
       }`}
     >
-      <span className="size-16 sm:size-20 rounded-full bg-white/15 backdrop-blur-md grid place-items-center shadow-2xl">
+      <span
+        className="size-16 sm:size-20 grid place-items-center shadow-2xl backdrop-blur-md"
+        style={{ background: bg, borderRadius: radius }}
+      >
         <Play className="size-7 sm:size-9 text-white fill-white ml-1" />
       </span>
     </div>
@@ -518,7 +532,10 @@ export function PopquizPlayer({
 
         <PlayButton className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none" />
 
-        <CenterPlayVisual />
+        <CenterPlayVisual
+          color={popquiz.appearance.playButtonColor}
+          shape={popquiz.appearance.playButtonShape}
+        />
         <BufferingOverlay />
         <CustomControls cues={cues} shareTitle={popquiz.title || "Popquiz"} />
 
