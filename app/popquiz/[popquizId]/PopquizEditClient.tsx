@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { PageBanner } from "@/components/PageBanner";
+import { PageContainer } from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ import {
 } from "@/lib/popquiz/appearance";
 import { buildEmbedSnippet } from "@/components/popquiz/EmbedCodeDialog";
 import { ThumbnailPicker } from "@/components/popquiz/ThumbnailPicker";
-import { sanitizeRichText } from "@/lib/richText";
+import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import type { Popquiz, PopquizCue } from "@/lib/popquiz";
 import { toast } from "sonner";
 
@@ -462,7 +463,8 @@ export default function PopquizEditClient({
   );
 
   return (
-    <AppShell userEmail={userEmail} headerTitle="Modifier le popquiz">
+    <AppShell userEmail={userEmail} headerTitle="Modifier le popquiz" contentClassName="flex-1">
+      <PageContainer>
       <PageBanner
         icon={<Video className="h-5 w-5" />}
         title={title || "Popquiz"}
@@ -593,7 +595,7 @@ export default function PopquizEditClient({
           personnalisation, droite la vidéo unique + timeline +
           marqueurs. Aucun tweak de margin/padding spécifique : on
           reste sur la grille standard de l'app. */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Colonne gauche : personnalisation. PopquizAppearanceForm
             est déjà un Card, donc on l'utilise tel quel. */}
         <PopquizAppearanceForm
@@ -674,21 +676,28 @@ export default function PopquizEditClient({
                   : { background: "transparent" }
               }
             >
-              {previewMode === "direct" && previewPopquiz.appearance.displayTitle ? (
-                <h3
-                  className="tiquiz-rich text-center text-base font-bold text-white drop-shadow-sm mb-1.5"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeRichText(previewPopquiz.appearance.displayTitle),
-                  }}
-                />
-              ) : null}
-              {previewMode === "direct" && previewPopquiz.appearance.displaySubtitle ? (
-                <p
-                  className="tiquiz-rich text-center text-xs text-white/80 mb-2"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeRichText(previewPopquiz.appearance.displaySubtitle),
-                  }}
-                />
+              {/* Titre / sous-titre éditables INLINE — clique pour
+                  modifier (toolbar : gras / italique / couleur /
+                  alignement / lien). Apparaît seulement en mode
+                  "lien direct" car ils ne s'affichent pas en iframe.
+                  Le HTML produit est sanitisé côté public. */}
+              {previewMode === "direct" ? (
+                <div className="space-y-1 mb-2 text-center">
+                  <RichTextEdit
+                    value={displayTitle}
+                    onChange={setDisplayTitle}
+                    singleLine
+                    placeholder="Clique pour ajouter un titre"
+                    className="tiquiz-rich text-base font-bold text-white drop-shadow-sm"
+                  />
+                  <RichTextEdit
+                    value={displaySubtitle}
+                    onChange={setDisplaySubtitle}
+                    singleLine
+                    placeholder="Clique pour ajouter un sous-titre"
+                    className="tiquiz-rich text-xs text-white/80"
+                  />
+                </div>
               ) : null}
               <div
                 className={buildPlayerWrapperClassName(previewPopquiz.appearance)}
@@ -974,6 +983,7 @@ export default function PopquizEditClient({
           </>
         )}
       </div>
+      </PageContainer>
     </AppShell>
   );
 }

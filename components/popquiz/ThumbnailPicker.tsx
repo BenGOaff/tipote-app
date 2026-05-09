@@ -47,20 +47,29 @@ const MAX_SCALE = 4;
 type Source = "auto" | "custom";
 
 interface Props {
-  popquizId: string;
-  /** Currently displayed thumbnail (signed URL minted by repo.ts). */
+  /** Si présent : on uploade direct via l'API. Si vide / undefined :
+   *  on stage le blob localement et on notifie le parent via
+   *  `onBlobReady` — usage : page de création où le popquiz n'existe
+   *  pas encore (upload différé après création). */
+  popquizId?: string;
+  /** Currently displayed thumbnail (signed URL minted by repo.ts).
+   *  Sur /popquiz/new on passe une URL.createObjectURL du blob staged. */
   currentUrl: string | null;
   /** "auto" or "custom" — drives the badge + the "restore" button. */
   currentSource: Source;
   /** Whether the popquiz is using an uploaded video (vs YouTube/Vimeo).
    *  Custom thumbnails are only available for uploaded videos. */
   enabled: boolean;
-  /** Called after a successful PATCH so the parent can refresh state. */
-  onUpdated: (next: {
+  /** Called after a successful PATCH so the parent can refresh state.
+   *  Optional sur la page de création où le popquiz n'existe pas. */
+  onUpdated?: (next: {
     source: Source;
     thumbnailPath: string | null;
     thumbnailUrl: string | null;
   }) => void;
+  /** Mode "stage local" — appelé avec le blob recadré au lieu de
+   *  l'uploader. Le parent stocke le blob et l'envoie après save. */
+  onBlobReady?: (blob: Blob | null) => void;
 }
 
 export function ThumbnailPicker({
@@ -69,7 +78,10 @@ export function ThumbnailPicker({
   currentSource,
   enabled,
   onUpdated,
+  onBlobReady,
 }: Props) {
+  // Mode "stage local" si pas de popquizId — on délègue au parent.
+  const isStageMode = !popquizId;
   const inputRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -96,6 +108,14 @@ export function ThumbnailPicker({
 
   async function handleCropConfirmed(blob: Blob) {
     setPendingFile(null);
+
+    // Mode "stage local" : on délègue au parent qui uploadera plus
+    // tard (typiquement après la création du popquiz).
+    if (isStageMode) {
+      onBlobReady?.(blob);
+      return;
+    }
+
     setBusy(true);
     try {
       // 1. ask backend for an upload token bound to this popquiz
@@ -157,7 +177,7 @@ export function ThumbnailPicker({
         throw new Error(patchJson.error || "Impossible d'appliquer la vignette.");
       }
 
-      onUpdated({
+      onUpdated?.({
         source: "custom",
         thumbnailPath: patchJson.thumbnailPath ?? null,
         thumbnailUrl: patchJson.thumbnailUrl ?? null,
@@ -172,6 +192,11 @@ export function ThumbnailPicker({
   }
 
   async function handleRestoreAuto() {
+    // Mode "stage local" : on dit juste au parent d'oublier le blob.
+    if (isStageMode) {
+      onBlobReady?.(null);
+      return;
+    }
     setRestoring(true);
     try {
       const res = await fetch(`/api/popquiz/${popquizId}/thumbnail`, {
@@ -189,7 +214,7 @@ export function ThumbnailPicker({
       if (!res.ok || !json.ok) {
         throw new Error(json.error || "Impossible de restaurer la vignette auto.");
       }
-      onUpdated({
+      onUpdated?.({
         source: "auto",
         thumbnailPath: json.thumbnailPath ?? null,
         thumbnailUrl: json.thumbnailUrl ?? null,

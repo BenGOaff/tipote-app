@@ -14,6 +14,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as tus from "tus-js-client";
 import {
   Plus,
   Trash2,
@@ -27,6 +28,7 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { PageBanner } from "@/components/PageBanner";
+import { PageContainer } from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,13 +49,14 @@ import {
 } from "@/components/ui/dialog";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
 import { PopquizAppearanceForm } from "@/components/popquiz/PopquizAppearanceForm";
+import { ThumbnailPicker } from "@/components/popquiz/ThumbnailPicker";
 import {
   buildPlayerWrapperClassName,
   buildPlayerWrapperStyle,
   buildPageBackgroundStyle,
 } from "@/lib/popquiz/appearance";
 import { buildEmbedSnippet } from "@/components/popquiz/EmbedCodeDialog";
-import { sanitizeRichText } from "@/lib/richText";
+import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import {
   VideoUploader,
   type UploadedVideo,
@@ -89,6 +92,52 @@ function genId(): string {
     return crypto.randomUUID();
   }
   return `cue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Upload différé d'une vignette stagée localement avant la création
+// du popquiz. Reproduit le flow de ThumbnailPicker (token → tus →
+// PATCH) côté création, parce que le composant lui-même délègue au
+// parent quand `popquizId` est absent.
+async function uploadStagedThumbnail(popquizId: string, blob: Blob) {
+  const tokenRes = await fetch(`/api/popquiz/${popquizId}/thumbnail`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ fileName: "thumbnail.jpg", fileSize: blob.size }),
+  });
+  const tokenJson = (await tokenRes.json()) as {
+    ok: boolean;
+    uploadUrl?: string;
+    token?: string;
+    storagePath?: string;
+    error?: string;
+  };
+  if (!tokenRes.ok || !tokenJson.ok || !tokenJson.uploadUrl || !tokenJson.token) {
+    throw new Error(tokenJson.error || "Impossible de préparer l'envoi.");
+  }
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(blob, {
+      endpoint: tokenJson.uploadUrl!,
+      headers: { authorization: `Bearer ${tokenJson.token!}` },
+      retryDelays: [0, 2000, 5000, 10000],
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: 1 * 1024 * 1024,
+      onError: (err) => reject(err),
+      onSuccess: () => resolve(),
+    });
+    upload.start();
+  });
+  const patchRes = await fetch(`/api/popquiz/${popquizId}/thumbnail`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ mode: "custom", storagePath: tokenJson.storagePath }),
+  });
+  const patchJson = (await patchRes.json()) as { ok: boolean; error?: string };
+  if (!patchRes.ok || !patchJson.ok) {
+    throw new Error(patchJson.error || "Impossible d'appliquer la vignette.");
+  }
 }
 
 function TimelineStrip({
@@ -240,6 +289,25 @@ export default function PopquizNewClient({
   // Aperçu : mode "lien direct" (avec titre/sous-titre/fond/branding)
   // ou "iframe" (vidéo seule).
   const [previewMode, setPreviewMode] = useState<"direct" | "iframe">("direct");
+
+  // Vignette stagée localement avant la première sauvegarde. Quand
+  // l'user crop son image, on garde le Blob ici et on génère une URL
+  // d'aperçu (revoked au remplacement). À la sauvegarde du popquiz,
+  // on enchaîne avec l'upload tus + PATCH côté backend.
+  const [stagedThumbBlob, setStagedThumbBlob] = useState<Blob | null>(null);
+  const [stagedThumbUrl, setStagedThumbUrl] = useState<string | null>(null);
+
+  function handleStagedThumb(blob: Blob | null) {
+    // Revoke l'URL précédente pour libérer la mémoire navigateur.
+    if (stagedThumbUrl) URL.revokeObjectURL(stagedThumbUrl);
+    if (blob) {
+      setStagedThumbBlob(blob);
+      setStagedThumbUrl(URL.createObjectURL(blob));
+    } else {
+      setStagedThumbBlob(null);
+      setStagedThumbUrl(null);
+    }
+  }
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
 
@@ -426,6 +494,26 @@ export default function PopquizNewClient({
       // côté publish, ou on bouclait sur /quizzes côté brouillon, et
       // l'user devait re-cliquer pour ouvrir l'éditeur complet.
       const newId = json.popquizId as string | undefined;
+
+      // Si l'user a stagé une vignette custom AVANT la première
+      // sauvegarde (la page n'avait pas d'ID popquiz à ce moment),
+      // on l'uploade maintenant qu'on a un ID. On enchaîne sans
+      // bloquer le flow — si ça échoue, l'user peut re-essayer
+      // depuis la page d'édition.
+      if (newId && stagedThumbBlob) {
+        try {
+          await uploadStagedThumbnail(newId, stagedThumbBlob);
+        } catch (e) {
+          // Non-bloquant : on log + on toast mais on continue la
+          // redirection. L'user retrouvera son popquiz sans vignette
+          // custom (la auto sera utilisée) et pourra ré-uploader.
+          console.error("[popquiz/new] thumbnail upload failed", e);
+          toast.error(
+            "Popquiz créé, mais l'envoi de la vignette a échoué. Réessaie depuis l'éditeur.",
+          );
+        }
+      }
+
       if (publish && newId) {
         toast.success("Popquiz publié");
         router.push(`/popquiz/${newId}`);
@@ -482,7 +570,8 @@ export default function PopquizNewClient({
   const markerColor = "hsl(var(--primary))";
 
   return (
-    <AppShell userEmail={userEmail} headerTitle="Nouveau Popquiz">
+    <AppShell userEmail={userEmail} headerTitle="Nouveau Popquiz" contentClassName="flex-1">
+      <PageContainer>
       <PageBanner
         icon={<Video className="h-5 w-5" />}
         title="Nouveau popquiz"
@@ -539,6 +628,17 @@ export default function PopquizNewClient({
             </Tabs>
           </div>
 
+          {/* Vignette personnalisée — dispo dès la création.
+              Mode "stage local" : on garde le blob recadré côté
+              client et on l'envoie automatiquement après la 1ère
+              sauvegarde (gérée par uploadStagedThumbnail). */}
+          <ThumbnailPicker
+            currentUrl={stagedThumbUrl}
+            currentSource={stagedThumbBlob ? "custom" : "auto"}
+            enabled={true}
+            onBlobReady={handleStagedThumb}
+          />
+
           <div className="space-y-1.5">
             <Label htmlFor="slug">
               Lien personnalisé{" "}
@@ -570,7 +670,7 @@ export default function PopquizNewClient({
       {/* En dessous de l'info full-width : 2 colonnes — gauche
           personnalisation, droite la vidéo unique + timeline +
           marqueurs. */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Colonne gauche : personnalisation. */}
         <PopquizAppearanceForm
           idPrefix="np"
@@ -649,21 +749,23 @@ export default function PopquizNewClient({
                     : { background: "transparent" }
                 }
               >
-                {previewMode === "direct" && draftPopquiz.appearance.displayTitle ? (
-                  <h3
-                    className="tiquiz-rich text-center text-base font-bold text-white drop-shadow-sm mb-1.5"
-                    dangerouslySetInnerHTML={{
-                      __html: sanitizeRichText(draftPopquiz.appearance.displayTitle),
-                    }}
-                  />
-                ) : null}
-                {previewMode === "direct" && draftPopquiz.appearance.displaySubtitle ? (
-                  <p
-                    className="tiquiz-rich text-center text-xs text-white/80 mb-2"
-                    dangerouslySetInnerHTML={{
-                      __html: sanitizeRichText(draftPopquiz.appearance.displaySubtitle),
-                    }}
-                  />
+                {previewMode === "direct" ? (
+                  <div className="space-y-1 mb-2 text-center">
+                    <RichTextEdit
+                      value={displayTitle}
+                      onChange={setDisplayTitle}
+                      singleLine
+                      placeholder="Clique pour ajouter un titre"
+                      className="tiquiz-rich text-base font-bold text-white drop-shadow-sm"
+                    />
+                    <RichTextEdit
+                      value={displaySubtitle}
+                      onChange={setDisplaySubtitle}
+                      singleLine
+                      placeholder="Clique pour ajouter un sous-titre"
+                      className="tiquiz-rich text-xs text-white/80"
+                    />
+                  </div>
                 ) : null}
                 <div
                   className={buildPlayerWrapperClassName(draftPopquiz.appearance)}
@@ -931,6 +1033,7 @@ export default function PopquizNewClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </PageContainer>
     </AppShell>
   );
 }

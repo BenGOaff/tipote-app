@@ -1,18 +1,17 @@
 "use client";
 
-// ColorSwatchPicker — color picker partagé. Bouton swatch qui ouvre
-// un popover style RichTextEdit avec :
-//   • palette curée 10 couleurs (mêmes que l'éditeur de texte du quiz
-//     pour cohérence)
-//   • input hex éditable (#xxxxxx)
-//   • input <type="color"> natif pour le custom
+// ColorSwatchPicker — popover de sélection de couleur "à la systeme.io" :
+//   • carré HSV (saturation × valeur) + slider de teinte (`HexColorPicker`
+//     de react-colorful — ~3kb gzipped)
+//   • input hex éditable
+//   • palette curée 10 swatches (cohérente avec celle de RichTextEdit)
 //
-// Pas de hook lourd ni de lib externe — on reste alignés avec le
-// reste de l'app (cf. RichTextEdit qui sert le même pattern pour
-// la couleur du texte). Le bouton trigger affiche la couleur courante
-// pour que l'user voie en un coup d'œil ce qui est sélectionné.
+// Composant générique réutilisable dans tout l'app (apparence popquiz,
+// éditeur de quiz, branding, etc.). Trigger = un swatch de la couleur
+// courante qui ouvre le popover ; clic-out ferme.
 
 import { useEffect, useRef, useState } from "react";
+import { HexColorPicker } from "react-colorful";
 
 const SWATCHES: Array<{ hex: string; label: string }> = [
   { hex: "#000000", label: "Noir" },
@@ -44,14 +43,11 @@ export function ColorSwatchPicker({ value, onChange, label, disabled }: Props) {
   const popRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  // Sync local hex input avec la valeur extérieure quand on rouvre
-  // le popover (sinon on garde la saisie en cours).
   useEffect(() => {
     if (!open) setHexInput(value);
   }, [open, value]);
 
-  // Click-out → ferme. On écoute sur document pour attraper les
-  // clics hors du popover sans intercepter ceux du bouton.
+  // Click-out → ferme.
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
@@ -90,55 +86,80 @@ export function ColorSwatchPicker({ value, onChange, label, disabled }: Props) {
       {open && !disabled ? (
         <div
           ref={popRef}
-          className="absolute z-30 top-full left-0 mt-1 w-56 rounded-lg border bg-background shadow-lg p-2 space-y-2"
+          className="absolute z-30 top-full left-0 mt-1 w-60 rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
         >
-          <div className="grid grid-cols-5 gap-1">
-            {SWATCHES.map((s) => (
-              <button
-                key={s.hex}
-                type="button"
-                onClick={() => {
-                  onChange(s.hex);
-                  setOpen(false);
-                }}
-                title={s.label}
-                className={`w-8 h-8 rounded-md border transition-transform hover:scale-110 ${
-                  value.toLowerCase() === s.hex
-                    ? "border-primary ring-2 ring-primary/30"
-                    : "border-border/60"
-                }`}
-                style={{ backgroundColor: s.hex }}
-                aria-label={s.label}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-2 pt-1 border-t">
-            <input
-              type="color"
-              value={value || "#ffffff"}
-              onChange={(e) => onChange(e.target.value)}
-              className="w-7 h-7 rounded cursor-pointer border-0 p-0"
-              aria-label="Couleur personnalisée"
+          {/* HSV square + hue slider — composant react-colorful.
+              On force la largeur full pour que le carré HSV remplisse
+              le popover proprement. */}
+          <div className="rcw">
+            <HexColorPicker
+              color={value || "#ffffff"}
+              onChange={onChange}
             />
+          </div>
+
+          {/* Hex input + palette */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">#</span>
             <input
               type="text"
-              value={hexInput}
-              onChange={(e) => setHexInput(e.target.value)}
+              value={hexInput.startsWith("#") ? hexInput.slice(1) : hexInput}
+              onChange={(e) => setHexInput("#" + e.target.value.replace(/^#/, ""))}
               onBlur={() => commitHex(hexInput)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
                   commitHex(hexInput);
-                  setOpen(false);
                 }
               }}
-              placeholder="#7ed321"
+              placeholder="7ed321"
               spellCheck={false}
               className="flex-1 min-w-0 h-7 rounded border bg-background px-2 text-xs font-mono uppercase"
             />
           </div>
+
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+              Couleurs enregistrées
+            </div>
+            <div className="grid grid-cols-5 gap-1">
+              {SWATCHES.map((s) => (
+                <button
+                  key={s.hex}
+                  type="button"
+                  onClick={() => {
+                    onChange(s.hex);
+                  }}
+                  title={s.label}
+                  className={`w-8 h-8 rounded-md border transition-transform hover:scale-110 ${
+                    value.toLowerCase() === s.hex
+                      ? "border-primary ring-2 ring-primary/30"
+                      : "border-border/60"
+                  }`}
+                  style={{ backgroundColor: s.hex }}
+                  aria-label={s.label}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       ) : null}
+      {/* Override la largeur par défaut de react-colorful (200px) pour
+          coller au popover et donner un peu plus de surface au carré. */}
+      <style jsx global>{`
+        .rcw .react-colorful {
+          width: 100%;
+          height: 140px;
+        }
+        .rcw .react-colorful__saturation {
+          border-radius: 6px 6px 0 0;
+        }
+        .rcw .react-colorful__hue,
+        .rcw .react-colorful__alpha {
+          height: 14px;
+          border-radius: 0 0 6px 6px;
+        }
+      `}</style>
     </div>
   );
 }

@@ -4,16 +4,17 @@
 // publique d'un popquiz. Partagé entre PopquizNewClient et
 // PopquizEditClient pour ne pas dupliquer la UI.
 //
+// Note 2026-05-09 : titre / sous-titre ont été retirés de ce form,
+// ils sont maintenant éditables INLINE dans la preview à droite
+// (clic pour éditer, comme dans l'éditeur de quiz). Le form ne gère
+// donc plus que fond / bordure / ombre / bouton play / branding.
+//
 // Toutes les valeurs sont contrôlées par le parent (controlled
 // component) — le form ne gère pas la persistance, juste la saisie.
-// Le parent (qu'il s'agisse de la page de création ou d'édition) est
-// responsable d'envoyer ces valeurs à l'API.
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
-import { RichTextEdit } from "@/components/ui/rich-text-edit";
 
 export type BgStyle = "transparent" | "solid" | "gradient";
 export type ShadowIntensity = "none" | "soft" | "medium" | "strong";
@@ -63,49 +64,10 @@ export function PopquizAppearanceForm(props: Props) {
           <h2 className="text-base font-semibold">Apparence de la page publique</h2>
           <p className="text-xs text-muted-foreground">
             Pour le lien direct <code className="px-1 bg-muted rounded">/pq/...</code>{" "}
-            et l&apos;embed iframe. Tout est optionnel — sans config,
-            la page affiche juste la vidéo proprement.
+            et l&apos;embed iframe. Le titre et le sous-titre sont
+            éditables directement dans l&apos;aperçu à droite (clique
+            pour modifier).
           </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>
-              Titre affiché{" "}
-              <span className="text-muted-foreground font-normal text-xs">
-                (lien direct uniquement)
-              </span>
-            </Label>
-            {/* RichTextEdit : clique pour éditer, sélectionne pour
-                appliquer gras / italique / couleur / alignement —
-                comme dans l'éditeur de quiz. */}
-            <div className="rounded-md border bg-background px-2 py-1.5 min-h-[2.25rem]">
-              <RichTextEdit
-                value={props.displayTitle}
-                onChange={props.setDisplayTitle}
-                singleLine
-                placeholder="Ex : La méthode pour..."
-                className="text-sm"
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>
-              Sous-titre{" "}
-              <span className="text-muted-foreground font-normal text-xs">
-                (lien direct uniquement)
-              </span>
-            </Label>
-            <div className="rounded-md border bg-background px-2 py-1.5 min-h-[2.25rem]">
-              <RichTextEdit
-                value={props.displaySubtitle}
-                onChange={props.setDisplaySubtitle}
-                singleLine
-                placeholder="Ex : Découvre comment en 12 minutes"
-                className="text-sm"
-              />
-            </div>
-          </div>
         </div>
 
         <div className="space-y-2">
