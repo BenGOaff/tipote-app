@@ -19,8 +19,14 @@
 // constructed in client code is annotated `: DraftCue` so the
 // literal `"block" | "optional"` is preserved through array spreads.
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  autosaveKey,
+  saveAutosave,
+  loadAutosave,
+  clearAutosave,
+} from "@/lib/popquiz/autosave";
 import {
   Plus,
   Trash2,
@@ -265,6 +271,100 @@ export default function PopquizEditClient({
   // toucher à la persistance — les valeurs saisies sont les mêmes.
   const [previewMode, setPreviewMode] = useState<"direct" | "iframe">("direct");
 
+  // ─── Autosave silencieux ────────────────────────────────────────
+  // Même pattern que PopquizNewClient mais clé scopée par popquiz ID
+  // pour ne pas mélanger les brouillons de plusieurs popquizzes.
+  // Vignette : la persistance d'un Blob serveur n'a pas de sens ici
+  // (l'image est déjà uploadée), on ne stocke que les champs édités.
+  const AUTOSAVE_KEY = autosaveKey(popquiz.id);
+  const [autosaveHydrated, setAutosaveHydrated] = useState(false);
+
+  useEffect(() => {
+    type Saved = {
+      title: string;
+      slug: string;
+      description: string;
+      cues: DraftCue[];
+      displayTitle: string;
+      displaySubtitle: string;
+      bgStyle: "transparent" | "solid" | "gradient";
+      bgColor: string;
+      bgColor2: string;
+      borderWidth: number;
+      borderColor: string;
+      shadowIntensity: "none" | "soft" | "medium" | "strong";
+      playButtonColor: string;
+      playButtonShape: "circle" | "rounded" | "square";
+      showCreatorBranding: boolean;
+      previewMode: "direct" | "iframe";
+    };
+    const saved = loadAutosave<Saved>(AUTOSAVE_KEY);
+    if (saved) {
+      setTitle(saved.title);
+      setSlug(saved.slug);
+      setDescription(saved.description);
+      setCues(saved.cues);
+      setDisplayTitle(saved.displayTitle);
+      setDisplaySubtitle(saved.displaySubtitle);
+      setBgStyle(saved.bgStyle);
+      setBgColor(saved.bgColor);
+      setBgColor2(saved.bgColor2);
+      setBorderWidth(saved.borderWidth);
+      setBorderColor(saved.borderColor);
+      setShadowIntensity(saved.shadowIntensity);
+      setPlayButtonColor(saved.playButtonColor);
+      setPlayButtonShape(saved.playButtonShape);
+      setShowCreatorBranding(saved.showCreatorBranding);
+      setPreviewMode(saved.previewMode);
+    }
+    setAutosaveHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!autosaveHydrated) return;
+    const t = setTimeout(() => {
+      saveAutosave(AUTOSAVE_KEY, {
+        title,
+        slug,
+        description,
+        cues,
+        displayTitle,
+        displaySubtitle,
+        bgStyle,
+        bgColor,
+        bgColor2,
+        borderWidth,
+        borderColor,
+        shadowIntensity,
+        playButtonColor,
+        playButtonShape,
+        showCreatorBranding,
+        previewMode,
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [
+    autosaveHydrated,
+    AUTOSAVE_KEY,
+    title,
+    slug,
+    description,
+    cues,
+    displayTitle,
+    displaySubtitle,
+    bgStyle,
+    bgColor,
+    bgColor2,
+    borderWidth,
+    borderColor,
+    shadowIntensity,
+    playButtonColor,
+    playButtonShape,
+    showCreatorBranding,
+    previewMode,
+  ]);
+
   // The popquiz handed in already carries hydrated branding; for
   // the editor preview we override accent so timeline markers
   // match the player.
@@ -356,6 +456,10 @@ export default function PopquizEditClient({
         setError(json.error ?? "Erreur lors de la sauvegarde");
         return;
       }
+      // Save serveur OK → on nettoie l'autosave local pour ne pas
+      // ré-hydrater des données obsolètes au prochain mount.
+      clearAutosave(AUTOSAVE_KEY);
+
       // Sync local state to what was sent so les boutons reflètent
       // immédiatement le nouveau statut sans attendre router.refresh().
       setIsPublished(willPublish);

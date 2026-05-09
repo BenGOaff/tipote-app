@@ -12,9 +12,17 @@
 // Vocabulary: we say "marqueur" everywhere user-facing. "Cue" only
 // survives in the wire format / DB. Same idea, French label.
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as tus from "tus-js-client";
+import {
+  autosaveKey,
+  saveAutosave,
+  loadAutosave,
+  clearAutosave,
+  blobToDataUrl,
+  dataUrlToBlob,
+} from "@/lib/popquiz/autosave";
 import {
   Plus,
   Trash2,
@@ -311,6 +319,124 @@ export default function PopquizNewClient({
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
 
+  // ─── Autosave silencieux ────────────────────────────────────────
+  // 1) Au mount : on hydrate depuis localStorage si une session
+  //    précédente n'a jamais été sauvegardée. La vignette stagée
+  //    revit via un dataURL → Blob.
+  // 2) À chaque changement d'un champ : on re-sérialise dans
+  //    localStorage (debounced 400 ms pour éviter de spammer le
+  //    storage à chaque keystroke).
+  // 3) Au save serveur réussi : on clean la clé pour ne pas écraser
+  //    le state initial à la prochaine ouverture.
+  const AUTOSAVE_KEY = autosaveKey("new");
+  const [autosaveHydrated, setAutosaveHydrated] = useState(false);
+
+  useEffect(() => {
+    type Saved = {
+      title: string;
+      slug: string;
+      sourceMode: SourceMode;
+      url: string;
+      uploaded: UploadedVideo | null;
+      cues: DraftCue[];
+      displayTitle: string;
+      displaySubtitle: string;
+      bgStyle: "transparent" | "solid" | "gradient";
+      bgColor: string;
+      bgColor2: string;
+      borderWidth: number;
+      borderColor: string;
+      shadowIntensity: "none" | "soft" | "medium" | "strong";
+      playButtonColor: string;
+      playButtonShape: "circle" | "rounded" | "square";
+      showCreatorBranding: boolean;
+      previewMode: "direct" | "iframe";
+      stagedThumbDataUrl: string | null;
+    };
+    const saved = loadAutosave<Saved>(AUTOSAVE_KEY);
+    if (saved) {
+      setTitle(saved.title);
+      setSlug(saved.slug);
+      setSourceMode(saved.sourceMode);
+      setUrl(saved.url);
+      setUploaded(saved.uploaded);
+      setCues(saved.cues);
+      setDisplayTitle(saved.displayTitle);
+      setDisplaySubtitle(saved.displaySubtitle);
+      setBgStyle(saved.bgStyle);
+      setBgColor(saved.bgColor);
+      setBgColor2(saved.bgColor2);
+      setBorderWidth(saved.borderWidth);
+      setBorderColor(saved.borderColor);
+      setShadowIntensity(saved.shadowIntensity);
+      setPlayButtonColor(saved.playButtonColor);
+      setPlayButtonShape(saved.playButtonShape);
+      setShowCreatorBranding(saved.showCreatorBranding);
+      setPreviewMode(saved.previewMode);
+      if (saved.stagedThumbDataUrl) {
+        dataUrlToBlob(saved.stagedThumbDataUrl).then((blob) => {
+          if (blob) {
+            setStagedThumbBlob(blob);
+            setStagedThumbUrl(URL.createObjectURL(blob));
+          }
+        });
+      }
+    }
+    setAutosaveHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!autosaveHydrated) return;
+    const t = setTimeout(async () => {
+      const stagedThumbDataUrl = await blobToDataUrl(stagedThumbBlob);
+      saveAutosave(AUTOSAVE_KEY, {
+        title,
+        slug,
+        sourceMode,
+        url,
+        uploaded,
+        cues,
+        displayTitle,
+        displaySubtitle,
+        bgStyle,
+        bgColor,
+        bgColor2,
+        borderWidth,
+        borderColor,
+        shadowIntensity,
+        playButtonColor,
+        playButtonShape,
+        showCreatorBranding,
+        previewMode,
+        stagedThumbDataUrl,
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [
+    autosaveHydrated,
+    AUTOSAVE_KEY,
+    title,
+    slug,
+    sourceMode,
+    url,
+    uploaded,
+    cues,
+    displayTitle,
+    displaySubtitle,
+    bgStyle,
+    bgColor,
+    bgColor2,
+    borderWidth,
+    borderColor,
+    shadowIntensity,
+    playButtonColor,
+    playButtonShape,
+    showCreatorBranding,
+    previewMode,
+    stagedThumbBlob,
+  ]);
+
   const parsedUrl = useMemo(() => parseVideoUrl(url), [url]);
 
   // Build a draft Popquiz so the live preview uses the same player
@@ -494,6 +620,10 @@ export default function PopquizNewClient({
       // côté publish, ou on bouclait sur /quizzes côté brouillon, et
       // l'user devait re-cliquer pour ouvrir l'éditeur complet.
       const newId = json.popquizId as string | undefined;
+
+      // Save serveur OK → on nettoie l'autosave local pour ne pas
+      // ré-hydrater des données obsolètes au prochain visit.
+      clearAutosave(AUTOSAVE_KEY);
 
       // Si l'user a stagé une vignette custom AVANT la première
       // sauvegarde (la page n'avait pas d'ID popquiz à ce moment),
