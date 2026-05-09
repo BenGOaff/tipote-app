@@ -35,6 +35,7 @@ import {
 import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 import ComptaConnections from "@/components/settings/ComptaConnections";
 import ComptaManualTransactions from "@/components/settings/ComptaManualTransactions";
+import { ComptaExpenseItems } from "@/components/settings/ComptaExpenseItems";
 import ComptaDashboard from "@/components/settings/ComptaDashboard";
 import { FiscalCalendar } from "@/components/settings/FiscalCalendar";
 import { FecExportCard } from "@/components/settings/FecExportCard";
@@ -357,6 +358,11 @@ function ConfiguredSummary({
 
       {/* Section "Saisies manuelles" — virements / espèces / chèques (1e) */}
       <ComptaManualTransactions />
+
+      {/* Achats / charges + TVA déductible (1k) — pour calculer la
+          vraie TVA à payer (collectée - déductible) et nourrir le
+          FEC en écritures d'achat. */}
+      <ComptaExpenseItems />
 
       {/* Calendrier fiscal personnalisé (1i) — URSSAF / TVA / IS / IR /
           CFE / DSN selon le statut. Lit /api/compta/fiscal-deadlines. */}

@@ -79,6 +79,24 @@ const COMPTE_VENTE_SERVICES = { num: "706000", lib: "Prestations de services" };
 const COMPTE_VENTE_MARCHANDISES = { num: "707000", lib: "Ventes de marchandises" };
 const COMPTE_AFFILIATE = { num: "758000", lib: "Produits divers de gestion courante" };
 const COMPTE_TVA_COLLECTEE = { num: "445710", lib: "TVA collectée" };
+const COMPTE_TVA_DEDUCTIBLE = { num: "445660", lib: "TVA déductible sur biens et services" };
+
+/** Mapping catégorie expense_item → compte de charge (PCG général).
+ *  Permet de produire un FEC où chaque achat tombe dans le bon
+ *  compte 6XX. Le comptable peut affiner derrière, mais c'est déjà
+ *  utilisable comme base. */
+const COMPTE_CHARGE_BY_CATEGORY: Record<string, { num: string; lib: string }> = {
+  achats: { num: "607000", lib: "Achats de marchandises" },
+  services: { num: "611000", lib: "Sous-traitance générale" },
+  fournitures: { num: "606300", lib: "Fournitures non stockables" },
+  deplacements: { num: "625100", lib: "Voyages et déplacements" },
+  logiciels: { num: "651100", lib: "Redevances logiciels et services en ligne" },
+  loyer: { num: "613200", lib: "Locations immobilières" },
+  communication: { num: "626000", lib: "Frais postaux et télécommunications" },
+  marketing: { num: "623100", lib: "Annonces et insertions" },
+  formation: { num: "631100", lib: "Versement formation professionnelle continue" },
+  autre: { num: "658000", lib: "Charges diverses de gestion courante" },
+};
 
 const TVA_RATE = 0.2; // Taux normal France 20%
 
@@ -159,7 +177,8 @@ function fecLine(row: {
 
 // ───────────────────────── Main builder ─────────────────────────
 
-interface NormalizedRow {
+interface SaleRow {
+  type: "sale";
   paidAt: string; // ISO
   amountCents: number; // TTC
   currency: string;
@@ -170,6 +189,21 @@ interface NormalizedRow {
   source: "psp" | "manual";
   paymentMethod: "bank" | "cash"; // route comptable d'encaissement
 }
+
+interface ExpenseRow {
+  type: "expense";
+  paidAt: string; // ISO
+  amountTtcCents: number;
+  vatDeductibleCents: number;
+  vatRate: number;
+  currency: string;
+  vendorName: string | null;
+  description: string | null;
+  pieceRef: string;
+  category: string; // expense category → compte 6XX via map
+}
+
+type FecRow = SaleRow | ExpenseRow;
 
 export async function buildFecExport(input: FecExportInput): Promise<FecExportResult> {
   const { userId, projectId, fromYmd, toYmd, siren, vatRegime } = input;
@@ -204,32 +238,62 @@ export async function buildFecExport(input: FecExportInput): Promise<FecExportRe
   const { data: manData, error: manErr } = await manQuery;
   if (manErr) throw new Error(`FEC manual fetch: ${manErr.message}`);
 
-  // Normalisation commune
-  const rows: NormalizedRow[] = [];
+  // 3. Achats / charges (expense_items, phase 1k)
+  let expQuery = supabaseAdmin
+    .from("expense_items")
+    .select(
+      "id, amount_ttc_cents, currency, vat_rate, vat_deductible_cents, vendor_name, description, category, paid_at",
+    )
+    .eq("user_id", userId)
+    .gte("paid_at", fromYmd)
+    .lte("paid_at", toYmd)
+    .order("paid_at", { ascending: true });
+  if (projectId) expQuery = expQuery.eq("project_id", projectId);
+  const { data: expData, error: expErr } = await expQuery;
+  if (expErr) throw new Error(`FEC expense fetch: ${expErr.message}`);
+
+  // Normalisation commune (ventes + achats)
+  const rows: FecRow[] = [];
   for (const t of (txData ?? []) as Array<Record<string, unknown>>) {
     rows.push({
+      type: "sale",
       paidAt: String(t.paid_at),
       amountCents: Number(t.amount_cents) || 0,
       currency: String(t.currency || "EUR"),
       description: (t.description as string | null) ?? null,
       customerName: ((t.customer_name as string | null) ?? (t.customer_email as string | null)) ?? null,
       pieceRef: String(t.provider_transaction_id),
-      category: (t.category as NormalizedRow["category"]) ?? "sale",
+      category: (t.category as SaleRow["category"]) ?? "sale",
       source: "psp",
       paymentMethod: "bank",
     });
   }
   for (const m of (manData ?? []) as Array<Record<string, unknown>>) {
     rows.push({
+      type: "sale",
       paidAt: `${String(m.paid_at)}T12:00:00Z`,
       amountCents: Number(m.amount_cents) || 0,
       currency: String(m.currency || "EUR"),
       description: (m.description as string | null) ?? null,
       customerName: (m.customer_name as string | null) ?? null,
       pieceRef: `MAN-${String(m.id).slice(0, 8)}`,
-      category: (m.category as NormalizedRow["category"]) ?? "sale",
+      category: (m.category as SaleRow["category"]) ?? "sale",
       source: "manual",
       paymentMethod: m.source_label === "especes" ? "cash" : "bank",
+    });
+  }
+  for (const e of (expData ?? []) as Array<Record<string, unknown>>) {
+    rows.push({
+      type: "expense",
+      paidAt: `${String(e.paid_at)}T12:00:00Z`,
+      amountTtcCents: Number(e.amount_ttc_cents) || 0,
+      vatDeductibleCents: Number(e.vat_deductible_cents) || 0,
+      vatRate: Number(e.vat_rate) || 0,
+      currency: String(e.currency || "EUR"),
+      vendorName: (e.vendor_name as string | null) ?? null,
+      description: (e.description as string | null) ?? null,
+      pieceRef: `EXP-${String(e.id).slice(0, 8)}`,
+      category: String(e.category || "autre"),
     });
   }
 
@@ -255,81 +319,129 @@ export async function buildFecExport(input: FecExportInput): Promise<FecExportRe
     const ecritureNum = `${yearPrefix}${String(entryCount).padStart(6, "0")}`;
     const ecritureDate = tsToCompact(row.paidAt);
     const pieceDate = ecritureDate;
-    const lib = clean(
-      row.description
-        ? `${row.description}${row.customerName ? ` — ${row.customerName}` : ""}`
-        : row.customerName ?? `Encaissement ${row.pieceRef}`,
-    );
 
-    // Compte d'encaissement (débit)
-    const compteEnc = row.paymentMethod === "cash" ? COMPTE_CAISSE : COMPTE_BANQUE;
-    // Compte de produit (crédit)
-    const compteProduit =
-      row.category === "affiliate"
-        ? COMPTE_AFFILIATE
-        : COMPTE_VENTE_SERVICES; // défaut : services. Tipote ne distingue pas
-    //                              services / marchandises au niveau transaction —
-    //                              le comptable peut reclasser au besoin.
+    if (row.type === "sale") {
+      const lib = clean(
+        row.description
+          ? `${row.description}${row.customerName ? ` — ${row.customerName}` : ""}`
+          : row.customerName ?? `Encaissement ${row.pieceRef}`,
+      );
 
-    // Calcul HT / TVA
-    let ht = row.amountCents;
-    let tva = 0;
-    if (hasVat && row.category !== "affiliate") {
-      // 20% inclus dans le TTC : HT = TTC / 1.20
-      ht = Math.round(row.amountCents / (1 + TVA_RATE));
-      tva = row.amountCents - ht;
-    }
+      const compteEnc = row.paymentMethod === "cash" ? COMPTE_CAISSE : COMPTE_BANQUE;
+      const compteProduit =
+        row.category === "affiliate" ? COMPTE_AFFILIATE : COMPTE_VENTE_SERVICES;
 
-    const baseRow = {
-      journalCode: "VT",
-      journalLib: "Ventes",
-      ecritureNum,
-      ecritureDate,
-      pieceRef: clean(row.pieceRef).slice(0, 80),
-      pieceDate,
-      ecritureLib: lib,
-      validDate,
-      montantDevise: row.currency === "EUR" ? "" : fmtAmount(row.amountCents),
-      idevise: row.currency === "EUR" ? "" : row.currency,
-    };
+      let ht = row.amountCents;
+      let tva = 0;
+      if (hasVat && row.category !== "affiliate") {
+        ht = Math.round(row.amountCents / (1 + TVA_RATE));
+        tva = row.amountCents - ht;
+      }
 
-    // Ligne 1 : débit du compte d'encaissement (TTC)
-    lines.push(
-      fecLine({
-        ...baseRow,
-        compteNum: compteEnc.num,
-        compteLib: compteEnc.lib,
-        compAuxNum: "",
-        compAuxLib: "",
-        debit: row.amountCents,
-        credit: 0,
-      }),
-    );
+      const baseRow = {
+        journalCode: "VT",
+        journalLib: "Ventes",
+        ecritureNum,
+        ecritureDate,
+        pieceRef: clean(row.pieceRef).slice(0, 80),
+        pieceDate,
+        ecritureLib: lib,
+        validDate,
+        montantDevise: row.currency === "EUR" ? "" : fmtAmount(row.amountCents),
+        idevise: row.currency === "EUR" ? "" : row.currency,
+      };
 
-    // Ligne 2 : crédit du produit (HT si TVA, TTC sinon)
-    lines.push(
-      fecLine({
-        ...baseRow,
-        compteNum: compteProduit.num,
-        compteLib: compteProduit.lib,
-        compAuxNum: row.customerName ? siren : "",
-        compAuxLib: row.customerName ? clean(row.customerName) : "",
-        debit: 0,
-        credit: ht,
-      }),
-    );
-
-    // Ligne 3 : crédit TVA collectée (si applicable)
-    if (tva > 0) {
+      // Débit encaissement (TTC) — Crédit produit (HT) — Crédit TVA si applicable
       lines.push(
         fecLine({
           ...baseRow,
-          compteNum: COMPTE_TVA_COLLECTEE.num,
-          compteLib: COMPTE_TVA_COLLECTEE.lib,
-          compAuxNum: "",
-          compAuxLib: "",
+          compteNum: compteEnc.num,
+          compteLib: compteEnc.lib,
+          debit: row.amountCents,
+          credit: 0,
+        }),
+      );
+      lines.push(
+        fecLine({
+          ...baseRow,
+          compteNum: compteProduit.num,
+          compteLib: compteProduit.lib,
+          compAuxNum: row.customerName ? siren : "",
+          compAuxLib: row.customerName ? clean(row.customerName) : "",
           debit: 0,
-          credit: tva,
+          credit: ht,
+        }),
+      );
+      if (tva > 0) {
+        lines.push(
+          fecLine({
+            ...baseRow,
+            compteNum: COMPTE_TVA_COLLECTEE.num,
+            compteLib: COMPTE_TVA_COLLECTEE.lib,
+            debit: 0,
+            credit: tva,
+          }),
+        );
+      }
+    } else {
+      // Expense (achat / charge) — journal AC, écriture inverse
+      // de la vente : on débite la charge HT + la TVA déductible,
+      // on crédite la banque (faute d'avoir un suivi fournisseur
+      // dédié dans Tipote, on impute direct en banque).
+      const compteCharge =
+        COMPTE_CHARGE_BY_CATEGORY[row.category] ?? COMPTE_CHARGE_BY_CATEGORY.autre;
+      const lib = clean(
+        row.description
+          ? `${row.description}${row.vendorName ? ` — ${row.vendorName}` : ""}`
+          : row.vendorName ?? `Charge ${row.pieceRef}`,
+      );
+      const ht = row.amountTtcCents - row.vatDeductibleCents;
+
+      const baseRow = {
+        journalCode: "AC",
+        journalLib: "Achats",
+        ecritureNum,
+        ecritureDate,
+        pieceRef: clean(row.pieceRef).slice(0, 80),
+        pieceDate,
+        ecritureLib: lib,
+        validDate,
+        montantDevise: row.currency === "EUR" ? "" : fmtAmount(row.amountTtcCents),
+        idevise: row.currency === "EUR" ? "" : row.currency,
+      };
+
+      // Débit charge (HT)
+      lines.push(
+        fecLine({
+          ...baseRow,
+          compteNum: compteCharge.num,
+          compteLib: compteCharge.lib,
+          compAuxNum: row.vendorName ? siren : "",
+          compAuxLib: row.vendorName ? clean(row.vendorName) : "",
+          debit: ht,
+          credit: 0,
+        }),
+      );
+      // Débit TVA déductible (si applicable)
+      if (row.vatDeductibleCents > 0) {
+        lines.push(
+          fecLine({
+            ...baseRow,
+            compteNum: COMPTE_TVA_DEDUCTIBLE.num,
+            compteLib: COMPTE_TVA_DEDUCTIBLE.lib,
+            debit: row.vatDeductibleCents,
+            credit: 0,
+          }),
+        );
+      }
+      // Crédit banque (TTC)
+      lines.push(
+        fecLine({
+          ...baseRow,
+          compteNum: COMPTE_BANQUE.num,
+          compteLib: COMPTE_BANQUE.lib,
+          debit: 0,
+          credit: row.amountTtcCents,
         }),
       );
     }

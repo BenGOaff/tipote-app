@@ -55,6 +55,9 @@ export interface FiscalProfile {
   ae_versement_liberatoire: boolean;
   ae_vat_franchise: boolean;
   ae_urssaf_periodicity?: "mensuelle" | "trimestrielle" | null;
+  /** Régime TVA pour AE qui a dépassé la franchise. NULL si toujours
+   *  en franchise (cas par défaut). */
+  ae_vat_regime?: "reel_mensuel" | "reel_trimestriel" | "simplifie" | null;
   // SASU
   sasu_fiscal_year_calendar: boolean;
   sasu_fiscal_year_start_month: number | null;
@@ -148,11 +151,18 @@ function urssafAE(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[
   return out;
 }
 
-/** SASU — TVA selon régime (réel mensuel / trimestriel / simplifié). */
-function tvaSASU(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[] {
+/** TVA selon régime (réel mensuel / trimestriel / simplifié) — utilisé
+ *  par SASU ET par AE qui a dépassé le seuil franchise. Le idPrefix
+ *  permet d'avoir des deadline.id stables et distincts entre les
+ *  deux statuts. */
+function tvaDeclarations(
+  regime: "reel_mensuel" | "reel_trimestriel" | "simplifie",
+  intraEnabled: boolean,
+  from: Date,
+  to: Date,
+  idPrefix: "sasu" | "ae",
+): FiscalDeadline[] {
   const out: FiscalDeadline[] = [];
-  const regime = profile.sasu_vat_regime;
-  if (!regime) return out;
 
   if (regime === "reel_mensuel") {
     for (const { year, month } of iterateMonths(from, to)) {
@@ -163,7 +173,7 @@ function tvaSASU(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[]
       const due = utcDate(declYear, declMonth, 24);
       if (due < from || due > to) continue;
       out.push({
-        id: `tva-sasu-mens-${year}-${String(month).padStart(2, "0")}`,
+        id: `tva-${idPrefix}-mens-${year}-${String(month).padStart(2, "0")}`,
         dueDate: ymd(due),
         kind: "tva",
         title: `Déclaration TVA (CA3) — ${frenchMonthName(month)} ${year}`,
@@ -185,7 +195,7 @@ function tvaSASU(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[]
         const due = utcDate(year, q.dueMonth, 24);
         if (due < from || due > to) continue;
         out.push({
-          id: `tva-sasu-trim-${trimYear}-T${q.q}`,
+          id: `tva-${idPrefix}-trim-${trimYear}-T${q.q}`,
           dueDate: ymd(due),
           kind: "tva",
           title: `Déclaration TVA (CA3) — T${q.q} ${trimYear}`,
@@ -201,7 +211,7 @@ function tvaSASU(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[]
       const ca12 = utcDate(year, 5, 31);
       if (ca12 >= from && ca12 <= to) {
         out.push({
-          id: `tva-sasu-ca12-${year - 1}`,
+          id: `tva-${idPrefix}-ca12-${year - 1}`,
           dueDate: ymd(ca12),
           kind: "tva",
           title: `Déclaration TVA annuelle (CA12) — exercice ${year - 1}`,
@@ -213,7 +223,7 @@ function tvaSASU(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[]
       const acompte1 = utcDate(year, 7, 31);
       if (acompte1 >= from && acompte1 <= to) {
         out.push({
-          id: `tva-sasu-acompte1-${year}`,
+          id: `tva-${idPrefix}-acompte1-${year}`,
           dueDate: ymd(acompte1),
           kind: "tva",
           title: `Acompte semestriel TVA — juillet ${year}`,
@@ -225,7 +235,7 @@ function tvaSASU(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[]
       const acompte2 = utcDate(year, 12, 31);
       if (acompte2 >= from && acompte2 <= to) {
         out.push({
-          id: `tva-sasu-acompte2-${year}`,
+          id: `tva-${idPrefix}-acompte2-${year}`,
           dueDate: ymd(acompte2),
           kind: "tva",
           title: `Acompte semestriel TVA — décembre ${year}`,
@@ -239,14 +249,14 @@ function tvaSASU(profile: FiscalProfile, from: Date, to: Date): FiscalDeadline[]
 
   // DES (Déclaration Européenne de Services) si TVA intra activée —
   // mensuelle, due le 10 du mois suivant pour les services.
-  if (profile.sasu_vat_intra_enabled) {
+  if (intraEnabled) {
     for (const { year, month } of iterateMonths(from, to)) {
       const declMonth = month === 12 ? 1 : month + 1;
       const declYear = month === 12 ? year + 1 : year;
       const due = utcDate(declYear, declMonth, 10);
       if (due < from || due > to) continue;
       out.push({
-        id: `des-${year}-${String(month).padStart(2, "0")}`,
+        id: `des-${idPrefix}-${year}-${String(month).padStart(2, "0")}`,
         dueDate: ymd(due),
         kind: "des_intra",
         title: `Déclaration Européenne de Services (DES) — ${frenchMonthName(month)} ${year}`,
@@ -425,10 +435,27 @@ export function computeFiscalDeadlines(
 
   if (profile.accounting_status === "auto_entrepreneur") {
     out.push(...urssafAE(profile, from, to));
+    // AE qui a dépassé la franchise : il déclare la TVA selon son
+    // régime (par défaut simplifié). On réutilise la même logique
+    // que pour la SASU via tvaDeclarations — id préfixé "ae" pour
+    // ne pas collisionner avec d'éventuelles deadlines SASU.
+    if (!profile.ae_vat_franchise && profile.ae_vat_regime) {
+      out.push(...tvaDeclarations(profile.ae_vat_regime, false, from, to, "ae"));
+    }
     out.push(...ir2042(profile, from, to));
     out.push(...cfe(profile, from, to));
   } else if (profile.accounting_status === "sasu") {
-    out.push(...tvaSASU(profile, from, to));
+    if (profile.sasu_vat_regime) {
+      out.push(
+        ...tvaDeclarations(
+          profile.sasu_vat_regime as "reel_mensuel" | "reel_trimestriel" | "simplifie",
+          profile.sasu_vat_intra_enabled,
+          from,
+          to,
+          "sasu",
+        ),
+      );
+    }
     out.push(...isSASU(profile, from, to));
     out.push(...bilanSASU(profile, from, to));
     out.push(...ir2042(profile, from, to));

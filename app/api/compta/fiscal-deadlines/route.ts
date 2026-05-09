@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   let bpQuery = supabase
     .from("business_profiles")
     .select(
-      "country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere",
+      "country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere",
     )
     .eq("user_id", user.id);
   if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
@@ -81,6 +81,11 @@ export async function GET(req: NextRequest) {
     ae_urssaf_periodicity: ((bp as Record<string, unknown>).ae_urssaf_periodicity ?? null) as
       | "mensuelle"
       | "trimestrielle"
+      | null,
+    ae_vat_regime: ((bp as Record<string, unknown>).ae_vat_regime ?? null) as
+      | "reel_mensuel"
+      | "reel_trimestriel"
+      | "simplifie"
       | null,
     sasu_fiscal_year_calendar: Boolean((bp as Record<string, unknown>).sasu_fiscal_year_calendar),
     sasu_fiscal_year_start_month: ((bp as Record<string, unknown>).sasu_fiscal_year_start_month ?? null) as number | null,

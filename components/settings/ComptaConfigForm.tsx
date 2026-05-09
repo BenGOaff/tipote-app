@@ -117,6 +117,12 @@ export default function ComptaConfigForm({
       patch.ae_versement_liberatoire = draft.ae_versement_liberatoire;
       patch.ae_vat_franchise = draft.ae_vat_franchise;
       patch.ae_urssaf_periodicity = draft.ae_urssaf_periodicity ?? "trimestrielle";
+      // Si l'user a dépassé le seuil franchise, on stocke son régime
+      // TVA. Sinon on force NULL (cohérent avec la base : un AE en
+      // franchise n'a pas de régime TVA actif).
+      patch.ae_vat_regime = draft.ae_vat_franchise
+        ? null
+        : draft.ae_vat_regime ?? "simplifie";
     } else if (status === "sasu") {
       patch.sasu_siren = draft.sasu_siren;
       patch.sasu_fiscal_year_calendar = draft.sasu_fiscal_year_calendar;
@@ -423,6 +429,51 @@ function AutoEntrepreneurFields({
         checked={!!draft.ae_vat_franchise}
         onChange={(b) => update("ae_vat_franchise", b)}
       />
+
+      {/* Régime TVA — conditionnel : seulement si l'user a dépassé
+          la franchise. Détermine la périodicité des CA3 dans le
+          calendrier fiscal. Défaut simplifié = le plus courant
+          quand on bascule depuis la franchise. */}
+      {!draft.ae_vat_franchise ? (
+        <div className="space-y-1.5 pt-3 border-t">
+          <label className="text-sm font-medium block">
+            Quel régime TVA ?
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Tu n&apos;es plus en franchise → tu déposes des déclarations
+            de TVA. Le régime simplifié (CA12 annuelle + 2 acomptes)
+            est le plus courant pour les AE qui sortent de franchise.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {(
+              [
+                { v: "simplifie", label: "Simplifié", hint: "CA12 annuelle + 2 acomptes" },
+                { v: "reel_trimestriel", label: "Réel trimestriel", hint: "CA3 chaque trimestre" },
+                { v: "reel_mensuel", label: "Réel mensuel", hint: "CA3 chaque mois" },
+              ] as const
+            ).map((opt) => {
+              const active = (draft.ae_vat_regime ?? "simplifie") === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => update("ae_vat_regime", opt.v)}
+                  className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    {opt.hint}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {/* Périodicité URSSAF — détermine les dates butoir affichées
           dans le calendrier fiscal (1i). Trimestrielle = défaut. */}

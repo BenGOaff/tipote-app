@@ -136,6 +136,7 @@ const UpdateSchema = z.object({
   ae_versement_liberatoire: z.boolean().optional(),
   ae_vat_franchise: z.boolean().optional(),
   ae_urssaf_periodicity: z.enum(["mensuelle", "trimestrielle"]).nullable().optional(),
+  ae_vat_regime: z.enum(["reel_mensuel", "reel_trimestriel", "simplifie"]).nullable().optional(),
 
   // SASU — SIREN strict 9 chiffres ; côté front on l'aide en bloquant
   // les caractères non numériques mais on revalide en zod côté serveur.

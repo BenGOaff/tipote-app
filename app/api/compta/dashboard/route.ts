@@ -398,11 +398,33 @@ export async function GET() {
     }
   }
 
+  // TVA collectée estimée — heuristique : si l'user a un régime TVA
+  // configuré (SASU avec sasu_vat_regime ou AE hors franchise), on
+  // dérive 20% du CA YTD. C'est une approximation (le vrai taux peut
+  // varier selon les ventes : 5,5 / 10 / 20%). Suffisant pour la
+  // card "TVA à payer" de l'onglet charges. Le FEC, lui, utilise
+  // les vrais montants HT/TVA quand on les a au niveau transaction.
+  const isVatable = (() => {
+    if (status === "sasu") {
+      return Boolean((bp as { sasu_vat_regime?: string | null } | null)?.sasu_vat_regime);
+    }
+    if (status === "auto_entrepreneur") {
+      const franchise = (bp as { ae_vat_franchise?: boolean } | null)?.ae_vat_franchise;
+      const regime = (bp as { ae_vat_regime?: string | null } | null)?.ae_vat_regime;
+      return franchise === false && Boolean(regime);
+    }
+    return false;
+  })();
+  const vatCollectedYtdCents = isVatable
+    ? Math.round((ytdEur * 20) / 120)
+    : 0;
+
   return NextResponse.json({
     ok: true,
     fiscal_year: now.getUTCFullYear(),
     accounting_status: status,
     ae_activity_type: aeActivity,
+    vat_collected_ytd_cents: vatCollectedYtdCents,
     metrics: {
       // CA
       month_eur_cents: monthEur,

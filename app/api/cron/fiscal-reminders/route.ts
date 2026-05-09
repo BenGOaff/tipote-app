@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
   const { data: profiles, error } = await supabaseAdmin
     .from("business_profiles")
     .select(
-      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere",
+      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere",
     )
     .not("accounting_status", "is", null);
 
@@ -104,6 +104,11 @@ export async function GET(req: NextRequest) {
       ae_urssaf_periodicity: (profile.ae_urssaf_periodicity ?? null) as
         | "mensuelle"
         | "trimestrielle"
+        | null,
+      ae_vat_regime: (profile.ae_vat_regime ?? null) as
+        | "reel_mensuel"
+        | "reel_trimestriel"
+        | "simplifie"
         | null,
       sasu_fiscal_year_calendar: Boolean(profile.sasu_fiscal_year_calendar),
       sasu_fiscal_year_start_month: (profile.sasu_fiscal_year_start_month ?? null) as number | null,
