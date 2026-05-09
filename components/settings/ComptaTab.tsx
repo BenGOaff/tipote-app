@@ -28,12 +28,17 @@ import {
   isSwissCountry,
   isPortugueseCountry,
   isBelgianCountry,
+  isSpanishCountry,
   SUPPORTED_COUNTRIES,
 } from "@/lib/compta/countries";
 import {
   type AccountingStatus,
   type ComptaProfileSlice,
   emptyComptaSlice,
+  ES_COMMUNITIES,
+  isCanariasCommunity,
+  isIPSICommunity,
+  isForalCommunity,
 } from "@/lib/compta/types";
 import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 import ComptaConnections from "@/components/settings/ComptaConnections";
@@ -66,7 +71,8 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
   const isSwiss = isSwissCountry(country);
   const isPortugal = isPortugueseCountry(country);
   const isBelgium = isBelgianCountry(country);
-  const isSupported = isFrance || isSwiss || isPortugal || isBelgium;
+  const isSpain = isSpanishCountry(country);
+  const isSupported = isFrance || isSwiss || isPortugal || isBelgium || isSpain;
 
   function patchProfile(patch: Partial<ComptaProfileSlice>): Promise<void> {
     return new Promise<void>((resolve) => {
@@ -129,7 +135,7 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
           </div>
           <ComptaConfigForm
             initial={slice}
-            country={isFrance ? "FR" : isSwiss ? "CH" : isPortugal ? "PT" : "BE"}
+            country={isFrance ? "FR" : isSwiss ? "CH" : isPortugal ? "PT" : isBelgium ? "BE" : "ES"}
             pending={pending}
             onSave={patchProfile}
             onCancel={editing ? () => setEditing(false) : undefined}
@@ -684,6 +690,112 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
         value: "Dépôt à la BNB dans les 7 mois après l'AG",
       });
     }
+  } else if (
+    slice.accounting_status === "autonomo_es" ||
+    slice.accounting_status === "slu_es" ||
+    slice.accounting_status === "sl_es" ||
+    slice.accounting_status === "sa_es"
+  ) {
+    // Espagne — résumé en français, noms officiels conservés
+    // (NIF/CIF, AEAT, Modelo 100/130/200/202/303/349, RETA, IGIC, etc.)
+    const esLabel =
+      slice.accounting_status === "autonomo_es"
+        ? "Trabajador autónomo"
+        : slice.accounting_status === "slu_es"
+          ? "Sociedad Limitada Unipersonal (SLU)"
+          : slice.accounting_status === "sl_es"
+            ? "Sociedad Limitada (SL)"
+            : "Sociedad Anónima (SA)";
+    rows.push({ label: "Forme juridique", value: esLabel });
+
+    const ccaaLabel = (() => {
+      const found = slice.es_community
+        ? ES_COMMUNITIES.find((c) => c.code === slice.es_community)
+        : null;
+      return found?.label ?? "Non précisée";
+    })();
+    rows.push({ label: "Comunidad Autónoma", value: ccaaLabel });
+
+    rows.push({
+      label: slice.accounting_status === "autonomo_es" ? "NIF / DNI" : "CIF",
+      value: slice.es_company_number ?? "Non renseigné",
+    });
+
+    if (isIPSICommunity(slice.es_community)) {
+      rows.push({
+        label: "Régime indirect",
+        value: "IPSI (hors scope MVP Tipote)",
+      });
+    } else {
+      const ivaTax = isCanariasCommunity(slice.es_community) ? "IGIC" : "IVA";
+      const ivaRegimeLabel =
+        slice.es_iva_regime === "general"
+          ? "General"
+          : slice.es_iva_regime === "simplificado"
+            ? "Simplificado"
+            : slice.es_iva_regime === "recargo_equivalencia"
+              ? "Recargo de equivalencia"
+              : slice.es_iva_regime === "exencion"
+                ? "Exención"
+                : "Non précisé";
+      rows.push({ label: `Régime ${ivaTax}`, value: ivaRegimeLabel });
+      if (slice.es_iva_regime && slice.es_iva_regime !== "exencion") {
+        rows.push({
+          label: `Périodicité ${ivaTax}`,
+          value:
+            slice.es_iva_periodicity === "mensual"
+              ? "Mensual (CA > 6 M€ ou REDEME)"
+              : "Trimestral (par défaut)",
+        });
+        if (slice.es_redeme) {
+          rows.push({
+            label: "REDEME",
+            value: "Inscrit (déclarations IVA mensuelles)",
+          });
+        }
+      }
+    }
+
+    if (isForalCommunity(slice.es_community)) {
+      rows.push({
+        label: "Hacienda compétente",
+        value:
+          slice.es_community === "PV"
+            ? "Hacienda Foral País Vasco (Régimen Foral)"
+            : "Hacienda Foral Navarra (Régimen Foral)",
+      });
+    }
+
+    if (slice.accounting_status === "autonomo_es") {
+      rows.push({
+        label: "Méthode IRPF",
+        value:
+          slice.es_irpf_method === "objetiva"
+            ? "Módulos (Modelo 131)"
+            : "Estimación directa (Modelo 130)",
+      });
+      rows.push({
+        label: "RETA",
+        value: "Cotisations mensuelles via TGSS (basées sur revenus réels)",
+      });
+    }
+
+    if (
+      slice.accounting_status === "slu_es" ||
+      slice.accounting_status === "sl_es" ||
+      slice.accounting_status === "sa_es"
+    ) {
+      rows.push({
+        label: "Exercice fiscal",
+        value: slice.sasu_fiscal_year_calendar
+          ? "Année civile (jan → déc)"
+          : `Décalé (début ${monthLabel(slice.sasu_fiscal_year_start_month)})`,
+      });
+      rows.push({
+        label: "Comptes annuels",
+        value: "Dépôt au Registro Mercantil dans le mois suivant l'AG",
+      });
+    }
   }
 
   return (
@@ -753,6 +865,14 @@ function statusLabel(s: AccountingStatus): string {
       return "SRL (Belgique)";
     case "sa_be":
       return "SA (Belgique)";
+    case "autonomo_es":
+      return "Autónomo (Espagne)";
+    case "slu_es":
+      return "SLU (Espagne)";
+    case "sl_es":
+      return "SL (Espagne)";
+    case "sa_es":
+      return "SA (Espagne)";
   }
 }
 

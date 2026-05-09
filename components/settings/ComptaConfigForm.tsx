@@ -30,6 +30,14 @@ import {
   type AeActivityType,
   type SasuVatRegime,
   type ComptaProfileSlice,
+  type EsCommunity,
+  type EsIvaRegime,
+  type EsIvaPeriodicity,
+  type EsIrpfMethod,
+  ES_COMMUNITIES,
+  isCanariasCommunity,
+  isIPSICommunity,
+  isForalCommunity,
   emptyComptaSlice,
   SIREN_REGEX,
 } from "@/lib/compta/types";
@@ -38,7 +46,7 @@ interface Props {
   initial: ComptaProfileSlice;
   /** Pays détecté côté parent (FR / CH / PT / BE) — détermine
    *  quelles cartes de statut on propose. */
-  country: "FR" | "CH" | "PT" | "BE";
+  country: "FR" | "CH" | "PT" | "BE" | "ES";
   /** Si fourni, l'user édite une config existante → bouton "Annuler". */
   onCancel?: () => void;
   /** Patch à envoyer à /api/profile. Le parent gère le fetch + le toast. */
@@ -147,6 +155,29 @@ export default function ComptaConfigForm({
       }
       if (!draft.be_vat_franchise && !draft.be_vat_periodicity) {
         next.be_vat_periodicity = "Choisis la périodicité de tes déclarations TVA.";
+      }
+    } else if (
+      status === "autonomo_es" ||
+      status === "slu_es" ||
+      status === "sl_es" ||
+      status === "sa_es"
+    ) {
+      if (!draft.es_community) {
+        next.es_community = "Choisis ta Comunidad Autónoma.";
+      }
+      if (!draft.es_iva_regime && !isIPSICommunity(draft.es_community)) {
+        next.es_iva_regime = "Choisis ton régime IVA.";
+      }
+      if (
+        draft.es_iva_regime &&
+        draft.es_iva_regime !== "exencion" &&
+        !isIPSICommunity(draft.es_community) &&
+        !draft.es_iva_periodicity
+      ) {
+        next.es_iva_periodicity = "Choisis la périodicité de tes déclarations.";
+      }
+      if (status === "autonomo_es" && !draft.es_irpf_method) {
+        next.es_irpf_method = "Choisis ta méthode IRPF.";
       }
     }
 
@@ -275,6 +306,34 @@ export default function ComptaConfigForm({
           ? null
           : draft.sasu_fiscal_year_start_month;
       }
+    } else if (
+      status === "autonomo_es" ||
+      status === "slu_es" ||
+      status === "sl_es" ||
+      status === "sa_es"
+    ) {
+      patch.es_community = draft.es_community;
+      patch.es_company_number = draft.es_company_number;
+      // Ceuta/Melilla = IPSI, on stocke 'exencion' pour neutraliser
+      // le calendrier IVA. Sinon on garde le régime choisi.
+      patch.es_iva_regime = isIPSICommunity(draft.es_community)
+        ? "exencion"
+        : draft.es_iva_regime;
+      patch.es_iva_periodicity =
+        draft.es_iva_regime === "exencion" || isIPSICommunity(draft.es_community)
+          ? null
+          : draft.es_iva_periodicity ?? "trimestral";
+      patch.es_redeme = draft.es_redeme;
+      if (status === "autonomo_es") {
+        patch.es_irpf_method = draft.es_irpf_method ?? "directa";
+      }
+      patch.es_started_at = draft.es_started_at;
+      if (status === "slu_es" || status === "sl_es" || status === "sa_es") {
+        patch.sasu_fiscal_year_calendar = draft.sasu_fiscal_year_calendar;
+        patch.sasu_fiscal_year_start_month = draft.sasu_fiscal_year_calendar
+          ? null
+          : draft.sasu_fiscal_year_start_month;
+      }
     }
 
     await onSave(patch);
@@ -338,6 +397,13 @@ export default function ComptaConfigForm({
         <BelgiqueFields draft={draft} update={update} errors={errors} status={status} />
       ) : null}
 
+      {status === "autonomo_es" ||
+      status === "slu_es" ||
+      status === "sl_es" ||
+      status === "sa_es" ? (
+        <EspagneFields draft={draft} update={update} errors={errors} status={status} />
+      ) : null}
+
       {status ? (
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={pending}>
@@ -375,7 +441,7 @@ function StatusPicker({
   onChange,
 }: {
   value: AccountingStatus | null;
-  country: "FR" | "CH" | "PT" | "BE";
+  country: "FR" | "CH" | "PT" | "BE" | "ES";
   onChange: (v: AccountingStatus) => void;
 }) {
   // Rend des cartes différentes selon le pays détecté côté parent.
@@ -581,6 +647,76 @@ function StatusPicker({
           PME wallonnes/flamandes/bruxelloises, TVA véhicules) ne
           sont pas détaillées — ton comptable / expert-comptable
           reste la référence.
+        </p>
+      </div>
+    );
+  }
+
+  if (country === "ES") {
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Sans société dédiée
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<User className="h-5 w-5" />}
+              title="Particulier"
+              desc="Revenus accessoires (en plus d'un emploi salarié ou pas d'autre activité). Tout passe par ta déclaration IRPF (Modelo 100) annuelle."
+              selected={value === "particulier"}
+              onClick={() => onChange("particulier")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="Autónomo"
+              desc="Trabajador autónomo, inscrit au RETA. Cotisations sociales mensuelles via TGSS, IRPF Modelos 130/131 trimestriels, IVA Modelo 303 trimestriel."
+              selected={value === "autonomo_es"}
+              onClick={() => onChange("autonomo_es")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Société commerciale (Impuesto sobre Sociedades)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="SLU"
+              desc="Sociedad Limitada Unipessoal — un seul associé. IS 25% (ou 23% empresas reducidas), comptes annuels Registro Mercantil, Modelo 200."
+              selected={value === "slu_es"}
+              onClick={() => onChange("slu_es")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="SL"
+              desc="Sociedad Limitada — 2 associés ou plus. Mêmes obligations IS/comptes annuels qu'une SLU."
+              selected={value === "sl_es"}
+              onClick={() => onChange("sl_es")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="SA"
+              desc="Sociedad Anónima. Capital min. 60 000 €, structure plus formelle. Mêmes obligations IS qu'une SL."
+              selected={value === "sa_es"}
+              onClick={() => onChange("sa_es")}
+            />
+          </div>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground italic">
+          Tipote couvre les obligations fédérales espagnoles (IVA via
+          Modelo 303/390/349, IRPF Modelos 100/130, IS Modelo 200/202,
+          RETA mensuel via TGSS, comptes annuels Registro Mercantil).
+          Régimen Foral (País Vasco, Navarra) : Hacienda Foral remplace
+          AEAT. Canarias : IGIC au lieu d&apos;IVA. Ceuta/Melilla :
+          IPSI. Pour les calculs exacts d&apos;impôt et les particularités
+          régionales (déductions IRPF par CCAA), ton asesor fiscal reste
+          la référence.
         </p>
       </div>
     );
@@ -1942,6 +2078,340 @@ function BelgiqueFields({
           20 juin, 20 septembre, 20 décembre), à payer auprès de ta
           caisse d&apos;assurances sociales (Acerta, Group S, Partena,
           Liantis, Xerius…).
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Espagne
+ * ────────────────────────────────────────────────────────────────── */
+
+function EspagneFields({
+  draft,
+  update,
+  errors,
+  status,
+}: {
+  draft: ComptaProfileSlice;
+  update: <K extends keyof ComptaProfileSlice>(key: K, value: ComptaProfileSlice[K]) => void;
+  errors: Record<string, string>;
+  status: "autonomo_es" | "slu_es" | "sl_es" | "sa_es";
+}) {
+  const isCorporate = status === "slu_es" || status === "sl_es" || status === "sa_es";
+  const isAutonomo = status === "autonomo_es";
+  const community = draft.es_community;
+  const isCanarias = isCanariasCommunity(community);
+  const isIPSI = isIPSICommunity(community);
+  const isForal = isForalCommunity(community);
+
+  const cifLabel = (() => {
+    switch (status) {
+      case "autonomo_es":
+        return "NIF / DNI / NIE";
+      case "slu_es":
+        return "CIF de ta SLU";
+      case "sl_es":
+        return "CIF de ta SL";
+      case "sa_es":
+        return "CIF de ta SA";
+    }
+  })();
+
+  return (
+    <Card className="p-5 space-y-5">
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>Espagne :</strong> Tipote calcule tes échéances IVA
+        (Modelo 303/390/349), IRPF (Modelos 100/130), IS (Modelo
+        200/202), RETA mensuel et comptes annuels Registro Mercantil.
+        Pour les calculs exacts d&apos;impôt et les déductions IRPF
+        spécifiques à ta Comunidad Autónoma, ton asesor fiscal reste
+        la référence.
+      </div>
+
+      <div className="space-y-2">
+        <Label>Comunidad Autónoma</Label>
+        <p className="text-xs text-muted-foreground">
+          Détermine si tu dépends de l&apos;AEAT (régime commun) ou
+          d&apos;une Hacienda Foral (País Vasco, Navarra). Affecte
+          aussi l&apos;IVA → IGIC (Canarias) ou IPSI (Ceuta/Melilla).
+        </p>
+        <Select
+          value={draft.es_community ?? ""}
+          onValueChange={(v) => update("es_community", v as EsCommunity)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Choisis ta CCAA" />
+          </SelectTrigger>
+          <SelectContent>
+            {ES_COMMUNITIES.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.es_community ? (
+          <p className="text-xs text-destructive">{errors.es_community}</p>
+        ) : null}
+        {isForal ? (
+          <p className="text-[11px] text-muted-foreground italic">
+            Régimen Foral détecté → tu déclares via Hacienda Foral
+            (euskadi.eus pour le País Vasco, navarra.es pour la
+            Navarra), pas l&apos;AEAT. Calendrier identique mais
+            modelos forales.
+          </p>
+        ) : null}
+        {isCanarias ? (
+          <p className="text-[11px] text-muted-foreground italic">
+            Canarias → IGIC au lieu d&apos;IVA. Tipo general 7%.
+            Modelo 420 (trimestriel) / 425 (annuel) au lieu de
+            303/390. Pas d&apos;opérations intra-UE.
+          </p>
+        ) : null}
+        {isIPSI ? (
+          <p className="text-[11px] text-amber-800 italic">
+            Ceuta/Melilla → IPSI (Impuesto sobre la Producción, los
+            Servicios y la Importación) au lieu d&apos;IVA. Hors scope
+            MVP de Tipote — le module compta affichera tes échéances
+            IRPF / IS / RETA mais pas IPSI. Renseigne-toi auprès de
+            ta ciudad autónoma.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="es-cif">{cifLabel}</Label>
+        <p className="text-xs text-muted-foreground">
+          Pour une société : 1 lettre + 8 chiffres (B = SL, A = SA).
+          Pour un autónomo : DNI (8 chiffres + 1 lettre) ou NIE.
+          Tu peux le retrouver sur{" "}
+          <a
+            href="https://www.agenciatributaria.gob.es/AEAT.sede/procedimientoini/G306.shtml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            agenciatributaria.gob.es
+          </a>
+          .
+        </p>
+        <Input
+          id="es-cif"
+          maxLength={20}
+          value={draft.es_company_number ?? ""}
+          onChange={(e) =>
+            update("es_company_number", e.target.value.toUpperCase().slice(0, 20) || null)
+          }
+          placeholder={isCorporate ? "B12345678" : "12345678A"}
+          className="font-mono tracking-wider"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="es-started">
+          Date de début d&apos;activité{" "}
+          <span className="text-muted-foreground font-normal">(optionnel)</span>
+        </Label>
+        <input
+          id="es-started"
+          type="date"
+          value={draft.es_started_at ?? ""}
+          onChange={(e) => update("es_started_at", e.target.value || null)}
+          className="rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      {isCorporate ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Exercice comptable</Label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => update("sasu_fiscal_year_calendar", true)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                draft.sasu_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Année civile (jan → déc)
+            </button>
+            <button
+              type="button"
+              onClick={() => update("sasu_fiscal_year_calendar", false)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                !draft.sasu_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Décalé
+            </button>
+          </div>
+          {!draft.sasu_fiscal_year_calendar ? (
+            <div className="space-y-1 pt-2">
+              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <select
+                value={draft.sasu_fiscal_year_start_month ?? ""}
+                onChange={(e) =>
+                  update("sasu_fiscal_year_start_month", parseInt(e.target.value, 10) || null)
+                }
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
+              >
+                <option value="">—</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                  <option key={m} value={m}>
+                    {monthName(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!isIPSI ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Régime IVA{isCanarias ? " (IGIC)" : ""}</Label>
+          <p className="text-xs text-muted-foreground">
+            General = défaut. Simplificado = forfait pour certaines
+            activités (modelo 303 simplifié). Recargo de equivalencia
+            = commerce de détail (l&apos;IVA est répercuté par le
+            fournisseur). Exención = activités exonérées (santé,
+            enseignement, etc.).
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {(
+              [
+                { v: "general", label: "General" },
+                { v: "simplificado", label: "Simplificado" },
+                { v: "recargo_equivalencia", label: "Recargo de equivalencia" },
+                { v: "exencion", label: "Exención" },
+              ] as const
+            ).map((opt) => {
+              const active = draft.es_iva_regime === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => update("es_iva_regime", opt.v as EsIvaRegime)}
+                  className={`text-sm rounded-md border px-3 py-2 transition ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          {errors.es_iva_regime ? (
+            <p className="text-xs text-destructive">{errors.es_iva_regime}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!isIPSI && draft.es_iva_regime && draft.es_iva_regime !== "exencion" ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Périodicité des déclarations{isCanarias ? " IGIC" : " IVA"}</Label>
+          <p className="text-xs text-muted-foreground">
+            Trimestrielle par défaut (T1 → 20/04, T2 → 20/07, T3 →
+            20/10, T4 → 30/01). Mensuelle obligatoire si CA &gt; 6 M€
+            ou si tu es inscrit au REDEME (registre de remboursement
+            mensuel).
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {(
+              [
+                { v: "trimestral", label: "Trimestral", hint: "défaut" },
+                { v: "mensual", label: "Mensual", hint: "CA > 6M€ ou REDEME" },
+              ] as const
+            ).map((opt) => {
+              const active = (draft.es_iva_periodicity ?? "trimestral") === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => update("es_iva_periodicity", opt.v as EsIvaPeriodicity)}
+                  className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    ({opt.hint})
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {errors.es_iva_periodicity ? (
+            <p className="text-xs text-destructive">{errors.es_iva_periodicity}</p>
+          ) : null}
+
+          <BoolRow
+            id="es-redeme"
+            title="Inscrit au REDEME ?"
+            desc="Le Registro de Devolución Mensual permet de récupérer la TVA chaque mois (au lieu d'attendre le solde annuel). Inscription volontaire via Modelo 036/039. Implique des déclarations mensuelles."
+            helpHref="https://sede.agenciatributaria.gob.es/Sede/iva/redeme.html"
+            helpLabel="Plus d'infos sur le REDEME"
+            checked={!!draft.es_redeme}
+            onChange={(b) => update("es_redeme", b)}
+          />
+        </div>
+      ) : null}
+
+      {isAutonomo ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Méthode IRPF</Label>
+          <p className="text-xs text-muted-foreground">
+            Estimación directa = comptabilité réelle (Modelo 130
+            trimestriel). Module objetiva = forfait par secteur
+            d&apos;activité (Modelo 131 trimestriel) — limité à
+            certaines activités listées par l&apos;AEAT.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {(
+              [
+                { v: "directa", label: "Estimación directa", hint: "Modelo 130" },
+                { v: "objetiva", label: "Módulos", hint: "Modelo 131" },
+              ] as const
+            ).map((opt) => {
+              const active = (draft.es_irpf_method ?? "directa") === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => update("es_irpf_method", opt.v as EsIrpfMethod)}
+                  className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    ({opt.hint})
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {errors.es_irpf_method ? (
+            <p className="text-xs text-destructive">{errors.es_irpf_method}</p>
+          ) : null}
+
+          <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground mt-2">
+            RETA (Régimen Especial de Trabajadores Autónomos) :
+            cotisations mensuelles via la TGSS, basées sur tes
+            revenus réels (réforme 2023). Domiciliation bancaire le
+            dernier jour ouvré du mois.
+          </div>
         </div>
       ) : null}
     </Card>

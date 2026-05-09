@@ -51,6 +51,19 @@ const BELGIUM_SYNONYMS = new Set([
   "belgian",
 ]);
 
+const SPAIN_SYNONYMS = new Set([
+  "espagne",
+  "es",
+  "espagnol",
+  "espagnole",
+  "espana",
+  "spain",
+  "spanish",
+  "esp",
+  "espanol",
+  "espanola",
+]);
+
 function normalize(s: string | null | undefined): string {
   return (s ?? "")
     .toLowerCase()
@@ -81,15 +94,21 @@ export function isBelgianCountry(country: string | null | undefined): boolean {
   return BELGIUM_SYNONYMS.has(normalize(country));
 }
 
+export function isSpanishCountry(country: string | null | undefined): boolean {
+  if (!country) return false;
+  return SPAIN_SYNONYMS.has(normalize(country));
+}
+
 /** Code pays normalisé. Évite de dispatcher sur le texte brut dans
  *  toute l'app. */
 export function detectCountryCode(
   country: string | null | undefined,
-): "FR" | "CH" | "PT" | "BE" | null {
+): "FR" | "CH" | "PT" | "BE" | "ES" | null {
   if (isFrenchCountry(country)) return "FR";
   if (isSwissCountry(country)) return "CH";
   if (isPortugueseCountry(country)) return "PT";
   if (isBelgianCountry(country)) return "BE";
+  if (isSpanishCountry(country)) return "ES";
   return null;
 }
 
@@ -114,6 +133,11 @@ export const SUPPORTED_COUNTRIES: ReadonlyArray<{ code: string; label: string; s
     code: "BE",
     label: "Belgique",
     synonyms: Array.from(BELGIUM_SYNONYMS),
+  },
+  {
+    code: "ES",
+    label: "Espagne",
+    synonyms: Array.from(SPAIN_SYNONYMS),
   },
 ];
 

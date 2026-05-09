@@ -26,7 +26,12 @@ export type AccountingStatus =
   | "independant_principal_be"
   | "independant_complementaire_be"
   | "srl_be"
-  | "sa_be";
+  | "sa_be"
+  // ES (phase 1q)
+  | "autonomo_es"
+  | "slu_es"
+  | "sl_es"
+  | "sa_es";
 
 export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "particulier",
@@ -47,7 +52,66 @@ export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "independant_complementaire_be",
   "srl_be",
   "sa_be",
+  "autonomo_es",
+  "slu_es",
+  "sl_es",
+  "sa_es",
 ];
+
+export function isSpanishStatus(status: AccountingStatus | null): boolean {
+  return (
+    status === "autonomo_es" ||
+    status === "slu_es" ||
+    status === "sl_es" ||
+    status === "sa_es"
+  );
+}
+
+export function isSpanishCorporate(status: AccountingStatus | null): boolean {
+  return status === "slu_es" || status === "sl_es" || status === "sa_es";
+}
+
+export type EsCommunity =
+  | "AN" | "AR" | "AS" | "IB" | "CN" | "CB" | "CL" | "CM" | "CT" | "VC"
+  | "EX" | "GA" | "MD" | "MC" | "NC" | "PV" | "RI" | "CE" | "ML";
+
+export const ES_COMMUNITIES: ReadonlyArray<{ code: EsCommunity; label: string }> = [
+  { code: "AN", label: "Andalucía" },
+  { code: "AR", label: "Aragón" },
+  { code: "AS", label: "Asturias" },
+  { code: "IB", label: "Illes Balears" },
+  { code: "CN", label: "Canarias (IGIC)" },
+  { code: "CB", label: "Cantabria" },
+  { code: "CL", label: "Castilla y León" },
+  { code: "CM", label: "Castilla-La Mancha" },
+  { code: "CT", label: "Cataluña" },
+  { code: "VC", label: "Comunidad Valenciana" },
+  { code: "EX", label: "Extremadura" },
+  { code: "GA", label: "Galicia" },
+  { code: "MD", label: "Madrid" },
+  { code: "MC", label: "Murcia" },
+  { code: "NC", label: "Navarra (Régimen Foral)" },
+  { code: "PV", label: "País Vasco (Régimen Foral)" },
+  { code: "RI", label: "La Rioja" },
+  { code: "CE", label: "Ceuta (IPSI)" },
+  { code: "ML", label: "Melilla (IPSI)" },
+];
+
+export function isForalCommunity(code: EsCommunity | null): boolean {
+  return code === "PV" || code === "NC";
+}
+
+export function isCanariasCommunity(code: EsCommunity | null): boolean {
+  return code === "CN";
+}
+
+export function isIPSICommunity(code: EsCommunity | null): boolean {
+  return code === "CE" || code === "ML";
+}
+
+export type EsIvaRegime = "general" | "simplificado" | "recargo_equivalencia" | "exencion";
+export type EsIvaPeriodicity = "mensual" | "trimestral";
+export type EsIrpfMethod = "directa" | "objetiva";
 
 /** Helpers Belgique : 4 statuts. */
 export function isBelgianStatus(status: AccountingStatus | null): boolean {
@@ -355,6 +419,14 @@ export interface ComptaProfileSlice {
   be_vat_periodicity: BeVatPeriodicity | null;
   be_intra_eu_listing: boolean;
   be_started_at: string | null;
+  // Espagne (phase 1q)
+  es_community: EsCommunity | null;
+  es_company_number: string | null; // NIF/CIF
+  es_iva_regime: EsIvaRegime | null;
+  es_iva_periodicity: EsIvaPeriodicity | null;
+  es_redeme: boolean;
+  es_irpf_method: EsIrpfMethod | null;
+  es_started_at: string | null;
 }
 
 /** Valeurs par défaut quand on construit une slice à partir d'un row
@@ -397,5 +469,12 @@ export function emptyComptaSlice(): ComptaProfileSlice {
     be_vat_periodicity: null,
     be_intra_eu_listing: false,
     be_started_at: null,
+    es_community: null,
+    es_company_number: null,
+    es_iva_regime: null,
+    es_iva_periodicity: null,
+    es_redeme: false,
+    es_irpf_method: null,
+    es_started_at: null,
   };
 }

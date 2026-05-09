@@ -148,6 +148,11 @@ const UpdateSchema = z.object({
       "independant_complementaire_be",
       "srl_be",
       "sa_be",
+      // ES
+      "autonomo_es",
+      "slu_es",
+      "sl_es",
+      "sa_es",
     ])
     .nullable()
     .optional(),
@@ -210,6 +215,21 @@ const UpdateSchema = z.object({
   be_vat_periodicity: z.enum(["mensuelle", "trimestrielle"]).nullable().optional(),
   be_intra_eu_listing: z.boolean().optional(),
   be_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+
+  // Espagne — phase 1q
+  es_community: z
+    .enum([
+      "AN", "AR", "AS", "IB", "CN", "CB", "CL", "CM", "CT", "VC",
+      "EX", "GA", "MD", "MC", "NC", "PV", "RI", "CE", "ML",
+    ])
+    .nullable()
+    .optional(),
+  es_company_number: z.string().trim().max(20).nullable().optional(),
+  es_iva_regime: z.enum(["general", "simplificado", "recargo_equivalencia", "exencion"]).nullable().optional(),
+  es_iva_periodicity: z.enum(["mensual", "trimestral"]).nullable().optional(),
+  es_redeme: z.boolean().optional(),
+  es_irpf_method: z.enum(["directa", "objetiva"]).nullable().optional(),
+  es_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   // accounting_status_configured_at est défini côté serveur dans le PATCH
   // ci-dessous, pas accepté en input.
 
