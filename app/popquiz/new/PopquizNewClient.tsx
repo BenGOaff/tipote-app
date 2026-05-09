@@ -362,12 +362,28 @@ export default function PopquizNewClient({
         setError(friendly);
         return;
       }
-      if (publish) {
-        setPublishedId(json.popquizId);
-        setPublishedSlug(json.slug ?? null);
-      } else {
+      // UX 2026-05-08 : qu'on publie ou qu'on enregistre en brouillon,
+      // on redirige immédiatement vers la page d'édition du popquiz
+      // qui contient TOUT (titre / sous-titre / fond / bordure /
+      // ombre / bouton play / vignette custom / partage / iframe).
+      // Avant : on restait sur /popquiz/new avec juste l'URL+iframe
+      // côté publish, ou on bouclait sur /quizzes côté brouillon, et
+      // l'user devait re-cliquer pour ouvrir l'éditeur complet.
+      const newId = json.popquizId as string | undefined;
+      if (publish && newId) {
+        toast.success("Popquiz publié");
+        router.push(`/popquiz/${newId}`);
+      } else if (newId) {
         toast.success("Brouillon enregistré");
-        router.push("/quizzes");
+        router.push(`/popquiz/${newId}`);
+      } else {
+        // Fallback safety si l'API ne renvoie pas d'id
+        if (publish) {
+          setPublishedId(json.popquizId);
+          setPublishedSlug(json.slug ?? null);
+        } else {
+          router.push("/quizzes");
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur réseau");
