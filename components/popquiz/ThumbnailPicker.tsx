@@ -360,6 +360,28 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
   const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const [exporting, setExporting] = useState(false);
 
+  // Taille effective du cadre de crop, mesurée via ResizeObserver —
+  // remplace l'ancien couple `PREVIEW_W` / `PREVIEW_H` constant qui
+  // dépassait le dialog sur certaines largeurs (Béné 2026-05-09).
+  // Le cadre utilise maintenant `aspect-video` + `max-w` responsive,
+  // et toute la math (cover scale, clamp, export canvas) s'appuie
+  // sur la taille rendue réelle.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [box, setBox] = useState({ w: PREVIEW_W, h: PREVIEW_H });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) setBox({ w: r.width, h: r.height });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Load the picked image into a blob URL so we can paint it. Blob URL
   // is revoked when the dialog closes — even on cancel — to keep the
   // memory footprint clean.
@@ -370,19 +392,29 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
     img.onload = () => {
       setImgEl(img);
       // Center the image and pick a base scale that covers the 16:9 area.
-      const cover = Math.max(PREVIEW_W / img.naturalWidth, PREVIEW_H / img.naturalHeight);
+      const cover = Math.max(box.w / img.naturalWidth, box.h / img.naturalHeight);
       setScale(Math.max(cover, MIN_SCALE));
       setOffset({ x: 0, y: 0 });
     };
     img.src = url;
     return () => URL.revokeObjectURL(url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
+
+  // Quand le container est redimensionné après chargement de l'image
+  // (ex. ouverture du dialog en mobile, rotation), on force le scale
+  // au minimum pour garantir que l'image couvre toute la zone visible.
+  useEffect(() => {
+    if (!imgEl || !box.w) return;
+    const cover = Math.max(box.w / imgEl.naturalWidth, box.h / imgEl.naturalHeight);
+    setScale((s) => Math.max(s, cover));
+  }, [imgEl, box.w, box.h]);
 
   function clampOffset(next: { x: number; y: number }, sc: number, img: HTMLImageElement) {
     const drawnW = img.naturalWidth * sc;
     const drawnH = img.naturalHeight * sc;
-    const maxX = Math.max(0, (drawnW - PREVIEW_W) / 2);
-    const maxY = Math.max(0, (drawnH - PREVIEW_H) / 2);
+    const maxX = Math.max(0, (drawnW - box.w) / 2);
+    const maxY = Math.max(0, (drawnH - box.h) / 2);
     return {
       x: Math.max(-maxX, Math.min(maxX, next.x)),
       y: Math.max(-maxY, Math.min(maxY, next.y)),
@@ -431,12 +463,14 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
 
       const drawnW = imgEl.naturalWidth * scale;
       const drawnH = imgEl.naturalHeight * scale;
-      // Top-left of the drawn image in the *preview* coordinate space:
-      const previewX = PREVIEW_W / 2 - drawnW / 2 + offset.x;
-      const previewY = PREVIEW_H / 2 - drawnH / 2 + offset.y;
-      // Scale up to the final 1280×720 canvas:
-      const finalScaleX = FINAL_W / PREVIEW_W;
-      const finalScaleY = FINAL_H / PREVIEW_H;
+      // Top-left of the drawn image in the *preview* coordinate space.
+      // On utilise la taille réelle mesurée du cadre (`box`) plutôt
+      // qu'une constante fixe — sinon le crop final est décalé sur
+      // les viewports où le cadre rendu n'est pas pile 480×270.
+      const previewX = box.w / 2 - drawnW / 2 + offset.x;
+      const previewY = box.h / 2 - drawnH / 2 + offset.y;
+      const finalScaleX = FINAL_W / box.w;
+      const finalScaleY = FINAL_H / box.h;
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, FINAL_W, FINAL_H);
       ctx.imageSmoothingQuality = "high";
@@ -475,20 +509,25 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
           </DialogDescription>
         </DialogHeader>
 
+        {/* Cadre de crop responsive : prend toute la largeur dispo
+            dans le dialog, plafonné à 480px. La hauteur s'aligne
+            automatiquement en 16/9 via aspect-video. La math interne
+            (cover, clamp, export) lit la taille rendue réelle via
+            `box` mis à jour par ResizeObserver. */}
         <div
-          className="relative mx-auto rounded-lg ring-2 ring-primary/40 bg-black overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none"
-          style={{ width: PREVIEW_W, height: PREVIEW_H }}
+          ref={containerRef}
+          className="relative mx-auto w-full max-w-[480px] aspect-video rounded-lg ring-2 ring-primary/40 bg-black overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          {imgSrc && imgEl ? (
+          {imgSrc && imgEl && box.w > 0 ? (
             <div
               className="absolute"
               style={{
-                left: PREVIEW_W / 2,
-                top: PREVIEW_H / 2,
+                left: box.w / 2,
+                top: box.h / 2,
                 width: imgEl.naturalWidth,
                 height: imgEl.naturalHeight,
                 transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
