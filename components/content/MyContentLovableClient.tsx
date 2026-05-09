@@ -119,6 +119,16 @@ type Props = {
   quizzes?: QuizListItem[];
   funnels?: FunnelListItem[];
   popquizCount?: number;
+  /** Compte des contenus présents sur d'AUTRES projets que celui
+   *  actuellement filtré. Sert à afficher un message "tu as N quiz
+   *  cachés par le projet actif, change de projet pour les voir"
+   *  quand le folder est vide ici mais peuplé ailleurs (cf. bug
+   *  Fabienne 2026-05-09). */
+  hiddenByProjectFilter?: {
+    quizzes: number;
+    popquizzes: number;
+    pages: number;
+  };
   error?: string;
 };
 
@@ -298,6 +308,7 @@ export default function MyContentLovableClient({
   quizzes = [],
   funnels: initialFunnels = [],
   popquizCount = 0,
+  hiddenByProjectFilter = { quizzes: 0, popquizzes: 0, pages: 0 },
   error,
 }: Props) {
   const router = useRouter();
@@ -725,6 +736,14 @@ export default function MyContentLovableClient({
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {CONTENT_FOLDERS.map((folder) => {
                       const count = countItemsForFolder(folder, initialItems, quizzes, funnels, popquizCount);
+                      const hidden =
+                        folder.id === "quiz"
+                          ? hiddenByProjectFilter.quizzes
+                          : folder.id === "popquiz"
+                            ? hiddenByProjectFilter.popquizzes
+                            : folder.id === "funnels"
+                              ? hiddenByProjectFilter.pages
+                              : 0;
                       const FIcon = folder.icon;
                       return (
                         <button
@@ -750,6 +769,14 @@ export default function MyContentLovableClient({
                             <div className="text-xs text-muted-foreground mt-1">
                               {count} {count <= 1 ? t("ui.elementOne") : t("ui.elementMany")}
                             </div>
+                            {/* Indicateur "tu as N items sur d'autres
+                                projets" — évite le cas où l'user
+                                pense ne rien avoir (cf. bug Fabienne). */}
+                            {hidden > 0 ? (
+                              <div className="text-[11px] text-amber-700 mt-1.5">
+                                +{hidden} dans tes autres projets
+                              </div>
+                            ) : null}
                           </Card>
                         </button>
                       );
@@ -842,6 +869,17 @@ export default function MyContentLovableClient({
                   {quizzes.length === 0 ? (
                     <Card className="p-6">
                       <p className="text-sm text-muted-foreground text-center py-4">{t("ui.noQuiz")}</p>
+                      {/* Bug Fabienne 2026-05-09 : si l'user a des
+                          quiz sur un autre projet, on lui dit
+                          explicitement plutôt que de le laisser
+                          croire qu'il n'a rien. */}
+                      {hiddenByProjectFilter.quizzes > 0 ? (
+                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-center">
+                          Tu as {hiddenByProjectFilter.quizzes} quiz dans
+                          tes autres projets. Change de projet en haut à
+                          droite pour les voir.
+                        </p>
+                      ) : null}
                     </Card>
                   ) : (
                     <div className="space-y-3">
@@ -1021,6 +1059,13 @@ export default function MyContentLovableClient({
                   {funnels.length === 0 ? (
                     <Card className="p-6">
                       <p className="text-sm text-muted-foreground text-center py-4">{t("ui.noPages")}</p>
+                      {hiddenByProjectFilter.pages > 0 ? (
+                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-center">
+                          Tu as {hiddenByProjectFilter.pages} page(s) dans
+                          tes autres projets. Change de projet en haut à
+                          droite pour les voir.
+                        </p>
+                      ) : null}
                     </Card>
                   ) : (
                     <div className="space-y-3">

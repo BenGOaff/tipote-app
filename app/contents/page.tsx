@@ -178,14 +178,47 @@ export default async function ContentsPage({
     .eq("user_id", session.user.id);
   if (projectId) popquizCountQuery = popquizCountQuery.eq("project_id", projectId);
 
-  const [{ data: items, error }, quizzesResult, pagesResult, popquizCountRes] = await Promise.all([
+  // Counts cross-projet (sans filtre project_id) — pour détecter
+  // les cas où l'user a des contenus sur un autre projet et le
+  // filtre actif les cache. Cf. bug Fabienne 2026-05-09 : 4 quiz
+  // créés sur "Mon Projet" mais cookie actif "Femme Cadre" → liste
+  // vide. On affiche un message explicite côté client à la place.
+  const totalQuizCountQuery = supabase
+    .from("quizzes")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.user.id);
+  const totalPopquizCountQuery = supabase
+    .from("popquizzes")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.user.id);
+  const totalPagesCountQuery = supabase
+    .from("hosted_pages")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.user.id)
+    .neq("status", "archived");
+
+  const [
+    { data: items, error },
+    quizzesResult,
+    pagesResult,
+    popquizCountRes,
+    totalQuizCountRes,
+    totalPopquizCountRes,
+    totalPagesCountRes,
+  ] = await Promise.all([
     fetchContentsForUser(session.user.id, q, status, type, channel, projectId),
     quizzesQuery,
     pagesQuery,
     popquizCountQuery,
+    totalQuizCountQuery,
+    totalPopquizCountQuery,
+    totalPagesCountQuery,
   ]);
 
   const popquizCount = popquizCountRes?.count ?? 0;
+  const totalQuizCount = totalQuizCountRes?.count ?? 0;
+  const totalPopquizCount = totalPopquizCountRes?.count ?? 0;
+  const totalPagesCount = totalPagesCountRes?.count ?? 0;
 
   // Count leads per quiz
   const quizRows = (quizzesResult?.data as any[]) ?? [];
@@ -234,6 +267,17 @@ export default async function ContentsPage({
     updated_at: String(p.updated_at ?? p.created_at),
   }));
 
+  // Si l'user a plus de contenus globalement que dans le projet actif,
+  // on remonte les "manquants" pour permettre au client de pointer
+  // l'user vers les autres projets.
+  const hiddenByProjectFilter = projectId
+    ? {
+        quizzes: Math.max(0, totalQuizCount - quizzes.length),
+        popquizzes: Math.max(0, totalPopquizCount - popquizCount),
+        pages: Math.max(0, totalPagesCount - funnels.length),
+      }
+    : { quizzes: 0, popquizzes: 0, pages: 0 };
+
   return (
     <MyContentLovableClient
       userEmail={session.user.email ?? ""}
@@ -242,6 +286,7 @@ export default async function ContentsPage({
       quizzes={quizzes}
       funnels={funnels}
       popquizCount={popquizCount}
+      hiddenByProjectFilter={hiddenByProjectFilter}
       error={error}
     />
   );
