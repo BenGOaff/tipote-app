@@ -353,7 +353,7 @@ export async function GET() {
   // 7. Statut compta + jauge TVA
   let bpQ = supabaseAdmin
     .from("business_profiles")
-    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti")
+    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti, pt_iva_isento, pt_region")
     .eq("user_id", user.id);
   if (projectId) bpQ = bpQ.eq("project_id", projectId);
   const { data: bp } = await bpQ.maybeSingle();
@@ -459,14 +459,34 @@ export async function GET() {
     if (status === "independant_ch" || status === "sarl_ch" || status === "sa_ch") {
       return Boolean((bp as { ch_vat_assujetti?: boolean } | null)?.ch_vat_assujetti);
     }
+    // PT — toutes les formes pro si pas en regime de isenção.
+    if (
+      status === "trabalhador_independente_pt" ||
+      status === "eni_pt" ||
+      status === "lda_unipessoal_pt" ||
+      status === "lda_pt" ||
+      status === "sa_pt"
+    ) {
+      const isento = (bp as { pt_iva_isento?: boolean } | null)?.pt_iva_isento;
+      return isento === false;
+    }
     return false;
   })();
 
-  // Taux TVA normal selon pays (CH = 8.1%, FR = 20%). Pour estimer
-  // la TVA collectée on assume que toutes les ventes sont au taux
-  // normal — les exceptions (5,5/2,1 FR ou 2,6/3,8 CH) sont
-  // statistiquement minoritaires sur le total CA YTD.
-  const vatRateNormal = countryCode === "CH" ? 8.1 : 20;
+  // Taux TVA normal selon pays (CH 8.1%, FR 20%, PT 23/22/16% selon
+  // région). Pour estimer la TVA collectée on assume taux normal sur
+  // toutes les ventes — les exceptions sont statistiquement
+  // minoritaires sur le CA YTD.
+  const vatRateNormal = (() => {
+    if (countryCode === "CH") return 8.1;
+    if (countryCode === "PT") {
+      const region = (bp as { pt_region?: string | null } | null)?.pt_region;
+      if (region === "madeira") return 22;
+      if (region === "acores") return 16;
+      return 23; // continente
+    }
+    return 20; // FR
+  })();
   const vatCollectedYtdCents = isVatable
     ? Math.round((ytdEur * vatRateNormal) / (100 + vatRateNormal))
     : 0;

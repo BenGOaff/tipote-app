@@ -26,6 +26,7 @@ import {
   COUNTRY_OPTIONS,
   isFrenchCountry,
   isSwissCountry,
+  isPortugueseCountry,
   SUPPORTED_COUNTRIES,
 } from "@/lib/compta/countries";
 import {
@@ -62,7 +63,8 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
   const hasCountry = (country ?? "").trim().length > 0;
   const isFrance = isFrenchCountry(country);
   const isSwiss = isSwissCountry(country);
-  const isSupported = isFrance || isSwiss;
+  const isPortugal = isPortugueseCountry(country);
+  const isSupported = isFrance || isSwiss || isPortugal;
 
   function patchProfile(patch: Partial<ComptaProfileSlice>): Promise<void> {
     return new Promise<void>((resolve) => {
@@ -125,7 +127,7 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
           </div>
           <ComptaConfigForm
             initial={slice}
-            country={isFrance ? "FR" : "CH"}
+            country={isFrance ? "FR" : isSwiss ? "CH" : "PT"}
             pending={pending}
             onSave={patchProfile}
             onCancel={editing ? () => setEditing(false) : undefined}
@@ -543,6 +545,70 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
         value: "AG d'approbation dans les 6 mois après clôture",
       });
     }
+  } else if (
+    slice.accounting_status === "trabalhador_independente_pt" ||
+    slice.accounting_status === "eni_pt" ||
+    slice.accounting_status === "lda_unipessoal_pt" ||
+    slice.accounting_status === "lda_pt" ||
+    slice.accounting_status === "sa_pt"
+  ) {
+    // Portugal — résumé adapté en français (UI Tipote francophone),
+    // termes officiels portugais conservés (NIF, IRS, IRC, etc.)
+    const ptLabel =
+      slice.accounting_status === "trabalhador_independente_pt"
+        ? "Trabalhador independente"
+        : slice.accounting_status === "eni_pt"
+          ? "Empresário em Nome Individual (ENI)"
+          : slice.accounting_status === "lda_unipessoal_pt"
+            ? "Sociedade Unipessoal por Quotas (LDA Unipessoal)"
+            : slice.accounting_status === "lda_pt"
+              ? "Sociedade por Quotas (LDA)"
+              : "Sociedade Anónima (SA)";
+    rows.push({ label: "Forme juridique", value: ptLabel });
+    rows.push({
+      label: "NIF",
+      value: slice.pt_nif ?? "Non renseigné",
+    });
+    const regionLabel =
+      slice.pt_region === "madeira"
+        ? "Madeira (taux IVA réduits)"
+        : slice.pt_region === "acores"
+          ? "Açores (taux IVA réduits)"
+          : slice.pt_region === "continente"
+            ? "Portugal continental"
+            : "Non précisé";
+    rows.push({ label: "Région", value: regionLabel });
+    rows.push({
+      label: "Régime IVA",
+      value: slice.pt_iva_isento
+        ? "Isento (sous le seuil 15 000 €)"
+        : "Normal (assujetti)",
+    });
+    if (!slice.pt_iva_isento) {
+      rows.push({
+        label: "Périodicité IVA",
+        value:
+          slice.pt_iva_periodicity === "mensal"
+            ? "Mensuelle"
+            : "Trimestrielle (par défaut)",
+      });
+    }
+    if (
+      slice.accounting_status === "trabalhador_independente_pt" ||
+      slice.accounting_status === "eni_pt"
+    ) {
+      rows.push({
+        label: "Régime fiscal",
+        value:
+          slice.pt_tax_regime === "organizada"
+            ? "Contabilidade organizada (réelle)"
+            : "Simplificado (forfaitaire)",
+      });
+      rows.push({
+        label: "Segurança Social",
+        value: "Paiement mensuel le 20 (21,4% du revenu pertinente)",
+      });
+    }
   }
 
   return (
@@ -594,6 +660,16 @@ function statusLabel(s: AccountingStatus): string {
       return "Sàrl (Suisse)";
     case "sa_ch":
       return "SA (Suisse)";
+    case "trabalhador_independente_pt":
+      return "Trabalhador independente (Portugal)";
+    case "eni_pt":
+      return "ENI (Portugal)";
+    case "lda_unipessoal_pt":
+      return "LDA Unipessoal (Portugal)";
+    case "lda_pt":
+      return "LDA (Portugal)";
+    case "sa_pt":
+      return "SA (Portugal)";
   }
 }
 

@@ -137,6 +137,12 @@ const UpdateSchema = z.object({
       "independant_ch",
       "sarl_ch",
       "sa_ch",
+      // PT
+      "trabalhador_independente_pt",
+      "eni_pt",
+      "lda_unipessoal_pt",
+      "lda_pt",
+      "sa_pt",
     ])
     .nullable()
     .optional(),
@@ -183,6 +189,14 @@ const UpdateSchema = z.object({
     .optional(),
   ch_vat_method: z.enum(["effective", "tdfn"]).nullable().optional(),
   ch_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+
+  // Portugal — phase 1o
+  pt_nif: z.string().regex(/^\d{9}$/).nullable().optional(),
+  pt_region: z.enum(["continente", "madeira", "acores"]).nullable().optional(),
+  pt_iva_isento: z.boolean().optional(),
+  pt_iva_periodicity: z.enum(["mensal", "trimestral"]).nullable().optional(),
+  pt_tax_regime: z.enum(["simplificado", "organizada"]).nullable().optional(),
+  pt_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   // accounting_status_configured_at est défini côté serveur dans le PATCH
   // ci-dessous, pas accepté en input.
 

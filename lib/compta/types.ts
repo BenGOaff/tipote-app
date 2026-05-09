@@ -15,7 +15,13 @@ export type AccountingStatus =
   // CH (phase 1n)
   | "independant_ch"
   | "sarl_ch"
-  | "sa_ch";
+  | "sa_ch"
+  // PT (phase 1o)
+  | "trabalhador_independente_pt"
+  | "eni_pt"
+  | "lda_unipessoal_pt"
+  | "lda_pt"
+  | "sa_pt";
 
 export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "particulier",
@@ -27,7 +33,53 @@ export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "independant_ch",
   "sarl_ch",
   "sa_ch",
+  "trabalhador_independente_pt",
+  "eni_pt",
+  "lda_unipessoal_pt",
+  "lda_pt",
+  "sa_pt",
 ];
+
+/** Helpers Portugal : 5 statuts. */
+export function isPortugueseStatus(status: AccountingStatus | null): boolean {
+  return (
+    status === "trabalhador_independente_pt" ||
+    status === "eni_pt" ||
+    status === "lda_unipessoal_pt" ||
+    status === "lda_pt" ||
+    status === "sa_pt"
+  );
+}
+
+/** Société portugaise à l'IRC (≈ IS local). LDA, LDA Unipessoal,
+ *  SA. L'ENI et le trabalhador independente sont à l'IRS personnel. */
+export function isPortugueseCorporate(status: AccountingStatus | null): boolean {
+  return (
+    status === "lda_unipessoal_pt" ||
+    status === "lda_pt" ||
+    status === "sa_pt"
+  );
+}
+
+export type PtRegion = "continente" | "madeira" | "acores";
+
+export const PT_REGIONS: ReadonlyArray<{ code: PtRegion; label: string }> = [
+  { code: "continente", label: "Portugal continental" },
+  { code: "madeira", label: "Madeira" },
+  { code: "acores", label: "Açores" },
+];
+
+export type PtIvaPeriodicity = "mensal" | "trimestral";
+
+export type PtTaxRegime = "simplificado" | "organizada";
+
+/** Taux IVA normal selon la région portugaise (continent / Madère
+ *  / Açores). Utilisé par le dashboard pour estimer la TVA collectée. */
+export function ptVatRateNormal(region: PtRegion | null): number {
+  if (region === "madeira") return 22;
+  if (region === "acores") return 16;
+  return 23; // continente par défaut
+}
 
 /** Helpers Suisse : 3 statuts, traités en bloc. */
 export function isSwissStatus(status: AccountingStatus | null): boolean {
@@ -254,6 +306,13 @@ export interface ComptaProfileSlice {
   ch_vat_periodicity: ChVatPeriodicity | null;
   ch_vat_method: ChVatMethod | null;
   ch_started_at: string | null; // ISO date YYYY-MM-DD
+  // Portugal (phase 1o)
+  pt_nif: string | null;
+  pt_region: PtRegion | null;
+  pt_iva_isento: boolean;
+  pt_iva_periodicity: PtIvaPeriodicity | null;
+  pt_tax_regime: PtTaxRegime | null;
+  pt_started_at: string | null;
 }
 
 /** Valeurs par défaut quand on construit une slice à partir d'un row
@@ -284,5 +343,11 @@ export function emptyComptaSlice(): ComptaProfileSlice {
     ch_vat_periodicity: null,
     ch_vat_method: null,
     ch_started_at: null,
+    pt_nif: null,
+    pt_region: null,
+    pt_iva_isento: false,
+    pt_iva_periodicity: null,
+    pt_tax_regime: null,
+    pt_started_at: null,
   };
 }

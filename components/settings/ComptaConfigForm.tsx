@@ -36,9 +36,9 @@ import {
 
 interface Props {
   initial: ComptaProfileSlice;
-  /** Pays détecté côté parent (FR ou CH) — détermine quelles
-   *  cartes de statut on propose (6 FR ou 3 CH). */
-  country: "FR" | "CH";
+  /** Pays détecté côté parent (FR / CH / PT) — détermine quelles
+   *  cartes de statut on propose (6 FR, 4 CH, 6 PT). */
+  country: "FR" | "CH" | "PT";
   /** Si fourni, l'user édite une config existante → bouton "Annuler". */
   onCancel?: () => void;
   /** Patch à envoyer à /api/profile. Le parent gère le fetch + le toast. */
@@ -123,6 +123,21 @@ export default function ComptaConfigForm({
       if (draft.ch_vat_assujetti && !draft.ch_vat_periodicity) {
         next.ch_vat_periodicity = "Choisis la périodicité de tes décomptes TVA.";
       }
+    } else if (
+      status === "trabalhador_independente_pt" ||
+      status === "eni_pt" ||
+      status === "lda_unipessoal_pt" ||
+      status === "lda_pt" ||
+      status === "sa_pt"
+    ) {
+      // PT : NIF format 9 chiffres si renseigné.
+      if (draft.pt_nif && !/^\d{9}$/.test(draft.pt_nif)) {
+        next.pt_nif = "NIF invalide (9 chiffres exactement).";
+      }
+      // Si non-isento, périodicité IVA obligatoire.
+      if (!draft.pt_iva_isento && !draft.pt_iva_periodicity) {
+        next.pt_iva_periodicity = "Choisis la périodicité de tes déclarations IVA.";
+      }
     }
 
     setErrors(next);
@@ -203,6 +218,36 @@ export default function ComptaConfigForm({
           ? null
           : draft.sasu_fiscal_year_start_month;
       }
+    } else if (
+      status === "trabalhador_independente_pt" ||
+      status === "eni_pt" ||
+      status === "lda_unipessoal_pt" ||
+      status === "lda_pt" ||
+      status === "sa_pt"
+    ) {
+      // Statuts PT — colonnes pt_*. Pour LDA/SA, on réutilise
+      // aussi sasu_fiscal_year_* pour l'exercice comptable.
+      patch.pt_nif = draft.pt_nif;
+      patch.pt_region = draft.pt_region ?? "continente";
+      patch.pt_iva_isento = draft.pt_iva_isento;
+      patch.pt_iva_periodicity = draft.pt_iva_isento
+        ? null
+        : draft.pt_iva_periodicity ?? "trimestral";
+      // Régime fiscal seulement pour les indépendants/ENI
+      if (status === "trabalhador_independente_pt" || status === "eni_pt") {
+        patch.pt_tax_regime = draft.pt_tax_regime ?? "simplificado";
+      }
+      patch.pt_started_at = draft.pt_started_at;
+      if (
+        status === "lda_unipessoal_pt" ||
+        status === "lda_pt" ||
+        status === "sa_pt"
+      ) {
+        patch.sasu_fiscal_year_calendar = draft.sasu_fiscal_year_calendar;
+        patch.sasu_fiscal_year_start_month = draft.sasu_fiscal_year_calendar
+          ? null
+          : draft.sasu_fiscal_year_start_month;
+      }
     }
 
     await onSave(patch);
@@ -251,6 +296,14 @@ export default function ComptaConfigForm({
         <SuisseFields draft={draft} update={update} errors={errors} status={status} />
       ) : null}
 
+      {status === "trabalhador_independente_pt" ||
+      status === "eni_pt" ||
+      status === "lda_unipessoal_pt" ||
+      status === "lda_pt" ||
+      status === "sa_pt" ? (
+        <PortugalFields draft={draft} update={update} errors={errors} status={status} />
+      ) : null}
+
       {status ? (
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={pending}>
@@ -288,7 +341,7 @@ function StatusPicker({
   onChange,
 }: {
   value: AccountingStatus | null;
-  country: "FR" | "CH";
+  country: "FR" | "CH" | "PT";
   onChange: (v: AccountingStatus) => void;
 }) {
   // Rend des cartes différentes selon le pays détecté côté parent.
@@ -351,6 +404,81 @@ function StatusPicker({
           le calendrier fédéral + les dates butoir de déclaration
           de TON canton (à indiquer plus bas). Pour les taux exacts
           d&apos;imposition, ton fiduciaire reste la référence.
+        </p>
+      </div>
+    );
+  }
+
+  if (country === "PT") {
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Sans société dédiée
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatusCard
+              icon={<User className="h-5 w-5" />}
+              title="Particulier"
+              desc="Revenus accessoires (en plus d'un emploi ou pas d'autre activité). Tout passe par ta Modelo 3 IRS annuelle."
+              selected={value === "particulier"}
+              onClick={() => onChange("particulier")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="Trabalhador independente"
+              desc="Indépendant inscrit à l'AT (Recibos Verdes). Régime simplificado par défaut, IVA si CA > 15k €, Segurança Social mensuelle."
+              selected={value === "trabalhador_independente_pt"}
+              onClick={() => onChange("trabalhador_independente_pt")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="ENI"
+              desc="Empresário em Nome Individual. Activité commerciale sous ton nom, comptabilité organizada possible."
+              selected={value === "eni_pt"}
+              onClick={() => onChange("eni_pt")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Société commerciale (à l&apos;IRC)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="LDA Unipessoal"
+              desc="Sociedade Unipessoal por Quotas — un seul associé. IRC 21%, comptes annuels, Modelo 22, e-fatura."
+              selected={value === "lda_unipessoal_pt"}
+              onClick={() => onChange("lda_unipessoal_pt")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="LDA"
+              desc="Sociedade por Quotas — 2 associés ou plus. Mêmes obligations qu'une LDA Unipessoal."
+              selected={value === "lda_pt"}
+              onClick={() => onChange("lda_pt")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="SA"
+              desc="Sociedade Anónima. Capital min. 50 000 €, structure plus formelle. Mêmes obligations IRC qu'une LDA."
+              selected={value === "sa_pt"}
+              onClick={() => onChange("sa_pt")}
+            />
+          </div>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground italic">
+          Tipote couvre les obligations fédérales portugaises
+          (IVA, IRS, IRC, Modelo 22, Segurança Social, e-fatura).
+          Les particularités régionales (Madère / Açores ont des
+          taux IVA différents) sont gérées via le sélecteur région
+          plus bas. Pour les calculs exacts d&apos;impôt, ton
+          contabilista certificado reste la référence.
         </p>
       </div>
     );
@@ -1226,6 +1354,268 @@ function monthName(m: number): string {
     "juillet", "août", "septembre", "octobre", "novembre", "décembre",
   ];
   return months[m - 1] ?? "";
+}
+
+/* ──────────────────────────────────────────────────────────────────
+ * Portugal (phase 1o)
+ * ────────────────────────────────────────────────────────────────── */
+
+function PortugalFields({
+  draft,
+  update,
+  errors,
+  status,
+}: {
+  draft: ComptaProfileSlice;
+  update: <K extends keyof ComptaProfileSlice>(key: K, value: ComptaProfileSlice[K]) => void;
+  errors: Record<string, string>;
+  status:
+    | "trabalhador_independente_pt"
+    | "eni_pt"
+    | "lda_unipessoal_pt"
+    | "lda_pt"
+    | "sa_pt";
+}) {
+  const isCorporate =
+    status === "lda_unipessoal_pt" ||
+    status === "lda_pt" ||
+    status === "sa_pt";
+  const isIndepOrEni =
+    status === "trabalhador_independente_pt" || status === "eni_pt";
+
+  return (
+    <Card className="p-5 space-y-5">
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>Portugal :</strong> Tipote calcule tes échéances IVA,
+        IRS / IRC et Segurança Social à partir des dates butoir
+        officielles de l&apos;AT (Autoridade Tributária). Les taux
+        d&apos;impôt et la derrama municipal varient — ton
+        contabilista certificado reste la référence pour les calculs.
+      </div>
+
+      {/* NIF — 9 chiffres, géré par l'AT */}
+      <div className="space-y-2">
+        <Label htmlFor="pt-nif">NIF (Número de Identificação Fiscal)</Label>
+        <p className="text-xs text-muted-foreground">
+          9 chiffres. Tu peux le retrouver sur le portail{" "}
+          <a
+            href="https://www.portaldasfinancas.gov.pt/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            portaldasfinancas.gov.pt
+          </a>
+          .
+        </p>
+        <Input
+          id="pt-nif"
+          inputMode="numeric"
+          maxLength={9}
+          value={draft.pt_nif ?? ""}
+          onChange={(e) => update("pt_nif", e.target.value.replace(/\D/g, "") || null)}
+          placeholder="123456789"
+        />
+        {errors.pt_nif ? (
+          <p className="text-xs text-destructive">{errors.pt_nif}</p>
+        ) : null}
+      </div>
+
+      {/* Région : continent / Madère / Açores — affecte les taux IVA */}
+      <div className="space-y-2">
+        <Label>Ta région</Label>
+        <p className="text-xs text-muted-foreground">
+          Madère et Açores ont des taux IVA réduits par rapport au
+          continent (22% et 16% au lieu de 23% pour le taux normal).
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          {(
+            [
+              { v: "continente", label: "Portugal continental", hint: "23% / 13% / 6%" },
+              { v: "madeira", label: "Madeira", hint: "22% / 12% / 5%" },
+              { v: "acores", label: "Açores", hint: "16% / 9% / 4%" },
+            ] as const
+          ).map((opt) => {
+            const active = (draft.pt_region ?? "continente") === opt.v;
+            return (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => update("pt_region", opt.v)}
+                className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary font-medium"
+                    : "border-border hover:bg-muted/40"
+                }`}
+              >
+                <div>{opt.label}</div>
+                <div className="text-[10px] text-muted-foreground font-normal">
+                  {opt.hint}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Date début activité */}
+      <div className="space-y-2">
+        <Label htmlFor="pt-started">
+          Date de début d&apos;activité{" "}
+          <span className="text-muted-foreground font-normal">(optionnel)</span>
+        </Label>
+        <input
+          id="pt-started"
+          type="date"
+          value={draft.pt_started_at ?? ""}
+          onChange={(e) => update("pt_started_at", e.target.value || null)}
+          className="rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      {/* Régime fiscal — uniquement pour indépendants/ENI */}
+      {isIndepOrEni ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Régime fiscal</Label>
+          <p className="text-xs text-muted-foreground">
+            Régime simplificado : forfait sur 75% du CA, comptabilité
+            allégée. Contabilidade organizada : comptabilité réelle,
+            obligatoire au-dessus de 200 000 € de CA.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {(
+              [
+                { v: "simplificado", label: "Simplificado", hint: "défaut" },
+                { v: "organizada", label: "Contabilidade organizada", hint: "comptabilité réelle" },
+              ] as const
+            ).map((opt) => {
+              const active = (draft.pt_tax_regime ?? "simplificado") === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => update("pt_tax_regime", opt.v)}
+                  className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    ({opt.hint})
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Exercice comptable pour LDA/SA */}
+      {isCorporate ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Exercice comptable</Label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => update("sasu_fiscal_year_calendar", true)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                draft.sasu_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Année civile (jan → déc)
+            </button>
+            <button
+              type="button"
+              onClick={() => update("sasu_fiscal_year_calendar", false)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                !draft.sasu_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Décalé
+            </button>
+          </div>
+          {!draft.sasu_fiscal_year_calendar ? (
+            <div className="space-y-1 pt-2">
+              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <select
+                value={draft.sasu_fiscal_year_start_month ?? ""}
+                onChange={(e) =>
+                  update("sasu_fiscal_year_start_month", parseInt(e.target.value, 10) || null)
+                }
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
+              >
+                <option value="">—</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                  <option key={m} value={m}>
+                    {monthName(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Régime IVA — assujetti ou isento */}
+      <BoolRow
+        id="pt-iva-isento"
+        title="Régime de isenção IVA ?"
+        desc="Si tu es sous le seuil de 15 000 € de CA annuel (art. 53 CIVA), tu es exonéré et tu ne factures pas la TVA. Au-dessus, tu collectes l'IVA et déclares mensuellement / trimestriellement."
+        helpHref="https://info-ras.at.gov.pt/"
+        helpLabel="Plus d'infos sur le régime de isenção"
+        checked={!!draft.pt_iva_isento}
+        onChange={(b) => update("pt_iva_isento", b)}
+      />
+
+      {/* Périodicité IVA si non-isento */}
+      {!draft.pt_iva_isento ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Périodicité du décompte IVA</Label>
+          <p className="text-xs text-muted-foreground">
+            Trimestrielle si CA &lt; 650 000 € (cas le plus courant).
+            Mensuelle au-delà. Date butoir : jour 25 du 2e mois suivant
+            la période.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {(
+              [
+                { v: "trimestral", label: "Trimestrielle", hint: "défaut, CA < 650k €" },
+                { v: "mensal", label: "Mensuelle", hint: "CA > 650k €" },
+              ] as const
+            ).map((opt) => {
+              const active = (draft.pt_iva_periodicity ?? "trimestral") === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => update("pt_iva_periodicity", opt.v)}
+                  className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    ({opt.hint})
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {errors.pt_iva_periodicity ? (
+            <p className="text-xs text-destructive">{errors.pt_iva_periodicity}</p>
+          ) : null}
+        </div>
+      ) : null}
+    </Card>
+  );
 }
 
 /* ──────────────────────────────────────────────────────────────────

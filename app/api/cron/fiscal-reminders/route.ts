@@ -33,6 +33,10 @@ import {
   computeFiscalDeadlinesCH,
   type FiscalProfileCH,
 } from "@/lib/compta/fiscalCalendarCH";
+import {
+  computeFiscalDeadlinesPT,
+  type FiscalProfilePT,
+} from "@/lib/compta/fiscalCalendarPT";
 import { detectCountryCode } from "@/lib/compta/countries";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +69,7 @@ export async function GET(req: NextRequest) {
   const { data: profiles, error } = await supabaseAdmin
     .from("business_profiles")
     .select(
-      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire, ch_canton, ch_vat_assujetti, ch_vat_periodicity, ch_vat_method, ch_started_at",
+      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire, ch_canton, ch_vat_assujetti, ch_vat_periodicity, ch_vat_method, ch_started_at, pt_nif, pt_region, pt_iva_isento, pt_iva_periodicity, pt_tax_regime, pt_started_at",
     )
     .not("accounting_status", "is", null);
 
@@ -89,7 +93,7 @@ export async function GET(req: NextRequest) {
     const userId = profile.user_id as string;
     const projectId = (profile.project_id ?? null) as string | null;
     const country = detectCountryCode(profile.country as string | null);
-    if (country !== "FR" && country !== "CH") continue;
+    if (country !== "FR" && country !== "CH" && country !== "PT") continue;
 
     const email = emailByUserId.get(userId) ?? "";
     const now = new Date();
@@ -121,7 +125,7 @@ export async function GET(req: NextRequest) {
         sarl_gerant_majoritaire: Boolean(profile.sarl_gerant_majoritaire),
       };
       all = computeFiscalDeadlines(fp, now, horizon);
-    } else {
+    } else if (country === "CH") {
       const fpCh: FiscalProfileCH = {
         accounting_status: profile.accounting_status as FiscalProfileCH["accounting_status"],
         ch_canton: (profile.ch_canton ?? null) as string | null,
@@ -133,6 +137,20 @@ export async function GET(req: NextRequest) {
         sasu_fiscal_year_start_month: (profile.sasu_fiscal_year_start_month ?? null) as number | null,
       };
       all = computeFiscalDeadlinesCH(fpCh, now, horizon);
+    } else {
+      // PT
+      const fpPt: FiscalProfilePT = {
+        accounting_status: profile.accounting_status as FiscalProfilePT["accounting_status"],
+        pt_nif: (profile.pt_nif ?? null) as string | null,
+        pt_region: (profile.pt_region ?? null) as FiscalProfilePT["pt_region"],
+        pt_iva_isento: Boolean(profile.pt_iva_isento),
+        pt_iva_periodicity: (profile.pt_iva_periodicity ?? null) as FiscalProfilePT["pt_iva_periodicity"],
+        pt_tax_regime: (profile.pt_tax_regime ?? null) as FiscalProfilePT["pt_tax_regime"],
+        pt_started_at: (profile.pt_started_at ?? null) as string | null,
+        sasu_fiscal_year_calendar: Boolean(profile.sasu_fiscal_year_calendar),
+        sasu_fiscal_year_start_month: (profile.sasu_fiscal_year_start_month ?? null) as number | null,
+      };
+      all = computeFiscalDeadlinesPT(fpPt, now, horizon);
     }
     const urgent = pickUrgentDeadlines(all, 7, now);
 

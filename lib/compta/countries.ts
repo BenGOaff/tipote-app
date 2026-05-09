@@ -30,6 +30,17 @@ const SWITZERLAND_SYNONYMS = new Set([
   "che",
 ]);
 
+const PORTUGAL_SYNONYMS = new Set([
+  "portugal",
+  "pt",
+  "portugais",
+  "portugaise",
+  "prt",
+  "portuguese",
+  "portugues",
+  "portuguesa",
+]);
+
 function normalize(s: string | null | undefined): string {
   return (s ?? "")
     .toLowerCase()
@@ -50,11 +61,19 @@ export function isSwissCountry(country: string | null | undefined): boolean {
   return SWITZERLAND_SYNONYMS.has(normalize(country));
 }
 
-/** Code pays normalisé (FR/CH/null). Évite de dispatcher sur le
- *  texte brut dans toute l'app. */
-export function detectCountryCode(country: string | null | undefined): "FR" | "CH" | null {
+export function isPortugueseCountry(country: string | null | undefined): boolean {
+  if (!country) return false;
+  return PORTUGAL_SYNONYMS.has(normalize(country));
+}
+
+/** Code pays normalisé. Évite de dispatcher sur le texte brut dans
+ *  toute l'app. */
+export function detectCountryCode(
+  country: string | null | undefined,
+): "FR" | "CH" | "PT" | null {
   if (isFrenchCountry(country)) return "FR";
   if (isSwissCountry(country)) return "CH";
+  if (isPortugueseCountry(country)) return "PT";
   return null;
 }
 
@@ -69,6 +88,11 @@ export const SUPPORTED_COUNTRIES: ReadonlyArray<{ code: string; label: string; s
     code: "CH",
     label: "Suisse",
     synonyms: Array.from(SWITZERLAND_SYNONYMS),
+  },
+  {
+    code: "PT",
+    label: "Portugal",
+    synonyms: Array.from(PORTUGAL_SYNONYMS),
   },
 ];
 
