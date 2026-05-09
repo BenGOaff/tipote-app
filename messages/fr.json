@@ -4330,7 +4330,8 @@
       "offres": "Mes Offres",
       "funnels": "Mes Pages",
       "strategies": "Mes Stratégies",
-      "quiz": "Mes Quiz"
+      "quiz": "Mes Quiz",
+      "popquiz": "Mes Popquiz"
     },
     "status": {
       "scheduled": "Planifié",

@@ -171,11 +171,21 @@ export default async function ContentsPage({
     .order("created_at", { ascending: false });
   if (projectId) pagesQuery = pagesQuery.eq("project_id", projectId);
 
-  const [{ data: items, error }, quizzesResult, pagesResult] = await Promise.all([
+  // Popquiz : juste un count (la liste/édition vit sur /popquizzes).
+  let popquizCountQuery = supabase
+    .from("popquizzes")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.user.id);
+  if (projectId) popquizCountQuery = popquizCountQuery.eq("project_id", projectId);
+
+  const [{ data: items, error }, quizzesResult, pagesResult, popquizCountRes] = await Promise.all([
     fetchContentsForUser(session.user.id, q, status, type, channel, projectId),
     quizzesQuery,
     pagesQuery,
+    popquizCountQuery,
   ]);
+
+  const popquizCount = popquizCountRes?.count ?? 0;
 
   // Count leads per quiz
   const quizRows = (quizzesResult?.data as any[]) ?? [];
@@ -231,6 +241,7 @@ export default async function ContentsPage({
       items={items}
       quizzes={quizzes}
       funnels={funnels}
+      popquizCount={popquizCount}
       error={error}
     />
   );

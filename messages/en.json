@@ -4330,7 +4330,8 @@
       "offres": "My Offers",
       "funnels": "My Pages",
       "strategies": "My Strategies",
-      "quiz": "My Quizzes"
+      "quiz": "My Quizzes",
+      "popquiz": "My Popquiz"
     },
     "status": {
       "scheduled": "Scheduled",

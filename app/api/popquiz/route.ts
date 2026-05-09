@@ -307,10 +307,13 @@ export async function POST(req: NextRequest) {
   // Publier) plutôt que d'avoir à passer par l'éditeur d'édition.
   const appearancePatch: Record<string, unknown> = {};
   if (typeof body.display_title === "string" && body.display_title.trim()) {
-    appearancePatch.display_title = body.display_title.trim().slice(0, 200);
+    // Limites larges car titre/sous-titre acceptent du HTML rich-text
+    // (gras / italique / couleur / alignement). La valeur est
+    // sanitisée côté client avant rendu sur la page publique.
+    appearancePatch.display_title = body.display_title.trim().slice(0, 2000);
   }
   if (typeof body.display_subtitle === "string" && body.display_subtitle.trim()) {
-    appearancePatch.display_subtitle = body.display_subtitle.trim().slice(0, 400);
+    appearancePatch.display_subtitle = body.display_subtitle.trim().slice(0, 4000);
   }
   if (
     typeof body.bg_style === "string" &&

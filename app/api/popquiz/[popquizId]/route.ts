@@ -109,15 +109,17 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   // Personnalisation page publique (apparence). Tous optionnels —
   // les defaults DB produisent un rendu propre sans config.
   if ("display_title" in body) {
+    // Limites larges car titre/sous-titre acceptent du HTML rich-text
+    // (gras / italique / couleur / alignement). Sanitisé côté client.
     update.display_title =
       typeof body.display_title === "string" && body.display_title.trim()
-        ? body.display_title.trim().slice(0, 200)
+        ? body.display_title.trim().slice(0, 2000)
         : null;
   }
   if ("display_subtitle" in body) {
     update.display_subtitle =
       typeof body.display_subtitle === "string" && body.display_subtitle.trim()
-        ? body.display_subtitle.trim().slice(0, 400)
+        ? body.display_subtitle.trim().slice(0, 4000)
         : null;
   }
   if (typeof body.bg_style === "string") {

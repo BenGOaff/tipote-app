@@ -23,6 +23,7 @@ import {
   buildPageBackgroundStyle,
   tiquizDiscoveryUrl,
 } from "@/lib/popquiz/appearance";
+import { sanitizeRichText } from "@/lib/richText";
 import type { Popquiz } from "@/lib/popquiz";
 
 function prettyHost(url: string): string {
@@ -75,18 +76,24 @@ export default function PopquizPlayClient({
           </div>
         ) : null}
 
-        {/* Titre + sous-titre (si configurés) */}
+        {/* Titre + sous-titre (si configurés). Le créateur peut taper
+            du HTML rich-text (gras / italique / couleur / alignement)
+            via l'éditeur côté admin — on rend le HTML après
+            sanitisation pour rester XSS-safe. La classe `tiquiz-rich`
+            applique les styles d'alignement/listes communs. */}
         {heading || subheading ? (
           <div className="text-center space-y-1.5">
             {heading ? (
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-sm">
-                {heading}
-              </h1>
+              <h1
+                className="tiquiz-rich text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-sm"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(heading) }}
+              />
             ) : null}
             {subheading ? (
-              <p className="text-sm sm:text-base text-white/80 max-w-2xl mx-auto">
-                {subheading}
-              </p>
+              <p
+                className="tiquiz-rich text-sm sm:text-base text-white/80 max-w-2xl mx-auto"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(subheading) }}
+              />
             ) : null}
           </div>
         ) : null}

@@ -12,6 +12,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
+import { RichTextEdit } from "@/components/ui/rich-text-edit";
 
 export type BgStyle = "transparent" | "solid" | "gradient";
 export type ShadowIntensity = "none" | "soft" | "medium" | "strong";
@@ -68,34 +70,41 @@ export function PopquizAppearanceForm(props: Props) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor={`${id}-display-title`}>
+            <Label>
               Titre affiché{" "}
               <span className="text-muted-foreground font-normal text-xs">
                 (lien direct uniquement)
               </span>
             </Label>
-            <Input
-              id={`${id}-display-title`}
-              value={props.displayTitle}
-              onChange={(e) => props.setDisplayTitle(e.target.value)}
-              placeholder="Ex : La méthode pour..."
-              maxLength={200}
-            />
+            {/* RichTextEdit : clique pour éditer, sélectionne pour
+                appliquer gras / italique / couleur / alignement —
+                comme dans l'éditeur de quiz. */}
+            <div className="rounded-md border bg-background px-2 py-1.5 min-h-[2.25rem]">
+              <RichTextEdit
+                value={props.displayTitle}
+                onChange={props.setDisplayTitle}
+                singleLine
+                placeholder="Ex : La méthode pour..."
+                className="text-sm"
+              />
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor={`${id}-display-subtitle`}>
+            <Label>
               Sous-titre{" "}
               <span className="text-muted-foreground font-normal text-xs">
                 (lien direct uniquement)
               </span>
             </Label>
-            <Input
-              id={`${id}-display-subtitle`}
-              value={props.displaySubtitle}
-              onChange={(e) => props.setDisplaySubtitle(e.target.value)}
-              placeholder="Ex : Découvre comment en 12 minutes"
-              maxLength={400}
-            />
+            <div className="rounded-md border bg-background px-2 py-1.5 min-h-[2.25rem]">
+              <RichTextEdit
+                value={props.displaySubtitle}
+                onChange={props.setDisplaySubtitle}
+                singleLine
+                placeholder="Ex : Découvre comment en 12 minutes"
+                className="text-sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -134,21 +143,19 @@ export function PopquizAppearanceForm(props: Props) {
                 <Label className="text-xs">
                   {props.bgStyle === "gradient" ? "Couleur 1" : "Couleur"}
                 </Label>
-                <input
-                  type="color"
+                <ColorSwatchPicker
                   value={props.bgColor}
-                  onChange={(e) => props.setBgColor(e.target.value)}
-                  className="size-9 rounded border cursor-pointer"
+                  onChange={props.setBgColor}
+                  label={props.bgStyle === "gradient" ? "Couleur 1 du fond" : "Couleur du fond"}
                 />
               </div>
               {props.bgStyle === "gradient" ? (
                 <div className="flex items-center gap-2">
                   <Label className="text-xs">Couleur 2</Label>
-                  <input
-                    type="color"
+                  <ColorSwatchPicker
                     value={props.bgColor2}
-                    onChange={(e) => props.setBgColor2(e.target.value)}
-                    className="size-9 rounded border cursor-pointer"
+                    onChange={props.setBgColor2}
+                    label="Couleur 2 du fond"
                   />
                 </div>
               ) : null}
@@ -187,11 +194,10 @@ export function PopquizAppearanceForm(props: Props) {
             {props.borderWidth > 0 ? (
               <div className="flex items-center gap-2">
                 <Label className="text-xs">Couleur</Label>
-                <input
-                  type="color"
+                <ColorSwatchPicker
                   value={props.borderColor}
-                  onChange={(e) => props.setBorderColor(e.target.value)}
-                  className="size-9 rounded border cursor-pointer"
+                  onChange={props.setBorderColor}
+                  label="Couleur de la bordure"
                 />
               </div>
             ) : null}
@@ -255,11 +261,10 @@ export function PopquizAppearanceForm(props: Props) {
             </div>
             <div className="flex items-center gap-2">
               <Label className="text-xs">Couleur (optionnel)</Label>
-              <input
-                type="color"
+              <ColorSwatchPicker
                 value={props.playButtonColor || "#ffffff"}
-                onChange={(e) => props.setPlayButtonColor(e.target.value)}
-                className="size-9 rounded border cursor-pointer"
+                onChange={props.setPlayButtonColor}
+                label="Couleur du bouton play"
               />
               {props.playButtonColor ? (
                 <button

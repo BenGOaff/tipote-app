@@ -26,6 +26,7 @@ import {
   Square as SquareIcon,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import { PageBanner } from "@/components/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ import {
   buildPageBackgroundStyle,
 } from "@/lib/popquiz/appearance";
 import { buildEmbedSnippet } from "@/components/popquiz/EmbedCodeDialog";
+import { sanitizeRichText } from "@/lib/richText";
 import {
   VideoUploader,
   type UploadedVideo,
@@ -481,18 +483,11 @@ export default function PopquizNewClient({
 
   return (
     <AppShell userEmail={userEmail} headerTitle="Nouveau Popquiz">
-      <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
-        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-          <Video className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">Popquiz</h2>
-          <p className="text-sm text-white/80">
-            Charge une vidéo, place des marqueurs sur la timeline pour faire
-            apparaître un quiz au bon moment.
-          </p>
-        </div>
-      </div>
+      <PageBanner
+        icon={<Video className="h-5 w-5" />}
+        title="Nouveau popquiz"
+        subtitle="Charge une vidéo, place des marqueurs pour faire apparaître un quiz au bon moment."
+      />
 
       <Card>
         <CardContent className="py-5 space-y-4">
@@ -655,14 +650,20 @@ export default function PopquizNewClient({
                 }
               >
                 {previewMode === "direct" && draftPopquiz.appearance.displayTitle ? (
-                  <h3 className="text-center text-base font-bold text-white drop-shadow-sm mb-1.5">
-                    {draftPopquiz.appearance.displayTitle}
-                  </h3>
+                  <h3
+                    className="tiquiz-rich text-center text-base font-bold text-white drop-shadow-sm mb-1.5"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeRichText(draftPopquiz.appearance.displayTitle),
+                    }}
+                  />
                 ) : null}
                 {previewMode === "direct" && draftPopquiz.appearance.displaySubtitle ? (
-                  <p className="text-center text-xs text-white/80 mb-2">
-                    {draftPopquiz.appearance.displaySubtitle}
-                  </p>
+                  <p
+                    className="tiquiz-rich text-center text-xs text-white/80 mb-2"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeRichText(draftPopquiz.appearance.displaySubtitle),
+                    }}
+                  />
                 ) : null}
                 <div
                   className={buildPlayerWrapperClassName(draftPopquiz.appearance)}

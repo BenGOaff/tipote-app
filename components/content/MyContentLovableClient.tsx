@@ -73,6 +73,7 @@ import {
   Download,
   Loader2,
   BarChart3,
+  PlayCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -117,6 +118,7 @@ type Props = {
   items: ContentListItem[];
   quizzes?: QuizListItem[];
   funnels?: FunnelListItem[];
+  popquizCount?: number;
   error?: string;
 };
 
@@ -207,11 +209,22 @@ const CONTENT_FOLDERS: ContentFolder[] = [
     bgColor: "bg-teal-500",
     matchType: () => false, // Quiz uses separate data source
   },
+  {
+    id: "popquiz",
+    label: "Mes Popquiz",
+    icon: PlayCircle,
+    color: "text-white",
+    bgColor: "bg-pink-500",
+    // Popquiz vit dans sa propre table — clic redirige vers /popquizzes,
+    // qui a déjà toute la UI dédiée (liste, stats, partage).
+    matchType: () => false,
+  },
 ];
 
-function countItemsForFolder(folder: ContentFolder, items: ContentListItem[], quizzes: QuizListItem[], funnels: FunnelListItem[]): number {
+function countItemsForFolder(folder: ContentFolder, items: ContentListItem[], quizzes: QuizListItem[], funnels: FunnelListItem[], popquizCount: number): number {
   if (folder.id === "quiz") return quizzes.length;
   if (folder.id === "funnels") return funnels.length;
+  if (folder.id === "popquiz") return popquizCount;
   return items.filter((it) => folder.matchType(it.type)).length;
 }
 
@@ -284,6 +297,7 @@ export default function MyContentLovableClient({
   items: initialItems,
   quizzes = [],
   funnels: initialFunnels = [],
+  popquizCount = 0,
   error,
 }: Props) {
   const router = useRouter();
@@ -710,12 +724,20 @@ export default function MyContentLovableClient({
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {CONTENT_FOLDERS.map((folder) => {
-                      const count = countItemsForFolder(folder, initialItems, quizzes, funnels);
+                      const count = countItemsForFolder(folder, initialItems, quizzes, funnels, popquizCount);
                       const FIcon = folder.icon;
                       return (
                         <button
                           key={folder.id}
-                          onClick={() => setActiveFolder(folder.id)}
+                          onClick={() => {
+                            // Popquiz a sa propre page (liste, stats, partage)
+                            // — on y redirige plutôt que d'inliner.
+                            if (folder.id === "popquiz") {
+                              router.push("/popquizzes");
+                              return;
+                            }
+                            setActiveFolder(folder.id);
+                          }}
                           className="group text-left"
                         >
                           <Card className="group p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-hover hover:border-primary/40 cursor-pointer h-full will-change-transform">

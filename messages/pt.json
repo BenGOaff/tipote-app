@@ -4630,7 +4630,8 @@
       "offres": "As minhas ofertas",
       "funnels": "As minhas páginas",
       "strategies": "As minhas estratégias",
-      "quiz": "Os meus quizzes"
+      "quiz": "Os meus quizzes",
+      "popquiz": "Os meus Popquiz"
     },
     "status": {
       "scheduled": "Agendado",
