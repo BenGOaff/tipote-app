@@ -37,6 +37,7 @@ import ComptaConnections from "@/components/settings/ComptaConnections";
 import ComptaManualTransactions from "@/components/settings/ComptaManualTransactions";
 import ComptaDashboard from "@/components/settings/ComptaDashboard";
 import { FiscalCalendar } from "@/components/settings/FiscalCalendar";
+import { FecExportCard } from "@/components/settings/FecExportCard";
 import RevenueGoalProgress from "@/components/business/RevenueGoalProgress";
 
 interface Props {
@@ -361,27 +362,13 @@ function ConfiguredSummary({
           CFE / DSN selon le statut. Lit /api/compta/fiscal-deadlines. */}
       <FiscalCalendar />
 
-      <Card className="p-6 space-y-4">
-        <div className="flex items-start gap-3">
-          <Sparkles className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-lg">À venir</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Prochaine étape qui s&apos;appuie sur ces données :
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <ul className="space-y-1 list-disc list-inside ml-1">
-            <li>Rappels email automatiques avant chaque échéance</li>
-            {status === "sasu" ? (
-              <li>Exporter le FEC pour ton comptable</li>
-            ) : null}
-            <li>Mise à jour automatique des seuils fiscaux chaque année</li>
-          </ul>
-        </div>
-      </Card>
+      {/* Export FEC (1j) — réservé aux SASU (les AE / particuliers
+          n'ont pas l'obligation de tenir un FEC). On passe le SIREN
+          lu dans le slice pour pouvoir désactiver le bouton tant
+          qu'il n'est pas renseigné. */}
+      {status === "sasu" ? (
+        <FecExportCard hasSiren={Boolean(slice.sasu_siren)} />
+      ) : null}
     </div>
   );
 }

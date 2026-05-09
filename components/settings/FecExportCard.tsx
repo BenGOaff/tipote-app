@@ -1,0 +1,159 @@
+"use client";
+
+// FecExportCard — card visible uniquement pour les SASU. Permet à
+// l'user de télécharger son FEC (Fichier des Écritures Comptables)
+// au format légal (article A47 A-1 du LPF) sur la période choisie,
+// par défaut son exercice fiscal en cours.
+//
+// Format du fichier : `<SIREN>FEC<AAAAMMJJ>.txt` (encoding UTF-8,
+// 18 colonnes pipe-separées). Cf. lib/compta/fecExport.ts pour la
+// construction réelle. Cette card est juste un wrapper UI.
+//
+// Bandeau d'avertissement permanent : on rappelle que Tipote ne
+// produit qu'un FEC partiel (ventes uniquement, pas d'achats /
+// charges / paie) — le comptable doit y agréger ses propres
+// écritures avant tout dépôt à l'admin fiscale.
+
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Download, FileText, Loader2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
+
+function ymdNow(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function startOfYearYmd(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-01-01`;
+}
+
+interface Props {
+  /** SIREN configuré ? Si pas, on désactive le bouton + on dit pourquoi. */
+  hasSiren: boolean;
+}
+
+export function FecExportCard({ hasSiren }: Props) {
+  const [from, setFrom] = useState<string>(startOfYearYmd());
+  const [to, setTo] = useState<string>(ymdNow());
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    if (!hasSiren) {
+      toast.error("Renseigne ton SIREN dans la configuration SASU d'abord.");
+      return;
+    }
+    if (from > to) {
+      toast.error("La date de début doit être avant la date de fin.");
+      return;
+    }
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/compta/fec-export?from=${from}&to=${to}`);
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error ?? `Erreur HTTP ${res.status}`);
+      }
+      const cd = res.headers.get("Content-Disposition") ?? "";
+      const match = /filename="([^"]+)"/.exec(cd);
+      const filename = match?.[1] ?? `FEC-${to}.txt`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      const entries = res.headers.get("X-Tipote-FEC-Entries") ?? "?";
+      toast.success(`FEC téléchargé (${entries} écritures sur la période).`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Téléchargement échoué");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="size-9 rounded-lg bg-primary/10 grid place-items-center shrink-0">
+          <FileText className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold">Export FEC pour ton comptable</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Fichier des Écritures Comptables au format légal
+            (article A47 A-1 du LPF). C&apos;est ce que l&apos;administration
+            fiscale peut te demander en cas de contrôle.
+          </p>
+        </div>
+      </div>
+
+      {/* Avertissement clair sur la portée du FEC produit ici */}
+      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+        <p>
+          Tipote n&apos;a que la moitié de ta compta : tes ventes &amp;
+          encaissements (PSP + saisies manuelles). Pas tes achats, charges,
+          dotations ou paie. Donne ce fichier à ton comptable comme base —
+          il y agrégera le reste avant tout dépôt officiel.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="fec-from">Date de début</Label>
+          <input
+            id="fec-from"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="w-full rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="fec-to">Date de fin</Label>
+          <input
+            id="fec-to"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="w-full rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+      </div>
+
+      {!hasSiren ? (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          Renseigne ton SIREN dans la configuration SASU plus bas — il
+          est obligatoire dans le nom du fichier FEC (norme fiscale).
+        </p>
+      ) : null}
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          onClick={handleDownload}
+          disabled={!hasSiren || downloading}
+        >
+          {downloading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Préparation…
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4 mr-2" />
+              Télécharger le FEC
+            </>
+          )}
+        </Button>
+      </div>
+    </Card>
+  );
+}
