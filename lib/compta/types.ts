@@ -31,7 +31,12 @@ export type AccountingStatus =
   | "autonomo_es"
   | "slu_es"
   | "sl_es"
-  | "sa_es";
+  | "sa_es"
+  // CA (phase 1r)
+  | "travailleur_autonome_ca"
+  | "entreprise_individuelle_ca"
+  | "inc_provincial_ca"
+  | "inc_federal_ca";
 
 export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "particulier",
@@ -56,6 +61,10 @@ export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "slu_es",
   "sl_es",
   "sa_es",
+  "travailleur_autonome_ca",
+  "entreprise_individuelle_ca",
+  "inc_provincial_ca",
+  "inc_federal_ca",
 ];
 
 export function isSpanishStatus(status: AccountingStatus | null): boolean {
@@ -112,6 +121,101 @@ export function isIPSICommunity(code: EsCommunity | null): boolean {
 export type EsIvaRegime = "general" | "simplificado" | "recargo_equivalencia" | "exencion";
 export type EsIvaPeriodicity = "mensual" | "trimestral";
 export type EsIrpfMethod = "directa" | "objetiva";
+
+/** Helpers Canada : 4 statuts (génériques, la province discrimine via
+ *  ca_province). On ne crée pas un statut par province pour rester
+ *  alignés sur les autres pays — ce qui change vraiment d'une province
+ *  à l'autre c'est le régime de taxes (TVQ/TVH/PST/RST), pas la forme
+ *  juridique. */
+export function isCanadianStatus(status: AccountingStatus | null): boolean {
+  return (
+    status === "travailleur_autonome_ca" ||
+    status === "entreprise_individuelle_ca" ||
+    status === "inc_provincial_ca" ||
+    status === "inc_federal_ca"
+  );
+}
+
+/** Société canadienne (T2 fédéral + déclaration provinciale).
+ *  Les travailleurs autonomes et entreprises individuelles déclarent
+ *  via le T1 personnel (annexe T2125 pour le revenu d'entreprise). */
+export function isCanadianCorporate(status: AccountingStatus | null): boolean {
+  return status === "inc_provincial_ca" || status === "inc_federal_ca";
+}
+
+/** 13 provinces et territoires canadiens (codes ISO 3166-2 CA-XX). */
+export type CaProvince =
+  | "QC" | "ON" | "BC" | "AB" | "MB" | "SK"
+  | "NS" | "NB" | "NL" | "PE"
+  | "YT" | "NT" | "NU";
+
+export const CA_PROVINCES: ReadonlyArray<{ code: CaProvince; label: string }> = [
+  { code: "QC", label: "Québec" },
+  { code: "ON", label: "Ontario" },
+  { code: "BC", label: "Colombie-Britannique" },
+  { code: "AB", label: "Alberta" },
+  { code: "MB", label: "Manitoba" },
+  { code: "SK", label: "Saskatchewan" },
+  { code: "NS", label: "Nouvelle-Écosse" },
+  { code: "NB", label: "Nouveau-Brunswick" },
+  { code: "NL", label: "Terre-Neuve-et-Labrador" },
+  { code: "PE", label: "Île-du-Prince-Édouard" },
+  { code: "YT", label: "Yukon" },
+  { code: "NT", label: "Territoires du Nord-Ouest" },
+  { code: "NU", label: "Nunavut" },
+];
+
+/** Régime de taxes applicable selon la province :
+ *   - tps_tvq : QC (TPS 5% + TVQ 9.975%, gérés ensemble par RQ)
+ *   - tvh     : ON (13%), NB+NL+NS+PE (15%) — taxe harmonisée
+ *   - tps_pst : BC (PST 7%), SK (PST 6%), MB (RST 7%) — séparées
+ *   - tps     : AB, YT, NT, NU — TPS seule, pas de taxe provinciale
+ */
+export type CaTaxRegime = "tps_tvq" | "tvh" | "tps_pst" | "tps";
+
+export function caTaxRegime(province: CaProvince | null): CaTaxRegime | null {
+  if (!province) return null;
+  if (province === "QC") return "tps_tvq";
+  if (province === "ON" || province === "NB" || province === "NL" ||
+      province === "NS" || province === "PE") return "tvh";
+  if (province === "BC" || province === "SK" || province === "MB") return "tps_pst";
+  return "tps"; // AB, YT, NT, NU
+}
+
+/** Taux de la composante provinciale (en %). 0 si pas de taxe
+ *  provinciale (AB + territoires) ou si TPS seule. La TPS fédérale
+ *  (5%) est constante et ajoutée par-dessus, sauf en TVH où le taux
+ *  affiché inclut déjà la part fédérale. */
+export function caProvincialTaxRate(province: CaProvince | null): number {
+  if (!province) return 0;
+  switch (province) {
+    case "QC": return 9.975;
+    case "ON": return 8;            // 8 % provincial dans la TVH 13 %
+    case "NB":
+    case "NL":
+    case "NS":
+    case "PE": return 10;           // 10 % provincial dans la TVH 15 %
+    case "BC": return 7;            // PST
+    case "SK": return 6;            // PST
+    case "MB": return 7;            // RST
+    default: return 0;              // AB, YT, NT, NU
+  }
+}
+
+/** Taux total de taxes à percevoir sur une facture (somme TPS +
+ *  composante provinciale). Sert au dashboard pour estimer la taxe
+ *  collectée à reverser. TPS fédérale = 5 %. */
+export function caTotalTaxRate(province: CaProvince | null): number {
+  return 5 + caProvincialTaxRate(province);
+}
+
+export type CaGstPeriodicity = "mensuelle" | "trimestrielle" | "annuelle";
+
+export const CA_GST_PERIODICITIES: ReadonlyArray<CaGstPeriodicity> = [
+  "mensuelle",
+  "trimestrielle",
+  "annuelle",
+];
 
 /** Helpers Belgique : 4 statuts. */
 export function isBelgianStatus(status: AccountingStatus | null): boolean {
@@ -427,6 +531,15 @@ export interface ComptaProfileSlice {
   es_redeme: boolean;
   es_irpf_method: EsIrpfMethod | null;
   es_started_at: string | null;
+  // Canada (phase 1r)
+  ca_province: CaProvince | null;
+  ca_business_number: string | null; // BN ARC (9 ch.) ou NEQ QC (10 ch.)
+  ca_gst_registered: boolean;
+  ca_gst_periodicity: CaGstPeriodicity | null;
+  ca_petit_fournisseur: boolean;
+  ca_fiscal_year_calendar: boolean;
+  ca_fiscal_year_start_month: number | null; // 1-12, sociétés
+  ca_started_at: string | null;
 }
 
 /** Valeurs par défaut quand on construit une slice à partir d'un row
@@ -476,5 +589,13 @@ export function emptyComptaSlice(): ComptaProfileSlice {
     es_redeme: false,
     es_irpf_method: null,
     es_started_at: null,
+    ca_province: null,
+    ca_business_number: null,
+    ca_gst_registered: false,
+    ca_gst_periodicity: null,
+    ca_petit_fournisseur: true,
+    ca_fiscal_year_calendar: true,
+    ca_fiscal_year_start_month: null,
+    ca_started_at: null,
   };
 }

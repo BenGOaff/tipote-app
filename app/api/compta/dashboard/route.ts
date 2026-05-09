@@ -353,7 +353,7 @@ export async function GET() {
   // 7. Statut compta + jauge TVA
   let bpQ = supabaseAdmin
     .from("business_profiles")
-    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti, pt_iva_isento, pt_region, be_vat_franchise, es_iva_regime, es_community")
+    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti, pt_iva_isento, pt_region, be_vat_franchise, es_iva_regime, es_community, ca_province, ca_gst_registered, ca_petit_fournisseur")
     .eq("user_id", user.id);
   if (projectId) bpQ = bpQ.eq("project_id", projectId);
   const { data: bp } = await bpQ.maybeSingle();
@@ -384,7 +384,7 @@ export async function GET() {
     over_base: boolean;
     over_major: boolean;
     source: "db" | "fallback";
-    currency?: "EUR" | "CHF";
+    currency?: "EUR" | "CHF" | "CAD";
   } | null = null;
 
   if (countryCode === "FR" && status === "auto_entrepreneur") {
@@ -405,6 +405,29 @@ export async function GET() {
         currency: "EUR",
       };
     }
+  } else if (
+    countryCode === "CA" &&
+    (status === "travailleur_autonome_ca" || status === "entreprise_individuelle_ca")
+  ) {
+    // Seuil "petit fournisseur" CA = 30 000 $ sur 4 trimestres
+    // consécutifs. CA est en EUR dans rolling12Eur, on convertit en
+    // CAD pour l'affichage. base = major = 30k (pas de tolérance).
+    const { rates } = await getEurForexRates(["CAD"]);
+    const eurToCad = rates.CAD ?? 1.48; // fallback ~ taux moyen 2026
+    const currentCad = (rolling12Eur / 100) * eurToCad;
+    const threshold = 30_000;
+    vatThreshold = {
+      activity_label: "Seuil petit fournisseur (TPS)",
+      base_eur: threshold,
+      major_eur: threshold,
+      current_eur: Math.round(currentCad * 100) / 100,
+      percent_base: threshold > 0 ? Math.round((currentCad / threshold) * 1000) / 10 : 0,
+      percent_major: threshold > 0 ? Math.round((currentCad / threshold) * 1000) / 10 : 0,
+      over_base: currentCad > threshold,
+      over_major: currentCad > threshold,
+      source: "fallback",
+      currency: "CAD",
+    };
   } else if (countryCode === "CH" && status === "independant_ch") {
     // Suisse : seuil unique d'assujettissement TVA = CHF 100'000
     // (CA mondial). On convertit le rolling12 EUR → CHF via forex
@@ -494,6 +517,17 @@ export async function GET() {
       if (community === "CE" || community === "ML") return false;
       return Boolean(regime) && regime !== "exencion";
     }
+    // CA — assujetti à TPS (et taxe provinciale combinée) si inscrit
+    // au GST. Petit fournisseur (CA < 30k$/4 trim) → non assujetti
+    // sauf si inscription volontaire (ca_gst_registered = true).
+    if (
+      status === "travailleur_autonome_ca" ||
+      status === "entreprise_individuelle_ca" ||
+      status === "inc_provincial_ca" ||
+      status === "inc_federal_ca"
+    ) {
+      return Boolean((bp as { ca_gst_registered?: boolean } | null)?.ca_gst_registered);
+    }
     return false;
   })();
 
@@ -514,6 +548,21 @@ export async function GET() {
       const community = (bp as { es_community?: string | null } | null)?.es_community;
       if (community === "CN") return 7; // Canarias IGIC tipo general
       return 21; // péninsule + Baléares
+    }
+    if (countryCode === "CA") {
+      // Taux total = TPS 5% + composante provinciale. TVH (ON 13%,
+      // NB/NL/NS/PE 15%) inclut déjà la part fédérale.
+      const province = (bp as { ca_province?: string | null } | null)?.ca_province;
+      switch (province) {
+        case "QC": return 14.975;       // 5 + 9.975
+        case "ON": return 13;           // TVH harmonisée
+        case "NB": case "NL":
+        case "NS": case "PE": return 15; // TVH harmonisée
+        case "BC": return 12;           // 5 + 7 PST
+        case "SK": return 11;           // 5 + 6 PST
+        case "MB": return 12;           // 5 + 7 RST
+        default: return 5;              // AB, YT, NT, NU + fallback
+      }
     }
     return 20; // FR
   })();

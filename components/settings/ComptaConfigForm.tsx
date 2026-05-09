@@ -38,15 +38,19 @@ import {
   isCanariasCommunity,
   isIPSICommunity,
   isForalCommunity,
+  type CaProvince,
+  type CaGstPeriodicity,
+  CA_PROVINCES,
+  caTaxRegime,
   emptyComptaSlice,
   SIREN_REGEX,
 } from "@/lib/compta/types";
 
 interface Props {
   initial: ComptaProfileSlice;
-  /** Pays détecté côté parent (FR / CH / PT / BE) — détermine
+  /** Pays détecté côté parent (FR / CH / PT / BE / ES / CA) — détermine
    *  quelles cartes de statut on propose. */
-  country: "FR" | "CH" | "PT" | "BE" | "ES";
+  country: "FR" | "CH" | "PT" | "BE" | "ES" | "CA";
   /** Si fourni, l'user édite une config existante → bouton "Annuler". */
   onCancel?: () => void;
   /** Patch à envoyer à /api/profile. Le parent gère le fetch + le toast. */
@@ -178,6 +182,27 @@ export default function ComptaConfigForm({
       }
       if (status === "autonomo_es" && !draft.es_irpf_method) {
         next.es_irpf_method = "Choisis ta méthode IRPF.";
+      }
+    } else if (
+      status === "travailleur_autonome_ca" ||
+      status === "entreprise_individuelle_ca" ||
+      status === "inc_provincial_ca" ||
+      status === "inc_federal_ca"
+    ) {
+      if (!draft.ca_province) {
+        next.ca_province = "Choisis ta province / ton territoire.";
+      }
+      // Inscrit à la TPS → périodicité requise.
+      if (draft.ca_gst_registered && !draft.ca_gst_periodicity) {
+        next.ca_gst_periodicity = "Choisis la périodicité de tes déclarations TPS.";
+      }
+      // Société → exercice cohérent.
+      if (
+        (status === "inc_provincial_ca" || status === "inc_federal_ca") &&
+        !draft.ca_fiscal_year_calendar &&
+        !draft.ca_fiscal_year_start_month
+      ) {
+        next.ca_fiscal_year_start_month = "Indique le mois de début d'exercice.";
       }
     }
 
@@ -334,6 +359,26 @@ export default function ComptaConfigForm({
           ? null
           : draft.sasu_fiscal_year_start_month;
       }
+    } else if (
+      status === "travailleur_autonome_ca" ||
+      status === "entreprise_individuelle_ca" ||
+      status === "inc_provincial_ca" ||
+      status === "inc_federal_ca"
+    ) {
+      patch.ca_province = draft.ca_province;
+      patch.ca_business_number = draft.ca_business_number;
+      patch.ca_gst_registered = draft.ca_gst_registered;
+      patch.ca_petit_fournisseur = draft.ca_petit_fournisseur;
+      patch.ca_gst_periodicity = draft.ca_gst_registered
+        ? draft.ca_gst_periodicity ?? "trimestrielle"
+        : null;
+      patch.ca_started_at = draft.ca_started_at;
+      if (status === "inc_provincial_ca" || status === "inc_federal_ca") {
+        patch.ca_fiscal_year_calendar = draft.ca_fiscal_year_calendar;
+        patch.ca_fiscal_year_start_month = draft.ca_fiscal_year_calendar
+          ? null
+          : draft.ca_fiscal_year_start_month;
+      }
     }
 
     await onSave(patch);
@@ -402,6 +447,13 @@ export default function ComptaConfigForm({
       status === "sl_es" ||
       status === "sa_es" ? (
         <EspagneFields draft={draft} update={update} errors={errors} status={status} />
+      ) : null}
+
+      {status === "travailleur_autonome_ca" ||
+      status === "entreprise_individuelle_ca" ||
+      status === "inc_provincial_ca" ||
+      status === "inc_federal_ca" ? (
+        <CanadaFields draft={draft} update={update} errors={errors} status={status} />
       ) : null}
 
       {status ? (
@@ -717,6 +769,76 @@ function StatusPicker({
           IPSI. Pour les calculs exacts d&apos;impôt et les particularités
           régionales (déductions IRPF par CCAA), ton asesor fiscal reste
           la référence.
+        </p>
+      </div>
+    );
+  }
+
+  if (country === "CA") {
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Sans société
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<User className="h-5 w-5" />}
+              title="Particulier"
+              desc="Revenus accessoires sans activité d'entreprise structurée. Tout passe par ta T1 (et TP-1 au QC) annuelle."
+              selected={value === "particulier"}
+              onClick={() => onChange("particulier")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="Travailleur autonome"
+              desc="Sole proprietor non immatriculé (au QC : pas inscrit au REQ). Revenus déclarés sur ta T1 personnelle via T2125. Production 15 juin, paiement 30 avril."
+              selected={value === "travailleur_autonome_ca"}
+              onClick={() => onChange("travailleur_autonome_ca")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="Entreprise individuelle"
+              desc="Sole proprietor immatriculé sous un nom commercial (au QC : inscrit au REQ avec NEQ). Mêmes obligations fiscales qu'un travailleur autonome + déclaration annuelle au registre."
+              selected={value === "entreprise_individuelle_ca"}
+              onClick={() => onChange("entreprise_individuelle_ca")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Société par actions (T2 + impôt provincial)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="Société provinciale (Inc.)"
+              desc="Incorporée sous la loi de la province (Loi sur les sociétés par actions du Québec, OBCA en Ontario, etc.). T2 fédéral + déclaration provinciale (CO-17 au QC). Activité limitée à la province."
+              selected={value === "inc_provincial_ca"}
+              onClick={() => onChange("inc_provincial_ca")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="Société fédérale (Inc.)"
+              desc="Incorporée sous la Loi canadienne sur les sociétés par actions (CBCA), via Corporations Canada. Permet d'opérer dans tout le Canada sous le même nom. T2 fédéral + déclarations provinciales selon présence."
+              selected={value === "inc_federal_ca"}
+              onClick={() => onChange("inc_federal_ca")}
+            />
+          </div>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground italic">
+          Tipote couvre la TPS (5 % fédérale, ARC) et ses déclinaisons
+          provinciales : TVQ 9,975 % au QC (Revenu Québec gère TPS+TVQ
+          via FPZ-500), TVH harmonisée 13 % (ON) ou 15 % (NB/NL/NS/PE),
+          PST/RST séparée en BC/SK/MB. AB et les territoires (YT, NT, NU)
+          ne perçoivent que la TPS. T1/TP-1 (particuliers, autonomes),
+          T2/CO-17 (sociétés), DAS/RRQ/RPC/RQAP, acomptes provisionnels.
+          Pour les calculs exacts d&apos;impôt et les particularités
+          provinciales, ton/ta comptable reste la référence.
         </p>
       </div>
     );
@@ -2452,6 +2574,259 @@ function BoolRow({
         <ExternalLinkRow href={helpHref} label={helpLabel} />
       </div>
     </div>
+  );
+}
+
+function CanadaFields({
+  draft,
+  update,
+  errors,
+  status,
+}: {
+  draft: ComptaProfileSlice;
+  update: <K extends keyof ComptaProfileSlice>(key: K, value: ComptaProfileSlice[K]) => void;
+  errors: Record<string, string>;
+  status: AccountingStatus;
+}) {
+  const province = draft.ca_province;
+  const taxRegime = caTaxRegime(province);
+  const isCorporate = status === "inc_provincial_ca" || status === "inc_federal_ca";
+  const isAutonome =
+    status === "travailleur_autonome_ca" || status === "entreprise_individuelle_ca";
+  const isImmatricule = status === "entreprise_individuelle_ca";
+
+  // Étiquette de la taxe affichée à l'user selon la province choisie.
+  const taxLabel = (() => {
+    if (taxRegime === "tps_tvq") return "TPS + TVQ";
+    if (taxRegime === "tvh") return "TVH";
+    if (taxRegime === "tps_pst") {
+      return province === "MB" ? "TPS + RST" : "TPS + PST";
+    }
+    return "TPS";
+  })();
+
+  return (
+    <Card className="p-4 space-y-4">
+      {/* Province / territoire */}
+      <div className="space-y-2">
+        <Label>Province ou territoire</Label>
+        <Select
+          value={draft.ca_province ?? ""}
+          onValueChange={(v) => update("ca_province", v as CaProvince)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Choisis ta province / ton territoire" />
+          </SelectTrigger>
+          <SelectContent>
+            {CA_PROVINCES.map((p) => (
+              <SelectItem key={p.code} value={p.code}>
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.ca_province ? (
+          <p className="text-xs text-destructive">{errors.ca_province}</p>
+        ) : null}
+        {province ? (
+          <p className="text-xs text-muted-foreground">
+            Régime de taxes : <strong>{taxLabel}</strong>.{" "}
+            {taxRegime === "tps_tvq" ? (
+              <>Revenu Québec gère TPS et TVQ ensemble via le formulaire FPZ-500.</>
+            ) : taxRegime === "tvh" ? (
+              <>TVH harmonisée gérée par l&apos;ARC ({province === "ON" ? "13 %" : "15 %"}).</>
+            ) : taxRegime === "tps_pst" ? (
+              <>
+                TPS fédérale (5 %) et {province === "MB" ? "RST" : "PST"} provinciale
+                ({province === "BC" ? "7 %" : province === "SK" ? "6 %" : "7 %"}) déclarées
+                séparément.
+              </>
+            ) : (
+              <>Pas de taxe provinciale, juste la TPS fédérale (5 %).</>
+            )}
+          </p>
+        ) : null}
+      </div>
+
+      {/* Numéro d'entreprise */}
+      <div className="space-y-2">
+        <Label htmlFor="ca-bn">
+          Numéro d&apos;entreprise{" "}
+          <span className="text-muted-foreground">
+            ({province === "QC" ? "NEQ ou Business Number ARC" : "Business Number ARC"})
+          </span>
+        </Label>
+        <Input
+          id="ca-bn"
+          value={draft.ca_business_number ?? ""}
+          onChange={(e) => update("ca_business_number", e.target.value || null)}
+          placeholder={province === "QC" ? "1234567890 (NEQ) ou 123456789 (BN)" : "123456789"}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Le BN ARC fait 9 chiffres (les comptes RT/RC/RP s&apos;ajoutent en suffixe). Le NEQ
+          québécois fait 10 chiffres. Optionnel si tu n&apos;es pas immatriculé.
+        </p>
+      </div>
+
+      {/* Date de début */}
+      <div className="space-y-2">
+        <Label htmlFor="ca-started">Date de début d&apos;activité (facultative)</Label>
+        <Input
+          id="ca-started"
+          type="date"
+          value={draft.ca_started_at ?? ""}
+          onChange={(e) => update("ca_started_at", e.target.value || null)}
+        />
+      </div>
+
+      {/* Petit fournisseur + inscription TPS */}
+      {isAutonome ? (
+        <BoolRow
+          id="ca-petit-fournisseur"
+          title="Petit fournisseur (CA < 30 000 $/4 trimestres) ?"
+          desc="Si ton CA mondial est sous 30 000 $ sur 4 trimestres consécutifs, tu n'es pas obligé de t'inscrire à la TPS. Tu peux quand même t'inscrire volontairement pour récupérer les CTI/RTI sur tes achats."
+          helpHref="https://www.canada.ca/fr/agence-revenu/services/impot/entreprises/sujets/tps-tvh-entreprises/inscription-compte-tps-tvh.html"
+          helpLabel="En savoir plus sur l'inscription TPS"
+          checked={!!draft.ca_petit_fournisseur}
+          onChange={(b) => update("ca_petit_fournisseur", b)}
+        />
+      ) : null}
+
+      <BoolRow
+        id="ca-gst-registered"
+        title={`Inscrit à la ${taxLabel} ?`}
+        desc={
+          taxRegime === "tps_tvq"
+            ? "Inscrit à la TPS et à la TVQ (Revenu Québec gère les deux). Obligatoire si CA > 30 000 $, optionnel sinon."
+            : "Inscrit à la TPS (et à la taxe provinciale qui s'applique). Obligatoire si CA > 30 000 $, optionnel sinon (avec récupération des CTI/RTI à la clé)."
+        }
+        helpHref="https://www.canada.ca/fr/agence-revenu/services/impot/entreprises/sujets/tps-tvh-entreprises.html"
+        helpLabel="Tout sur la TPS/TVH"
+        checked={!!draft.ca_gst_registered}
+        onChange={(b) => update("ca_gst_registered", b)}
+      />
+
+      {/* Périodicité TPS */}
+      {draft.ca_gst_registered ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Périodicité de tes déclarations {taxLabel}</Label>
+          <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
+            {(
+              [
+                { v: "annuelle", label: "Annuelle", hint: "CA < 1,5 M$ (défaut)" },
+                { v: "trimestrielle", label: "Trimestrielle", hint: "CA 1,5–6 M$" },
+                { v: "mensuelle", label: "Mensuelle", hint: "CA > 6 M$" },
+              ] as const
+            ).map((opt) => {
+              const active = (draft.ca_gst_periodicity ?? "annuelle") === opt.v;
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => update("ca_gst_periodicity", opt.v as CaGstPeriodicity)}
+                  className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    ({opt.hint})
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {errors.ca_gst_periodicity ? (
+            <p className="text-xs text-destructive">{errors.ca_gst_periodicity}</p>
+          ) : null}
+          <p className="text-[11px] text-muted-foreground">
+            La périodicité est assignée par l&apos;ARC selon ton volume — l&apos;option ici
+            correspond à ce qui t&apos;a été notifié. Tu peux demander un changement (vers
+            plus fréquent toujours possible, vers moins fréquent si CA en baisse).
+          </p>
+        </div>
+      ) : null}
+
+      {/* Disclaimer immatriculation REQ pour entreprise individuelle au QC */}
+      {isImmatricule && province === "QC" ? (
+        <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs">
+          <strong>Rappel REQ :</strong> en tant qu&apos;entreprise individuelle immatriculée
+          au Registraire des entreprises du Québec, tu dois produire une déclaration de
+          mise à jour annuelle (à la date anniversaire d&apos;immatriculation).{" "}
+          <ExternalLinkRow
+            href="https://www.registreentreprises.gouv.qc.ca/"
+            label="Portail REQ"
+          />
+        </div>
+      ) : null}
+
+      {/* Exercice comptable pour les sociétés */}
+      {isCorporate ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Exercice comptable</Label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => update("ca_fiscal_year_calendar", true)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                draft.ca_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Année civile (jan → déc)
+            </button>
+            <button
+              type="button"
+              onClick={() => update("ca_fiscal_year_calendar", false)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                !draft.ca_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Décalé
+            </button>
+          </div>
+          {!draft.ca_fiscal_year_calendar ? (
+            <div className="space-y-1 pt-2">
+              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <select
+                value={draft.ca_fiscal_year_start_month ?? ""}
+                onChange={(e) =>
+                  update("ca_fiscal_year_start_month", parseInt(e.target.value, 10) || null)
+                }
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
+              >
+                <option value="">—</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                  <option key={m} value={m}>
+                    {monthName(m)}
+                  </option>
+                ))}
+              </select>
+              {errors.ca_fiscal_year_start_month ? (
+                <p className="text-xs text-destructive">{errors.ca_fiscal_year_start_month}</p>
+              ) : null}
+              <p className="text-[11px] text-muted-foreground">
+                Le T2 fédéral est dû 6 mois après la fin d&apos;exercice. Le solde est dû à
+                2 mois (3 mois pour SPCC admissible à la déduction accordée aux petites
+                entreprises).
+              </p>
+            </div>
+          ) : null}
+          <p className="text-[11px] text-muted-foreground">
+            {status === "inc_federal_ca"
+              ? "Société fédérale (CBCA) : siège social typiquement déclaré dans une province d'opération. Si le siège est au QC, immatriculation REQ obligatoire en plus de Corporations Canada."
+              : province === "QC"
+                ? "Société provinciale du Québec (LSAQ) : immatriculation REQ obligatoire."
+                : "Société provinciale : immatriculation au registre provincial des entreprises (selon la province choisie)."}
+          </p>
+        </div>
+      ) : null}
+    </Card>
   );
 }
 

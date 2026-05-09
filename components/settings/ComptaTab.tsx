@@ -29,6 +29,7 @@ import {
   isPortugueseCountry,
   isBelgianCountry,
   isSpanishCountry,
+  isCanadianCountry,
   SUPPORTED_COUNTRIES,
 } from "@/lib/compta/countries";
 import {
@@ -39,6 +40,9 @@ import {
   isCanariasCommunity,
   isIPSICommunity,
   isForalCommunity,
+  CA_PROVINCES,
+  caTaxRegime,
+  caTotalTaxRate,
 } from "@/lib/compta/types";
 import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 import ComptaConnections from "@/components/settings/ComptaConnections";
@@ -72,7 +76,8 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
   const isPortugal = isPortugueseCountry(country);
   const isBelgium = isBelgianCountry(country);
   const isSpain = isSpanishCountry(country);
-  const isSupported = isFrance || isSwiss || isPortugal || isBelgium || isSpain;
+  const isCanada = isCanadianCountry(country);
+  const isSupported = isFrance || isSwiss || isPortugal || isBelgium || isSpain || isCanada;
 
   function patchProfile(patch: Partial<ComptaProfileSlice>): Promise<void> {
     return new Promise<void>((resolve) => {
@@ -135,7 +140,7 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
           </div>
           <ComptaConfigForm
             initial={slice}
-            country={isFrance ? "FR" : isSwiss ? "CH" : isPortugal ? "PT" : isBelgium ? "BE" : "ES"}
+            country={isFrance ? "FR" : isSwiss ? "CH" : isPortugal ? "PT" : isBelgium ? "BE" : isSpain ? "ES" : "CA"}
             pending={pending}
             onSave={patchProfile}
             onCancel={editing ? () => setEditing(false) : undefined}
@@ -796,6 +801,132 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
         value: "Dépôt au Registro Mercantil dans le mois suivant l'AG",
       });
     }
+  } else if (
+    slice.accounting_status === "travailleur_autonome_ca" ||
+    slice.accounting_status === "entreprise_individuelle_ca" ||
+    slice.accounting_status === "inc_provincial_ca" ||
+    slice.accounting_status === "inc_federal_ca"
+  ) {
+    // Canada — résumé en français, noms officiels conservés
+    // (TPS/TVQ/TVH/PST, T1/TP-1, T2/CO-17, BN, NEQ, ARC, RQ, RRQ, RPC,
+    // RQAP, REQ, etc.)
+    const caLabel =
+      slice.accounting_status === "travailleur_autonome_ca"
+        ? "Travailleur autonome"
+        : slice.accounting_status === "entreprise_individuelle_ca"
+          ? "Entreprise individuelle (immatriculée)"
+          : slice.accounting_status === "inc_provincial_ca"
+            ? "Société par actions provinciale (Inc.)"
+            : "Société par actions fédérale (Inc., CBCA)";
+    rows.push({ label: "Forme juridique", value: caLabel });
+
+    if (slice.ca_province) {
+      const provLabel = CA_PROVINCES.find((p) => p.code === slice.ca_province)?.label ??
+        slice.ca_province;
+      rows.push({ label: "Province / territoire", value: provLabel });
+
+      const regime = caTaxRegime(slice.ca_province);
+      const rate = caTotalTaxRate(slice.ca_province);
+      const regimeLabel =
+        regime === "tps_tvq"
+          ? `TPS + TVQ (${rate.toFixed(3).replace(/\.?0+$/, "")} % combinés)`
+          : regime === "tvh"
+            ? `TVH harmonisée (${rate} %)`
+            : regime === "tps_pst"
+              ? `TPS 5 % + ${slice.ca_province === "MB" ? "RST" : "PST"} ${rate - 5} %`
+              : "TPS 5 % seule (pas de taxe provinciale)";
+      rows.push({ label: "Régime de taxes", value: regimeLabel });
+    }
+
+    if (slice.ca_business_number) {
+      rows.push({
+        label: slice.ca_province === "QC" ? "BN ARC / NEQ" : "Business Number ARC",
+        value: slice.ca_business_number,
+      });
+    }
+
+    if (slice.ca_started_at) {
+      rows.push({ label: "Date de début", value: slice.ca_started_at });
+    }
+
+    if (slice.ca_gst_registered) {
+      const period =
+        (slice.ca_gst_periodicity ?? "annuelle") === "mensuelle"
+          ? "Mensuelle"
+          : slice.ca_gst_periodicity === "trimestrielle"
+            ? "Trimestrielle"
+            : "Annuelle";
+      const taxName =
+        caTaxRegime(slice.ca_province) === "tps_tvq" ? "TPS + TVQ" :
+        caTaxRegime(slice.ca_province) === "tvh" ? "TVH" : "TPS";
+      rows.push({
+        label: "Inscription taxes",
+        value: `${taxName} — ${period.toLowerCase()}`,
+        href: slice.ca_province === "QC"
+          ? "https://www.revenuquebec.ca/fr/entreprises/taxes/tps-tvh-et-tvq/"
+          : "https://www.canada.ca/fr/agence-revenu/services/impot/entreprises/sujets/tps-tvh-entreprises.html",
+        hrefLabel: slice.ca_province === "QC" ? "Revenu Québec" : "ARC",
+      });
+    } else {
+      rows.push({
+        label: "Inscription TPS",
+        value: slice.ca_petit_fournisseur
+          ? "Non inscrit (petit fournisseur, CA < 30 000 $)"
+          : "Non inscrit",
+      });
+    }
+
+    if (
+      slice.accounting_status === "travailleur_autonome_ca" ||
+      slice.accounting_status === "entreprise_individuelle_ca"
+    ) {
+      rows.push({
+        label: "Impôt particulier",
+        value: slice.ca_province === "QC"
+          ? "T1 (ARC) + TP-1 (Revenu Québec) — production 15 juin, paiement 30 avril"
+          : "T1 (ARC) — production 15 juin, paiement 30 avril",
+      });
+      rows.push({
+        label: "Acomptes provisionnels",
+        value: "Trimestriels (15 mars / juin / sept / déc) si impôt > 3 000 $/an",
+      });
+      rows.push({
+        label: slice.ca_province === "QC" ? "RRQ + RQAP" : "RPC",
+        value: "Cotisations payées avec le T1 annuel",
+      });
+    }
+
+    if (
+      slice.accounting_status === "inc_provincial_ca" ||
+      slice.accounting_status === "inc_federal_ca"
+    ) {
+      const fyLabel = slice.ca_fiscal_year_calendar
+        ? "Année civile (clôture 31 décembre)"
+        : slice.ca_fiscal_year_start_month
+          ? `Décalé (début mois ${slice.ca_fiscal_year_start_month})`
+          : "À configurer";
+      rows.push({ label: "Exercice comptable", value: fyLabel });
+      rows.push({
+        label: "Impôt société",
+        value: slice.ca_province === "QC"
+          ? "T2 (ARC) + CO-17 (RQ) — production 6 mois après clôture, paiement 2 mois (3 si SPCC admissible DPE)"
+          : "T2 (ARC) — production 6 mois après clôture, paiement 2 mois (3 si SPCC admissible DPE)",
+      });
+      rows.push({
+        label: "DAS (si employés)",
+        value: slice.ca_province === "QC"
+          ? "Mensuelles : ARC (RPC/AE/impôt) + Revenu Québec (RRQ/RQAP/FSS/impôt)"
+          : "Mensuelles à l'ARC (RPC/AE/impôt fédéral)",
+      });
+      if (slice.accounting_status === "inc_federal_ca") {
+        rows.push({
+          label: "Registre fédéral",
+          value: "Mise à jour annuelle Corporations Canada (anniversaire)",
+          href: "https://www.ic.gc.ca/eic/site/cd-dgc.nsf/fra/accueil",
+          hrefLabel: "Corporations Canada",
+        });
+      }
+    }
   }
 
   return (
@@ -873,6 +1004,14 @@ function statusLabel(s: AccountingStatus): string {
       return "SL (Espagne)";
     case "sa_es":
       return "SA (Espagne)";
+    case "travailleur_autonome_ca":
+      return "Travailleur autonome (Canada)";
+    case "entreprise_individuelle_ca":
+      return "Entreprise individuelle (Canada)";
+    case "inc_provincial_ca":
+      return "Société par actions provinciale (Canada)";
+    case "inc_federal_ca":
+      return "Société par actions fédérale (Canada)";
   }
 }
 

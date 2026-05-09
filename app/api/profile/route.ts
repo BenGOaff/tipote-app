@@ -153,6 +153,11 @@ const UpdateSchema = z.object({
       "slu_es",
       "sl_es",
       "sa_es",
+      // CA
+      "travailleur_autonome_ca",
+      "entreprise_individuelle_ca",
+      "inc_provincial_ca",
+      "inc_federal_ca",
     ])
     .nullable()
     .optional(),
@@ -230,6 +235,23 @@ const UpdateSchema = z.object({
   es_redeme: z.boolean().optional(),
   es_irpf_method: z.enum(["directa", "objetiva"]).nullable().optional(),
   es_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+
+  // Canada — phase 1r
+  ca_province: z
+    .enum([
+      "QC", "ON", "BC", "AB", "MB", "SK",
+      "NS", "NB", "NL", "PE",
+      "YT", "NT", "NU",
+    ])
+    .nullable()
+    .optional(),
+  ca_business_number: z.string().trim().max(30).nullable().optional(),
+  ca_gst_registered: z.boolean().optional(),
+  ca_gst_periodicity: z.enum(["mensuelle", "trimestrielle", "annuelle"]).nullable().optional(),
+  ca_petit_fournisseur: z.boolean().optional(),
+  ca_fiscal_year_calendar: z.boolean().optional(),
+  ca_fiscal_year_start_month: z.number().int().min(1).max(12).nullable().optional(),
+  ca_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   // accounting_status_configured_at est défini côté serveur dans le PATCH
   // ci-dessous, pas accepté en input.
 

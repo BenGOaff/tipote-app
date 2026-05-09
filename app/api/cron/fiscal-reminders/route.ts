@@ -45,6 +45,10 @@ import {
   computeFiscalDeadlinesES,
   type FiscalProfileES,
 } from "@/lib/compta/fiscalCalendarES";
+import {
+  computeFiscalDeadlinesCA,
+  type FiscalProfileCA,
+} from "@/lib/compta/fiscalCalendarCA";
 import { detectCountryCode } from "@/lib/compta/countries";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +81,7 @@ export async function GET(req: NextRequest) {
   const { data: profiles, error } = await supabaseAdmin
     .from("business_profiles")
     .select(
-      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire, ch_canton, ch_vat_assujetti, ch_vat_periodicity, ch_vat_method, ch_started_at, pt_nif, pt_region, pt_iva_isento, pt_iva_periodicity, pt_tax_regime, pt_started_at, be_region, be_company_number, be_vat_franchise, be_vat_periodicity, be_intra_eu_listing, be_started_at, es_community, es_company_number, es_iva_regime, es_iva_periodicity, es_redeme, es_irpf_method, es_started_at",
+      "user_id, project_id, country, accounting_status, ae_activity_type, ae_started_at, ae_versement_liberatoire, ae_vat_franchise, ae_urssaf_periodicity, ae_vat_regime, sasu_fiscal_year_calendar, sasu_fiscal_year_start_month, sasu_vat_regime, sasu_vat_intra_enabled, sasu_dirigeant_remunere, eurl_is_election, sarl_gerant_majoritaire, ch_canton, ch_vat_assujetti, ch_vat_periodicity, ch_vat_method, ch_started_at, pt_nif, pt_region, pt_iva_isento, pt_iva_periodicity, pt_tax_regime, pt_started_at, be_region, be_company_number, be_vat_franchise, be_vat_periodicity, be_intra_eu_listing, be_started_at, es_community, es_company_number, es_iva_regime, es_iva_periodicity, es_redeme, es_irpf_method, es_started_at, ca_province, ca_business_number, ca_gst_registered, ca_gst_periodicity, ca_petit_fournisseur, ca_fiscal_year_calendar, ca_fiscal_year_start_month, ca_started_at",
     )
     .not("accounting_status", "is", null);
 
@@ -101,7 +105,7 @@ export async function GET(req: NextRequest) {
     const userId = profile.user_id as string;
     const projectId = (profile.project_id ?? null) as string | null;
     const country = detectCountryCode(profile.country as string | null);
-    if (country !== "FR" && country !== "CH" && country !== "PT" && country !== "BE" && country !== "ES") continue;
+    if (country !== "FR" && country !== "CH" && country !== "PT" && country !== "BE" && country !== "ES" && country !== "CA") continue;
 
     const email = emailByUserId.get(userId) ?? "";
     const now = new Date();
@@ -171,8 +175,7 @@ export async function GET(req: NextRequest) {
         sasu_fiscal_year_start_month: (profile.sasu_fiscal_year_start_month ?? null) as number | null,
       };
       all = computeFiscalDeadlinesBE(fpBe, now, horizon);
-    } else {
-      // ES
+    } else if (country === "ES") {
       const fpEs: FiscalProfileES = {
         accounting_status: profile.accounting_status as FiscalProfileES["accounting_status"],
         es_community: (profile.es_community ?? null) as FiscalProfileES["es_community"],
@@ -186,6 +189,20 @@ export async function GET(req: NextRequest) {
         sasu_fiscal_year_start_month: (profile.sasu_fiscal_year_start_month ?? null) as number | null,
       };
       all = computeFiscalDeadlinesES(fpEs, now, horizon);
+    } else {
+      // CA
+      const fpCa: FiscalProfileCA = {
+        accounting_status: profile.accounting_status as FiscalProfileCA["accounting_status"],
+        ca_province: (profile.ca_province ?? null) as FiscalProfileCA["ca_province"],
+        ca_business_number: (profile.ca_business_number ?? null) as string | null,
+        ca_gst_registered: Boolean(profile.ca_gst_registered),
+        ca_gst_periodicity: (profile.ca_gst_periodicity ?? null) as FiscalProfileCA["ca_gst_periodicity"],
+        ca_petit_fournisseur: Boolean(profile.ca_petit_fournisseur),
+        ca_fiscal_year_calendar: profile.ca_fiscal_year_calendar !== false,
+        ca_fiscal_year_start_month: (profile.ca_fiscal_year_start_month ?? null) as number | null,
+        ca_started_at: (profile.ca_started_at ?? null) as string | null,
+      };
+      all = computeFiscalDeadlinesCA(fpCa, now, horizon);
     }
     const urgent = pickUrgentDeadlines(all, 7, now);
 
