@@ -116,6 +116,7 @@ export default function ComptaConfigForm({
       patch.ae_acre = draft.ae_acre;
       patch.ae_versement_liberatoire = draft.ae_versement_liberatoire;
       patch.ae_vat_franchise = draft.ae_vat_franchise;
+      patch.ae_urssaf_periodicity = draft.ae_urssaf_periodicity ?? "trimestrielle";
     } else if (status === "sasu") {
       patch.sasu_siren = draft.sasu_siren;
       patch.sasu_fiscal_year_calendar = draft.sasu_fiscal_year_calendar;
@@ -422,6 +423,47 @@ function AutoEntrepreneurFields({
         checked={!!draft.ae_vat_franchise}
         onChange={(b) => update("ae_vat_franchise", b)}
       />
+
+      {/* Périodicité URSSAF — détermine les dates butoir affichées
+          dans le calendrier fiscal (1i). Trimestrielle = défaut. */}
+      <div className="space-y-1.5 pt-3 border-t">
+        <label className="text-sm font-medium block">
+          Tu déclares ton CA à l&apos;URSSAF…
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Choisi à ton inscription URSSAF (modifiable une fois par an).
+          Détermine les dates butoir affichées dans ton calendrier fiscal.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          {(
+            [
+              { v: "trimestrielle", label: "Tous les trimestres", hint: "le plus courant" },
+              { v: "mensuelle", label: "Tous les mois", hint: "" },
+            ] as const
+          ).map((opt) => {
+            const active = (draft.ae_urssaf_periodicity ?? "trimestrielle") === opt.v;
+            return (
+              <button
+                key={opt.v}
+                type="button"
+                onClick={() => update("ae_urssaf_periodicity", opt.v)}
+                className={`text-sm rounded-md border px-3 py-2 transition ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary font-medium"
+                    : "border-border hover:bg-muted/40"
+                }`}
+              >
+                {opt.label}
+                {opt.hint ? (
+                  <span className="ml-1 text-[10px] text-muted-foreground font-normal">
+                    ({opt.hint})
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </Card>
   );
 }

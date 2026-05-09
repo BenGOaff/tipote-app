@@ -37,6 +37,13 @@ export const SASU_VAT_REGIMES: ReadonlyArray<SasuVatRegime> = [
   "simplifie",
 ];
 
+export type AeUrssafPeriodicity = "mensuelle" | "trimestrielle";
+
+export const AE_URSSAF_PERIODICITIES: ReadonlyArray<AeUrssafPeriodicity> = [
+  "mensuelle",
+  "trimestrielle",
+];
+
 /** SIREN = 9 chiffres. Validation purement format ; le contrôle Luhn
  *  serait plus robuste mais ferait planter une saisie partielle pendant
  *  que l'user tape — on garde simple et on laisse le zod côté API
@@ -59,6 +66,7 @@ export interface ComptaProfileSlice {
   ae_acre: boolean;
   ae_versement_liberatoire: boolean;
   ae_vat_franchise: boolean;
+  ae_urssaf_periodicity: AeUrssafPeriodicity | null;
 
   sasu_siren: string | null;
   sasu_fiscal_year_calendar: boolean;
@@ -81,6 +89,7 @@ export function emptyComptaSlice(): ComptaProfileSlice {
     ae_acre: false,
     ae_versement_liberatoire: false,
     ae_vat_franchise: true,
+    ae_urssaf_periodicity: null,
     sasu_siren: null,
     sasu_fiscal_year_calendar: true,
     sasu_fiscal_year_start_month: null,

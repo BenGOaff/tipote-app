@@ -36,6 +36,7 @@ import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 import ComptaConnections from "@/components/settings/ComptaConnections";
 import ComptaManualTransactions from "@/components/settings/ComptaManualTransactions";
 import ComptaDashboard from "@/components/settings/ComptaDashboard";
+import { FiscalCalendar } from "@/components/settings/FiscalCalendar";
 import RevenueGoalProgress from "@/components/business/RevenueGoalProgress";
 
 interface Props {
@@ -356,6 +357,10 @@ function ConfiguredSummary({
       {/* Section "Saisies manuelles" — virements / espèces / chèques (1e) */}
       <ComptaManualTransactions />
 
+      {/* Calendrier fiscal personnalisé (1i) — URSSAF / TVA / IS / IR /
+          CFE / DSN selon le statut. Lit /api/compta/fiscal-deadlines. */}
+      <FiscalCalendar />
+
       <Card className="p-6 space-y-4">
         <div className="flex items-start gap-3">
           <Sparkles className="h-6 w-6 text-primary shrink-0 mt-0.5" />
@@ -369,7 +374,7 @@ function ConfiguredSummary({
 
         <div className="space-y-2 text-sm text-muted-foreground">
           <ul className="space-y-1 list-disc list-inside ml-1">
-            <li>Calendrier fiscal personnalisé (URSSAF, TVA, IS…)</li>
+            <li>Rappels email automatiques avant chaque échéance</li>
             {status === "sasu" ? (
               <li>Exporter le FEC pour ton comptable</li>
             ) : null}
@@ -402,6 +407,13 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
     rows.push({
       label: "Franchise TVA",
       value: slice.ae_vat_franchise ? "Oui" : "Non (TVA collectée)",
+    });
+    rows.push({
+      label: "Déclaration URSSAF",
+      value:
+        slice.ae_urssaf_periodicity === "mensuelle"
+          ? "Mensuelle"
+          : "Trimestrielle (par défaut)",
     });
   } else if (slice.accounting_status === "sasu") {
     rows.push({
