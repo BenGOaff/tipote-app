@@ -493,7 +493,7 @@ function StatusPicker({
   onChange,
 }: {
   value: AccountingStatus | null;
-  country: "FR" | "CH" | "PT" | "BE" | "ES";
+  country: "FR" | "CH" | "PT" | "BE" | "ES" | "CA";
   onChange: (v: AccountingStatus) => void;
 }) {
   // Rend des cartes différentes selon le pays détecté côté parent.
