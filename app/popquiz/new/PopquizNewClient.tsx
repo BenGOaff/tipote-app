@@ -22,6 +22,8 @@ import {
   ExternalLink,
   Sparkles,
   Video,
+  Link as LinkIcon,
+  Square as SquareIcon,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -44,7 +46,11 @@ import {
 } from "@/components/ui/dialog";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
 import { PopquizAppearanceForm } from "@/components/popquiz/PopquizAppearanceForm";
-import { PopquizPreviewPanel } from "@/components/popquiz/PopquizPreviewPanel";
+import {
+  buildPlayerWrapperClassName,
+  buildPlayerWrapperStyle,
+  buildPageBackgroundStyle,
+} from "@/lib/popquiz/appearance";
 import { buildEmbedSnippet } from "@/components/popquiz/EmbedCodeDialog";
 import {
   VideoUploader,
@@ -228,6 +234,10 @@ export default function PopquizNewClient({
 
   const [publishedId, setPublishedId] = useState<string | null>(null);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
+
+  // Aperçu : mode "lien direct" (avec titre/sous-titre/fond/branding)
+  // ou "iframe" (vidéo seule).
+  const [previewMode, setPreviewMode] = useState<"direct" | "iframe">("direct");
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
 
@@ -484,12 +494,6 @@ export default function PopquizNewClient({
         </div>
       </div>
 
-      {/* Split-view WYSIWYG : édition à gauche, aperçu live à droite.
-          Sur mobile (<lg) on stack — l'aperçu vient juste sous le
-          header pour rester visible pendant l'édition. */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-6 lg:items-start">
-        <div className="space-y-6">
-
       <Card>
         <CardContent className="py-5 space-y-4">
           <div className="space-y-1.5">
@@ -568,45 +572,136 @@ export default function PopquizNewClient({
         </CardContent>
       </Card>
 
-      {draftPopquiz ? (
+      {/* En dessous de l'info full-width : 2 colonnes — gauche
+          personnalisation, droite la vidéo unique + timeline +
+          marqueurs. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Colonne gauche : personnalisation. */}
+        <PopquizAppearanceForm
+          idPrefix="np"
+          displayTitle={displayTitle}
+          displaySubtitle={displaySubtitle}
+          bgStyle={bgStyle}
+          bgColor={bgColor}
+          bgColor2={bgColor2}
+          borderWidth={borderWidth}
+          borderColor={borderColor}
+          shadowIntensity={shadowIntensity}
+          playButtonColor={playButtonColor}
+          playButtonShape={playButtonShape}
+          showCreatorBranding={showCreatorBranding}
+          setDisplayTitle={setDisplayTitle}
+          setDisplaySubtitle={setDisplaySubtitle}
+          setBgStyle={setBgStyle}
+          setBgColor={setBgColor}
+          setBgColor2={setBgColor2}
+          setBorderWidth={setBorderWidth}
+          setBorderColor={setBorderColor}
+          setShadowIntensity={setShadowIntensity}
+          setPlayButtonColor={setPlayButtonColor}
+          setPlayButtonShape={setPlayButtonShape}
+          setShowCreatorBranding={setShowCreatorBranding}
+        />
+
+        {/* Colonne droite : LA vidéo unique (avec apparence appliquée),
+            timeline juste en dessous, puis liste des marqueurs.
+            Si pas encore de source vidéo, on affiche un placeholder
+            mais la liste des marqueurs reste éditable. */}
         <Card className="overflow-hidden">
           <CardContent className="py-5 space-y-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <Label className="text-sm">Aperçu</Label>
-              <span className="text-[11px] text-muted-foreground">
-                Le quiz lié s'affichera à chaque marqueur en lecture finale.
-              </span>
+            <div className="flex items-start justify-between gap-2 flex-wrap">
+              <div>
+                <h2 className="text-base font-semibold">Aperçu de la vidéo</h2>
+                <p className="text-[11px] text-muted-foreground">
+                  Reflète l&apos;apparence en temps réel. Place les
+                  marqueurs en cliquant sur la timeline.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("direct")}
+                  className={`rounded-md border px-2 py-1 transition flex items-center gap-1 ${
+                    previewMode === "direct"
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <LinkIcon className="size-3" />
+                  Lien direct
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("iframe")}
+                  className={`rounded-md border px-2 py-1 transition flex items-center gap-1 ${
+                    previewMode === "iframe"
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <SquareIcon className="size-3" />
+                  Iframe
+                </button>
+              </div>
             </div>
-            <PopquizPlayer
-              popquiz={draftPopquiz}
-              onDurationChange={setDurationMs}
-              renderOverlay={({ cue, onSkipped }) => {
-                const linked = quizzes.find((q) => q.id === cue.quizId);
-                return (
-                  <div className="absolute inset-0 grid place-items-center p-6">
-                    <div className="max-w-md w-full rounded-2xl bg-white shadow-2xl p-6 space-y-3">
-                      <h3 className="text-base font-semibold">
-                        Marqueur à {formatMs(cue.timestampMs)} —{" "}
-                        {linked?.title ?? "Quiz inconnu"}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        En lecture finale, le quiz lié s'affichera ici.
-                        Clique sur la croix pour reprendre la vidéo.
-                      </p>
-                      {cue.behavior === "optional" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={onSkipped}
-                        >
-                          Passer
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              }}
-            />
+
+            {draftPopquiz ? (
+              <div
+                className="rounded-md p-3"
+                style={
+                  previewMode === "direct"
+                    ? buildPageBackgroundStyle(draftPopquiz.appearance)
+                    : { background: "transparent" }
+                }
+              >
+                {previewMode === "direct" && draftPopquiz.appearance.displayTitle ? (
+                  <h3 className="text-center text-base font-bold text-white drop-shadow-sm mb-1.5">
+                    {draftPopquiz.appearance.displayTitle}
+                  </h3>
+                ) : null}
+                {previewMode === "direct" && draftPopquiz.appearance.displaySubtitle ? (
+                  <p className="text-center text-xs text-white/80 mb-2">
+                    {draftPopquiz.appearance.displaySubtitle}
+                  </p>
+                ) : null}
+                <div
+                  className={buildPlayerWrapperClassName(draftPopquiz.appearance)}
+                  style={buildPlayerWrapperStyle(draftPopquiz.appearance)}
+                >
+                  <PopquizPlayer
+                    popquiz={draftPopquiz}
+                    onDurationChange={setDurationMs}
+                    renderOverlay={({ cue, onSkipped }) => {
+                      const linked = quizzes.find((q) => q.id === cue.quizId);
+                      return (
+                        <div className="absolute inset-0 grid place-items-center p-4">
+                          <div className="max-w-sm w-full rounded-xl bg-white shadow-2xl p-4 space-y-2">
+                            <h4 className="text-sm font-semibold">
+                              Marqueur à {formatMs(cue.timestampMs)} —{" "}
+                              {linked?.title ?? "Quiz inconnu"}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              En lecture finale, le quiz s&apos;affichera ici.
+                            </p>
+                            {cue.behavior === "optional" ? (
+                              <Button size="sm" variant="outline" onClick={onSkipped}>
+                                Passer
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed p-8 text-center text-xs text-muted-foreground">
+                Ajoute une source vidéo (lien ou import) pour voir
+                l&apos;aperçu en temps réel.
+              </div>
+            )}
+
             <TimelineStrip
               durationMs={durationMs}
               cues={cues}
@@ -614,145 +709,105 @@ export default function PopquizNewClient({
               onRemove={removeCue}
               primaryColor={markerColor}
             />
+
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold">Marqueurs</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Le quiz se déclenche à ce moment.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    addCueAt(durationMs ? Math.min(5000, durationMs / 6) : 5000)
+                  }
+                  type="button"
+                >
+                  <Plus className="size-4 mr-1" /> Ajouter
+                </Button>
+              </div>
+
+              {cues.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-3 text-center">
+                  Aucun marqueur. Clique sur la timeline ou sur « Ajouter ».
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {cues.map((cue) => {
+                    const linked = quizzes.find((q) => q.id === cue.quizId);
+                    const isDraftQuiz = linked && linked.status !== "active";
+                    return (
+                      <li
+                        key={cue.localId}
+                        className="flex flex-wrap items-center gap-2 rounded-md border p-2.5"
+                      >
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={Math.floor(cue.timestampMs / 1000)}
+                          onChange={(e) =>
+                            updateCue(cue.localId, {
+                              timestampMs:
+                                Math.max(0, Number(e.target.value) || 0) * 1000,
+                            })
+                          }
+                          className="w-20"
+                          aria-label="Timestamp en secondes"
+                        />
+                        <span className="text-xs text-muted-foreground">s</span>
+                        <select
+                          value={cue.quizId}
+                          onChange={(e) =>
+                            updateCue(cue.localId, { quizId: e.target.value })
+                          }
+                          className="flex-1 min-w-[160px] h-9 rounded-md border bg-background px-2 text-sm"
+                          aria-label="Quiz lié"
+                        >
+                          {quizzes.map((q) => (
+                            <option key={q.id} value={q.id}>
+                              {q.title}
+                              {q.status !== "active" ? " (brouillon)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={cue.behavior}
+                          onChange={(e) =>
+                            updateCue(cue.localId, {
+                              behavior: e.target.value as "block" | "optional",
+                            })
+                          }
+                          className="h-9 rounded-md border bg-background px-2 text-sm"
+                          aria-label="Comportement"
+                        >
+                          <option value="block">Bloquant</option>
+                          <option value="optional">Optionnel</option>
+                        </select>
+                        {isDraftQuiz ? (
+                          <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                            Publie ce quiz pour qu&apos;il s&apos;affiche
+                          </span>
+                        ) : null}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          type="button"
+                          onClick={() => removeCue(cue.localId)}
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </CardContent>
         </Card>
-      ) : null}
-
-      <Card>
-        <CardContent className="py-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold">Marqueurs</h2>
-              <p className="text-xs text-muted-foreground">
-                Le quiz se déclenche à ce moment de la vidéo.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              onClick={() =>
-                addCueAt(durationMs ? Math.min(5000, durationMs / 6) : 5000)
-              }
-              type="button"
-            >
-              <Plus className="size-4 mr-1" /> Ajouter
-            </Button>
-          </div>
-
-          {cues.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Aucun marqueur. Clique sur la timeline ou sur « Ajouter ».
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {cues.map((cue) => {
-                const linked = quizzes.find((q) => q.id === cue.quizId);
-                const isDraftQuiz = linked && linked.status !== "active";
-                return (
-                  <li
-                    key={cue.localId}
-                    className="flex flex-wrap items-center gap-2 rounded-md border p-3"
-                  >
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={Math.floor(cue.timestampMs / 1000)}
-                      onChange={(e) =>
-                        updateCue(cue.localId, {
-                          timestampMs:
-                            Math.max(0, Number(e.target.value) || 0) * 1000,
-                        })
-                      }
-                      className="w-24"
-                      aria-label="Timestamp en secondes"
-                    />
-                    <span className="text-xs text-muted-foreground">s</span>
-
-                    <select
-                      value={cue.quizId}
-                      onChange={(e) =>
-                        updateCue(cue.localId, { quizId: e.target.value })
-                      }
-                      className="flex-1 min-w-[200px] h-9 rounded-md border bg-background px-2 text-sm"
-                      aria-label="Quiz lié"
-                    >
-                      {quizzes.map((q) => (
-                        <option key={q.id} value={q.id}>
-                          {q.title}
-                          {q.status !== "active" ? " (brouillon)" : ""}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={cue.behavior}
-                      onChange={(e) =>
-                        updateCue(cue.localId, {
-                          behavior: e.target.value as "block" | "optional",
-                        })
-                      }
-                      className="h-9 rounded-md border bg-background px-2 text-sm"
-                      aria-label="Comportement"
-                    >
-                      <option value="block">Bloquant</option>
-                      <option value="optional">Optionnel</option>
-                    </select>
-
-                    {isDraftQuiz ? (
-                      <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-                        Publie ce quiz pour qu'il s'affiche
-                      </span>
-                    ) : null}
-
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      type="button"
-                      onClick={() => removeCue(cue.localId)}
-                      aria-label="Supprimer"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Apparence — composant partagé entre New et Edit. */}
-      <PopquizAppearanceForm
-        idPrefix="np"
-        displayTitle={displayTitle}
-        displaySubtitle={displaySubtitle}
-        bgStyle={bgStyle}
-        bgColor={bgColor}
-        bgColor2={bgColor2}
-        borderWidth={borderWidth}
-        borderColor={borderColor}
-        shadowIntensity={shadowIntensity}
-        playButtonColor={playButtonColor}
-        playButtonShape={playButtonShape}
-        showCreatorBranding={showCreatorBranding}
-        setDisplayTitle={setDisplayTitle}
-        setDisplaySubtitle={setDisplaySubtitle}
-        setBgStyle={setBgStyle}
-        setBgColor={setBgColor}
-        setBgColor2={setBgColor2}
-        setBorderWidth={setBorderWidth}
-        setBorderColor={setBorderColor}
-        setShadowIntensity={setShadowIntensity}
-        setPlayButtonColor={setPlayButtonColor}
-        setPlayButtonShape={setPlayButtonShape}
-        setShowCreatorBranding={setShowCreatorBranding}
-      />
-
-        </div>
-
-        {/* Aperçu live — desktop sticky right column ; mobile au choix
-            (bouton flottant ou épinglé en haut). */}
-        <PopquizPreviewPanel popquiz={draftPopquiz} />
       </div>
 
       {error ? (
