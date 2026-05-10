@@ -465,7 +465,7 @@ export function ContentItemActions({ id, title, status, scheduledDate, contentPr
             <AlertDialogTrigger asChild>
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}
-                className="flex items-center gap-2 text-rose-600 focus:text-rose-600"
+                className="flex items-center gap-2 text-rose-600 dark:text-rose-400 focus:text-rose-600"
               >
                 <Trash2 className="w-4 h-4" />
                 {t('delete')}

@@ -229,7 +229,7 @@ function ManualTransactionRow({
             {formatAmount(item.amount_cents, item.currency)}
           </span>
           {isAffiliate ? (
-            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">
+            <span className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded font-medium">
               Commission
             </span>
           ) : null}

@@ -147,7 +147,7 @@ export function AutoCommentPanel({
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-sm">{t("title")}</span>
                 {!hasAccess && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-600">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-600 dark:text-amber-400">
                     <Crown className="w-3 h-3 mr-0.5" />
                     PRO
                   </Badge>
@@ -173,9 +173,9 @@ export function AutoCommentPanel({
 
         {/* Locked overlay for FREE/BASIC */}
         {!hasAccess && (
-          <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-3">
+          <div className="rounded-lg border border-dashed border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 p-3">
             <div className="flex items-start gap-2">
-              <Zap className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+              <Zap className="w-4 h-4 text-amber-500 dark:text-amber-400 mt-0.5 shrink-0" />
               <div className="text-xs text-amber-700 dark:text-amber-400">
                 <p className="font-medium mb-1">
                   {t("upsellTitle")}

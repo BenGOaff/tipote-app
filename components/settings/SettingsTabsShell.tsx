@@ -1529,13 +1529,13 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         </Card>
 
         {/* ✅ ZONE DANGER */}
-        <Card className="p-6 border border-red-200 bg-red-50/40">
+        <Card className="p-6 border border-red-200 dark:border-red-800 bg-red-50/40">
           <div className="flex items-start gap-3 mb-3">
-            <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+            <div className="mt-0.5 rounded-full bg-red-100 dark:bg-red-900/40 p-2 text-red-600 dark:text-red-400">
               <AlertTriangle className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-red-700">{tSP("profile.danger.title")}</h3>
+              <h3 className="text-lg font-bold text-red-700 dark:text-red-300">{tSP("profile.danger.title")}</h3>
               <p className="text-sm font-medium text-red-700/90">{tSP("profile.danger.subtitle")}</p>
             </div>
           </div>
@@ -2614,7 +2614,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {/* Step 4 */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">4</span>
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-bold">4</span>
                 <Label className="text-sm font-semibold">Jusqu&apos;au jour où…</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
@@ -2632,7 +2632,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {/* Step 5 */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">5</span>
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold">5</span>
                 <Label className="text-sm font-semibold">Tout s&apos;arrange…</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
@@ -2650,7 +2650,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             {/* Step 6 */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">6</span>
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold">6</span>
                 <Label className="text-sm font-semibold">Et depuis ce jour…</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">

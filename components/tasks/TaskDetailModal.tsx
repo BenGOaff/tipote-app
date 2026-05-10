@@ -175,14 +175,14 @@ export function TaskDetailModal({
 
           {/* Priority selector */}
           <div className="space-y-1">
-            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
               Priorité
             </label>
             <div className="flex gap-1.5">
               {[
-                { value: "high", label: t("priorityHigh"), color: "bg-red-100 text-red-700 border-red-200 hover:bg-red-200" },
-                { value: "medium", label: t("priorityMedium"), color: "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200" },
-                { value: "low", label: t("priorityLow"), color: "bg-green-100 text-green-700 border-green-200 hover:bg-green-200" },
+                { value: "high", label: t("priorityHigh"), color: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 hover:bg-red-200" },
+                { value: "medium", label: t("priorityMedium"), color: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-200" },
+                { value: "low", label: t("priorityLow"), color: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-200" },
               ].map((p) => (
                 <button
                   key={p.value}
@@ -191,7 +191,7 @@ export function TaskDetailModal({
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                     priority === p.value
                       ? p.color + " ring-1 ring-offset-1 ring-slate-300"
-                      : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
+                      : "bg-slate-50 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   {p.label}
@@ -202,7 +202,7 @@ export function TaskDetailModal({
 
           {/* Tags */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
               <Tags className="h-3.5 w-3.5" /> {t("tags")}
             </div>
             <TagSelector
@@ -216,32 +216,32 @@ export function TaskDetailModal({
           {/* Due date + duration */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                 <Calendar className="h-3.5 w-3.5" /> {t("dueDate")}
               </label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
               />
             </div>
             <div className="space-y-1">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                 <Clock className="h-3.5 w-3.5" /> {t("estimatedDuration")}
               </label>
               <input
                 value={estimatedDuration}
                 onChange={(e) => setEstimatedDuration(e.target.value)}
                 placeholder={t("durationPlaceholder")}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
               />
             </div>
           </div>
 
           {/* Description */}
           <div className="space-y-1">
-            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
               <FileText className="h-3.5 w-3.5" /> {t("notes")}
             </label>
             <textarea
@@ -249,19 +249,19 @@ export function TaskDetailModal({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder={t("notesPlaceholder")}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 resize-y min-h-[60px]"
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 resize-y min-h-[60px]"
             />
           </div>
 
           {/* Subtasks / Checklist */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
               <ListChecks className="h-3.5 w-3.5" /> {t("checklist")}
             </div>
 
             {subtasks.length === 0 && CHECKLIST_TEMPLATES.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-slate-400">{tc("applyTemplate")}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">{tc("applyTemplate")}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {CHECKLIST_TEMPLATES.map((tpl) => (
                     <Button
@@ -288,11 +288,11 @@ export function TaskDetailModal({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
             <Button
               variant="ghost"
               size="sm"
-              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+              className="text-red-500 dark:text-red-400 hover:text-red-600 hover:bg-red-50"
               onClick={() => { onDelete(task.id); onOpenChange(false); }}
             >
               <Trash2 className="h-4 w-4 mr-1" /> {t("delete")}

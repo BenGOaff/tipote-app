@@ -1010,7 +1010,7 @@ export function ContentEditor({ initialItem }: Props) {
                         <p className="font-semibold">Preview</p>
                         <Badge variant="secondary">HTML complet</Badge>
                       </div>
-                      <div className="border rounded-lg overflow-hidden bg-white">
+                      <div className="border rounded-lg overflow-hidden bg-white dark:bg-card">
                         <iframe title="Preview" srcDoc={htmlPreview || "<html><body></body></html>"} className="w-full h-[360px] sm:h-[560px]" />
                       </div>
                     </div>
@@ -1145,7 +1145,7 @@ export function ContentEditor({ initialItem }: Props) {
                   size="sm"
                   onClick={copy}
                   disabled={saving || deleting}
-                  className="text-slate-500 hover:text-slate-700"
+                  className="text-slate-500 dark:text-slate-400 hover:text-slate-700"
                 >
                   <Copy className="h-4 w-4 mr-1" />
                   Copier

@@ -34,9 +34,9 @@ type Ticket = {
 };
 
 const STATUS_CONFIG = {
-  open: { labelKey: "statusOpen", color: "bg-amber-100 text-amber-700", icon: Clock },
-  replied: { labelKey: "statusReplied", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
-  closed: { labelKey: "statusClosed", color: "bg-gray-100 text-gray-500", icon: Archive },
+  open: { labelKey: "statusOpen", color: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300", icon: Clock },
+  replied: { labelKey: "statusReplied", color: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300", icon: CheckCircle2 },
+  closed: { labelKey: "statusClosed", color: "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400", icon: Archive },
 };
 
 /* ────────────────── Component ────────────────── */
@@ -138,7 +138,7 @@ export default function AdminTicketsClient() {
           <p className="text-sm text-muted-foreground">
             {t("totalTickets", { n: total })}
             {statusFilter === "open" && openCount > 0 && (
-              <span className="ml-1 text-amber-600 font-medium">
+              <span className="ml-1 text-amber-600 dark:text-amber-400 font-medium">
                 — {t("pending", { n: openCount })}
               </span>
             )}
@@ -283,12 +283,12 @@ export default function AdminTicketsClient() {
 
                     {/* Previous admin reply */}
                     {ticket.admin_reply && ticket.status === "replied" && (
-                      <div className="bg-green-50 border border-green-100 rounded-lg p-3">
-                        <p className="text-xs font-medium text-green-700 mb-1 flex items-center gap-1">
+                      <div className="bg-green-50 dark:bg-green-950/30 border border-green-100 rounded-lg p-3">
+                        <p className="text-xs font-medium text-green-700 dark:text-green-300 mb-1 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" />
                           {t("repliedOn", { date: ticket.replied_at ? formatDate(ticket.replied_at) : "—" })}
                         </p>
-                        <p className="text-sm text-green-900 whitespace-pre-wrap">
+                        <p className="text-sm text-green-900 dark:text-green-200 whitespace-pre-wrap">
                           {ticket.admin_reply}
                         </p>
                       </div>
@@ -345,7 +345,7 @@ export default function AdminTicketsClient() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(ticket.id)}
-                          className="gap-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 ml-auto"
+                          className="gap-1.5 text-red-500 dark:text-red-400 hover:text-red-600 hover:bg-red-50 ml-auto"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>

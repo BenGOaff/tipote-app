@@ -460,8 +460,8 @@ export default function SupportChatWidget({ locale }: { locale: string }) {
           ) : escalation === "submitted" ? (
             /* ─── Ticket confirmed ─── */
             <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
-                <CheckCircle2 className="w-8 h-8 text-green-500" />
+              <div className="w-16 h-16 rounded-full bg-green-50 dark:bg-green-950/30 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-green-500 dark:text-green-400" />
               </div>
               <p className="text-sm text-foreground leading-relaxed">
                 {t("ticket_sent", locale)}
@@ -538,7 +538,7 @@ export default function SupportChatWidget({ locale }: { locale: string }) {
                         "rounded-2xl px-3.5 py-2.5 max-w-[85%]",
                         msg.role === "assistant" && "bg-accent rounded-tl-sm",
                         msg.role === "user" && "bg-primary text-white rounded-tr-sm",
-                        msg.role === "system" && "bg-red-50 border border-red-100 rounded-lg ml-9 text-red-600",
+                        msg.role === "system" && "bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900 rounded-lg ml-9 text-red-600 dark:text-red-400",
                       )}
                     >
                       {msg.role === "user" ? (

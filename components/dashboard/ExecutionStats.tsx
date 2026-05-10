@@ -43,7 +43,7 @@ export default function ExecutionStats() {
   if (!stats) {
     return (
       <Card className="p-5">
-        <p className="text-sm text-slate-500">{t('loadingStats')}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('loadingStats')}</p>
       </Card>
     )
   }
@@ -52,8 +52,8 @@ export default function ExecutionStats() {
     <Card className="p-5 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs text-slate-500">{t('execution')}</p>
-          <p className="text-base font-semibold text-slate-900">
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t('execution')}</p>
+          <p className="text-base font-semibold text-slate-900 dark:text-slate-50">
             {t('globalProgress')}
           </p>
         </div>

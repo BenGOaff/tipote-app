@@ -1733,7 +1733,7 @@ export default function PublicQuizClient({
             </Button>
 
             {submitError && (
-              <p className="text-sm text-center text-red-600 mt-2" role="alert">
+              <p className="text-sm text-center text-red-600 dark:text-red-400 mt-2" role="alert">
                 {submitError}
               </p>
             )}
@@ -1868,13 +1868,13 @@ export default function PublicQuizClient({
                   onClick={copyShareLink}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:opacity-80 transition-opacity border"
                 >
-                  {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  {linkCopied ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
                   {linkCopied ? t.copied : t.copyLink}
                 </button>
               </div>
 
               {shareWarning && (
-                <p className="text-sm text-amber-600 text-center bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <p className="text-sm text-amber-600 dark:text-amber-400 text-center bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
                   {t.sharingTooFast}
                 </p>
               )}
@@ -2079,7 +2079,7 @@ export default function PublicQuizClient({
               The full share UI now lives in step="bonus", so here we only
               reassure the visitor that their bonus is on its way. */}
           {quiz.virality_enabled && bonusUnlocked && (
-            <Card className="p-4 border-dashed flex items-center gap-2 text-green-600">
+            <Card className="p-4 border-dashed flex items-center gap-2 text-green-600 dark:text-green-400">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
               <span className="text-sm font-medium whitespace-pre-line">
                 {(quiz.bonus_unlocked_message?.trim() || t.bonusUnlocked)}

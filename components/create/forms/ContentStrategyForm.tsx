@@ -964,9 +964,9 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
               <Badge
                 className={
                   contentModalData.status === "published"
-                    ? "bg-green-100 text-green-700"
+                    ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
                     : contentModalData.status === "scheduled"
-                      ? "bg-blue-100 text-blue-700"
+                      ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
                       : ""
                 }
               >
@@ -1327,10 +1327,10 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                         <Loader2 className="w-4 h-4 animate-spin text-primary" />
                       )}
                       {item.status === "done" && (
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <CheckCircle2 className="w-4 h-4 text-green-500 dark:text-green-400" />
                       )}
                       {item.status === "error" && (
-                        <AlertCircle className="w-4 h-4 text-red-500" />
+                        <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
                       )}
                       <Badge variant="outline" className="text-xs">
                         {PLATFORM_LABELS[item.platform] || item.platform}
@@ -1415,7 +1415,7 @@ export function ContentStrategyForm({ onClose }: ContentStrategyFormProps) {
                           </Badge>
                           <p className="font-medium text-sm truncate">{item.theme}</p>
                           {item.status === "done" && (
-                            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-green-500 dark:text-green-400 shrink-0" />
                           )}
                           {item.status === "error" && (
                             <Badge variant="destructive" className="text-xs">{t("errorBadge")}</Badge>

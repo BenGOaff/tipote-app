@@ -16,7 +16,7 @@ export default async function AuthCallbackPage() {
       <main className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="w-full max-w-md rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-lg">
           <h1 className="text-xl font-semibold text-slate-50 mb-2">{t("loadingTitle")}</h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-400 dark:text-slate-500">
             {t("loadingDesc")}
           </p>
         </div>

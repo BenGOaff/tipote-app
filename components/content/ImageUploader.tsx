@@ -202,14 +202,14 @@ export function ImageUploader({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-slate-700">
+        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
           {t('label')}
-          <span className="ml-1 font-normal text-slate-500">
+          <span className="ml-1 font-normal text-slate-500 dark:text-slate-400">
             ({images.length}/{maxImages})
           </span>
         </label>
         {images.length > 0 && (
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
             {t('formatHint')}
           </span>
         )}
@@ -221,7 +221,7 @@ export function ImageUploader({
           {images.map((img, i) => (
             <div
               key={img.path}
-              className="group relative h-20 w-20 rounded-lg border border-slate-200 overflow-hidden bg-slate-50"
+              className="group relative h-20 w-20 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-50 dark:bg-slate-900/40"
             >
               <img
                 src={img.url}
@@ -255,21 +255,21 @@ export function ImageUploader({
           className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 transition-colors ${
             dragOver
               ? "border-primary bg-primary/5"
-              : "border-slate-200 bg-slate-50 hover:border-primary/50 hover:bg-primary/5"
+              : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 hover:border-primary/50 hover:bg-primary/5"
           } ${uploading ? "pointer-events-none opacity-60" : ""}`}
         >
           {uploading ? (
             <>
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <p className="text-xs text-slate-600">{t('uploading')}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">{t('uploading')}</p>
             </>
           ) : (
             <>
-              <ImagePlus className="h-6 w-6 text-slate-400" />
-              <p className="text-xs text-slate-600">
+              <ImagePlus className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+              <p className="text-xs text-slate-600 dark:text-slate-300">
                 {t('dropText')}
               </p>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
                 {t('formatHint')}
               </p>
             </>
@@ -278,7 +278,7 @@ export function ImageUploader({
       )}
 
       {images.length >= maxImages && (
-        <div className="flex items-center gap-1.5 text-[11px] text-amber-600">
+        <div className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
           <AlertCircle className="h-3 w-3" />
           {t('maxReached', { max: maxImages })}
         </div>

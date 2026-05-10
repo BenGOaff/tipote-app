@@ -277,7 +277,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
                 <button onClick={handleAcceptReformulation} className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-medium hover:bg-blue-700 flex items-center gap-0.5">
                   <Check className="w-2.5 h-2.5" /> OK
                 </button>
-                <button onClick={handleRejectReformulation} className="px-2 py-0.5 rounded border border-blue-300 text-blue-600 text-[10px] font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center gap-0.5">
+                <button onClick={handleRejectReformulation} className="px-2 py-0.5 rounded border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 text-[10px] font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center gap-0.5">
                   <X className="w-2.5 h-2.5" /> Non
                 </button>
               </div>
@@ -396,7 +396,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
         {reformulation && (
           <div className="bg-blue-50 dark:bg-blue-950/20 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
             <div className="flex items-start gap-2">
-              <MessageCircle className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+              <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">
                   J&apos;ai compris :
@@ -413,7 +413,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
                   </button>
                   <button
                     onClick={handleRejectReformulation}
-                    className="px-3 py-1 rounded-md border border-blue-300 text-blue-600 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-1"
+                    className="px-3 py-1 rounded-md border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-1"
                   >
                     <X className="w-3 h-3" /> Reformuler
                   </button>

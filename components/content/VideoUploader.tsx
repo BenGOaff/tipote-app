@@ -297,12 +297,12 @@ export function VideoUploader({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-          <Video className="w-3.5 h-3.5 text-slate-500" />
+        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+          <Video className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
           {t('label')}
         </label>
         {video && (
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
             {formatLabel} - max 50 MB
           </span>
         )}
@@ -310,7 +310,7 @@ export function VideoUploader({
 
       {/* Preview */}
       {video && (
-        <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-black">
+        <div className="relative rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-black">
           {video.type === "image/gif" ? (
             <img
               src={video.url}
@@ -350,10 +350,10 @@ export function VideoUploader({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="text-xs text-slate-600">{t('uploading')}</span>
-            <span className="text-xs text-slate-500 ml-auto">{Math.round(uploadProgress)}%</span>
+            <span className="text-xs text-slate-600 dark:text-slate-300">{t('uploading')}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 ml-auto">{Math.round(uploadProgress)}%</span>
           </div>
-          <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+          <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
             <div
               className="h-full rounded-full bg-primary transition-all duration-300"
               style={{ width: `${Math.min(uploadProgress, 100)}%` }}
@@ -372,21 +372,21 @@ export function VideoUploader({
           className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors ${
             dragOver
               ? "border-primary bg-primary/5"
-              : "border-slate-200 bg-slate-50 hover:border-primary/50 hover:bg-primary/5"
+              : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 hover:border-primary/50 hover:bg-primary/5"
           }`}
         >
-          <Video className="h-8 w-8 text-slate-400" />
-          <p className="text-xs text-slate-600">
+          <Video className="h-8 w-8 text-slate-400 dark:text-slate-500" />
+          <p className="text-xs text-slate-600 dark:text-slate-300">
             {t('dropText')}
           </p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">
             {formatLabel} - max 50 MB
           </p>
         </div>
       )}
 
       {video && (
-        <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
+        <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
           <AlertCircle className="h-3 w-3" />
           {video.type === "image/gif"
             ? t("gifReelNotice")

@@ -59,7 +59,7 @@ export function QuizPreviewModal({ open, onOpenChange, quizId, previewData }: Qu
 
         <div className="flex-1 overflow-auto bg-muted/50 flex items-start justify-center p-6">
           <div
-            className="bg-white rounded-lg shadow-xl overflow-hidden transition-all duration-300 border"
+            className="bg-white dark:bg-card rounded-lg shadow-xl overflow-hidden transition-all duration-300 border"
             style={{
               width: cfg.width,
               maxWidth: "100%",

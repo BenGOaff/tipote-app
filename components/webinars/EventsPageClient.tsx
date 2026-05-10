@@ -82,15 +82,15 @@ type OfferOption = {
 };
 
 const STATUS_CONFIG: Record<string, { labelKey: string; color: string }> = {
-  draft: { labelKey: "statusDraft", color: "bg-slate-100 text-slate-600" },
-  scheduled: { labelKey: "statusScheduled", color: "bg-blue-100 text-blue-700" },
-  live: { labelKey: "statusLive", color: "bg-green-100 text-green-700" },
-  completed: { labelKey: "statusCompleted", color: "bg-purple-100 text-purple-700" },
+  draft: { labelKey: "statusDraft", color: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300" },
+  scheduled: { labelKey: "statusScheduled", color: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" },
+  live: { labelKey: "statusLive", color: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" },
+  completed: { labelKey: "statusCompleted", color: "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" },
 };
 
 const EVENT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-  webinar: { label: "Webinaire", color: "bg-indigo-100 text-indigo-700" },
-  challenge: { label: "Challenge", color: "bg-amber-100 text-amber-700" },
+  webinar: { label: "Webinaire", color: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300" },
+  challenge: { label: "Challenge", color: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300" },
 };
 
 function pct(a: number, b: number): string {
@@ -118,9 +118,9 @@ function formatDate(iso: string | null, locale: string): string {
 
 // KPI benchmark thresholds
 function kpiColor(value: number, good: number, excellent: number): string {
-  if (value >= excellent) return "text-green-600";
-  if (value >= good) return "text-amber-600";
-  return "text-red-500";
+  if (value >= excellent) return "text-green-600 dark:text-green-400";
+  if (value >= good) return "text-amber-600 dark:text-amber-400";
+  return "text-red-500 dark:text-red-400";
 }
 
 export default function EventsPageClient() {
@@ -456,7 +456,7 @@ export default function EventsPageClient() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-slate-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => { e.stopPropagation(); openEdit(w); }}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -466,7 +466,7 @@ export default function EventsPageClient() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -518,7 +518,7 @@ export default function EventsPageClient() {
                         <div>
                           {Number(w.revenue) > 0 ? (
                             <>
-                              <p className="text-sm font-bold text-green-600">{Number(w.revenue).toLocaleString()}\u00a0\u20ac</p>
+                              <p className="text-sm font-bold text-green-600 dark:text-green-400">{Number(w.revenue).toLocaleString()}\u00a0\u20ac</p>
                               <p className="text-[10px] text-muted-foreground">{t("kpi.revenue")}</p>
                             </>
                           ) : (
@@ -550,7 +550,7 @@ export default function EventsPageClient() {
                           <button
                             className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                               activeTab === "playbook"
-                                ? "bg-white shadow-sm text-primary"
+                                ? "bg-white dark:bg-card shadow-sm text-primary"
                                 : "text-muted-foreground hover:text-foreground"
                             }`}
                             onClick={() => setActiveTab("playbook")}
@@ -561,7 +561,7 @@ export default function EventsPageClient() {
                           <button
                             className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                               activeTab === "kpis"
-                                ? "bg-white shadow-sm text-primary"
+                                ? "bg-white dark:bg-card shadow-sm text-primary"
                                 : "text-muted-foreground hover:text-foreground"
                             }`}
                             onClick={() => setActiveTab("kpis")}

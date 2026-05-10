@@ -31,7 +31,7 @@ export function ReadinessRing({ percent, passed, total, size = "md", className }
   const isReady = passed === total && total > 0;
   // Soft green when fully ready, muted-then-primary as the user fills it in.
   const ringColor = isReady ? "stroke-emerald-500" : percent === 0 ? "stroke-muted-foreground/30" : "stroke-primary";
-  const labelColor = isReady ? "text-emerald-600" : "text-foreground";
+  const labelColor = isReady ? "text-emerald-600 dark:text-emerald-400" : "text-foreground";
 
   return (
     <div className={cn("inline-flex items-center gap-2", className)} aria-label={`${passed} sur ${total} étapes`}>

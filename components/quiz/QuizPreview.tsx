@@ -100,7 +100,7 @@ export default function QuizPreview({
       {/* Preview frame */}
       <div className="flex justify-center">
         <div
-          className="border-2 border-border rounded-2xl overflow-hidden bg-white shadow-lg transition-all duration-300"
+          className="border-2 border-border rounded-2xl overflow-hidden bg-white dark:bg-card shadow-lg transition-all duration-300"
           style={{
             width: DEVICE_WIDTHS[device],
             maxWidth: "100%",
@@ -120,7 +120,7 @@ export default function QuizPreview({
                 <h1 className="text-2xl sm:text-3xl font-bold mb-4" style={{ color: primaryColor }}>
                   {title || t("defaultTitle")}
                 </h1>
-                <p className="text-base text-gray-600 mb-8 max-w-md">
+                <p className="text-base text-gray-600 dark:text-gray-300 mb-8 max-w-md">
                   {introduction || t("defaultIntro")}
                 </p>
                 <button
@@ -138,11 +138,11 @@ export default function QuizPreview({
               <>
                 {/* Progress */}
                 <div className="w-full mb-6">
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
+                  <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mb-1">
                     <span>{t("questionProgress", { n: currentQ + 1, total: questions.length })}</span>
                     <span>{Math.round(((currentQ + 1) / questions.length) * 100)}%</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
@@ -176,7 +176,7 @@ export default function QuizPreview({
                         }
                       }}
                     >
-                      <span className="font-medium text-xs text-gray-400 mr-2">{String.fromCharCode(65 + i)}</span>
+                      <span className="font-medium text-xs text-gray-400 dark:text-gray-500 mr-2">{String.fromCharCode(65 + i)}</span>
                       {opt.text || t("defaultOption", { n: i + 1 })}
                     </button>
                   ))}
@@ -186,7 +186,7 @@ export default function QuizPreview({
                 <div className="flex gap-2 mt-6">
                   {currentQ > 0 && (
                     <button
-                      className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                      className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors"
                       onClick={() => setCurrentQ(currentQ - 1)}
                     >
                       {t("prevNav")}
@@ -202,16 +202,16 @@ export default function QuizPreview({
                 <h2 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: primaryColor }}>
                   {captureHeading || t("defaultCaptureHeading")}
                 </h2>
-                <p className="text-sm text-gray-500 mb-6">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                   {captureSubtitle || t("defaultCaptureSubtitle")}
                 </p>
 
                 <div className="space-y-3 w-full max-w-sm">
-                  <input placeholder={t("emailPh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />
-                  {captureFirstName && <input placeholder={t("firstNamePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
-                  {captureLastName && <input placeholder={t("lastNamePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
-                  {capturePhone && <input placeholder={t("phonePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
-                  {captureCountry && <input placeholder={t("countryPh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" readOnly />}
+                  <input placeholder={t("emailPh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm" readOnly />
+                  {captureFirstName && <input placeholder={t("firstNamePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm" readOnly />}
+                  {captureLastName && <input placeholder={t("lastNamePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm" readOnly />}
+                  {capturePhone && <input placeholder={t("phonePh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm" readOnly />}
+                  {captureCountry && <input placeholder={t("countryPh")} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm" readOnly />}
 
                   <button
                     className="w-full px-6 py-3 rounded-xl text-white font-semibold transition-all"
@@ -233,7 +233,7 @@ export default function QuizPreview({
                 <h2 className="text-xl sm:text-2xl font-bold mb-3" style={{ color: primaryColor }}>
                   {results[0].title || t("defaultResultTitle")}
                 </h2>
-                <p className="text-sm text-gray-600 mb-6 max-w-md">
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 max-w-md">
                   {results[0].description || t("defaultResultDesc")}
                 </p>
                 {results[0].cta_text && (

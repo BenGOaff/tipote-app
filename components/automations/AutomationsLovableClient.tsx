@@ -108,7 +108,7 @@ const PLATFORM_STATUS = [
     label: "Facebook",
     icon: Facebook,
     status: "available" as const,
-    color: "text-blue-500",
+    color: "text-blue-500 dark:text-blue-400",
     bg: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40",
     descriptionKey: "platformDescDmComment",
   },
@@ -117,7 +117,7 @@ const PLATFORM_STATUS = [
     label: "Instagram",
     icon: Instagram,
     status: "available" as const,
-    color: "text-pink-500",
+    color: "text-pink-500 dark:text-pink-400",
     bg: "bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800/40",
     descriptionKey: "platformDescDmComment",
   },
@@ -135,7 +135,7 @@ const PLATFORM_STATUS = [
     label: "LinkedIn",
     icon: Linkedin,
     status: "available" as const,
-    color: "text-sky-600",
+    color: "text-sky-600 dark:text-sky-400",
     bg: "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40",
     descriptionKey: "platformDescCommentOnly",
   },
@@ -144,7 +144,7 @@ const PLATFORM_STATUS = [
     label: "X / Twitter",
     icon: Twitter,
     status: "available" as const,
-    color: "text-sky-500",
+    color: "text-sky-500 dark:text-sky-400",
     bg: "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40",
     descriptionKey: "platformDescLikeComment",
   },
@@ -153,7 +153,7 @@ const PLATFORM_STATUS = [
     label: "Pinterest",
     icon: ImageIcon,
     status: "soon" as const,
-    color: "text-red-500",
+    color: "text-red-500 dark:text-red-400",
     bg: "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40",
     descriptionKey: "",
   },
@@ -162,7 +162,7 @@ const PLATFORM_STATUS = [
     label: "Threads",
     icon: MessageCircle,
     status: "soon" as const,
-    color: "text-slate-500",
+    color: "text-slate-500 dark:text-slate-400",
     bg: "bg-slate-50 dark:bg-slate-950/20 border-slate-200 dark:border-slate-800/40",
     descriptionKey: "",
   },
@@ -555,7 +555,7 @@ export default function AutomationsLovableClient() {
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-5 py-2 pr-1">
             {/* Platform badge (read-only) */}
             <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-              {form.platforms[0] === "instagram" ? <Instagram className="w-4 h-4 text-pink-500" /> : form.platforms[0] === "tiktok" ? <TikTokIcon className="w-4 h-4 text-black dark:text-white" /> : form.platforms[0] === "linkedin" ? <Linkedin className="w-4 h-4 text-sky-600" /> : form.platforms[0] === "twitter" ? <Twitter className="w-4 h-4 text-sky-500" /> : <Facebook className="w-4 h-4 text-blue-500" />}
+              {form.platforms[0] === "instagram" ? <Instagram className="w-4 h-4 text-pink-500 dark:text-pink-400" /> : form.platforms[0] === "tiktok" ? <TikTokIcon className="w-4 h-4 text-black dark:text-white" /> : form.platforms[0] === "linkedin" ? <Linkedin className="w-4 h-4 text-sky-600" /> : form.platforms[0] === "twitter" ? <Twitter className="w-4 h-4 text-sky-500 dark:text-sky-400" /> : <Facebook className="w-4 h-4 text-blue-500 dark:text-blue-400" />}
               <span className="text-sm font-medium">{platformLabel}</span>
               {isCommentOnly && <Badge variant="secondary" className="text-xs ml-auto">{form.platforms[0] === "linkedin" ? t("commentReply") : form.platforms[0] === "twitter" ? t("likeCommentReply") : t("form.tiktokCommentOnly")}</Badge>}
             </div>
@@ -724,7 +724,7 @@ export default function AutomationsLovableClient() {
 
             {/* Info note */}
             <div className="flex items-start gap-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 p-3">
-              <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
               <p className="text-xs text-blue-700 dark:text-blue-400">
                 {isTikTok ? t("form.tiktokNote") : t("form.rgpdNote")}
               </p>
@@ -780,11 +780,11 @@ function AutomationCard({
     twitter: Twitter,
   };
   const platformColors: Record<Platform, string> = {
-    instagram: "text-pink-500",
-    facebook: "text-blue-500",
+    instagram: "text-pink-500 dark:text-pink-400",
+    facebook: "text-blue-500 dark:text-blue-400",
     tiktok: "text-black dark:text-white",
-    linkedin: "text-sky-600",
-    twitter: "text-sky-500",
+    linkedin: "text-sky-600 dark:text-sky-400",
+    twitter: "text-sky-500 dark:text-sky-400",
   };
 
   const hasPostTarget = Boolean(auto.target_post_url?.trim());
@@ -820,7 +820,7 @@ function AutomationCard({
           }`}>
             {auto.type === "comment_to_dm"
               ? <MessageCircle className="w-5 h-5 text-primary" />
-              : <Mail className="w-5 h-5 text-green-600" />
+              : <Mail className="w-5 h-5 text-green-600 dark:text-green-400" />
             }
           </div>
 
@@ -892,7 +892,7 @@ function AutomationCard({
                   </Button>
                 </div>
                 {testResult && (
-                  <p className={`text-xs ${testResult.ok ? "text-green-600" : "text-destructive"}`}>
+                  <p className={`text-xs ${testResult.ok ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>
                     {testResult.ok ? "✓" : "✗"} {testResult.detail}
                   </p>
                 )}
@@ -996,7 +996,7 @@ function PostPickerModal({
   }
 
   const PlatformIcon = platform === "instagram" ? Instagram : platform === "tiktok" ? TikTokIcon : platform === "linkedin" ? Linkedin : platform === "twitter" ? Twitter : Facebook;
-  const iconColor = platform === "instagram" ? "text-pink-500" : platform === "tiktok" ? "text-black dark:text-white" : platform === "linkedin" ? "text-sky-600" : platform === "twitter" ? "text-sky-500" : "text-blue-500";
+  const iconColor = platform === "instagram" ? "text-pink-500 dark:text-pink-400" : platform === "tiktok" ? "text-black dark:text-white" : platform === "linkedin" ? "text-sky-600" : platform === "twitter" ? "text-sky-500 dark:text-sky-400" : "text-blue-500 dark:text-blue-400";
   const platformLabel = platform === "instagram" ? "Instagram" : platform === "tiktok" ? "TikTok" : platform === "linkedin" ? "LinkedIn" : platform === "twitter" ? "X / Twitter" : "Facebook";
   const pickerTitle = `${t("form.targetPostPickTitle")} ${platformLabel}`;
 

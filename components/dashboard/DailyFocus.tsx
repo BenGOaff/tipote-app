@@ -29,7 +29,7 @@ export default function DailyFocus({ task }: Props) {
     return (
       <Card className="p-5">
         <p className="text-xs text-muted-foreground">{t('focusTitle')}</p>
-        <p className="mt-1 text-sm text-slate-700">{t('upToDate')}</p>
+        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{t('upToDate')}</p>
         <div className="mt-4 flex gap-2">
           <Link href="/strategy">
             <Button variant="outline">{t('seeStrategy')}</Button>
@@ -45,9 +45,9 @@ export default function DailyFocus({ task }: Props) {
   return (
     <Card className="p-5 border-primary/30">
       <p className="text-xs text-muted-foreground">{t('focusTitle')}</p>
-      <p className="mt-1 text-base font-semibold text-slate-900">{task.title}</p>
+      <p className="mt-1 text-base font-semibold text-slate-900 dark:text-slate-50">{task.title}</p>
 
-      <p className="mt-1 text-xs text-slate-500">{t('nextAction')}</p>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('nextAction')}</p>
 
       <div className="mt-4 grid gap-2">
         <MarkTaskDoneButton

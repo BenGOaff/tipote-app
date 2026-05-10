@@ -597,7 +597,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
           {isPinterest && (
             <div className="space-y-2">
               <Label>
-                {t("pinTitle")} <span className="text-rose-500">*</span>
+                {t("pinTitle")} <span className="text-rose-500 dark:text-rose-400">*</span>
                 <span className="ml-1 text-xs text-muted-foreground font-normal">({t("maxChars", { count: 100 })})</span>
               </Label>
               <Input
@@ -605,7 +605,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                 value={pinterestTitle}
                 onChange={(e) => setPinterestTitle(e.target.value.slice(0, 100))}
               />
-              <div className={`text-xs text-right ${pinterestTitle.length > 90 ? "text-amber-500" : "text-muted-foreground"}`}>
+              <div className={`text-xs text-right ${pinterestTitle.length > 90 ? "text-amber-500 dark:text-amber-400" : "text-muted-foreground"}`}>
                 {pinterestTitle.length} / 100
               </div>
             </div>
@@ -625,7 +625,7 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
 
             {/* Compteur de caractères */}
             {generatedContent && charLimit !== null && (
-              <div className={`text-xs text-right ${isOverLimit ? "text-rose-600 font-medium" : "text-muted-foreground"}`}>
+              <div className={`text-xs text-right ${isOverLimit ? "text-rose-600 dark:text-rose-400 font-medium" : "text-muted-foreground"}`}>
                 {charCount} / {charLimit} {t("characters")}
                 {isOverLimit && ` (${t("overLimit", { count: charCount - charLimit })})`}
               </div>
@@ -658,12 +658,12 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                 </p>
               )}
               {isTikTok && !uploadedVideo && images.length === 0 && (
-                <p className="text-xs text-amber-600 -mt-1">
+                <p className="text-xs text-amber-600 dark:text-amber-400 -mt-1">
                   {t("tiktokMediaRequired")}
                 </p>
               )}
               {isInstagram && !uploadedVideo && images.length === 0 && (
-                <p className="text-xs text-amber-600 -mt-1">
+                <p className="text-xs text-amber-600 dark:text-amber-400 -mt-1">
                   {t("instagramMediaRequired")}
                 </p>
               )}
@@ -947,7 +947,7 @@ function QuickCreateAutomationModal({
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <Label htmlFor="qa-keyword">
-              {t("triggerKeyword")} <span className="text-rose-500">*</span>
+              {t("triggerKeyword")} <span className="text-rose-500 dark:text-rose-400">*</span>
             </Label>
             <Input
               id="qa-keyword"
@@ -963,7 +963,7 @@ function QuickCreateAutomationModal({
 
           <div className="space-y-1.5">
             <Label htmlFor="qa-dm">
-              {t("dmMessage")} <span className="text-rose-500">*</span>
+              {t("dmMessage")} <span className="text-rose-500 dark:text-rose-400">*</span>
             </Label>
             <Textarea
               id="qa-dm"

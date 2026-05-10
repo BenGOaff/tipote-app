@@ -435,7 +435,7 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
               >
                 {t("previewSection")}
               </div>
-              <div className="px-4 py-3 bg-white">
+              <div className="px-4 py-3 bg-white dark:bg-card">
                 <span
                   className="inline-block rounded px-3 py-1.5 text-sm font-semibold text-white"
                   style={{ backgroundColor: colorAccent }}

@@ -60,7 +60,7 @@ interface OfferDetailModalProps {
 const offerConfig = {
   lead_magnet: {
     icon: Gift,
-    color: "text-green-500",
+    color: "text-green-500 dark:text-green-400",
     bgColor: "bg-green-500/10",
     borderColor: "border-green-500/30",
     label: "Lead Magnet",
@@ -76,7 +76,7 @@ const offerConfig = {
   },
   high_ticket: {
     icon: Crown,
-    color: "text-amber-500",
+    color: "text-amber-500 dark:text-amber-400",
     bgColor: "bg-amber-500/10",
     borderColor: "border-amber-500/30",
     label: "High Ticket",

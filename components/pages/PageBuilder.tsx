@@ -2192,7 +2192,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     <div className="fixed inset-0 z-40 flex flex-col bg-[#f0f2f5] dark:bg-[#0d1117]">
 
       {/* ════════════════ TOP BAR (Systeme.io style) ════════════════ */}
-      <div className="h-12 shrink-0 flex items-center justify-between px-3 bg-white dark:bg-[#161b22] border-b border-border/50 shadow-sm">
+      <div className="h-12 shrink-0 flex items-center justify-between px-3 bg-white dark:bg-card dark:bg-[#161b22] border-b border-border/50 shadow-sm">
 
         {/* Left: Sidebar toggle + Title */}
         <div className="flex items-center gap-2 min-w-0">
@@ -2237,7 +2237,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                   key={d}
                   onClick={() => setDevice(d)}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs transition-all ${
-                    device === d ? "bg-white dark:bg-[#21262d] shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
+                    device === d ? "bg-white dark:bg-card dark:bg-[#21262d] shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -2356,12 +2356,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       {/* Published URL bar (slim) */}
       {isPublished && (
         <div className="h-7 shrink-0 flex items-center gap-2 px-3 bg-green-50 dark:bg-green-950/20 border-b border-green-200/50 text-xs">
-          <Globe className="w-3 h-3 text-green-600" />
-          <a href={publicUrl} target="_blank" rel="noopener" className="text-green-600 underline truncate">
+          <Globe className="w-3 h-3 text-green-600 dark:text-green-400" />
+          <a href={publicUrl} target="_blank" rel="noopener" className="text-green-600 dark:text-green-400 underline truncate">
             {publicUrl}
           </a>
           <button onClick={copyUrl} className="p-0.5 rounded hover:bg-green-100 dark:hover:bg-green-900/30">
-            {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3 text-green-600" />}
+            {copied ? <Check className="w-3 h-3 text-green-600 dark:text-green-400" /> : <Copy className="w-3 h-3 text-green-600" />}
           </button>
           <span className="text-green-600/50 ml-auto hidden sm:inline">{t("liveChanges")}</span>
         </div>
@@ -2482,8 +2482,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { fontFamily: e.target.value ? `'${e.target.value}', sans-serif` : "inherit" })}
                                   className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white"
                                 >
-                                  <option value="" className="text-gray-900">{t("controls.default")}</option>
-                                  {GOOGLE_FONTS.map(f => <option key={f} value={f} className="text-gray-900">{f}</option>)}
+                                  <option value="" className="text-gray-900 dark:text-gray-50">{t("controls.default")}</option>
+                                  {GOOGLE_FONTS.map(f => <option key={f} value={f} className="text-gray-900 dark:text-gray-50">{f}</option>)}
                                 </select>
                               </div>
 
@@ -2897,7 +2897,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white"
                               defaultValue="none"
                             >
-                              {CSS_ANIMATION_KEYS.map(a => <option key={a.value} value={a.value} className="text-gray-900">{t(a.tKey)}</option>)}
+                              {CSS_ANIMATION_KEYS.map(a => <option key={a.value} value={a.value} className="text-gray-900 dark:text-gray-50">{t(a.tKey)}</option>)}
                             </select>
                           </div>
 
@@ -3298,7 +3298,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         {/* ──── PREVIEW AREA (full width) ──── */}
         <div className="flex-1 flex justify-center overflow-auto p-2 sm:p-4 min-h-0">
           <div
-            className="bg-white shadow-lg rounded-lg overflow-hidden transition-all duration-300"
+            className="bg-white dark:bg-card shadow-lg rounded-lg overflow-hidden transition-all duration-300"
             style={{
               width: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
               maxWidth: device === "desktop" ? "100%" : `${deviceCfg.width}px`,
@@ -3454,7 +3454,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           {new Date(lead.created_at).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}
                         </p>
                       </div>
-                      {lead.sio_synced && <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700">Sync SIO</span>}
+                      {lead.sio_synced && <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">Sync SIO</span>}
                     </div>
                   ))}
                 </div>
@@ -3596,7 +3596,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 <div className="flex-1 rounded-xl overflow-hidden border shadow-sm" style={{ background: `linear-gradient(145deg, #fafafa 0%, ${brandPrimary}08 40%, ${brandAccent}12 100%)` }}>
                   <div className="flex flex-col items-center justify-center p-6 text-center min-h-[340px]">
                     {/* Preview card */}
-                    <div className="bg-white rounded-2xl p-6 w-full shadow-sm border" style={{ borderColor: `${brandPrimary}12` }}>
+                    <div className="bg-white dark:bg-card rounded-2xl p-6 w-full shadow-sm border" style={{ borderColor: `${brandPrimary}12` }}>
                       {/* Success icon */}
                       <div className="mx-auto mb-4 w-12 h-12 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${brandPrimary}, ${brandAccent})` }}>
                         <svg width="24" height="24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">

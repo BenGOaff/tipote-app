@@ -1466,7 +1466,7 @@ function SasuFields({
       ) : null}
 
       {isEurlIR ? (
-        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+        <div className="rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs text-blue-900 dark:text-blue-200">
           <strong>Mode EURL à l&apos;IR :</strong> ta liasse fiscale
           (2031 ou 2035 selon ton activité) doit être télétransmise
           au plus tard début mai chaque année. Le bénéfice est
@@ -1635,7 +1635,7 @@ function SuisseFields({
     <Card className="p-5 space-y-5">
       {/* Disclaimer cantonal — Tipote couvre les 26 cantons sur les
           dates butoir et le portail, mais pas les taux d'imposition. */}
-      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+      <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
         <strong>Important Suisse :</strong> Tipote calcule tes
         échéances en fonction de ton canton (date butoir de
         déclaration d&apos;impôt + portail). Les taux d&apos;imposition
@@ -1897,7 +1897,7 @@ function PortugalFields({
 
   return (
     <Card className="p-5 space-y-5">
-      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+      <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
         <strong>Portugal :</strong> Tipote calcule tes échéances IVA,
         IRS / IRC et Segurança Social à partir des dates butoir
         officielles de l&apos;AT (Autoridade Tributária). Les taux
@@ -2152,7 +2152,7 @@ function BelgiqueFields({
 
   return (
     <Card className="p-5 space-y-5">
-      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+      <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
         <strong>Belgique :</strong> Tipote calcule tes échéances TVA
         (Intervat), IPP/ISoc, INASTI/RSVZ, comptes annuels BNB et
         listings clients/intra-UE. Pour les calculs exacts d&apos;impôt
@@ -2395,7 +2395,7 @@ function EspagneFields({
 
   return (
     <Card className="p-5 space-y-5">
-      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+      <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
         <strong>Espagne :</strong> Tipote calcule tes échéances IVA
         (Modelo 303/390/349), IRPF (Modelos 100/130), IS (Modelo
         200/202), RETA mensuel et comptes annuels Registro Mercantil.
@@ -2445,7 +2445,7 @@ function EspagneFields({
           </p>
         ) : null}
         {isIPSI ? (
-          <p className="text-[11px] text-amber-800 italic">
+          <p className="text-[11px] text-amber-800 dark:text-amber-200 italic">
             Ceuta/Melilla → IPSI (Impuesto sobre la Producción, los
             Servicios y la Importación) au lieu d&apos;IVA. Hors scope
             MVP de Tipote — le module compta affichera tes échéances
@@ -2903,7 +2903,7 @@ function CanadaFields({
 
       {/* Disclaimer immatriculation REQ pour entreprise individuelle au QC */}
       {isImmatricule && province === "QC" ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs">
+        <div className="rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs">
           <strong>Rappel REQ :</strong> en tant qu&apos;entreprise individuelle immatriculée
           au Registraire des entreprises du Québec, tu dois produire une déclaration de
           mise à jour annuelle (à la date anniversaire d&apos;immatriculation).{" "}
@@ -3010,7 +3010,7 @@ function UnitedStatesFields({
 
   return (
     <Card className="p-5 space-y-5">
-      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+      <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
         <strong>États-Unis :</strong> Tipote calcule tes échéances
         fédérales (Forms 1040 / 1120 / 1120-S / 1065 / 1040-ES / 1099-NEC),
         ton state income tax (sauf 9 états sans), et un rappel mensuel par
@@ -3204,7 +3204,7 @@ function UnitedStatesFields({
 
       {/* Disclaimer multi-member partnership */}
       {isMultiLLC ? (
-        <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs">
+        <div className="rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs">
           <strong>Multi-member LLC :</strong> par défaut, ta LLC produit un{" "}
           <code>Form 1065</code> (partnership return) et émet des K-1 à chaque
           membre. Date limite : 15 mars (calendar year), extension automatique 6
@@ -3214,7 +3214,7 @@ function UnitedStatesFields({
 
       {/* Disclaimer S-Corp */}
       {status === "s_corp_us" ? (
-        <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs">
+        <div className="rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs">
           <strong>S-Corp :</strong> Form 1120-S due le 15 mars (calendar year).
           Pass-through, pas d&apos;impôt fédéral au niveau de l&apos;entité.
           Reasonable salary requis pour les owner-employees (sinon risque de

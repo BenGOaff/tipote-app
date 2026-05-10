@@ -342,20 +342,20 @@ export default function CallbackClient() {
   if (status === "loading") {
     return (
       <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="w-full max-w-md bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           <div className="flex flex-col items-center text-center mb-6">
             <div className="flex items-center gap-3 mb-3">
               <Image src="/tipote-logo.png" alt="Tipote" width={40} height={40} priority />
-              <span className="text-2xl font-bold text-gray-900">Tipote™</span>
+              <span className="text-2xl font-bold text-gray-900 dark:text-gray-50">Tipote™</span>
             </div>
-            <p className="text-gray-600">{t("loadingTitle")}</p>
+            <p className="text-gray-600 dark:text-gray-300">{t("loadingTitle")}</p>
           </div>
 
-          <div className="mt-4 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+          <div className="mt-4 h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
             <div className="h-full w-2/3 bg-gray-300 rounded-full animate-pulse" />
           </div>
 
-          <div className="mt-8 text-center text-sm text-gray-500">
+          <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
             {t("copyright", { year: new Date().getFullYear() })}
           </div>
         </div>
@@ -367,21 +367,21 @@ export default function CallbackClient() {
 
   return (
     <main className="min-h-screen bg-[#F7F7FB] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+      <div className="w-full max-w-md bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
         <div className="flex flex-col items-center text-center mb-6">
           <div className="flex items-center gap-3 mb-3">
             <Image src="/tipote-logo.png" alt="Tipote" width={40} height={40} priority />
-            <span className="text-2xl font-bold text-gray-900">Tipote™</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-gray-50">Tipote™</span>
           </div>
-          <p className="text-gray-600">{t("errorHeading")}</p>
+          <p className="text-gray-600 dark:text-gray-300">{t("errorHeading")}</p>
         </div>
 
-        <p className="text-sm text-gray-600 text-center break-words">{errorMsg || t("errUnknown")}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300 text-center break-words">{errorMsg || t("errUnknown")}</p>
 
         {showResend && (
           <div className="mt-6">
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm text-gray-700 mb-3">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
                 {t("resendInfo")}
               </p>
 
@@ -406,7 +406,7 @@ export default function CallbackClient() {
                         ? "text-primary bg-primary/10 border-primary/30"
                         : resendStatus === "failed"
                           ? "text-destructive bg-destructive/10 border-destructive/30"
-                          : "text-gray-700 bg-white border-gray-200",
+                          : "text-gray-700 dark:text-gray-300 bg-white dark:bg-card border-gray-200 dark:border-gray-700",
                     ].join(" ")}
                   >
                     {resendMsg}
@@ -425,7 +425,7 @@ export default function CallbackClient() {
           {t("backToLogin")}
         </Button>
 
-        <div className="mt-8 text-center text-sm text-gray-500">
+        <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
           {t("copyright", { year: new Date().getFullYear() })}
         </div>
       </div>

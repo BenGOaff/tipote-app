@@ -325,7 +325,7 @@ function ConnectionCard({
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                   <span>Synchronisé {formatRelative(connection.last_sync_at)}</span>
                 </>
               )}
@@ -795,8 +795,8 @@ function MollieConnectForm({
       </div>
 
       {/* Note de sécurité — Mollie n'a pas de clé restreinte */}
-      <div className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded p-3 space-y-1">
-        <p className="font-semibold text-amber-900">À savoir</p>
+      <div className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3 space-y-1">
+        <p className="font-semibold text-amber-900 dark:text-amber-200">À savoir</p>
         <p className="text-amber-900/80 leading-relaxed">
           Contrairement à Stripe, Mollie ne propose pas de clé en
           lecture seule — la clé donne accès complet à ton compte

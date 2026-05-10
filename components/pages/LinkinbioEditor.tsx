@@ -69,7 +69,7 @@ const SOCIAL_PLATFORMS = [
 ];
 
 const THEMES: { id: LinkinbioTheme; label: string; preview: string }[] = [
-  { id: "minimal", label: "Minimal", preview: "bg-gray-50 text-gray-900" },
+  { id: "minimal", label: "Minimal", preview: "bg-gray-50 dark:bg-gray-900/40 text-gray-900 dark:text-gray-50" },
   { id: "dark", label: "Dark", preview: "bg-gray-900 text-white" },
   { id: "gradient", label: "Gradient", preview: "bg-gradient-to-br from-indigo-500 to-purple-600 text-white" },
   { id: "glass", label: "Glass", preview: "bg-gray-800 text-white" },
@@ -396,10 +396,10 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
         {/* Published URL bar */}
         {page.status === "published" && (
           <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/30 border-b text-xs">
-            <Globe className="w-3.5 h-3.5 text-green-600" />
+            <Globe className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
             <span className="truncate flex-1 text-green-700 dark:text-green-400">{pageUrl}</span>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyUrl}>
-              {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+              {copied ? <Check className="w-3 h-3 text-green-600 dark:text-green-400" /> : <Copy className="w-3 h-3" />}
             </Button>
             <a href={pageUrl} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-3 h-3 text-muted-foreground hover:text-foreground" />
@@ -657,7 +657,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
         {/* Preview iframe */}
         <div className="flex-1 flex items-start justify-center p-6 overflow-auto">
           <div
-            className="bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-300"
+            className="bg-white dark:bg-card rounded-2xl shadow-xl overflow-hidden transition-all duration-300"
             style={{
               width: previewDevice === "mobile" ? 375 : 800,
               height: previewDevice === "mobile" ? 667 : "auto",

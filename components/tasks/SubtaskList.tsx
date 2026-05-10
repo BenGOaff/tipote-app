@@ -40,7 +40,7 @@ export function SubtaskList({ subtasks, onToggle, onAdd, onDelete }: SubtaskList
       {total > 0 && (
         <div className="flex items-center gap-3">
           <Progress value={progress} className="flex-1 h-2" />
-          <span className="text-xs font-medium text-slate-600 whitespace-nowrap">
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
             {done}/{total}
           </span>
         </div>
@@ -57,14 +57,14 @@ export function SubtaskList({ subtasks, onToggle, onAdd, onDelete }: SubtaskList
               onCheckedChange={(checked) => onToggle(st.id, !!checked)}
             />
             <span
-              className={`flex-1 text-sm ${st.is_done ? "line-through text-slate-400" : "text-slate-700"}`}
+              className={`flex-1 text-sm ${st.is_done ? "line-through text-slate-400" : "text-slate-700 dark:text-slate-300"}`}
             >
               {st.title}
             </span>
             <button
               type="button"
               onClick={() => onDelete(st.id)}
-              className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-red-500 transition-opacity"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -73,13 +73,13 @@ export function SubtaskList({ subtasks, onToggle, onAdd, onDelete }: SubtaskList
       </div>
 
       <div className="flex items-center gap-2">
-        <Plus className="h-4 w-4 text-slate-400" />
+        <Plus className="h-4 w-4 text-slate-400 dark:text-slate-500" />
         <input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
           placeholder={t("addSubtask")}
-          className="flex-1 border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+          className="flex-1 border-none bg-transparent text-sm text-slate-700 dark:text-slate-300 outline-none placeholder:text-slate-400"
           maxLength={500}
         />
       </div>

@@ -221,7 +221,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
                 <CardTitle className="flex items-center gap-2">
                   {t("title")}
                   {!hasAccess && (
-                    <Badge variant="outline" className="text-xs border-amber-400 text-amber-600">
+                    <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 dark:text-amber-400">
                       <Crown className="w-3 h-3 mr-1" />
                       {t("badge")}
                     </Badge>
@@ -247,9 +247,9 @@ export function AutoCommentSettings({ userPlan }: Props) {
         {/* Locked message for FREE/BASIC */}
         {!hasAccess && (
           <CardContent className="pt-0">
-            <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+            <div className="rounded-lg border border-dashed border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 p-4">
               <div className="flex items-start gap-3">
-                <Zap className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                <Zap className="w-5 h-5 text-amber-500 dark:text-amber-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium text-sm text-amber-700 dark:text-amber-400 mb-1">
                     {t("upsell.title")}
@@ -266,7 +266,7 @@ export function AutoCommentSettings({ userPlan }: Props) {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-amber-400 text-amber-700 hover:bg-amber-100"
+                    className="border-amber-400 text-amber-700 dark:text-amber-300 hover:bg-amber-100"
                     onClick={() => {
                       const el = document.querySelector('[data-tab="pricing"]');
                       if (el instanceof HTMLElement) el.click();

@@ -314,34 +314,34 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
   return (
     <div className="space-y-4">
       {/* Crédits */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-semibold text-slate-900">{t('aiCredits')}</p>
+            <p className="text-xs font-semibold text-slate-900 dark:text-slate-50">{t('aiCredits')}</p>
             <Link href="/settings?tab=billing" className="text-xs font-semibold text-primary hover:underline">
               {t('manageCredits')}
             </Link>
           </div>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
             {t('oneGenOneCredit')}
           </p>
         </div>
       </section>
 
       {/* Prompt */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-slate-900">{meta.title}</h3>
-            <p className="text-xs text-slate-600">{meta.subtitle}</p>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{meta.title}</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300">{meta.subtitle}</p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-700">{t('channel')}</span>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('channel')}</span>
             <input
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="h-10 w-44 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              className="h-10 w-44 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="LinkedIn, Email…"
             />
           </div>
@@ -349,25 +349,25 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div className="grid gap-2">
-            <label className="text-xs font-semibold text-slate-700">{t('tags')}</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('tags')}</label>
             <input
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              className="h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="ex: lancement, preuve sociale"
             />
-            <p className="text-[11px] text-slate-500">{t('tagsSeparator')}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('tagsSeparator')}</p>
           </div>
 
           <div className="md:col-span-2 grid gap-2">
-            <label className="text-xs font-semibold text-slate-700">{t('brief')}</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('brief')}</label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[180px] rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              className="min-h-[180px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               placeholder={meta.placeholder}
             />
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               {t('briefTip')}
             </p>
           </div>
@@ -385,7 +385,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
           <Link
             href="/contents"
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-4 py-2 text-xs font-semibold text-slate-900 dark:text-slate-50 hover:bg-slate-50"
           >
             {t('viewContents')}
           </Link>
@@ -393,39 +393,39 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
         {result ? (
           result.ok ? (
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-slate-900">{t('generatedContent')}</p>
-                  {result.title ? <p className="text-xs text-slate-600">{result.title}</p> : null}
-                  {result.warning ? <p className="text-xs font-semibold text-amber-700">{result.warning}</p> : null}
-                  {result.saveError ? <p className="text-xs font-semibold text-rose-700">{result.saveError}</p> : null}
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{t('generatedContent')}</p>
+                  {result.title ? <p className="text-xs text-slate-600 dark:text-slate-300">{result.title}</p> : null}
+                  {result.warning ? <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">{result.warning}</p> : null}
+                  {result.saveError ? <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">{result.saveError}</p> : null}
                 </div>
 
                 {result.id ? (
                   <Link
                     href={`/contents/${result.id}`}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-50 hover:bg-slate-50"
                   >
                     {t('openDetail')}
                   </Link>
                 ) : (
                   <Link
                     href="/contents"
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-50 hover:bg-slate-50"
                   >
                     {t('openContentHub')}
                   </Link>
                 )}
               </div>
 
-              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                <pre className="whitespace-pre-wrap text-sm text-slate-900">{result.content ?? ''}</pre>
+              <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-4">
+                <pre className="whitespace-pre-wrap text-sm text-slate-900 dark:text-slate-50">{result.content ?? ''}</pre>
               </div>
 
               {/* Image upload pour les posts réseaux sociaux */}
               {isSocialPost && (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-4">
                   <ImageUploader
                     images={images}
                     onChange={setImages}
@@ -437,7 +437,7 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
 
               {/* Actions : Publier / Programmer / Copier / PDF / Supprimer */}
               {isSocialPost && result.id && (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-4">
                   <PostActionButtons
                     contentId={result.id}
                     contentPreview={result.content}
@@ -464,9 +464,9 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
               </div>
             </div>
           ) : (
-            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
-              <p className="text-sm font-semibold text-rose-800">{t('error')}</p>
-              <p className="mt-1 text-sm text-rose-800">{result.error ?? t('unknownError')}</p>
+            <div className="mt-4 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-4">
+              <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">{t('error')}</p>
+              <p className="mt-1 text-sm text-rose-800 dark:text-rose-200">{result.error ?? t('unknownError')}</p>
 
               {result.code === 'NO_CREDITS' ? (
                 <div className="mt-3">
@@ -481,13 +481,13 @@ export function ContentGenerator({ type, defaultPrompt }: Props) {
                       type="button"
                       onClick={onSyncBilling}
                       disabled={billingSyncing}
-                      className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-60"
+                      className="rounded-xl border border-rose-200 dark:border-rose-800 bg-white dark:bg-card px-4 py-2 text-xs font-semibold text-rose-800 dark:text-rose-200 hover:bg-rose-50 disabled:opacity-60"
                     >
                       {billingSyncing ? t('verifying') : t('alreadyPaid')}
                     </button>
                   </div>
 
-                  {billingSyncMsg ? <p className="mt-2 text-xs font-medium text-rose-800">{billingSyncMsg}</p> : null}
+                  {billingSyncMsg ? <p className="mt-2 text-xs font-medium text-rose-800 dark:text-rose-200">{billingSyncMsg}</p> : null}
                 </div>
               ) : null}
             </div>

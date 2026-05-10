@@ -189,7 +189,7 @@ function SlugBlock({ slug, setSlug, slugError, setSlugError, quizId }: AdvancedQ
           className="h-10"
         />
         {slugError ? (
-          <p className="text-xs text-red-600">{slugError}</p>
+          <p className="text-xs text-red-600 dark:text-red-400">{slugError}</p>
         ) : (
           <p className="text-xs text-muted-foreground">
             {slug ? `/q/${sanitizeSlug(slug) ?? slug}` : t("slugNonePreview", { id: "{uuid}" })}

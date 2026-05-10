@@ -350,7 +350,7 @@ export default function ToastWidgetsClient() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium">{t(mode === "display" ? "displayCode" : mode === "signup" ? "signupPixel" : "purchasePixel")}</span>
                       <Button variant="ghost" size="sm" onClick={() => copyToastCode(editingToast.id, mode)}>
-                        {copied === `toast-${mode}-${editingToast.id}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                        {copied === `toast-${mode}-${editingToast.id}` ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
                     <code className="text-xs text-muted-foreground break-all">{codeSnippet}</code>
@@ -540,7 +540,7 @@ export default function ToastWidgetsClient() {
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium">{t("share.embedCode")}</span>
                 <Button variant="ghost" size="sm" onClick={() => copyShareCode(editingShare.id)}>
-                  {copied === `share-${editingShare.id}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  {copied === `share-${editingShare.id}` ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
               <code className="text-xs text-muted-foreground break-all">
@@ -588,7 +588,7 @@ export default function ToastWidgetsClient() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 text-amber-600">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400">
                   <Bell className="w-4 h-4" />
                 </div>
                 <div>
@@ -627,7 +627,7 @@ export default function ToastWidgetsClient() {
                     </div>
                     <div className="flex items-center gap-1 pt-1 border-t">
                       <Button variant="ghost" size="sm" onClick={() => copyToastCode(w.id, "display")} title={t("copyCode")}>
-                        {copied === `toast-display-${w.id}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                        {copied === `toast-display-${w.id}` ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setEditingToast(w)}>
                         <Settings className="w-4 h-4" />
@@ -647,7 +647,7 @@ export default function ToastWidgetsClient() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 text-blue-600">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
                   <Share2 className="w-4 h-4" />
                 </div>
                 <div>
@@ -686,7 +686,7 @@ export default function ToastWidgetsClient() {
                     </div>
                     <div className="flex items-center gap-1 pt-1 border-t">
                       <Button variant="ghost" size="sm" onClick={() => copyShareCode(w.id)} title={t("copyCode")}>
-                        {copied === `share-${w.id}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                        {copied === `share-${w.id}` ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setEditingShare(w)}>
                         <Settings className="w-4 h-4" />

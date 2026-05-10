@@ -641,7 +641,7 @@ export default function MyContentLovableClient({
               <div className="max-w-[1200px] mx-auto w-full space-y-5">
                 <Card className="p-6">
                   <p className="text-sm text-muted-foreground">Impossible de charger tes contenus pour le moment.</p>
-                  <p className="mt-2 text-sm text-rose-600">{error}</p>
+                  <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{error}</p>
                 </Card>
               </div>
             </div>
@@ -773,7 +773,7 @@ export default function MyContentLovableClient({
                                 projets" — évite le cas où l'user
                                 pense ne rien avoir (cf. bug Fabienne). */}
                             {hidden > 0 ? (
-                              <div className="text-[11px] text-amber-700 mt-1.5">
+                              <div className="text-[11px] text-amber-700 dark:text-amber-300 mt-1.5">
                                 +{hidden} dans tes autres projets
                               </div>
                             ) : null}
@@ -856,7 +856,7 @@ export default function MyContentLovableClient({
 
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold flex items-center gap-2">
-                      <ClipboardList className="w-5 h-5 text-teal-600" />
+                      <ClipboardList className="w-5 h-5 text-teal-600 dark:text-teal-400" />
                       Mes Quiz
                     </h2>
                     <Button size="sm" asChild>
@@ -874,7 +874,7 @@ export default function MyContentLovableClient({
                           explicitement plutôt que de le laisser
                           croire qu'il n'a rien. */}
                       {hiddenByProjectFilter.quizzes > 0 ? (
-                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-center">
+                        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2 text-center">
                           Tu as {hiddenByProjectFilter.quizzes} quiz dans
                           tes autres projets. Change de projet en haut à
                           droite pour les voir.
@@ -1046,7 +1046,7 @@ export default function MyContentLovableClient({
 
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold flex items-center gap-2">
-                      <Route className="w-5 h-5 text-indigo-600" />
+                      <Route className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                       Mes Pages
                     </h2>
                     <Button size="sm" asChild>
@@ -1060,7 +1060,7 @@ export default function MyContentLovableClient({
                     <Card className="p-6">
                       <p className="text-sm text-muted-foreground text-center py-4">{t("ui.noPages")}</p>
                       {hiddenByProjectFilter.pages > 0 ? (
-                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-center">
+                        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2 text-center">
                           Tu as {hiddenByProjectFilter.pages} page(s) dans
                           tes autres projets. Change de projet en haut à
                           droite pour les voir.
@@ -1108,7 +1108,7 @@ export default function MyContentLovableClient({
                                         href={publicUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+                                        className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline"
                                       >
                                         <ExternalLink className="h-3 w-3" /> Voir en ligne
                                       </a>
@@ -1398,7 +1398,7 @@ export default function MyContentLovableClient({
                                             ) : null}
 
                                             <DropdownMenuItem
-                                              className="text-rose-600 focus:text-rose-600"
+                                              className="text-rose-600 dark:text-rose-400 focus:text-rose-600"
                                               onClick={() => setDeleteConfirm(item)}
                                               disabled={busy !== null}
                                             >

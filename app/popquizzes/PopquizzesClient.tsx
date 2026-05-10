@@ -218,7 +218,7 @@ export function PopquizzesClient({
                           {p.title || <span className="italic text-muted-foreground">Sans titre</span>}
                         </h3>
                         {p.is_published ? (
-                          <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 border border-emerald-500/30">
+                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/30">
                             Publié
                           </Badge>
                         ) : (

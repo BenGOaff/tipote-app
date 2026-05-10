@@ -124,7 +124,7 @@ export default function QuizShareSettings({
             <div className="flex items-center gap-2">
               <Input value={publicUrl} readOnly className="font-mono text-sm bg-muted" />
               <Button variant="outline" size="icon" onClick={() => copyText(publicUrl, "link")} className="shrink-0">
-                {copied === "link" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                {copied === "link" ? <Check className="h-4 w-4 text-green-500 dark:text-green-400" /> : <Copy className="h-4 w-4" />}
               </Button>
               <Button variant="outline" size="icon" asChild className="shrink-0">
                 <a href={publicUrl} target="_blank" rel="noopener noreferrer">
@@ -157,7 +157,7 @@ export default function QuizShareSettings({
                 className="absolute top-2 right-2"
                 onClick={() => copyText(iframeCode, "iframe")}
               >
-                {copied === "iframe" ? <Check className="h-3.5 w-3.5 mr-1 text-green-500" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                {copied === "iframe" ? <Check className="h-3.5 w-3.5 mr-1 text-green-500 dark:text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
                 {copied === "iframe" ? t("copiedBtn") : t("copyBtn")}
               </Button>
             </div>

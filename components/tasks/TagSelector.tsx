@@ -62,21 +62,21 @@ export function TagSelector({ allTags, selectedIds, onToggle, onCreate }: TagSel
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs text-slate-500 hover:border-slate-400 hover:text-slate-700"
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs text-slate-500 dark:text-slate-400 hover:border-slate-400 hover:text-slate-700"
         >
           <Plus className="h-3 w-3" /> Nouveau tag
         </button>
       </div>
 
       {showCreate && (
-        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+        <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2">
           <input
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setShowCreate(false); }}
             placeholder="Nom du tag..."
-            className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+            className="flex-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-2 py-1 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
             maxLength={50}
           />
           <div className="flex gap-1">

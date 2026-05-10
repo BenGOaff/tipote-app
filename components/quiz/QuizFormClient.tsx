@@ -957,7 +957,7 @@ export default function QuizFormClient() {
                     onClick={() => setAiFormat("short")}
                     className={`p-3 rounded-xl border text-left transition-all ${aiFormat === "short" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
                   >
-                    <Zap className="h-4 w-4 text-amber-500 mb-1" />
+                    <Zap className="h-4 w-4 text-amber-500 dark:text-amber-400 mb-1" />
                     <p className="font-medium text-sm">{t("aiFormatShort")}</p>
                     <p className="text-xs text-muted-foreground">{t("aiFormatShortDesc")}</p>
                   </button>
@@ -1006,7 +1006,7 @@ export default function QuizFormClient() {
                     onClick={() => setAiSegmentation("profile")}
                     className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "profile" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
                   >
-                    <Users className="h-4 w-4 text-violet-500 mb-1" />
+                    <Users className="h-4 w-4 text-violet-500 dark:text-violet-400 mb-1" />
                     <p className="font-medium text-sm">{t("aiSegProfile")}</p>
                     <p className="text-xs text-muted-foreground">{t("aiSegProfileDesc")}</p>
                   </button>
@@ -1015,7 +1015,7 @@ export default function QuizFormClient() {
                     onClick={() => setAiSegmentation("level")}
                     className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "level" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
                   >
-                    <TrendingUp className="h-4 w-4 text-emerald-500 mb-1" />
+                    <TrendingUp className="h-4 w-4 text-emerald-500 dark:text-emerald-400 mb-1" />
                     <p className="font-medium text-sm">{t("aiSegLevel")}</p>
                     <p className="text-xs text-muted-foreground">{t("aiSegLevelDesc")}</p>
                   </button>

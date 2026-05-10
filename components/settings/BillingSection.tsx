@@ -422,7 +422,7 @@ export default function BillingSection({ email }: Props) {
             type="button"
             className={`rounded-full px-6 py-2 text-sm font-semibold transition-all ${
               billingCycle === "monthly"
-                ? "bg-white shadow-sm text-foreground"
+                ? "bg-white dark:bg-card shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setBillingCycle("monthly")}
@@ -433,7 +433,7 @@ export default function BillingSection({ email }: Props) {
             type="button"
             className={`rounded-full px-6 py-2 text-sm font-semibold transition-all ${
               billingCycle === "annual"
-                ? "bg-white shadow-sm text-foreground"
+                ? "bg-white dark:bg-card shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setBillingCycle("annual")}

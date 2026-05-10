@@ -193,13 +193,13 @@ export default function StrategyClient({
           On conserve l'UX via le bouton "Changer de scénario". */}
       {/* NOTE : les offres remplacent l'ancien concept "pyramide d'offres" côté UI */}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-5 shadow-sm">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
               Tes Offres
             </h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               L&apos;offre de base, l&apos;offre coeur et l&apos;offre premium vont
               structurer tout ton contenu, ton tunnel et tes automatisations.
             </p>
@@ -212,7 +212,7 @@ export default function StrategyClient({
             )}
 
             {mode === "edit" && (
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                 Tu peux ajuster les noms, descriptions et prix pour coller à ton
                 business actuel.
               </p>
@@ -221,15 +221,15 @@ export default function StrategyClient({
         </div>
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-slate-600">
+          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
               {selectedIndex !== null ? selectedIndex + 1 : "?"}
             </span>
             <div>
-              <p className="font-medium text-slate-900">
+              <p className="font-medium text-slate-900 dark:text-slate-50">
                 {scenarioLabel || "Aucune offre encore sélectionnée"}
               </p>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Scénarios générés automatiquement à partir de ton onboarding.
               </p>
             </div>
@@ -243,7 +243,7 @@ export default function StrategyClient({
               router.push("/strategy/pyramids");
               router.refresh();
             }}
-            className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+            className="inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100"
           >
             Changer de scénario
           </button>
@@ -252,11 +252,11 @@ export default function StrategyClient({
         {mode === "edit" && draft && (
           <>
             <div className="mb-4">
-              <label className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Nom de tes offres
               </label>
               <input
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 text-sm text-slate-900 dark:text-slate-50 outline-none ring-0 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                 value={scenarioLabel}
                 onChange={(e) => updateName(e.target.value)}
                 placeholder="Ex : Ascension Affiliation Success"
@@ -270,19 +270,19 @@ export default function StrategyClient({
                   return (
                     <div
                       key={idx}
-                      className="flex flex-col rounded-xl border border-slate-200 bg-slate-50/80 p-3"
+                      className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 p-3"
                     >
-                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         Niveau {idx + 1} · {label}
                       </p>
 
                       <div className="space-y-2">
                         <div>
-                          <label className="text-[11px] font-medium text-slate-600">
+                          <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
                             Nom de l&apos;offre
                           </label>
                           <input
-                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                             value={level.name ?? ""}
                             onChange={(e) =>
                               updateLevel(idx, "name", e.target.value)
@@ -292,11 +292,11 @@ export default function StrategyClient({
                         </div>
 
                         <div>
-                          <label className="text-[11px] font-medium text-slate-600">
+                          <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
                             Description courte
                           </label>
                           <textarea
-                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                             rows={3}
                             value={level.description ?? ""}
                             onChange={(e) =>
@@ -308,11 +308,11 @@ export default function StrategyClient({
 
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[11px] font-medium text-slate-600">
+                            <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
                               Prix indicatif
                             </label>
                             <input
-                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                               value={
                                 level.price !== undefined
                                   ? String(level.price)
@@ -326,11 +326,11 @@ export default function StrategyClient({
                           </div>
 
                           <div>
-                            <label className="text-[11px] font-medium text-slate-600">
+                            <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
                               Fourchette / gamme
                             </label>
                             <input
-                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                               value={level.price_range ?? ""}
                               onChange={(e) =>
                                 updateLevel(idx, "price_range", e.target.value)
@@ -360,7 +360,7 @@ export default function StrategyClient({
         )}
 
         {statusMessage && (
-          <p className="mt-2 text-xs text-slate-600">{statusMessage}</p>
+          <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{statusMessage}</p>
         )}
       </div>
 
@@ -370,7 +370,7 @@ export default function StrategyClient({
 
       {/* (optionnel) info silencieuse */}
       {draft == null && scenarios.length > 0 && chooserOpen && (
-        <p className="mt-3 text-[11px] text-slate-400">
+        <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
           {scenarios.length} scénarios disponibles — choix sur /strategy/pyramids.
         </p>
       )}

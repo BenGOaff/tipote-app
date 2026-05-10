@@ -35,6 +35,12 @@
     "viewCredits": "Ver meus créditos IA",
     "account": "Minha conta",
     "logout": "Sair",
+    "theme": {
+      "label": "Aparência",
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema"
+    },
     "menu": "Menu",
     "notifications": "Notificações",
     "upgrade": "Fazer upgrade",

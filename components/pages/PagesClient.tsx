@@ -511,7 +511,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                     <button onClick={() => setView("step2")} className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1">
                       <ArrowLeft className="w-4 h-4" /> Retour
                     </button>
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 mb-5">
+                    <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-6 mb-5">
                       <div className="flex items-start gap-3">
                         <span className="text-2xl leading-none">⚠️</span>
                         <div className="flex-1">
@@ -570,7 +570,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                       >
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                            <FileText className="w-6 h-6 text-blue-600" />
+                            <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div>
                             <h3 className="font-semibold mb-1">{t("typeCapture")}</h3>
@@ -587,7 +587,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                       >
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                            <ShoppingCart className="w-6 h-6 text-green-600" />
+                            <ShoppingCart className="w-6 h-6 text-green-600 dark:text-green-400" />
                           </div>
                           <div>
                             <h3 className="font-semibold mb-1">{t("typeSales")}</h3>
@@ -604,7 +604,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                       >
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
-                            <Globe className="w-6 h-6 text-purple-600" />
+                            <Globe className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                           </div>
                           <div>
                             <h3 className="font-semibold mb-1">{t("typeShowcase")}</h3>
@@ -622,7 +622,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                       >
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
-                            {creatingLinkinbio ? <Loader2 className="w-6 h-6 text-orange-600 animate-spin" /> : <Link2 className="w-6 h-6 text-orange-600" />}
+                            {creatingLinkinbio ? <Loader2 className="w-6 h-6 text-orange-600 dark:text-orange-400 animate-spin" /> : <Link2 className="w-6 h-6 text-orange-600" />}
                           </div>
                           <div>
                             <h3 className="font-semibold mb-1">{t("typeLinkinbio")}</h3>
@@ -835,7 +835,7 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                                   {logoPreviewUrl && (
                                     <div className="mt-2 flex items-center gap-2">
                                       <img src={logoPreviewUrl} alt="Logo" className="h-8 w-auto rounded" />
-                                      <span className="text-xs text-green-600 flex items-center gap-1"><Check className="w-3 h-3" /> {t("logoUploaded")}</span>
+                                      <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1"><Check className="w-3 h-3" /> {t("logoUploaded")}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1111,13 +1111,13 @@ function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onE
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           {page.page_type === "capture" ? (
-            <FileText className="w-4 h-4 text-blue-600" />
+            <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           ) : page.page_type === "showcase" ? (
-            <Globe className="w-4 h-4 text-purple-600" />
+            <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           ) : page.page_type === "linkinbio" ? (
-            <Link2 className="w-4 h-4 text-orange-600" />
+            <Link2 className="w-4 h-4 text-orange-600 dark:text-orange-400" />
           ) : (
-            <ShoppingCart className="w-4 h-4 text-green-600" />
+            <ShoppingCart className="w-4 h-4 text-green-600 dark:text-green-400" />
           )}
           <span className={`text-xs px-2 py-0.5 rounded-full ${
             isPublished ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
@@ -1149,12 +1149,12 @@ function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onE
         </button>
         {page.leads_count > 0 && (
           <button onClick={onLeads} className="p-1.5 border rounded-md hover:bg-muted" title={t("viewLeads")}>
-            <Users className="w-3.5 h-3.5 text-blue-600" />
+            <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           </button>
         )}
         {isPublished && (
           <button onClick={copyUrl} className="p-1.5 border rounded-md hover:bg-muted" title={t("copyLink")}>
-            {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         )}
         <button onClick={onArchive} className="p-1.5 border rounded-md hover:bg-muted text-destructive" title={t("delete")}>
@@ -1209,7 +1209,7 @@ function LeadsPanel({ pageId, pageTitle, onClose }: { pageId: string; pageTitle:
         <div className="flex items-center justify-between p-5 border-b">
           <div>
             <h2 className="text-lg font-bold flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Leads &mdash; {pageTitle}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">{leads.length} {t("contacts")}</p>

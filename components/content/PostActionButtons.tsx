@@ -255,13 +255,13 @@ export function PostActionButtons({
               size="sm"
               onClick={handleCopyAndPdf}
               disabled={busy}
-              className="text-slate-500 hover:text-slate-700"
+              className="text-slate-500 dark:text-slate-400 hover:text-slate-700"
             >
               <Copy className="h-4 w-4 mr-1" />
               {t("copy")}
               {onDownloadPdf && (
                 <>
-                  <span className="mx-1 text-slate-300">|</span>
+                  <span className="mx-1 text-slate-300 dark:text-slate-600">|</span>
                   <Download className="h-4 w-4 mr-1" />
                   PDF
                 </>
@@ -277,7 +277,7 @@ export function PostActionButtons({
                   variant="ghost"
                   size="sm"
                   disabled={busy || deleting}
-                  className="text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                  className="text-rose-500 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50"
                 >
                   {deleting ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -310,7 +310,7 @@ export function PostActionButtons({
 
         {/* Message si aucun réseau connecté */}
         {relevantPlatforms.length === 0 && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {detectedPlatform
               ? t("connectPlatform", { platform: PLATFORM_LABELS[detectedPlatform] ?? detectedPlatform })
               : t("connectSocial")}

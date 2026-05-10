@@ -376,7 +376,7 @@ export function PublishModal({
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-500" />
+                <AlertCircle className="w-5 h-5 text-amber-500 dark:text-amber-400" />
                 {t("notConnectedTitle", { platform: label })}
               </DialogTitle>
               <DialogDescription>
@@ -717,7 +717,7 @@ export function PublishModal({
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
                 {t("successTitle", { platform: label })}
               </DialogTitle>
               <DialogDescription>
@@ -756,7 +756,7 @@ export function PublishModal({
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-rose-600" />
+                <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 {t("errorTitle")}
               </DialogTitle>
               <DialogDescription>{result?.error ?? "An error occurred."}</DialogDescription>

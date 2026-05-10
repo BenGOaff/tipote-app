@@ -18,9 +18,9 @@ import { cn } from "@/lib/utils";
 
 const tones = {
   primary: { bg: "bg-primary/10", fg: "text-primary" },
-  success: { bg: "bg-emerald-500/10", fg: "text-emerald-600" },
-  warning: { bg: "bg-amber-500/10", fg: "text-amber-600" },
-  destructive: { bg: "bg-rose-500/10", fg: "text-rose-600" },
+  success: { bg: "bg-emerald-500/10", fg: "text-emerald-600 dark:text-emerald-400" },
+  warning: { bg: "bg-amber-500/10", fg: "text-amber-600 dark:text-amber-400" },
+  destructive: { bg: "bg-rose-500/10", fg: "text-rose-600 dark:text-rose-400" },
   neutral: { bg: "bg-muted", fg: "text-muted-foreground" },
 } as const;
 

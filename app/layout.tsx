@@ -21,7 +21,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dir = (RTL_LOCALES as string[]).includes(locale) ? "rtl" : "ltr";
 
   return (
-    <html lang={locale} dir={dir}>
+    // suppressHydrationWarning : next-themes ajoute la classe `.dark`
+    // sur <html> côté client avant la première peinture, ce qui crée
+    // un mismatch SSR/client volontaire. Le warning React doit être
+    // silencé sur cet élément précis (recommandation officielle
+    // next-themes pour éviter le flash de thème incorrect).
+    <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <HotjarTracker />
         <NextIntlClientProvider locale={locale} messages={messages}>

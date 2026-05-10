@@ -146,7 +146,7 @@ export function ComptaExpenseItems() {
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVA à payer</div>
-            <div className={`text-lg font-bold ${vatToPay < 0 ? "text-emerald-600" : ""}`}>
+            <div className={`text-lg font-bold ${vatToPay < 0 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
               {formatEUR(Math.max(0, vatToPay))}
             </div>
             <div className="text-[10px] text-muted-foreground">

@@ -89,11 +89,11 @@ export default function FiscalThresholdsAdminClient() {
 
   return (
     <div className="space-y-4 max-w-[1100px]">
-      <Card className="p-5 space-y-3 bg-blue-50 border-blue-200">
+      <Card className="p-5 space-y-3 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
         <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <p className="font-semibold text-blue-900 text-sm">
+            <p className="font-semibold text-blue-900 dark:text-blue-200 text-sm">
               Seuils fiscaux affichés aux users dans /settings?tab=compta
             </p>
             <p className="text-xs text-blue-900/80 leading-relaxed">

@@ -156,7 +156,7 @@ function SchemaFieldInput({
           {field.inputType === "image_url" && <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />}
           {field.inputType === "url" && <Link2 className="h-3.5 w-3.5 text-muted-foreground" />}
           {field.label}
-          {field.required && field.source === "user" && <span className="text-red-500">*</span>}
+          {field.required && field.source === "user" && <span className="text-red-500 dark:text-red-400">*</span>}
         </Label>
         <FieldChoiceToggle field={field} choice={choice} onChoiceChange={onChoiceChange} />
       </div>
@@ -166,11 +166,11 @@ function SchemaFieldInput({
       )}
 
       {choice === "remove" ? (
-        <div className="rounded-md border border-dashed border-red-300 bg-red-50 px-3 py-2 text-xs text-red-600">
+        <div className="rounded-md border border-dashed border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs text-red-600 dark:text-red-400">
           {t("sectionRemoved")}
         </div>
       ) : choice === "generate" ? (
-        <div className="rounded-md border border-dashed border-blue-300 bg-blue-50 px-3 py-2 text-xs text-blue-600">
+        <div className="rounded-md border border-dashed border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-xs text-blue-600 dark:text-blue-400">
           {t("aiWillGenerate")}
         </div>
       ) : field.inputType === "textarea" || field.kind === "array_scalar" || field.kind === "array_object" ? (

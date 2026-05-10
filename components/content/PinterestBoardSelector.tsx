@@ -106,7 +106,7 @@ export function PinterestBoardSelector({
       <div className="space-y-1.5">
         <Label htmlFor="pinterest-board">
           {t("boardLabel")}{" "}
-          <span className="text-rose-500">*</span>
+          <span className="text-rose-500 dark:text-rose-400">*</span>
         </Label>
 
         {loading ? (
@@ -115,7 +115,7 @@ export function PinterestBoardSelector({
             {t("loading")}
           </div>
         ) : error ? (
-          <div className="flex items-center gap-2 text-sm text-rose-600">
+          <div className="flex items-center gap-2 text-sm text-rose-600 dark:text-rose-400">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {error}
           </div>

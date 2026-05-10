@@ -42,9 +42,9 @@ interface TaskCardProps {
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
-  high: "text-red-600 bg-red-50 border-red-200",
-  medium: "text-amber-600 bg-amber-50 border-amber-200",
-  low: "text-slate-500 bg-slate-50 border-slate-200",
+  high: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
+  medium: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
+  low: "text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700",
 };
 
 export function TaskCard({
@@ -159,7 +159,7 @@ export function TaskCard({
               className={[
                 "inline-flex items-center gap-1 text-[11px] rounded-md px-1.5 py-0.5",
                 isOverdue
-                  ? "text-red-600 bg-red-50 font-medium"
+                  ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 font-medium"
                   : "text-muted-foreground",
               ].join(" ")}
             >

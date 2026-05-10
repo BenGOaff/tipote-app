@@ -28,6 +28,12 @@
     "viewCredits": "Ver mis créditos IA",
     "account": "Mi cuenta",
     "logout": "Cerrar sesión",
+    "theme": {
+      "label": "Apariencia",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    },
     "menu": {
       "profile": "Perfil",
       "connections": "Conexiones",

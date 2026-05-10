@@ -286,11 +286,11 @@ export default function ProfileSection() {
   };
 
   return (
-    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="space-y-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-5 shadow-sm">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-slate-900">Profil business</h3>
-          <p className="text-xs text-slate-500">Ces infos alimentent la stratégie et la génération de contenu.</p>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Profil business</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Ces infos alimentent la stratégie et la génération de contenu.</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -396,7 +396,7 @@ export default function ProfileSection() {
             onChange={(e) => setMainGoalsCsv(e.target.value)}
             placeholder="Ex: trouver des clients, vendre une offre, construire une audience"
           />
-          <p className="text-[11px] text-slate-500">Sépare par des virgules. Max 10.</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">Sépare par des virgules. Max 10.</p>
         </div>
 
         <div className="grid gap-2">
@@ -409,22 +409,22 @@ export default function ProfileSection() {
             onChange={(e) => setContentTypesCsv(e.target.value)}
             placeholder="Ex: posts, emails, blog, scripts vidéo"
           />
-          <p className="text-[11px] text-slate-500">Sépare par des virgules. Max 12.</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">Sépare par des virgules. Max 12.</p>
         </div>
       </div>
 
       {/* ✅ AJOUT : ZONE DANGER */}
-      <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-5">
+      <div className="mt-4 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-red-600">⚠️</span>
-              <h3 className="text-sm font-semibold text-red-700">Zone danger</h3>
+              <span className="text-red-600 dark:text-red-400">⚠️</span>
+              <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">Zone danger</h3>
             </div>
 
-            <p className="text-sm font-medium text-slate-900">Réinitialiser ce Tipote</p>
+            <p className="text-sm font-medium text-slate-900 dark:text-slate-50">Réinitialiser ce Tipote</p>
 
-            <p className="text-xs leading-relaxed text-slate-600">
+            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
               Tu as changé de voie ou tu t&apos;es perdu en cours de route ? Tu veux repartir à zéro avec ce Tipote et
               le lancer dans une autre direction ? Clique sur ce bouton. Attention : tous les contenus, toutes les tâches
               et toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartiras de zéro.
@@ -447,15 +447,15 @@ export default function ProfileSection() {
       </div>
 
       {/* Supprimer mon compte */}
-      <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-5">
+      <div className="mt-4 rounded-2xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-red-600">🗑️</span>
-              <h3 className="text-sm font-semibold text-red-700">Supprimer mon compte</h3>
+              <span className="text-red-600 dark:text-red-400">🗑️</span>
+              <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">Supprimer mon compte</h3>
             </div>
 
-            <p className="text-xs leading-relaxed text-slate-600">
+            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
               Supprime définitivement ton compte Tipote, toutes tes données, et annule ton abonnement s&apos;il y en a un.
               Cette action est irréversible. Tu ne pourras pas récupérer ton compte ni tes données.
             </p>
@@ -473,7 +473,7 @@ export default function ProfileSection() {
               </Button>
             ) : (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium text-red-700">Es-tu vraiment sûr(e) ?</p>
+                <p className="text-xs font-medium text-red-700 dark:text-red-300">Es-tu vraiment sûr(e) ?</p>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="destructive"

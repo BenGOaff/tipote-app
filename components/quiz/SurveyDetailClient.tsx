@@ -212,7 +212,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
     // (white background) keeps a readable dark-on-white contrast — fixes the
     // "invisible text" on inverted buttons like the start CTA.
     const safeClass = (className || "").replace(/\btext-white\b/g, "").replace(/\btext-(?:primary|background)-foreground\b/g, "");
-    const cls = `${safeClass} text-foreground w-full bg-white border-2 border-primary/40 outline-none rounded-lg px-2 py-1`;
+    const cls = `${safeClass} text-foreground w-full bg-white dark:bg-card border-2 border-primary/40 outline-none rounded-lg px-2 py-1`;
     return (
       <div className="space-y-1.5">
         {multiline ? (
@@ -326,7 +326,7 @@ function SettingsToggle({ label, hint, checked, onChange, disabled }: {
         onClick={() => !disabled && onChange(!checked)}
         className={`relative shrink-0 w-9 h-5 rounded-full border-0 p-0 transition-colors ${checked ? "bg-primary" : "bg-muted"} ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
       >
-        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} />
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white dark:bg-card shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} />
       </button>
     </div>
   );
@@ -1048,7 +1048,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   {brandLogoUrl ? (
                     <div className="space-y-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
+                      <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white dark:bg-card p-1" />
                       <div className="flex items-center gap-2">
                         <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
                           {uploadingLogo ? t("uploading") : t("change")}
@@ -1486,7 +1486,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             </div>
             <div className="flex items-center gap-2">
               <Input value={publicUrl} readOnly className="font-mono text-sm bg-muted flex-1" />
-              <Button variant="outline" size="icon" onClick={handleCopyLink}>{copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}</Button>
+              <Button variant="outline" size="icon" onClick={handleCopyLink}>{copied ? <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" /> : <Copy className="w-4 h-4" />}</Button>
             </div>
             <pre className="text-xs font-mono bg-muted rounded-lg p-3 overflow-x-auto border mt-3">{`<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`}</pre>
           </CardContent></Card>

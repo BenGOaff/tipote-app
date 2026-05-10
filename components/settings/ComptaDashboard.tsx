@@ -173,7 +173,7 @@ export default function ComptaDashboard() {
   return (
     <div className="space-y-4">
       {fxIssue ? (
-        <Card className="p-3 bg-amber-50 border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+        <Card className="p-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2">
           <Info className="h-4 w-4 shrink-0" />
           Taux de change indisponibles. Les montants en devises étrangères
           sont comptés tels quels (1:1 vers EUR).
@@ -333,7 +333,7 @@ export default function ComptaDashboard() {
 
               <div className="grid grid-cols-3 gap-3">
                 <MiniStat
-                  icon={<UserPlus className="h-4 w-4 text-emerald-600" />}
+                  icon={<UserPlus className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
                   label="Nouveaux clients"
                   value={String(m.new_customers_count)}
                 />
@@ -370,7 +370,7 @@ export default function ComptaDashboard() {
             {/* Top produits */}
             <Card className="p-5 space-y-3">
               <h3 className="font-semibold flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-amber-500" />
+                <Trophy className="h-5 w-5 text-amber-500 dark:text-amber-400" />
                 Mes meilleures ventes ce mois-ci
               </h3>
               {data.top_products_month.length === 0 ? (
@@ -564,7 +564,7 @@ function DeltaBadge({ value, label }: { value: number | null; label: string }) {
   return (
     <p
       className={`text-xs inline-flex items-center gap-1.5 ${
-        isUp ? "text-emerald-600" : "text-destructive"
+        isUp ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
       }`}
     >
       {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -603,9 +603,9 @@ function VatGaugeCard({ t }: { t: NonNullable<DashboardData["vat_threshold"]> })
       };
     }
     if (t.percent_base >= 80) {
-      return { color: "text-amber-600", bg: "bg-amber-500", text: "Attention, tu approches du seuil" };
+      return { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500", text: "Attention, tu approches du seuil" };
     }
-    return { color: "text-emerald-600", bg: "bg-emerald-500", text: "Tu es sous le seuil" };
+    return { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500", text: "Tu es sous le seuil" };
   })();
 
   return (

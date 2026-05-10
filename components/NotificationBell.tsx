@@ -143,7 +143,7 @@ export function NotificationBell() {
               onClick={() => setTab(key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 tab === key
-                  ? "bg-white shadow-sm text-foreground"
+                  ? "bg-white dark:bg-card shadow-sm text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -153,7 +153,7 @@ export function NotificationBell() {
                   key === "unread"
                     ? "bg-primary/15 text-primary"
                     : key === "archived"
-                    ? "bg-emerald-100 text-emerald-700"
+                    ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
                     : "bg-muted text-muted-foreground"
                 }`}
               >

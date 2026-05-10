@@ -177,7 +177,7 @@ export default function TaskItem({
     <div
       className={cn(
         'rounded-xl border px-4 py-3 transition',
-        done ? 'bg-slate-50 opacity-70' : 'bg-white',
+        done ? 'bg-slate-50 dark:bg-slate-900/40 opacity-70' : 'bg-white dark:bg-card',
       )}
     >
       <div className="flex items-start gap-3">
@@ -188,7 +188,7 @@ export default function TaskItem({
           onClick={toggleDone}
           disabled={isPending}
           aria-label={done ? ti('markTodo') : ti('markDone')}
-          className={cn('mt-0.5 h-8 w-8 rounded-full', done ? 'border-slate-300' : '')}
+          className={cn('mt-0.5 h-8 w-8 rounded-full', done ? 'border-slate-300 dark:border-slate-600' : '')}
         >
           {done ? <Check className="h-4 w-4" /> : null}
         </Button>
@@ -235,7 +235,7 @@ export default function TaskItem({
           ) : (
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className={cn('text-sm font-medium text-slate-900', done ? 'line-through text-slate-500' : '')}>
+                <p className={cn('text-sm font-medium text-slate-900', done ? 'line-through text-slate-500 dark:text-slate-400' : '')}>
                   {title}
                 </p>
 

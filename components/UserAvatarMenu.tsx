@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggleSubMenu } from "@/components/ThemeToggle";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type Props = {
@@ -110,6 +111,8 @@ export function UserAvatarMenu({ userEmail }: Props) {
             {t(`menu.${key}`)}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <ThemeToggleSubMenu />
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleLogout}

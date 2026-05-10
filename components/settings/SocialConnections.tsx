@@ -89,19 +89,19 @@ function PinterestConsentDialog({
             <p className="font-medium text-foreground">{tp("accessTitle")}</p>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 dark:text-green-400 shrink-0" />
                 <span>{tp("accessProfile")}</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 dark:text-green-400 shrink-0" />
                 <span>{tp("accessBoards")}</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 dark:text-green-400 shrink-0" />
                 <span>{tp("accessPins")}</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-500 dark:text-green-400 shrink-0" />
                 <span>{tp("accessCreateBoards")}</span>
               </li>
             </ul>
@@ -111,15 +111,15 @@ function PinterestConsentDialog({
             <p className="font-medium text-foreground">{tp("guaranteesTitle")}</p>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 dark:text-blue-400 shrink-0" />
                 <span>{tp("guaranteeNoResell")}</span>
               </li>
               <li className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 dark:text-blue-400 shrink-0" />
                 <span>{tp("guaranteeNoAutoPublish")}</span>
               </li>
               <li className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+                <AlertCircle className="w-4 h-4 mt-0.5 text-blue-500 dark:text-blue-400 shrink-0" />
                 <span>{tp("guaranteeDisconnect")}</span>
               </li>
             </ul>
@@ -482,13 +482,13 @@ export default function SocialConnections() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{platform.label}</span>
                       {connection && !connection.expired && (
-                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
+                        <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 text-xs">
                           <CheckCircle2 className="w-3 h-3 mr-1" />
                           {t("connected")}
                         </Badge>
                       )}
                       {connection?.expired && (
-                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
+                        <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-xs">
                           <AlertCircle className="w-3 h-3 mr-1" />
                           {t("expired")}
                         </Badge>

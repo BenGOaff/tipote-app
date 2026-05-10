@@ -141,10 +141,10 @@ type Props = {
 
 // ─── Status config ──────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ElementType }> = {
-  prospect: { color: "bg-blue-100 text-blue-700 border-blue-200", icon: Users },
-  active: { color: "bg-green-100 text-green-700 border-green-200", icon: UserCheck },
-  completed: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: Clock },
-  paused: { color: "bg-amber-100 text-amber-700 border-amber-200", icon: Pause },
+  prospect: { color: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800", icon: Users },
+  active: { color: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800", icon: UserCheck },
+  completed: { color: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700", icon: Clock },
+  paused: { color: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", icon: Pause },
 };
 
 // ─── Template colors ────────────────────────────────────────
@@ -180,7 +180,7 @@ function ClientRevenueBadges({
         className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-semibold ${
           isNegative
             ? "bg-destructive/10 text-destructive"
-            : "bg-emerald-50 text-emerald-700"
+            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
         }`}
         title={`${stats.transactions_count} encaissement${stats.transactions_count > 1 ? "s" : ""}`}
       >
@@ -192,7 +192,7 @@ function ClientRevenueBadges({
         </span>
       ) : null}
       {stats.is_churned ? (
-        <span className="inline-flex items-center rounded-md px-2 py-0.5 bg-amber-100 text-amber-700 font-medium">
+        <span className="inline-flex items-center rounded-md px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-medium">
           A arrêté son abo
         </span>
       ) : null}
@@ -652,10 +652,10 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               {/* Stats cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: t("statsTotal"), value: stats.total, color: "text-slate-700" },
-                  { label: t("statsActive"), value: stats.active, color: "text-green-600" },
-                  { label: t("statsProspect"), value: stats.prospect, color: "text-blue-600" },
-                  { label: t("statsCompleted"), value: stats.completed, color: "text-slate-500" },
+                  { label: t("statsTotal"), value: stats.total, color: "text-slate-700 dark:text-slate-300" },
+                  { label: t("statsActive"), value: stats.active, color: "text-green-600 dark:text-green-400" },
+                  { label: t("statsProspect"), value: stats.prospect, color: "text-blue-600 dark:text-blue-400" },
+                  { label: t("statsCompleted"), value: stats.completed, color: "text-slate-500 dark:text-slate-400" },
                 ].map((s) => (
                   <Card key={s.label} className="px-4 py-3">
                     <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -695,7 +695,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                     <select
                       value={templateFilter}
                       onChange={(e) => setTemplateFilter(e.target.value)}
-                      className="h-8 text-xs border border-slate-200 rounded-md px-2 bg-white text-slate-700"
+                      className="h-8 text-xs border border-slate-200 dark:border-slate-700 rounded-md px-2 bg-white dark:bg-card text-slate-700 dark:text-slate-300"
                     >
                       <option value="all">{t("filterAll")}</option>
                       {templates.map((tpl) => (
@@ -742,7 +742,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-sm text-slate-900 truncate">{client.name}</h3>
+                            <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-50 truncate">{client.name}</h3>
                             {client.email && (
                               <p className="text-xs text-muted-foreground truncate">{client.email}</p>
                             )}
@@ -758,9 +758,9 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                         {client.process_summaries && client.process_summaries.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mb-2">
                             {client.process_summaries.map((ps, i) => (
-                              <div key={i} className="flex items-center gap-1.5 bg-slate-50 rounded-md px-2 py-1">
-                                <span className="text-xs font-medium text-slate-600 truncate max-w-[120px]">{ps.name}</span>
-                                <span className={`text-xs font-bold ${ps.progress === 100 ? "text-green-600" : "text-slate-500"}`}>{ps.progress}%</span>
+                              <div key={i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/40 rounded-md px-2 py-1">
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{ps.name}</span>
+                                <span className={`text-xs font-bold ${ps.progress === 100 ? "text-green-600 dark:text-green-400" : "text-slate-500 dark:text-slate-400"}`}>{ps.progress}%</span>
                               </div>
                             ))}
                           </div>
@@ -795,7 +795,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div className="space-y-2 flex-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-bold text-slate-900">{selectedClient.name}</h2>
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{selectedClient.name}</h2>
                       <Badge
                         variant="outline"
                         className={`text-xs ${STATUS_CONFIG[selectedClient.status]?.color ?? ""}`}
@@ -836,7 +836,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">
+                        <Button variant="outline" size="sm" className="text-red-500 dark:text-red-400 hover:text-red-600">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
@@ -857,7 +857,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                 </div>
 
                 {/* Status change buttons */}
-                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
+                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                   {["prospect", "active", "completed", "paused"].map((s) => {
                     const cfg = STATUS_CONFIG[s] ?? STATUS_CONFIG.active;
                     return (
@@ -965,14 +965,14 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-slate-400 hover:text-blue-500"
+                            className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-blue-500"
                             onClick={() => openEditTemplate(tpl)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-red-500">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </AlertDialogTrigger>
@@ -996,7 +996,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                       )}
                       <div className="space-y-1">
                         {tpl.items.map((item, i) => (
-                          <p key={item.id} className="text-xs text-slate-600 flex items-center gap-1.5">
+                          <p key={item.id} className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                             <span className="text-muted-foreground">{i + 1}.</span>
                             {item.title}
                           </p>
@@ -1023,7 +1023,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("clientName")} *</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("clientName")} *</label>
               <Input
                 value={newClientName}
                 onChange={(e) => setNewClientName(e.target.value)}
@@ -1033,7 +1033,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-500">{t("email")}</label>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("email")}</label>
                 <Input
                   type="email"
                   value={newClientEmail}
@@ -1042,7 +1042,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-500">{t("phone")}</label>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("phone")}</label>
                 <Input
                   value={newClientPhone}
                   onChange={(e) => setNewClientPhone(e.target.value)}
@@ -1051,7 +1051,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("initialStatus")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("initialStatus")}</label>
               <div className="flex gap-2">
                 {["prospect", "active"].map((s) => (
                   <Button
@@ -1096,7 +1096,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("templateName")} *</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("templateName")} *</label>
               <Input
                 value={newTplName}
                 onChange={(e) => setNewTplName(e.target.value)}
@@ -1104,7 +1104,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("templateDescription")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("templateDescription")}</label>
               <Input
                 value={newTplDescription}
                 onChange={(e) => setNewTplDescription(e.target.value)}
@@ -1112,7 +1112,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("templateColor")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("templateColor")}</label>
               <div className="flex gap-2">
                 {TEMPLATE_COLORS.map((c) => (
                   <button
@@ -1126,7 +1126,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-500">{t("templateStepsLabel")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("templateStepsLabel")}</label>
               {newTplItems.map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
@@ -1150,7 +1150,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-slate-400 hover:text-red-500"
+                      className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-red-500"
                       onClick={() => setNewTplItems(newTplItems.filter((_, j) => j !== i))}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -1189,7 +1189,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("templateName")} *</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("templateName")} *</label>
               <Input
                 value={editTplName}
                 onChange={(e) => setEditTplName(e.target.value)}
@@ -1197,7 +1197,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("templateDescription")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("templateDescription")}</label>
               <Input
                 value={editTplDescription}
                 onChange={(e) => setEditTplDescription(e.target.value)}
@@ -1205,7 +1205,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("templateColor")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("templateColor")}</label>
               <div className="flex gap-2">
                 {TEMPLATE_COLORS.map((c) => (
                   <button
@@ -1219,7 +1219,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-500">{t("templateStepsLabel")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("templateStepsLabel")}</label>
               {editTplItems.map((item, i) => (
                 <div key={item.id ?? `new-${i}`} className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
@@ -1243,7 +1243,7 @@ export default function ClientsPageClient({ clients: initialClients, templates: 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-slate-400 hover:text-red-500"
+                      className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-red-500"
                       onClick={() => setEditTplItems(editTplItems.filter((_, j) => j !== i))}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -1429,7 +1429,7 @@ function ProcessCard({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setEditingHeader(true); }}
-              className="text-slate-400 hover:text-primary transition-colors"
+              className="text-slate-400 dark:text-slate-500 hover:text-primary transition-colors"
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
@@ -1438,7 +1438,7 @@ function ProcessCard({
                 <button
                   type="button"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-slate-400 hover:text-red-500 transition-colors"
+                  className="text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -1463,11 +1463,11 @@ function ProcessCard({
 
       {/* Payment summary + log */}
       {hasPayment && (
-        <div className="mt-3 border-t border-slate-100 pt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-3 border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3 text-xs">
             <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="font-medium text-slate-700">
+              <span className="font-medium text-slate-700 dark:text-slate-300">
                 {localCollected}€ / {process.amount_total}€
               </span>
               <span className="text-muted-foreground">
@@ -1490,7 +1490,7 @@ function ProcessCard({
 
           {/* Add payment form */}
           {showAddPayment && (
-            <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+            <div className="bg-slate-50 dark:bg-slate-900/40 rounded-lg p-3 space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground font-medium">Montant (€)</label>
@@ -1546,12 +1546,12 @@ function ProcessCard({
               {payments.map((p) => (
                 <div key={p.id} className="flex items-center gap-2 text-xs px-1 py-0.5 group">
                   <span className="text-muted-foreground w-20 shrink-0">{new Date(p.paid_at).toLocaleDateString(locale)}</span>
-                  <span className="font-medium text-green-700">+{p.amount}€</span>
+                  <span className="font-medium text-green-700 dark:text-green-300">+{p.amount}€</span>
                   {p.note && <span className="text-muted-foreground truncate">{p.note}</span>}
                   <button
                     type="button"
                     onClick={() => deletePayment(p.id)}
-                    className="ml-auto opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity"
+                    className="ml-auto opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-red-500 transition-opacity"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -1592,12 +1592,12 @@ function ProcessCard({
                       }
                       setEditingItemId(null);
                     }}
-                    className="flex-1 text-sm border rounded px-2 py-0.5 text-slate-700"
+                    className="flex-1 text-sm border rounded px-2 py-0.5 text-slate-700 dark:text-slate-300"
                     autoFocus
                   />
                 ) : (
                   <span
-                    className={`flex-1 text-sm cursor-pointer ${item.is_done ? "line-through text-slate-400" : "text-slate-700"}`}
+                    className={`flex-1 text-sm cursor-pointer ${item.is_done ? "line-through text-slate-400" : "text-slate-700 dark:text-slate-300"}`}
                     onDoubleClick={() => { setEditingItemId(item.id); setEditingItemTitle(item.title); }}
                   >
                     {item.title}
@@ -1610,7 +1610,7 @@ function ProcessCard({
                   <button
                     type="button"
                     onClick={() => { setEditingItemId(item.id); setEditingItemTitle(item.title); }}
-                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-primary transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-primary transition-opacity"
                   >
                     <Pencil className="h-3 w-3" />
                   </button>
@@ -1618,7 +1618,7 @@ function ProcessCard({
                 <button
                   type="button"
                   onClick={() => onDeleteItem(item.id)}
-                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-red-500 transition-opacity"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -1626,7 +1626,7 @@ function ProcessCard({
             ))}
 
           <div className="flex items-center gap-2 mt-2">
-            <Plus className="h-4 w-4 text-slate-400" />
+            <Plus className="h-4 w-4 text-slate-400 dark:text-slate-500" />
             <input
               value={newItemTitle}
               onChange={(e) => setNewItemTitle(e.target.value)}
@@ -1637,7 +1637,7 @@ function ProcessCard({
                 }
               }}
               placeholder={t("addStep")}
-              className="flex-1 border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+              className="flex-1 border-none bg-transparent text-sm text-slate-700 dark:text-slate-300 outline-none placeholder:text-slate-400"
               maxLength={500}
             />
           </div>
@@ -1694,27 +1694,27 @@ function EditClientDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-500">{t("clientName")} *</label>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("clientName")} *</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("email")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("email")}</label>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-500">{t("phone")}</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("phone")}</label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-500">{t("notes")}</label>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{t("notes")}</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder={t("notesPlaceholder")}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 resize-y min-h-[60px]"
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 resize-y min-h-[60px]"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -1789,7 +1789,7 @@ function ApplyTemplateDialog({
                     className={`p-3 rounded-lg border cursor-pointer transition-all ${
                       selectedTpl === tpl.id
                         ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                        : "border-slate-200 hover:border-slate-300"
+                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
                     }`}
                     onClick={() => setSelectedTpl(tpl.id)}
                   >
@@ -1811,7 +1811,7 @@ function ApplyTemplateDialog({
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
                   {t("processDueDate")}
                 </label>
@@ -1823,14 +1823,14 @@ function ApplyTemplateDialog({
               </div>
 
               {/* Payment info */}
-              <div className="border-t border-slate-100 pt-3 space-y-3">
-                <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-3">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   <DollarSign className="h-3.5 w-3.5" />
                   {t("paymentInfo")}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500">{t("amountTotal")}</label>
+                    <label className="text-xs text-slate-500 dark:text-slate-400">{t("amountTotal")}</label>
                     <Input
                       type="number"
                       value={amountTotal}
@@ -1841,11 +1841,11 @@ function ApplyTemplateDialog({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500">{t("paymentType")}</label>
+                    <label className="text-xs text-slate-500 dark:text-slate-400">{t("paymentType")}</label>
                     <select
                       value={paymentType}
                       onChange={(e) => setPaymentType(e.target.value)}
-                      className="w-full h-9 text-sm border border-slate-200 rounded-md px-2 bg-white"
+                      className="w-full h-9 text-sm border border-slate-200 dark:border-slate-700 rounded-md px-2 bg-white dark:bg-card"
                     >
                       <option value="full">{t("paymentFull")}</option>
                       <option value="installments">{t("paymentInstallments")}</option>
@@ -1854,7 +1854,7 @@ function ApplyTemplateDialog({
                 </div>
                 {paymentType === "installments" && (
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500">{t("installmentsCount")}</label>
+                    <label className="text-xs text-slate-500 dark:text-slate-400">{t("installmentsCount")}</label>
                     <Input
                       type="number"
                       value={installmentsCount}

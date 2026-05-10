@@ -980,7 +980,7 @@ export default function TodayLovable() {
                   {/* --- Cette semaine : coaching --- */}
                   <Card className="p-6 flex flex-col">
                     <div className="flex items-center gap-2 mb-1">
-                      <Lightbulb className="w-4 h-4 text-amber-500" />
+                      <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         {t("thisWeek")}
                       </p>
@@ -1049,7 +1049,7 @@ export default function TodayLovable() {
                           <div className="rounded-lg border border-border/60 p-4 space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-muted-foreground">Revenus ce mois vs objectif</span>
-                              <span className={`text-sm font-bold ${pct >= 100 ? "text-green-600" : pct >= 50 ? "text-amber-600" : "text-muted-foreground"}`}>{pct}%</span>
+                              <span className={`text-sm font-bold ${pct >= 100 ? "text-green-600 dark:text-green-400" : pct >= 50 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>{pct}%</span>
                             </div>
                             <Progress value={pct} className="h-2" />
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -1071,8 +1071,8 @@ export default function TodayLovable() {
                               <div key={i} className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">{line.label}</span>
                                 <span className={`font-medium ${
-                                  line.trend === "up" ? "text-green-600" :
-                                  line.trend === "down" ? "text-red-500" :
+                                  line.trend === "up" ? "text-green-600 dark:text-green-400" :
+                                  line.trend === "down" ? "text-red-500 dark:text-red-400" :
                                   "text-foreground"
                                 }`}>{line.value}</span>
                               </div>

@@ -410,7 +410,7 @@ export function ProjectSwitcher() {
             <Plus className="w-4 h-4" />
             <span>{t("newProject")}</span>
             {plan !== "elite" && (
-              <Crown className="w-3.5 h-3.5 text-amber-500 ml-auto" />
+              <Crown className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 ml-auto" />
             )}
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -459,7 +459,7 @@ export function ProjectSwitcher() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-amber-500" />
+              <Crown className="w-5 h-5 text-amber-500 dark:text-amber-400" />
               {t("upsellTitle")}
             </DialogTitle>
           </DialogHeader>

@@ -307,10 +307,10 @@ export function VideoUploader({
 
   if (current) {
     return (
-      <div className="flex items-center gap-3 rounded-md border border-green-200 bg-green-50 p-3">
-        <CheckCircle2 className="size-5 text-green-700 shrink-0" />
+      <div className="flex items-center gap-3 rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-3">
+        <CheckCircle2 className="size-5 text-green-700 dark:text-green-300 shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-green-900 truncate">
+          <p className="text-sm font-medium text-green-900 dark:text-green-200 truncate">
             {current.fileName}
           </p>
           <p className="text-xs text-green-700/80">
@@ -329,7 +329,7 @@ export function VideoUploader({
           aria-label="Retirer la vidéo"
           className="shrink-0 hover:bg-green-100"
         >
-          <X className="size-4 text-green-900" />
+          <X className="size-4 text-green-900 dark:text-green-200" />
         </Button>
       </div>
     );

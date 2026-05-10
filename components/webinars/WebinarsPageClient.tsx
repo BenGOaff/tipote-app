@@ -63,10 +63,10 @@ interface Webinar {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  draft: { label: "Brouillon", color: "bg-slate-100 text-slate-600" },
-  scheduled: { label: "Planifi\u00e9", color: "bg-blue-100 text-blue-700" },
-  live: { label: "En direct", color: "bg-green-100 text-green-700" },
-  completed: { label: "Termin\u00e9", color: "bg-purple-100 text-purple-700" },
+  draft: { label: "Brouillon", color: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300" },
+  scheduled: { label: "Planifi\u00e9", color: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" },
+  live: { label: "En direct", color: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" },
+  completed: { label: "Termin\u00e9", color: "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" },
 };
 
 function pct(a: number, b: number): string {
@@ -94,9 +94,9 @@ function formatDate(iso: string | null, locale: string): string {
 
 // KPI benchmark thresholds
 function kpiColor(value: number, good: number, excellent: number): string {
-  if (value >= excellent) return "text-green-600";
-  if (value >= good) return "text-amber-600";
-  return "text-red-500";
+  if (value >= excellent) return "text-green-600 dark:text-green-400";
+  if (value >= good) return "text-amber-600 dark:text-amber-400";
+  return "text-red-500 dark:text-red-400";
 }
 
 export default function WebinarsPageClient() {
@@ -349,7 +349,7 @@ export default function WebinarsPageClient() {
                             {pct(w.sales_count, totalViewers)} conv.
                           </span>
                           {Number(w.revenue) > 0 && (
-                            <span className="text-green-600 font-medium">
+                            <span className="text-green-600 dark:text-green-400 font-medium">
                               {Number(w.revenue).toLocaleString()}&nbsp;&euro;
                             </span>
                           )}
@@ -360,7 +360,7 @@ export default function WebinarsPageClient() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-slate-400 hover:text-blue-500"
+                          className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-blue-500"
                           onClick={(e) => { e.stopPropagation(); openEdit(w); }}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -370,7 +370,7 @@ export default function WebinarsPageClient() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-slate-400 hover:text-red-500"
+                              className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-red-500"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <Trash2 className="h-3.5 w-3.5" />

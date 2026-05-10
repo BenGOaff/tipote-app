@@ -544,7 +544,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           >
             <div className="flex items-start gap-4">
               <div className="p-2.5 rounded-lg bg-blue-500/10 shrink-0">
-                <FileUp className="w-5 h-5 text-blue-500" />
+                <FileUp className="w-5 h-5 text-blue-500 dark:text-blue-400" />
               </div>
               <div>
                 <h3 className="font-bold">Importer un quiz existant</h3>
@@ -562,7 +562,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           >
             <div className="flex items-start gap-4">
               <div className="p-2.5 rounded-lg bg-emerald-500/10 shrink-0">
-                <PenLine className="w-5 h-5 text-emerald-500" />
+                <PenLine className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
               </div>
               <div>
                 <h3 className="font-bold">Créer de zéro</h3>

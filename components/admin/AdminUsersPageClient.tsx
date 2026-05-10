@@ -604,7 +604,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                   ))}
                 </div>
                 {emailSegment.length === 0 && (
-                  <div className="text-xs text-amber-600">⚠ Aucun segment = envoi à TOUS les users</div>
+                  <div className="text-xs text-amber-600 dark:text-amber-400">⚠ Aucun segment = envoi à TOUS les users</div>
                 )}
               </div>
             )}
@@ -724,9 +724,9 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
 
             {/* Result */}
             {emailResult && (
-              <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm">
+              <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-sm">
                 ✅ <strong>{emailResult.sent}</strong> envoyé{emailResult.sent > 1 ? "s" : ""} sur {emailResult.total}
-                {emailResult.failed > 0 && <span className="text-red-600 ml-2">({t("failedCount", { n: emailResult.failed })})</span>}
+                {emailResult.failed > 0 && <span className="text-red-600 dark:text-red-400 ml-2">({t("failedCount", { n: emailResult.failed })})</span>}
               </div>
             )}
 
@@ -734,7 +734,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             {emailPreviewHtml && (
               <div className="mt-3 space-y-2">
                 <div className="text-xs font-medium text-muted-foreground">Prévisualisation :</div>
-                <div className="border rounded-lg overflow-hidden bg-gray-50">
+                <div className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900/40">
                   <iframe
                     srcDoc={emailPreviewHtml}
                     title="Email preview"

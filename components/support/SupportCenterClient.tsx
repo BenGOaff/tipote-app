@@ -146,7 +146,7 @@ export default function SupportCenterClient({ locale }: { locale: string }) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("search_placeholder", locale)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl text-foreground bg-white shadow-lg border-0 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
+              className="w-full pl-12 pr-4 py-3.5 rounded-xl text-foreground bg-white dark:bg-card shadow-lg border-0 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
             />
           </div>
         </div>

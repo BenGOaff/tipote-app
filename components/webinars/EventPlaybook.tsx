@@ -71,7 +71,7 @@ function getPhases(isChallenge: boolean, tp: (k: string) => string): Record<stri
     phase1: {
       id: "phase1",
       icon: Package,
-      color: "text-pink-600",
+      color: "text-pink-600 dark:text-pink-400",
       tipsKey: c ? "tips_phase1_challenge" : "tips_phase1_webinar",
       items: [
         { key: "phase1_offer", labelKey: c ? "phase1_offer_challenge" : "phase1_offer_webinar" },
@@ -88,7 +88,7 @@ function getPhases(isChallenge: boolean, tp: (k: string) => string): Record<stri
     phase2: {
       id: "phase2",
       icon: FileText,
-      color: "text-green-600",
+      color: "text-green-600 dark:text-green-400",
       tipsKey: c ? "tips_phase2_challenge" : "tips_phase2_webinar",
       items: [
         { key: "phase2_program", labelKey: c ? "phase2_program_challenge" : "phase2_program_webinar" },
@@ -106,7 +106,7 @@ function getPhases(isChallenge: boolean, tp: (k: string) => string): Record<stri
     phase3: {
       id: "phase3",
       icon: Monitor,
-      color: "text-violet-600",
+      color: "text-violet-600 dark:text-violet-400",
       tipsKey: "tips_phase3",
       items: [
         { key: "phase3_tech", labelKey: "phase3_tech" },
@@ -125,7 +125,7 @@ function getPhases(isChallenge: boolean, tp: (k: string) => string): Record<stri
     phase4: {
       id: "phase4",
       icon: Megaphone,
-      color: "text-blue-600",
+      color: "text-blue-600 dark:text-blue-400",
       tipsKey: c ? "tips_phase4_challenge" : "tips_phase4_webinar",
       items: [
         ...(c
@@ -155,7 +155,7 @@ function getPhases(isChallenge: boolean, tp: (k: string) => string): Record<stri
     phase5: {
       id: "phase5",
       icon: Flame,
-      color: "text-orange-600",
+      color: "text-orange-600 dark:text-orange-400",
       tipsKey: c ? "tips_phase5_challenge" : "tips_phase5_webinar",
       items: [
         {
@@ -183,7 +183,7 @@ function getPhases(isChallenge: boolean, tp: (k: string) => string): Record<stri
     phase6: {
       id: "phase6",
       icon: BarChart3,
-      color: "text-purple-600",
+      color: "text-purple-600 dark:text-purple-400",
       tipsKey: "tips_phase6",
       items: [
         {
@@ -348,7 +348,7 @@ function PlaybookAIGenerator({
       {chosenTitle && !program && !generating && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
             <p className="text-sm">
               {t("playbook.titleChosen")} <span className="font-semibold">{chosenTitle}</span>
             </p>
@@ -377,7 +377,7 @@ function PlaybookAIGenerator({
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
               <p className="text-sm font-semibold truncate">{chosenTitle}</p>
             </div>
             <Button variant="ghost" size="sm" onClick={generateProgram}>
@@ -390,7 +390,7 @@ function PlaybookAIGenerator({
           {isChallenge && Array.isArray((program as any).days) && (
             <div className="space-y-3">
               {((program as any).days as any[]).map((day: any) => (
-                <Card key={day.day} className="p-3 bg-white">
+                <Card key={day.day} className="p-3 bg-white dark:bg-card">
                   <p className="font-semibold text-sm">
                     {t("playbook.day")} {day.day} : {day.theme}
                   </p>
@@ -414,7 +414,7 @@ function PlaybookAIGenerator({
           {!isChallenge && Array.isArray((program as any).sections) && (
             <div className="space-y-3">
               {((program as any).sections as any[]).map((sec: any) => (
-                <Card key={sec.section} className="p-3 bg-white">
+                <Card key={sec.section} className="p-3 bg-white dark:bg-card">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold text-sm">{sec.title}</p>
                     <Badge variant="outline" className="text-[10px] shrink-0">
@@ -464,7 +464,7 @@ function PlaybookAIGenerator({
               <ul className="space-y-1">
                 {((program as any).offer_pitch_tips as string[]).map((tip, i) => (
                   <li key={i} className="text-xs flex items-start gap-1.5">
-                    <span className="text-green-600 mt-0.5 shrink-0">*</span>
+                    <span className="text-green-600 dark:text-green-400 mt-0.5 shrink-0">*</span>
                     <span>{tip}</span>
                   </li>
                 ))}
@@ -481,7 +481,7 @@ function PlaybookAIGenerator({
               <ul className="space-y-1">
                 {((program as any).promo_strategies as string[]).map((s, i) => (
                   <li key={i} className="text-xs flex items-start gap-1.5">
-                    <span className="text-orange-600 mt-0.5 shrink-0">*</span>
+                    <span className="text-orange-600 dark:text-orange-400 mt-0.5 shrink-0">*</span>
                     <span>{s}</span>
                   </li>
                 ))}

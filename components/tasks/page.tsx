@@ -29,8 +29,8 @@ export default async function TasksPage() {
     <AppShell userEmail={userEmail}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Tâches</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Tâches</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Exécute ton plan, une tâche à la fois.
           </p>
         </div>

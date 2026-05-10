@@ -943,7 +943,7 @@ export function CoachWidget() {
                               aria-label={t("copyMessage")}
                             >
                               {copiedId === m.id ? (
-                                <Check className="w-3 h-3 text-green-500" />
+                                <Check className="w-3 h-3 text-green-500 dark:text-green-400" />
                               ) : (
                                 <Copy className="w-3 h-3 text-muted-foreground" />
                               )}
@@ -1136,10 +1136,10 @@ export function CoachWidget() {
                             strokeDasharray={`${(scoreData.score / 100) * 264} 264`}
                             className={cn(
                               scoreData.score >= 60
-                                ? "text-green-500"
+                                ? "text-green-500 dark:text-green-400"
                                 : scoreData.score >= 40
                                   ? "text-yellow-500"
-                                  : "text-red-500",
+                                  : "text-red-500 dark:text-red-400",
                             )}
                           />
                         </svg>

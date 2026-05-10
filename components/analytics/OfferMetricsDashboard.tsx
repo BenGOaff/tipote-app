@@ -138,7 +138,7 @@ export const OfferMetricsDashboard = ({
             Résultats totaux ({grandTotals.monthCount} mois de données)
           </h3>
           {grandTotals.revenueSource === "compta" ? (
-            <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5">
+            <span className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded px-2 py-0.5">
               ↗ Ventes & CA synchronisés depuis tes comptes Stripe / PayPal / Mollie
             </span>
           ) : null}
@@ -148,7 +148,7 @@ export const OfferMetricsDashboard = ({
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <ShoppingCart className="w-4 h-4 text-purple-600" />
+                <ShoppingCart className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Ventes totales</p>
@@ -157,7 +157,7 @@ export const OfferMetricsDashboard = ({
               <p className="text-xs text-muted-foreground mt-0.5">{grandTotals.revenue.toLocaleString(locale)} EUR de CA</p>
             )}
             {grandTotals.affiliateRevenue > 0 && (
-              <p className="text-[11px] text-amber-700 mt-0.5">
+              <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
                 + {grandTotals.affiliateRevenue.toLocaleString(locale)} EUR de commissions
               </p>
             )}
@@ -166,7 +166,7 @@ export const OfferMetricsDashboard = ({
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Users className="w-4 h-4 text-green-600" />
+                <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Leads capturés</p>
@@ -179,7 +179,7 @@ export const OfferMetricsDashboard = ({
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Mail className="w-4 h-4 text-blue-600" />
+                <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Ouverture emails (moy.)</p>
@@ -194,7 +194,7 @@ export const OfferMetricsDashboard = ({
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <Euro className="w-4 h-4 text-emerald-600" />
+                <Euro className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">CA total</p>
@@ -204,7 +204,7 @@ export const OfferMetricsDashboard = ({
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <Target className="w-4 h-4 text-amber-600" />
+                <Target className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Conv. vente (moy.)</p>
@@ -242,7 +242,7 @@ export const OfferMetricsDashboard = ({
           {/* Conversion rates */}
           <Card className="p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Target className="w-4 h-4 text-amber-500" />
+              <Target className="w-4 h-4 text-amber-500 dark:text-amber-400" />
               <h4 className="font-bold text-sm">Taux de capture et conversion</h4>
             </div>
             <div className="h-[180px] sm:h-[220px] w-full">
@@ -263,7 +263,7 @@ export const OfferMetricsDashboard = ({
           {/* Email open + click rates */}
           <Card className="p-5 lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <Mail className="w-4 h-4 text-blue-500" />
+              <Mail className="w-4 h-4 text-blue-500 dark:text-blue-400" />
               <h4 className="font-bold text-sm">Ouverture et clics emails</h4>
             </div>
             <div className="h-[180px] sm:h-[220px] w-full">

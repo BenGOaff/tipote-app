@@ -28,6 +28,12 @@
     "viewCredits": "View my AI credits",
     "account": "My account",
     "logout": "Log out",
+    "theme": {
+      "label": "Appearance",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
     "menu": {
       "profile": "Profile",
       "connections": "Connections",

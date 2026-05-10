@@ -851,10 +851,10 @@ export default function CompetitorAnalysisSection() {
                       )}
                       {aiInfo.strengths && aiInfo.strengths.length > 0 && (
                         <div>
-                          <Label className="text-xs text-green-600">{t("strengthsLabel")}</Label>
+                          <Label className="text-xs text-green-600 dark:text-green-400">{t("strengthsLabel")}</Label>
                           <ul className="mt-0.5 space-y-0.5">
                             {aiInfo.strengths.map((s, i) => (
-                              <li key={i} className="text-xs text-green-700 flex gap-1 items-start">
+                              <li key={i} className="text-xs text-green-700 dark:text-green-300 flex gap-1 items-start">
                                 <span className="flex-shrink-0">+</span><span>{s}</span>
                               </li>
                             ))}
@@ -863,10 +863,10 @@ export default function CompetitorAnalysisSection() {
                       )}
                       {aiInfo.weaknesses && aiInfo.weaknesses.length > 0 && (
                         <div>
-                          <Label className="text-xs text-orange-600">{t("weaknessesLabel")}</Label>
+                          <Label className="text-xs text-orange-600 dark:text-orange-400">{t("weaknessesLabel")}</Label>
                           <ul className="mt-0.5 space-y-0.5">
                             {aiInfo.weaknesses.map((w, i) => (
-                              <li key={i} className="text-xs text-orange-700 flex gap-1 items-start">
+                              <li key={i} className="text-xs text-orange-700 dark:text-orange-300 flex gap-1 items-start">
                                 <span className="flex-shrink-0">-</span><span>{w}</span>
                               </li>
                             ))}
@@ -893,7 +893,7 @@ export default function CompetitorAnalysisSection() {
         {/* Document imported indicator */}
         {analysis?.uploaded_document_summary && analysis?.status === "draft" && (
           <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <FileText className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">
                 {t("documentLoaded")}
@@ -1019,8 +1019,8 @@ export default function CompetitorAnalysisSection() {
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-green-600" />
-                    <h4 className="font-semibold text-green-700">{t("yourStrengths")}</h4>
+                    <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <h4 className="font-semibold text-green-700 dark:text-green-300">{t("yourStrengths")}</h4>
                   </div>
                   {!editingStrengths && (
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedStrengths([...analysis.strengths!]); setEditingStrengths(true); }}>
@@ -1052,7 +1052,7 @@ export default function CompetitorAnalysisSection() {
                   <ul className="space-y-2">
                     {analysis.strengths.map((s, i) => (
                       <li key={i} className="text-sm flex gap-2">
-                        <span className="text-green-500 mt-0.5 flex-shrink-0">+</span>
+                        <span className="text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0">+</span>
                         <span>{s}</span>
                       </li>
                     ))}
@@ -1065,8 +1065,8 @@ export default function CompetitorAnalysisSection() {
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <TrendingDown className="w-4 h-4 text-orange-600" />
-                    <h4 className="font-semibold text-orange-700">{t("toImprove")}</h4>
+                    <TrendingDown className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                    <h4 className="font-semibold text-orange-700 dark:text-orange-300">{t("toImprove")}</h4>
                   </div>
                   {!editingWeaknesses && (
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedWeaknesses([...analysis.weaknesses!]); setEditingWeaknesses(true); }}>
@@ -1098,7 +1098,7 @@ export default function CompetitorAnalysisSection() {
                   <ul className="space-y-2">
                     {analysis.weaknesses.map((w, i) => (
                       <li key={i} className="text-sm flex gap-2">
-                        <span className="text-orange-500 mt-0.5 flex-shrink-0">-</span>
+                        <span className="text-orange-500 dark:text-orange-400 mt-0.5 flex-shrink-0">-</span>
                         <span>{w}</span>
                       </li>
                     ))}
@@ -1111,8 +1111,8 @@ export default function CompetitorAnalysisSection() {
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-blue-600" />
-                    <h4 className="font-semibold text-blue-700">{t("opportunities")}</h4>
+                    <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <h4 className="font-semibold text-blue-700 dark:text-blue-300">{t("opportunities")}</h4>
                   </div>
                   {!editingOpportunities && (
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => { setEditedOpportunities([...analysis.opportunities!]); setEditingOpportunities(true); }}>
@@ -1144,7 +1144,7 @@ export default function CompetitorAnalysisSection() {
                   <ul className="space-y-2">
                     {analysis.opportunities.map((o, i) => (
                       <li key={i} className="text-sm flex gap-2">
-                        <span className="text-blue-500 mt-0.5 flex-shrink-0">*</span>
+                        <span className="text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0">*</span>
                         <span>{o}</span>
                       </li>
                     ))}
@@ -1243,7 +1243,7 @@ export default function CompetitorAnalysisSection() {
                       </div>
                       <div className="flex items-center gap-2">
                         {d.user_advantages && d.user_advantages.length > 0 && (
-                          <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 text-xs hidden sm:flex">
+                          <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30 text-xs hidden sm:flex">
                             {t("advantagesBadge", { count: d.user_advantages.length })}
                           </Badge>
                         )}
@@ -1345,7 +1345,7 @@ export default function CompetitorAnalysisSection() {
                           <div className="grid sm:grid-cols-2 gap-4">
                             {((ed.strengths && ed.strengths.length > 0) || isEditing) && (
                               <div>
-                                <Label className="text-xs text-green-600">{t("strengthsLabel")}</Label>
+                                <Label className="text-xs text-green-600 dark:text-green-400">{t("strengthsLabel")}</Label>
                                 {isEditing ? (
                                   <div className="space-y-1 mt-1">
                                     {(ed.strengths || []).map((s, i) => (
@@ -1359,7 +1359,7 @@ export default function CompetitorAnalysisSection() {
                                 ) : (
                                   <ul className="text-sm space-y-1 mt-1">
                                     {d.strengths!.map((s, i) => (
-                                      <li key={i} className="flex gap-1.5"><span className="text-green-500 flex-shrink-0">+</span><span>{s}</span></li>
+                                      <li key={i} className="flex gap-1.5"><span className="text-green-500 dark:text-green-400 flex-shrink-0">+</span><span>{s}</span></li>
                                     ))}
                                   </ul>
                                 )}
@@ -1367,7 +1367,7 @@ export default function CompetitorAnalysisSection() {
                             )}
                             {((ed.weaknesses && ed.weaknesses.length > 0) || isEditing) && (
                               <div>
-                                <Label className="text-xs text-orange-600">{t("weaknessesLabel")}</Label>
+                                <Label className="text-xs text-orange-600 dark:text-orange-400">{t("weaknessesLabel")}</Label>
                                 {isEditing ? (
                                   <div className="space-y-1 mt-1">
                                     {(ed.weaknesses || []).map((w, i) => (
@@ -1381,7 +1381,7 @@ export default function CompetitorAnalysisSection() {
                                 ) : (
                                   <ul className="text-sm space-y-1 mt-1">
                                     {d.weaknesses!.map((w, i) => (
-                                      <li key={i} className="flex gap-1.5"><span className="text-orange-500 flex-shrink-0">-</span><span>{w}</span></li>
+                                      <li key={i} className="flex gap-1.5"><span className="text-orange-500 dark:text-orange-400 flex-shrink-0">-</span><span>{w}</span></li>
                                     ))}
                                   </ul>
                                 )}
@@ -1421,17 +1421,17 @@ export default function CompetitorAnalysisSection() {
                             </div>
                           )}
                           {d.missing_info && d.missing_info.length > 0 && !isEditing && (
-                            <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
                               <div className="flex items-center gap-1.5 mb-1">
-                                <AlertCircle className="w-3.5 h-3.5 text-yellow-600" />
-                                <Label className="text-xs text-yellow-700 font-medium">
+                                <AlertCircle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
+                                <Label className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">
                                   {t("missingInfoTitle")}
                                 </Label>
                               </div>
-                              <ul className="text-xs text-yellow-700 space-y-0.5">
+                              <ul className="text-xs text-yellow-700 dark:text-yellow-300 space-y-0.5">
                                 {d.missing_info.map((m, i) => <li key={i}>- {m}</li>)}
                               </ul>
-                              <p className="text-xs text-yellow-600 mt-2">
+                              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
                                 {t("missingInfoHint")}
                               </p>
                             </div>
@@ -1454,7 +1454,7 @@ export default function CompetitorAnalysisSection() {
                                   <Textarea value={ed.key_differences_summary || ""} onChange={(e) => updateDetailField("key_differences_summary", e.target.value)} rows={3} className="mt-1 text-sm resize-y" />
                                 </div>
                               ) : d.key_differences_summary ? (
-                                <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border text-sm leading-relaxed">
+                                <div className="p-3 bg-white dark:bg-card dark:bg-slate-900 rounded-lg border text-sm leading-relaxed">
                                   {d.key_differences_summary}
                                 </div>
                               ) : null
@@ -1463,7 +1463,7 @@ export default function CompetitorAnalysisSection() {
                               {((ed.user_advantages && ed.user_advantages.length > 0) || isEditing) && (
                                 <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                                   <div className="flex items-center gap-1.5 mb-2">
-                                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                    <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
                                     <Label className="text-xs font-semibold text-green-700 dark:text-green-400">{t("youDoBetter")}</Label>
                                   </div>
                                   {isEditing ? (
@@ -1490,7 +1490,7 @@ export default function CompetitorAnalysisSection() {
                               {((ed.user_disadvantages && ed.user_disadvantages.length > 0) || isEditing) && (
                                 <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
                                   <div className="flex items-center gap-1.5 mb-2">
-                                    <XCircle className="w-4 h-4 text-orange-600" />
+                                    <XCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                                     <Label className="text-xs font-semibold text-orange-700 dark:text-orange-400">{t("theyDoBetter")}</Label>
                                   </div>
                                   {isEditing ? (
@@ -1557,7 +1557,7 @@ export default function CompetitorAnalysisSection() {
                                 ) : (
                                   <ul className="space-y-1.5">
                                     {(d.communication_focus || []).map((msg, i) => (
-                                      <li key={i} className="text-sm flex gap-2 p-2 bg-white dark:bg-slate-900 rounded border">
+                                      <li key={i} className="text-sm flex gap-2 p-2 bg-white dark:bg-card dark:bg-slate-900 rounded border">
                                         <span className="text-primary font-bold flex-shrink-0">{i + 1}.</span>
                                         <span>{msg}</span>
                                       </li>

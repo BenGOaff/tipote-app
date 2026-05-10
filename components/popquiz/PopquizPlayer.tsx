@@ -104,7 +104,7 @@ function CueMarkers({ cues }: { cues: PopquizCue[] }) {
           // doux pour qu'on les repère sans loupe.
           <span
             key={c.id}
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-2.5 rounded-full bg-white ring-[2px] ring-[var(--pq-accent,#5D6CDB)] shadow-[0_0_0_3px_rgba(93,108,219,0.25)]"
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-2.5 rounded-full bg-white dark:bg-card ring-[2px] ring-[var(--pq-accent,#5D6CDB)] shadow-[0_0_0_3px_rgba(93,108,219,0.25)]"
             style={{ left: `${pct}%` }}
             aria-hidden
           />
@@ -408,7 +408,7 @@ function CustomControls({
               <TimeSlider.Progress className="absolute h-full rounded-full bg-white/35" />
             </TimeSlider.Track>
             <CueMarkers cues={cues} />
-            <TimeSlider.Thumb className="absolute size-3 rounded-full bg-white shadow-lg opacity-0 group-hover/scrub:opacity-100 transition-opacity" />
+            <TimeSlider.Thumb className="absolute size-3 rounded-full bg-white dark:bg-card shadow-lg opacity-0 group-hover/scrub:opacity-100 transition-opacity" />
           </TimeSlider.Root>
         </div>
         <div className="flex items-center gap-1.5 mt-1">

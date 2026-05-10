@@ -106,10 +106,10 @@ async function ensureStrategyAfterTimeout(supabase: any, userId: string) {
 // ─── Level icons ──────────────────────────────────────────────────────────────
 
 const LEVEL_CONFIG = {
-  lead_magnet: { icon: Gift, label: "Lead Magnet", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", badge: "Gratuit" },
-  low_ticket: { icon: Zap, label: "Low Ticket", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", badge: "7€–97€" },
-  middle_ticket: { icon: Star, label: "Middle Ticket", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", badge: "97€–497€" },
-  high_ticket: { icon: Crown, label: "High Ticket", color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200", badge: "497€+" },
+  lead_magnet: { icon: Gift, label: "Lead Magnet", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800", badge: "Gratuit" },
+  low_ticket: { icon: Zap, label: "Low Ticket", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800", badge: "7€–97€" },
+  middle_ticket: { icon: Star, label: "Middle Ticket", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800", badge: "97€–497€" },
+  high_ticket: { icon: Crown, label: "High Ticket", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/30", border: "border-purple-200 dark:border-purple-800", badge: "497€+" },
 } as const;
 
 // ─── Offer card sub-component ─────────────────────────────────────────────────
@@ -168,7 +168,7 @@ function OfferCard({ offer, level, expanded, onToggle }: {
           {/* Problem */}
           {offer.problem && (
             <div className="flex items-start gap-2">
-              <Target className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+              <Target className="w-3.5 h-3.5 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-xs font-medium text-muted-foreground">{t("urgentProblem")}</p>
                 <p className="text-sm">{offer.problem}</p>
@@ -187,10 +187,10 @@ function OfferCard({ offer, level, expanded, onToggle }: {
           {/* Transformation */}
           {offer.transformation && (
             <div className="flex items-start gap-2">
-              <ArrowRight className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+              <ArrowRight className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Transformation :</p>
-                <p className="text-sm font-medium text-green-700">{offer.transformation}</p>
+                <p className="text-sm font-medium text-green-700 dark:text-green-300">{offer.transformation}</p>
               </div>
             </div>
           )}
@@ -220,11 +220,11 @@ function OfferCard({ offer, level, expanded, onToggle }: {
 
           {/* Guarantee */}
           {offer.guarantee && (
-            <div className="flex items-start gap-2 bg-green-50 rounded-lg px-3 py-2">
-              <ShieldCheck className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-2 bg-green-50 dark:bg-green-950/30 rounded-lg px-3 py-2">
+              <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-xs font-medium text-green-700">Garantie :</p>
-                <p className="text-sm text-green-800">{offer.guarantee}</p>
+                <p className="text-xs font-medium text-green-700 dark:text-green-300">Garantie :</p>
+                <p className="text-sm text-green-800 dark:text-green-200">{offer.guarantee}</p>
               </div>
             </div>
           )}
@@ -499,9 +499,9 @@ export default function PyramidSelection() {
             const isSelected = selectedId === offerSet.id;
             const pyramidLetters = ["A", "B", "C"];
             const pyramidColors = [
-              { ring: "ring-blue-500", iconBg: "bg-blue-100", iconColor: "text-blue-600" },
-              { ring: "ring-amber-500", iconBg: "bg-amber-100", iconColor: "text-amber-600" },
-              { ring: "ring-purple-500", iconBg: "bg-purple-100", iconColor: "text-purple-600" },
+              { ring: "ring-blue-500", iconBg: "bg-blue-100 dark:bg-blue-900/40", iconColor: "text-blue-600 dark:text-blue-400" },
+              { ring: "ring-amber-500", iconBg: "bg-amber-100 dark:bg-amber-900/40", iconColor: "text-amber-600 dark:text-amber-400" },
+              { ring: "ring-purple-500", iconBg: "bg-purple-100 dark:bg-purple-900/40", iconColor: "text-purple-600 dark:text-purple-400" },
             ];
             const colors = pyramidColors[pyramidIdx] ?? pyramidColors[0];
 
@@ -510,7 +510,7 @@ export default function PyramidSelection() {
                 key={offerSet.id}
                 className={`relative overflow-hidden transition-all cursor-pointer ${
                   isSelected
-                    ? `ring-2 ${colors.ring} shadow-xl bg-white border-transparent`
+                    ? `ring-2 ${colors.ring} shadow-xl bg-white dark:bg-card border-transparent`
                     : "hover:shadow-lg bg-background border-border"
                 }`}
                 onClick={() => setSelectedId(offerSet.id)}

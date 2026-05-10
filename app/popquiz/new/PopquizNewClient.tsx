@@ -908,7 +908,7 @@ export default function PopquizNewClient({
                       const linked = quizzes.find((q) => q.id === cue.quizId);
                       return (
                         <div className="absolute inset-0 grid place-items-center p-4">
-                          <div className="max-w-sm w-full rounded-xl bg-white shadow-2xl p-4 space-y-2">
+                          <div className="max-w-sm w-full rounded-xl bg-white dark:bg-card shadow-2xl p-4 space-y-2">
                             <h4 className="text-sm font-semibold">
                               Marqueur à {formatMs(cue.timestampMs)} —{" "}
                               {linked?.title ?? "Quiz inconnu"}
@@ -1020,7 +1020,7 @@ export default function PopquizNewClient({
                           <option value="optional">Optionnel</option>
                         </select>
                         {isDraftQuiz ? (
-                          <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded">
                             Publie ce quiz pour qu&apos;il s&apos;affiche
                           </span>
                         ) : null}
@@ -1098,7 +1098,7 @@ export default function PopquizNewClient({
                 className="shrink-0"
               >
                 {copied ? (
-                  <Check className="size-4 text-green-600" />
+                  <Check className="size-4 text-green-600 dark:text-green-400" />
                 ) : (
                   <Copy className="size-4" />
                 )}
@@ -1126,7 +1126,7 @@ export default function PopquizNewClient({
             >
               {copiedEmbed ? (
                 <>
-                  <Check className="size-4 mr-2 text-green-600" />
+                  <Check className="size-4 mr-2 text-green-600 dark:text-green-400" />
                   Code copié
                 </>
               ) : (

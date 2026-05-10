@@ -262,24 +262,24 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
   return (
     <form
       onSubmit={handleGeneratePlan}
-      className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="space-y-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-6 shadow-sm"
     >
       {/* Indicateur d'étapes */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Étape {step} sur 4
           </p>
-          <h2 className="text-sm font-semibold text-slate-900">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
             {step === 1 && 'Ton identité'}
             {step === 2 && 'Ta niche et ta mission'}
             {step === 3 && 'Maturité, offres et audience'}
             {step === 4 && 'Temps disponible et objectif'}
           </h2>
         </div>
-        <div className="flex h-2 w-32 overflow-hidden rounded-full bg-slate-100">
+        <div className="flex h-2 w-32 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
           <div
-            className="rounded-full bg-slate-900 transition-all"
+            className="rounded-full bg-slate-900 dark:bg-slate-100 transition-all"
             style={{ width: `${(step / 4) * 100}%` }}
           />
         </div>
@@ -287,13 +287,13 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
 
       {/* Messages système */}
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+        <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        <div className="rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
           {successMessage}
         </div>
       )}
@@ -302,12 +302,12 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Comment tu t&apos;appelles ? (Prénom)
             </label>
             <input
               type="text"
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               disabled={disableForm}
@@ -316,11 +316,11 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                 Tranche d&apos;âge
               </label>
               <select
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                 value={ageRange}
                 onChange={(e) => setAgeRange(e.target.value)}
                 disabled={disableForm}
@@ -335,11 +335,11 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                 Genre
               </label>
               <select
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
                 disabled={disableForm}
@@ -354,13 +354,13 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Pays
             </label>
             <input
               type="text"
               placeholder="France, Belgique, Canada..."
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               disabled={disableForm}
@@ -373,11 +373,11 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
       {step === 2 && (
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Dans quel domaine veux-tu aider les gens ? (Niche)
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               value={niche}
               onChange={(e) => setNiche(e.target.value)}
               disabled={disableForm}
@@ -401,12 +401,12 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
 
           {niche === 'autre' && (
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                 Précise ta niche
               </label>
               <input
                 type="text"
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                 value={nicheOther}
                 onChange={(e) => setNicheOther(e.target.value)}
                 disabled={disableForm}
@@ -415,18 +415,18 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
           )}
 
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Décris en une phrase : qui veux-tu aider à faire quoi, et comment ?
             </label>
             <textarea
               rows={3}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               placeholder={`Exemple : "J'aide les mamans débordées à s'organiser grâce à des routines simples."`}
               value={mission}
               onChange={(e) => setMission(e.target.value)}
               disabled={disableForm}
             />
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Tipote utilisera cette phrase pour générer ton persona client
               idéal.
             </p>
@@ -438,11 +438,11 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
       {step === 3 && (
         <div className="space-y-6">
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Où en es-tu aujourd&apos;hui ? (Maturité business)
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               value={businessMaturity}
               onChange={(e) => setBusinessMaturity(e.target.value)}
               disabled={disableForm}
@@ -462,11 +462,11 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                 As-tu déjà des offres à vendre ?
               </label>
               <select
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                 value={offersStatus}
                 onChange={(e) => setOffersStatus(e.target.value)}
                 disabled={disableForm}
@@ -486,8 +486,8 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
             {(offersStatus === 'lead_magnet' ||
               offersStatus === 'one_paid' ||
               offersStatus === 'multiple_paid') && (
-              <div className="space-y-3 rounded-lg bg-slate-50 p-3">
-                <p className="text-xs font-medium text-slate-700">
+              <div className="space-y-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 p-3">
+                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Détail de tes offres (optionnel mais très utile pour un plan
                   précis)
                 </p>
@@ -495,16 +495,16 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                 {offers.map((offer, index) => (
                   <div
                     key={index}
-                    className="space-y-2 rounded-md border border-slate-200 bg-white p-3"
+                    className="space-y-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-3"
                   >
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
-                        <label className="block text-[11px] font-medium text-slate-700">
+                        <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
                           Nom de l&apos;offre
                         </label>
                         <input
                           type="text"
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                          className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                           value={offer.name}
                           onChange={(e) =>
                             updateOffer(index, 'name', e.target.value)
@@ -513,12 +513,12 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-medium text-slate-700">
+                        <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
                           Type (ebook, formation, coaching...)
                         </label>
                         <input
                           type="text"
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                          className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                           value={offer.type}
                           onChange={(e) =>
                             updateOffer(index, 'type', e.target.value)
@@ -529,13 +529,13 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
-                        <label className="block text-[11px] font-medium text-slate-700">
+                        <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
                           Prix (en €)
                         </label>
                         <input
                           type="number"
                           min={0}
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                          className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                           value={offer.price}
                           onChange={(e) =>
                             updateOffer(index, 'price', e.target.value)
@@ -544,13 +544,13 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-medium text-slate-700">
+                        <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
                           Nombre de ventes
                         </label>
                         <input
                           type="number"
                           min={0}
-                          className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                          className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                           value={offer.sales}
                           onChange={(e) =>
                             updateOffer(index, 'sales', e.target.value)
@@ -563,7 +563,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                       <button
                         type="button"
                         onClick={() => removeOffer(index)}
-                        className="text-[11px] font-medium text-red-600 hover:underline"
+                        className="text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline"
                         disabled={disableForm}
                       >
                         Supprimer cette offre
@@ -575,7 +575,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                 <button
                   type="button"
                   onClick={addOffer}
-                  className="text-[11px] font-medium text-slate-700 hover:underline"
+                  className="text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:underline"
                   disabled={disableForm}
                 >
                   + Ajouter une offre
@@ -586,13 +586,13 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                 Abonnés réseaux sociaux (approx.)
               </label>
               <input
                 type="number"
                 min={0}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                 value={audienceSocial}
                 onChange={(e) => setAudienceSocial(e.target.value)}
                 disabled={disableForm}
@@ -600,13 +600,13 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                 Emails dans ta liste (approx.)
               </label>
               <input
                 type="number"
                 min={0}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
                 value={audienceEmail}
                 onChange={(e) => setAudienceEmail(e.target.value)}
                 disabled={disableForm}
@@ -620,11 +620,11 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
       {step === 4 && (
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Combien de temps peux-tu consacrer à ton business par semaine ?
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               value={timeAvailable}
               onChange={(e) => setTimeAvailable(e.target.value)}
               disabled={disableForm}
@@ -638,11 +638,11 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Quel est ton objectif prioritaire pour les 90 prochains jours ?
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               value={mainGoal}
               onChange={(e) => setMainGoal(e.target.value)}
               disabled={disableForm}
@@ -666,7 +666,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
             </select>
           </div>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Ton plan d&apos;action sera entièrement basé sur cette
             réponse, ta maturité business et ton temps disponible.
           </p>
@@ -679,7 +679,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
           type="button"
           onClick={goToPreviousStep}
           disabled={step === 1 || disableForm}
-          className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Précédent
         </button>
@@ -689,7 +689,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
             type="button"
             onClick={() => saveAnswers(true)}
             disabled={disableForm}
-            className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>
@@ -699,7 +699,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
               type="button"
               onClick={goToNextStep}
               disabled={disableForm}
-              className="inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Continuer
             </button>
@@ -707,7 +707,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
             <button
               type="submit"
               disabled={disableForm}
-              className="inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {generating
                 ? 'Génération en cours...'

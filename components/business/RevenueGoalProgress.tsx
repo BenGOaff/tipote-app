@@ -206,7 +206,7 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
     <Card className="p-5 space-y-3">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-start gap-3">
-          <Target className={`h-5 w-5 shrink-0 mt-0.5 ${isReached ? "text-emerald-600" : "text-primary"}`} />
+          <Target className={`h-5 w-5 shrink-0 mt-0.5 ${isReached ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`} />
           <div>
             <h3 className="font-semibold">
               Objectif {monthName()} : {formatEur(summary.objective_eur)}
@@ -215,7 +215,7 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
           </div>
         </div>
         {isReached ? (
-          <span className="text-xs font-medium text-emerald-600 bg-emerald-100 rounded-full px-2 py-0.5 inline-flex items-center gap-1">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2 py-0.5 inline-flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
             Atteint
           </span>

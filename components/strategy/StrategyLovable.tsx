@@ -849,7 +849,7 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>{rev.toLocaleString(locale)} € ce mois</span>
-                        {goalNum > 0 && <span className={pct >= 100 ? "text-green-600 font-semibold" : pct >= 50 ? "text-amber-600" : "text-muted-foreground"}>{pct}%</span>}
+                        {goalNum > 0 && <span className={pct >= 100 ? "text-green-600 dark:text-green-400 font-semibold" : pct >= 50 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}>{pct}%</span>}
                       </div>
                       {goalNum > 0 && <Progress value={pct} className="h-1.5" />}
                     </div>

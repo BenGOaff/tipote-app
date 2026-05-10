@@ -163,11 +163,11 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
 
 function DisclaimerBanner() {
   return (
-    <Card className="p-6 bg-amber-50 border-amber-200">
+    <Card className="p-6 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
       <div className="flex items-start gap-3">
-        <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <p className="font-semibold text-amber-900 text-sm">
+          <p className="font-semibold text-amber-900 dark:text-amber-200 text-sm">
             Tipote t&apos;aide à anticiper, pas à déclarer.
           </p>
           <p className="text-sm text-amber-900/80 leading-relaxed">

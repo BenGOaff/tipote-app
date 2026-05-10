@@ -109,7 +109,7 @@ export function RefineChatPanel({
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+        className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
       >
         <MessageCircle className="h-4 w-4 text-primary" />
         {t('refineWithTipote')}
@@ -118,11 +118,11 @@ export function RefineChatPanel({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card overflow-hidden">
       <div className="flex items-center justify-between border-b px-4 py-2.5">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-slate-900">
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
             {t('refineWithTipote')}
           </span>
           <span className="text-xs text-muted-foreground">{t('creditPerMessage')}</span>
@@ -145,7 +145,7 @@ export function RefineChatPanel({
             type="button"
             disabled={loading}
             onClick={() => sendInstruction(t(key))}
-            className="text-xs px-2.5 py-1 rounded-full border bg-white hover:bg-accent transition-colors disabled:opacity-50"
+            className="text-xs px-2.5 py-1 rounded-full border bg-white dark:bg-card hover:bg-accent transition-colors disabled:opacity-50"
           >
             {t(key)}
           </button>
@@ -164,8 +164,8 @@ export function RefineChatPanel({
               className={cn(
                 "text-xs px-3 py-2 rounded-lg max-w-[85%]",
                 msg.role === "user"
-                  ? "ml-auto bg-primary/10 text-slate-900"
-                  : "bg-slate-100 text-slate-700",
+                  ? "ml-auto bg-primary/10 text-slate-900 dark:text-slate-50"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
               )}
             >
               {msg.content}

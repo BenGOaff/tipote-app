@@ -95,7 +95,7 @@ export function FecExportCard({ hasSiren }: Props) {
       </div>
 
       {/* Avertissement clair sur la portée du FEC produit ici */}
-      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+      <div className="flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
         <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
         <p>
           Tipote n&apos;a que la moitié de ta compta : tes ventes &amp;
@@ -129,7 +129,7 @@ export function FecExportCard({ hasSiren }: Props) {
       </div>
 
       {!hasSiren ? (
-        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+        <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
           Renseigne ton SIREN dans la configuration SASU plus bas — il
           est obligatoire dans le nom du fichier FEC (norme fiscale).
         </p>

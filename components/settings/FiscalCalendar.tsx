@@ -61,15 +61,15 @@ const KIND_LABEL: Record<DeadlineKind, string> = {
 };
 
 const KIND_COLOR: Record<DeadlineKind, string> = {
-  urssaf: "bg-blue-100 text-blue-800 border-blue-200",
-  tva: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  is_acompte: "bg-amber-100 text-amber-800 border-amber-200",
-  is_solde: "bg-amber-100 text-amber-900 border-amber-300 font-semibold",
-  ir_2042: "bg-violet-100 text-violet-800 border-violet-200",
-  cfe: "bg-orange-100 text-orange-800 border-orange-200",
-  bilan: "bg-slate-100 text-slate-800 border-slate-200",
-  dsn: "bg-cyan-100 text-cyan-800 border-cyan-200",
-  des_intra: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  urssaf: "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800",
+  tva: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800",
+  is_acompte: "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-800",
+  is_solde: "bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700 font-semibold",
+  ir_2042: "bg-violet-100 dark:bg-violet-900/40 text-violet-800 border-violet-200 dark:border-violet-800",
+  cfe: "bg-orange-100 dark:bg-orange-900/40 text-orange-800 border-orange-200 dark:border-orange-800",
+  bilan: "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700",
+  dsn: "bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 border-cyan-200 dark:border-cyan-800",
+  des_intra: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800",
 };
 
 const FRENCH_MONTHS = [
@@ -285,9 +285,9 @@ export function FiscalCalendar() {
                         isDone
                           ? "bg-muted/30 opacity-60"
                           : urgent
-                            ? "bg-amber-50 border-amber-200"
+                            ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
                             : overdue
-                              ? "bg-red-50 border-red-200"
+                              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
                               : "bg-card"
                       }`}
                     >
@@ -306,11 +306,11 @@ export function FiscalCalendar() {
                             {KIND_LABEL[d.kind]}
                           </span>
                           {urgent ? (
-                            <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 border bg-amber-200 text-amber-900 border-amber-300">
+                            <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 border bg-amber-200 dark:bg-amber-800/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700">
                               Dans {remaining} jour{remaining > 1 ? "s" : ""}
                             </span>
                           ) : overdue ? (
-                            <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 border bg-red-200 text-red-900 border-red-300">
+                            <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 border bg-red-200 text-red-900 dark:text-red-200 border-red-300 dark:border-red-700">
                               En retard de {Math.abs(remaining)} jour{Math.abs(remaining) > 1 ? "s" : ""}
                             </span>
                           ) : null}
