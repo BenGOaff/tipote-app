@@ -42,6 +42,11 @@ import {
   type CaGstPeriodicity,
   CA_PROVINCES,
   caTaxRegime,
+  type UsState,
+  type UsLlcTaxClassification,
+  US_STATES,
+  usHasStateIncomeTax,
+  usHasStateSalesTax,
   emptyComptaSlice,
   SIREN_REGEX,
 } from "@/lib/compta/types";
@@ -50,7 +55,7 @@ interface Props {
   initial: ComptaProfileSlice;
   /** Pays détecté côté parent (FR / CH / PT / BE / ES / CA) — détermine
    *  quelles cartes de statut on propose. */
-  country: "FR" | "CH" | "PT" | "BE" | "ES" | "CA";
+  country: "FR" | "CH" | "PT" | "BE" | "ES" | "CA" | "US";
   /** Si fourni, l'user édite une config existante → bouton "Annuler". */
   onCancel?: () => void;
   /** Patch à envoyer à /api/profile. Le parent gère le fetch + le toast. */
@@ -203,6 +208,30 @@ export default function ComptaConfigForm({
         !draft.ca_fiscal_year_start_month
       ) {
         next.ca_fiscal_year_start_month = "Indique le mois de début d'exercice.";
+      }
+    } else if (
+      status === "sole_proprietorship_us" ||
+      status === "single_member_llc_us" ||
+      status === "multi_member_llc_us" ||
+      status === "c_corp_us" ||
+      status === "s_corp_us"
+    ) {
+      if (!draft.us_state) {
+        next.us_state = "Choisis ton état.";
+      }
+      // EIN format XX-XXXXXXX si renseigné. EIN obligatoire pour
+      // multi-member LLC, C-Corp, S-Corp (mais on n'impose pas la
+      // saisie immédiate — l'user peut compléter plus tard).
+      if (draft.us_ein && !/^\d{2}-?\d{7}$/.test(draft.us_ein.replace(/\s/g, ""))) {
+        next.us_ein = "EIN invalide (format XX-XXXXXXX, 9 chiffres).";
+      }
+      // Société → exercice cohérent.
+      if (
+        (status === "c_corp_us" || status === "s_corp_us") &&
+        !draft.us_fiscal_year_calendar &&
+        !draft.us_fiscal_year_start_month
+      ) {
+        next.us_fiscal_year_start_month = "Indique le mois de début d'exercice.";
       }
     }
 
@@ -379,6 +408,35 @@ export default function ComptaConfigForm({
           ? null
           : draft.ca_fiscal_year_start_month;
       }
+    } else if (
+      status === "sole_proprietorship_us" ||
+      status === "single_member_llc_us" ||
+      status === "multi_member_llc_us" ||
+      status === "c_corp_us" ||
+      status === "s_corp_us"
+    ) {
+      patch.us_state = draft.us_state;
+      patch.us_ein = draft.us_ein;
+      patch.us_sales_tax_states = draft.us_sales_tax_states ?? [];
+      // Élection LLC : seulement pour les statuts LLC. Sinon NULL.
+      patch.us_llc_tax_classification =
+        status === "single_member_llc_us" || status === "multi_member_llc_us"
+          ? draft.us_llc_tax_classification
+          : null;
+      patch.us_started_at = draft.us_started_at;
+      if (status === "c_corp_us" || status === "s_corp_us") {
+        patch.us_fiscal_year_calendar = draft.us_fiscal_year_calendar;
+        patch.us_fiscal_year_start_month = draft.us_fiscal_year_calendar
+          ? null
+          : draft.us_fiscal_year_start_month;
+      } else {
+        // Sole prop / LLC pass-through → calendar year forcé (les
+        // partnerships et S-Corp doivent avoir le même fiscal year
+        // que leurs associés/shareholders, qui sont sur calendar year
+        // dans 99 % des cas).
+        patch.us_fiscal_year_calendar = true;
+        patch.us_fiscal_year_start_month = null;
+      }
     }
 
     await onSave(patch);
@@ -456,6 +514,14 @@ export default function ComptaConfigForm({
         <CanadaFields draft={draft} update={update} errors={errors} status={status} />
       ) : null}
 
+      {status === "sole_proprietorship_us" ||
+      status === "single_member_llc_us" ||
+      status === "multi_member_llc_us" ||
+      status === "c_corp_us" ||
+      status === "s_corp_us" ? (
+        <UnitedStatesFields draft={draft} update={update} errors={errors} status={status} />
+      ) : null}
+
       {status ? (
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={pending}>
@@ -493,7 +559,7 @@ function StatusPicker({
   onChange,
 }: {
   value: AccountingStatus | null;
-  country: "FR" | "CH" | "PT" | "BE" | "ES" | "CA";
+  country: "FR" | "CH" | "PT" | "BE" | "ES" | "CA" | "US";
   onChange: (v: AccountingStatus) => void;
 }) {
   // Rend des cartes différentes selon le pays détecté côté parent.
@@ -839,6 +905,92 @@ function StatusPicker({
           T2/CO-17 (sociétés), DAS/RRQ/RPC/RQAP, acomptes provisionnels.
           Pour les calculs exacts d&apos;impôt et les particularités
           provinciales, ton/ta comptable reste la référence.
+        </p>
+      </div>
+    );
+  }
+
+  if (country === "US") {
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-base">What's your business status?</h3>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Sans entité (revenus sur le 1040 personnel)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<User className="h-5 w-5" />}
+              title="Particulier"
+              desc="Revenus accessoires, pas d'activité business structurée. Tout passe par ton 1040 annuel."
+              selected={value === "particulier"}
+              onClick={() => onChange("particulier")}
+            />
+            <StatusCard
+              icon={<Briefcase className="h-5 w-5" />}
+              title="Sole proprietorship"
+              desc="Aucune entité juridique séparée. Revenus sur Schedule C du 1040 personnel + self-employment tax 15,3 %. EIN pas obligatoire (SSN suffit). Estimated taxes trimestriels."
+              selected={value === "sole_proprietorship_us"}
+              onClick={() => onChange("sole_proprietorship_us")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            LLC (Limited Liability Company)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="Single-member LLC"
+              desc="LLC à 1 membre. Par défaut « disregarded entity » (= Schedule C, identique à sole prop côté impôt). Peut élire S-Corp via Form 2553 (économies sur self-employment tax au-delà de ~50k$ de profit) ou C-Corp via Form 8832."
+              selected={value === "single_member_llc_us"}
+              onClick={() => onChange("single_member_llc_us")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="Multi-member LLC"
+              desc="LLC à 2+ membres. Par défaut « partnership » (Form 1065 + K-1 distribués aux membres). Peut aussi élire S-Corp ou C-Corp."
+              selected={value === "multi_member_llc_us"}
+              onClick={() => onChange("multi_member_llc_us")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            Corporation (entité distincte fiscalement)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="C-Corp"
+              desc="Form 1120 fédéral, taux flat 21 % depuis TCJA 2017. Double taxation : la corp paie l'impôt, puis les actionnaires repaient sur les dividendes. Choix par défaut pour les startups levant du venture capital."
+              selected={value === "c_corp_us"}
+              onClick={() => onChange("c_corp_us")}
+            />
+            <StatusCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="S-Corp"
+              desc="Form 1120-S + K-1. Pass-through (pas d'impôt fédéral au niveau de la corp). Permet d'économiser sur la self-employment tax via le « reasonable salary + distributions ». Max 100 actionnaires, citoyens/résidents US uniquement."
+              selected={value === "s_corp_us"}
+              onClick={() => onChange("s_corp_us")}
+            />
+          </div>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground italic">
+          Tipote couvre le calendrier fiscal fédéral (Forms 1040, 1120,
+          1120-S, 1065, 1040-ES, 1099-NEC) + state income tax pour les
+          41 états qui en perçoivent un (9 sont sans : AK, FL, NV, NH,
+          SD, TN, TX, WA, WY). Sales tax modélisée par état d&apos;inscription
+          (rappel mensuel le 20). Pas de calcul automatique du sales tax
+          rate (45+ états × ~10 000 juridictions locales) — utilise Stripe
+          Tax / TaxJar / Avalara pour l&apos;exactitude. Ton CPA reste la
+          référence pour les calculs précis et les élections (Form 2553
+          S-election, Form 8832 entity classification).
         </p>
       </div>
     );
@@ -2823,6 +2975,316 @@ function CanadaFields({
               : province === "QC"
                 ? "Société provinciale du Québec (LSAQ) : immatriculation REQ obligatoire."
                 : "Société provinciale : immatriculation au registre provincial des entreprises (selon la province choisie)."}
+          </p>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function UnitedStatesFields({
+  draft,
+  update,
+  errors,
+  status,
+}: {
+  draft: ComptaProfileSlice;
+  update: <K extends keyof ComptaProfileSlice>(key: K, value: ComptaProfileSlice[K]) => void;
+  errors: Record<string, string>;
+  status: AccountingStatus;
+}) {
+  const isLLC = status === "single_member_llc_us" || status === "multi_member_llc_us";
+  const isSingleLLC = status === "single_member_llc_us";
+  const isMultiLLC = status === "multi_member_llc_us";
+  const isCorp = status === "c_corp_us" || status === "s_corp_us";
+  const stateHasIncomeTax = usHasStateIncomeTax(draft.us_state);
+  const stateHasSalesTax = usHasStateSalesTax(draft.us_state);
+  const salesTaxStates = draft.us_sales_tax_states ?? [];
+
+  function toggleSalesTaxState(code: UsState) {
+    const cur = new Set(salesTaxStates);
+    if (cur.has(code)) cur.delete(code);
+    else cur.add(code);
+    update("us_sales_tax_states", Array.from(cur).sort());
+  }
+
+  return (
+    <Card className="p-5 space-y-5">
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>États-Unis :</strong> Tipote calcule tes échéances
+        fédérales (Forms 1040 / 1120 / 1120-S / 1065 / 1040-ES / 1099-NEC),
+        ton state income tax (sauf 9 états sans), et un rappel mensuel par
+        état où tu collectes la sales tax. Pour les calculs exacts d&apos;impôt,
+        les élections fiscales (S-election, entity classification) et le
+        calcul des taux de sales tax (~10 000 juridictions locales), ton
+        CPA et un outil dédié (Stripe Tax / TaxJar / Avalara) restent la
+        référence.
+      </div>
+
+      {/* État principal */}
+      <div className="space-y-2">
+        <Label>State (résidence / formation de l&apos;entité)</Label>
+        <Select
+          value={draft.us_state ?? ""}
+          onValueChange={(v) => update("us_state", v as UsState)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Choose your state" />
+          </SelectTrigger>
+          <SelectContent>
+            {US_STATES.map((s) => (
+              <SelectItem key={s.code} value={s.code}>
+                {s.code} — {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.us_state ? (
+          <p className="text-xs text-destructive">{errors.us_state}</p>
+        ) : null}
+        {draft.us_state ? (
+          <p className="text-xs text-muted-foreground">
+            {!stateHasIncomeTax ? (
+              <>
+                <strong>{draft.us_state}</strong> ne perçoit pas de state income
+                tax sur les revenus business — tu n&apos;as que le fédéral à
+                produire. Économie typique : 4 à 9 % du revenu net.
+              </>
+            ) : (
+              <>
+                <strong>{draft.us_state}</strong> perçoit un state income tax —
+                tu produis une déclaration parallèle au fédéral, généralement
+                à la même date (15 avril).
+              </>
+            )}
+            {!stateHasSalesTax ? (
+              <>
+                {" "}Pas de sales tax au niveau state (NH, OR, MT, DE).
+              </>
+            ) : null}
+          </p>
+        ) : null}
+      </div>
+
+      {/* EIN */}
+      <div className="space-y-2">
+        <Label htmlFor="us-ein">
+          EIN <span className="text-muted-foreground">(Employer Identification Number)</span>
+        </Label>
+        <Input
+          id="us-ein"
+          value={draft.us_ein ?? ""}
+          onChange={(e) => update("us_ein", e.target.value || null)}
+          placeholder="XX-XXXXXXX"
+        />
+        {errors.us_ein ? (
+          <p className="text-xs text-destructive">{errors.us_ein}</p>
+        ) : null}
+        <p className="text-[11px] text-muted-foreground">
+          Format <code>XX-XXXXXXX</code> (9 chiffres).{" "}
+          {status === "sole_proprietorship_us" || isSingleLLC ? (
+            <>Optionnel — un sole prop / single-member LLC sans employés peut utiliser son SSN.</>
+          ) : (
+            <>Obligatoire pour multi-member LLC, C-Corp, S-Corp et toute entité avec employés.</>
+          )}
+        </p>
+      </div>
+
+      {/* Date de début */}
+      <div className="space-y-2">
+        <Label htmlFor="us-started">Date de début d&apos;activité (facultative)</Label>
+        <Input
+          id="us-started"
+          type="date"
+          value={draft.us_started_at ?? ""}
+          onChange={(e) => update("us_started_at", e.target.value || null)}
+        />
+      </div>
+
+      {/* Élection fiscale LLC */}
+      {isLLC ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Élection fiscale LLC</Label>
+          <p className="text-[11px] text-muted-foreground">
+            {isSingleLLC ? (
+              <>Par défaut : disregarded entity (= Schedule C, identique à sole prop côté impôt).</>
+            ) : (
+              <>Par défaut : partnership (Form 1065 + K-1).</>
+            )}{" "}
+            Tu peux élire S-Corp (Form 2553) ou C-Corp (Form 8832).
+          </p>
+          <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
+            {(
+              [
+                {
+                  v: null,
+                  label: "Par défaut",
+                  hint: isSingleLLC ? "Schedule C" : "Partnership",
+                },
+                { v: "s_corp", label: "S-Corp", hint: "Form 2553" },
+                { v: "c_corp", label: "C-Corp", hint: "Form 8832" },
+                {
+                  v: isSingleLLC ? "disregarded" : "partnership",
+                  label: "Explicite",
+                  hint: isSingleLLC ? "Disregarded" : "Partnership",
+                },
+              ] as const
+            ).map((opt, idx) => {
+              const active =
+                (draft.us_llc_tax_classification ?? null) === (opt.v ?? null);
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() =>
+                    update(
+                      "us_llc_tax_classification",
+                      (opt.v ?? null) as UsLlcTaxClassification | null,
+                    )
+                  }
+                  className={`text-sm rounded-md border px-3 py-2 transition text-left ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-normal">
+                    ({opt.hint})
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Sales tax states */}
+      <div className="space-y-2 pt-3 border-t">
+        <Label>États où tu collectes la sales tax</Label>
+        <p className="text-[11px] text-muted-foreground">
+          Coche chaque état où tu es inscrit pour collecter et reverser la
+          sales tax (économic nexus si tu dépasses les seuils de revenus
+          ou de transactions). Tipote émet un rappel mensuel par état (le
+          20 du mois suivant). Si tu utilises Stripe Tax / TaxJar, indique
+          quand même les états ici pour avoir tes rappels de filing.
+        </p>
+        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2 max-h-64 overflow-y-auto p-2 border rounded-md">
+          {US_STATES.map((s) => {
+            if (!usHasStateSalesTax(s.code)) return null;
+            const active = salesTaxStates.includes(s.code);
+            return (
+              <button
+                key={s.code}
+                type="button"
+                onClick={() => toggleSalesTaxState(s.code)}
+                className={`text-xs rounded-md border px-2 py-1.5 transition ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary font-medium"
+                    : "border-border hover:bg-muted/40"
+                }`}
+                title={s.label}
+              >
+                {s.code}
+              </button>
+            );
+          })}
+        </div>
+        {salesTaxStates.length > 0 ? (
+          <p className="text-[11px] text-muted-foreground">
+            {salesTaxStates.length} état{salesTaxStates.length > 1 ? "s" : ""} sélectionné
+            {salesTaxStates.length > 1 ? "s" : ""} : {salesTaxStates.join(", ")}.
+          </p>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">
+            Aucun état sélectionné — pas de sales tax à collecter.
+          </p>
+        )}
+      </div>
+
+      {/* Disclaimer multi-member partnership */}
+      {isMultiLLC ? (
+        <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs">
+          <strong>Multi-member LLC :</strong> par défaut, ta LLC produit un{" "}
+          <code>Form 1065</code> (partnership return) et émet des K-1 à chaque
+          membre. Date limite : 15 mars (calendar year), extension automatique 6
+          mois (15 sept). Si tu as fait une élection S/C, le calendrier change.
+        </div>
+      ) : null}
+
+      {/* Disclaimer S-Corp */}
+      {status === "s_corp_us" ? (
+        <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs">
+          <strong>S-Corp :</strong> Form 1120-S due le 15 mars (calendar year).
+          Pass-through, pas d&apos;impôt fédéral au niveau de l&apos;entité.
+          Reasonable salary requis pour les owner-employees (sinon risque de
+          requalification IRS).
+        </div>
+      ) : null}
+
+      {/* Exercice comptable pour les corporations */}
+      {isCorp ? (
+        <div className="space-y-2 pt-3 border-t">
+          <Label>Exercice fiscal</Label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => update("us_fiscal_year_calendar", true)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                draft.us_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Calendar year (jan → déc)
+            </button>
+            <button
+              type="button"
+              onClick={() => update("us_fiscal_year_calendar", false)}
+              className={`text-sm rounded-md border px-3 py-2 ${
+                !draft.us_fiscal_year_calendar
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              Fiscal year décalé
+            </button>
+          </div>
+          {!draft.us_fiscal_year_calendar ? (
+            <div className="space-y-1 pt-2">
+              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <select
+                value={draft.us_fiscal_year_start_month ?? ""}
+                onChange={(e) =>
+                  update("us_fiscal_year_start_month", parseInt(e.target.value, 10) || null)
+                }
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
+              >
+                <option value="">—</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                  <option key={m} value={m}>
+                    {monthName(m)}
+                  </option>
+                ))}
+              </select>
+              {errors.us_fiscal_year_start_month ? (
+                <p className="text-xs text-destructive">{errors.us_fiscal_year_start_month}</p>
+              ) : null}
+            </div>
+          ) : null}
+          <p className="text-[11px] text-muted-foreground">
+            {status === "c_corp_us" ? (
+              <>
+                C-Corp 1120 due le 15 du 4e mois après la fin d&apos;exercice
+                (15 avril en calendar year). Extension auto 6 mois via Form 7004.
+              </>
+            ) : (
+              <>
+                S-Corp 1120-S due le 15 du 3e mois après la fin d&apos;exercice
+                (15 mars en calendar year). Doit en principe rester sur calendar
+                year sauf élection 444.
+              </>
+            )}
           </p>
         </div>
       ) : null}

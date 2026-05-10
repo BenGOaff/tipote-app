@@ -30,6 +30,7 @@ import {
   isBelgianCountry,
   isSpanishCountry,
   isCanadianCountry,
+  isAmericanCountry,
   SUPPORTED_COUNTRIES,
 } from "@/lib/compta/countries";
 import {
@@ -43,6 +44,8 @@ import {
   CA_PROVINCES,
   caTaxRegime,
   caTotalTaxRate,
+  US_STATES,
+  usHasStateIncomeTax,
 } from "@/lib/compta/types";
 import ComptaConfigForm from "@/components/settings/ComptaConfigForm";
 import ComptaConnections from "@/components/settings/ComptaConnections";
@@ -77,7 +80,8 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
   const isBelgium = isBelgianCountry(country);
   const isSpain = isSpanishCountry(country);
   const isCanada = isCanadianCountry(country);
-  const isSupported = isFrance || isSwiss || isPortugal || isBelgium || isSpain || isCanada;
+  const isUSA = isAmericanCountry(country);
+  const isSupported = isFrance || isSwiss || isPortugal || isBelgium || isSpain || isCanada || isUSA;
 
   function patchProfile(patch: Partial<ComptaProfileSlice>): Promise<void> {
     return new Promise<void>((resolve) => {
@@ -140,7 +144,7 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
           </div>
           <ComptaConfigForm
             initial={slice}
-            country={isFrance ? "FR" : isSwiss ? "CH" : isPortugal ? "PT" : isBelgium ? "BE" : isSpain ? "ES" : "CA"}
+            country={isFrance ? "FR" : isSwiss ? "CH" : isPortugal ? "PT" : isBelgium ? "BE" : isSpain ? "ES" : isCanada ? "CA" : "US"}
             pending={pending}
             onSave={patchProfile}
             onCancel={editing ? () => setEditing(false) : undefined}
@@ -927,6 +931,155 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
         });
       }
     }
+  } else if (
+    slice.accounting_status === "sole_proprietorship_us" ||
+    slice.accounting_status === "single_member_llc_us" ||
+    slice.accounting_status === "multi_member_llc_us" ||
+    slice.accounting_status === "c_corp_us" ||
+    slice.accounting_status === "s_corp_us"
+  ) {
+    // États-Unis — résumé en français, noms officiels conservés
+    // (Forms 1040/1120/1120-S/1065/1040-ES/1099-NEC, EIN, Schedule C,
+    // K-1, IRS, Sales tax, etc.)
+    const usLabel =
+      slice.accounting_status === "sole_proprietorship_us"
+        ? "Sole proprietorship"
+        : slice.accounting_status === "single_member_llc_us"
+          ? "Single-member LLC"
+          : slice.accounting_status === "multi_member_llc_us"
+            ? "Multi-member LLC"
+            : slice.accounting_status === "c_corp_us"
+              ? "C-Corp (C Corporation)"
+              : "S-Corp (S Corporation)";
+    rows.push({ label: "Forme juridique", value: usLabel });
+
+    if (slice.us_state) {
+      const stateLabel = US_STATES.find((s) => s.code === slice.us_state)?.label ??
+        slice.us_state;
+      rows.push({
+        label: "État",
+        value: `${slice.us_state} — ${stateLabel}`,
+      });
+      rows.push({
+        label: "State income tax",
+        value: usHasStateIncomeTax(slice.us_state)
+          ? "Oui (déclaration parallèle au 1040 fédéral)"
+          : "Non — état sans state income tax sur business",
+      });
+    }
+
+    if (slice.us_ein) {
+      rows.push({ label: "EIN", value: slice.us_ein });
+    }
+
+    if (slice.us_started_at) {
+      rows.push({ label: "Date de début", value: slice.us_started_at });
+    }
+
+    // Élection LLC
+    if (
+      slice.accounting_status === "single_member_llc_us" ||
+      slice.accounting_status === "multi_member_llc_us"
+    ) {
+      const classif = slice.us_llc_tax_classification;
+      const classifLabel =
+        classif === "s_corp"
+          ? "S-Corp (Form 2553)"
+          : classif === "c_corp"
+            ? "C-Corp (Form 8832)"
+            : classif === "partnership"
+              ? "Partnership (Form 1065)"
+              : classif === "disregarded"
+                ? "Disregarded entity (Schedule C)"
+                : slice.accounting_status === "single_member_llc_us"
+                  ? "Disregarded entity (défaut, Schedule C)"
+                  : "Partnership (défaut, Form 1065)";
+      rows.push({ label: "Élection fiscale", value: classifLabel });
+    }
+
+    // Forms à produire selon le statut effectif
+    if (slice.accounting_status === "sole_proprietorship_us") {
+      rows.push({
+        label: "Forms fédérales",
+        value: "1040 + Schedule C, 1040-ES (estimated taxes Q1-Q4), Self-employment tax 15,3 %",
+        href: "https://www.irs.gov/forms-pubs/about-form-1040",
+        hrefLabel: "IRS Form 1040",
+      });
+    } else if (slice.accounting_status === "c_corp_us" ||
+               slice.us_llc_tax_classification === "c_corp") {
+      rows.push({
+        label: "Forms fédérales",
+        value: "1120 (15 avril en calendar year), 1120-W estimated tax (15 mars/juin/sept/déc)",
+        href: "https://www.irs.gov/forms-pubs/about-form-1120",
+        hrefLabel: "IRS Form 1120",
+      });
+    } else if (slice.accounting_status === "s_corp_us" ||
+               slice.us_llc_tax_classification === "s_corp") {
+      rows.push({
+        label: "Forms fédérales",
+        value: "1120-S + K-1 (15 mars en calendar year), pass-through aux shareholders",
+        href: "https://www.irs.gov/forms-pubs/about-form-1120-s",
+        hrefLabel: "IRS Form 1120-S",
+      });
+    } else if (slice.accounting_status === "multi_member_llc_us") {
+      rows.push({
+        label: "Forms fédérales",
+        value: "1065 + K-1 (15 mars en calendar year), pass-through aux members",
+        href: "https://www.irs.gov/forms-pubs/about-form-1065",
+        hrefLabel: "IRS Form 1065",
+      });
+    } else {
+      // single-member LLC disregarded (default)
+      rows.push({
+        label: "Forms fédérales",
+        value: "1040 + Schedule C (LLC ignorée fiscalement), 1040-ES, Self-employment tax 15,3 %",
+        href: "https://www.irs.gov/forms-pubs/about-form-1040",
+        hrefLabel: "IRS Form 1040",
+      });
+    }
+
+    // 1099-NEC pour tous les business
+    rows.push({
+      label: "1099-NEC contractors",
+      value: "À émettre 31 janvier pour chaque contractor payé > 600 $/an",
+      href: "https://www.irs.gov/forms-pubs/about-form-1099-nec",
+      hrefLabel: "IRS Form 1099-NEC",
+    });
+
+    // Sales tax
+    const salesTaxStates = slice.us_sales_tax_states ?? [];
+    if (salesTaxStates.length > 0) {
+      rows.push({
+        label: "Sales tax",
+        value: `Inscrit dans ${salesTaxStates.length} état${salesTaxStates.length > 1 ? "s" : ""} : ${salesTaxStates.join(", ")} (rappel mensuel le 20)`,
+      });
+    } else {
+      rows.push({
+        label: "Sales tax",
+        value: "Aucun état d'inscription",
+      });
+    }
+
+    // Annual report pour les entités
+    if (slice.accounting_status !== "sole_proprietorship_us") {
+      rows.push({
+        label: "Annual report",
+        value: `Dépôt auprès du Secretary of State ${slice.us_state ?? ""} (date variable selon l'état)`,
+      });
+    }
+
+    // Exercice fiscal pour les corporations
+    if (
+      slice.accounting_status === "c_corp_us" ||
+      slice.accounting_status === "s_corp_us"
+    ) {
+      const fyLabel = slice.us_fiscal_year_calendar
+        ? "Calendar year (clôture 31 décembre)"
+        : slice.us_fiscal_year_start_month
+          ? `Fiscal year décalé (début mois ${slice.us_fiscal_year_start_month})`
+          : "À configurer";
+      rows.push({ label: "Exercice fiscal", value: fyLabel });
+    }
   }
 
   return (
@@ -1012,6 +1165,16 @@ function statusLabel(s: AccountingStatus): string {
       return "Société par actions provinciale (Canada)";
     case "inc_federal_ca":
       return "Société par actions fédérale (Canada)";
+    case "sole_proprietorship_us":
+      return "Sole proprietorship (États-Unis)";
+    case "single_member_llc_us":
+      return "Single-member LLC (États-Unis)";
+    case "multi_member_llc_us":
+      return "Multi-member LLC (États-Unis)";
+    case "c_corp_us":
+      return "C-Corp (États-Unis)";
+    case "s_corp_us":
+      return "S-Corp (États-Unis)";
   }
 }
 

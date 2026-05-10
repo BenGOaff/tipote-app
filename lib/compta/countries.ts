@@ -77,6 +77,22 @@ const CANADA_SYNONYMS = new Set([
   "quebecoise",
 ]);
 
+const USA_SYNONYMS = new Set([
+  "etats-unis",
+  "etats unis",
+  "etatsunis",
+  "us",
+  "usa",
+  "united states",
+  "america",
+  "american",
+  "americain",
+  "americaine",
+  "us of a",
+  "u.s.",
+  "u.s.a.",
+]);
+
 function normalize(s: string | null | undefined): string {
   return (s ?? "")
     .toLowerCase()
@@ -117,17 +133,23 @@ export function isCanadianCountry(country: string | null | undefined): boolean {
   return CANADA_SYNONYMS.has(normalize(country));
 }
 
+export function isAmericanCountry(country: string | null | undefined): boolean {
+  if (!country) return false;
+  return USA_SYNONYMS.has(normalize(country));
+}
+
 /** Code pays normalisé. Évite de dispatcher sur le texte brut dans
  *  toute l'app. */
 export function detectCountryCode(
   country: string | null | undefined,
-): "FR" | "CH" | "PT" | "BE" | "ES" | "CA" | null {
+): "FR" | "CH" | "PT" | "BE" | "ES" | "CA" | "US" | null {
   if (isFrenchCountry(country)) return "FR";
   if (isSwissCountry(country)) return "CH";
   if (isPortugueseCountry(country)) return "PT";
   if (isBelgianCountry(country)) return "BE";
   if (isSpanishCountry(country)) return "ES";
   if (isCanadianCountry(country)) return "CA";
+  if (isAmericanCountry(country)) return "US";
   return null;
 }
 
@@ -162,6 +184,11 @@ export const SUPPORTED_COUNTRIES: ReadonlyArray<{ code: string; label: string; s
     code: "CA",
     label: "Canada",
     synonyms: Array.from(CANADA_SYNONYMS),
+  },
+  {
+    code: "US",
+    label: "États-Unis",
+    synonyms: Array.from(USA_SYNONYMS),
   },
 ];
 

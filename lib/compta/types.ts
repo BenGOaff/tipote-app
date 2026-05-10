@@ -36,7 +36,13 @@ export type AccountingStatus =
   | "travailleur_autonome_ca"
   | "entreprise_individuelle_ca"
   | "inc_provincial_ca"
-  | "inc_federal_ca";
+  | "inc_federal_ca"
+  // US (phase 1s)
+  | "sole_proprietorship_us"
+  | "single_member_llc_us"
+  | "multi_member_llc_us"
+  | "c_corp_us"
+  | "s_corp_us";
 
 export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "particulier",
@@ -65,6 +71,11 @@ export const ACCOUNTING_STATUSES: ReadonlyArray<AccountingStatus> = [
   "entreprise_individuelle_ca",
   "inc_provincial_ca",
   "inc_federal_ca",
+  "sole_proprietorship_us",
+  "single_member_llc_us",
+  "multi_member_llc_us",
+  "c_corp_us",
+  "s_corp_us",
 ];
 
 export function isSpanishStatus(status: AccountingStatus | null): boolean {
@@ -215,6 +226,177 @@ export const CA_GST_PERIODICITIES: ReadonlyArray<CaGstPeriodicity> = [
   "mensuelle",
   "trimestrielle",
   "annuelle",
+];
+
+/** Helpers États-Unis : 5 statuts. */
+export function isAmericanStatus(status: AccountingStatus | null): boolean {
+  return (
+    status === "sole_proprietorship_us" ||
+    status === "single_member_llc_us" ||
+    status === "multi_member_llc_us" ||
+    status === "c_corp_us" ||
+    status === "s_corp_us"
+  );
+}
+
+/** Entité passible de l'impôt fédéral au niveau corporatif (1120).
+ *  Une C-Corp paie l'impôt à 21 % au niveau corp puis les actionnaires
+ *  paient à nouveau sur les dividendes (double taxation). Tout le reste
+ *  est pass-through (revenus passent sur le 1040 personnel). */
+export function isUSCCorp(
+  status: AccountingStatus | null,
+  llcTaxClassif: UsLlcTaxClassification | null,
+): boolean {
+  if (status === "c_corp_us") return true;
+  if (
+    (status === "single_member_llc_us" || status === "multi_member_llc_us") &&
+    llcTaxClassif === "c_corp"
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Entité produisant un Form 1120-S (S-Corp), pass-through avec
+ *  exigences strictes (max 100 shareholders, citoyens/résidents US,
+ *  une seule classe d'actions). Inclut les LLC ayant fait l'élection
+ *  S via Form 2553. */
+export function isUSSCorp(
+  status: AccountingStatus | null,
+  llcTaxClassif: UsLlcTaxClassification | null,
+): boolean {
+  if (status === "s_corp_us") return true;
+  if (
+    (status === "single_member_llc_us" || status === "multi_member_llc_us") &&
+    llcTaxClassif === "s_corp"
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Entité produisant un Form 1065 (partnership) — multi-member LLC
+ *  par défaut, sauf élection S/C. */
+export function isUSPartnership(
+  status: AccountingStatus | null,
+  llcTaxClassif: UsLlcTaxClassification | null,
+): boolean {
+  if (status !== "multi_member_llc_us") return false;
+  return llcTaxClassif === null || llcTaxClassif === "partnership";
+}
+
+/** Entité "disregarded" (= ignorée fiscalement, revenus directement
+ *  sur Schedule C) : sole prop ou single-member LLC sans élection. */
+export function isUSDisregarded(
+  status: AccountingStatus | null,
+  llcTaxClassif: UsLlcTaxClassification | null,
+): boolean {
+  if (status === "sole_proprietorship_us") return true;
+  if (status === "single_member_llc_us") {
+    return llcTaxClassif === null || llcTaxClassif === "disregarded";
+  }
+  return false;
+}
+
+/** 50 états + DC. Codes USPS officiels (= codes ISO 3166-2 US-XX). */
+export type UsState =
+  | "AL" | "AK" | "AZ" | "AR" | "CA" | "CO" | "CT" | "DE" | "FL" | "GA"
+  | "HI" | "ID" | "IL" | "IN" | "IA" | "KS" | "KY" | "LA" | "ME" | "MD"
+  | "MA" | "MI" | "MN" | "MS" | "MO" | "MT" | "NE" | "NV" | "NH" | "NJ"
+  | "NM" | "NY" | "NC" | "ND" | "OH" | "OK" | "OR" | "PA" | "RI" | "SC"
+  | "SD" | "TN" | "TX" | "UT" | "VT" | "VA" | "WA" | "WV" | "WI" | "WY"
+  | "DC";
+
+export const US_STATES: ReadonlyArray<{ code: UsState; label: string }> = [
+  { code: "AL", label: "Alabama" },
+  { code: "AK", label: "Alaska" },
+  { code: "AZ", label: "Arizona" },
+  { code: "AR", label: "Arkansas" },
+  { code: "CA", label: "California" },
+  { code: "CO", label: "Colorado" },
+  { code: "CT", label: "Connecticut" },
+  { code: "DE", label: "Delaware" },
+  { code: "DC", label: "District of Columbia" },
+  { code: "FL", label: "Florida" },
+  { code: "GA", label: "Georgia" },
+  { code: "HI", label: "Hawaii" },
+  { code: "ID", label: "Idaho" },
+  { code: "IL", label: "Illinois" },
+  { code: "IN", label: "Indiana" },
+  { code: "IA", label: "Iowa" },
+  { code: "KS", label: "Kansas" },
+  { code: "KY", label: "Kentucky" },
+  { code: "LA", label: "Louisiana" },
+  { code: "ME", label: "Maine" },
+  { code: "MD", label: "Maryland" },
+  { code: "MA", label: "Massachusetts" },
+  { code: "MI", label: "Michigan" },
+  { code: "MN", label: "Minnesota" },
+  { code: "MS", label: "Mississippi" },
+  { code: "MO", label: "Missouri" },
+  { code: "MT", label: "Montana" },
+  { code: "NE", label: "Nebraska" },
+  { code: "NV", label: "Nevada" },
+  { code: "NH", label: "New Hampshire" },
+  { code: "NJ", label: "New Jersey" },
+  { code: "NM", label: "New Mexico" },
+  { code: "NY", label: "New York" },
+  { code: "NC", label: "North Carolina" },
+  { code: "ND", label: "North Dakota" },
+  { code: "OH", label: "Ohio" },
+  { code: "OK", label: "Oklahoma" },
+  { code: "OR", label: "Oregon" },
+  { code: "PA", label: "Pennsylvania" },
+  { code: "RI", label: "Rhode Island" },
+  { code: "SC", label: "South Carolina" },
+  { code: "SD", label: "South Dakota" },
+  { code: "TN", label: "Tennessee" },
+  { code: "TX", label: "Texas" },
+  { code: "UT", label: "Utah" },
+  { code: "VT", label: "Vermont" },
+  { code: "VA", label: "Virginia" },
+  { code: "WA", label: "Washington" },
+  { code: "WV", label: "West Virginia" },
+  { code: "WI", label: "Wisconsin" },
+  { code: "WY", label: "Wyoming" },
+];
+
+/** États sans state income tax sur les revenus business / salariaux.
+ *  NH taxe historiquement les intérêts/dividendes (abolition prévue 2027)
+ *  mais pas le salary/business income. WA a une capital gains tax récente
+ *  > 250k$. Pour les solos avec revenus d'activité, ces 9 états sont
+ *  effectivement no-income-tax. */
+const US_NO_INCOME_TAX_STATES: ReadonlySet<UsState> = new Set<UsState>([
+  "AK", "FL", "NV", "NH", "SD", "TN", "TX", "WA", "WY",
+]);
+
+export function usHasStateIncomeTax(state: UsState | null): boolean {
+  if (!state) return true; // par défaut on assume oui (plus prudent)
+  return !US_NO_INCOME_TAX_STATES.has(state);
+}
+
+/** États sans sales tax. NH/OR/MT/AK/DE = pas de sales tax au niveau
+ *  state. AK autorise les locales à en imposer une → on conserve la
+ *  possibilité d'inscription sales tax même en AK. */
+const US_NO_SALES_TAX_STATES: ReadonlySet<UsState> = new Set<UsState>([
+  "NH", "OR", "MT", "DE", // AK exclus : locales seulement
+]);
+
+export function usHasStateSalesTax(state: UsState | null): boolean {
+  if (!state) return true;
+  return !US_NO_SALES_TAX_STATES.has(state);
+}
+
+/** Élection fiscale d'une LLC. NULL = pas de LLC ou pas d'élection
+ *  (= classement par défaut : disregarded pour single-member, partnership
+ *  pour multi-member). */
+export type UsLlcTaxClassification = "disregarded" | "partnership" | "s_corp" | "c_corp";
+
+export const US_LLC_TAX_CLASSIFICATIONS: ReadonlyArray<UsLlcTaxClassification> = [
+  "disregarded",
+  "partnership",
+  "s_corp",
+  "c_corp",
 ];
 
 /** Helpers Belgique : 4 statuts. */
@@ -540,6 +722,15 @@ export interface ComptaProfileSlice {
   ca_fiscal_year_calendar: boolean;
   ca_fiscal_year_start_month: number | null; // 1-12, sociétés
   ca_started_at: string | null;
+  // États-Unis (phase 1s)
+  us_state: UsState | null;
+  us_ein: string | null; // XX-XXXXXXX (9 chiffres)
+  us_llc_tax_classification: UsLlcTaxClassification | null;
+  /** Liste de codes USPS d'états où l'user collecte la sales tax. */
+  us_sales_tax_states: UsState[];
+  us_fiscal_year_calendar: boolean;
+  us_fiscal_year_start_month: number | null;
+  us_started_at: string | null;
 }
 
 /** Valeurs par défaut quand on construit une slice à partir d'un row
@@ -597,5 +788,12 @@ export function emptyComptaSlice(): ComptaProfileSlice {
     ca_fiscal_year_calendar: true,
     ca_fiscal_year_start_month: null,
     ca_started_at: null,
+    us_state: null,
+    us_ein: null,
+    us_llc_tax_classification: null,
+    us_sales_tax_states: [],
+    us_fiscal_year_calendar: true,
+    us_fiscal_year_start_month: null,
+    us_started_at: null,
   };
 }

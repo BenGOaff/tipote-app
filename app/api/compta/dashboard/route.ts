@@ -353,7 +353,7 @@ export async function GET() {
   // 7. Statut compta + jauge TVA
   let bpQ = supabaseAdmin
     .from("business_profiles")
-    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti, pt_iva_isento, pt_region, be_vat_franchise, es_iva_regime, es_community, ca_province, ca_gst_registered, ca_petit_fournisseur")
+    .select("country, accounting_status, ae_activity_type, sasu_vat_regime, ae_vat_franchise, ae_vat_regime, eurl_is_election, ch_vat_assujetti, pt_iva_isento, pt_region, be_vat_franchise, es_iva_regime, es_community, ca_province, ca_gst_registered, ca_petit_fournisseur, us_state, us_sales_tax_states, us_llc_tax_classification")
     .eq("user_id", user.id);
   if (projectId) bpQ = bpQ.eq("project_id", projectId);
   const { data: bp } = await bpQ.maybeSingle();
@@ -528,6 +528,19 @@ export async function GET() {
     ) {
       return Boolean((bp as { ca_gst_registered?: boolean } | null)?.ca_gst_registered);
     }
+    // US — assujetti à la sales tax dès qu'on est inscrit dans au
+    // moins un état. Pas de TVA fédérale aux US, donc le seul moyen
+    // d'être "vatable" c'est la sales tax state-level.
+    if (
+      status === "sole_proprietorship_us" ||
+      status === "single_member_llc_us" ||
+      status === "multi_member_llc_us" ||
+      status === "c_corp_us" ||
+      status === "s_corp_us"
+    ) {
+      const states = (bp as { us_sales_tax_states?: string[] | null } | null)?.us_sales_tax_states;
+      return Array.isArray(states) && states.length > 0;
+    }
     return false;
   })();
 
@@ -563,6 +576,14 @@ export async function GET() {
         case "MB": return 12;           // 5 + 7 RST
         default: return 5;              // AB, YT, NT, NU + fallback
       }
+    }
+    if (countryCode === "US") {
+      // Pas de TVA fédérale, pas de "taux normal" national. Sales tax
+      // state-level + locale (~10 000 juridictions). On utilise un
+      // taux moyen pondéré ~7 % (combinaison state moyen 5 % + local
+      // moyen 1.5 %) pour donner un ordre de grandeur. L'user sérieux
+      // utilisera Stripe Tax / TaxJar pour le calcul exact.
+      return 7;
     }
     return 20; // FR
   })();

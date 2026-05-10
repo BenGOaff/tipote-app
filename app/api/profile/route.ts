@@ -158,6 +158,12 @@ const UpdateSchema = z.object({
       "entreprise_individuelle_ca",
       "inc_provincial_ca",
       "inc_federal_ca",
+      // US
+      "sole_proprietorship_us",
+      "single_member_llc_us",
+      "multi_member_llc_us",
+      "c_corp_us",
+      "s_corp_us",
     ])
     .nullable()
     .optional(),
@@ -252,6 +258,28 @@ const UpdateSchema = z.object({
   ca_fiscal_year_calendar: z.boolean().optional(),
   ca_fiscal_year_start_month: z.number().int().min(1).max(12).nullable().optional(),
   ca_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+
+  // États-Unis — phase 1s
+  us_state: z
+    .enum([
+      "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
+      "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
+      "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+      "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
+      "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
+      "DC",
+    ])
+    .nullable()
+    .optional(),
+  us_ein: z.string().trim().max(20).nullable().optional(),
+  us_llc_tax_classification: z
+    .enum(["disregarded", "partnership", "s_corp", "c_corp"])
+    .nullable()
+    .optional(),
+  us_sales_tax_states: z.array(z.string().regex(/^[A-Z]{2}$/)).max(51).optional(),
+  us_fiscal_year_calendar: z.boolean().optional(),
+  us_fiscal_year_start_month: z.number().int().min(1).max(12).nullable().optional(),
+  us_started_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   // accounting_status_configured_at est défini côté serveur dans le PATCH
   // ci-dessous, pas accepté en input.
 
