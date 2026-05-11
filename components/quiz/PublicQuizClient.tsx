@@ -738,10 +738,32 @@ export default function PublicQuizClient({
   }, [branding.font]);
 
   // ─── Root style applied to every step (font + brand color + background) ───
+  // CSS isolation: when this page is embedded on a third-party blog via
+  // iframe (srcdoc / sandbox quirks) or DOM-injected by a WordPress plugin
+  // that copies our HTML into their page, the host stylesheet can bleed in
+  // and override inherited properties — `color` in particular, which on
+  // sites with dark-mode or low-contrast brand styling renders our quiz
+  // text in faint gray (Imagelys 2026-05-10).
+  //
+  // Defensive locks:
+  //   • color   — explicit + hardcoded HSL fallback so descendants stop
+  //               inheriting from the host body even if --foreground is
+  //               overridden upstream
+  //   • --foreground / --muted-foreground — re-pinned locally so Tailwind
+  //               utility classes (text-foreground, text-muted-foreground)
+  //               on descendants resolve to OUR values, not the host's
+  //   • colorScheme — neutralises forced dark-mode at the user-agent level
+  //   • isolation — gives this subtree its own stacking context, also acts
+  //                 as a stable anchor for the explicit color rule above
   const hslPrimary = hexToHslTriplet(branding.primaryColor);
   const rootStyle: React.CSSProperties = {
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
+    color: "hsl(231 41% 31%)",
+    colorScheme: "light",
+    isolation: "isolate",
+    ["--foreground" as string]: "231 41% 31%",
+    ["--muted-foreground" as string]: "236 16% 50%",
     ...(hslPrimary ? ({ ["--primary" as string]: hslPrimary } as React.CSSProperties) : {}),
   };
 
