@@ -36,7 +36,7 @@ export default function EmbedPopquizPlayClient({
   const wrapperStyle = buildPlayerWrapperStyle(appearance);
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-transparent">
+    <div className="public-surface w-full min-h-screen flex flex-col items-center justify-center bg-transparent">
       <div className="w-full max-w-5xl mx-auto">
         <div className={wrapperClassName} style={wrapperStyle}>
           <PopquizPlayer

@@ -1265,7 +1265,7 @@ export default function PublicQuizClient({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={rootStyle}>
+      <div className="public-surface min-h-screen flex items-center justify-center" style={rootStyle}>
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -1273,7 +1273,7 @@ export default function PublicQuizClient({
 
   if (error || !quiz) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={rootStyle}>
+      <div className="public-surface min-h-screen flex items-center justify-center p-6" style={rootStyle}>
         <Card className="p-8 max-w-md text-center">
           <p className="text-muted-foreground">{error || t.quizNotFound}</p>
         </Card>
@@ -1302,7 +1302,7 @@ export default function PublicQuizClient({
 
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
         style={rootStyle}
       >
         {toastOverlay}
@@ -1367,7 +1367,7 @@ export default function PublicQuizClient({
     const canContinue = (!quiz.ask_first_name || firstName.trim().length > 0)
                      && (!quiz.ask_gender || gender !== null);
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16" style={rootStyle}>
+      <div className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16" style={rootStyle}>
         <div className="max-w-md w-full space-y-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-center">{t.personalizeTitle}</h2>
           <p className="text-muted-foreground text-center">{t.personalizeSubtitle}</p>
@@ -1666,7 +1666,7 @@ export default function PublicQuizClient({
     }
 
     return (
-      <div className="min-h-screen flex flex-col" style={rootStyle}>
+      <div className="public-surface min-h-screen flex flex-col" style={rootStyle}>
           {toastOverlay}
           {shareOverlay}
           {/* Progress bar fixed top */}
@@ -1709,7 +1709,7 @@ export default function PublicQuizClient({
   if (step === "email") {
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
         style={rootStyle}
       >
         {toastOverlay}
@@ -1905,7 +1905,7 @@ export default function PublicQuizClient({
 
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
         style={rootStyle}
       >
         {toastOverlay}
@@ -2076,7 +2076,7 @@ export default function PublicQuizClient({
     const ctaText = interp(quiz.cta_text || "") || t.resultCtaDefault;
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
         style={rootStyle}
       >
         {toastOverlay}
@@ -2132,7 +2132,7 @@ export default function PublicQuizClient({
   if (step === "result") {
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
         style={rootStyle}
       >
         {toastOverlay}

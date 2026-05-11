@@ -188,6 +188,49 @@
     --sidebar-border: 230 30% 25%;
     --sidebar-ring: 233 64% 65%;
   }
+
+  /* ── Public surface lock ──
+     Pages publiques (quiz partagés sur blogs externes, lead-capture,
+     landings de vente, popquiz embed) NE DOIVENT PAS suivre le dark
+     mode de l'app authentifiée. Si l'user a activé le dark dans son
+     dashboard et puis ouvre/teste sa propre page publique, le <html>
+     porte encore `.dark`, ce qui faisait apparaître les champs et
+     fonds en sombre côté visiteur.
+
+     Solution : `.public-surface` re-pin toutes les variables CSS en
+     light avec une spécificité strictement supérieure à `.dark { ... }`
+     grâce au sélecteur composé `.dark .public-surface` (ou
+     `.public-surface` seul si pas de .dark). Les composants publics
+     (PublicQuizClient, PublicPageClient, popquiz embed) ajoutent cette
+     classe à leur root pour forcer un thème light hermétique. */
+  .public-surface,
+  .dark .public-surface {
+    --background: 0 0% 100%;
+    --foreground: 231 41% 31%;
+    --card: 225 33% 97%;
+    --card-foreground: 231 41% 31%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 231 41% 31%;
+    --primary: 233 64% 61%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 33% 96%;
+    --secondary-foreground: 230 41% 28%;
+    --muted: 220 33% 96%;
+    --muted-foreground: 236 16% 50%;
+    --accent: 236 79% 96%;
+    --accent-foreground: 230 41% 28%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --border: 220 13% 92%;
+    --input: 220 13% 92%;
+    --ring: 233 64% 61%;
+    --surface: 225 33% 97%;
+    --surface-muted: 225 33% 95%;
+    --surface-soft: 233 64% 96%;
+    color-scheme: light;
+  }
 }
 
 @layer base {

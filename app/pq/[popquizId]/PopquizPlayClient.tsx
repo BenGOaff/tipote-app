@@ -58,7 +58,7 @@ export default function PopquizPlayClient({
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-10"
+      className="public-surface min-h-screen w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-10"
       style={pageBgStyle}
     >
       <div className="w-full max-w-5xl space-y-3 sm:space-y-4 mx-auto">
