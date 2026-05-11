@@ -3734,7 +3734,9 @@
     "noLabel": "No",
     "previewFreeTextPh": "La persona scriverà la sua risposta qui…",
     "imageEmptyHint": "Aggiungi l'URL di un'immagine",
-    "imageUrlPlaceholder": "https://… (URL immagine)"
+    "imageUrlPlaceholder": "https://… (URL immagine)",
+    "multiSelectLabel": "Più risposte ammesse",
+    "multiSelectHint": "Se attivata, il visitatore può selezionare più opzioni. Tocca ogni opzione per attivarla e usa il pulsante \"Avanti\" per continuare."
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

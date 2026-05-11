@@ -3734,7 +3734,9 @@
     "noLabel": "لا",
     "previewFreeTextPh": "سيكتب المجيب إجابته هنا…",
     "imageEmptyHint": "أضف رابط صورة",
-    "imageUrlPlaceholder": "https://… (رابط الصورة)"
+    "imageUrlPlaceholder": "https://… (رابط الصورة)",
+    "multiSelectLabel": "السماح بعدّة إجابات",
+    "multiSelectHint": "إذا فُعِّلت، يمكن للزائر اختيار عدّة خيارات. ينقر على كل خيار لتفعيله ثم يستخدم زر «التالي» للمتابعة."
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

@@ -24,7 +24,10 @@ type SurveyQuestion = {
 
 type SurveyAnswer = {
   question_index: number;
+  // Legacy single-choice path. Multi-select questions populate option_indices
+  // instead — aggregation below treats them as one tally per picked option.
   option_index?: number;
+  option_indices?: number[];
   rating?: number;
   stars?: number;
   text?: string;
@@ -143,7 +146,13 @@ function QuestionTrend({
           <OptionDistribution
             options={question.options}
             counts={question.options.map(
-              (_, oi) => answers.filter((a) => a.option_index === oi).length,
+              // Count both legacy single picks (option_index) AND multi-select
+              // picks (option_indices[]). A respondent who ticked 3 options on
+              // a multi-select question contributes 1 to each of those 3
+              // option counters — same convention as Typeform / Tally.
+              (_, oi) => answers.filter((a) =>
+                a.option_index === oi || (Array.isArray(a.option_indices) && a.option_indices.includes(oi))
+              ).length,
             )}
           />
         )}

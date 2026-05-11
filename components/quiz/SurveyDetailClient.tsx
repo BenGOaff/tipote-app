@@ -1321,6 +1321,25 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
                         {(qType === "multiple_choice" || qType === "image_choice") && (
                           <>
+                            {/* Multi-select toggle (Typeform/Tally pattern):
+                                lets the creator allow visitors to pick more
+                                than one option on this question. Stored in
+                                q.config.multi_select; the public renderer
+                                switches to a toggle-then-Next interaction
+                                when it's on. */}
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/60">
+                              <input
+                                type="checkbox"
+                                id={`multi-select-${qi}`}
+                                checked={(cfg.multi_select as boolean | undefined) === true}
+                                onChange={(e) => setEditQuestions((p) => p.map((qq, i) => i !== qi ? qq : { ...qq, config: { ...(qq.config ?? {}), multi_select: e.target.checked } }))}
+                                className="mt-0.5 h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                              />
+                              <label htmlFor={`multi-select-${qi}`} className="flex-1 cursor-pointer">
+                                <p className="text-sm font-medium">{t("multiSelectLabel")}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{t("multiSelectHint")}</p>
+                              </label>
+                            </div>
                             <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                               {q.options.map((opt, oi) => (
                                 <div key={oi} className="relative rounded-xl border-2 border-border hover:border-primary/30 transition-all group overflow-hidden">

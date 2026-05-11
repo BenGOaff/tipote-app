@@ -64,7 +64,14 @@ type Lead = {
   first_name: string | null;
   result_id: string | null;
   result_title: string | null;
-  answers: { question_index: number; option_index: number }[] | null;
+  // Legacy quizzes single-pick path: one option_index per answer.
+  // Multi-select questions populate option_indices[] (array of picks).
+  // Either shape can appear on a given quiz_leads row.
+  answers: {
+    question_index: number;
+    option_index?: number;
+    option_indices?: number[];
+  }[] | null;
   created_at: string;
 };
 
@@ -159,13 +166,24 @@ export default function QuizResultsAnalytics({
         if (!Array.isArray(lead.answers)) continue;
         const answer = lead.answers.find((a) => a.question_index === qIdx);
         if (!answer) continue;
-        if (
-          answer.option_index >= 0 &&
-          answer.option_index < optionCounts.length
-        ) {
-          optionCounts[answer.option_index] += 1;
-          totalAnswered += 1;
+        // Build the list of picked indices: legacy single-pick OR multi-select
+        // array. Each pick contributes 1 to its option counter; a multi-select
+        // respondent still counts once toward `totalAnswered` (the chart
+        // shows pick frequency, not response count, so this matches the
+        // SurveyTrends convention).
+        const picked: number[] = Array.isArray(answer.option_indices)
+          ? answer.option_indices
+          : typeof answer.option_index === "number"
+            ? [answer.option_index]
+            : [];
+        let countedRespondent = false;
+        for (const oi of picked) {
+          if (oi >= 0 && oi < optionCounts.length) {
+            optionCounts[oi] += 1;
+            countedRespondent = true;
+          }
         }
+        if (countedRespondent) totalAnswered += 1;
       }
       const data = q.options.map((opt, oIdx) => ({
         name: truncate(opt.text || t("optionFallback", { n: oIdx + 1 })),

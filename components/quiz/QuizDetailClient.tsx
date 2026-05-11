@@ -70,9 +70,19 @@ import {
 
 // Types
 type QuizOption = { text: string; result_index: number };
-type QuizQuestion = { id?: string; question_text: string; options: QuizOption[]; sort_order: number };
+type QuizQuestion = {
+  id?: string;
+  question_text: string;
+  options: QuizOption[];
+  sort_order: number;
+  // Per-question JSON config. Today only multi_select is read here, but the
+  // shape is open-ended so future quiz-specific knobs (time limit, weighted
+  // scoring…) land without another type change. Mirrors the DB column added
+  // in supabase/migrations/20260428_survey_mode.sql.
+  config?: Record<string, unknown> | null;
+};
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number };
-type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index: number }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
+type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
@@ -901,6 +911,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               result_index: o.result_index,
             })),
             sort_order: i,
+            // Per-question config (multi_select, future knobs). API accepts
+            // any plain object and DB column is JSONB.
+            config: q.config ?? {},
           })),
           results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i })),
         }),
@@ -1468,6 +1481,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <div className="max-w-2xl w-full space-y-8">
                         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>Questions {qi + 1}/{editQuestions.length}</p>
                         <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
+                        {/* Multi-select toggle (Typeform/Tally pattern):
+                            quiz mode lets the creator allow multiple picks
+                            per question. Each picked option scores its
+                            result_index bucket; highest-total result wins
+                            (cf. computeResult in PublicQuizClient). */}
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-border/60 max-w-md mx-auto">
+                          <input
+                            type="checkbox"
+                            id={`q-multi-select-${qi}`}
+                            checked={((q.config ?? {}) as Record<string, unknown>).multi_select === true}
+                            onChange={(e) => setEditQuestions((p) => p.map((qq, i) => i !== qi ? qq : { ...qq, config: { ...(qq.config ?? {}), multi_select: e.target.checked } }))}
+                            className="mt-0.5 h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                          />
+                          <label htmlFor={`q-multi-select-${qi}`} className="flex-1 cursor-pointer">
+                            <p className="text-sm font-medium">{t("multiSelectLabel")}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t("multiSelectHint")}</p>
+                          </label>
+                        </div>
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">

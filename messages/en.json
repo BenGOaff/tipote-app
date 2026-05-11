@@ -3734,7 +3734,9 @@
     "noLabel": "No",
     "previewFreeTextPh": "The respondent will type their answer here…",
     "imageEmptyHint": "Add an image URL",
-    "imageUrlPlaceholder": "https://… (image URL)"
+    "imageUrlPlaceholder": "https://… (image URL)",
+    "multiSelectLabel": "Multiple answers allowed",
+    "multiSelectHint": "If enabled, the visitor can pick several options. They tap each option to toggle it and use the \"Next\" button to continue."
   },
   "contentStrategy": {
     "title": "Content strategy",
