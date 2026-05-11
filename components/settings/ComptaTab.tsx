@@ -408,6 +408,7 @@ function ConfiguredSummary({
 }
 
 function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
+  const t = useTranslations("compta.summary");
   const rows: Array<{ label: string; value: string; href?: string; hrefLabel?: string }> = [];
 
   if (slice.accounting_status === "particulier") {
@@ -453,42 +454,42 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
           : slice.accounting_status === "sarl"
             ? "SARL"
             : "EURL";
-    rows.push({ label: "Forme juridique", value: statusLabel });
+    rows.push({ label: t("fields.legalForm"), value: statusLabel });
 
     rows.push({
       label: "SIREN",
-      value: slice.sasu_siren ?? "Non renseigné",
+      value: slice.sasu_siren ?? t("values.notSpecified"),
       href: slice.sasu_siren
         ? `https://annuaire-entreprises.data.gouv.fr/entreprise/${slice.sasu_siren}`
         : undefined,
-      hrefLabel: "Voir sur annuaire-entreprises",
+      hrefLabel: t("links.annuaireEntreprises"),
     });
 
     if (slice.accounting_status === "eurl") {
       rows.push({
-        label: "Régime fiscal",
-        value: slice.eurl_is_election ? "IS (sur option)" : "IR (par défaut)",
+        label: t("fields.taxRegime"),
+        value: slice.eurl_is_election ? t("values.eurlIsOption") : t("values.eurlIrDefault"),
       });
     }
     if (slice.accounting_status === "sarl") {
       rows.push({
-        label: "Statut du gérant",
+        label: t("fields.managerStatus"),
         value: slice.sarl_gerant_majoritaire
-          ? "Majoritaire (TNS — pas de DSN)"
-          : "Minoritaire / égalitaire (assimilé salarié)",
+          ? t("values.sarlMajoritaire")
+          : t("values.sarlMinoritaire"),
       });
     }
 
     rows.push({
-      label: "Exercice fiscal",
+      label: t("fields.fiscalYear"),
       value: slice.sasu_fiscal_year_calendar
-        ? "Année civile (jan → déc)"
-        : `Décalé (début ${monthLabel(slice.sasu_fiscal_year_start_month)})`,
+        ? t("values.calendarYear")
+        : t("values.offsetYear", { month: monthLabel(slice.sasu_fiscal_year_start_month, t) }),
     });
-    rows.push({ label: "Régime TVA", value: vatRegimeLabel(slice.sasu_vat_regime) });
+    rows.push({ label: t("fields.vatRegime"), value: vatRegimeLabel(slice.sasu_vat_regime, t) });
     rows.push({
-      label: "TVA intracommunautaire",
-      value: slice.sasu_vat_intra_enabled ? "Activée (DES requise)" : "Non",
+      label: t("fields.vatIntra"),
+      value: slice.sasu_vat_intra_enabled ? t("values.vatIntraEnabled") : t("values.no"),
     });
     // Dirigeant rémunéré : seulement pertinent si le statut social
     // est assimilé salarié. Pour SARL gérant majoritaire / EURL-IR,
@@ -500,15 +501,15 @@ function SummaryDetails({ slice }: { slice: ComptaProfileSlice }) {
       (slice.accounting_status === "eurl" && slice.eurl_is_election);
     if (isAssimile) {
       rows.push({
-        label: "Dirigeant rémunéré",
+        label: t("fields.execCompensation"),
         value: slice.sasu_dirigeant_remunere
-          ? "Oui (URSSAF + DSN)"
-          : "Non (dividendes uniquement)",
+          ? t("values.execYesUrssaf")
+          : t("values.execNoDividends"),
       });
     } else {
       rows.push({
-        label: "Régime social",
-        value: "TNS — cotisations URSSAF travailleur indépendant",
+        label: t("fields.socialRegime"),
+        value: t("values.tnsUrssaf"),
       });
     }
   } else if (
@@ -1208,23 +1209,36 @@ function aeActivityLabel(v: ComptaProfileSlice["ae_activity_type"]): string {
   }
 }
 
-function vatRegimeLabel(v: ComptaProfileSlice["sasu_vat_regime"]): string {
+function vatRegimeLabel(
+  v: ComptaProfileSlice["sasu_vat_regime"],
+  t?: (key: string) => string,
+): string {
+  const tx = t ?? ((k: string) => k);
   switch (v) {
     case "reel_mensuel":
-      return "Réel normal mensuel";
+      return tx("values.vatReelMensuel");
     case "reel_trimestriel":
-      return "Réel normal trimestriel";
+      return tx("values.vatReelTrimestriel");
     case "simplifie":
-      return "Simplifié";
+      return tx("values.vatSimplifie");
     default:
-      return "Non renseigné";
+      return tx("values.notSpecified");
   }
 }
 
-function monthLabel(m: number | null | undefined): string {
+function monthLabel(
+  m: number | null | undefined,
+  t?: (key: string) => string,
+): string {
   if (!m || m < 1 || m > 12) return "—";
-  return [
+  const keys = [
+    "months.january", "months.february", "months.march", "months.april",
+    "months.may", "months.june", "months.july", "months.august",
+    "months.september", "months.october", "months.november", "months.december",
+  ];
+  const fallback = [
     "janvier", "février", "mars", "avril", "mai", "juin",
     "juillet", "août", "septembre", "octobre", "novembre", "décembre",
-  ][m - 1] ?? "—";
+  ];
+  return t ? t(keys[m - 1]) : (fallback[m - 1] ?? "—");
 }

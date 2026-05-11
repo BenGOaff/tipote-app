@@ -1306,7 +1306,14 @@
     "oneScheduledToday": "1 contenido programado hoy",
     "veryDynamic": "¡Súper dinámico este mes!",
     "warningDown": "Atención, algunos indicadores bajan.",
-    "manyScheduledToday": "contenidos programados hoy"
+    "manyScheduledToday": "contenidos programados hoy",
+    "revenueVsGoal": "Ingresos este mes vs objetivo",
+    "goalShort": "Objetivo: {amount} €",
+    "progressionLabels": {
+      "revenue": "Ingresos",
+      "newSubscribers": "Nuevos suscriptores",
+      "conversion": "Conversión"
+    }
   },
   "create": {
     "title": "Crear contenido",
@@ -5062,7 +5069,52 @@
     },
     "summary": {
       "myStatus": "Mi estatuto",
-      "edit": "Modificar"
+      "edit": "Modificar",
+      "fields": {
+        "legalForm": "Forma jurídica",
+        "taxRegime": "Régimen fiscal",
+        "managerStatus": "Estatuto del gerente",
+        "fiscalYear": "Ejercicio fiscal",
+        "vatRegime": "Régimen IVA",
+        "vatIntra": "IVA intracomunitario",
+        "execCompensation": "Dirigente remunerado",
+        "socialRegime": "Régimen social"
+      },
+      "values": {
+        "notSpecified": "Sin especificar",
+        "yes": "Sí",
+        "no": "No",
+        "calendarYear": "Año natural (ene → dic)",
+        "offsetYear": "Desfasado (inicio {month})",
+        "vatIntraEnabled": "Activado (DES requerida)",
+        "vatReelMensuel": "Real normal mensual",
+        "vatReelTrimestriel": "Real normal trimestral",
+        "vatSimplifie": "Simplificado",
+        "eurlIsOption": "IS (opcional)",
+        "eurlIrDefault": "IR (por defecto)",
+        "sarlMajoritaire": "Mayoritario (TNS — sin DSN)",
+        "sarlMinoritaire": "Minoritario / igualitario (asimilado a asalariado)",
+        "execYesUrssaf": "Sí (URSSAF + DSN)",
+        "execNoDividends": "No (solo dividendos)",
+        "tnsUrssaf": "Autónomo — cotizaciones URSSAF"
+      },
+      "links": {
+        "annuaireEntreprises": "Ver en annuaire-entreprises"
+      },
+      "months": {
+        "january": "enero",
+        "february": "febrero",
+        "march": "marzo",
+        "april": "abril",
+        "may": "mayo",
+        "june": "junio",
+        "july": "julio",
+        "august": "agosto",
+        "september": "septiembre",
+        "october": "octubre",
+        "november": "noviembre",
+        "december": "diciembre"
+      }
     },
     "connections": {
       "title": "Mis conexiones",

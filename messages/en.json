@@ -1306,7 +1306,14 @@
     "oneScheduledToday": "1 piece of content scheduled today",
     "veryDynamic": "Great momentum this month!",
     "warningDown": "Careful, a few metrics are dropping.",
-    "manyScheduledToday": "content pieces scheduled today"
+    "manyScheduledToday": "content pieces scheduled today",
+    "revenueVsGoal": "Revenue this month vs goal",
+    "goalShort": "Goal: €{amount}",
+    "progressionLabels": {
+      "revenue": "Revenue",
+      "newSubscribers": "New subscribers",
+      "conversion": "Conversion"
+    }
   },
   "create": {
     "title": "Create content",
@@ -5062,7 +5069,52 @@
     },
     "summary": {
       "myStatus": "My status",
-      "edit": "Edit"
+      "edit": "Edit",
+      "fields": {
+        "legalForm": "Legal form",
+        "taxRegime": "Tax regime",
+        "managerStatus": "Manager status",
+        "fiscalYear": "Fiscal year",
+        "vatRegime": "VAT regime",
+        "vatIntra": "Intra-EU VAT",
+        "execCompensation": "Executive compensation",
+        "socialRegime": "Social regime"
+      },
+      "values": {
+        "notSpecified": "Not specified",
+        "yes": "Yes",
+        "no": "No",
+        "calendarYear": "Calendar year (Jan → Dec)",
+        "offsetYear": "Offset (starts {month})",
+        "vatIntraEnabled": "Enabled (DES required)",
+        "vatReelMensuel": "Standard monthly",
+        "vatReelTrimestriel": "Standard quarterly",
+        "vatSimplifie": "Simplified",
+        "eurlIsOption": "Corporate tax (opt-in)",
+        "eurlIrDefault": "Personal income tax (default)",
+        "sarlMajoritaire": "Majority shareholder (TNS — no DSN)",
+        "sarlMinoritaire": "Minority / equal (employee-assimilated)",
+        "execYesUrssaf": "Yes (URSSAF + DSN)",
+        "execNoDividends": "No (dividends only)",
+        "tnsUrssaf": "Self-employed — URSSAF contributions"
+      },
+      "links": {
+        "annuaireEntreprises": "View on annuaire-entreprises"
+      },
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      }
     },
     "connections": {
       "title": "My connections",

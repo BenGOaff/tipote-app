@@ -1532,7 +1532,14 @@
     "filterPending": "Pendentes",
     "filterDone": "Concluídas",
     "empty": "Sem tarefas",
-    "help": "Como funciona"
+    "help": "Como funciona",
+    "revenueVsGoal": "Receita deste mês vs meta",
+    "goalShort": "Meta: R$ {amount}",
+    "progressionLabels": {
+      "revenue": "Receita",
+      "newSubscribers": "Novos inscritos",
+      "conversion": "Conversão"
+    }
   },
   "create": {
     "title": "Criar",
@@ -5361,7 +5368,52 @@
     },
     "summary": {
       "myStatus": "Meu regime",
-      "edit": "Editar"
+      "edit": "Editar",
+      "fields": {
+        "legalForm": "Forma jurídica",
+        "taxRegime": "Regime fiscal",
+        "managerStatus": "Status do gerente",
+        "fiscalYear": "Exercício fiscal",
+        "vatRegime": "Regime IVA",
+        "vatIntra": "IVA intracomunitário",
+        "execCompensation": "Dirigente remunerado",
+        "socialRegime": "Regime social"
+      },
+      "values": {
+        "notSpecified": "Não preenchido",
+        "yes": "Sim",
+        "no": "Não",
+        "calendarYear": "Ano civil (jan → dez)",
+        "offsetYear": "Defasado (início {month})",
+        "vatIntraEnabled": "Ativada (DES exigida)",
+        "vatReelMensuel": "Real normal mensal",
+        "vatReelTrimestriel": "Real normal trimestral",
+        "vatSimplifie": "Simplificado",
+        "eurlIsOption": "IS (por opção)",
+        "eurlIrDefault": "IR (padrão)",
+        "sarlMajoritaire": "Majoritário (TNS — sem DSN)",
+        "sarlMinoritaire": "Minoritário / igualitário (equiparado a empregado)",
+        "execYesUrssaf": "Sim (URSSAF + DSN)",
+        "execNoDividends": "Não (somente dividendos)",
+        "tnsUrssaf": "TNS — contribuições URSSAF autônomo"
+      },
+      "links": {
+        "annuaireEntreprises": "Ver no annuaire-entreprises"
+      },
+      "months": {
+        "january": "janeiro",
+        "february": "fevereiro",
+        "march": "março",
+        "april": "abril",
+        "may": "maio",
+        "june": "junho",
+        "july": "julho",
+        "august": "agosto",
+        "september": "setembro",
+        "october": "outubro",
+        "november": "novembro",
+        "december": "dezembro"
+      }
     },
     "connections": {
       "title": "Minhas conexões",

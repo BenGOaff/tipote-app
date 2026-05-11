@@ -1306,7 +1306,14 @@
     "oneScheduledToday": "محتوى واحد مجدول اليوم",
     "veryDynamic": "شهر نشط للغاية!",
     "warningDown": "احذر، بعض المؤشرات تتراجع.",
-    "manyScheduledToday": "محتويات مجدولة اليوم"
+    "manyScheduledToday": "محتويات مجدولة اليوم",
+    "revenueVsGoal": "إيرادات هذا الشهر مقارنة بالهدف",
+    "goalShort": "الهدف: {amount} €",
+    "progressionLabels": {
+      "revenue": "الإيراد",
+      "newSubscribers": "مشتركون جدد",
+      "conversion": "التحويل"
+    }
   },
   "create": {
     "title": "إنشاء محتوى",
@@ -5062,7 +5069,52 @@
     },
     "summary": {
       "myStatus": "وضعي",
-      "edit": "تعديل"
+      "edit": "تعديل",
+      "fields": {
+        "legalForm": "الشكل القانوني",
+        "taxRegime": "النظام الضريبي",
+        "managerStatus": "وضع المدير",
+        "fiscalYear": "السنة المالية",
+        "vatRegime": "نظام ضريبة القيمة المضافة",
+        "vatIntra": "ضريبة القيمة المضافة داخل الاتحاد",
+        "execCompensation": "أجر المدير",
+        "socialRegime": "النظام الاجتماعي"
+      },
+      "values": {
+        "notSpecified": "غير محدد",
+        "yes": "نعم",
+        "no": "لا",
+        "calendarYear": "السنة الميلادية (يناير → ديسمبر)",
+        "offsetYear": "مزاحة (تبدأ {month})",
+        "vatIntraEnabled": "مفعّلة (DES مطلوب)",
+        "vatReelMensuel": "الحقيقي العادي الشهري",
+        "vatReelTrimestriel": "الحقيقي العادي الفصلي",
+        "vatSimplifie": "مبسّط",
+        "eurlIsOption": "IS (اختياري)",
+        "eurlIrDefault": "IR (افتراضي)",
+        "sarlMajoritaire": "أغلبي (TNS — بدون DSN)",
+        "sarlMinoritaire": "أقلي / متساوٍ (مشبّه بأجير)",
+        "execYesUrssaf": "نعم (URSSAF + DSN)",
+        "execNoDividends": "لا (أرباح أسهم فقط)",
+        "tnsUrssaf": "مستقل — اشتراكات URSSAF"
+      },
+      "links": {
+        "annuaireEntreprises": "عرض على annuaire-entreprises"
+      },
+      "months": {
+        "january": "يناير",
+        "february": "فبراير",
+        "march": "مارس",
+        "april": "أبريل",
+        "may": "مايو",
+        "june": "يونيو",
+        "july": "يوليو",
+        "august": "أغسطس",
+        "september": "سبتمبر",
+        "october": "أكتوبر",
+        "november": "نوفمبر",
+        "december": "ديسمبر"
+      }
     },
     "connections": {
       "title": "اتصالاتي",

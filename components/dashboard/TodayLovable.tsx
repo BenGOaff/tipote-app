@@ -428,35 +428,38 @@ function buildProgressionSummary(p: ProgressionData, t?: (key: string) => string
   let hasNegative = false;
 
   if (p.revenue !== null) {
+    const revenueLabel = t ? t("progressionLabels.revenue") : "CA";
     if (hasPrev && p.prevRevenue !== null && p.prevRevenue > 0) {
       const pct = Math.round(((p.revenue - p.prevRevenue) / p.prevRevenue) * 100);
-      if (pct >= 5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString(locale)}€ (+${pct}%)`, trend: "up" }); hasPositive = true; }
-      else if (pct <= -5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString(locale)}€ (${pct}%)`, trend: "down" }); hasNegative = true; }
-      else lines.push({ label: "CA", value: `${p.revenue.toLocaleString(locale)}€`, trend: "stable" });
+      if (pct >= 5) { lines.push({ label: revenueLabel, value: `${p.revenue.toLocaleString(locale)}€ (+${pct}%)`, trend: "up" }); hasPositive = true; }
+      else if (pct <= -5) { lines.push({ label: revenueLabel, value: `${p.revenue.toLocaleString(locale)}€ (${pct}%)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: revenueLabel, value: `${p.revenue.toLocaleString(locale)}€`, trend: "stable" });
     } else {
-      lines.push({ label: "CA", value: `${p.revenue.toLocaleString(locale)}€` });
+      lines.push({ label: revenueLabel, value: `${p.revenue.toLocaleString(locale)}€` });
     }
   }
 
   if (p.newSubscribers !== null) {
+    const subsLabel = t ? t("progressionLabels.newSubscribers") : "Nouveaux inscrits";
     if (hasPrev && p.prevNewSubscribers !== null && p.prevNewSubscribers > 0) {
       const pct = Math.round(((p.newSubscribers - p.prevNewSubscribers) / p.prevNewSubscribers) * 100);
-      if (pct >= 10) { lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers} (+${pct}%)`, trend: "up" }); hasPositive = true; }
-      else if (pct <= -10) { lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers} (${pct}%)`, trend: "down" }); hasNegative = true; }
-      else lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers}`, trend: "stable" });
+      if (pct >= 10) { lines.push({ label: subsLabel, value: `${p.newSubscribers} (+${pct}%)`, trend: "up" }); hasPositive = true; }
+      else if (pct <= -10) { lines.push({ label: subsLabel, value: `${p.newSubscribers} (${pct}%)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: subsLabel, value: `${p.newSubscribers}`, trend: "stable" });
     } else {
-      lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers}` });
+      lines.push({ label: subsLabel, value: `${p.newSubscribers}` });
     }
   }
 
   if (p.conversionRate !== null) {
+    const convLabel = t ? t("progressionLabels.conversion") : "Conversion";
     if (hasPrev && p.prevConversionRate !== null) {
       const diff = +(p.conversionRate - p.prevConversionRate).toFixed(1);
-      if (diff >= 0.5) { lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}% (+${diff}pts)`, trend: "up" }); hasPositive = true; }
-      else if (diff <= -0.5) { lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}% (${diff}pts)`, trend: "down" }); hasNegative = true; }
-      else lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}%`, trend: "stable" });
+      if (diff >= 0.5) { lines.push({ label: convLabel, value: `${p.conversionRate.toFixed(1)}% (+${diff}pts)`, trend: "up" }); hasPositive = true; }
+      else if (diff <= -0.5) { lines.push({ label: convLabel, value: `${p.conversionRate.toFixed(1)}% (${diff}pts)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: convLabel, value: `${p.conversionRate.toFixed(1)}%`, trend: "stable" });
     } else {
-      lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}%` });
+      lines.push({ label: convLabel, value: `${p.conversionRate.toFixed(1)}%` });
     }
   }
 
@@ -1048,13 +1051,13 @@ export default function TodayLovable() {
                         return (
                           <div className="rounded-lg border border-border/60 p-4 space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-muted-foreground">Revenus ce mois vs objectif</span>
+                              <span className="text-xs font-medium text-muted-foreground">{t("revenueVsGoal")}</span>
                               <span className={`text-sm font-bold ${pct >= 100 ? "text-green-600 dark:text-green-400" : pct >= 50 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>{pct}%</span>
                             </div>
                             <Progress value={pct} className="h-2" />
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                               <span>{rev.toLocaleString(locale)} €</span>
-                              <span>Objectif : {goal.toLocaleString(locale)} €</span>
+                              <span>{t("goalShort", { amount: goal.toLocaleString(locale) })}</span>
                             </div>
                           </div>
                         );

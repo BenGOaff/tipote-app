@@ -1306,7 +1306,14 @@
     "oneScheduledToday": "1 contenu programmé aujourd’hui",
     "veryDynamic": "Super dynamique ce mois-ci !",
     "warningDown": "Attention, quelques indicateurs baissent.",
-    "manyScheduledToday": "contenus programmés aujourd’hui"
+    "manyScheduledToday": "contenus programmés aujourd’hui",
+    "revenueVsGoal": "Revenus ce mois vs objectif",
+    "goalShort": "Objectif : {amount} €",
+    "progressionLabels": {
+      "revenue": "CA",
+      "newSubscribers": "Nouveaux inscrits",
+      "conversion": "Conversion"
+    }
   },
   "create": {
     "title": "Créer du contenu",
@@ -5062,7 +5069,52 @@
     },
     "summary": {
       "myStatus": "Mon statut",
-      "edit": "Modifier"
+      "edit": "Modifier",
+      "fields": {
+        "legalForm": "Forme juridique",
+        "taxRegime": "Régime fiscal",
+        "managerStatus": "Statut du gérant",
+        "fiscalYear": "Exercice fiscal",
+        "vatRegime": "Régime TVA",
+        "vatIntra": "TVA intracommunautaire",
+        "execCompensation": "Dirigeant rémunéré",
+        "socialRegime": "Régime social"
+      },
+      "values": {
+        "notSpecified": "Non renseigné",
+        "yes": "Oui",
+        "no": "Non",
+        "calendarYear": "Année civile (jan → déc)",
+        "offsetYear": "Décalé (début {month})",
+        "vatIntraEnabled": "Activée (DES requise)",
+        "vatReelMensuel": "Réel normal mensuel",
+        "vatReelTrimestriel": "Réel normal trimestriel",
+        "vatSimplifie": "Simplifié",
+        "eurlIsOption": "IS (sur option)",
+        "eurlIrDefault": "IR (par défaut)",
+        "sarlMajoritaire": "Majoritaire (TNS — pas de DSN)",
+        "sarlMinoritaire": "Minoritaire / égalitaire (assimilé salarié)",
+        "execYesUrssaf": "Oui (URSSAF + DSN)",
+        "execNoDividends": "Non (dividendes uniquement)",
+        "tnsUrssaf": "TNS — cotisations URSSAF travailleur indépendant"
+      },
+      "links": {
+        "annuaireEntreprises": "Voir sur annuaire-entreprises"
+      },
+      "months": {
+        "january": "janvier",
+        "february": "février",
+        "march": "mars",
+        "april": "avril",
+        "may": "mai",
+        "june": "juin",
+        "july": "juillet",
+        "august": "août",
+        "september": "septembre",
+        "october": "octobre",
+        "november": "novembre",
+        "december": "décembre"
+      }
     },
     "connections": {
       "title": "Mes connexions",
