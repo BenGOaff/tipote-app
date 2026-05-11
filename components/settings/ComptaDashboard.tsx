@@ -7,6 +7,7 @@
 // qui éclairent une décision business.
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -103,8 +104,8 @@ interface DashboardData {
   total_count: number;
 }
 
-function formatEur(cents: number, opts: { decimals?: boolean } = {}): string {
-  return new Intl.NumberFormat("fr-FR", {
+function formatEur(cents: number, locale: string, opts: { decimals?: boolean } = {}): string {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: opts.decimals ? 2 : 0,
@@ -119,6 +120,8 @@ function formatPct(n: number | null): string {
 }
 
 export default function ComptaDashboard() {
+  const t = useTranslations("compta.dashboard");
+  const locale = useLocale();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -130,12 +133,12 @@ export default function ComptaDashboard() {
       const res = await fetch("/api/compta/dashboard");
       const json = (await res.json()) as DashboardData & { error?: string };
       if (!json.ok) {
-        setError(json.error ?? "Erreur");
+        setError(json.error ?? t("errorGeneric"));
         return;
       }
       setData(json);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur réseau");
+      setError(e instanceof Error ? e.message : t("errorNetwork"));
     } finally {
       setLoading(false);
     }
@@ -149,7 +152,7 @@ export default function ComptaDashboard() {
     return (
       <Card className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Calcul de tes chiffres en cours…
+        {t("loading")}
       </Card>
     );
   }
@@ -157,7 +160,7 @@ export default function ComptaDashboard() {
   if (error) {
     return (
       <Card className="p-6 text-sm text-destructive">
-        Erreur de chargement : {error}
+        {t("loadError", { error })}
       </Card>
     );
   }
@@ -175,21 +178,17 @@ export default function ComptaDashboard() {
       {fxIssue ? (
         <Card className="p-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2">
           <Info className="h-4 w-4 shrink-0" />
-          Taux de change indisponibles. Les montants en devises étrangères
-          sont comptés tels quels (1:1 vers EUR).
+          {t("fxIssue")}
         </Card>
       ) : null}
 
       {noData ? (
         <Card className="p-6 text-sm text-muted-foreground">
           <p className="font-semibold text-foreground mb-2">
-            Pas encore d&apos;encaissements à analyser.
+            {t("noData.title")}
           </p>
           <p>
-            Connecte ton Stripe / PayPal / Mollie ci-dessous, ou ajoute
-            des saisies manuelles. Tu verras ici tes revenus, tes
-            abonnements et tes meilleures ventes dès qu&apos;il y aura
-            des données.
+            {t("noData.body")}
           </p>
         </Card>
       ) : (
@@ -198,28 +197,30 @@ export default function ComptaDashboard() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <BigStatCard
               icon={<CalendarDays className="h-5 w-5" />}
-              label={`Ce mois-ci (${monthName(new Date())})`}
-              value={formatEur(m.month_eur_cents)}
+              label={t("stats.thisMonthLabel", { month: monthName(new Date(), locale) })}
+              value={formatEur(m.month_eur_cents, locale)}
               delta={m.delta_month_vs_last_year_pct}
-              deltaLabel={`vs même mois ${data.fiscal_year - 1}`}
+              deltaLabel={t("stats.vsSameMonth", { year: data.fiscal_year - 1 })}
             />
             <BigStatCard
               icon={<TrendingUp className="h-5 w-5" />}
-              label={`Depuis janvier ${data.fiscal_year}`}
-              value={formatEur(m.ytd_eur_cents)}
+              label={t("stats.sinceJanuaryLabel", { year: data.fiscal_year })}
+              value={formatEur(m.ytd_eur_cents, locale)}
               delta={m.delta_ytd_vs_last_year_pct}
-              deltaLabel={`vs même période ${data.fiscal_year - 1}`}
+              deltaLabel={t("stats.vsSamePeriod", { year: data.fiscal_year - 1 })}
             />
             <BigStatCard
               icon={<Repeat className="h-5 w-5" />}
-              label="Revenus récurrents (abonnements)"
-              value={formatEur(m.mrr_eur_cents)}
+              label={t("stats.mrrLabel")}
+              value={formatEur(m.mrr_eur_cents, locale)}
               delta={m.delta_mrr_pct}
-              deltaLabel="vs mois dernier"
+              deltaLabel={t("stats.vsLastMonth")}
               footer={
                 m.recurring_customers_count > 0
-                  ? `${m.recurring_customers_count} client${m.recurring_customers_count > 1 ? "s" : ""} avec abonnement`
-                  : "Aucun abonnement détecté"
+                  ? m.recurring_customers_count > 1
+                    ? t("stats.subscribersFooterMany", { count: m.recurring_customers_count })
+                    : t("stats.subscribersFooterOne", { count: m.recurring_customers_count })
+                  : t("stats.noSubscription")
               }
             />
             <RefundCard
@@ -233,11 +234,10 @@ export default function ComptaDashboard() {
           <Card className="p-5 space-y-3">
             <div>
               <h3 className="font-semibold">
-                Évolution mois par mois ({data.fiscal_year} vs {data.fiscal_year - 1})
+                {t("chart.title", { current: data.fiscal_year, previous: data.fiscal_year - 1 })}
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Pour voir si tu progresses ou si tu décroches par rapport
-                à l&apos;année dernière.
+                {t("chart.subtitle")}
               </p>
             </div>
             <div className="h-72 w-full -mx-2">
@@ -260,7 +260,7 @@ export default function ComptaDashboard() {
                     width={50}
                   />
                   <Tooltip
-                    formatter={(v: number) => formatEur(v * 100, { decimals: true })}
+                    formatter={(v: number) => formatEur(v * 100, locale, { decimals: true })}
                     labelStyle={{ fontSize: 12 }}
                     contentStyle={{
                       background: "hsl(var(--background))",
@@ -273,8 +273,8 @@ export default function ComptaDashboard() {
                     wrapperStyle={{ fontSize: 12, paddingTop: 6 }}
                     formatter={(v: string) =>
                       v === "current"
-                        ? `Année en cours (${data.fiscal_year})`
-                        : `Année précédente (${data.fiscal_year - 1})`
+                        ? t("chart.legendCurrent", { year: data.fiscal_year })
+                        : t("chart.legendPrevious", { year: data.fiscal_year - 1 })
                     }
                   />
                   <Bar
@@ -305,19 +305,18 @@ export default function ComptaDashboard() {
               card "Ce mois-ci" tout en haut). */}
           {m.month_affiliate_eur_cents > 0 || m.ytd_affiliate_eur_cents > 0 ? (
             <Card className="p-5 space-y-3">
-              <h3 className="font-semibold">Ventes directes vs commissions d&apos;affiliation</h3>
+              <h3 className="font-semibold">{t("split.title")}</h3>
               <p className="text-xs text-muted-foreground -mt-2">
-                Pour distinguer ce que tu vends toi-même de ce que tu
-                touches en commission sur les ventes des autres.
+                {t("split.subtitle")}
               </p>
               <div className="grid sm:grid-cols-2 gap-4">
                 <SalesAffiliateSplit
-                  label="Ce mois-ci"
+                  label={t("split.thisMonth")}
                   salesCents={m.month_sales_eur_cents}
                   affiliateCents={m.month_affiliate_eur_cents}
                 />
                 <SalesAffiliateSplit
-                  label="Depuis janvier"
+                  label={t("split.sinceJanuary")}
                   salesCents={m.ytd_sales_eur_cents}
                   affiliateCents={m.ytd_affiliate_eur_cents}
                 />
@@ -329,39 +328,49 @@ export default function ComptaDashboard() {
           <div className="grid gap-3 lg:grid-cols-2">
             {/* Clients */}
             <Card className="p-5 space-y-3">
-              <h3 className="font-semibold">Mes clients ce mois-ci</h3>
+              <h3 className="font-semibold">{t("clients.title")}</h3>
 
               <div className="grid grid-cols-3 gap-3">
                 <MiniStat
                   icon={<UserPlus className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
-                  label="Nouveaux clients"
+                  label={t("clients.newCustomers")}
                   value={String(m.new_customers_count)}
                 />
                 <MiniStat
                   icon={<Repeat className="h-4 w-4 text-primary" />}
-                  label="Clients abonnés"
+                  label={t("clients.subscribedCustomers")}
                   value={String(m.recurring_customers_count)}
                 />
                 <MiniStat
                   icon={<UserMinus className="h-4 w-4 text-destructive" />}
-                  label="Clients perdus"
+                  label={t("clients.lostCustomers")}
                   value={String(m.churned_customers_count)}
-                  hint={m.churn_rate_pct > 0 ? `${m.churn_rate_pct} % des abonnés` : undefined}
+                  hint={m.churn_rate_pct > 0 ? t("clients.churnHint", { pct: m.churn_rate_pct }) : undefined}
                 />
               </div>
 
               <p className="text-xs text-muted-foreground border-t pt-3">
-                <strong>{m.customers_current_month_count}</strong> client
-                {m.customers_current_month_count > 1 ? "s" : ""} au total ce mois-ci.
+                {m.customers_current_month_count > 1
+                  ? t.rich("clients.totalMany", {
+                      count: m.customers_current_month_count,
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                    })
+                  : t.rich("clients.totalOne", {
+                      count: m.customers_current_month_count,
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                    })}
                 {m.churned_customers_count > 0 ? (
                   <>
                     {" "}
-                    <strong className="text-destructive">
-                      {m.churned_customers_count} abonné
-                      {m.churned_customers_count > 1 ? "s ont" : " a"} arrêté
-                    </strong>{" "}
-                    depuis le mois dernier — pense à comprendre pourquoi
-                    (relance, message ?).
+                    {m.churned_customers_count > 1
+                      ? t.rich("clients.churnedMany", {
+                          count: m.churned_customers_count,
+                          strong: (chunks) => <strong className="text-destructive">{chunks}</strong>,
+                        })
+                      : t.rich("clients.churnedOne", {
+                          count: m.churned_customers_count,
+                          strong: (chunks) => <strong className="text-destructive">{chunks}</strong>,
+                        })}
                   </>
                 ) : null}
               </p>
@@ -371,11 +380,11 @@ export default function ComptaDashboard() {
             <Card className="p-5 space-y-3">
               <h3 className="font-semibold flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-amber-500 dark:text-amber-400" />
-                Mes meilleures ventes ce mois-ci
+                {t("topProducts.title")}
               </h3>
               {data.top_products_month.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">
-                  Aucune vente ce mois-ci pour l&apos;instant.
+                  {t("topProducts.empty")}
                 </p>
               ) : (
                 <ol className="space-y-2 text-sm">
@@ -389,7 +398,7 @@ export default function ComptaDashboard() {
                       </span>
                       <span className="text-right shrink-0">
                         <span className="font-semibold tabular-nums">
-                          {formatEur(p.amount_eur_cents)}
+                          {formatEur(p.amount_eur_cents, locale)}
                         </span>
                         <span className="text-xs text-muted-foreground ml-2">
                           ×{p.count}
@@ -404,7 +413,7 @@ export default function ComptaDashboard() {
 
           {/* Jauge TVA franchise (AE) */}
           {data.vat_threshold ? (
-            <VatGaugeCard t={data.vat_threshold} />
+            <VatGaugeCard threshold={data.vat_threshold} />
           ) : null}
         </>
       )}
@@ -412,27 +421,26 @@ export default function ComptaDashboard() {
       <div className="flex items-center justify-end">
         <Button variant="ghost" size="sm" onClick={reload}>
           <RefreshCw className="h-3.5 w-3.5 mr-2" />
-          Rafraîchir
+          {t("refresh")}
         </Button>
       </div>
 
       <p className="text-xs text-muted-foreground text-center px-2">
-        Calculé à partir de tes connexions Stripe / PayPal / Mollie + tes
-        saisies manuelles.{" "}
+        {t("footerComputed")}{" "}
         {data.rates.fetched_at ? (
-          <>
-            Taux de change EUR récupérés via{" "}
-            <a
-              href="https://www.frankfurter.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-foreground inline-flex items-center gap-0.5"
-            >
-              frankfurter.app
-              <ExternalLink className="h-3 w-3" />
-            </a>{" "}
-            (open data BCE).
-          </>
+          t.rich("footerRates", {
+            link: (chunks) => (
+              <a
+                href="https://www.frankfurter.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground inline-flex items-center gap-0.5"
+              >
+                {chunks}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ),
+          })
         ) : null}
       </p>
     </div>
@@ -484,27 +492,30 @@ function RefundCard({
   refundedEurCents: number;
   monthRefundedEurCents: number;
 }) {
+  const t = useTranslations("compta.dashboard");
+  const locale = useLocale();
   const isHigh = ratePct >= 5;
   return (
     <Card className="p-5 space-y-2">
       <div className="flex items-center gap-2 text-muted-foreground">
         <Undo2 className="h-5 w-5" />
-        <span className="text-xs font-medium">Remboursements (depuis janvier)</span>
+        <span className="text-xs font-medium">{t("refunds.label")}</span>
       </div>
       <div className="text-2xl font-bold tabular-nums">
         {ratePct.toFixed(1)} %
       </div>
       <p className={`text-xs ${isHigh ? "text-destructive" : "text-muted-foreground"}`}>
-        {formatEur(refundedEurCents)} remboursés cette année
-        {monthRefundedEurCents > 0 ? (
-          <>
-            {" "}— dont <strong>{formatEur(monthRefundedEurCents)}</strong> ce mois-ci
-          </>
-        ) : null}
+        {t("refunds.refundedThisYear", { amount: formatEur(refundedEurCents, locale) })}
+        {monthRefundedEurCents > 0
+          ? t.rich("refunds.refundedThisMonthSuffix", {
+              amount: formatEur(monthRefundedEurCents, locale),
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })
+          : null}
       </p>
       {isHigh ? (
         <p className="text-xs text-destructive border-t pt-2">
-          Taux élevé — vérifie tes pages de vente ou la qualité de la livraison.
+          {t("refunds.highRateWarning")}
         </p>
       ) : null}
     </Card>
@@ -543,11 +554,12 @@ function MiniStat({
  * ────────────────────────────────────────────────────────────────── */
 
 function DeltaBadge({ value, label }: { value: number | null; label: string }) {
+  const t = useTranslations("compta.dashboard");
   if (value === null) {
     return (
       <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
         <Minus className="h-3 w-3" />
-        Pas de comparaison ({label})
+        {t("delta.noComparison", { label })}
       </p>
     );
   }
@@ -557,7 +569,7 @@ function DeltaBadge({ value, label }: { value: number | null; label: string }) {
     return (
       <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
         <Minus className="h-3 w-3" />
-        Stable {label}
+        {t("delta.stable", { label })}
       </p>
     );
   }
@@ -578,51 +590,52 @@ function DeltaBadge({ value, label }: { value: number | null; label: string }) {
  * Jauge TVA franchise (auto-entrepreneur)
  * ────────────────────────────────────────────────────────────────── */
 
-function VatGaugeCard({ t }: { t: NonNullable<DashboardData["vat_threshold"]> }) {
+function VatGaugeCard({ threshold }: { threshold: NonNullable<DashboardData["vat_threshold"]> }) {
+  const t = useTranslations("compta.dashboard");
+  const locale = useLocale();
   // Suisse = seuil unique (CHF 100'000), pas de "majoré". On adapte
   // la copie en conséquence.
-  const isCH = t.currency === "CHF";
+  const isCH = threshold.currency === "CHF";
   const currencySymbol = isCH ? "CHF" : "€";
   const status = (() => {
-    if (t.over_major) {
+    if (threshold.over_major) {
       return {
         color: "text-destructive",
         bg: "bg-destructive",
         text: isCH
-          ? "Seuil dépassé — assujettissement TVA obligatoire"
-          : "Seuil majoré dépassé — sortie de la franchise immédiate",
+          ? t("vat.statusOverThresholdCH")
+          : t("vat.statusOverMajor"),
       };
     }
-    if (t.over_base) {
+    if (threshold.over_base) {
       return {
         color: "text-destructive",
         bg: "bg-destructive",
         text: isCH
-          ? "Seuil dépassé — assujettissement TVA obligatoire"
-          : "Seuil de base dépassé — passage à la TVA dans les semaines à venir",
+          ? t("vat.statusOverThresholdCH")
+          : t("vat.statusOverBase"),
       };
     }
-    if (t.percent_base >= 80) {
-      return { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500", text: "Attention, tu approches du seuil" };
+    if (threshold.percent_base >= 80) {
+      return { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500", text: t("vat.statusApproaching") };
     }
-    return { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500", text: "Tu es sous le seuil" };
+    return { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500", text: t("vat.statusUnder") };
   })();
 
   return (
     <Card className="p-5 space-y-3">
       <div className="flex items-center gap-2">
         <Gauge className="h-5 w-5 text-primary" />
-        <h3 className="font-semibold">Franchise TVA — où tu en es ?</h3>
+        <h3 className="font-semibold">{t("vat.title")}</h3>
       </div>
       <p className="text-xs text-muted-foreground">
-        Calcul sur tes 12 derniers mois ({t.activity_label}). Tant que tu
-        es en dessous du seuil, tu ne factures pas la TVA à tes clients.
+        {t("vat.description", { activity: threshold.activity_label })}
       </p>
 
       <div className="space-y-1">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-xl font-bold tabular-nums">
-            {Math.round(t.percent_base)}%
+            {Math.round(threshold.percent_base)}%
           </span>
           <span className={`text-sm font-medium ${status.color}`}>
             {status.text}
@@ -631,27 +644,29 @@ function VatGaugeCard({ t }: { t: NonNullable<DashboardData["vat_threshold"]> })
         <div className="h-2.5 rounded-full bg-muted overflow-hidden">
           <div
             className={`h-full ${status.bg} transition-all`}
-            style={{ width: `${Math.min(100, t.percent_base)}%` }}
+            style={{ width: `${Math.min(100, threshold.percent_base)}%` }}
           />
         </div>
         <div className="flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
           <span>
-            {new Intl.NumberFormat("fr-FR").format(Math.round(t.current_eur))} {currencySymbol}
+            {new Intl.NumberFormat(locale).format(Math.round(threshold.current_eur))} {currencySymbol}
           </span>
           <span>
-            seuil : {new Intl.NumberFormat("fr-FR").format(t.base_eur)} {currencySymbol}
+            {t("vat.thresholdLabel", {
+              value: `${new Intl.NumberFormat(locale).format(threshold.base_eur)} ${currencySymbol}`,
+            })}
           </span>
         </div>
       </div>
 
-      {(t.over_base || t.percent_base >= 80) && (
+      {(threshold.over_base || threshold.percent_base >= 80) && (
         <a
           href="https://www.service-public.fr/professionnels-entreprises/vosdroits/F32353"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs text-primary hover:text-primary/80 underline inline-flex items-center gap-0.5"
         >
-          Comment fonctionne la franchise TVA ?
+          {t("vat.helpLink")}
           <ExternalLink className="h-3 w-3" />
         </a>
       )}
@@ -663,8 +678,8 @@ function VatGaugeCard({ t }: { t: NonNullable<DashboardData["vat_threshold"]> })
  * Helpers
  * ────────────────────────────────────────────────────────────────── */
 
-function monthName(d: Date): string {
-  return new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(d);
+function monthName(d: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { month: "long" }).format(d);
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -680,6 +695,8 @@ function SalesAffiliateSplit({
   salesCents: number;
   affiliateCents: number;
 }) {
+  const t = useTranslations("compta.dashboard");
+  const locale = useLocale();
   const total = salesCents + affiliateCents;
   const salesPct = total > 0 ? Math.round((salesCents / total) * 100) : 0;
   const affiliatePct = 100 - salesPct;
@@ -688,27 +705,27 @@ function SalesAffiliateSplit({
     <div className="space-y-2">
       <p className="text-sm font-medium">{label}</p>
       <div className="flex items-baseline gap-2">
-        <span className="text-xl font-bold tabular-nums">{formatEur(total)}</span>
-        <span className="text-xs text-muted-foreground">au total</span>
+        <span className="text-xl font-bold tabular-nums">{formatEur(total, locale)}</span>
+        <span className="text-xs text-muted-foreground">{t("split.total")}</span>
       </div>
       <div className="space-y-1">
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-primary" />
-            Ventes directes
+            {t("split.directSales")}
           </span>
           <span className="tabular-nums">
-            <strong>{formatEur(salesCents)}</strong>{" "}
+            <strong>{formatEur(salesCents, locale)}</strong>{" "}
             <span className="text-muted-foreground">({salesPct} %)</span>
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-500" />
-            Commissions
+            {t("split.commissions")}
           </span>
           <span className="tabular-nums">
-            <strong>{formatEur(affiliateCents)}</strong>{" "}
+            <strong>{formatEur(affiliateCents, locale)}</strong>{" "}
             <span className="text-muted-foreground">({affiliatePct} %)</span>
           </span>
         </div>

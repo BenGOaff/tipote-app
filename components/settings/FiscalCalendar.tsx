@@ -17,6 +17,7 @@
 // "Configuration" du même tab.
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,12 +73,12 @@ const KIND_COLOR: Record<DeadlineKind, string> = {
   des_intra: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200 border-indigo-200 dark:border-indigo-800",
 };
 
-const FRENCH_MONTHS = [
-  "janvier", "février", "mars", "avril", "mai", "juin",
-  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
-];
-
 const DONE_STORAGE_KEY = "tipote-compta-deadlines-done";
+
+function monthName(monthIndex0: number, locale: string): string {
+  // monthIndex0: 0-11
+  return new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(2000, monthIndex0, 1));
+}
 
 function loadDoneIds(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -100,9 +101,9 @@ function saveDoneIds(ids: Set<string>): void {
   }
 }
 
-function formatFrenchDate(ymd: string): { day: number; month: string; year: number } {
+function parseYmd(ymd: string, locale: string): { day: number; month: string; year: number } {
   const [y, m, d] = ymd.split("-").map((s) => parseInt(s, 10));
-  return { day: d, month: FRENCH_MONTHS[m - 1] ?? "", year: y };
+  return { day: d, month: monthName(m - 1, locale), year: y };
 }
 
 function daysUntil(ymd: string, now: Date = new Date()): number {
@@ -113,6 +114,8 @@ function daysUntil(ymd: string, now: Date = new Date()): number {
 }
 
 export function FiscalCalendar() {
+  const t = useTranslations("compta.fiscalCalendar");
+  const locale = useLocale();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
@@ -128,13 +131,13 @@ export function FiscalCalendar() {
         if (cancelled) return;
         const json = await res.json();
         if (!json.ok) {
-          setError(json.error ?? "Erreur lors du chargement des échéances");
+          setError(json.error ?? t("errorLoading"));
           return;
         }
         setDeadlines(json.deadlines ?? []);
         setReason(json.reason ?? null);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Erreur réseau");
+        if (!cancelled) setError(e instanceof Error ? e.message : t("errorNetwork"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -142,7 +145,7 @@ export function FiscalCalendar() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   function toggleDone(id: string): void {
     setDoneIds((prev) => {
@@ -174,7 +177,7 @@ export function FiscalCalendar() {
     return (
       <Card className="p-6 flex items-center gap-3 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Chargement de ton calendrier fiscal…
+        {t("loading")}
       </Card>
     );
   }
@@ -185,7 +188,7 @@ export function FiscalCalendar() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium">Impossible de charger ton calendrier fiscal</p>
+            <p className="text-sm font-medium">{t("loadFailureTitle")}</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>
           </div>
         </div>
@@ -197,8 +200,7 @@ export function FiscalCalendar() {
     return (
       <Card className="p-6">
         <p className="text-sm text-muted-foreground">
-          Le calendrier fiscal n&apos;est disponible que pour les users
-          français pour le moment. Bientôt étendu à BE / CH / CA.
+          {t("countryNotSupported")}
         </p>
       </Card>
     );
@@ -210,12 +212,9 @@ export function FiscalCalendar() {
         <div className="flex items-start gap-3">
           <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium">Configure ton statut pour voir ton calendrier</p>
+            <p className="text-sm font-medium">{t("configureStatusTitle")}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Va dans la section &laquo;&nbsp;Configuration de mon
-              statut&nbsp;&raquo; ci-dessous et choisis particulier,
-              auto-entrepreneur ou SASU. On calculera tes échéances
-              URSSAF / TVA / IR / CFE en fonction.
+              {t("configureStatusBody")}
             </p>
           </div>
         </div>
@@ -227,7 +226,7 @@ export function FiscalCalendar() {
     return (
       <Card className="p-6">
         <p className="text-sm text-muted-foreground">
-          Aucune échéance dans les 12 prochains mois pour ton statut.
+          {t("noDeadlines")}
         </p>
       </Card>
     );
@@ -243,11 +242,9 @@ export function FiscalCalendar() {
             <CalendarDays className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-base font-semibold">Calendrier fiscal</h3>
+            <h3 className="text-base font-semibold">{t("header.title")}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Tes échéances fiscales calculées d&apos;après ton statut.
-              Tipote ne déclare pas pour toi — clique sur l&apos;échéance pour
-              aller sur le site officiel.
+              {t("header.subtitle")}
             </p>
           </div>
         </div>
@@ -257,7 +254,9 @@ export function FiscalCalendar() {
             onClick={() => setShowDone((v) => !v)}
             className="text-xs text-muted-foreground hover:text-foreground underline shrink-0"
           >
-            {showDone ? "Masquer" : "Afficher"} les {totalDone} échéance{totalDone > 1 ? "s" : ""} faite{totalDone > 1 ? "s" : ""}
+            {showDone
+              ? t(totalDone > 1 ? "toggleHideMany" : "toggleHideOne", { count: totalDone })
+              : t(totalDone > 1 ? "toggleShowMany" : "toggleShowOne", { count: totalDone })}
           </button>
         ) : null}
       </div>
@@ -265,7 +264,7 @@ export function FiscalCalendar() {
       <div className="space-y-5">
         {grouped.map(([yearMonth, items]) => {
           const [y, m] = yearMonth.split("-").map((s) => parseInt(s, 10));
-          const monthLabel = `${FRENCH_MONTHS[m - 1] ?? ""} ${y}`;
+          const monthLabel = `${monthName(m - 1, locale)} ${y}`;
           return (
             <div key={yearMonth}>
               <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
@@ -277,7 +276,7 @@ export function FiscalCalendar() {
                   const remaining = daysUntil(d.dueDate);
                   const urgent = remaining <= 7 && remaining >= 0 && !isDone;
                   const overdue = remaining < 0 && !isDone;
-                  const fmt = formatFrenchDate(d.dueDate);
+                  const fmt = parseYmd(d.dueDate, locale);
                   return (
                     <li
                       key={d.id}
@@ -307,11 +306,11 @@ export function FiscalCalendar() {
                           </span>
                           {urgent ? (
                             <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 border bg-amber-200 dark:bg-amber-800/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700">
-                              Dans {remaining} jour{remaining > 1 ? "s" : ""}
+                              {t(remaining > 1 ? "urgentMany" : "urgentOne", { count: remaining })}
                             </span>
                           ) : overdue ? (
                             <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 border bg-red-200 text-red-900 dark:text-red-200 border-red-300 dark:border-red-700">
-                              En retard de {Math.abs(remaining)} jour{Math.abs(remaining) > 1 ? "s" : ""}
+                              {t(Math.abs(remaining) > 1 ? "overdueMany" : "overdueOne", { count: Math.abs(remaining) })}
                             </span>
                           ) : null}
                         </div>
@@ -329,7 +328,7 @@ export function FiscalCalendar() {
                             className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                           >
                             <ExternalLink className="h-3 w-3" />
-                            Aller déclarer sur le site officiel
+                            {t("goToOfficial")}
                           </a>
                           <Button
                             type="button"
@@ -339,7 +338,7 @@ export function FiscalCalendar() {
                             className="h-7 text-xs"
                           >
                             <CheckCircle2 className={`h-3.5 w-3.5 mr-1 ${isDone ? "text-primary" : ""}`} />
-                            {isDone ? "Refaire" : "Marqué comme fait"}
+                            {isDone ? t("redo") : t("markDone")}
                           </Button>
                         </div>
                       </div>

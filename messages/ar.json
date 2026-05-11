@@ -5004,5 +5004,325 @@
     "untitledQuestion": "سؤال بدون عنوان",
     "trendAverage": "المتوسط",
     "trendResponseCount": "إجابة"
+  },
+  "compta": {
+    "revenueGoal": {
+      "loadingFull": "جاري حساب أرقامك…",
+      "loadingCompact": "جاري التحميل…",
+      "title": "هدف {month}: {amount}",
+      "reachedBadge": "تم تحقيقه",
+      "noObjective": {
+        "title": "ليس لديك هدف شهري",
+        "body": "حدد هدف إيرادات حتى يساعدك Tipote على متابعته — كم تريد أن تكسب شهرياً، هذا كل شيء. يمكنك تعديله في أي وقت.",
+        "cta": "تحديد هدفي"
+      },
+      "noTransactions": {
+        "body": "لا توجد مقبوضات مسجلة هذا الشهر بعد. اربط أداة الدفع (Stripe / PayPal / Mollie) أو أضف إدخالات يدوية في تبويب المحاسبة لمتابعة تقدمك مباشرة.",
+        "cta": "إعداد محاسبتي"
+      },
+      "status": {
+        "reached": "🎯 تم بلوغ الهدف! حققت {current} من أصل {target} المتوقعة.",
+        "closeOne": "تبقى {remaining} فقط خلال {days} يوم — قابل للتحقيق.",
+        "closeMany": "تبقى {remaining} فقط خلال {days} يوماً — قابل للتحقيق.",
+        "behindOne": "يتبقى لك {remaining} و{days} يوم فقط. وضع الدفع القوي موصى به.",
+        "behindMany": "يتبقى لك {remaining} و{days} أياماً فقط. وضع الدفع القوي موصى به.",
+        "onTrackOne": "يتبقى لك {remaining} لتحقيقها خلال {days} يوم.",
+        "onTrackMany": "يتبقى لك {remaining} لتحقيقها خلال {days} يوماً."
+      }
+    },
+    "toast": {
+      "errorTitle": "عذراً",
+      "saveFailed": "تعذر الحفظ",
+      "genericError": "خطأ"
+    },
+    "disclaimer": {
+      "headline": "Tipote يساعدك على الاستباق، لا على التصريح.",
+      "body": "تجمع هذه التبويبة مقبوضاتك (Stripe، PayPal، Mollie، Systeme.io…) وتنبهك حول العتبات والاستحقاقات والوثائق التي يجب تحضيرها. <strong>لا يحل محل محاسب·ة، ولا التصاريح الرسمية</strong> على <impots>impots.gouv.fr</impots> و<urssaf>urssaf.fr</urssaf>. تحقق دائماً من أرقامك قبل التصريح."
+    },
+    "configure": {
+      "title": "إعداد محاسبتك",
+      "editTitle": "تعديل إعداداتي",
+      "body": "لمساعدتك على استباق العتبات والاستحقاقات والتصاريح، أخبرني تحت أي وضع تعمل."
+    },
+    "countryGate": {
+      "title": "في أي بلد تعيش؟",
+      "body": "تعتمد المحاسبة على البلد (الأنظمة، العتبات، الروزنامة الضريبية…). اختر بلدك لرؤية المعلومات الصحيحة.",
+      "countryLabel": "بلد الإقامة",
+      "placeholder": "اختر…",
+      "otherLabel": "حدد بلدك",
+      "otherPlaceholder": "مثال: النرويج",
+      "saving": "جاري الحفظ…",
+      "continue": "متابعة"
+    },
+    "unsupported": {
+      "title": "قريباً متوفر لـ {country}",
+      "body": "مساعدة المحاسبة من Tipote متوفرة حالياً فقط لـ: <strong>{countries}</strong>. نفتح البلدان الأخرى بلداً بلداً — بلجيكا، سويسرا، كيبيك، البرتغال، إسبانيا… قادمة.",
+      "noList": "<strong>لا حاجة للتسجيل في قائمة</strong>: ستُبلَّغ عبر البريد فور فتح بلدك، نحدد هويتك تلقائياً.",
+      "wrongCountry": "بلد خاطئ؟ صحح"
+    },
+    "summary": {
+      "myStatus": "وضعي",
+      "edit": "تعديل"
+    },
+    "connections": {
+      "title": "اتصالاتي",
+      "subtitle": "اربط أدوات الدفع الخاصة بك ليتتبع Tipote مقبوضاتك تلقائياً. <strong>اربط فقط ما تستخدمه</strong> — Stripe وحده، PayPal وحده، أو كلاهما إذا كنت تبيع على المنصتين. <strong>نقوم بالمزامنة مرة واحدة يومياً</strong>؛ انقر على الزر أدناه لفرض تحديث فوري.",
+      "loading": "جارٍ تحميل اتصالاتك…",
+      "syncNow": "مزامنة الآن",
+      "connecting": "جارٍ الاتصال…",
+      "cancel": "إلغاء",
+      "comingSoon": "متاح قريباً.",
+      "connect": {
+        "button": "ربط",
+        "stripe": {
+          "label": "ربط Stripe",
+          "description": "يستعيد مقبوضاتك تلقائياً (حتى 24 شهراً من السجل)."
+        },
+        "paypal": {
+          "label": "ربط PayPal",
+          "description": "يستعيد مقبوضات PayPal تلقائياً (حتى 24 شهراً من السجل)."
+        },
+        "mollie": {
+          "label": "ربط Mollie",
+          "description": "يستعيد مقبوضات Mollie تلقائياً (حتى 24 شهراً من السجل)."
+        }
+      },
+      "disconnect": {
+        "button": "قطع الاتصال",
+        "confirm": "هل تريد قطع الاتصال بهذا المصدر؟ يمكنك إعادة الاتصال متى شئت؛ ومعاملاتك المستوردة سابقاً تظل قابلة للاطلاع.",
+        "done": "تم قطع الاتصال"
+      },
+      "status": {
+        "initialSyncing": "جارٍ تنفيذ المزامنة الأولية…",
+        "error": "خطأ — راجع التفاصيل أدناه",
+        "syncedAt": "تمت المزامنة {when}"
+      },
+      "relative": {
+        "never": "أبداً",
+        "justNow": "للتو",
+        "minutesAgo": "منذ {count} دقيقة",
+        "hoursAgo": "منذ {count} ساعة",
+        "daysAgo": "منذ {count} يوم"
+      },
+      "syncToast": {
+        "upToDate": "{count} اتصال محدّث",
+        "noNew": "لا توجد معاملات جديدة",
+        "failed": "{count} اتصال به خطأ — تحقق أدناه",
+        "error": "خطأ في المزامنة"
+      },
+      "errors": {
+        "generic": "خطأ",
+        "unknown": "غير معروف",
+        "network": "خطأ في الشبكة"
+      },
+      "stripeToast": {
+        "connected": "تم ربط Stripe",
+        "initialSync": "جارٍ تنفيذ المزامنة الأولية (24 شهراً). قد يستغرق ذلك بضع ثوانٍ."
+      },
+      "paypalToast": {
+        "connected": "تم ربط PayPal",
+        "initialSync": "جارٍ تنفيذ المزامنة الأولية (24 شهراً). قد يستغرق ذلك بضع دقائق."
+      },
+      "mollieToast": {
+        "connected": "تم ربط Mollie",
+        "initialSync": "جارٍ تنفيذ المزامنة الأولية (24 شهراً). قد يستغرق ذلك بضع دقائق."
+      },
+      "stripeForm": {
+        "heading": "ربط Stripe",
+        "intro": "نحتاج إلى <strong>Restricted Key</strong> للقراءة فقط. تحتفظ بالتحكم الكامل — يمكنك إبطالها في أي وقت من لوحة Stripe الخاصة بك.",
+        "guideTitle": "كيفية إنشاء المفتاح في 30 ثانية:",
+        "step1Prefix": "افتح",
+        "step1Link": "dashboard.stripe.com → Restricted keys → Create",
+        "step2Prefix": "الاسم:",
+        "step3": "صلاحيات <strong>Read</strong> على: <code1>Charges</code1>، <code2>Customers</code2>، <code3>Balance</code3>. كل ما تبقى: None.",
+        "step4": "انسخ المفتاح (يبدأ بـ <code>rk_live_</code>) والصقه أدناه.",
+        "label": "Restricted Key لـ Stripe",
+        "hideKey": "إخفاء المفتاح",
+        "showKey": "إظهار المفتاح",
+        "storedEncrypted": "يُخزَّن مشفّراً (AES-256) لدى Tipote. لا يُعرض أبداً بشكل صريح بعد هذا الإدخال.",
+        "testModeToast": {
+          "title": "تم اكتشاف مفتاح Stripe في وضع الاختبار",
+          "description": "لقد لصقت مفتاحاً من نوع `rk_test_…` أو `sk_test_…`. للإنتاج، استخدم مفتاحاً من نوع `rk_live_…`."
+        }
+      },
+      "paypalForm": {
+        "heading": "ربط PayPal",
+        "intro": "يطلب PayPal <strong>تطبيق مطوّر</strong> مع زوج (Client ID, Secret). تحتفظ بالتحكم — يمكنك إبطال التطبيق في أي وقت من لوحة developer.paypal.com.",
+        "guideTitle": "كيفية إنشاء التطبيق في دقيقة واحدة:",
+        "step1Prefix": "افتح",
+        "step1Link": "developer.paypal.com → Apps & Credentials → Create App",
+        "step2": "الاسم: <code1>Tipote Compta</code1> (لا يقبل PayPal الشَّرَطات ولا الأقواس) — النوع: <code2>Merchant</code2>",
+        "step3": "في صفحة التطبيق: <strong>انزل إلى الأسفل</strong> حتى <em1>Live API features</em1>، و<strong>فعّل</strong> خانة <code>Transaction Search</code>. بدون ذلك، لا يمكننا قراءة السجل. انقر <em2>Save</em2>.",
+        "step4": "انسخ <strong1>Client ID</strong1> و<strong2>Secret</strong2> (عليك النقر على <em>Show</em> لإظهار الـ Secret) والصقهما أدناه.",
+        "modeLabel": "الوضع",
+        "modeLive": "Live (الإنتاج — مبيعات حقيقية)",
+        "modeSandbox": "Sandbox (اختبار — للتحقق من التكامل)",
+        "modeLiveHelp": "وضع الإنتاج: سيقوم Tipote بمزامنة مبيعاتك الحقيقية.",
+        "modeSandboxHelp": "وضع الاختبار: لن تكون المبيعات حقيقية، مفيد للتحقق من الاتصال.",
+        "clientIdLabel": "Client ID",
+        "secretLabel": "Secret",
+        "hideSecret": "إخفاء الـ Secret",
+        "showSecret": "إظهار الـ Secret",
+        "storedEncrypted": "يُخزَّن مشفّراً (AES-256) لدى Tipote. لا يُعرض أبداً بشكل صريح بعد هذا الإدخال."
+      },
+      "mollieForm": {
+        "heading": "ربط Mollie",
+        "intro": "انسخ <strong>Live API key</strong> من لوحة Mollie الخاصة بك. يمكنك إبطالها في أي وقت.",
+        "guideTitle": "كيفية العثور على المفتاح في 30 ثانية:",
+        "step1Prefix": "افتح",
+        "step1Link": "my.mollie.com → Developers → API keys",
+        "step2": "ابحث عن قسم <strong>Live API key</strong>. انقر على أيقونة العين لإظهاره ثم انسخه.",
+        "step3": "الصقه في الحقل أدناه. يبدأ المفتاح بـ <code1>live_</code1> في الإنتاج، و<code2>test_</code2> إن كنت تختبر في الـ sandbox.",
+        "noticeTitle": "للعلم",
+        "noticeBody": "بخلاف Stripe، لا يوفر Mollie مفتاحاً للقراءة فقط — يمنح المفتاح وصولاً كاملاً إلى حسابك في Mollie عبر API. يستخدمه Tipote <strong>للقراءة فقط</strong> لاسترجاع مدفوعاتك. يمكنك إبطاله فوراً من لوحة Mollie لقطع الوصول.",
+        "label": "API key لـ Mollie",
+        "hideKey": "إخفاء المفتاح",
+        "showKey": "إظهار المفتاح",
+        "storedEncrypted": "يُخزَّن مشفّراً (AES-256) لدى Tipote. لا يُعرض أبداً بشكل صريح بعد هذا الإدخال."
+      }
+    },
+    "dashboard": {
+      "loading": "جارٍ حساب أرقامك…",
+      "errorGeneric": "خطأ",
+      "errorNetwork": "خطأ في الشبكة",
+      "loadError": "خطأ في التحميل: {error}",
+      "fxIssue": "أسعار الصرف غير متاحة. تُحتسب المبالغ بالعملات الأجنبية كما هي (1:1 إلى EUR).",
+      "refresh": "تحديث",
+      "footerComputed": "محسوب من اتصالاتك Stripe / PayPal / Mollie + إدخالاتك اليدوية.",
+      "footerRates": "أسعار صرف EUR مأخوذة عبر <link>frankfurter.app</link> (بيانات مفتوحة من BCE).",
+      "noData": {
+        "title": "لا توجد بعد مقبوضات لتحليلها.",
+        "body": "اربط حساب Stripe / PayPal / Mollie أدناه، أو أضف إدخالات يدوية. ستظهر هنا إيراداتك واشتراكاتك وأفضل مبيعاتك بمجرد توفر البيانات."
+      },
+      "stats": {
+        "thisMonthLabel": "هذا الشهر ({month})",
+        "sinceJanuaryLabel": "منذ يناير {year}",
+        "mrrLabel": "الإيرادات المتكررة (الاشتراكات)",
+        "vsSameMonth": "مقارنةً بالشهر نفسه من {year}",
+        "vsSamePeriod": "مقارنةً بالفترة نفسها من {year}",
+        "vsLastMonth": "مقارنةً بالشهر الماضي",
+        "subscribersFooterOne": "{count} عميل مشترك",
+        "subscribersFooterMany": "{count} عميل مشترك",
+        "noSubscription": "لم يُكتشف أي اشتراك"
+      },
+      "chart": {
+        "title": "التطور شهراً بشهر ({current} مقابل {previous})",
+        "subtitle": "لمعرفة هل أنت تتقدم أم تتراجع مقارنةً بالعام الماضي.",
+        "legendCurrent": "السنة الحالية ({year})",
+        "legendPrevious": "السنة السابقة ({year})"
+      },
+      "split": {
+        "title": "المبيعات المباشرة مقابل عمولات الشراكة",
+        "subtitle": "للتمييز بين ما تبيعه بنفسك وما تحصل عليه كعمولة على مبيعات الآخرين.",
+        "thisMonth": "هذا الشهر",
+        "sinceJanuary": "منذ يناير",
+        "total": "إجمالاً",
+        "directSales": "المبيعات المباشرة",
+        "commissions": "العمولات"
+      },
+      "clients": {
+        "title": "عملائي هذا الشهر",
+        "newCustomers": "عملاء جدد",
+        "subscribedCustomers": "عملاء مشتركون",
+        "lostCustomers": "عملاء مفقودون",
+        "churnHint": "{pct} % من المشتركين",
+        "totalOne": "<strong>{count}</strong> عميل إجمالاً هذا الشهر.",
+        "totalMany": "<strong>{count}</strong> عميل إجمالاً هذا الشهر.",
+        "churnedOne": "<strong>{count} مشترك توقف</strong> منذ الشهر الماضي — فكر في فهم السبب (متابعة، رسالة؟).",
+        "churnedMany": "<strong>{count} مشترك توقفوا</strong> منذ الشهر الماضي — فكر في فهم السبب (متابعة، رسالة؟)."
+      },
+      "topProducts": {
+        "title": "أفضل مبيعاتي هذا الشهر",
+        "empty": "لا توجد مبيعات هذا الشهر حتى الآن."
+      },
+      "delta": {
+        "noComparison": "لا توجد مقارنة ({label})",
+        "stable": "مستقر {label}"
+      },
+      "refunds": {
+        "label": "المستردات (منذ يناير)",
+        "refundedThisYear": "{amount} مستردة هذا العام",
+        "refundedThisMonthSuffix": " — منها <strong>{amount}</strong> هذا الشهر",
+        "highRateWarning": "معدل مرتفع — راجع صفحات البيع أو جودة التسليم."
+      },
+      "vat": {
+        "title": "إعفاء TVA — أين تقف؟",
+        "description": "حساب على آخر 12 شهراً ({activity}). ما دمت تحت العتبة، فأنت لا تفرض TVA على عملائك.",
+        "thresholdLabel": "العتبة: {value}",
+        "helpLink": "كيف يعمل إعفاء TVA؟",
+        "statusOverThresholdCH": "تم تجاوز العتبة — الخضوع لـ TVA إلزامي",
+        "statusOverMajor": "تم تجاوز العتبة المرتفعة — خروج فوري من الإعفاء",
+        "statusOverBase": "تم تجاوز العتبة الأساسية — الانتقال إلى TVA خلال الأسابيع المقبلة",
+        "statusApproaching": "انتبه، أنت تقترب من العتبة",
+        "statusUnder": "أنت تحت العتبة"
+      }
+    },
+    "expenseItems": {
+      "title": "المشتريات والمصاريف المهنية",
+      "description": "أدخل فواتير مورديك (متضمنة TVA) لحساب TVA القابلة للخصم وتغذية FEC الخاص بك.",
+      "addButton": "إضافة مصروف",
+      "loading": "جارٍ التحميل…",
+      "emptyState": "لا توجد مصاريف مسجلة. أضف فواتيرك لحساب TVA القابلة للخصم.",
+      "mvpNotice": "MVP: إدخال يدوي فقط. تحميل الفواتير بصيغة PDF/صورة مع القراءة التلقائية (OCR) سيأتي في المرحلة التالية. في غضون ذلك، احتفظ بالمستندات الداعمة تحسباً لطلب السلطات الضريبية.",
+      "vatCollected": "TVA المحصّلة",
+      "vatDeductible": "TVA القابلة للخصم",
+      "vatToPay": "TVA المستحقة الدفع",
+      "vatCredit": "رصيد TVA",
+      "estimated": "تقديري",
+      "sinceJanuary": "منذ يناير",
+      "expensesCount": "{count, plural, one {# مصروف} other {# مصروفات}}",
+      "toastAdded": "تمت إضافة المصروف",
+      "toastUpdated": "تم تحديث المصروف",
+      "toastDeleted": "تم حذف المصروف",
+      "errorInvalidAmount": "أدخل مبلغاً TTC صحيحاً.",
+      "errorSaveFailed": "فشل الحفظ",
+      "errorNetwork": "خطأ في الشبكة",
+      "errorDeleteFailed": "فشل الحذف",
+      "confirmDelete": "هل تريد حذف هذا المصروف؟",
+      "amountTtcLabel": "المبلغ TTC (€)",
+      "vatRateLabel": "معدل TVA (%)",
+      "vatRateZero": "0 % (معفى / خارج النطاق)",
+      "vatDeductibleCalculated": "TVA القابلة للخصم المحسوبة",
+      "categoryLabel": "الفئة",
+      "paidAtLabel": "تاريخ الدفع",
+      "vendorLabel": "المورّد (اختياري)",
+      "vendorPlaceholder": "مثلاً: SNCF، OVH، Google Workspace…",
+      "vendorUnspecified": "(لم يُحدَّد المورّد)",
+      "descriptionLabel": "الوصف (اختياري)",
+      "descriptionPlaceholder": "تفصيل مختصر",
+      "rowSummary": "{date} · TVA {rate}% ({amount} قابلة للخصم)",
+      "ttcLabel": "TTC",
+      "editAriaLabel": "تحرير",
+      "deleteAriaLabel": "حذف",
+      "cancel": "إلغاء",
+      "saving": "جارٍ الحفظ…",
+      "save": "حفظ",
+      "add": "إضافة"
+    },
+    "fiscalCalendar": {
+      "loading": "جارٍ تحميل تقويمك الضريبي…",
+      "loadFailureTitle": "تعذّر تحميل تقويمك الضريبي",
+      "errorLoading": "خطأ أثناء تحميل المواعيد",
+      "errorNetwork": "خطأ في الشبكة",
+      "countryNotSupported": "التقويم الضريبي متاح فقط للمستخدمين الفرنسيين حالياً. سيُوسَّع قريباً ليشمل BE / CH / CA.",
+      "configureStatusTitle": "اضبط وضعك لعرض تقويمك",
+      "configureStatusBody": "اذهب إلى قسم «ضبط وضعي» أدناه واختر فرد، auto-entrepreneur أو SASU. سنحسب مواعيدك URSSAF / TVA / IR / CFE بناءً على ذلك.",
+      "noDeadlines": "لا توجد مواعيد خلال الأشهر الاثني عشر المقبلة لوضعك.",
+      "header": {
+        "title": "التقويم الضريبي",
+        "subtitle": "مواعيدك الضريبية محسوبة بناءً على وضعك. Tipote لا يصرّح بالنيابة عنك — انقر على الموعد للذهاب إلى الموقع الرسمي."
+      },
+      "toggleShowOne": "إظهار الموعد المنجز",
+      "toggleShowMany": "إظهار المواعيد {count} المنجزة",
+      "toggleHideOne": "إخفاء الموعد المنجز",
+      "toggleHideMany": "إخفاء المواعيد {count} المنجزة",
+      "urgentOne": "خلال {count} يوم",
+      "urgentMany": "خلال {count} يوم",
+      "overdueOne": "متأخر بـ {count} يوم",
+      "overdueMany": "متأخر بـ {count} يوم",
+      "goToOfficial": "اذهب للتصريح على الموقع الرسمي",
+      "markDone": "تم وضع علامة منجز",
+      "redo": "إعادة"
+    }
   }
 }
