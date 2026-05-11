@@ -5004,5 +5004,65 @@
     "untitledQuestion": "Question sans titre",
     "trendAverage": "Moyenne",
     "trendResponseCount": "réponses"
+  },
+  "compta": {
+    "revenueGoal": {
+      "loadingFull": "Calcul de tes chiffres en cours…",
+      "loadingCompact": "Chargement…",
+      "title": "Objectif {month} : {amount}",
+      "reachedBadge": "Atteint",
+      "noObjective": {
+        "title": "Tu n'as pas d'objectif mensuel",
+        "body": "Fixe un objectif de revenu pour que Tipote t'aide à le suivre — combien tu veux gagner par mois, c'est tout. Tu pourras le modifier à tout moment.",
+        "cta": "Définir mon objectif"
+      },
+      "noTransactions": {
+        "body": "Pas encore d'encaissement enregistré ce mois-ci. Connecte ton outil de paiement (Stripe / PayPal / Mollie) ou ajoute des saisies manuelles dans l'onglet Compta pour suivre ta progression en temps réel.",
+        "cta": "Configurer ma compta"
+      },
+      "status": {
+        "reached": "🎯 Objectif atteint ! Tu as fait {current} sur les {target} prévus.",
+        "closeOne": "Plus que {remaining} à faire en {days} jour — c'est jouable.",
+        "closeMany": "Plus que {remaining} à faire en {days} jours — c'est jouable.",
+        "behindOne": "Il te reste {remaining} à faire et seulement {days} jour. Mode coup de boost recommandé.",
+        "behindMany": "Il te reste {remaining} à faire et seulement {days} jours. Mode coup de boost recommandé.",
+        "onTrackOne": "Il te reste {remaining} à faire en {days} jour.",
+        "onTrackMany": "Il te reste {remaining} à faire en {days} jours."
+      }
+    },
+    "toast": {
+      "errorTitle": "Oups",
+      "saveFailed": "Impossible d'enregistrer",
+      "genericError": "Erreur"
+    },
+    "disclaimer": {
+      "headline": "Tipote t'aide à anticiper, pas à déclarer.",
+      "body": "Cet onglet agrège tes encaissements (Stripe, PayPal, Mollie, Systeme.io…) et te prévient sur les seuils, échéances et documents à préparer. <strong>Il ne remplace ni un·e comptable, ni les déclarations officielles</strong> sur <impots>impots.gouv.fr</impots> et <urssaf>urssaf.fr</urssaf>. Vérifie toujours tes chiffres avant de déclarer."
+    },
+    "configure": {
+      "title": "Configure ta compta",
+      "editTitle": "Modifier ma configuration",
+      "body": "Pour t'aider à anticiper tes seuils, échéances et déclarations, dis-moi sous quel statut tu exerces."
+    },
+    "countryGate": {
+      "title": "Tu vis dans quel pays ?",
+      "body": "La compta dépend du pays (régimes, seuils, calendrier fiscal…). Choisis le tien pour voir les bonnes infos.",
+      "countryLabel": "Pays de résidence",
+      "placeholder": "Sélectionne…",
+      "otherLabel": "Précise ton pays",
+      "otherPlaceholder": "Ex : Norvège",
+      "saving": "Enregistrement…",
+      "continue": "Continuer"
+    },
+    "unsupported": {
+      "title": "Bientôt disponible pour {country}",
+      "body": "L'aide compta Tipote n'est aujourd'hui disponible que pour : <strong>{countries}</strong>. On ouvre les autres pays un par un — Belgique, Suisse, Québec, Portugal, Espagne… arrivent.",
+      "noList": "<strong>Pas besoin de t'inscrire à une liste</strong> : tu seras prévenu·e par email dès que ton pays est ouvert, on t'identifie automatiquement.",
+      "wrongCountry": "Mauvais pays ? Corriger"
+    },
+    "summary": {
+      "myStatus": "Mon statut",
+      "edit": "Modifier"
+    }
   }
 }

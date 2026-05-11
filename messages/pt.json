@@ -5303,5 +5303,65 @@
     "untitledQuestion": "Pergunta sem título",
     "trendAverage": "Média",
     "trendResponseCount": "respostas"
+  },
+  "compta": {
+    "revenueGoal": {
+      "loadingFull": "A calcular os teus números…",
+      "loadingCompact": "A carregar…",
+      "title": "Objetivo de {month}: {amount}",
+      "reachedBadge": "Atingido",
+      "noObjective": {
+        "title": "Não tens objetivo mensal",
+        "body": "Define um objetivo de receita para o Tipote te ajudar a acompanhá-lo — quanto queres ganhar por mês, é tudo. Podes alterá-lo a qualquer momento.",
+        "cta": "Definir o meu objetivo"
+      },
+      "noTransactions": {
+        "body": "Ainda não há entradas registadas este mês. Liga a tua ferramenta de pagamento (Stripe / PayPal / Mollie) ou adiciona entradas manuais no separador Contabilidade para acompanhar o teu progresso em tempo real.",
+        "cta": "Configurar a minha contabilidade"
+      },
+      "status": {
+        "reached": "🎯 Objetivo atingido! Fizeste {current} dos {target} previstos.",
+        "closeOne": "Faltam apenas {remaining} em {days} dia — é exequível.",
+        "closeMany": "Faltam apenas {remaining} em {days} dias — é exequível.",
+        "behindOne": "Faltam-te {remaining} e só {days} dia. Modo arranque recomendado.",
+        "behindMany": "Faltam-te {remaining} e só {days} dias. Modo arranque recomendado.",
+        "onTrackOne": "Faltam-te {remaining} a fazer em {days} dia.",
+        "onTrackMany": "Faltam-te {remaining} a fazer em {days} dias."
+      }
+    },
+    "toast": {
+      "errorTitle": "Oops",
+      "saveFailed": "Não foi possível guardar",
+      "genericError": "Erro"
+    },
+    "disclaimer": {
+      "headline": "O Tipote ajuda-te a antecipar, não a declarar.",
+      "body": "Este separador agrega as tuas entradas (Stripe, PayPal, Mollie, Systeme.io…) e avisa-te sobre limiares, prazos e documentos a preparar. <strong>Não substitui um·a contabilista, nem as declarações oficiais</strong> em <impots>impots.gouv.fr</impots> e <urssaf>urssaf.fr</urssaf>. Verifica sempre os teus números antes de declarar."
+    },
+    "configure": {
+      "title": "Configura a tua contabilidade",
+      "editTitle": "Alterar a minha configuração",
+      "body": "Para te ajudar a antecipar os teus limiares, prazos e declarações, diz-me sob que estatuto trabalhas."
+    },
+    "countryGate": {
+      "title": "Em que país vives?",
+      "body": "A contabilidade depende do país (regimes, limiares, calendário fiscal…). Escolhe o teu para ver as informações certas.",
+      "countryLabel": "País de residência",
+      "placeholder": "Seleciona…",
+      "otherLabel": "Especifica o teu país",
+      "otherPlaceholder": "Ex.: Noruega",
+      "saving": "A guardar…",
+      "continue": "Continuar"
+    },
+    "unsupported": {
+      "title": "Em breve para {country}",
+      "body": "A ajuda contabilística do Tipote está hoje disponível apenas para: <strong>{countries}</strong>. Abrimos os outros países um a um — Bélgica, Suíça, Quebeque, Portugal, Espanha… estão a caminho.",
+      "noList": "<strong>Não precisas de te inscrever numa lista</strong>: serás avisado·a por email assim que o teu país for aberto, identificamos-te automaticamente.",
+      "wrongCountry": "País errado? Corrigir"
+    },
+    "summary": {
+      "myStatus": "O meu estatuto",
+      "edit": "Alterar"
+    }
   }
 }

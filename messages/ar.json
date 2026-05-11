@@ -5004,5 +5004,65 @@
     "untitledQuestion": "سؤال بدون عنوان",
     "trendAverage": "المتوسط",
     "trendResponseCount": "إجابة"
+  },
+  "compta": {
+    "revenueGoal": {
+      "loadingFull": "جاري حساب أرقامك…",
+      "loadingCompact": "جاري التحميل…",
+      "title": "هدف {month}: {amount}",
+      "reachedBadge": "تم تحقيقه",
+      "noObjective": {
+        "title": "ليس لديك هدف شهري",
+        "body": "حدد هدف إيرادات حتى يساعدك Tipote على متابعته — كم تريد أن تكسب شهرياً، هذا كل شيء. يمكنك تعديله في أي وقت.",
+        "cta": "تحديد هدفي"
+      },
+      "noTransactions": {
+        "body": "لا توجد مقبوضات مسجلة هذا الشهر بعد. اربط أداة الدفع (Stripe / PayPal / Mollie) أو أضف إدخالات يدوية في تبويب المحاسبة لمتابعة تقدمك مباشرة.",
+        "cta": "إعداد محاسبتي"
+      },
+      "status": {
+        "reached": "🎯 تم بلوغ الهدف! حققت {current} من أصل {target} المتوقعة.",
+        "closeOne": "تبقى {remaining} فقط خلال {days} يوم — قابل للتحقيق.",
+        "closeMany": "تبقى {remaining} فقط خلال {days} يوماً — قابل للتحقيق.",
+        "behindOne": "يتبقى لك {remaining} و{days} يوم فقط. وضع الدفع القوي موصى به.",
+        "behindMany": "يتبقى لك {remaining} و{days} أياماً فقط. وضع الدفع القوي موصى به.",
+        "onTrackOne": "يتبقى لك {remaining} لتحقيقها خلال {days} يوم.",
+        "onTrackMany": "يتبقى لك {remaining} لتحقيقها خلال {days} يوماً."
+      }
+    },
+    "toast": {
+      "errorTitle": "عذراً",
+      "saveFailed": "تعذر الحفظ",
+      "genericError": "خطأ"
+    },
+    "disclaimer": {
+      "headline": "Tipote يساعدك على الاستباق، لا على التصريح.",
+      "body": "تجمع هذه التبويبة مقبوضاتك (Stripe، PayPal، Mollie، Systeme.io…) وتنبهك حول العتبات والاستحقاقات والوثائق التي يجب تحضيرها. <strong>لا يحل محل محاسب·ة، ولا التصاريح الرسمية</strong> على <impots>impots.gouv.fr</impots> و<urssaf>urssaf.fr</urssaf>. تحقق دائماً من أرقامك قبل التصريح."
+    },
+    "configure": {
+      "title": "إعداد محاسبتك",
+      "editTitle": "تعديل إعداداتي",
+      "body": "لمساعدتك على استباق العتبات والاستحقاقات والتصاريح، أخبرني تحت أي وضع تعمل."
+    },
+    "countryGate": {
+      "title": "في أي بلد تعيش؟",
+      "body": "تعتمد المحاسبة على البلد (الأنظمة، العتبات، الروزنامة الضريبية…). اختر بلدك لرؤية المعلومات الصحيحة.",
+      "countryLabel": "بلد الإقامة",
+      "placeholder": "اختر…",
+      "otherLabel": "حدد بلدك",
+      "otherPlaceholder": "مثال: النرويج",
+      "saving": "جاري الحفظ…",
+      "continue": "متابعة"
+    },
+    "unsupported": {
+      "title": "قريباً متوفر لـ {country}",
+      "body": "مساعدة المحاسبة من Tipote متوفرة حالياً فقط لـ: <strong>{countries}</strong>. نفتح البلدان الأخرى بلداً بلداً — بلجيكا، سويسرا، كيبيك، البرتغال، إسبانيا… قادمة.",
+      "noList": "<strong>لا حاجة للتسجيل في قائمة</strong>: ستُبلَّغ عبر البريد فور فتح بلدك، نحدد هويتك تلقائياً.",
+      "wrongCountry": "بلد خاطئ؟ صحح"
+    },
+    "summary": {
+      "myStatus": "وضعي",
+      "edit": "تعديل"
+    }
   }
 }

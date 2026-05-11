@@ -4,15 +4,12 @@
 // Affichable sur Aujourd'hui, Stratégie, Compta — partout où l'user
 // a besoin de voir d'un coup d'œil sa progression.
 //
-// 3 modes :
-//   • initial="data" → on fetch /api/business/monthly-summary à mount
-//   • initial=<summary> → données injectées par le parent (server-side
-//     fetch déjà fait → pas de roundtrip réseau côté client)
-//
-// Vocabulaire 100% naturel : "il te reste 4 774 € à faire en 14 jours"
-// plutôt que "objective progress 52% YTD delta vs LY".
+// I18N: tous les strings passent par next-intl (namespace `compta.revenueGoal`).
+// formatEur + monthName utilisent useLocale() pour respecter la locale
+// affichée par l'utilisateur (date + devise localisées).
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -45,8 +42,8 @@ interface Props {
   variant?: "full" | "compact";
 }
 
-function formatEur(amount: number): string {
-  return new Intl.NumberFormat("fr-FR", {
+function formatEur(amount: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 0,
@@ -54,11 +51,13 @@ function formatEur(amount: number): string {
   }).format(amount);
 }
 
-function monthName(): string {
-  return new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(new Date());
+function monthName(locale: string): string {
+  return new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date());
 }
 
 export default function RevenueGoalProgress({ initial, variant = "full" }: Props) {
+  const t = useTranslations("compta.revenueGoal");
+  const locale = useLocale();
   const [summary, setSummary] = useState<RevenueSummary | null>(initial ?? null);
   const [loading, setLoading] = useState(!initial);
 
@@ -83,12 +82,12 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
     return variant === "full" ? (
       <Card className="p-5 flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Calcul de tes chiffres en cours…
+        {t("loadingFull")}
       </Card>
     ) : (
       <div className="text-xs text-muted-foreground flex items-center gap-2">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Chargement…
+        {t("loadingCompact")}
       </div>
     );
   }
@@ -103,17 +102,15 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
         <div className="flex items-start gap-3">
           <Target className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold">Tu n&apos;as pas d&apos;objectif mensuel</h3>
+            <h3 className="font-semibold">{t("noObjective.title")}</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Fixe un objectif de revenu pour que Tipote t&apos;aide à
-              le suivre — combien tu veux gagner par mois, c&apos;est
-              tout. Tu pourras le modifier à tout moment.
+              {t("noObjective.body")}
             </p>
           </div>
         </div>
         <Button asChild variant="outline" size="sm">
           <Link href="/settings?tab=positioning">
-            Définir mon objectif
+            {t("noObjective.cta")}
             <ArrowRight className="h-3.5 w-3.5 ml-2" />
           </Link>
         </Button>
@@ -130,19 +127,16 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
           <Target className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold">
-              Objectif {monthName()} : {formatEur(summary.objective_eur)}
+              {t("title", { month: monthName(locale), amount: formatEur(summary.objective_eur, locale) })}
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Pas encore d&apos;encaissement enregistré ce mois-ci.
-              Connecte ton outil de paiement (Stripe / PayPal / Mollie)
-              ou ajoute des saisies manuelles dans l&apos;onglet Compta
-              pour suivre ta progression en temps réel.
+              {t("noTransactions.body")}
             </p>
           </div>
         </div>
         <Button asChild variant="outline" size="sm">
           <Link href="/settings?tab=compta">
-            Configurer ma compta
+            {t("noTransactions.cta")}
             <ArrowRight className="h-3.5 w-3.5 ml-2" />
           </Link>
         </Button>
@@ -156,8 +150,8 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
   const isClose = pct >= 80;
   const isBehind = pct < 50 && summary.days_remaining_in_month <= 10;
   const remaining = summary.remaining_eur ?? 0;
+  const days = summary.days_remaining_in_month;
 
-  // Couleur selon l'état
   const barColor = isReached
     ? "bg-emerald-500"
     : isClose
@@ -166,16 +160,27 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
         ? "bg-amber-500"
         : "bg-primary";
 
-  // Message contextuel
   let mainMessage: string;
   if (isReached) {
-    mainMessage = `🎯 Objectif atteint ! Tu as fait ${formatEur(summary.current_month_eur)} sur les ${formatEur(summary.objective_eur)} prévus.`;
+    mainMessage = t("status.reached", {
+      current: formatEur(summary.current_month_eur, locale),
+      target: formatEur(summary.objective_eur, locale),
+    });
   } else if (isClose) {
-    mainMessage = `Plus que ${formatEur(remaining)} à faire en ${summary.days_remaining_in_month} jour${summary.days_remaining_in_month > 1 ? "s" : ""} — c&apos;est jouable.`;
+    mainMessage = t(days > 1 ? "status.closeMany" : "status.closeOne", {
+      remaining: formatEur(remaining, locale),
+      days,
+    });
   } else if (isBehind) {
-    mainMessage = `Il te reste ${formatEur(remaining)} à faire et seulement ${summary.days_remaining_in_month} jour${summary.days_remaining_in_month > 1 ? "s" : ""}. Mode coup de boost recommandé.`;
+    mainMessage = t(days > 1 ? "status.behindMany" : "status.behindOne", {
+      remaining: formatEur(remaining, locale),
+      days,
+    });
   } else {
-    mainMessage = `Il te reste ${formatEur(remaining)} à faire en ${summary.days_remaining_in_month} jour${summary.days_remaining_in_month > 1 ? "s" : ""}.`;
+    mainMessage = t(days > 1 ? "status.onTrackMany" : "status.onTrackOne", {
+      remaining: formatEur(remaining, locale),
+      days,
+    });
   }
 
   if (variant === "compact") {
@@ -183,9 +188,9 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-sm font-semibold tabular-nums">
-            {formatEur(summary.current_month_eur)}{" "}
+            {formatEur(summary.current_month_eur, locale)}{" "}
             <span className="text-xs text-muted-foreground font-normal">
-              / {formatEur(summary.objective_eur)}
+              / {formatEur(summary.objective_eur, locale)}
             </span>
           </span>
           <span className="text-xs font-medium text-muted-foreground">
@@ -209,15 +214,15 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
           <Target className={`h-5 w-5 shrink-0 mt-0.5 ${isReached ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`} />
           <div>
             <h3 className="font-semibold">
-              Objectif {monthName()} : {formatEur(summary.objective_eur)}
+              {t("title", { month: monthName(locale), amount: formatEur(summary.objective_eur, locale) })}
             </h3>
-            <p className="text-sm text-muted-foreground mt-1" dangerouslySetInnerHTML={{ __html: mainMessage }} />
+            <p className="text-sm text-muted-foreground mt-1">{mainMessage}</p>
           </div>
         </div>
         {isReached ? (
           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2 py-0.5 inline-flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
-            Atteint
+            {t("reachedBadge")}
           </span>
         ) : null}
       </div>
@@ -225,7 +230,7 @@ export default function RevenueGoalProgress({ initial, variant = "full" }: Props
       <div className="space-y-1.5">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-2xl font-bold tabular-nums">
-            {formatEur(summary.current_month_eur)}
+            {formatEur(summary.current_month_eur, locale)}
           </span>
           <span className="text-sm font-medium text-muted-foreground tabular-nums">
             {Math.round(pct)} %

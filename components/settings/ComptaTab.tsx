@@ -16,6 +16,7 @@
 // porte d'entrée et on collecte les infos nécessaires.
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -66,6 +67,7 @@ interface Props {
 }
 
 export default function ComptaTab({ profile, onProfileUpdated }: Props) {
+  const t = useTranslations("compta");
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const { toast } = useToast();
@@ -95,15 +97,15 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
           const json = (await res.json().catch(() => null)) as
             | { ok?: boolean; profile?: ComptaProfileSlice; error?: string }
             | null;
-          if (!json?.ok) throw new Error(json?.error ?? "Erreur");
+          if (!json?.ok) throw new Error(json?.error ?? t("toast.genericError"));
           if (json.profile) {
             onProfileUpdated({ ...emptyComptaSlice(), ...json.profile });
           }
           setEditing(false);
         } catch (e) {
           toast({
-            title: "Oups",
-            description: e instanceof Error ? e.message : "Impossible d'enregistrer",
+            title: t("toast.errorTitle"),
+            description: e instanceof Error ? e.message : t("toast.saveFailed"),
             variant: "destructive",
           });
         } finally {
@@ -134,11 +136,10 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
             <Sparkles className="h-6 w-6 text-primary shrink-0 mt-0.5" />
             <div>
               <h3 className="font-semibold text-lg">
-                {editing ? "Modifier ma configuration" : "Configure ta compta"}
+                {editing ? t("configure.editTitle") : t("configure.title")}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Pour t&apos;aider à anticiper tes seuils, échéances et
-                déclarations, dis-moi sous quel statut tu exerces.
+                {t("configure.body")}
               </p>
             </div>
           </div>
@@ -162,36 +163,39 @@ export default function ComptaTab({ profile, onProfileUpdated }: Props) {
  * ────────────────────────────────────────────────────────────────── */
 
 function DisclaimerBanner() {
+  const t = useTranslations("compta.disclaimer");
   return (
     <Card className="p-6 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
       <div className="flex items-start gap-3">
         <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-semibold text-amber-900 dark:text-amber-200 text-sm">
-            Tipote t&apos;aide à anticiper, pas à déclarer.
+            {t("headline")}
           </p>
           <p className="text-sm text-amber-900/80 leading-relaxed">
-            Cet onglet agrège tes encaissements (Stripe, PayPal, Mollie,
-            Systeme.io…) et te prévient sur les seuils, échéances et
-            documents à préparer. <strong>Il ne remplace ni un·e
-            comptable, ni les déclarations officielles</strong> sur{" "}
-            <a
-              href="https://www.impots.gouv.fr"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-amber-700"
-            >
-              impots.gouv.fr
-            </a>{" "}
-            et{" "}
-            <a
-              href="https://www.urssaf.fr"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-amber-700"
-            >
-              urssaf.fr
-            </a>. Vérifie toujours tes chiffres avant de déclarer.
+            {t.rich("body", {
+              strong: (chunks) => <strong>{chunks}</strong>,
+              impots: (chunks) => (
+                <a
+                  href="https://www.impots.gouv.fr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-amber-700"
+                >
+                  {chunks}
+                </a>
+              ),
+              urssaf: (chunks) => (
+                <a
+                  href="https://www.urssaf.fr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-amber-700"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         </div>
       </div>
@@ -210,6 +214,7 @@ function CountryGateForm({
   pending: boolean;
   onSave: (country: string) => void;
 }) {
+  const t = useTranslations("compta.countryGate");
   const [draft, setDraft] = useState("");
   const [otherText, setOtherText] = useState("");
 
@@ -225,17 +230,14 @@ function CountryGateForm({
       <div className="flex items-start gap-3">
         <Globe className="h-6 w-6 text-primary shrink-0 mt-0.5" />
         <div>
-          <h3 className="font-semibold text-lg">Tu vis dans quel pays ?</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            La compta dépend du pays (régimes, seuils, calendrier
-            fiscal…). Choisis le tien pour voir les bonnes infos.
-          </p>
+          <h3 className="font-semibold text-lg">{t("title")}</h3>
+          <p className="text-sm text-muted-foreground mt-1">{t("body")}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="compta-country">Pays de résidence</Label>
+          <Label htmlFor="compta-country">{t("countryLabel")}</Label>
           <select
             id="compta-country"
             value={draft}
@@ -244,7 +246,7 @@ function CountryGateForm({
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             required
           >
-            <option value="">Sélectionne…</option>
+            <option value="">{t("placeholder")}</option>
             {COUNTRY_OPTIONS.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.label}
@@ -255,14 +257,14 @@ function CountryGateForm({
 
         {draft === "Autre" ? (
           <div className="space-y-2">
-            <Label htmlFor="compta-country-other">Précise ton pays</Label>
+            <Label htmlFor="compta-country-other">{t("otherLabel")}</Label>
             <Input
               id="compta-country-other"
               type="text"
               value={otherText}
               onChange={(e) => setOtherText(e.target.value)}
               disabled={pending}
-              placeholder="Ex : Norvège"
+              placeholder={t("otherPlaceholder")}
               required
               maxLength={120}
             />
@@ -273,10 +275,10 @@ function CountryGateForm({
           {pending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Enregistrement…
+              {t("saving")}
             </>
           ) : (
-            "Continuer"
+            t("continue")
           )}
         </Button>
       </form>
@@ -297,6 +299,7 @@ function UnsupportedCountry({
   pending: boolean;
   onSave: (country: string) => void;
 }) {
+  const t = useTranslations("compta.unsupported");
   const [editing, setEditing] = useState(false);
   const supportedLabels = SUPPORTED_COUNTRIES.map((c) => c.label).join(", ");
 
@@ -305,19 +308,17 @@ function UnsupportedCountry({
       <div className="flex items-start gap-3">
         <Globe className="h-6 w-6 text-muted-foreground shrink-0 mt-0.5" />
         <div>
-          <h3 className="font-semibold text-lg">
-            Bientôt disponible pour {country}
-          </h3>
+          <h3 className="font-semibold text-lg">{t("title", { country })}</h3>
           <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-            L&apos;aide compta Tipote n&apos;est aujourd&apos;hui
-            disponible que pour : <strong>{supportedLabels}</strong>.
-            On ouvre les autres pays un par un — Belgique, Suisse,
-            Québec, Portugal, Espagne… arrivent.
+            {t.rich("body", {
+              countries: supportedLabels,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
           <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-            <strong>Pas besoin de t&apos;inscrire à une liste</strong> :
-            tu seras prévenu·e par email dès que ton pays est ouvert,
-            on t&apos;identifie automatiquement.
+            {t.rich("noList", {
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
         </div>
       </div>
@@ -331,7 +332,7 @@ function UnsupportedCountry({
             onClick={() => setEditing(true)}
             className="text-xs text-muted-foreground underline hover:text-foreground"
           >
-            Mauvais pays ? Corriger
+            {t("wrongCountry")}
           </button>
         )}
       </div>
@@ -350,6 +351,7 @@ function ConfiguredSummary({
   slice: ComptaProfileSlice;
   onEdit: () => void;
 }) {
+  const t = useTranslations("compta.summary");
   const status = slice.accounting_status as AccountingStatus;
   return (
     <div className="space-y-4">
@@ -357,13 +359,13 @@ function ConfiguredSummary({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
-              Mon statut
+              {t("myStatus")}
             </p>
             <h3 className="font-semibold text-lg mt-1">{statusLabel(status)}</h3>
           </div>
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5 mr-2" />
-            Modifier
+            {t("edit")}
           </Button>
         </div>
         <SummaryDetails slice={slice} />

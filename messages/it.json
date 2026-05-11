@@ -5004,5 +5004,65 @@
     "untitledQuestion": "Domanda senza titolo",
     "trendAverage": "Media",
     "trendResponseCount": "risposte"
+  },
+  "compta": {
+    "revenueGoal": {
+      "loadingFull": "Calcolo dei tuoi numeri in corso…",
+      "loadingCompact": "Caricamento…",
+      "title": "Obiettivo {month}: {amount}",
+      "reachedBadge": "Raggiunto",
+      "noObjective": {
+        "title": "Non hai un obiettivo mensile",
+        "body": "Fissa un obiettivo di fatturato così che Tipote possa aiutarti a seguirlo — quanto vuoi guadagnare al mese, tutto qui. Puoi modificarlo in qualsiasi momento.",
+        "cta": "Definisci il mio obiettivo"
+      },
+      "noTransactions": {
+        "body": "Nessun incasso registrato questo mese. Collega il tuo strumento di pagamento (Stripe / PayPal / Mollie) o aggiungi voci manuali nella scheda Contabilità per seguire il tuo progresso in tempo reale.",
+        "cta": "Configura la mia contabilità"
+      },
+      "status": {
+        "reached": "🎯 Obiettivo raggiunto! Hai fatto {current} sui {target} previsti.",
+        "closeOne": "Mancano {remaining} in {days} giorno — è fattibile.",
+        "closeMany": "Mancano {remaining} in {days} giorni — è fattibile.",
+        "behindOne": "Ti restano {remaining} e solo {days} giorno. Serve uno scatto.",
+        "behindMany": "Ti restano {remaining} e solo {days} giorni. Serve uno scatto.",
+        "onTrackOne": "Ti restano {remaining} da fare in {days} giorno.",
+        "onTrackMany": "Ti restano {remaining} da fare in {days} giorni."
+      }
+    },
+    "toast": {
+      "errorTitle": "Ops",
+      "saveFailed": "Impossibile salvare",
+      "genericError": "Errore"
+    },
+    "disclaimer": {
+      "headline": "Tipote ti aiuta ad anticipare, non a dichiarare.",
+      "body": "Questa scheda aggrega i tuoi incassi (Stripe, PayPal, Mollie, Systeme.io…) e ti avvisa su soglie, scadenze e documenti da preparare. <strong>Non sostituisce un·a commercialista, né le dichiarazioni ufficiali</strong> su <impots>impots.gouv.fr</impots> e <urssaf>urssaf.fr</urssaf>. Verifica sempre i tuoi numeri prima di dichiarare."
+    },
+    "configure": {
+      "title": "Configura la tua contabilità",
+      "editTitle": "Modifica la mia configurazione",
+      "body": "Per aiutarti ad anticipare soglie, scadenze e dichiarazioni, dimmi sotto quale regime operi."
+    },
+    "countryGate": {
+      "title": "In quale paese vivi?",
+      "body": "La contabilità dipende dal paese (regimi, soglie, calendario fiscale…). Scegli il tuo per vedere le informazioni giuste.",
+      "countryLabel": "Paese di residenza",
+      "placeholder": "Seleziona…",
+      "otherLabel": "Specifica il tuo paese",
+      "otherPlaceholder": "Es.: Norvegia",
+      "saving": "Salvataggio…",
+      "continue": "Continua"
+    },
+    "unsupported": {
+      "title": "Presto disponibile per {country}",
+      "body": "L'aiuto contabile di Tipote è oggi disponibile solo per: <strong>{countries}</strong>. Apriamo gli altri paesi uno a uno — Belgio, Svizzera, Québec, Portogallo, Spagna… stanno arrivando.",
+      "noList": "<strong>Non serve iscriversi a una lista</strong>: ti avviseremo via email appena il tuo paese sarà aperto, ti identifichiamo automaticamente.",
+      "wrongCountry": "Paese sbagliato? Correggi"
+    },
+    "summary": {
+      "myStatus": "Il mio regime",
+      "edit": "Modifica"
+    }
   }
 }

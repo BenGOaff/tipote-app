@@ -5004,5 +5004,65 @@
     "untitledQuestion": "Untitled question",
     "trendAverage": "Average",
     "trendResponseCount": "responses"
+  },
+  "compta": {
+    "revenueGoal": {
+      "loadingFull": "Crunching your numbers…",
+      "loadingCompact": "Loading…",
+      "title": "{month} goal: {amount}",
+      "reachedBadge": "Reached",
+      "noObjective": {
+        "title": "You haven't set a monthly goal",
+        "body": "Set a revenue target so Tipote can help you track it — just how much you want to earn per month. You can change it anytime.",
+        "cta": "Set my goal"
+      },
+      "noTransactions": {
+        "body": "No income recorded yet this month. Connect your payment tool (Stripe / PayPal / Mollie) or add manual entries in the Accounting tab to track your progress in real time.",
+        "cta": "Set up accounting"
+      },
+      "status": {
+        "reached": "🎯 Goal reached! You earned {current} of the {target} planned.",
+        "closeOne": "Just {remaining} to go in {days} day — you've got this.",
+        "closeMany": "Just {remaining} to go in {days} days — you've got this.",
+        "behindOne": "You have {remaining} left and only {days} day. Time for a push.",
+        "behindMany": "You have {remaining} left and only {days} days. Time for a push.",
+        "onTrackOne": "You have {remaining} left to earn in {days} day.",
+        "onTrackMany": "You have {remaining} left to earn in {days} days."
+      }
+    },
+    "toast": {
+      "errorTitle": "Oops",
+      "saveFailed": "Couldn't save",
+      "genericError": "Error"
+    },
+    "disclaimer": {
+      "headline": "Tipote helps you anticipate, not declare.",
+      "body": "This tab aggregates your income (Stripe, PayPal, Mollie, Systeme.io…) and warns you about thresholds, deadlines and documents to prepare. <strong>It doesn't replace an accountant, nor official filings</strong> on <impots>impots.gouv.fr</impots> and <urssaf>urssaf.fr</urssaf>. Always double-check your numbers before filing."
+    },
+    "configure": {
+      "title": "Set up your accounting",
+      "editTitle": "Edit my configuration",
+      "body": "To help you anticipate thresholds, deadlines and filings, tell me under which status you operate."
+    },
+    "countryGate": {
+      "title": "Which country do you live in?",
+      "body": "Accounting depends on the country (regimes, thresholds, fiscal calendar…). Pick yours to see the right info.",
+      "countryLabel": "Country of residence",
+      "placeholder": "Select…",
+      "otherLabel": "Specify your country",
+      "otherPlaceholder": "e.g. Norway",
+      "saving": "Saving…",
+      "continue": "Continue"
+    },
+    "unsupported": {
+      "title": "Coming soon for {country}",
+      "body": "Tipote's accounting help is currently available for: <strong>{countries}</strong>. We're rolling out other countries one by one — Belgium, Switzerland, Quebec, Portugal, Spain… are on the way.",
+      "noList": "<strong>No need to sign up to a waitlist</strong>: you'll be notified by email as soon as your country is opened, we identify you automatically.",
+      "wrongCountry": "Wrong country? Fix it"
+    },
+    "summary": {
+      "myStatus": "My status",
+      "edit": "Edit"
+    }
   }
 }
