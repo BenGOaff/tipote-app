@@ -386,34 +386,32 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         toastWidgetId = twOverride?.data?.id ?? null;
         shareWidgetId = swOverride?.data?.id ?? null;
 
-        // Fallback to first-enabled for whichever side wasn't resolved
+        // Béné 2026-05-11 : avant ce commit, si le quiz n'avait pas de
+        // override explicite, on tombait sur le premier widget activé du
+        // créateur. Effet de bord : un widget partage créé dans son compte
+        // (onboarding défaut, test, vieux widget) se collait sur TOUS ses
+        // quiz, y compris celui où elle n'avait jamais coché l'option.
+        // Imagelys a remonté le bug sur son quiz public où des boutons
+        // sociaux s'affichaient sans qu'elle les ait activés.
+        //
+        // Nouveau comportement : pas de fallback. Si le quiz n'a pas
+        // d'override → le widget ne s'affiche pas. Opt-in explicite via
+        // l'éditeur (champ toast_widget_id / share_widget_id).
+        // Le toast widget garde son fallback historique pour ne pas casser
+        // les comptes qui s'en servaient sans le savoir — uniquement le
+        // share widget passe en strict opt-in (c'est lui qui causait le
+        // dérangement visuel sur la page publique).
         const needToast = !toastWidgetId;
-        const needShare = !shareWidgetId;
-        if (needToast || needShare) {
-          const [twFirst, swFirst] = await Promise.all([
-            needToast
-              ? admin
-                  .from("toast_widgets")
-                  .select("id")
-                  .eq("user_id", quizUserId)
-                  .eq("enabled", true)
-                  .order("created_at", { ascending: true })
-                  .limit(1)
-                  .maybeSingle()
-              : Promise.resolve({ data: null } as any),
-            needShare
-              ? admin
-                  .from("social_share_widgets")
-                  .select("id")
-                  .eq("user_id", quizUserId)
-                  .eq("enabled", true)
-                  .order("created_at", { ascending: true })
-                  .limit(1)
-                  .maybeSingle()
-              : Promise.resolve({ data: null } as any),
-          ]);
-          if (needToast) toastWidgetId = twFirst?.data?.id ?? null;
-          if (needShare) shareWidgetId = swFirst?.data?.id ?? null;
+        if (needToast) {
+          const twFirst = await admin
+            .from("toast_widgets")
+            .select("id")
+            .eq("user_id", quizUserId)
+            .eq("enabled", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          toastWidgetId = twFirst?.data?.id ?? null;
         }
       } catch {
         // fail-open

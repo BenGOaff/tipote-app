@@ -1251,7 +1251,17 @@ export default function PublicQuizClient({
   // Tipote widget overlays (toast social proof + social share) — fixed-position,
   // rendered above the quiz content on every step after data is loaded.
   const toastOverlay = toastWidgetId ? <ToastNotificationOverlay widgetId={toastWidgetId} /> : null;
-  const shareOverlay = shareWidgetId ? <SocialShareOverlay widgetId={shareWidgetId} /> : null;
+  // Social share buttons are only meaningful AFTER the visitor sees their
+  // result (or unlocks the bonus by sharing) — showing them on intro / quiz
+  // / email steps is noise that distracts from the funnel. We render the
+  // overlay only when the visitor has reached the share-relevant stages.
+  // Béné 2026-05-11 : retours utilisatrice qui voyait les boutons dès
+  // l'intro sans les avoir activés (cf. fix amont sur l'API qui retire le
+  // fallback auto vers le premier widget activé du compte créateur).
+  const shareOverlay =
+    shareWidgetId && (step === "bonus" || step === "result")
+      ? <SocialShareOverlay widgetId={shareWidgetId} />
+      : null;
 
   if (loading) {
     return (
