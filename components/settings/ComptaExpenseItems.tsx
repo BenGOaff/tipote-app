@@ -10,6 +10,7 @@
 // l'user voie tout de suite l'impact.
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -51,8 +52,8 @@ interface Totals {
   total_ht_cents: number;
 }
 
-function formatEUR(cents: number): string {
-  return new Intl.NumberFormat("fr-FR", {
+function formatEUR(cents: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
   }).format(cents / 100);
@@ -71,6 +72,8 @@ function liveVatDeductible(ttcCents: number, rate: number): number {
 }
 
 export function ComptaExpenseItems() {
+  const t = useTranslations("compta.expenseItems");
+  const locale = useLocale();
   const [items, setItems] = useState<ExpenseItem[]>([]);
   const [totals, setTotals] = useState<Totals>({
     total_ttc_cents: 0,
@@ -117,16 +120,15 @@ export function ComptaExpenseItems() {
             <Receipt className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-base font-semibold">Achats & charges pro</h3>
+            <h3 className="text-base font-semibold">{t("title")}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Saisis tes factures fournisseurs (avec TVA) pour calculer
-              ta TVA déductible et nourrir ton FEC.
+              {t("description")}
             </p>
           </div>
         </div>
         <Button size="sm" onClick={() => setShowCreate(true)}>
           <Plus className="h-3.5 w-3.5 mr-1" />
-          Ajouter une charge
+          {t("addButton")}
         </Button>
       </div>
 
@@ -135,22 +137,22 @@ export function ComptaExpenseItems() {
       {(totals.total_vat_deductible_cents > 0 || vatCollected > 0) ? (
         <div className="rounded-lg border bg-muted/30 p-4 grid grid-cols-3 gap-3 text-center">
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVA collectée</div>
-            <div className="text-lg font-bold">{formatEUR(vatCollected)}</div>
-            <div className="text-[10px] text-muted-foreground">depuis janvier</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t("vatCollected")}</div>
+            <div className="text-lg font-bold">{formatEUR(vatCollected, locale)}</div>
+            <div className="text-[10px] text-muted-foreground">{t("sinceJanuary")}</div>
           </div>
           <div className="border-x">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVA déductible</div>
-            <div className="text-lg font-bold">{formatEUR(totals.total_vat_deductible_cents)}</div>
-            <div className="text-[10px] text-muted-foreground">{items.length} charge{items.length > 1 ? "s" : ""}</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t("vatDeductible")}</div>
+            <div className="text-lg font-bold">{formatEUR(totals.total_vat_deductible_cents, locale)}</div>
+            <div className="text-[10px] text-muted-foreground">{t("expensesCount", { count: items.length })}</div>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVA à payer</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t("vatToPay")}</div>
             <div className={`text-lg font-bold ${vatToPay < 0 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
-              {formatEUR(Math.max(0, vatToPay))}
+              {formatEUR(Math.max(0, vatToPay), locale)}
             </div>
             <div className="text-[10px] text-muted-foreground">
-              {vatToPay < 0 ? "Crédit de TVA" : "Estimé"}
+              {vatToPay < 0 ? t("vatCredit") : t("estimated")}
             </div>
           </div>
         </div>
@@ -163,19 +165,18 @@ export function ComptaExpenseItems() {
           onSaved={async () => {
             setShowCreate(false);
             await reload();
-            toast.success("Charge ajoutée");
+            toast.success(t("toastAdded"));
           }}
         />
       ) : null}
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-          <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Aucune charge enregistrée. Ajoute tes factures pour calculer ta
-          TVA déductible.
+          {t("emptyState")}
         </div>
       ) : (
         <div className="border rounded-md divide-y">
@@ -189,11 +190,11 @@ export function ComptaExpenseItems() {
               onUpdated={async () => {
                 setEditingId(null);
                 await reload();
-                toast.success("Charge mise à jour");
+                toast.success(t("toastUpdated"));
               }}
               onDeleted={async () => {
                 await reload();
-                toast.success("Charge supprimée");
+                toast.success(t("toastDeleted"));
               }}
             />
           ))}
@@ -202,12 +203,7 @@ export function ComptaExpenseItems() {
 
       <div className="flex items-start gap-2 text-xs text-muted-foreground">
         <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        <p>
-          MVP : saisie manuelle uniquement. L&apos;upload de factures
-          PDF/image avec lecture automatique (OCR) arrive en phase
-          suivante. En attendant, garde tes justificatifs au cas où
-          le fisc te les demande.
-        </p>
+        <p>{t("mvpNotice")}</p>
       </div>
     </Card>
   );
@@ -228,6 +224,8 @@ function ExpenseForm({
   onCancel: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("compta.expenseItems");
+  const locale = useLocale();
   const [amountEuros, setAmountEuros] = useState<string>(
     initial ? String(initial.amount_ttc_cents / 100) : "",
   );
@@ -250,7 +248,7 @@ function ExpenseForm({
 
   async function handleSave() {
     if (amountTtcCents <= 0) {
-      toast.error("Saisis un montant TTC valide.");
+      toast.error(t("errorInvalidAmount"));
       return;
     }
     setBusy(true);
@@ -275,12 +273,12 @@ function ExpenseForm({
       );
       const json = await res.json();
       if (!json.ok) {
-        toast.error(json.error ?? "Échec de l'enregistrement");
+        toast.error(json.error ?? t("errorSaveFailed"));
         return;
       }
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur réseau");
+      toast.error(e instanceof Error ? e.message : t("errorNetwork"));
     } finally {
       setBusy(false);
     }
@@ -290,7 +288,7 @@ function ExpenseForm({
     <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="exp-amount">Montant TTC (€)</Label>
+          <Label htmlFor="exp-amount">{t("amountTtcLabel")}</Label>
           <Input
             id="exp-amount"
             type="text"
@@ -301,7 +299,7 @@ function ExpenseForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="exp-rate">Taux TVA (%)</Label>
+          <Label htmlFor="exp-rate">{t("vatRateLabel")}</Label>
           <select
             id="exp-rate"
             value={vatRate}
@@ -310,7 +308,7 @@ function ExpenseForm({
           >
             {VAT_RATES.map((r) => (
               <option key={r} value={r}>
-                {r === 0 ? "0 % (exonéré / hors champ)" : `${r} %`}
+                {r === 0 ? t("vatRateZero") : `${r} %`}
               </option>
             ))}
           </select>
@@ -321,15 +319,15 @@ function ExpenseForm({
           l'user. La valeur stockée en DB est recalculée serveur-side
           au cas où. */}
       <div className="rounded-md bg-background border px-3 py-2 text-xs text-muted-foreground flex items-center justify-between">
-        <span>TVA déductible calculée</span>
+        <span>{t("vatDeductibleCalculated")}</span>
         <span className="font-mono font-semibold text-foreground">
-          {formatEUR(vatDeductibleCents)}
+          {formatEUR(vatDeductibleCents, locale)}
         </span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="exp-cat">Catégorie</Label>
+          <Label htmlFor="exp-cat">{t("categoryLabel")}</Label>
           <select
             id="exp-cat"
             value={category}
@@ -344,7 +342,7 @@ function ExpenseForm({
           </select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="exp-paid">Date de paiement</Label>
+          <Label htmlFor="exp-paid">{t("paidAtLabel")}</Label>
           <input
             id="exp-paid"
             type="date"
@@ -357,21 +355,21 @@ function ExpenseForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="exp-vendor">Fournisseur (optionnel)</Label>
+          <Label htmlFor="exp-vendor">{t("vendorLabel")}</Label>
           <Input
             id="exp-vendor"
             value={vendorName}
             onChange={(e) => setVendorName(e.target.value)}
-            placeholder="Ex : SNCF, OVH, Google Workspace…"
+            placeholder={t("vendorPlaceholder")}
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="exp-desc">Description (optionnelle)</Label>
+          <Label htmlFor="exp-desc">{t("descriptionLabel")}</Label>
           <Input
             id="exp-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Détail bref"
+            placeholder={t("descriptionPlaceholder")}
           />
         </div>
       </div>
@@ -379,18 +377,18 @@ function ExpenseForm({
       <div className="flex items-center justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
           <X className="h-4 w-4 mr-1" />
-          Annuler
+          {t("cancel")}
         </Button>
         <Button size="sm" onClick={handleSave} disabled={busy}>
           {busy ? (
             <>
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              Enregistrement…
+              {t("saving")}
             </>
           ) : (
             <>
               <Check className="h-4 w-4 mr-1" />
-              {mode === "create" ? "Ajouter" : "Enregistrer"}
+              {mode === "create" ? t("add") : t("save")}
             </>
           )}
         </Button>
@@ -414,6 +412,8 @@ function ExpenseRow({
   onUpdated: () => void | Promise<void>;
   onDeleted: () => void | Promise<void>;
 }) {
+  const t = useTranslations("compta.expenseItems");
+  const locale = useLocale();
   const [deleting, setDeleting] = useState(false);
 
   if (isEditing) {
@@ -430,7 +430,7 @@ function ExpenseRow({
   }
 
   async function handleDelete() {
-    if (!confirm("Supprimer cette charge ?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/compta/expense-items/${item.id}`, {
@@ -438,7 +438,7 @@ function ExpenseRow({
       });
       const json = await res.json();
       if (!json.ok) {
-        toast.error(json.error ?? "Échec de la suppression");
+        toast.error(json.error ?? t("errorDeleteFailed"));
         return;
       }
       await onDeleted();
@@ -452,7 +452,7 @@ function ExpenseRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium truncate">
-            {item.vendor_name || "(fournisseur non précisé)"}
+            {item.vendor_name || t("vendorUnspecified")}
           </span>
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded-full px-2 py-0.5">
             {EXPENSE_CATEGORY_LABELS[item.category]}
@@ -464,17 +464,17 @@ function ExpenseRow({
           </p>
         ) : null}
         <div className="text-xs text-muted-foreground mt-0.5">
-          {item.paid_at} · TVA {item.vat_rate}% ({formatEUR(item.vat_deductible_cents)} déductibles)
+          {t("rowSummary", { date: item.paid_at, rate: item.vat_rate, amount: formatEUR(item.vat_deductible_cents, locale) })}
         </div>
       </div>
       <div className="text-right shrink-0">
         <div className="text-base font-semibold">
-          {formatEUR(item.amount_ttc_cents)}
+          {formatEUR(item.amount_ttc_cents, locale)}
         </div>
-        <div className="text-[10px] text-muted-foreground">TTC</div>
+        <div className="text-[10px] text-muted-foreground">{t("ttcLabel")}</div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <Button variant="ghost" size="icon" onClick={onEdit} aria-label="Éditer">
+        <Button variant="ghost" size="icon" onClick={onEdit} aria-label={t("editAriaLabel")}>
           <Edit3 className="h-4 w-4" />
         </Button>
         <Button
@@ -482,7 +482,7 @@ function ExpenseRow({
           size="icon"
           onClick={handleDelete}
           disabled={deleting}
-          aria-label="Supprimer"
+          aria-label={t("deleteAriaLabel")}
         >
           {deleting ? (
             <Loader2 className="h-4 w-4 animate-spin" />

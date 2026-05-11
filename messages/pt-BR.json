@@ -5362,6 +5362,266 @@
     "summary": {
       "myStatus": "Meu regime",
       "edit": "Editar"
+    },
+    "connections": {
+      "title": "Minhas conexões",
+      "subtitle": "Conecte suas ferramentas de pagamento para que o Tipote acompanhe automaticamente seus recebimentos. <strong>Conecte apenas o que você usa</strong> — só o Stripe, só o PayPal, ou os dois se você vende nas duas plataformas. <strong>Sincronizamos uma vez por dia</strong>; clique no botão abaixo para forçar uma atualização imediata.",
+      "loading": "Carregando suas conexões…",
+      "syncNow": "Sincronizar agora",
+      "connecting": "Conectando…",
+      "cancel": "Cancelar",
+      "comingSoon": "Em breve.",
+      "connect": {
+        "button": "Conectar",
+        "stripe": {
+          "label": "Conectar Stripe",
+          "description": "Recupera automaticamente seus recebimentos (até 24 meses de histórico)."
+        },
+        "paypal": {
+          "label": "Conectar PayPal",
+          "description": "Recupera automaticamente seus recebimentos PayPal (até 24 meses de histórico)."
+        },
+        "mollie": {
+          "label": "Conectar Mollie",
+          "description": "Recupera automaticamente seus recebimentos Mollie (até 24 meses de histórico)."
+        }
+      },
+      "disconnect": {
+        "button": "Desconectar",
+        "confirm": "Desconectar essa fonte? Você pode reconectar quando quiser; suas transações já importadas continuam disponíveis para consulta.",
+        "done": "Desconectado"
+      },
+      "status": {
+        "initialSyncing": "Sincronização inicial em andamento…",
+        "error": "Erro — veja os detalhes abaixo",
+        "syncedAt": "Sincronizado {when}"
+      },
+      "relative": {
+        "never": "nunca",
+        "justNow": "agora mesmo",
+        "minutesAgo": "há {count} min",
+        "hoursAgo": "há {count} h",
+        "daysAgo": "há {count} d"
+      },
+      "syncToast": {
+        "upToDate": "{count} conexão(ões) atualizada(s)",
+        "noNew": "Nenhuma nova transação",
+        "failed": "{count} conexão(ões) com erro — verifique abaixo",
+        "error": "Erro de sincronização"
+      },
+      "errors": {
+        "generic": "Erro",
+        "unknown": "Desconhecido",
+        "network": "Erro de rede"
+      },
+      "stripeToast": {
+        "connected": "Stripe conectado",
+        "initialSync": "Sincronização inicial em andamento (24 meses). Pode levar alguns segundos."
+      },
+      "paypalToast": {
+        "connected": "PayPal conectado",
+        "initialSync": "Sincronização inicial em andamento (24 meses). Pode levar alguns minutos."
+      },
+      "mollieToast": {
+        "connected": "Mollie conectado",
+        "initialSync": "Sincronização inicial em andamento (24 meses). Pode levar alguns minutos."
+      },
+      "stripeForm": {
+        "heading": "Conectar Stripe",
+        "intro": "Precisamos de uma <strong>Restricted Key</strong> somente leitura. Você mantém o controle total — pode revogá-la a qualquer momento pelo seu dashboard Stripe.",
+        "guideTitle": "Como criar a chave em 30 segundos:",
+        "step1Prefix": "Abra",
+        "step1Link": "dashboard.stripe.com → Restricted keys → Create",
+        "step2Prefix": "Nome:",
+        "step3": "Permissões <strong>Read</strong> em: <code1>Charges</code1>, <code2>Customers</code2>, <code3>Balance</code3>. Todo o resto: None.",
+        "step4": "Copie a chave (começa com <code>rk_live_</code>) e cole abaixo.",
+        "label": "Restricted Key Stripe",
+        "hideKey": "Ocultar a chave",
+        "showKey": "Mostrar a chave",
+        "storedEncrypted": "Armazenada criptografada (AES-256) no lado do Tipote. Nunca exibida em texto claro após esta entrada.",
+        "testModeToast": {
+          "title": "Chave Stripe em modo de teste detectada",
+          "description": "Você colou uma chave `rk_test_…` ou `sk_test_…`. Para produção, use uma chave `rk_live_…`."
+        }
+      },
+      "paypalForm": {
+        "heading": "Conectar PayPal",
+        "intro": "O PayPal exige um <strong>app de desenvolvedor</strong> com um par (Client ID, Secret). Você mantém o controle — pode revogar o app a qualquer momento pelo seu dashboard developer.paypal.com.",
+        "guideTitle": "Como criar o app em 1 minuto:",
+        "step1Prefix": "Abra",
+        "step1Link": "developer.paypal.com → Apps & Credentials → Create App",
+        "step2": "Nome: <code1>Tipote Compta</code1> (o PayPal não aceita hífens nem parênteses) — Tipo: <code2>Merchant</code2>",
+        "step3": "Na página do app: <strong>role até o final</strong> em <em1>Live API features</em1> e <strong>ative</strong> a opção <code>Transaction Search</code>. Sem isso, não conseguimos ler o histórico. Clique em <em2>Save</em2>.",
+        "step4": "Copie o <strong1>Client ID</strong1> e o <strong2>Secret</strong2> (você precisa clicar em <em>Show</em> para revelar o secret) e cole abaixo.",
+        "modeLabel": "Modo",
+        "modeLive": "Live (produção — vendas reais)",
+        "modeSandbox": "Sandbox (teste — para validar a integração)",
+        "modeLiveHelp": "Modo produção: o Tipote vai sincronizar suas vendas reais.",
+        "modeSandboxHelp": "Modo teste: as vendas não serão reais, útil para validar a conexão.",
+        "clientIdLabel": "Client ID",
+        "secretLabel": "Secret",
+        "hideSecret": "Ocultar o secret",
+        "showSecret": "Mostrar o secret",
+        "storedEncrypted": "Armazenado criptografado (AES-256) no lado do Tipote. Nunca exibido em texto claro após esta entrada."
+      },
+      "mollieForm": {
+        "heading": "Conectar Mollie",
+        "intro": "Copie sua <strong>Live API key</strong> do seu dashboard Mollie. Você pode revogá-la a qualquer momento.",
+        "guideTitle": "Como encontrar a chave em 30 segundos:",
+        "step1Prefix": "Abra",
+        "step1Link": "my.mollie.com → Developers → API keys",
+        "step2": "Localize a seção <strong>Live API key</strong>. Clique no ícone de olho para revelá-la e copie.",
+        "step3": "Cole no campo abaixo. A chave começa com <code1>live_</code1> em produção, <code2>test_</code2> se você estiver testando em sandbox.",
+        "noticeTitle": "Importante saber",
+        "noticeBody": "Diferente do Stripe, o Mollie não oferece chave somente leitura — a chave dá acesso completo à sua conta Mollie pela API. O Tipote a usa <strong>apenas para leitura</strong> para recuperar seus pagamentos. Você pode revogá-la instantaneamente pelo seu dashboard Mollie para cortar o acesso.",
+        "label": "API key Mollie",
+        "hideKey": "Ocultar a chave",
+        "showKey": "Mostrar a chave",
+        "storedEncrypted": "Armazenada criptografada (AES-256) no lado do Tipote. Nunca exibida em texto claro após esta entrada."
+      }
+    },
+    "dashboard": {
+      "loading": "Calculando seus números…",
+      "errorGeneric": "Erro",
+      "errorNetwork": "Erro de rede",
+      "loadError": "Erro de carregamento: {error}",
+      "fxIssue": "Taxas de câmbio indisponíveis. Os valores em moedas estrangeiras são contabilizados como estão (1:1 para EUR).",
+      "refresh": "Atualizar",
+      "footerComputed": "Calculado a partir das suas conexões Stripe / PayPal / Mollie + suas entradas manuais.",
+      "footerRates": "Taxas de câmbio EUR obtidas via <link>frankfurter.app</link> (open data BCE).",
+      "noData": {
+        "title": "Ainda não há recebimentos para analisar.",
+        "body": "Conecte seu Stripe / PayPal / Mollie abaixo, ou adicione entradas manuais. Você verá aqui suas receitas, suas assinaturas e seus campeões de venda assim que houver dados."
+      },
+      "stats": {
+        "thisMonthLabel": "Este mês ({month})",
+        "sinceJanuaryLabel": "Desde janeiro de {year}",
+        "mrrLabel": "Receitas recorrentes (assinaturas)",
+        "vsSameMonth": "vs mesmo mês {year}",
+        "vsSamePeriod": "vs mesmo período {year}",
+        "vsLastMonth": "vs mês passado",
+        "subscribersFooterOne": "{count} cliente com assinatura",
+        "subscribersFooterMany": "{count} clientes com assinatura",
+        "noSubscription": "Nenhuma assinatura detectada"
+      },
+      "chart": {
+        "title": "Evolução mês a mês ({current} vs {previous})",
+        "subtitle": "Para ver se você está progredindo ou perdendo terreno em relação ao ano passado.",
+        "legendCurrent": "Ano atual ({year})",
+        "legendPrevious": "Ano anterior ({year})"
+      },
+      "split": {
+        "title": "Vendas diretas vs comissões de afiliação",
+        "subtitle": "Para diferenciar o que você mesmo vende do que recebe como comissão sobre as vendas de outras pessoas.",
+        "thisMonth": "Este mês",
+        "sinceJanuary": "Desde janeiro",
+        "total": "no total",
+        "directSales": "Vendas diretas",
+        "commissions": "Comissões"
+      },
+      "clients": {
+        "title": "Meus clientes este mês",
+        "newCustomers": "Novos clientes",
+        "subscribedCustomers": "Clientes assinantes",
+        "lostCustomers": "Clientes perdidos",
+        "churnHint": "{pct} % dos assinantes",
+        "totalOne": "<strong>{count}</strong> cliente no total este mês.",
+        "totalMany": "<strong>{count}</strong> clientes no total este mês.",
+        "churnedOne": "<strong>{count} assinante cancelou</strong> desde o mês passado — vale a pena entender o motivo (retomada de contato, mensagem?).",
+        "churnedMany": "<strong>{count} assinantes cancelaram</strong> desde o mês passado — vale a pena entender o motivo (retomada de contato, mensagem?)."
+      },
+      "topProducts": {
+        "title": "Meus campeões de venda este mês",
+        "empty": "Nenhuma venda este mês por enquanto."
+      },
+      "delta": {
+        "noComparison": "Sem comparação ({label})",
+        "stable": "Estável {label}"
+      },
+      "refunds": {
+        "label": "Reembolsos (desde janeiro)",
+        "refundedThisYear": "{amount} reembolsados este ano",
+        "refundedThisMonthSuffix": " — sendo <strong>{amount}</strong> este mês",
+        "highRateWarning": "Taxa alta — verifique suas páginas de venda ou a qualidade da entrega."
+      },
+      "vat": {
+        "title": "Franquia de IVA — em que pé você está?",
+        "description": "Cálculo sobre seus últimos 12 meses ({activity}). Enquanto você estiver abaixo do limite, não cobra IVA dos seus clientes.",
+        "thresholdLabel": "limite: {value}",
+        "helpLink": "Como funciona a franquia de IVA?",
+        "statusOverThresholdCH": "Limite ultrapassado — obrigação de recolhimento de IVA",
+        "statusOverMajor": "Limite majorado ultrapassado — saída imediata da franquia",
+        "statusOverBase": "Limite base ultrapassado — passagem ao IVA nas próximas semanas",
+        "statusApproaching": "Atenção, você está se aproximando do limite",
+        "statusUnder": "Você está abaixo do limite"
+      }
+    },
+    "expenseItems": {
+      "title": "Compras e despesas profissionais",
+      "description": "Registre suas notas fiscais de fornecedores (com IVA) para calcular seu IVA dedutível e alimentar seu FEC.",
+      "addButton": "Adicionar uma despesa",
+      "loading": "Carregando…",
+      "emptyState": "Nenhuma despesa registrada. Adicione suas notas fiscais para calcular seu IVA dedutível.",
+      "mvpNotice": "MVP: entrada manual apenas. O upload de notas fiscais PDF/imagem com leitura automática (OCR) chega na próxima fase. Enquanto isso, guarde seus comprovantes caso o fisco peça.",
+      "vatCollected": "IVA arrecadado",
+      "vatDeductible": "IVA dedutível",
+      "vatToPay": "IVA a pagar",
+      "vatCredit": "Crédito de IVA",
+      "estimated": "Estimado",
+      "sinceJanuary": "desde janeiro",
+      "expensesCount": "{count, plural, one {# despesa} other {# despesas}}",
+      "toastAdded": "Despesa adicionada",
+      "toastUpdated": "Despesa atualizada",
+      "toastDeleted": "Despesa excluída",
+      "errorInvalidAmount": "Informe um valor com impostos válido.",
+      "errorSaveFailed": "Falha ao salvar",
+      "errorNetwork": "Erro de rede",
+      "errorDeleteFailed": "Falha ao excluir",
+      "confirmDelete": "Excluir esta despesa?",
+      "amountTtcLabel": "Valor com impostos (€)",
+      "vatRateLabel": "Alíquota IVA (%)",
+      "vatRateZero": "0 % (isento / fora do escopo)",
+      "vatDeductibleCalculated": "IVA dedutível calculado",
+      "categoryLabel": "Categoria",
+      "paidAtLabel": "Data de pagamento",
+      "vendorLabel": "Fornecedor (opcional)",
+      "vendorPlaceholder": "Ex: SNCF, OVH, Google Workspace…",
+      "vendorUnspecified": "(fornecedor não informado)",
+      "descriptionLabel": "Descrição (opcional)",
+      "descriptionPlaceholder": "Detalhe breve",
+      "rowSummary": "{date} · IVA {rate}% ({amount} dedutíveis)",
+      "ttcLabel": "C/ impostos",
+      "editAriaLabel": "Editar",
+      "deleteAriaLabel": "Excluir",
+      "cancel": "Cancelar",
+      "saving": "Salvando…",
+      "save": "Salvar",
+      "add": "Adicionar"
+    },
+    "fiscalCalendar": {
+      "loading": "Carregando seu calendário fiscal…",
+      "loadFailureTitle": "Não foi possível carregar seu calendário fiscal",
+      "errorLoading": "Erro ao carregar os prazos",
+      "errorNetwork": "Erro de rede",
+      "countryNotSupported": "O calendário fiscal está disponível apenas para usuários franceses por enquanto. Em breve estendido a BE / CH / CA.",
+      "configureStatusTitle": "Configure seu status para ver seu calendário",
+      "configureStatusBody": "Vá até a seção «Configuração do meu status» abaixo e escolha pessoa física, auto-entrepreneur ou SASU. Vamos calcular seus prazos URSSAF / IVA / IR / CFE de acordo.",
+      "noDeadlines": "Nenhum prazo nos próximos 12 meses para o seu status.",
+      "header": {
+        "title": "Calendário fiscal",
+        "subtitle": "Seus prazos fiscais calculados conforme seu status. O Tipote não declara por você — clique no prazo para ir ao site oficial."
+      },
+      "toggleShowOne": "Mostrar o prazo cumprido",
+      "toggleShowMany": "Mostrar os {count} prazos cumpridos",
+      "toggleHideOne": "Ocultar o prazo cumprido",
+      "toggleHideMany": "Ocultar os {count} prazos cumpridos",
+      "urgentOne": "Em {count} dia",
+      "urgentMany": "Em {count} dias",
+      "overdueOne": "Atrasado em {count} dia",
+      "overdueMany": "Atrasado em {count} dias",
+      "goToOfficial": "Ir declarar no site oficial",
+      "markDone": "Marcado como feito",
+      "redo": "Refazer"
     }
   }
 }

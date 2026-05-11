@@ -13,6 +13,7 @@
 // le cron quotidien (5h du matin).
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,16 +61,19 @@ const PROVIDER_COLORS: Record<string, string> = {
   paypal: "bg-[#0070ba]",
 };
 
-function formatRelative(iso: string | null): string {
-  if (!iso) return "jamais";
+type RelativeT = (key: string, values?: Record<string, string | number>) => string;
+
+function formatRelative(iso: string | null, t: RelativeT): string {
+  if (!iso) return t("relative.never");
   const ms = Date.now() - new Date(iso).getTime();
-  if (ms < 60_000) return "à l'instant";
-  if (ms < 3_600_000) return `il y a ${Math.floor(ms / 60_000)} min`;
-  if (ms < 86_400_000) return `il y a ${Math.floor(ms / 3_600_000)} h`;
-  return `il y a ${Math.floor(ms / 86_400_000)} j`;
+  if (ms < 60_000) return t("relative.justNow");
+  if (ms < 3_600_000) return t("relative.minutesAgo", { count: Math.floor(ms / 60_000) });
+  if (ms < 86_400_000) return t("relative.hoursAgo", { count: Math.floor(ms / 3_600_000) });
+  return t("relative.daysAgo", { count: Math.floor(ms / 86_400_000) });
 }
 
 export default function ComptaConnections() {
+  const t = useTranslations("compta.connections");
   const [loading, setLoading] = useState(true);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [syncPending, startSyncTransition] = useTransition();
@@ -106,20 +110,20 @@ export default function ComptaConnections() {
         if (json?.ok) {
           const success = (json.total ?? 0) - (json.failed ?? 0);
           toast({
-            title: success > 0 ? `${success} connexion(s) à jour` : "Aucune nouvelle transaction",
+            title: success > 0 ? t("syncToast.upToDate", { count: success }) : t("syncToast.noNew"),
             description:
               json.failed && json.failed > 0
-                ? `${json.failed} connexion(s) en erreur — vérifie ci-dessous`
+                ? t("syncToast.failed", { count: json.failed })
                 : undefined,
           });
           await reload();
         } else {
-          toast({ title: "Erreur de synchronisation", variant: "destructive" });
+          toast({ title: t("syncToast.error"), variant: "destructive" });
         }
       } catch (e) {
         toast({
-          title: "Erreur",
-          description: e instanceof Error ? e.message : "Inconnue",
+          title: t("errors.generic"),
+          description: e instanceof Error ? e.message : t("errors.unknown"),
           variant: "destructive",
         });
       }
@@ -127,12 +131,7 @@ export default function ComptaConnections() {
   }
 
   async function disconnect(id: string) {
-    if (
-      !confirm(
-        "Déconnecter cette source ? Tu pourras te reconnecter quand tu veux ; tes transactions déjà importées restent consultables.",
-      )
-    )
-      return;
+    if (!confirm(t("disconnect.confirm"))) return;
     try {
       // Endpoint générique — déconnecte n'importe quel provider
       // (Stripe, PayPal, Mollie quand il sera là).
@@ -143,15 +142,15 @@ export default function ComptaConnections() {
       });
       const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
       if (json?.ok) {
-        toast({ title: "Déconnecté" });
+        toast({ title: t("disconnect.done") });
         await reload();
       } else {
-        toast({ title: "Erreur", description: json?.error, variant: "destructive" });
+        toast({ title: t("errors.generic"), description: json?.error, variant: "destructive" });
       }
     } catch (e) {
       toast({
-        title: "Erreur",
-        description: e instanceof Error ? e.message : "Inconnue",
+        title: t("errors.generic"),
+        description: e instanceof Error ? e.message : t("errors.unknown"),
         variant: "destructive",
       });
     }
@@ -166,7 +165,7 @@ export default function ComptaConnections() {
     return (
       <Card className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Chargement de tes connexions…
+        {t("loading")}
       </Card>
     );
   }
@@ -177,15 +176,11 @@ export default function ComptaConnections() {
         <div className="flex items-start gap-3">
           <Plug className="h-6 w-6 text-primary shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-lg">Mes connexions</h3>
+            <h3 className="font-semibold text-lg">{t("title")}</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Connecte tes outils de paiement pour que Tipote suive
-              automatiquement tes encaissements.{" "}
-              <strong>Connecte uniquement ce que tu utilises</strong>{" "}
-              — Stripe seul, PayPal seul, ou les deux si tu vends sur
-              les deux plateformes. <strong>On synchronise une fois
-              par jour</strong> ; clique sur le bouton ci-dessous pour
-              forcer une mise à jour immédiate.
+              {t.rich("subtitle", {
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </p>
           </div>
         </div>
@@ -196,7 +191,7 @@ export default function ComptaConnections() {
             ) : (
               <RefreshCw className="h-3.5 w-3.5 mr-2" />
             )}
-            Synchroniser maintenant
+            {t("syncNow")}
           </Button>
         ) : null}
       </div>
@@ -214,8 +209,8 @@ export default function ComptaConnections() {
               setShowStripeForm(false);
               await reload();
               toast({
-                title: "Stripe connecté",
-                description: "Synchronisation initiale en cours (24 mois). Ça peut prendre quelques secondes.",
+                title: t("stripeToast.connected"),
+                description: t("stripeToast.initialSync"),
               });
             }}
             onCancel={() => setShowStripeForm(false)}
@@ -223,8 +218,8 @@ export default function ComptaConnections() {
         ) : (
           <ConnectButton
             providerKey="stripe"
-            label="Connecter Stripe"
-            description="Récupère automatiquement tes encaissements (jusqu'à 24 mois d'historique)."
+            label={t("connect.stripe.label")}
+            description={t("connect.stripe.description")}
             onClick={() => setShowStripeForm(true)}
           />
         )}
@@ -241,8 +236,8 @@ export default function ComptaConnections() {
               setShowPaypalForm(false);
               await reload();
               toast({
-                title: "PayPal connecté",
-                description: "Synchronisation initiale en cours (24 mois). Ça peut prendre quelques minutes.",
+                title: t("paypalToast.connected"),
+                description: t("paypalToast.initialSync"),
               });
             }}
             onCancel={() => setShowPaypalForm(false)}
@@ -250,8 +245,8 @@ export default function ComptaConnections() {
         ) : (
           <ConnectButton
             providerKey="paypal"
-            label="Connecter PayPal"
-            description="Récupère automatiquement tes encaissements PayPal (jusqu'à 24 mois d'historique)."
+            label={t("connect.paypal.label")}
+            description={t("connect.paypal.description")}
             onClick={() => setShowPaypalForm(true)}
           />
         )}
@@ -268,8 +263,8 @@ export default function ComptaConnections() {
               setShowMollieForm(false);
               await reload();
               toast({
-                title: "Mollie connecté",
-                description: "Synchronisation initiale en cours (24 mois). Ça peut prendre quelques minutes.",
+                title: t("mollieToast.connected"),
+                description: t("mollieToast.initialSync"),
               });
             }}
             onCancel={() => setShowMollieForm(false)}
@@ -277,8 +272,8 @@ export default function ComptaConnections() {
         ) : (
           <ConnectButton
             providerKey="mollie"
-            label="Connecter Mollie"
-            description="Récupère automatiquement tes encaissements Mollie (jusqu'à 24 mois d'historique)."
+            label={t("connect.mollie.label")}
+            description={t("connect.mollie.description")}
             onClick={() => setShowMollieForm(true)}
           />
         )}
@@ -298,6 +293,7 @@ function ConnectionCard({
   connection: Connection;
   onDisconnect: () => void;
 }) {
+  const t = useTranslations("compta.connections");
   const label = PROVIDER_LABELS[connection.provider] ?? connection.provider;
   const color = PROVIDER_COLORS[connection.provider] ?? "bg-primary";
   const initialSyncing = !connection.initial_sync_done_at;
@@ -316,17 +312,17 @@ function ConnectionCard({
               {initialSyncing ? (
                 <>
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Synchronisation initiale en cours…</span>
+                  <span>{t("status.initialSyncing")}</span>
                 </>
               ) : hasError ? (
                 <>
                   <AlertTriangle className="h-3 w-3 text-destructive" />
-                  <span className="text-destructive">Erreur — voir détails ci-dessous</span>
+                  <span className="text-destructive">{t("status.error")}</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                  <span>Synchronisé {formatRelative(connection.last_sync_at)}</span>
+                  <span>{t("status.syncedAt", { when: formatRelative(connection.last_sync_at, t) })}</span>
                 </>
               )}
             </div>
@@ -339,7 +335,7 @@ function ConnectionCard({
           className="text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-          Déconnecter
+          {t("disconnect.button")}
         </Button>
       </div>
       {hasError ? (
@@ -385,6 +381,7 @@ function ConnectButton({
 }
 
 function DisabledConnectButton({ providerKey, label }: { providerKey: string; label: string }) {
+  const t = useTranslations("compta.connections");
   const color = PROVIDER_COLORS[providerKey] ?? "bg-muted";
   return (
     <div className="w-full rounded-lg border border-dashed border-border p-4 flex items-center gap-3 opacity-50">
@@ -393,7 +390,7 @@ function DisabledConnectButton({ providerKey, label }: { providerKey: string; la
       </div>
       <div className="flex-1">
         <p className="font-semibold">{label}</p>
-        <p className="text-xs text-muted-foreground">Bientôt disponible.</p>
+        <p className="text-xs text-muted-foreground">{t("comingSoon")}</p>
       </div>
     </div>
   );
@@ -410,6 +407,7 @@ function StripeConnectForm({
   onConnected: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("compta.connections");
   const [key, setKey] = useState("");
   const [visible, setVisible] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -430,19 +428,18 @@ function StripeConnectForm({
           | { ok?: boolean; error?: string; livemode?: boolean }
           | null;
         if (!json?.ok) {
-          setError(json?.error ?? "Erreur");
+          setError(json?.error ?? t("errors.generic"));
           return;
         }
         if (json.livemode === false) {
           toast({
-            title: "Clé Stripe en mode test détectée",
-            description:
-              "Tu as collé une clé `rk_test_…` ou `sk_test_…`. Pour la prod, utilise une clé `rk_live_…`.",
+            title: t("stripeForm.testModeToast.title"),
+            description: t("stripeForm.testModeToast.description"),
           });
         }
         onConnected();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur réseau");
+        setError(e instanceof Error ? e.message : t("errors.network"));
       }
     });
   }
@@ -450,48 +447,51 @@ function StripeConnectForm({
   return (
     <form onSubmit={handleSubmit} className="rounded-lg border border-border p-4 space-y-4 bg-muted/20">
       <div className="space-y-1">
-        <h4 className="font-semibold text-sm">Connecter Stripe</h4>
+        <h4 className="font-semibold text-sm">{t("stripeForm.heading")}</h4>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          On a besoin d&apos;une <strong>Restricted Key</strong> en
-          lecture seule. Tu gardes le contrôle total — tu peux la
-          révoquer à tout moment depuis ton dashboard Stripe.
+          {t.rich("stripeForm.intro", {
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
       </div>
 
       {/* Guide pas-à-pas */}
       <div className="text-xs text-muted-foreground space-y-1.5 bg-background border border-border rounded p-3">
-        <p className="font-semibold text-foreground">Comment créer la clé en 30 secondes :</p>
+        <p className="font-semibold text-foreground">{t("stripeForm.guideTitle")}</p>
         <ol className="list-decimal list-inside space-y-1 ml-1">
           <li>
-            Ouvre{" "}
+            {t("stripeForm.step1Prefix")}{" "}
             <a
               href="https://dashboard.stripe.com/apikeys/create"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary underline inline-flex items-center gap-1"
             >
-              dashboard.stripe.com → Restricted keys → Create
+              {t("stripeForm.step1Link")}
               <ExternalLink className="h-3 w-3" />
             </a>
           </li>
           <li>
-            Nom : <code className="px-1 bg-muted rounded">Tipote – Compta (lecture)</code>
+            {t("stripeForm.step2Prefix")} <code className="px-1 bg-muted rounded">Tipote – Compta (lecture)</code>
           </li>
           <li>
-            Permissions <strong>Read</strong> sur :{" "}
-            <code className="px-1 bg-muted rounded">Charges</code>,{" "}
-            <code className="px-1 bg-muted rounded">Customers</code>,{" "}
-            <code className="px-1 bg-muted rounded">Balance</code>. Tout le reste : None.
+            {t.rich("stripeForm.step3", {
+              strong: (chunks) => <strong>{chunks}</strong>,
+              code1: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+              code2: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+              code3: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+            })}
           </li>
           <li>
-            Copie la clé (commence par <code className="px-1 bg-muted rounded">rk_live_</code>) et
-            colle-la ci-dessous.
+            {t.rich("stripeForm.step4", {
+              code: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+            })}
           </li>
         </ol>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="stripe-key">Restricted Key Stripe</Label>
+        <Label htmlFor="stripe-key">{t("stripeForm.label")}</Label>
         <div className="relative">
           <Input
             id="stripe-key"
@@ -507,14 +507,14 @@ function StripeConnectForm({
             type="button"
             onClick={() => setVisible((v) => !v)}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={visible ? "Masquer la clé" : "Afficher la clé"}
+            aria-label={visible ? t("stripeForm.hideKey") : t("stripeForm.showKey")}
           >
             {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
         <p className="text-xs text-muted-foreground">
-          Stockée chiffrée (AES-256) côté Tipote. Jamais affichée en clair après cette saisie.
+          {t("stripeForm.storedEncrypted")}
         </p>
       </div>
 
@@ -523,15 +523,15 @@ function StripeConnectForm({
           {pending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Connexion…
+              {t("connecting")}
             </>
           ) : (
-            "Connecter"
+            t("connect.button")
           )}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Annuler
+          {t("cancel")}
         </Button>
       </div>
     </form>
@@ -549,6 +549,7 @@ function PaypalConnectForm({
   onConnected: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("compta.connections");
   const [clientId, setClientId] = useState("");
   const [secret, setSecret] = useState("");
   const [mode, setMode] = useState<"live" | "sandbox">("live");
@@ -574,12 +575,12 @@ function PaypalConnectForm({
           | { ok?: boolean; error?: string; mode?: string }
           | null;
         if (!json?.ok) {
-          setError(json?.error ?? "Erreur");
+          setError(json?.error ?? t("errors.generic"));
           return;
         }
         onConnected();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur réseau");
+        setError(e instanceof Error ? e.message : t("errors.network"));
       }
     });
   }
@@ -587,69 +588,74 @@ function PaypalConnectForm({
   return (
     <form onSubmit={handleSubmit} className="rounded-lg border border-border p-4 space-y-4 bg-muted/20">
       <div className="space-y-1">
-        <h4 className="font-semibold text-sm">Connecter PayPal</h4>
+        <h4 className="font-semibold text-sm">{t("paypalForm.heading")}</h4>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          PayPal demande une <strong>app développeur</strong> avec une
-          paire (Client ID, Secret). Tu gardes le contrôle — tu peux
-          révoquer l&apos;app à tout moment depuis ton dashboard
-          developer.paypal.com.
+          {t.rich("paypalForm.intro", {
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
       </div>
 
       {/* Guide pas-à-pas */}
       <div className="text-xs text-muted-foreground space-y-1.5 bg-background border border-border rounded p-3">
-        <p className="font-semibold text-foreground">Comment créer l&apos;app en 1 minute :</p>
+        <p className="font-semibold text-foreground">{t("paypalForm.guideTitle")}</p>
         <ol className="list-decimal list-inside space-y-1 ml-1">
           <li>
-            Ouvre{" "}
+            {t("paypalForm.step1Prefix")}{" "}
             <a
               href="https://developer.paypal.com/dashboard/applications/live"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary underline inline-flex items-center gap-1"
             >
-              developer.paypal.com → Apps & Credentials → Create App
+              {t("paypalForm.step1Link")}
               <ExternalLink className="h-3 w-3" />
             </a>
           </li>
           <li>
-            Nom : <code className="px-1 bg-muted rounded">Tipote Compta</code>
-            {" "}(PayPal n&apos;accepte ni tirets ni parenthèses){" — "}
-            Type : <code className="px-1 bg-muted rounded">Merchant</code>
+            {t.rich("paypalForm.step2", {
+              code1: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+              code2: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+            })}
           </li>
           <li>
-            Sur la page de l&apos;app : <strong>scroll vers le bas</strong> jusqu&apos;à
-            <em>Live API features</em>, et <strong>active</strong> la case{" "}
-            <code className="px-1 bg-muted rounded">Transaction Search</code>.
-            Sans ça, on ne peut pas lire l&apos;historique. Clique <em>Save</em>.
+            {t.rich("paypalForm.step3", {
+              strong: (chunks) => <strong>{chunks}</strong>,
+              em1: (chunks) => <em>{chunks}</em>,
+              em2: (chunks) => <em>{chunks}</em>,
+              code: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+            })}
           </li>
           <li>
-            Copie le <strong>Client ID</strong> et le <strong>Secret</strong> (tu dois cliquer
-            <em> Show</em> pour révéler le secret) et colle-les ci-dessous.
+            {t.rich("paypalForm.step4", {
+              strong1: (chunks) => <strong>{chunks}</strong>,
+              strong2: (chunks) => <strong>{chunks}</strong>,
+              em: (chunks) => <em>{chunks}</em>,
+            })}
           </li>
         </ol>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="paypal-mode">Mode</Label>
+        <Label htmlFor="paypal-mode">{t("paypalForm.modeLabel")}</Label>
         <Select value={mode} onValueChange={(v) => setMode(v as "live" | "sandbox")}>
           <SelectTrigger id="paypal-mode">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="live">Live (production — vraies ventes)</SelectItem>
-            <SelectItem value="sandbox">Sandbox (test — pour valider l&apos;intégration)</SelectItem>
+            <SelectItem value="live">{t("paypalForm.modeLive")}</SelectItem>
+            <SelectItem value="sandbox">{t("paypalForm.modeSandbox")}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
           {mode === "sandbox"
-            ? "Mode test : les ventes ne seront pas réelles, utile pour valider la connexion."
-            : "Mode production : Tipote synchronisera tes vraies ventes."}
+            ? t("paypalForm.modeSandboxHelp")
+            : t("paypalForm.modeLiveHelp")}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="paypal-client-id">Client ID</Label>
+        <Label htmlFor="paypal-client-id">{t("paypalForm.clientIdLabel")}</Label>
         <Input
           id="paypal-client-id"
           type="text"
@@ -663,7 +669,7 @@ function PaypalConnectForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="paypal-secret">Secret</Label>
+        <Label htmlFor="paypal-secret">{t("paypalForm.secretLabel")}</Label>
         <div className="relative">
           <Input
             id="paypal-secret"
@@ -679,13 +685,13 @@ function PaypalConnectForm({
             type="button"
             onClick={() => setSecretVisible((v) => !v)}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={secretVisible ? "Masquer le secret" : "Afficher le secret"}
+            aria-label={secretVisible ? t("paypalForm.hideSecret") : t("paypalForm.showSecret")}
           >
             {secretVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Stocké chiffré (AES-256) côté Tipote. Jamais affiché en clair après cette saisie.
+          {t("paypalForm.storedEncrypted")}
         </p>
       </div>
 
@@ -700,15 +706,15 @@ function PaypalConnectForm({
           {pending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Connexion…
+              {t("connecting")}
             </>
           ) : (
-            "Connecter"
+            t("connect.button")
           )}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Annuler
+          {t("cancel")}
         </Button>
       </div>
     </form>
@@ -726,6 +732,7 @@ function MollieConnectForm({
   onConnected: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("compta.connections");
   const [apiKey, setApiKey] = useState("");
   const [visible, setVisible] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -745,12 +752,12 @@ function MollieConnectForm({
           | { ok?: boolean; error?: string; mode?: string }
           | null;
         if (!json?.ok) {
-          setError(json?.error ?? "Erreur");
+          setError(json?.error ?? t("errors.generic"));
           return;
         }
         onConnected();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur réseau");
+        setError(e instanceof Error ? e.message : t("errors.network"));
       }
     });
   }
@@ -758,57 +765,56 @@ function MollieConnectForm({
   return (
     <form onSubmit={handleSubmit} className="rounded-lg border border-border p-4 space-y-4 bg-muted/20">
       <div className="space-y-1">
-        <h4 className="font-semibold text-sm">Connecter Mollie</h4>
+        <h4 className="font-semibold text-sm">{t("mollieForm.heading")}</h4>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Copie ta <strong>Live API key</strong> depuis ton dashboard
-          Mollie. Tu peux la révoquer à tout moment.
+          {t.rich("mollieForm.intro", {
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
       </div>
 
       {/* Guide pas-à-pas */}
       <div className="text-xs text-muted-foreground space-y-1.5 bg-background border border-border rounded p-3">
-        <p className="font-semibold text-foreground">Comment trouver la clé en 30 secondes :</p>
+        <p className="font-semibold text-foreground">{t("mollieForm.guideTitle")}</p>
         <ol className="list-decimal list-inside space-y-1 ml-1">
           <li>
-            Ouvre{" "}
+            {t("mollieForm.step1Prefix")}{" "}
             <a
               href="https://my.mollie.com/dashboard/developers/api-keys"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary underline inline-flex items-center gap-1"
             >
-              my.mollie.com → Developers → API keys
+              {t("mollieForm.step1Link")}
               <ExternalLink className="h-3 w-3" />
             </a>
           </li>
           <li>
-            Repère la section <strong>Live API key</strong>. Clique
-            sur l&apos;icône œil pour la révéler, puis copie-la.
+            {t.rich("mollieForm.step2", {
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </li>
           <li>
-            Colle-la dans le champ ci-dessous. La clé commence par{" "}
-            <code className="px-1 bg-muted rounded">live_</code> en
-            production, <code className="px-1 bg-muted rounded">test_</code>{" "}
-            si tu testes en sandbox.
+            {t.rich("mollieForm.step3", {
+              code1: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+              code2: (chunks) => <code className="px-1 bg-muted rounded">{chunks}</code>,
+            })}
           </li>
         </ol>
       </div>
 
       {/* Note de sécurité — Mollie n'a pas de clé restreinte */}
       <div className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3 space-y-1">
-        <p className="font-semibold text-amber-900 dark:text-amber-200">À savoir</p>
+        <p className="font-semibold text-amber-900 dark:text-amber-200">{t("mollieForm.noticeTitle")}</p>
         <p className="text-amber-900/80 leading-relaxed">
-          Contrairement à Stripe, Mollie ne propose pas de clé en
-          lecture seule — la clé donne accès complet à ton compte
-          Mollie côté API. Tipote l&apos;utilise <strong>uniquement
-          en lecture</strong> pour récupérer tes paiements. Tu peux
-          la révoquer instantanément depuis ton dashboard Mollie pour
-          couper l&apos;accès.
+          {t.rich("mollieForm.noticeBody", {
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="mollie-key">API key Mollie</Label>
+        <Label htmlFor="mollie-key">{t("mollieForm.label")}</Label>
         <div className="relative">
           <Input
             id="mollie-key"
@@ -824,7 +830,7 @@ function MollieConnectForm({
             type="button"
             onClick={() => setVisible((v) => !v)}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={visible ? "Masquer la clé" : "Afficher la clé"}
+            aria-label={visible ? t("mollieForm.hideKey") : t("mollieForm.showKey")}
           >
             {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -835,7 +841,7 @@ function MollieConnectForm({
           </div>
         ) : null}
         <p className="text-xs text-muted-foreground">
-          Stockée chiffrée (AES-256) côté Tipote. Jamais affichée en clair après cette saisie.
+          {t("mollieForm.storedEncrypted")}
         </p>
       </div>
 
@@ -844,15 +850,15 @@ function MollieConnectForm({
           {pending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Connexion…
+              {t("connecting")}
             </>
           ) : (
-            "Connecter"
+            t("connect.button")
           )}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Annuler
+          {t("cancel")}
         </Button>
       </div>
     </form>

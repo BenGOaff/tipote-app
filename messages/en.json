@@ -5063,6 +5063,266 @@
     "summary": {
       "myStatus": "My status",
       "edit": "Edit"
+    },
+    "connections": {
+      "title": "My connections",
+      "subtitle": "Connect your payment tools so Tipote can automatically track your incoming payments. <strong>Only connect what you use</strong> — Stripe alone, PayPal alone, or both if you sell on both platforms. <strong>We sync once a day</strong>; click the button below to force an immediate update.",
+      "loading": "Loading your connections…",
+      "syncNow": "Sync now",
+      "connecting": "Connecting…",
+      "cancel": "Cancel",
+      "comingSoon": "Coming soon.",
+      "connect": {
+        "button": "Connect",
+        "stripe": {
+          "label": "Connect Stripe",
+          "description": "Automatically pulls in your payments (up to 24 months of history)."
+        },
+        "paypal": {
+          "label": "Connect PayPal",
+          "description": "Automatically pulls in your PayPal payments (up to 24 months of history)."
+        },
+        "mollie": {
+          "label": "Connect Mollie",
+          "description": "Automatically pulls in your Mollie payments (up to 24 months of history)."
+        }
+      },
+      "disconnect": {
+        "button": "Disconnect",
+        "confirm": "Disconnect this source? You can reconnect any time; your already-imported transactions stay accessible.",
+        "done": "Disconnected"
+      },
+      "status": {
+        "initialSyncing": "Initial sync in progress…",
+        "error": "Error — see details below",
+        "syncedAt": "Synced {when}"
+      },
+      "relative": {
+        "never": "never",
+        "justNow": "just now",
+        "minutesAgo": "{count} min ago",
+        "hoursAgo": "{count} h ago",
+        "daysAgo": "{count} d ago"
+      },
+      "syncToast": {
+        "upToDate": "{count} connection(s) up to date",
+        "noNew": "No new transactions",
+        "failed": "{count} connection(s) failed — check below",
+        "error": "Sync error"
+      },
+      "errors": {
+        "generic": "Error",
+        "unknown": "Unknown",
+        "network": "Network error"
+      },
+      "stripeToast": {
+        "connected": "Stripe connected",
+        "initialSync": "Initial sync in progress (24 months). This may take a few seconds."
+      },
+      "paypalToast": {
+        "connected": "PayPal connected",
+        "initialSync": "Initial sync in progress (24 months). This may take a few minutes."
+      },
+      "mollieToast": {
+        "connected": "Mollie connected",
+        "initialSync": "Initial sync in progress (24 months). This may take a few minutes."
+      },
+      "stripeForm": {
+        "heading": "Connect Stripe",
+        "intro": "We need a read-only <strong>Restricted Key</strong>. You stay in full control — you can revoke it any time from your Stripe dashboard.",
+        "guideTitle": "How to create the key in 30 seconds:",
+        "step1Prefix": "Open",
+        "step1Link": "dashboard.stripe.com → Restricted keys → Create",
+        "step2Prefix": "Name:",
+        "step3": "<strong>Read</strong> permissions on: <code1>Charges</code1>, <code2>Customers</code2>, <code3>Balance</code3>. Everything else: None.",
+        "step4": "Copy the key (starts with <code>rk_live_</code>) and paste it below.",
+        "label": "Stripe Restricted Key",
+        "hideKey": "Hide key",
+        "showKey": "Show key",
+        "storedEncrypted": "Stored encrypted (AES-256) on Tipote's side. Never shown in clear after this entry.",
+        "testModeToast": {
+          "title": "Stripe test mode key detected",
+          "description": "You pasted an `rk_test_…` or `sk_test_…` key. For production, use an `rk_live_…` key."
+        }
+      },
+      "paypalForm": {
+        "heading": "Connect PayPal",
+        "intro": "PayPal requires a <strong>developer app</strong> with a (Client ID, Secret) pair. You stay in control — you can revoke the app any time from your developer.paypal.com dashboard.",
+        "guideTitle": "How to create the app in 1 minute:",
+        "step1Prefix": "Open",
+        "step1Link": "developer.paypal.com → Apps & Credentials → Create App",
+        "step2": "Name: <code1>Tipote Compta</code1> (PayPal doesn't accept dashes or parentheses) — Type: <code2>Merchant</code2>",
+        "step3": "On the app page: <strong>scroll down</strong> to <em1>Live API features</em1>, and <strong>enable</strong> the <code>Transaction Search</code> checkbox. Without it, we can't read your history. Click <em2>Save</em2>.",
+        "step4": "Copy the <strong1>Client ID</strong1> and the <strong2>Secret</strong2> (you have to click <em>Show</em> to reveal the secret) and paste them below.",
+        "modeLabel": "Mode",
+        "modeLive": "Live (production — real sales)",
+        "modeSandbox": "Sandbox (test — to validate the integration)",
+        "modeLiveHelp": "Production mode: Tipote will sync your real sales.",
+        "modeSandboxHelp": "Test mode: sales won't be real, useful to validate the connection.",
+        "clientIdLabel": "Client ID",
+        "secretLabel": "Secret",
+        "hideSecret": "Hide secret",
+        "showSecret": "Show secret",
+        "storedEncrypted": "Stored encrypted (AES-256) on Tipote's side. Never shown in clear after this entry."
+      },
+      "mollieForm": {
+        "heading": "Connect Mollie",
+        "intro": "Copy your <strong>Live API key</strong> from your Mollie dashboard. You can revoke it any time.",
+        "guideTitle": "How to find the key in 30 seconds:",
+        "step1Prefix": "Open",
+        "step1Link": "my.mollie.com → Developers → API keys",
+        "step2": "Find the <strong>Live API key</strong> section. Click the eye icon to reveal it, then copy it.",
+        "step3": "Paste it into the field below. The key starts with <code1>live_</code1> in production, <code2>test_</code2> if you're testing in sandbox.",
+        "noticeTitle": "Good to know",
+        "noticeBody": "Unlike Stripe, Mollie doesn't offer a read-only key — the key gives full API access to your Mollie account. Tipote uses it <strong>read-only</strong> to fetch your payments. You can revoke it instantly from your Mollie dashboard to cut access.",
+        "label": "Mollie API key",
+        "hideKey": "Hide key",
+        "showKey": "Show key",
+        "storedEncrypted": "Stored encrypted (AES-256) on Tipote's side. Never shown in clear after this entry."
+      }
+    },
+    "dashboard": {
+      "loading": "Crunching your numbers…",
+      "errorGeneric": "Error",
+      "errorNetwork": "Network error",
+      "loadError": "Loading error: {error}",
+      "fxIssue": "Exchange rates unavailable. Foreign currency amounts are counted as-is (1:1 to EUR).",
+      "refresh": "Refresh",
+      "footerComputed": "Computed from your Stripe / PayPal / Mollie connections + your manual entries.",
+      "footerRates": "EUR exchange rates fetched via <link>frankfurter.app</link> (ECB open data).",
+      "noData": {
+        "title": "No payments to analyze yet.",
+        "body": "Connect your Stripe / PayPal / Mollie below, or add manual entries. You'll see your revenue, subscriptions and best sellers here as soon as there's data."
+      },
+      "stats": {
+        "thisMonthLabel": "This month ({month})",
+        "sinceJanuaryLabel": "Since January {year}",
+        "mrrLabel": "Recurring revenue (subscriptions)",
+        "vsSameMonth": "vs same month {year}",
+        "vsSamePeriod": "vs same period {year}",
+        "vsLastMonth": "vs last month",
+        "subscribersFooterOne": "{count} customer with a subscription",
+        "subscribersFooterMany": "{count} customers with a subscription",
+        "noSubscription": "No subscription detected"
+      },
+      "chart": {
+        "title": "Month-by-month trend ({current} vs {previous})",
+        "subtitle": "To see whether you're progressing or slipping compared to last year.",
+        "legendCurrent": "Current year ({year})",
+        "legendPrevious": "Previous year ({year})"
+      },
+      "split": {
+        "title": "Direct sales vs affiliate commissions",
+        "subtitle": "To tell apart what you sell yourself from what you earn as commission on other people's sales.",
+        "thisMonth": "This month",
+        "sinceJanuary": "Since January",
+        "total": "total",
+        "directSales": "Direct sales",
+        "commissions": "Commissions"
+      },
+      "clients": {
+        "title": "My customers this month",
+        "newCustomers": "New customers",
+        "subscribedCustomers": "Subscribed customers",
+        "lostCustomers": "Lost customers",
+        "churnHint": "{pct}% of subscribers",
+        "totalOne": "<strong>{count}</strong> customer in total this month.",
+        "totalMany": "<strong>{count}</strong> customers in total this month.",
+        "churnedOne": "<strong>{count} subscriber has cancelled</strong> since last month — think about figuring out why (follow-up, message?).",
+        "churnedMany": "<strong>{count} subscribers have cancelled</strong> since last month — think about figuring out why (follow-up, message?)."
+      },
+      "topProducts": {
+        "title": "My best sellers this month",
+        "empty": "No sales this month yet."
+      },
+      "delta": {
+        "noComparison": "No comparison ({label})",
+        "stable": "Stable {label}"
+      },
+      "refunds": {
+        "label": "Refunds (since January)",
+        "refundedThisYear": "{amount} refunded this year",
+        "refundedThisMonthSuffix": " — including <strong>{amount}</strong> this month",
+        "highRateWarning": "High rate — check your sales pages or your delivery quality."
+      },
+      "vat": {
+        "title": "VAT exemption — where do you stand?",
+        "description": "Calculated over your last 12 months ({activity}). As long as you're below the threshold, you don't charge VAT to your customers.",
+        "thresholdLabel": "threshold: {value}",
+        "helpLink": "How does the VAT exemption work?",
+        "statusOverThresholdCH": "Threshold exceeded — VAT registration mandatory",
+        "statusOverMajor": "Upper threshold exceeded — immediate exit from the exemption",
+        "statusOverBase": "Base threshold exceeded — switching to VAT in the coming weeks",
+        "statusApproaching": "Heads up, you're getting close to the threshold",
+        "statusUnder": "You're below the threshold"
+      }
+    },
+    "expenseItems": {
+      "title": "Business purchases & expenses",
+      "description": "Enter your supplier invoices (with VAT) to compute your deductible VAT and feed your FEC.",
+      "addButton": "Add an expense",
+      "loading": "Loading…",
+      "emptyState": "No expenses recorded. Add your invoices to compute your deductible VAT.",
+      "mvpNotice": "MVP: manual entry only. Uploading PDF/image invoices with automatic reading (OCR) is coming in the next phase. Meanwhile, keep your receipts in case the tax office asks for them.",
+      "vatCollected": "VAT collected",
+      "vatDeductible": "Deductible VAT",
+      "vatToPay": "VAT to pay",
+      "vatCredit": "VAT credit",
+      "estimated": "Estimated",
+      "sinceJanuary": "since January",
+      "expensesCount": "{count, plural, one {# expense} other {# expenses}}",
+      "toastAdded": "Expense added",
+      "toastUpdated": "Expense updated",
+      "toastDeleted": "Expense deleted",
+      "errorInvalidAmount": "Enter a valid amount (incl. VAT).",
+      "errorSaveFailed": "Save failed",
+      "errorNetwork": "Network error",
+      "errorDeleteFailed": "Delete failed",
+      "confirmDelete": "Delete this expense?",
+      "amountTtcLabel": "Amount incl. VAT (€)",
+      "vatRateLabel": "VAT rate (%)",
+      "vatRateZero": "0% (exempt / out of scope)",
+      "vatDeductibleCalculated": "Calculated deductible VAT",
+      "categoryLabel": "Category",
+      "paidAtLabel": "Payment date",
+      "vendorLabel": "Vendor (optional)",
+      "vendorPlaceholder": "E.g. SNCF, OVH, Google Workspace…",
+      "vendorUnspecified": "(vendor not specified)",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Brief detail",
+      "rowSummary": "{date} · VAT {rate}% ({amount} deductible)",
+      "ttcLabel": "incl. VAT",
+      "editAriaLabel": "Edit",
+      "deleteAriaLabel": "Delete",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "save": "Save",
+      "add": "Add"
+    },
+    "fiscalCalendar": {
+      "loading": "Loading your fiscal calendar…",
+      "loadFailureTitle": "Couldn't load your fiscal calendar",
+      "errorLoading": "Error loading deadlines",
+      "errorNetwork": "Network error",
+      "countryNotSupported": "The fiscal calendar is only available for French users for now. Soon expanding to BE / CH / CA.",
+      "configureStatusTitle": "Set up your status to see your calendar",
+      "configureStatusBody": "Go to the \"My status configuration\" section below and pick individual, auto-entrepreneur or SASU. We'll work out your URSSAF / VAT / IR / CFE deadlines accordingly.",
+      "noDeadlines": "No deadlines in the next 12 months for your status.",
+      "header": {
+        "title": "Fiscal calendar",
+        "subtitle": "Your tax deadlines computed from your status. Tipote doesn't file for you — click a deadline to go to the official site."
+      },
+      "toggleShowOne": "Show the completed deadline",
+      "toggleShowMany": "Show the {count} completed deadlines",
+      "toggleHideOne": "Hide the completed deadline",
+      "toggleHideMany": "Hide the {count} completed deadlines",
+      "urgentOne": "In {count} day",
+      "urgentMany": "In {count} days",
+      "overdueOne": "{count} day overdue",
+      "overdueMany": "{count} days overdue",
+      "goToOfficial": "File on the official site",
+      "markDone": "Marked as done",
+      "redo": "Redo"
     }
   }
 }
