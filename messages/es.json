@@ -558,7 +558,131 @@
     "seeStrategy": "Ver estrategia",
     "createContent": "Crear contenido",
     "nextAction": "Próxima acción a realizar",
-    "allTasks": "Ver todas las tareas"
+    "allTasks": "Ver todas las tareas",
+    "greeting": {
+      "morning": "Buenos días 👋",
+      "morningWithName": "Buenos días {name} 👋",
+      "afternoon": "Hola ☀️",
+      "afternoonWithName": "Hola {name} ☀️",
+      "evening": "Buenas noches 🌙",
+      "eveningWithName": "Buenas noches {name} 🌙",
+      "lateNight": "¿Sigues por aquí? ☕",
+      "lateNightWithName": "¿Sigues por aquí {name}? ☕"
+    },
+    "subtitleRotation": {
+      "0": "¿Lista/o para impulsar tu negocio hoy?",
+      "1": "¿Creamos contenido que convierte?",
+      "2": "Un nuevo día, una nueva oportunidad ✨",
+      "3": "¿Qué lanzamos hoy?",
+      "4": "Tu audiencia te espera — ¿vamos?"
+    },
+    "weeklyGoal": {
+      "objectiveLabel": "Objetivo de la semana",
+      "firstPublish": {
+        "title": "Publica tu primer quiz",
+        "desc": "Una vez listo tu quiz, compártelo para captar tus primeros leads.",
+        "cta": "Crear un quiz"
+      },
+      "firstLead": {
+        "title": "Captura tu primer lead",
+        "desc": "Comparte el enlace de tu quiz con tu audiencia para recoger tu primera respuesta.",
+        "cta": "Ver mis proyectos"
+      },
+      "shareAgain": {
+        "title": "Vuelve a compartir esta semana",
+        "desc": "Sin nuevas respuestas esta semana — volver a compartir suele reactivar el flujo.",
+        "cta": "Ver mis proyectos"
+      },
+      "firstSurvey": {
+        "title": "Crea un sondeo NPS",
+        "desc": "Pregunta a tus clientes qué piensan de ti en 1 minuto. Impulsa la retención.",
+        "cta": "Crear un sondeo"
+      },
+      "hundredClub": {
+        "title": "Apunta a 100 leads",
+        "desc": "Solo {remaining} más para entrar en el club de los 100.",
+        "cta": "Ver mis proyectos"
+      },
+      "keepShipping": {
+        "title": "Mantén el ritmo",
+        "desc": "Ya tienes 100+ leads. Lanza un nuevo quiz esta semana para ampliar tu audiencia.",
+        "cta": "Crear un quiz"
+      }
+    },
+    "insights": {
+      "title": "Sugerencias para ti",
+      "quietProject": {
+        "title": "Tu {kind} «{name}» se ha dormido",
+        "titleQuiz": "quiz",
+        "titleSurvey": "sondeo",
+        "body": "{days} días sin una nueva respuesta. Volver a compartir suele reactivar el flujo.",
+        "cta": "Ver el proyecto"
+      },
+      "lowConv": {
+        "title": "«{name}»: {starts} inicios, pocas capturas",
+        "body": "Tasa de captura {rate}%. Revisa la relevancia del CTA y la longitud del formulario.",
+        "cta": "Optimizar"
+      },
+      "topPerformer": {
+        "title": "«{name}» convierte muy bien",
+        "body": "Tasa de captura {rate}% — por encima de la media. Empújalo en tus canales para amplificar.",
+        "cta": "Compartir el proyecto"
+      },
+      "shipDrafts": {
+        "title": "Tienes proyectos en borrador",
+        "bodyOne": "{count} proyecto a la espera de publicación. ¡Adelante!",
+        "bodyMany": "{count} proyectos a la espera de publicación. ¡Adelante!",
+        "cta": "Ver mis proyectos"
+      },
+      "firstSurvey": {
+        "title": "Pide la opinión de tus leads",
+        "body": "Un sondeo NPS de 1 minuto a tus contactos captados es una mina de insights directa.",
+        "cta": "Crear un sondeo"
+      },
+      "untitled": "Sin título"
+    },
+    "achievements": {
+      "first_publish": {
+        "label": "Primer proyecto",
+        "hint": "Publica tu primer quiz o sondeo"
+      },
+      "launcher": {
+        "label": "Lanzadora",
+        "hint": "Publica 5 proyectos o más"
+      },
+      "first_lead": {
+        "label": "Primer lead",
+        "hint": "Captura tu primera respuesta"
+      },
+      "hundred_club": {
+        "label": "Club de los 100",
+        "hint": "Acumula 100 respuestas o más"
+      },
+      "thousand_club": {
+        "label": "Mil bravos",
+        "hint": "Acumula 1 000 respuestas o más"
+      },
+      "polyglot": {
+        "label": "Políglota",
+        "hint": "Publica en al menos 2 idiomas"
+      },
+      "survey_master": {
+        "label": "Profesional del sondeo",
+        "hint": "Ten 3 sondeos activos al mismo tiempo"
+      },
+      "hot_streak": {
+        "label": "En forma",
+        "hint": "Recibe 7 respuestas en 7 días"
+      },
+      "conversion_25": {
+        "label": "Convertidora",
+        "hint": "Alcanza un 25% de tasa de captura"
+      },
+      "library": {
+        "label": "Biblioteca",
+        "hint": "Ten 10 proyectos o más"
+      }
+    }
   },
   "contents": {
     "title": "Mis Contenidos",

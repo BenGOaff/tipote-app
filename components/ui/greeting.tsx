@@ -3,15 +3,22 @@
 // components/ui/greeting.tsx
 // Personalised hero heading for dashboards / home pages.
 //
-//   <Greeting />               // → "Bonjour Béné 👋"
+//   <Greeting />               // → "Good morning Béné 👋"
 //   <Greeting subtitle />      // → adds the rotating subtitle below
 //
-// Fetches first_name from /api/profile once and caches it for the
-// session via a tiny module-level cache so multiple Greeting instances
-// (e.g. desktop + mobile variants) don't re-fetch.
+// I18N: lib/copy.ts returns a {period, name} descriptor; this
+// component looks up the localised string via next-intl so the
+// greeting always matches the user's chosen locale.
 
 import { useEffect, useState } from "react";
-import { greet, greetSubtitle, dailySeed } from "@/lib/copy";
+import { useTranslations } from "next-intl";
+import {
+  greet,
+  greetSubtitleIndex,
+  dailySeed,
+  SUBTITLE_VARIANT_COUNT,
+  type GreetingPeriod,
+} from "@/lib/copy";
 import { Mascot, type MascotExpression } from "@/components/ui/mascot";
 
 let cachedName: string | null = null;
@@ -19,8 +26,7 @@ let inFlight: Promise<void> | null = null;
 
 // Pull the user's first name from /api/profile. Tries first_name first
 // (Tipote's business_profiles), falls back to the first chunk of
-// full_name (Tiquiz's profiles table — no separate first_name column).
-// Either way, the user gets a personalised greeting on both apps.
+// full_name (when no separate first_name column).
 async function ensureName(): Promise<string | null> {
   if (cachedName !== null) return cachedName;
   if (!inFlight) {
@@ -34,7 +40,6 @@ async function ensureName(): Promise<string | null> {
           return;
         }
         const full = typeof p.full_name === "string" ? p.full_name.trim() : "";
-        // Drop trailing "Lagardette" / "Doe" — first whitespace chunk only.
         cachedName = full ? full.split(/\s+/)[0] : "";
       })
       .catch(() => {
@@ -59,20 +64,20 @@ type Props = {
 };
 
 // Pick the mascot expression from the time of day so the same hero
-// feels different morning vs. evening. Stable across renders within a
-// session — no re-roll surprises.
-function pickMascotExpression(): MascotExpression {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return "wave";       // morning hello
-  if (hour >= 12 && hour < 18) return "happy";    // afternoon energy
-  if (hour >= 18 && hour < 23) return "hello";    // evening warm
-  return "sleepy";                                  // late night / early
+// feels different morning vs. evening.
+function pickMascotExpression(period: GreetingPeriod): MascotExpression {
+  if (period === "morning") return "wave";
+  if (period === "afternoon") return "happy";
+  if (period === "evening") return "hello";
+  return "sleepy";
 }
 
 export function Greeting({ subtitle = false, className, hideMascot = false }: Props) {
+  const t = useTranslations("dashboard.greeting");
+  const tSub = useTranslations("dashboard.subtitleRotation");
+
   // Hydrate-safe: render the no-name greeting first, swap to the
-  // personalised one once we have the data. Avoids a flash of the
-  // wrong name and never causes a hydration mismatch.
+  // personalised one once we have the data.
   const [name, setName] = useState<string | null>(cachedName);
 
   useEffect(() => {
@@ -85,9 +90,18 @@ export function Greeting({ subtitle = false, className, hideMascot = false }: Pr
     };
   }, []);
 
-  const headline = greet(name);
+  const { period, name: greetName } = greet(name);
+  const hasName = greetName.length > 0;
+  const headlineKey = hasName ? `${period}WithName` : period;
+  const headline = hasName ? t(headlineKey, { name: greetName }) : t(headlineKey);
+
+  // Subtitle: pick a stable variant index for the day so a returning
+  // user doesn't see the exact same line every refresh, but no flicker
+  // within the day.
   const seed = dailySeed();
-  const expression = pickMascotExpression();
+  const subIndex = greetSubtitleIndex(seed);
+  const subKey = String(subIndex < SUBTITLE_VARIANT_COUNT ? subIndex : 0);
+  const expression = pickMascotExpression(period);
 
   return (
     <div className={className}>
@@ -101,7 +115,7 @@ export function Greeting({ subtitle = false, className, hideMascot = false }: Pr
           </h1>
           {subtitle && (
             <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mt-1.5">
-              {greetSubtitle(seed)}
+              {tSub(subKey)}
             </p>
           )}
         </div>

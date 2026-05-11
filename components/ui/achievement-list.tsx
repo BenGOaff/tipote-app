@@ -1,14 +1,15 @@
+"use client";
+
 // components/ui/achievement-list.tsx
 // Visual gallery for the achievements computed in lib/achievements.ts.
-// Drop in a settings page / profile page / dashboard side-rail.
 //
 //   <AchievementList items={detectAchievements(input)} />
 //
-// Locked badges render greyed out with the lock affordance, unlocked
-// ones get the tone-tinted soft pill so the contrast is immediately
-// readable — "I have 4 of these, the others are within reach".
+// I18N: label + hint are looked up by id from
+//   dashboard.achievements.{id}.label  /  .hint
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   Rocket,
@@ -53,11 +54,14 @@ type Props = {
 };
 
 export function AchievementList({ items, className, compact }: Props) {
+  const t = useTranslations("dashboard.achievements");
   return (
     <div className={cn("grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3", className)}>
       {items.map((a) => {
         const Icon = ICONS[a.icon] ?? Sparkles;
         const tone = TONES[a.tone] ?? TONES.primary;
+        const label = t(`${a.id}.label`);
+        const hint = t(`${a.id}.hint`);
         return (
           <div
             key={a.id}
@@ -67,7 +71,7 @@ export function AchievementList({ items, className, compact }: Props) {
                 ? `bg-card border border-border/60 shadow-soft ring-1 ${tone.ring} hover:shadow-card`
                 : "bg-surface-muted border border-border/40 opacity-70",
             )}
-            title={a.hint}
+            title={hint}
           >
             <div
               className={cn(
@@ -80,11 +84,11 @@ export function AchievementList({ items, className, compact }: Props) {
             </div>
             <div className="space-y-0.5">
               <div className={cn("text-sm font-semibold leading-tight", a.unlocked ? "text-foreground" : "text-muted-foreground")}>
-                {a.label}
+                {label}
               </div>
               {!compact && (
                 <div className="text-[11px] text-muted-foreground leading-snug">
-                  {a.hint}
+                  {hint}
                 </div>
               )}
             </div>
@@ -96,7 +100,7 @@ export function AchievementList({ items, className, compact }: Props) {
 }
 
 /**
- * Small summary chip — "4/10 réussis" — useful to drop next to the
+ * Small summary chip — "4/10" — useful to drop next to the
  * grid title or in a sidebar.
  */
 export function AchievementSummary({

@@ -1,96 +1,57 @@
 // lib/copy.ts
-// Tiny copy bank for tone-of-voice helpers. Use these instead of writing
-// "Aucun résultat" / "Chargement…" inline so we keep one consistent voice
-// across both apps:  warm, slightly playful, never robotic.
+// Tiny copy bank for tone-of-voice helpers. Returns i18n DESCRIPTORS
+// (keys + params) rather than localised strings — the rendering layer
+// looks up the message via useTranslations / getTranslations.
 //
-// Why a util and not just message keys? next-intl is great for full
-// translations but we want a SINGLE phrase that's curated, not 7 locale
-// strings every time we want to say "no results". For one-off ambient
-// copy this util short-circuits the translation overhead.
-//
-// The util returns a deterministic phrase for SSR (no random hydration
-// mismatch) but supports a `seed` for variety on the client when you
-// want a different phrase per page-load.
+// Why descriptors instead of literal strings? lib/* code runs in both
+// server and client contexts and shouldn't bake one language into the
+// data layer. The UI components are the only ones that know the user's
+// locale, so they do the actual translation lookup.
 
-const PHRASES = {
-  loadingShort: ["Une seconde…", "Chargement…", "Tipote prépare ça…"],
-  loadingAi: [
-    "L'IA fait sa magie ✨",
-    "Réflexion en cours…",
-    "On cuisine ça pour toi…",
-  ],
-  emptyResults: [
-    "👀 Rien par ici pour l'instant",
-    "Aucun résultat — pour le moment",
-    "Tu n'as encore rien dans cette catégorie",
-  ],
-  emptyDashboard: [
-    "Prêt·e à démarrer ?",
-    "Tout commence ici 🚀",
-    "Une nouvelle aventure t'attend",
-  ],
-  errorGeneric: [
-    "Petite couac. On recommence ?",
-    "Quelque chose a coincé — réessaie ?",
-    "Ça n'a pas marché cette fois 🙁",
-  ],
-  successGeneric: [
-    "C'est fait ✓",
-    "Enregistré !",
-    "Parfait, c'est sauvegardé.",
-  ],
-  saved: ["Sauvegardé ✓", "Enregistré ✓", "Tout est à jour ✓"],
-} as const;
+/** Time-of-day buckets used for greetings + mascot expression. */
+export type GreetingPeriod = "morning" | "afternoon" | "evening" | "lateNight";
 
-type Bank = keyof typeof PHRASES;
-
-/** Pick a phrase. SSR-safe (always picks index 0 on the server). */
-export function phrase(key: Bank, seed?: number): string {
-  const list = PHRASES[key];
-  if (typeof seed !== "number") return list[0];
-  const i = Math.abs(seed) % list.length;
-  return list[i];
-}
+/** Descriptor returned by greet(). Render with:
+ *    const key = `dashboard.greeting.${period}${name ? "WithName" : ""}`
+ *    t(key, name ? { name } : undefined)
+ */
+export type GreetingDescriptor = {
+  period: GreetingPeriod;
+  /** Trimmed first name, or empty string if anonymous. */
+  name: string;
+};
 
 /**
- * Greeting helper — returns a contextual hello based on the time of day,
- * optionally personalised with the user's first name.
- *
- *   greet("Béné")  // → "Bonjour Béné 👋"  (morning / afternoon)
- *                  // → "Bonsoir Béné 🌙"  (evening)
- *                  // → "Bon retour Béné !" (late night)
- *
- * The returned string is suitable for an <h1>. Pass the user's first name
- * (not full name) for a natural feel.
+ * Greeting helper — returns the time-of-day bucket + an optional name.
+ * The UI then looks up `dashboard.greeting.morningWithName` (etc.) so
+ * the wording stays in the locale the user has picked, not the locale
+ * of whoever wrote this file.
  */
-export function greet(firstName?: string | null): string {
+export function greet(firstName?: string | null): GreetingDescriptor {
   const name = (firstName ?? "").trim();
   const hour = new Date().getHours();
 
-  let base: string;
-  if (hour >= 5 && hour < 12) base = name ? `Bonjour ${name} 👋` : "Bonjour 👋";
-  else if (hour >= 12 && hour < 18) base = name ? `Hello ${name} ☀️` : "Hello ☀️";
-  else if (hour >= 18 && hour < 23) base = name ? `Bonsoir ${name} 🌙` : "Bonsoir 🌙";
-  else base = name ? `Toujours là ${name} ? ☕` : "Toujours là ? ☕";
+  let period: GreetingPeriod;
+  if (hour >= 5 && hour < 12) period = "morning";
+  else if (hour >= 12 && hour < 18) period = "afternoon";
+  else if (hour >= 18 && hour < 23) period = "evening";
+  else period = "lateNight";
 
-  return base;
+  return { period, name };
 }
 
 /**
- * Subtitle to pair with greet(). Rotates so a returning user doesn't
- * see the exact same line every time. Pass `seed` (e.g. day-of-year)
- * for stable randomness within a session.
+ * Subtitle helper — returns a stable index 0..N-1 the rendering layer
+ * can use to look up `dashboard.subtitleRotation.{index}`. SSR-safe:
+ * with no seed we always return 0 so client + server agree.
+ *
+ * Keep SUBTITLE_VARIANT_COUNT in sync with the messages JSON.
  */
-export function greetSubtitle(seed?: number): string {
-  const lines = [
-    "Prêt·e à booster ton business aujourd'hui ?",
-    "On crée du contenu qui convertit ?",
-    "Une nouvelle journée, une nouvelle opportunité ✨",
-    "Qu'est-ce qu'on lance aujourd'hui ?",
-    "Ton audience t'attend — on y va ?",
-  ];
-  if (typeof seed !== "number") return lines[0];
-  return lines[Math.abs(seed) % lines.length];
+export const SUBTITLE_VARIANT_COUNT = 5;
+
+export function greetSubtitleIndex(seed?: number): number {
+  if (typeof seed !== "number") return 0;
+  return Math.abs(seed) % SUBTITLE_VARIANT_COUNT;
 }
 
 /** Day-of-year used as a stable seed (changes once per day, no flicker). */

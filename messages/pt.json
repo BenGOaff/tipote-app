@@ -728,9 +728,132 @@
     "title": "Painel",
     "subtitle": "Visão geral do teu projeto",
     "welcome": "Bem-vindo",
-    "greeting": "Olá",
+    "greeting": {
+      "morning": "Bom dia 👋",
+      "morningWithName": "Bom dia {name} 👋",
+      "afternoon": "Olá ☀️",
+      "afternoonWithName": "Olá {name} ☀️",
+      "evening": "Boa noite 🌙",
+      "eveningWithName": "Boa noite {name} 🌙",
+      "lateNight": "Ainda por aqui? ☕",
+      "lateNightWithName": "Ainda por aqui {name}? ☕"
+    },
     "empty": "Ainda sem dados",
-    "startHere": "Começa por aqui"
+    "startHere": "Começa por aqui",
+    "subtitleRotation": {
+      "0": "Pronto·a para impulsionar o teu negócio hoje?",
+      "1": "Vamos criar conteúdo que converte?",
+      "2": "Um novo dia, uma nova oportunidade ✨",
+      "3": "O que vamos lançar hoje?",
+      "4": "A tua audiência espera — vamos?"
+    },
+    "weeklyGoal": {
+      "objectiveLabel": "Objetivo da semana",
+      "firstPublish": {
+        "title": "Publica o teu primeiro quiz",
+        "desc": "Quando o teu quiz estiver pronto, partilha-o para captar os teus primeiros leads.",
+        "cta": "Criar um quiz"
+      },
+      "firstLead": {
+        "title": "Capta o teu primeiro lead",
+        "desc": "Partilha o link do teu quiz com a tua audiência para receberes a primeira resposta.",
+        "cta": "Ver os meus projetos"
+      },
+      "shareAgain": {
+        "title": "Volta a partilhar esta semana",
+        "desc": "Nenhuma resposta nova esta semana — voltar a partilhar costuma reativar o fluxo.",
+        "cta": "Ver os meus projetos"
+      },
+      "firstSurvey": {
+        "title": "Cria um inquérito NPS",
+        "desc": "Pergunta aos teus clientes o que pensam de ti em 1 minuto. Aumenta a retenção.",
+        "cta": "Criar um inquérito"
+      },
+      "hundredClub": {
+        "title": "Apunta aos 100 leads",
+        "desc": "Faltam apenas {remaining} para entrares no clube dos 100.",
+        "cta": "Ver os meus projetos"
+      },
+      "keepShipping": {
+        "title": "Mantém o ritmo",
+        "desc": "Já tens 100+ leads. Lança um novo quiz esta semana para alargar a audiência.",
+        "cta": "Criar um quiz"
+      }
+    },
+    "insights": {
+      "title": "Sugestões para ti",
+      "quietProject": {
+        "title": "O teu {kind} «{name}» adormeceu",
+        "titleQuiz": "quiz",
+        "titleSurvey": "inquérito",
+        "body": "{days} dias sem nova resposta. Voltar a partilhar costuma reativar o fluxo.",
+        "cta": "Ver o projeto"
+      },
+      "lowConv": {
+        "title": "«{name}»: {starts} arranques, poucas capturas",
+        "body": "Taxa de captura {rate}%. Verifica a relevância do CTA e o comprimento do formulário.",
+        "cta": "Otimizar"
+      },
+      "topPerformer": {
+        "title": "«{name}» está a converter forte",
+        "body": "Taxa de captura {rate}% — acima da média. Empurra-o nos teus canais para amplificar.",
+        "cta": "Partilhar o projeto"
+      },
+      "shipDrafts": {
+        "title": "Tens projetos em rascunho",
+        "bodyOne": "{count} projeto à espera de publicação. Vai lá!",
+        "bodyMany": "{count} projetos à espera de publicação. Vai lá!",
+        "cta": "Ver os meus projetos"
+      },
+      "firstSurvey": {
+        "title": "Pede a opinião aos teus leads",
+        "body": "Um inquérito NPS de 1 minuto aos teus contactos captados é uma mina de insights direta.",
+        "cta": "Criar um inquérito"
+      },
+      "untitled": "Sem título"
+    },
+    "achievements": {
+      "first_publish": {
+        "label": "Primeiro projeto",
+        "hint": "Publica o teu primeiro quiz ou inquérito"
+      },
+      "launcher": {
+        "label": "Lançador",
+        "hint": "Publica 5 projetos ou mais"
+      },
+      "first_lead": {
+        "label": "Primeiro lead",
+        "hint": "Capta a tua primeira resposta"
+      },
+      "hundred_club": {
+        "label": "Clube dos 100",
+        "hint": "Acumula 100 respostas ou mais"
+      },
+      "thousand_club": {
+        "label": "Mil parabéns",
+        "hint": "Acumula 1 000 respostas ou mais"
+      },
+      "polyglot": {
+        "label": "Poliglota",
+        "hint": "Publica em pelo menos 2 idiomas"
+      },
+      "survey_master": {
+        "label": "Pro dos inquéritos",
+        "hint": "Tem 3 inquéritos ativos ao mesmo tempo"
+      },
+      "hot_streak": {
+        "label": "Em forma",
+        "hint": "Recebe 7 respostas em 7 dias"
+      },
+      "conversion_25": {
+        "label": "Convertedor",
+        "hint": "Atinge 25% de taxa de captura"
+      },
+      "library": {
+        "label": "Biblioteca",
+        "hint": "Tem 10 projetos ou mais"
+      }
+    }
   },
   "contents": {
     "title": "Os meus conteúdos",

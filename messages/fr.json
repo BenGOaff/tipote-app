@@ -558,7 +558,131 @@
     "seeStrategy": "Voir stratégie",
     "createContent": "Créer du contenu",
     "nextAction": "Prochaine action à faire",
-    "allTasks": "Voir toutes les tâches"
+    "allTasks": "Voir toutes les tâches",
+    "greeting": {
+      "morning": "Bonjour 👋",
+      "morningWithName": "Bonjour {name} 👋",
+      "afternoon": "Hello ☀️",
+      "afternoonWithName": "Hello {name} ☀️",
+      "evening": "Bonsoir 🌙",
+      "eveningWithName": "Bonsoir {name} 🌙",
+      "lateNight": "Toujours là ? ☕",
+      "lateNightWithName": "Toujours là {name} ? ☕"
+    },
+    "subtitleRotation": {
+      "0": "Prêt·e à booster ton business aujourd'hui ?",
+      "1": "On crée du contenu qui convertit ?",
+      "2": "Une nouvelle journée, une nouvelle opportunité ✨",
+      "3": "Qu'est-ce qu'on lance aujourd'hui ?",
+      "4": "Ton audience t'attend — on y va ?"
+    },
+    "weeklyGoal": {
+      "objectiveLabel": "Objectif de la semaine",
+      "firstPublish": {
+        "title": "Publie ton premier quiz",
+        "desc": "Une fois ton quiz prêt, partage-le pour capturer tes premiers leads.",
+        "cta": "Créer un quiz"
+      },
+      "firstLead": {
+        "title": "Capture ton premier lead",
+        "desc": "Partage le lien de ton quiz à ton audience pour récolter ta première réponse.",
+        "cta": "Voir mes projets"
+      },
+      "shareAgain": {
+        "title": "Repartage cette semaine",
+        "desc": "Aucune nouvelle réponse cette semaine — un repartage relance souvent le flux.",
+        "cta": "Voir mes projets"
+      },
+      "firstSurvey": {
+        "title": "Crée un sondage NPS",
+        "desc": "Demande à tes clients ce qu'ils pensent de toi en 1 minute. Boost la rétention.",
+        "cta": "Créer un sondage"
+      },
+      "hundredClub": {
+        "title": "Vise les 100 leads",
+        "desc": "Plus que {remaining} pour intégrer le club des 100.",
+        "cta": "Voir mes projets"
+      },
+      "keepShipping": {
+        "title": "Continue sur ta lancée",
+        "desc": "Tu as déjà 100+ leads. Lance un nouveau quiz cette semaine pour étendre ton audience.",
+        "cta": "Créer un quiz"
+      }
+    },
+    "insights": {
+      "title": "Suggestions pour toi",
+      "quietProject": {
+        "title": "Ton {kind} « {name} » s'est endormi",
+        "titleQuiz": "quiz",
+        "titleSurvey": "sondage",
+        "body": "{days} jours sans nouvelle réponse. Un repartage relance souvent le flux.",
+        "cta": "Voir le projet"
+      },
+      "lowConv": {
+        "title": "« {name} » : {starts} démarrages, peu de captures",
+        "body": "Taux de capture {rate} %. Vérifie la pertinence du CTA et la longueur du formulaire.",
+        "cta": "Optimiser"
+      },
+      "topPerformer": {
+        "title": "« {name} » convertit fort",
+        "body": "Taux de capture {rate} % — au-dessus de la moyenne. Pousse-le sur tes canaux pour amplifier.",
+        "cta": "Partager le projet"
+      },
+      "shipDrafts": {
+        "title": "Tu as des projets en brouillon",
+        "bodyOne": "{count} projet en attente de publication. Lance-toi !",
+        "bodyMany": "{count} projets en attente de publication. Lance-toi !",
+        "cta": "Voir mes projets"
+      },
+      "firstSurvey": {
+        "title": "Demande l'avis de tes leads",
+        "body": "Un sondage NPS de 1 minute auprès de tes contacts capturés est un gisement d'insights direct.",
+        "cta": "Créer un sondage"
+      },
+      "untitled": "Sans titre"
+    },
+    "achievements": {
+      "first_publish": {
+        "label": "Premier projet",
+        "hint": "Publie ton premier quiz ou sondage"
+      },
+      "launcher": {
+        "label": "Lanceur",
+        "hint": "Publie 5 projets ou plus"
+      },
+      "first_lead": {
+        "label": "Premier lead",
+        "hint": "Capture ta première réponse"
+      },
+      "hundred_club": {
+        "label": "Club des 100",
+        "hint": "Cumule 100 réponses ou plus"
+      },
+      "thousand_club": {
+        "label": "Mille fois bravo",
+        "hint": "Cumule 1 000 réponses ou plus"
+      },
+      "polyglot": {
+        "label": "Polyglotte",
+        "hint": "Publie dans au moins 2 langues"
+      },
+      "survey_master": {
+        "label": "Pro du sondage",
+        "hint": "Aie 3 sondages actifs en même temps"
+      },
+      "hot_streak": {
+        "label": "En forme",
+        "hint": "Reçois 7 réponses sur 7 jours"
+      },
+      "conversion_25": {
+        "label": "Convertisseur",
+        "hint": "Atteins 25 % de taux de capture"
+      },
+      "library": {
+        "label": "Bibliothèque",
+        "hint": "Aie 10 projets ou plus"
+      }
+    }
   },
   "contents": {
     "title": "Mes Contenus",

@@ -558,7 +558,131 @@
     "seeStrategy": "View strategy",
     "createContent": "Create content",
     "nextAction": "Next action to take",
-    "allTasks": "View all tasks"
+    "allTasks": "View all tasks",
+    "greeting": {
+      "morning": "Good morning 👋",
+      "morningWithName": "Good morning {name} 👋",
+      "afternoon": "Hello ☀️",
+      "afternoonWithName": "Hello {name} ☀️",
+      "evening": "Good evening 🌙",
+      "eveningWithName": "Good evening {name} 🌙",
+      "lateNight": "Still here? ☕",
+      "lateNightWithName": "Still here {name}? ☕"
+    },
+    "subtitleRotation": {
+      "0": "Ready to grow your business today?",
+      "1": "Shall we craft content that converts?",
+      "2": "A new day, a new opportunity ✨",
+      "3": "What are we launching today?",
+      "4": "Your audience is waiting — let's go?"
+    },
+    "weeklyGoal": {
+      "objectiveLabel": "Goal of the week",
+      "firstPublish": {
+        "title": "Publish your first quiz",
+        "desc": "Once your quiz is ready, share it to capture your first leads.",
+        "cta": "Create a quiz"
+      },
+      "firstLead": {
+        "title": "Capture your first lead",
+        "desc": "Share your quiz link with your audience to collect your first response.",
+        "cta": "View my projects"
+      },
+      "shareAgain": {
+        "title": "Share again this week",
+        "desc": "No new response this week — re-sharing often restarts the flow.",
+        "cta": "View my projects"
+      },
+      "firstSurvey": {
+        "title": "Create an NPS survey",
+        "desc": "Ask your customers what they think of you in 1 minute. Boost retention.",
+        "cta": "Create a survey"
+      },
+      "hundredClub": {
+        "title": "Aim for 100 leads",
+        "desc": "Just {remaining} more to join the 100-club.",
+        "cta": "View my projects"
+      },
+      "keepShipping": {
+        "title": "Keep up the momentum",
+        "desc": "You already have 100+ leads. Launch a new quiz this week to grow your audience.",
+        "cta": "Create a quiz"
+      }
+    },
+    "insights": {
+      "title": "Suggestions for you",
+      "quietProject": {
+        "title": "Your {kind} \"{name}\" went quiet",
+        "titleQuiz": "quiz",
+        "titleSurvey": "survey",
+        "body": "{days} days without a new response. A re-share often restarts the flow.",
+        "cta": "View the project"
+      },
+      "lowConv": {
+        "title": "\"{name}\": {starts} starts, few captures",
+        "body": "Capture rate {rate}%. Check the CTA's relevance and the form's length.",
+        "cta": "Optimise"
+      },
+      "topPerformer": {
+        "title": "\"{name}\" is converting hard",
+        "body": "Capture rate {rate}% — above average. Push it on your channels to amplify.",
+        "cta": "Share the project"
+      },
+      "shipDrafts": {
+        "title": "You have draft projects",
+        "bodyOne": "{count} project waiting to be published. Go for it!",
+        "bodyMany": "{count} projects waiting to be published. Go for it!",
+        "cta": "View my projects"
+      },
+      "firstSurvey": {
+        "title": "Ask your leads' opinion",
+        "body": "A 1-minute NPS survey of your captured contacts is a direct insight goldmine.",
+        "cta": "Create a survey"
+      },
+      "untitled": "Untitled"
+    },
+    "achievements": {
+      "first_publish": {
+        "label": "First project",
+        "hint": "Publish your first quiz or survey"
+      },
+      "launcher": {
+        "label": "Launcher",
+        "hint": "Publish 5 projects or more"
+      },
+      "first_lead": {
+        "label": "First lead",
+        "hint": "Capture your first response"
+      },
+      "hundred_club": {
+        "label": "100 club",
+        "hint": "Reach 100 responses or more"
+      },
+      "thousand_club": {
+        "label": "Thousand bravos",
+        "hint": "Reach 1,000 responses or more"
+      },
+      "polyglot": {
+        "label": "Polyglot",
+        "hint": "Publish in at least 2 languages"
+      },
+      "survey_master": {
+        "label": "Survey pro",
+        "hint": "Have 3 active surveys at the same time"
+      },
+      "hot_streak": {
+        "label": "On fire",
+        "hint": "Get 7 responses over 7 days"
+      },
+      "conversion_25": {
+        "label": "Converter",
+        "hint": "Reach a 25% capture rate"
+      },
+      "library": {
+        "label": "Library",
+        "hint": "Have 10 projects or more"
+      }
+    }
   },
   "contents": {
     "title": "My Content",
