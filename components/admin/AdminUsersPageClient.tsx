@@ -102,6 +102,8 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [draftPlanById, setDraftPlanById] = useState<Record<string, string>>({});
 
@@ -326,6 +328,73 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       });
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function resendMagicLink(user: AdminUser) {
+    if (!user.id) return;
+    setResendingId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id, action: "resend_magic_link" }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || "Failed to resend magic link");
+      }
+      toast({
+        title: t("toast.magicLinkSent") || "Magic link envoyé",
+        description: user.email ?? user.id,
+      });
+    } catch (e) {
+      toast({
+        title: tc("error"),
+        description: e instanceof Error ? e.message : "Failed",
+        variant: "destructive",
+      });
+    } finally {
+      setResendingId(null);
+    }
+  }
+
+  // Suppression dure : on prévient l'admin avec un confirm() natif qui
+  // rappelle l'effet cascade (profil + projets + pages + connexions
+  // sociales etc. — tous les FKs ON DELETE CASCADE pointant vers
+  // auth.users sont déclenchés). Pas d'undo.
+  async function deleteUser(user: AdminUser) {
+    if (!user.id) return;
+    const ok = window.confirm(
+      `Supprimer DÉFINITIVEMENT ${user.email ?? user.id} ?\n\nCascade : profil, projets, pages hostées, connexions sociales, données comptables — tout sera détruit. Action irréversible.`,
+    );
+    if (!ok) return;
+    setDeletingId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || "Failed to delete user");
+      }
+      toast({ title: "User supprimé", description: user.email ?? user.id });
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(user.id);
+        return next;
+      });
+    } catch (e) {
+      toast({
+        title: tc("error"),
+        description: e instanceof Error ? e.message : "Failed",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -1033,13 +1102,34 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                     </TableCell>
 
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => savePlan(u)}
-                        disabled={savingId === u.id || loading || !dirty}
-                      >
-                        {savingId === u.id ? tc("sendingShort") : tc("apply")}
-                      </Button>
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                        <Button
+                          size="sm"
+                          onClick={() => savePlan(u)}
+                          disabled={savingId === u.id || loading || !dirty}
+                        >
+                          {savingId === u.id ? tc("sendingShort") : tc("apply")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Renvoyer un lien magique"
+                          onClick={() => resendMagicLink(u)}
+                          disabled={resendingId === u.id || deletingId === u.id || !u.email}
+                        >
+                          {resendingId === u.id ? "…" : "Lien"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Supprimer définitivement"
+                          onClick={() => deleteUser(u)}
+                          disabled={deletingId === u.id || resendingId === u.id}
+                          className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                        >
+                          {deletingId === u.id ? "…" : "🗑"}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

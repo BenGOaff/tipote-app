@@ -390,7 +390,13 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// PATCH — Admin: view credits for a user
+// PATCH — Admin: view credits for a user OR resend a magic link.
+// Branche par action :
+//   action="get" (défaut)        → snapshot crédits
+//   action="resend_magic_link"   → renvoie un magic link à l'user (l'email
+//                                  est résolu depuis auth.users à partir
+//                                  du user_id pour éviter qu'un admin
+//                                  envoie un OTP à une adresse arbitraire).
 export async function PATCH(req: NextRequest) {
   try {
     const { ok } = await assertAdmin(req);
@@ -399,17 +405,101 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = (await req.json().catch(() => ({}))) as {
-      user_id: string;
+      user_id?: string;
+      action?: string;
     };
 
     const userId = typeof body?.user_id === "string" ? body.user_id.trim() : "";
+    const action = typeof body?.action === "string" ? body.action.trim() : "get";
 
     if (!userId) {
       return NextResponse.json({ ok: false, error: "Missing user_id" }, { status: 400 });
     }
 
+    if (action === "resend_magic_link") {
+      const { data: authUser, error: getErr } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (getErr || !authUser?.user?.email) {
+        return NextResponse.json(
+          { ok: false, error: getErr?.message || "User not found in auth" },
+          { status: 404 },
+        );
+      }
+      const email = authUser.user.email;
+      const anonClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { persistSession: false } },
+      );
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
+      const { error: otpErr } = await anonClient.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${appUrl}/auth/callback`, shouldCreateUser: false },
+      });
+      if (otpErr) {
+        return NextResponse.json({ ok: false, error: otpErr.message }, { status: 400 });
+      }
+      return NextResponse.json({ ok: true, email });
+    }
+
+    // default: credits snapshot
     const snapshot = await ensureUserCredits(userId);
     return NextResponse.json({ ok: true, credits: snapshot });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
+
+// DELETE — Admin: hard-delete a user. Cascade-deletes everything tied
+// to auth.users (profil, projets, hosted pages, social connections, etc.)
+// via les ON DELETE CASCADE déclarés sur chaque table publique.
+// Irréversible — l'UI demande une confirmation explicite avant d'appeler.
+export async function DELETE(req: NextRequest) {
+  try {
+    const { ok, session } = await assertAdmin(req);
+    if (!ok) {
+      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = (await req.json().catch(() => ({}))) as { user_id?: string };
+    const userId = typeof body?.user_id === "string" ? body.user_id.trim() : "";
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Missing user_id" }, { status: 400 });
+    }
+
+    // Defensive: an admin shouldn't be able to nuke themselves via the
+    // dashboard — that would log them out + lose access to fix anything.
+    if (userId === session?.user?.id) {
+      return NextResponse.json({ ok: false, error: "Cannot delete yourself" }, { status: 400 });
+    }
+
+    // Capture the email for the audit log before the row vanishes.
+    let targetEmail: string | null = null;
+    try {
+      const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+      targetEmail = data?.user?.email ?? null;
+    } catch { /* non-blocking */ }
+
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    }
+
+    // Best-effort audit trail — mirrors PUT/POST patterns.
+    try {
+      await supabaseAdmin.from("plan_change_log").insert({
+        actor_user_id: session?.user?.id ?? null,
+        target_user_id: userId,
+        target_email: targetEmail,
+        old_plan: null,
+        new_plan: null,
+        reason: "admin: delete user",
+      });
+    } catch { /* table may not exist in legacy envs */ }
+
+    return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
