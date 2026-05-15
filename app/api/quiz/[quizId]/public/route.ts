@@ -523,14 +523,20 @@ export async function GET(_req: NextRequest, context: RouteContext) {
             "Vercel-CDN-Cache-Control": "no-store",
           }
         : {
-            // Same cache strategy as hosted_pages: edge SWR for resilience.
+            // Edge SWR resilience (origin down → keep serving last-good).
             // - max-age=0: browser always revalidates → creator sees fresh
             // - s-maxage=60: edge caches 60s → cheap origin protection
-            // - stale-while-revalidate=86400: edge serves last-good for up
-            //   to 24h when origin is down (deploy / crash / maintenance).
-            "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
-            "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
-            "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+            // - stale-while-revalidate=60: edge serves last-good seulement
+            //   pendant 60s en plus (au lieu de 24h précédemment). Sinon,
+            //   un visiteur qui a déjà ouvert l'URL voyait l'ancienne
+            //   version pendant 24h après une édition (couleurs / titre)
+            //   — bug remonté par Adeline (16 mai 2026, "couleur de base
+            //   sur mon tel"). 60s SWR limite la fenêtre à ~2 min entre
+            //   l'édit et l'apparition de la nouvelle version chez les
+            //   visiteurs déjà cachés côté edge.
+            "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=60",
+            "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=60",
+            "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=60",
           },
     });
   } catch (e) {
