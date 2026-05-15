@@ -31,7 +31,13 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
 
     if (!data) return {};
 
-    const description = (data.og_description?.trim() || stripHtml(data.introduction).slice(0, 160)) || undefined;
+    // Strip aussi la `og_description` (qui peut elle-même contenir des
+    // entités `&nbsp;` ou des balises résiduelles) — pas que l'intro.
+    // Cf. rapport Adeline (16 mai 2026) : iMessage affichait `&nbsp;`
+    // littéral dans l'aperçu de partage.
+    const ogDescPlain = stripHtml(data.og_description).trim();
+    const introPlain = stripHtml(data.introduction).slice(0, 160);
+    const description = (ogDescPlain || introPlain).trim() || undefined;
     // Title is rich-text in DB → strip pour la balise <title> et l'OG.
     const plainTitle = stripHtml(data.title);
 

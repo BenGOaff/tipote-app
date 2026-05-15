@@ -26,13 +26,35 @@ export function useAutosave<T>({
   const lastSerializedRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef<AbortController | null>(null);
+  // Tracks "have we ever seen `enabled=true` with a state?" — used pour
+  // poser une baseline à la première activation au lieu de pousser un
+  // draft "vide" identique au canonique. Sans ça, l'ouverture de
+  // l'éditeur (state hydraté = state canonique) déclenchait un PUT
+  // automatique après 2s, qui faisait draft_updated_at > updated_at →
+  // le dialog "Reprendre tes modifs ?" apparaissait au prochain
+  // ouverture, alors qu'aucune édition n'avait eu lieu.
+  // Cf. rapport Adeline (16 mai 2026).
+  const baselineSetRef = useRef(false);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      // Si on désactive (loading remonte à true, ou pendingDraft ouvre),
+      // on oublie la baseline pour la réposer à la prochaine activation.
+      baselineSetRef.current = false;
+      return;
+    }
     let serialized: string;
     try {
       serialized = JSON.stringify(state);
     } catch {
+      return;
+    }
+    if (!baselineSetRef.current) {
+      // Première activation après hydratation : on prend l'état initial
+      // comme référence "déjà saved côté serveur". Les pushes suivants
+      // ne se déclencheront que sur diff réelle (= user a vraiment édité).
+      lastSerializedRef.current = serialized;
+      baselineSetRef.current = true;
       return;
     }
     if (lastSerializedRef.current === serialized) return;
@@ -75,6 +97,15 @@ export function useAutosave<T>({
     try {
       await fetch(endpoint, { method: "DELETE" });
       lastSerializedRef.current = null;
+      // Reset la baseline : sans ça, le prochain render (avec state
+      // identique au state juste sauvegardé) verrait
+      // `lastSerializedRef === null !== JSON(state)` et planifierait
+      // un PUT inutile — recréant le draft strictement identique au
+      // canonique et ramenant le dialog "Reprendre tes modifs ?" à la
+      // prochaine ouverture. En oubliant la baseline, l'effet
+      // re-tombe sur la branche "première activation" qui pose le
+      // state actuel comme nouvelle référence sans push.
+      baselineSetRef.current = false;
       setLastSavedAt(null);
     } catch {
       // Non-fatal — the server-side draft will eventually be overwritten
