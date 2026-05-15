@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { consumeCredits, ensureUserCredits } from "@/lib/credits";
-import { callClaude, getClaudeApiKey } from "@/lib/claude";
+import { callClaude, getClaudeApiKey, resolveClaudeModel } from "@/lib/claude";
 import {
   buildSalesArgumentsPrompt,
   offerSignature,
@@ -192,7 +192,9 @@ export async function POST(req: NextRequest) {
     generated_at: new Date().toISOString(),
     persona_signature: personaSignature(persona),
     offer_signature: offerSignature(offer),
-    model: "claude-sonnet-4-5",
+    // Métadonnée DB : on enregistre le modèle réellement utilisé pour la
+    // génération (résolu via la lib centrale → Sonnet 4.6 par défaut).
+    model: resolveClaudeModel(),
     bullets,
   };
 
@@ -285,7 +287,9 @@ export async function PATCH(req: NextRequest) {
       offer?.sales_arguments?.generated_at ?? new Date().toISOString(),
     persona_signature: personaSignature(persona),
     offer_signature: offerSignature(offer),
-    model: offer?.sales_arguments?.model ?? "claude-sonnet-4-5",
+    // Garde la valeur stockée si elle existe (audit trail des anciennes
+    // générations) ; sinon = modèle courant.
+    model: offer?.sales_arguments?.model ?? resolveClaudeModel(),
     bullets,
   };
 

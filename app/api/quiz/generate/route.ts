@@ -13,6 +13,7 @@ import {
   buildSurveyImportPrompt,
 } from "@/lib/prompts/quiz/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,11 +31,12 @@ function getClaudeApiKey(): string {
 }
 
 function getClaudeModel(): string {
-  return (
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-sonnet-4-5-20250929"
+  // Sonnet 4.6 + safety net via lib.
+  return resolveAnthropicModel(
+    process.env.TIPOTE_CLAUDE_MODEL ||
+      process.env.CLAUDE_MODEL ||
+      process.env.ANTHROPIC_MODEL,
+    "sonnet",
   );
 }
 

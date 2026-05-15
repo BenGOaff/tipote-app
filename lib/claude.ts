@@ -11,24 +11,22 @@
 // default), which is the only failure mode worth caring about.
 
 import "server-only";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
-const DEFAULT_MODEL = "claude-sonnet-4-5-20250929";
 const DEFAULT_IDLE_TIMEOUT_MS = 90_000;
 
 export function resolveClaudeModel(): string {
-  const raw =
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "";
-  const v = raw.trim();
-  if (!v) return DEFAULT_MODEL;
-  const s = v.toLowerCase();
-  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5") {
-    return DEFAULT_MODEL;
-  }
-  if (s === "claude-3-5-sonnet-20240620") return DEFAULT_MODEL;
-  return v;
+  // Délégation à la lib centrale — couvre Sonnet 4.6 + safety net qui
+  // rattrape tous les IDs legacy (Sonnet 3.5 / Sonnet 4 / Sonnet 4.5,
+  // aliases informels). Ce wrapper garde les call-sites existants
+  // intacts tout en harmonisant la résolution sur l'ensemble des
+  // endpoints AI Tipote.
+  return resolveAnthropicModel(
+    process.env.TIPOTE_CLAUDE_MODEL ||
+      process.env.CLAUDE_MODEL ||
+      process.env.ANTHROPIC_MODEL,
+    "sonnet",
+  );
 }
 
 export function getClaudeApiKey(): string {

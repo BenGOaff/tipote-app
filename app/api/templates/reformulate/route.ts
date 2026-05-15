@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,17 +22,13 @@ function getClaudeApiKey(): string {
 }
 
 function resolveClaudeModel(): string {
-  const raw =
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "";
-  const v = (raw || "").trim();
-  const DEFAULT = "claude-sonnet-4-5-20250929";
-  if (!v) return DEFAULT;
-  const s = v.toLowerCase();
-  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5") return DEFAULT;
-  return v;
+  // Sonnet 4.6 + safety net via lib centrale.
+  return resolveAnthropicModel(
+    process.env.TIPOTE_CLAUDE_MODEL ||
+      process.env.CLAUDE_MODEL ||
+      process.env.ANTHROPIC_MODEL,
+    "sonnet",
+  );
 }
 
 async function callClaude(args: {

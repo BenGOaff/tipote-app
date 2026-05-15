@@ -25,6 +25,7 @@ import { formatBulletsForPrompt } from "@/lib/salesArguments";
 import { buildSocialPostPrompt } from "@/lib/prompts/content/socialPost";
 import { buildVideoScriptPrompt, type VideoDurationId, type VideoPlatform } from "@/lib/prompts/content/video";
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
 import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
@@ -1401,31 +1402,18 @@ function humanizeGenerationError(raw: string): { title: string; content: string 
  * -------------------------- */
 
 function resolveClaudeModel(): string {
-  const raw =
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "";
-
-  const v = (raw || "").trim();
-  const DEFAULT = "claude-sonnet-4-6";
-
-  if (!v) return DEFAULT;
-
-  const s = v.toLowerCase();
-
-  if (s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5"
-      || s === "sonnet-4.6" || s === "sonnet_4_6" || s === "claude-sonnet-4.6") {
-    return DEFAULT;
-  }
-
-  // Legacy model IDs → redirect to current default
-  if (s === "claude-3-5-sonnet-20240620" || s.includes("claude-3-5-sonnet-20240620")
-      || s === "claude-sonnet-4-5-20250929" || s.includes("claude-sonnet-4-5-20250929")) {
-    return DEFAULT;
-  }
-
-  return v;
+  // Délégation à la lib centrale (lib/anthropicModel) — couvre Sonnet
+  // 4.6 par défaut + safety net pour rattraper TOUS les IDs legacy
+  // identifiés dans le codebase. Avant cette unification, plusieurs
+  // endpoints avaient chacun leur petit `resolveClaudeModel` partiel
+  // avec des listes d'aliases divergentes (cf. lib/claude.ts,
+  // gender-variants…). Le hub centralisé évite la divergence.
+  return resolveAnthropicModel(
+    process.env.TIPOTE_CLAUDE_MODEL ||
+      process.env.CLAUDE_MODEL ||
+      process.env.ANTHROPIC_MODEL,
+    "sonnet",
+  );
 }
 
 /** Statuses that warrant an automatic retry (transient server-side errors). */

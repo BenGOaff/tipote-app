@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,38 +29,14 @@ function getClaudeApiKey(): string {
 }
 
 function getClaudeModel(): string {
-  // Même normalisation que `resolveClaudeModel()` dans
-  // app/api/content/generate/route.ts — sinon une env var
-  // `TIPOTE_CLAUDE_MODEL=claude-sonnet-4-5-20250929` (utilisée pour
-  // /content/generate qui rattrape les IDs legacy via redirect) pointait
-  // ici directement sur un modèle déprécié → 404 Anthropic →
-  // "Impossible de générer les variantes". On rattrape les mêmes
-  // alias legacy et on retombe sur claude-sonnet-4-6 (Sonnet courant).
-  const raw =
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "";
-
-  const v = raw.trim();
-  const DEFAULT = "claude-sonnet-4-6";
-  if (!v) return DEFAULT;
-
-  const s = v.toLowerCase();
-  if (
-    s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5" ||
-    s === "sonnet-4.6" || s === "sonnet_4_6" || s === "claude-sonnet-4.6"
-  ) {
-    return DEFAULT;
-  }
-  if (
-    s === "claude-3-5-sonnet-20240620" || s.includes("claude-3-5-sonnet-20240620") ||
-    s === "claude-sonnet-4-5-20250929" || s.includes("claude-sonnet-4-5-20250929") ||
-    s === "claude-sonnet-4-20250514" || s.includes("claude-sonnet-4-20250514")
-  ) {
-    return DEFAULT;
-  }
-  return v;
+  // Résolution centralisée via lib/anthropicModel (safety net IDs legacy
+  // + fallback Sonnet 4.6). Les env vars Tipote / Claude / Anthropic
+  // restent prioritaires dans cet ordre si elles pointent un modèle valide.
+  const envValue =
+    process.env.TIPOTE_CLAUDE_MODEL ||
+    process.env.CLAUDE_MODEL ||
+    process.env.ANTHROPIC_MODEL;
+  return resolveAnthropicModel(envValue, "sonnet");
 }
 
 type Variants = { m: string; f: string; x: string };

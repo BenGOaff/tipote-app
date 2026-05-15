@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -211,7 +212,8 @@ export async function GET(_req: NextRequest) {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
+          // Haiku (vitesse) + safety net via lib/anthropicModel.
+          model: resolveAnthropicModel(undefined, "haiku"),
           max_tokens: 300,
           system: systemPrompt,
           messages: [{ role: "user", content: `CONTEXTE:\n${contextLines}\n\nDate: ${today}` }],

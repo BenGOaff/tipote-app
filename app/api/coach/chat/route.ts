@@ -14,6 +14,7 @@ import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { buildCoachSystemPrompt } from "@/lib/prompts/coach/system";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { searchResourceChunks, type ResourceChunkMatch } from "@/lib/resources";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -193,11 +194,14 @@ async function callClaude(args: {
   maxTokens?: number;
   temperature?: number;
 }): Promise<string> {
-  const model =
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-sonnet-4-5-20250929";
+  // Sonnet 4.6 default + safety net via lib/anthropicModel (rattrape les
+  // anciens IDs Sonnet 4.5 / Sonnet 4 / Sonnet 3.5).
+  const model = resolveAnthropicModel(
+    process.env.TIPOTE_CLAUDE_MODEL ||
+      process.env.CLAUDE_MODEL ||
+      process.env.ANTHROPIC_MODEL,
+    "sonnet",
+  );
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

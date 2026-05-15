@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkRateLimit } from "@/lib/aiRateLimit";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,8 @@ function getClaudeApiKey(): string {
 function getModel(): string {
   // Haiku — fast + cheap. Reformulating a single short string is well within
   // its sweet spot, and Marie will click ✨ many times so latency matters.
-  return process.env.ANTHROPIC_REWRITE_MODEL?.trim() || "claude-haiku-4-5-20251001";
+  // Safety net IDs Haiku legacy via lib.
+  return resolveAnthropicModel(process.env.ANTHROPIC_REWRITE_MODEL, "haiku");
 }
 
 const ALLOWED_KINDS = new Set([

@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkRateLimit } from "@/lib/aiRateLimit";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,8 +41,8 @@ function getModel(): string {
   // Sonnet for the rebalance decision: a one-shot semantic-fit choice across
   // the whole quiz benefits from the better model. Cost is bounded — N
   // questions × M options is a few hundred tokens of input + a small JSON
-  // out, even for a long quiz.
-  return process.env.ANTHROPIC_REBALANCE_MODEL?.trim() || "claude-sonnet-4-20250514";
+  // out, even for a long quiz. Safety net IDs legacy via lib.
+  return resolveAnthropicModel(process.env.ANTHROPIC_REBALANCE_MODEL, "sonnet");
 }
 
 type RebalanceChange = {

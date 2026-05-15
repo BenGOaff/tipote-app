@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { buildBusinessContext } from "@/lib/compta/businessContext";
 
@@ -80,10 +81,11 @@ export async function GET() {
       return NextResponse.json({ ok: true, text: null }, { status: 200 });
     }
 
-    const model =
-      process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-      process.env.CLAUDE_MODEL?.trim() ||
-      "claude-sonnet-4-5-20250929";
+    // Sonnet 4.6 default + safety net via lib/anthropicModel.
+    const model = resolveAnthropicModel(
+      process.env.TIPOTE_CLAUDE_MODEL || process.env.CLAUDE_MODEL,
+      "sonnet",
+    );
 
     const systemPrompt = `Tu es le coach business de l'utilisateur sur Tipote. Tu dois écrire UNE SEULE phrase d'encouragement pour le tableau de bord.
 

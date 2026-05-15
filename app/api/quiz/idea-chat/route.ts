@@ -9,6 +9,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { buildQuizChatSystemPrompt } from "@/lib/prompts/quiz/chat";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,10 +31,10 @@ function getClaudeApiKey(): string {
 }
 
 function getChatModel(): string {
-  return (
-    process.env.TIPOTE_CHAT_MODEL?.trim() ||
-    process.env.ANTHROPIC_CHAT_MODEL?.trim() ||
-    "claude-haiku-4-5-20251001"
+  // Haiku 4.5 (rapide pour le chat conversationnel) + safety net via lib.
+  return resolveAnthropicModel(
+    process.env.TIPOTE_CHAT_MODEL || process.env.ANTHROPIC_CHAT_MODEL,
+    "haiku",
   );
 }
 

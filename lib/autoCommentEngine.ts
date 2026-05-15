@@ -2,6 +2,8 @@
 // Core engine for auto-commenting: AI comment generation + platform API calls.
 // Searches for relevant posts, generates varied comments, and posts them.
 
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
+
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
 function getClaudeApiKey(): string {
@@ -9,11 +11,12 @@ function getClaudeApiKey(): string {
 }
 
 function getClaudeModel(): string {
-  return (
-    process.env.TIPOTE_CLAUDE_MODEL?.trim() ||
-    process.env.CLAUDE_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-sonnet-4-5-20250929"
+  // Sonnet 4.6 + safety net via lib centrale.
+  return resolveAnthropicModel(
+    process.env.TIPOTE_CLAUDE_MODEL ||
+      process.env.CLAUDE_MODEL ||
+      process.env.ANTHROPIC_MODEL,
+    "sonnet",
   );
 }
 
