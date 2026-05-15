@@ -17,6 +17,7 @@ import { DateTimePicker } from "@/components/content/DateTimePicker";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
+import { stripHtml } from "@/lib/richText";
 // Design-system primitives (Phase 2 pilot). Replaces the bulky gradient
 // PageBanner + hand-rolled paddings with a cohesive heading + container +
 // card grammar shared across pages.
@@ -915,7 +916,11 @@ export default function MyContentLovableClient({
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <div className="font-medium truncate">
-                                      {qz.title || (isSurvey ? "Sondage sans titre" : "Quiz sans titre")}
+                                      {/* Le titre est édité en rich-text (RichTextEdit) → peut
+                                          contenir des `<span style="color:…">`. Pour cette ligne
+                                          de listing, on rend en texte plat — le rendu coloré reste
+                                          intact sur la page publique du quiz. */}
+                                      {stripHtml(qz.title) || (isSurvey ? "Sondage sans titre" : "Quiz sans titre")}
                                     </div>
                                     {isSurvey && (
                                       <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">

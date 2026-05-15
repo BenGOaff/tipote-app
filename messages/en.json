@@ -387,7 +387,8 @@
     "saveError": "Save error",
     "deleteArticleConfirm": "Delete this article?",
     "signOut": "Sign out",
-    "signingOut": "Signing out…"
+    "signingOut": "Signing out…",
+    "rteMyPalettes": "My palettes"
   },
   "auth": {
     "login": "Sign in",

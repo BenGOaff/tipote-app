@@ -387,7 +387,8 @@
     "saveError": "Error al guardar",
     "deleteArticleConfirm": "¿Eliminar este artículo?",
     "signOut": "Cerrar sesión",
-    "signingOut": "Cerrando sesión…"
+    "signingOut": "Cerrando sesión…",
+    "rteMyPalettes": "Mis paletas"
   },
   "auth": {
     "login": "Iniciar sesión",

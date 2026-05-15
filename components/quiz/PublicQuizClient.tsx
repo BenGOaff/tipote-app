@@ -17,7 +17,7 @@ import {
   hexToHslTriplet,
   type QuizBranding,
 } from "@/lib/quizBranding";
-import { sanitizeRichText } from "@/lib/richText";
+import { sanitizeRichText, stripHtml } from "@/lib/richText";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, type QuizGender } from "@/lib/quizPersonalization";
 import { ensureExternalUrl } from "@/lib/url";
@@ -1220,7 +1220,7 @@ export default function PublicQuizClient({
       typeof navigator.share === "function"
     ) {
       navigator
-        .share({ title: quiz?.title || "", text: shareText, url: shareUrl })
+        .share({ title: stripHtml(quiz?.title || ""), text: shareText, url: shareUrl })
         .then(() => trackShare())
         .catch(() => {
           /* user cancelled */
@@ -1362,7 +1362,13 @@ export default function PublicQuizClient({
                 />
               </div>
             )}
-            <h1 className="text-3xl sm:text-5xl font-bold leading-tight">{quiz.title}</h1>
+            {/* Le titre supporte le rich-text (RichTextEdit dans l'éditeur)
+                — on rend en HTML sanitisé pour que les `<span style="color:…">`
+                appliqués par le créateur apparaissent réellement. */}
+            <h1
+              className="tiquiz-rich text-3xl sm:text-5xl font-bold leading-tight"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
+            />
 
             {introRich ? (
               <div
@@ -2155,7 +2161,7 @@ export default function PublicQuizClient({
               const { shareText, shareUrl } = getShareData();
               try {
                 if (typeof navigator !== "undefined" && navigator.share) {
-                  await navigator.share({ title: quiz.title, text: shareText, url: shareUrl });
+                  await navigator.share({ title: stripHtml(quiz.title), text: shareText, url: shareUrl });
                 } else if (typeof navigator !== "undefined" && navigator.clipboard) {
                   await navigator.clipboard.writeText(shareUrl);
                   setLinkCopied(true);

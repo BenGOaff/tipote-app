@@ -30,6 +30,7 @@ import {
 import { useAutosave } from "@/hooks/use-autosave";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { type PaletteList } from "@/components/editor/UserPalettePicker";
+import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import {
   Plus,
   Trash2,
@@ -685,6 +686,7 @@ export default function PopquizEditClient({
 
   return (
     <AppShell userEmail={userEmail} headerTitle="Modifier le popquiz" contentClassName="flex-1">
+      <UserPalettesProvider palettes={savedPalettes}>
       <RestoreDraftDialog
         open={!!pendingDraft}
         draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
@@ -1216,6 +1218,7 @@ export default function PopquizEditClient({
         )}
       </div>
       </PageContainer>
+      </UserPalettesProvider>
     </AppShell>
   );
 }

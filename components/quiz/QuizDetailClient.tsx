@@ -52,6 +52,7 @@ function cleanPlaceholdersForLabel(text: string | null | undefined): string {
 }
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
+import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -1226,6 +1227,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   return (
    <SioTagsProvider>
+    <UserPalettesProvider palettes={savedPalettes}>
       <RestoreDraftDialog
         open={!!pendingDraft}
         draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
@@ -2278,6 +2280,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       )}
         </main>
       </div>
+    </UserPalettesProvider>
    </SioTagsProvider>
   );
 }

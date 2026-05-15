@@ -527,7 +527,8 @@
     "collapse": "Recolher",
     "viewAll": "Ver tudo",
     "seeMore": "Ver mais",
-    "learnMore": "Saber mais"
+    "learnMore": "Saber mais",
+    "rteMyPalettes": "As minhas paletas"
   },
   "auth": {
     "login": "Iniciar sessão",

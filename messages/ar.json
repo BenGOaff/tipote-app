@@ -387,7 +387,8 @@
     "saveError": "خطأ في الحفظ",
     "deleteArticleConfirm": "هل تريد حذف هذا المقال؟",
     "signOut": "تسجيل الخروج",
-    "signingOut": "جارٍ تسجيل الخروج…"
+    "signingOut": "جارٍ تسجيل الخروج…",
+    "rteMyPalettes": "لوحاتي"
   },
   "auth": {
     "login": "تسجيل الدخول",

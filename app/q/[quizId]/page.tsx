@@ -32,12 +32,14 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     if (!data) return {};
 
     const description = (data.og_description?.trim() || stripHtml(data.introduction).slice(0, 160)) || undefined;
+    // Title is rich-text in DB → strip pour la balise <title> et l'OG.
+    const plainTitle = stripHtml(data.title);
 
     const meta: Metadata = {
-      title: data.title,
+      title: plainTitle,
       description,
       openGraph: {
-        title: data.title,
+        title: plainTitle,
         description,
         type: "website",
       },

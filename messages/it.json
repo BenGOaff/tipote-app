@@ -387,7 +387,8 @@
     "saveError": "Errore di salvataggio",
     "deleteArticleConfirm": "Eliminare questo articolo?",
     "signOut": "Disconnetti",
-    "signingOut": "Disconnessione…"
+    "signingOut": "Disconnessione…",
+    "rteMyPalettes": "Le mie palette"
   },
   "auth": {
     "login": "Accedi",

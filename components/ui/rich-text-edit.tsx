@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
+import { useUserPalettes } from "@/components/editor/PalettesContext";
 
 interface RichTextEditProps {
   value: string;
@@ -83,6 +84,11 @@ export function RichTextEdit({
   const ref = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
+  // Palettes utilisateur — alimentées par UserPalettesProvider quand
+  // l'éditeur est monté dans un écran qui les a chargées (quiz, sondage,
+  // popquiz). Sinon `[]` → la section "Mes palettes" est masquée, la
+  // palette curée seule reste affichée.
+  const userPalettes = useUserPalettes();
   // AI rewrite state: a small popover-like list of proposals shown right
   // under the field after the creator clicks ✨. We keep it local to the
   // component so each field manages its own popover independently.
@@ -328,6 +334,44 @@ export function RichTextEdit({
                 className="absolute z-30 top-full left-0 mt-1 w-56 rounded-lg border bg-background shadow-lg p-2 space-y-2"
                 onMouseDown={(e) => e.preventDefault()}
               >
+                {/* Palettes user, surfacées en TÊTE quand l'écran les
+                    a chargées — c'est la valeur ajoutée vs le picker
+                    natif du browser : le user retrouve sa charte sans
+                    rouvrir le panneau Design. */}
+                {userPalettes.length > 0 && userPalettes.some((p) => p.colors.length > 0) && (
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                      {t("rteMyPalettes")}
+                    </div>
+                    <div className="space-y-1">
+                      {userPalettes.map((p) => (
+                        p.colors.length > 0 ? (
+                          <div key={p.id} className="flex items-center gap-1.5">
+                            <span
+                              className="text-[10px] text-muted-foreground truncate max-w-[80px]"
+                              title={p.name}
+                            >
+                              {p.name}
+                            </span>
+                            <div className="flex gap-1">
+                              {p.colors.map((c, i) => (
+                                <button
+                                  key={`${p.id}-${i}`}
+                                  type="button"
+                                  onClick={() => applyColor(c)}
+                                  title={c}
+                                  className="w-7 h-7 rounded-md border border-border/60 hover:scale-110 transition-transform"
+                                  style={{ backgroundColor: c }}
+                                  aria-label={c}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-5 gap-1">
                   {SWATCHES.map((s) => (
                     <button

@@ -44,6 +44,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { stripHtml } from "@/lib/richText";
 
 type Period = "7" | "30" | "90" | "all";
 
@@ -145,7 +146,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
           <div className="min-w-0">
             <h1 className="text-xl font-bold flex items-center gap-2 min-w-0">
               <BarChart3 className="size-5 text-primary shrink-0" />
-              <span className="truncate">{data.quiz.title}</span>
+              <span className="truncate">{stripHtml(data.quiz.title)}</span>
             </h1>
             <p className="text-xs text-muted-foreground">
               Statistiques · {PERIOD_LABELS[data.period]}
@@ -287,7 +288,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                           backgroundColor: PIE_COLORS[i % PIE_COLORS.length],
                         }}
                       />
-                      <span className="truncate">{r.title}</span>
+                      <span className="truncate">{stripHtml(r.title)}</span>
                     </span>
                     <span className="font-mono tabular-nums text-muted-foreground">
                       {r.count} · {r.pct}%
@@ -489,7 +490,7 @@ function ResultTooltip({ active, payload }: any) {
   const p = payload[0];
   return (
     <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
-      <div className="font-semibold">{p.payload.title}</div>
+      <div className="font-semibold">{stripHtml(p.payload.title)}</div>
       <div className="text-muted-foreground tabular-nums">
         {p.value} leads · {p.payload.pct}%
       </div>
