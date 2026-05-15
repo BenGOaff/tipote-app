@@ -58,7 +58,12 @@ export function RestoreDraftDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onDiscard(); }}>
-      <DialogContent className="sm:max-w-md">
+      {/* Largeur généreuse : les libellés FR sont longs (~35 chars
+          chacun) et la classe par défaut <Button> a whitespace-nowrap
+          → on retient sm:max-w-lg + on relâche le wrap sur les
+          boutons (whitespace-normal + h-auto + py-2.5) pour que tout
+          tienne lisible sur 2 lignes max si besoin. */}
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("dialogTitle")}</DialogTitle>
           <DialogDescription>
@@ -66,11 +71,20 @@ export function RestoreDraftDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" disabled={loading} onClick={onDiscard}>
+          <Button
+            variant="outline"
+            disabled={loading}
+            onClick={onDiscard}
+            className="whitespace-normal text-left h-auto py-2.5 leading-snug"
+          >
             {t("discardBtn")}
           </Button>
-          <Button disabled={loading} onClick={onRestore} className="gap-2">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          <Button
+            disabled={loading}
+            onClick={onRestore}
+            className="gap-2 whitespace-normal text-left h-auto py-2.5 leading-snug"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : null}
             {t("restoreBtn")}
           </Button>
         </DialogFooter>
