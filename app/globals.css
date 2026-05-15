@@ -383,6 +383,38 @@
 .tipote-quiz-rich [style*="text-align: right"] { text-align: right; }
 .tipote-quiz-rich [style*="text-align: left"] { text-align: left; }
 
+/* Variante "inline" — pour les champs courts (heading, subtitle de
+ * la capture, headings de résultats…). Neutralise les block-levels
+ * (p, div, headings) qui apparaîtraient dans le HTML produit par le
+ * contentEditable et qui sinon casseraient l'uniformité typo du
+ * champ : un <p> implicite + un <div> imbriqué, ou un <h3> hérité
+ * d'un paste-from-Docs, donnaient des tailles différentes sur deux
+ * lignes du MÊME paragraphe (cf. capture page, mai 2026). Les spans
+ * inline (couleur, gras) restent intacts — on n'affecte que la
+ * taille / le poids / le line-height / les marges. */
+.tipote-quiz-rich-inline,
+.tipote-quiz-rich-inline * {
+  font-size: inherit;
+  font-family: inherit;
+  line-height: inherit;
+}
+.tipote-quiz-rich-inline p,
+.tipote-quiz-rich-inline div {
+  margin: 0;
+  padding: 0;
+}
+.tipote-quiz-rich-inline h1,
+.tipote-quiz-rich-inline h2,
+.tipote-quiz-rich-inline h3,
+.tipote-quiz-rich-inline h4,
+.tipote-quiz-rich-inline h5,
+.tipote-quiz-rich-inline h6 {
+  font-weight: inherit;
+  margin: 0;
+  padding: 0;
+  display: inline;
+}
+
 
 /* ───────────────────────────────────────────
  * Popquiz player — fix YouTube/Vimeo iframe

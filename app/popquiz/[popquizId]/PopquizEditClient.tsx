@@ -64,6 +64,7 @@ import { ThumbnailPicker } from "@/components/popquiz/ThumbnailPicker";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import type { Popquiz, PopquizCue } from "@/lib/popquiz";
 import { toast } from "sonner";
+import { stripHtml } from "@/lib/richText";
 
 interface QuizOption {
   id: string;
@@ -922,14 +923,14 @@ export default function PopquizEditClient({
                     onChange={setDisplayTitle}
                     singleLine
                     placeholder="Clique pour ajouter un titre"
-                    className="tiquiz-rich text-base font-bold text-white drop-shadow-sm"
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-base font-bold text-white drop-shadow-sm leading-tight"
                   />
                   <RichTextEdit
                     value={displaySubtitle}
                     onChange={setDisplaySubtitle}
                     singleLine
                     placeholder="Clique pour ajouter un sous-titre"
-                    className="tiquiz-rich text-xs text-white/80"
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-xs text-white/80 leading-snug"
                   />
                 </div>
               ) : null}
@@ -1034,7 +1035,8 @@ export default function PopquizEditClient({
                         >
                           {quizzes.map((q) => (
                             <option key={q.id} value={q.id}>
-                              {q.title}
+                              {/* Titre du quiz = rich-text → strip pour l'option du select. */}
+                              {stripHtml(q.title)}
                               {q.status !== "active" ? " (brouillon)" : ""}
                             </option>
                           ))}

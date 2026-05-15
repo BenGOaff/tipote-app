@@ -72,6 +72,7 @@ import {
 import { parseVideoUrl } from "@/lib/popquiz";
 import type { Popquiz, PopquizCue, PopquizVideo } from "@/lib/popquiz";
 import { toast } from "sonner";
+import { stripHtml } from "@/lib/richText";
 
 interface QuizOption {
   id: string;
@@ -886,14 +887,14 @@ export default function PopquizNewClient({
                       onChange={setDisplayTitle}
                       singleLine
                       placeholder="Clique pour ajouter un titre"
-                      className="tiquiz-rich text-base font-bold text-white drop-shadow-sm"
+                      className="tipote-quiz-rich tipote-quiz-rich-inline text-base font-bold text-white drop-shadow-sm leading-tight"
                     />
                     <RichTextEdit
                       value={displaySubtitle}
                       onChange={setDisplaySubtitle}
                       singleLine
                       placeholder="Clique pour ajouter un sous-titre"
-                      className="tiquiz-rich text-xs text-white/80"
+                      className="tipote-quiz-rich tipote-quiz-rich-inline text-xs text-white/80 leading-snug"
                     />
                   </div>
                 ) : null}
@@ -1001,7 +1002,7 @@ export default function PopquizNewClient({
                         >
                           {quizzes.map((q) => (
                             <option key={q.id} value={q.id}>
-                              {q.title}
+                              {stripHtml(q.title)}
                               {q.status !== "active" ? " (brouillon)" : ""}
                             </option>
                           ))}

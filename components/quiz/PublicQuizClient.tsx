@@ -1366,7 +1366,7 @@ export default function PublicQuizClient({
                 — on rend en HTML sanitisé pour que les `<span style="color:…">`
                 appliqués par le créateur apparaissent réellement. */}
             <h1
-              className="tiquiz-rich text-3xl sm:text-5xl font-bold leading-tight"
+              className="tipote-quiz-rich tipote-quiz-rich-inline text-3xl sm:text-5xl font-bold leading-tight"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
             />
 
@@ -1638,7 +1638,10 @@ export default function PublicQuizClient({
                   ) : (
                     <div className="w-full aspect-video bg-muted/40" aria-hidden />
                   )}
-                  <span className="text-base font-medium text-left p-4">{interp(opt.text)}</span>
+                  <span
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-base font-medium text-left p-4"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                  />
                 </button>
               );
             })}
@@ -1694,7 +1697,10 @@ export default function PublicQuizClient({
                       : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
                   }`}
                 >
-                  <span className="text-base font-medium">{interp(opt.text)}</span>
+                  <span
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-base font-medium"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                  />
                 </button>
               );
             })}
@@ -1730,7 +1736,13 @@ export default function PublicQuizClient({
                 {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
               </p>
 
-              <h2 className="text-2xl sm:text-4xl font-bold leading-tight">{interp(q.question_text)}</h2>
+              {/* Question = rich-text (RichTextEdit) → rendu HTML sanitisé
+                  + `tipote-quiz-rich-inline` pour neutraliser les block
+                  parasites (sinon la taille saute au milieu de la phrase). */}
+              <h2
+                className="tipote-quiz-rich tipote-quiz-rich-inline text-2xl sm:text-4xl font-bold leading-tight"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
+              />
 
               {answerBlock}
 
@@ -1765,18 +1777,23 @@ export default function PublicQuizClient({
         {toastOverlay}
         {shareOverlay}
         <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
+            {/* Heading et subtitle de la page capture = champs COURTS.
+                On AJOUTE `tipote-quiz-rich-inline` à `tipote-quiz-rich`
+                pour neutraliser les block-levels parasites (<p>, <div>,
+                <h3>…) qui faisaient sauter la taille de police au milieu
+                d'une même phrase (cf. bug visuel reporté mai 2026). */}
             {(() => {
               const headingRaw = interp(quiz.capture_heading) || "";
               if (headingRaw && isHtml(headingRaw)) {
                 return (
                   <div
-                    className="tipote-quiz-rich text-2xl sm:text-4xl font-bold text-center"
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-2xl sm:text-4xl font-bold text-center leading-tight"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(headingRaw) }}
                   />
                 );
               }
               return (
-                <h2 className="text-2xl sm:text-4xl font-bold text-center">
+                <h2 className="text-2xl sm:text-4xl font-bold text-center leading-tight">
                   {headingRaw || t.captureHeadingDefault}
                 </h2>
               );
@@ -1786,7 +1803,7 @@ export default function PublicQuizClient({
               if (subtitleRaw && isHtml(subtitleRaw)) {
                 return (
                   <div
-                    className="tipote-quiz-rich text-muted-foreground text-center text-lg"
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-muted-foreground text-center text-lg leading-snug"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(subtitleRaw) }}
                   />
                 );
@@ -2189,9 +2206,12 @@ export default function PublicQuizClient({
         {shareOverlay}
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
             <div className="space-y-3">
-              <h2 className="text-3xl sm:text-5xl font-bold leading-tight text-primary">
-                {interp(resultProfile?.title) || t.resultFallback}
-              </h2>
+              {/* Titre du résultat = rich-text (héritage RichTextEdit).
+                  Rendu HTML sanitisé + `tipote-quiz-rich-inline`. */}
+              <h2
+                className="tipote-quiz-rich tipote-quiz-rich-inline text-3xl sm:text-5xl font-bold leading-tight text-primary"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(resultProfile?.title) || "") || t.resultFallback }}
+              />
             </div>
 
             {resultProfile?.description && (() => {
@@ -2210,7 +2230,10 @@ export default function PublicQuizClient({
               const ins = interp(resultProfile.insight);
               return (
                 <div className="p-4 rounded-xl bg-muted/50 border">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{quiz.result_insight_heading?.trim() || t.insight}</p>
+                  <p
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_insight_heading?.trim() || "") || t.insight }}
+                  />
                   {isHtml(ins) ? (
                     <div
                       className="tipote-quiz-rich text-sm leading-relaxed"
@@ -2227,7 +2250,10 @@ export default function PublicQuizClient({
               const proj = interp(resultProfile.projection);
               return (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                  <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{quiz.result_projection_heading?.trim() || t.projection}</p>
+                  <p
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_projection_heading?.trim() || "") || t.projection }}
+                  />
                   {isHtml(proj) ? (
                     <div
                       className="tipote-quiz-rich text-sm leading-relaxed"
@@ -2261,7 +2287,7 @@ export default function PublicQuizClient({
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
                           <span
-                            className={`tiquiz-rich truncate ${isMain ? "font-semibold" : ""}`}
+                            className={`tipote-quiz-rich tipote-quiz-rich-inline truncate ${isMain ? "font-semibold" : ""}`}
                             dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(r.title) || "") }}
                           />
                           <span className="flex items-center gap-2 shrink-0">

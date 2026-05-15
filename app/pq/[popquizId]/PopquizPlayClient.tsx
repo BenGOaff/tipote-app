@@ -79,19 +79,24 @@ export default function PopquizPlayClient({
         {/* Titre + sous-titre (si configurés). Le créateur peut taper
             du HTML rich-text (gras / italique / couleur / alignement)
             via l'éditeur côté admin — on rend le HTML après
-            sanitisation pour rester XSS-safe. La classe `tiquiz-rich`
-            applique les styles d'alignement/listes communs. */}
+            sanitisation pour rester XSS-safe. Les classes
+            `tipote-quiz-rich` + `tipote-quiz-rich-inline` s'occupent
+            des styles d'alignement ET neutralisent les block-levels
+            parasites (<p>, <div>, <h3>…) qui faisaient sauter la
+            taille de police au milieu d'une même ligne — bug typo
+            identifié sur la page capture en mai 2026, dont le popquiz
+            héritait du même pattern. */}
         {heading || subheading ? (
           <div className="text-center space-y-1.5">
             {heading ? (
               <h1
-                className="tiquiz-rich text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-sm"
+                className="tipote-quiz-rich tipote-quiz-rich-inline text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-sm leading-tight"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(heading) }}
               />
             ) : null}
             {subheading ? (
               <p
-                className="tiquiz-rich text-sm sm:text-base text-white/80 max-w-2xl mx-auto"
+                className="tipote-quiz-rich tipote-quiz-rich-inline text-sm sm:text-base text-white/80 max-w-2xl mx-auto leading-snug"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(subheading) }}
               />
             ) : null}
