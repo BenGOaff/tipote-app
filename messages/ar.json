@@ -5378,5 +5378,31 @@
       "markDone": "تم وضع علامة منجز",
       "redo": "إعادة"
     }
+  },
+  "palettes": {
+    "defaultPaletteName": "علامتي",
+    "paletteNumberedName": "لوحة {n}",
+    "selectorTitle": "تغيير اللوحة",
+    "noPalette": "لا توجد لوحة",
+    "manage": "إدارة اللوحات",
+    "saveCurrent": "حفظ",
+    "saveCurrentTitle": "إضافة اللون الحالي إلى اللوحة",
+    "manageTitle": "لوحاتي",
+    "manageDesc": "ألوانك القابلة لإعادة الاستخدام، متاحة في الاختبار والاستبيان والبوب كويز.",
+    "namePlaceholder": "اسم اللوحة",
+    "deletePalette": "حذف اللوحة",
+    "removeColor": "إزالة اللون",
+    "addColor": "إضافة لون",
+    "colorCount": "{n}/{max}",
+    "newPalette": "لوحة جديدة",
+    "emptyHint": "لا توجد لوحة بعد. أنشئ واحدة لإعادة استخدام ألوانك بنقرة واحدة.",
+    "cancel": "إلغاء",
+    "save": "حفظ"
+  },
+  "autosave": {
+    "dialogTitle": "استئناف آخر تعديلاتك؟",
+    "dialogBody": "توجد نسخة تم حفظها تلقائيًا ({draftWhen}). يمكنك استعادتها، أو الانطلاق من آخر حفظ ({savedWhen}).",
+    "restoreBtn": "استعادة النسخة المحفوظة تلقائيًا",
+    "discardBtn": "الانطلاق من آخر حفظ"
   }
 }

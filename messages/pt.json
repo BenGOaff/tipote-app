@@ -5677,5 +5677,31 @@
       "markDone": "Marcado como concluído",
       "redo": "Refazer"
     }
+  },
+  "palettes": {
+    "defaultPaletteName": "A minha marca",
+    "paletteNumberedName": "Paleta {n}",
+    "selectorTitle": "Mudar de paleta",
+    "noPalette": "Sem paleta",
+    "manage": "Gerir paletas",
+    "saveCurrent": "Guardar",
+    "saveCurrentTitle": "Adicionar a cor atual à paleta",
+    "manageTitle": "As minhas paletas",
+    "manageDesc": "As tuas cores reutilizáveis, disponíveis em quiz, sondagens e popquiz.",
+    "namePlaceholder": "Nome da paleta",
+    "deletePalette": "Eliminar paleta",
+    "removeColor": "Remover cor",
+    "addColor": "Adicionar cor",
+    "colorCount": "{n}/{max}",
+    "newPalette": "Nova paleta",
+    "emptyHint": "Sem paleta por enquanto. Cria uma para reutilizar as tuas cores num clique.",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "autosave": {
+    "dialogTitle": "Retomar as últimas alterações?",
+    "dialogBody": "Existe uma versão auto-guardada ({draftWhen}). Podes recuperá-la, ou partir do teu último guardado ({savedWhen}).",
+    "restoreBtn": "Recuperar a versão auto-guardada",
+    "discardBtn": "Partir do meu último guardado"
   }
 }

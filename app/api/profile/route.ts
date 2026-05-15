@@ -99,6 +99,16 @@ const UpdateSchema = z.object({
   brand_author_photo_url: z.string().trim().max(1000).nullable().optional(),
   brand_tone_of_voice: z.string().trim().max(500).nullable().optional(),
 
+  // Palettes de couleurs nommées de l'user (max 10 palettes × 5 couleurs).
+  // Stockées en JSONB sur business_profiles, ré-utilisables sur tous
+  // les éditeurs (quiz, survey, popquiz). Validation stricte du format
+  // pour ne pas laisser passer de blob arbitraire.
+  saved_palettes: z.array(z.object({
+    id: z.string().min(1).max(80),
+    name: z.string().trim().max(60).default(""),
+    colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/)).max(5).default([]),
+  })).max(10).optional(),
+
   linkedin_url: z.string().trim().max(500).optional(),
   instagram_url: z.string().trim().max(500).optional(),
   youtube_url: z.string().trim().max(500).optional(),

@@ -89,6 +89,11 @@ export interface Popquiz {
   branding: PopquizBranding;
   appearance: PopquizAppearance;
   cues: PopquizCue[];
+  // Auto-save brouillon (mirror Tiquiz). Présent uniquement quand
+  // l'éditeur a poussé un draft via PUT /api/popquiz/[id]/autosave.
+  draftState?: unknown;
+  draftUpdatedAt?: string | null;
+  updatedAt?: string | null;
 }
 
 // Runtime player state. Transitions are driven by the reducer in

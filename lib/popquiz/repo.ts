@@ -74,6 +74,9 @@ interface PopquizRow {
   play_button_color?: string | null;
   play_button_shape?: string | null;
   show_creator_branding?: boolean | null;
+  draft_state?: unknown;
+  draft_updated_at?: string | null;
+  updated_at?: string | null;
   video: VideoRow | VideoRow[] | null;
   theme: ThemeRow | ThemeRow[] | null;
   cues: CueRow[];
@@ -108,6 +111,9 @@ const FULL_SELECT = `
   play_button_color,
   play_button_shape,
   show_creator_branding,
+  draft_state,
+  draft_updated_at,
+  updated_at,
   video:popquiz_videos!inner(
     id, source, external_url, external_id,
     storage_path, hls_path, thumbnail_url, thumbnail_path,
@@ -296,6 +302,9 @@ function rowToPopquiz(
       showCreatorBranding: row.show_creator_branding !== false,
     },
     cues: row.cues.map(mapCue).sort((a, b) => a.timestampMs - b.timestampMs),
+    draftState: row.draft_state ?? null,
+    draftUpdatedAt: row.draft_updated_at ?? null,
+    updatedAt: row.updated_at ?? null,
   };
   return {
     popquiz: applyBrandingToTheme(popquiz, branding),

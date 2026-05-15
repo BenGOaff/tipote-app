@@ -19,7 +19,7 @@
 // constructed in client code is annotated `: DraftCue` so the
 // literal `"block" | "optional"` is preserved through array spreads.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   autosaveKey,
@@ -27,6 +27,9 @@ import {
   loadAutosave,
   clearAutosave,
 } from "@/lib/popquiz/autosave";
+import { useAutosave } from "@/hooks/use-autosave";
+import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
+import { type PaletteList } from "@/components/editor/UserPalettePicker";
 import {
   Plus,
   Trash2,
@@ -266,6 +269,46 @@ export default function PopquizEditClient({
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
 
+  // Palettes utilisateur (charte par projet)
+  const [savedPalettes, setSavedPalettes] = useState<PaletteList>([]);
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d?.ok) return;
+        const raw = (d.profile?.saved_palettes ?? []) as unknown;
+        setSavedPalettes(Array.isArray(raw) ? (raw as PaletteList) : []);
+      })
+      .catch(() => { /* non-fatal */ });
+  }, []);
+  const handleChangePalettes = useCallback(async (next: PaletteList) => {
+    setSavedPalettes(next);
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saved_palettes: next }),
+      });
+    } catch { /* non-fatal */ }
+  }, []);
+
+  // Server-side autosave : restauration si le draft serveur est plus
+  // récent que la dernière save explicite.
+  const [pendingDraft, setPendingDraft] = useState<{ state: Record<string, unknown>; draftUpdatedAt: string; updatedAt: string | null } | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  useEffect(() => {
+    const draftState = popquiz.draftState ?? null;
+    const draftAt = popquiz.draftUpdatedAt ?? null;
+    const savedAt = popquiz.updatedAt ?? null;
+    if (draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime())) {
+      setPendingDraft({
+        state: draftState as Record<string, unknown>,
+        draftUpdatedAt: draftAt,
+        updatedAt: savedAt,
+      });
+    }
+  }, [popquiz.draftState, popquiz.draftUpdatedAt, popquiz.updatedAt]);
+
   // Aperçu : mode "lien direct" (avec titre/sous-titre/fond/branding)
   // ou "iframe" (vidéo seule). Ne sert qu'à visualiser le rendu sans
   // toucher à la persistance — les valeurs saisies sont les mêmes.
@@ -365,6 +408,79 @@ export default function PopquizEditClient({
     previewMode,
   ]);
 
+  // Server-side autosave hook — same fields que le localStorage
+  // autosave existant, mais persisté en DB pour cross-device et reprise
+  // après vidage de cache.
+  const autosaveSnapshot = useMemo(() => ({
+    title,
+    slug,
+    description,
+    isPublished,
+    cues,
+    displayTitle,
+    displaySubtitle,
+    bgStyle,
+    bgColor,
+    bgColor2,
+    borderWidth,
+    borderColor,
+    shadowIntensity,
+    playButtonColor,
+    playButtonShape,
+    showCreatorBranding,
+  }), [
+    title, slug, description, isPublished, cues,
+    displayTitle, displaySubtitle, bgStyle, bgColor, bgColor2,
+    borderWidth, borderColor, shadowIntensity,
+    playButtonColor, playButtonShape, showCreatorBranding,
+  ]);
+
+  const { savingDraft, clearDraft } = useAutosave({
+    endpoint: `/api/popquiz/${popquiz.id}/autosave`,
+    state: autosaveSnapshot,
+    enabled: autosaveHydrated && !pendingDraft,
+  });
+
+  const applySnapshot = useCallback((s: Record<string, unknown>) => {
+    if (typeof s.title === "string") setTitle(s.title);
+    if (typeof s.slug === "string") setSlug(s.slug);
+    if (typeof s.description === "string") setDescription(s.description);
+    if (typeof s.isPublished === "boolean") setIsPublished(s.isPublished);
+    if (Array.isArray(s.cues)) setCues(s.cues as DraftCue[]);
+    if (typeof s.displayTitle === "string") setDisplayTitle(s.displayTitle);
+    if (typeof s.displaySubtitle === "string") setDisplaySubtitle(s.displaySubtitle);
+    if (s.bgStyle === "transparent" || s.bgStyle === "solid" || s.bgStyle === "gradient") {
+      setBgStyle(s.bgStyle);
+    }
+    if (typeof s.bgColor === "string") setBgColor(s.bgColor);
+    if (typeof s.bgColor2 === "string") setBgColor2(s.bgColor2);
+    if (typeof s.borderWidth === "number") setBorderWidth(s.borderWidth);
+    if (typeof s.borderColor === "string") setBorderColor(s.borderColor);
+    if (s.shadowIntensity === "none" || s.shadowIntensity === "soft" || s.shadowIntensity === "medium" || s.shadowIntensity === "strong") {
+      setShadowIntensity(s.shadowIntensity);
+    }
+    if (typeof s.playButtonColor === "string") setPlayButtonColor(s.playButtonColor);
+    if (s.playButtonShape === "circle" || s.playButtonShape === "rounded" || s.playButtonShape === "square") {
+      setPlayButtonShape(s.playButtonShape);
+    }
+    if (typeof s.showCreatorBranding === "boolean") setShowCreatorBranding(s.showCreatorBranding);
+  }, []);
+
+  const onRestoreDraft = useCallback(async () => {
+    if (!pendingDraft) return;
+    setRestoring(true);
+    try { applySnapshot(pendingDraft.state); }
+    finally {
+      setPendingDraft(null);
+      setRestoring(false);
+    }
+  }, [pendingDraft, applySnapshot]);
+
+  const onDiscardDraft = useCallback(async () => {
+    setPendingDraft(null);
+    try { await clearDraft(); } catch { /* non-fatal */ }
+  }, [clearDraft]);
+
   // The popquiz handed in already carries hydrated branding; for
   // the editor preview we override accent so timeline markers
   // match the player.
@@ -459,6 +575,7 @@ export default function PopquizEditClient({
       // Save serveur OK → on nettoie l'autosave local pour ne pas
       // ré-hydrater des données obsolètes au prochain mount.
       clearAutosave(AUTOSAVE_KEY);
+      try { await clearDraft(); } catch { /* non-fatal */ }
 
       // Sync local state to what was sent so les boutons reflètent
       // immédiatement le nouveau statut sans attendre router.refresh().
@@ -568,6 +685,15 @@ export default function PopquizEditClient({
 
   return (
     <AppShell userEmail={userEmail} headerTitle="Modifier le popquiz" contentClassName="flex-1">
+      <RestoreDraftDialog
+        open={!!pendingDraft}
+        draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
+        savedUpdatedAt={pendingDraft?.updatedAt ?? null}
+        loading={restoring}
+        onRestore={onRestoreDraft}
+        onDiscard={onDiscardDraft}
+        locale={popquiz.locale || "fr"}
+      />
       <PageContainer>
       <PageBanner
         icon={<Video className="h-5 w-5" />}
@@ -726,6 +852,8 @@ export default function PopquizEditClient({
           setPlayButtonColor={setPlayButtonColor}
           setPlayButtonShape={setPlayButtonShape}
           setShowCreatorBranding={setShowCreatorBranding}
+          palettes={savedPalettes}
+          onChangePalettes={handleChangePalettes}
         />
 
         {/* Colonne droite : LA vidéo unique (avec apparence appliquée),

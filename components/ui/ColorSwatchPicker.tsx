@@ -35,9 +35,15 @@ interface Props {
   label?: string;
   /** Désactive le picker. */
   disabled?: boolean;
+  /** Palettes utilisateur, surfacées en plus des swatches curés.
+   *  Si vide / non fourni : pas de section "Mes palettes" affichée. */
+  userPalettes?: Array<{ id: string; name: string; colors: string[] }>;
+  /** Optionnel : label du label "Mes palettes" — défaut FR.
+   *  i18n géré par le parent (le picker reste agnostique-locale). */
+  userPalettesLabel?: string;
 }
 
-export function ColorSwatchPicker({ value, onChange, label, disabled }: Props) {
+export function ColorSwatchPicker({ value, onChange, label, disabled, userPalettes, userPalettesLabel }: Props) {
   const [open, setOpen] = useState(false);
   const [hexInput, setHexInput] = useState(value);
   const popRef = useRef<HTMLDivElement>(null);
@@ -117,6 +123,42 @@ export function ColorSwatchPicker({ value, onChange, label, disabled }: Props) {
               className="flex-1 min-w-0 h-7 rounded border bg-background px-2 text-xs font-mono uppercase"
             />
           </div>
+
+          {userPalettes && userPalettes.length > 0 ? (
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                {userPalettesLabel ?? "Mes palettes"}
+              </div>
+              <div className="space-y-1.5">
+                {userPalettes.map((p) => (
+                  p.colors.length > 0 ? (
+                    <div key={p.id} className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[80px]" title={p.name}>
+                        {p.name}
+                      </span>
+                      <div className="flex gap-1">
+                        {p.colors.map((c, i) => (
+                          <button
+                            key={`${p.id}-${i}`}
+                            type="button"
+                            onClick={() => onChange(c)}
+                            title={c}
+                            className={`w-6 h-6 rounded-md border transition-transform hover:scale-110 ${
+                              value.toLowerCase() === c.toLowerCase()
+                                ? "border-primary ring-2 ring-primary/30"
+                                : "border-border/60"
+                            }`}
+                            style={{ backgroundColor: c }}
+                            aria-label={c}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : null
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div>
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">

@@ -5378,5 +5378,31 @@
       "markDone": "Marqué comme fait",
       "redo": "Refaire"
     }
+  },
+  "palettes": {
+    "defaultPaletteName": "Ma charte",
+    "paletteNumberedName": "Palette {n}",
+    "selectorTitle": "Changer de palette",
+    "noPalette": "Aucune palette",
+    "manage": "Gérer mes palettes",
+    "saveCurrent": "Enregistrer",
+    "saveCurrentTitle": "Ajouter la couleur courante à la palette",
+    "manageTitle": "Mes palettes",
+    "manageDesc": "Tes couleurs réutilisables, dispos partout sur quiz, sondage et popquiz.",
+    "namePlaceholder": "Nom de la palette",
+    "deletePalette": "Supprimer la palette",
+    "removeColor": "Retirer la couleur",
+    "addColor": "Ajouter une couleur",
+    "colorCount": "{n}/{max}",
+    "newPalette": "Nouvelle palette",
+    "emptyHint": "Aucune palette pour l'instant. Crée-en une pour réutiliser tes couleurs en un clic.",
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "autosave": {
+    "dialogTitle": "Reprendre tes dernières modifs ?",
+    "dialogBody": "Une version auto-sauvegardée existe ({draftWhen}). Tu peux la reprendre, ou repartir de ton dernier enregistrement ({savedWhen}).",
+    "restoreBtn": "Reprendre la version auto-sauvegardée",
+    "discardBtn": "Repartir de mon dernier enregistrement"
   }
 }

@@ -48,6 +48,9 @@ function cleanPlaceholdersForLabel(text: string | null | undefined): string {
   return interpolateText(text, { name: "", gender: "x" });
 }
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
+import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
+import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
+import { useAutosave } from "@/hooks/use-autosave";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTutorial } from "@/hooks/useTutorial";
 // SidebarProvider / AppSidebar intentionally NOT imported — the survey
@@ -127,7 +130,7 @@ type QuizData = {
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
 };
-type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null };
+type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null; saved_palettes?: unknown };
 interface SurveyDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview.
@@ -437,6 +440,22 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<ProfileBrand | null>(null);
+  // Palettes utilisateur (charte par projet)
+  const [savedPalettes, setSavedPalettes] = useState<PaletteList>([]);
+  const handleChangePalettes = useCallback(async (next: PaletteList) => {
+    setSavedPalettes(next);
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saved_palettes: next }),
+      });
+    } catch { /* non-fatal */ }
+  }, []);
+  // Autosave : draft serveur plus récent que la dernière save explicite
+  // → on propose la restauration.
+  const [pendingDraft, setPendingDraft] = useState<{ state: Record<string, unknown>; draftUpdatedAt: string; updatedAt: string | null } | null>(null);
+  const [restoring, setRestoring] = useState(false);
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -462,6 +481,112 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const scrollPreviewToTop = useCallback(() => {
     previewRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  // ─── Autosave snapshot ────────────────────────────────────────
+  const autosaveSnapshot = useMemo(() => ({
+    title,
+    introduction,
+    cta_text: ctaText,
+    cta_url: ctaUrl,
+    start_button_text: startButtonText,
+    privacy_url: privacyUrl,
+    consent_text: consentText,
+    capture_heading: captureHeading,
+    capture_subtitle: captureSubtitle,
+    result_insight_heading: resultInsightHeading,
+    result_projection_heading: resultProjectionHeading,
+    capture_first_name: captureFirstName,
+    capture_last_name: captureLastName,
+    capture_phone: capturePhone,
+    capture_country: captureCountry,
+    show_consent_checkbox: showConsentCheckbox,
+    ask_first_name: askFirstName,
+    ask_gender: askGender,
+    share_message: shareMessage,
+    locale,
+    sio_share_tag_name: sioShareTagName,
+    status,
+    brand_font: fontFamily,
+    brand_color_primary: primaryColor,
+    brand_color_background: bgColor,
+    slug,
+    og_description: ogDescription,
+    custom_footer_text: customFooterText,
+    custom_footer_url: customFooterUrl,
+    share_networks: shareNetworks,
+    toast_widget_id: selectedToastWidget,
+    share_widget_id: selectedShareWidget,
+    questions: editQuestions,
+  }), [
+    title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
+    captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
+    captureFirstName, captureLastName, capturePhone, captureCountry,
+    showConsentCheckbox, askFirstName, askGender,
+    shareMessage, locale, sioShareTagName, status,
+    fontFamily, primaryColor, bgColor,
+    slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
+    selectedToastWidget, selectedShareWidget,
+    editQuestions,
+  ]);
+
+  const { savingDraft, clearDraft } = useAutosave({
+    endpoint: `/api/quiz/${quizId}/autosave`,
+    state: autosaveSnapshot,
+    enabled: !loading && !pendingDraft,
+  });
+
+  const applySnapshot = useCallback((s: Record<string, unknown>) => {
+    if (typeof s.title === "string") setTitle(s.title);
+    if (typeof s.introduction === "string") setIntroduction(s.introduction);
+    if (typeof s.cta_text === "string") setCtaText(s.cta_text);
+    if (typeof s.cta_url === "string") setCtaUrl(s.cta_url);
+    if (typeof s.start_button_text === "string") setStartButtonText(s.start_button_text);
+    if (typeof s.privacy_url === "string") setPrivacyUrl(s.privacy_url);
+    if (typeof s.consent_text === "string") setConsentText(s.consent_text);
+    if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
+    if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
+    if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
+    if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
+    if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
+    if (typeof s.capture_last_name === "boolean") setCaptureLastName(s.capture_last_name);
+    if (typeof s.capture_phone === "boolean") setCapturePhone(s.capture_phone);
+    if (typeof s.capture_country === "boolean") setCaptureCountry(s.capture_country);
+    if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
+    if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
+    if (typeof s.ask_gender === "boolean") setAskGender(s.ask_gender);
+    if (typeof s.share_message === "string") setShareMessage(s.share_message);
+    if (typeof s.locale === "string") setLocale(s.locale);
+    if (typeof s.sio_share_tag_name === "string") setSioShareTagName(s.sio_share_tag_name);
+    if (typeof s.status === "string") setStatus(s.status);
+    if (typeof s.brand_font === "string" && (BRAND_FONT_CHOICES as readonly string[]).includes(s.brand_font)) {
+      setFontFamily(s.brand_font as BrandFontChoice);
+    }
+    if (typeof s.brand_color_primary === "string") setPrimaryColor(s.brand_color_primary);
+    if (typeof s.brand_color_background === "string") setBgColor(s.brand_color_background);
+    if (typeof s.slug === "string") setSlug(s.slug);
+    if (typeof s.og_description === "string") setOgDescription(s.og_description);
+    if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
+    if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
+    if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
+    if (typeof s.toast_widget_id === "string") setSelectedToastWidget(s.toast_widget_id);
+    if (typeof s.share_widget_id === "string") setSelectedShareWidget(s.share_widget_id);
+    if (Array.isArray(s.questions)) setEditQuestions(s.questions as QuizQuestion[]);
+  }, []);
+
+  const onRestoreDraft = useCallback(async () => {
+    if (!pendingDraft) return;
+    setRestoring(true);
+    try { applySnapshot(pendingDraft.state); }
+    finally {
+      setPendingDraft(null);
+      setRestoring(false);
+    }
+  }, [pendingDraft, applySnapshot]);
+
+  const onDiscardDraft = useCallback(async () => {
+    setPendingDraft(null);
+    try { await clearDraft(); } catch { /* non-fatal */ }
+  }, [clearDraft]);
 
   // Display-only placeholder substitution for the preview canvas.
   const previewInterpolate = useCallback(
@@ -568,6 +693,18 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setPrimaryColor(q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY);
       setBgColor(q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND);
       setBrandLogoUrl(prof?.brand_logo_url ?? null);
+      const rawPalettes = (prof?.saved_palettes ?? []) as unknown;
+      setSavedPalettes(Array.isArray(rawPalettes) ? (rawPalettes as PaletteList) : []);
+      const draftState = (q as { draft_state?: unknown }).draft_state ?? null;
+      const draftAt = (q as { draft_updated_at?: string | null }).draft_updated_at ?? null;
+      const savedAt = (q as { updated_at?: string | null }).updated_at ?? null;
+      if (draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime())) {
+        setPendingDraft({
+          state: draftState as Record<string, unknown>,
+          draftUpdatedAt: draftAt,
+          updatedAt: savedAt,
+        });
+      }
     } catch { toast.error("Error loading quiz"); } finally { setLoading(false); }
   }, [quizId, router]);
   useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
@@ -788,6 +925,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         throw new Error(json?.error || "Error");
       }
       toast.success(t("toastSaved"));
+      try { await clearDraft(); } catch { /* non-fatal */ }
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : tc("error")); } finally { setSaving(false); }
   };
 
@@ -900,6 +1038,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   return (
    <SioTagsProvider>
+      <RestoreDraftDialog
+        open={!!pendingDraft}
+        draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
+        savedUpdatedAt={pendingDraft?.updatedAt ?? null}
+        loading={restoring}
+        onRestore={onRestoreDraft}
+        onDiscard={onDiscardDraft}
+        locale={locale || "fr"}
+      />
       <div className="h-screen flex w-full">
         <main className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
       {/* First-visit onboarding banner */}
@@ -968,6 +1115,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             <Eye className="w-4 h-4 mr-1" />
             Aperçu
           </Button>
+          {savingDraft && (
+            <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Brouillon enregistré
+            </span>
+          )}
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : tc("save")}
           </Button>
@@ -1041,6 +1194,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 <div className="space-y-3"><Label className="text-xs">Couleurs</Label>
                   <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur principale</span></div>
                   <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur de fond</span></div>
+                  <UserPalettePicker
+                    currentColor={primaryColor}
+                    onPick={setPrimaryColor}
+                    palettes={savedPalettes}
+                    onChangePalettes={handleChangePalettes}
+                  />
                   <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">Réinitialiser aux couleurs du profil</button>
                 </div>
                 <div className="space-y-2">
