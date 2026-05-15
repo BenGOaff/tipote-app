@@ -109,6 +109,10 @@ type PublicQuizData = {
   // checkbox under the email capture form when their CRM already
   // handles consent upstream. Default true on every existing row.
   show_consent_checkbox?: boolean | null;
+  // Gwenn (2026-05-14) : opt-in pour révéler tous les scores après le
+  // résultat principal. Quand true, on rend une card "Répartition
+  // complète" sur la page de résultat. Off par défaut.
+  show_results_breakdown?: boolean | null;
   ask_first_name?: boolean | null;
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
@@ -202,6 +206,10 @@ type QuizTranslations = {
   noLabel?: string;
   ratingScaleMinLabel?: string;
   ratingScaleMaxLabel?: string;
+  // Opt-in "Répartition complète" card on the result page
+  breakdownTitle?: string;
+  breakdownSubtitle?: string;
+  breakdownMainBadge?: string;
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -262,6 +270,9 @@ const translations: Record<string, QuizTranslations> = {
     noLabel: "Non",
     ratingScaleMinLabel: "Pas du tout",
     ratingScaleMaxLabel: "Tout à fait",
+    breakdownTitle: "Répartition complète de tes réponses",
+    breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils — voici ton profil dominant et tes traits secondaires.",
+    breakdownMainBadge: "principal",
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -311,6 +322,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Comment préférez-vous être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
     resultCtaDefault: "Découvrir",
+    breakdownTitle: "Répartition complète de vos réponses",
+    breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils — voici votre profil dominant et vos traits secondaires.",
+    breakdownMainBadge: "principal",
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -360,6 +374,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "How should we refer to you?",
     personalizeContinue: "Start the quiz",
     resultCtaDefault: "Discover",
+    breakdownTitle: "Full breakdown of your answers",
+    breakdownSubtitle: "Most people recognise themselves in several profiles — here's your main type and your secondary traits.",
+    breakdownMainBadge: "main",
   },
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
@@ -409,6 +426,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "¿Cómo prefieres que te tratemos?",
     personalizeContinue: "Empezar el quiz",
     resultCtaDefault: "Descubrir",
+    breakdownTitle: "Desglose completo de tus respuestas",
+    breakdownSubtitle: "La mayoría de las personas se reconocen en varios perfiles — aquí tienes tu perfil principal y tus rasgos secundarios.",
+    breakdownMainBadge: "principal",
   },
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
@@ -458,6 +478,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Wie sollen wir dich ansprechen?",
     personalizeContinue: "Quiz starten",
     resultCtaDefault: "Entdecken",
+    breakdownTitle: "Vollständige Aufschlüsselung deiner Antworten",
+    breakdownSubtitle: "Die meisten erkennen sich in mehreren Profilen wieder — hier ist dein Hauptprofil und deine Nebenausprägungen.",
+    breakdownMainBadge: "Haupt",
   },
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
@@ -507,6 +530,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Como prefere que te chamemos?",
     personalizeContinue: "Começar o quiz",
     resultCtaDefault: "Descobrir",
+    breakdownTitle: "Distribuição completa das tuas respostas",
+    breakdownSubtitle: "A maioria das pessoas reconhece-se em vários perfis — aqui está o teu perfil principal e os teus traços secundários.",
+    breakdownMainBadge: "principal",
   },
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
@@ -556,6 +582,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Come preferisci essere chiamat·a?",
     personalizeContinue: "Inizia il quiz",
     resultCtaDefault: "Scopri",
+    breakdownTitle: "Distribuzione completa delle tue risposte",
+    breakdownSubtitle: "La maggior parte delle persone si riconosce in più profili — ecco il tuo profilo principale e i tuoi tratti secondari.",
+    breakdownMainBadge: "principale",
   },
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
@@ -605,6 +634,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "كيف تُفضّل أن نخاطبك؟",
     personalizeContinue: "ابدأ الاختبار",
     resultCtaDefault: "اكتشف",
+    breakdownTitle: "التوزيع الكامل لإجاباتك",
+    breakdownSubtitle: "يتعرّف معظم الأشخاص على أنفسهم في عدة ملفات — هذا هو ملفك الرئيسي وسماتك الثانوية.",
+    breakdownMainBadge: "رئيسي",
   },
 };
 
@@ -706,6 +738,11 @@ export default function PublicQuizClient({
   const [submitting, setSubmitting] = useState(false);
 
   const [resultProfile, setResultProfile] = useState<QuizResult | null>(null);
+  // Per-profile points used by the optional "Répartition complète" card.
+  // Computed once at email submit and persisted in session so the breakdown
+  // survives a refresh of the result page. Stays empty while the visitor
+  // is still answering questions.
+  const [resultScores, setResultScores] = useState<number[]>([]);
   const [hasShared, setHasShared] = useState(false);
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
   // Surfaced to the visitor when the lead POST fails so they know their
@@ -914,6 +951,7 @@ export default function PublicQuizClient({
         v?: number;
         step?: Step;
         resultProfileId?: string | null;
+        resultScores?: number[];
         hasShared?: boolean;
         bonusUnlocked?: boolean;
         email?: string;
@@ -932,6 +970,9 @@ export default function PublicQuizClient({
         return;
       }
       setResultProfile(profile);
+      if (Array.isArray(saved.resultScores)) {
+        setResultScores(saved.resultScores.map((n) => Number(n) || 0));
+      }
       setHasShared(Boolean(saved.hasShared));
       setBonusUnlocked(Boolean(saved.bonusUnlocked));
       if (typeof saved.email === "string") setEmail(saved.email);
@@ -953,6 +994,7 @@ export default function PublicQuizClient({
           v: 1,
           step,
           resultProfileId: resultProfile?.id ?? null,
+          resultScores,
           hasShared,
           bonusUnlocked,
           email,
@@ -961,13 +1003,14 @@ export default function PublicQuizClient({
     } catch {
       // quota exceeded or storage disabled — non-fatal
     }
-  }, [previewData, sessionKey, step, resultProfile, hasShared, bonusUnlocked, email]);
+  }, [previewData, sessionKey, step, resultProfile, resultScores, hasShared, bonusUnlocked, email]);
 
-  const computeResult = useCallback((): QuizResult | null => {
-    if (!quiz) return null;
-    // Surveys never compute a result profile — short-circuit here so the
-    // engine only routes option-based answers from quizzes.
-    if (quiz.mode === "survey") return null;
+  // Returns the winning profile + the per-profile scores array so the
+  // optional "Répartition complète" card can be rendered alongside the
+  // primary result. Surveys still short-circuit (no result page).
+  const computeResult = useCallback((): { profile: QuizResult | null; scores: number[] } => {
+    if (!quiz) return { profile: null, scores: [] };
+    if (quiz.mode === "survey") return { profile: null, scores: [] };
     const scores: number[] = new Array(quiz.results.length).fill(0);
     answers.forEach((ans, qIdx) => {
       if (!ans) return;
@@ -997,7 +1040,7 @@ export default function PublicQuizClient({
         maxIdx = i;
       }
     });
-    return quiz.results[maxIdx] ?? null;
+    return { profile: quiz.results[maxIdx] ?? null, scores };
   }, [quiz, answers]);
 
   // Single answer-commit pathway for every question type. Auto-advances to
@@ -1042,7 +1085,7 @@ export default function PublicQuizClient({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const profile = computeResult();
+      const { profile, scores } = computeResult();
 
       // In preview mode (props-data preview OR ?preview_name=<x> URL preview),
       // skip the actual lead submission so the creator can walk through the
@@ -1093,6 +1136,7 @@ export default function PublicQuizClient({
       }
 
       setResultProfile(profile);
+      setResultScores(scores);
 
       // If the creator set up a bonus-on-share, show the intermediate step so
       // the visitor can unlock it before seeing their results.
@@ -2189,6 +2233,53 @@ export default function PublicQuizClient({
                 </div>
               );
             })()}
+
+          {/* Opt-in breakdown card (Gwenn 2026-05-14): exposes every
+              profile's score so the visitor can see their secondary
+              traits, not just the winner. Sorted descending; the
+              winning profile is flagged with a "principal" badge. */}
+          {quiz.show_results_breakdown && resultScores.length > 0 && (() => {
+            const max = Math.max(1, ...resultScores);
+            const ranked = quiz.results
+              .map((r, i) => ({ r, i, score: resultScores[i] ?? 0 }))
+              .sort((a, b) => b.score - a.score);
+            return (
+              <div className="p-5 rounded-2xl bg-card border shadow-sm">
+                <h3 className="text-base font-semibold mb-1">{t.breakdownTitle}</h3>
+                <p className="text-xs text-muted-foreground mb-4 leading-snug">{t.breakdownSubtitle}</p>
+                <ul className="space-y-3">
+                  {ranked.map(({ r, i, score }) => {
+                    const isMain = resultProfile?.id === r.id;
+                    const pct = Math.round((score / max) * 100);
+                    return (
+                      <li key={r.id ?? i} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span
+                            className={`tiquiz-rich truncate ${isMain ? "font-semibold" : ""}`}
+                            dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(r.title) || "") }}
+                          />
+                          <span className="flex items-center gap-2 shrink-0">
+                            {isMain && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+                                {t.breakdownMainBadge}
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground tabular-nums">{`${score}/${quiz.questions.length}`}</span>
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-[width] duration-500"
+                            style={{ width: `${pct}%`, backgroundColor: isMain ? undefined : "currentColor", color: isMain ? undefined : "rgba(0,0,0,0.18)", backgroundImage: isMain ? "linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary)))" : undefined }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* CTA — per-result URL takes priority over global.
               Falls back to the locale's default label when only the URL is set,

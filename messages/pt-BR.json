@@ -4124,6 +4124,8 @@
     "askGenderLabel": "Pedir o gênero",
     "optionsTitle": "Opções",
     "shareRequestLabel": "Pedido de compartilhamento",
+    "optionShowResultsBreakdown": "Mostrar a distribuição completa",
+    "optionShowResultsBreakdownHint": "Os participantes veem a pontuação de cada perfil ao lado do seu resultado principal.",
     "uploading": "Enviando…",
     "change": "Trocar",
     "addLogo": "Adicionar meu logo",

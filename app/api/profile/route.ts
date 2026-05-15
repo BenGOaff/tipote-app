@@ -89,13 +89,15 @@ const UpdateSchema = z.object({
   address_form: z.enum(["tu", "vous"]).optional(),
   revenue_goal_monthly: z.string().trim().max(200).optional(),
 
-  // Branding
-  brand_font: z.string().trim().max(100).optional(),
-  brand_color_base: z.string().trim().max(30).optional(),
-  brand_color_accent: z.string().trim().max(30).optional(),
-  brand_logo_url: z.string().trim().max(1000).optional(),
-  brand_author_photo_url: z.string().trim().max(1000).optional(),
-  brand_tone_of_voice: z.string().trim().max(500).optional(),
+  // Branding — nullable so a paid user can clear the value (e.g. remove
+  // their custom logo and fall back to no logo). The UI sends null on
+  // remove; without .nullable() Zod 400s and the save silently fails.
+  brand_font: z.string().trim().max(100).nullable().optional(),
+  brand_color_base: z.string().trim().max(30).nullable().optional(),
+  brand_color_accent: z.string().trim().max(30).nullable().optional(),
+  brand_logo_url: z.string().trim().max(1000).nullable().optional(),
+  brand_author_photo_url: z.string().trim().max(1000).nullable().optional(),
+  brand_tone_of_voice: z.string().trim().max(500).nullable().optional(),
 
   linkedin_url: z.string().trim().max(500).optional(),
   instagram_url: z.string().trim().max(500).optional(),

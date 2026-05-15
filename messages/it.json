@@ -3825,6 +3825,8 @@
     "askGenderLabel": "Chiedi il genere",
     "optionsTitle": "Opzioni",
     "shareRequestLabel": "Richiesta di condivisione",
+    "optionShowResultsBreakdown": "Mostra il dettaglio completo",
+    "optionShowResultsBreakdownHint": "I rispondenti vedono il punteggio di ogni profilo accanto al loro risultato principale.",
     "uploading": "Invio…",
     "change": "Cambia",
     "addLogo": "Aggiungi il mio logo",

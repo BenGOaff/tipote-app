@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Gift, Sparkles,
+  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import { toast } from "sonner";
@@ -421,6 +421,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // Defaults to true so older quizzes (no column value yet) keep showing
   // the GDPR-style checkbox. Only flips when the creator opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
+  const [showResultsBreakdown, setShowResultsBreakdown] = useState(false);
   const [askFirstName, setAskFirstName] = useState(false);
   const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
@@ -641,6 +642,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
+      setShowResultsBreakdown((q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true);
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
@@ -880,6 +882,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           start_button_text: startButtonText || null,
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
+          show_results_breakdown: showResultsBreakdown,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
@@ -1018,6 +1021,30 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const updateOptResult = (qi: number, oi: number, ri: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, result_index: ri } : o) }));
   const addOpt = (qi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: [...q.options, { text: "", result_index: 0 }] }));
   const removeOpt = (qi: number, oi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.filter((_, j) => j !== oi) }));
+  // Gwenn (2026-05-14) : "noter dans l'ordre, puis mélanger". Le bouton
+  // brasse uniquement l'ordre d'affichage — result_index est porté par
+  // chaque option, donc la cartographie réponse→profil reste correcte.
+  // Fisher-Yates + garde-fou anti-no-op pour éviter qu'un re-clic donne
+  // la même séquence quand on n'a que 2 options.
+  const shuffleOpts = (qi: number) => setEditQuestions(p => p.map((q, i) => {
+    if (i !== qi || q.options.length < 2) return q;
+    const out = q.options.slice();
+    for (let k = out.length - 1; k > 0; k--) {
+      const j = Math.floor(Math.random() * (k + 1));
+      [out[k], out[j]] = [out[j], out[k]];
+    }
+    const same = out.every((o, idx) => o === q.options[idx]);
+    if (same) [out[0], out[1]] = [out[1], out[0]];
+    return { ...q, options: out };
+  }));
+  const moveOpt = (qi: number, oi: number, dir: -1 | 1) => setEditQuestions(p => p.map((q, i) => {
+    if (i !== qi) return q;
+    const ni = oi + dir;
+    if (ni < 0 || ni >= q.options.length) return q;
+    const out = q.options.slice();
+    [out[oi], out[ni]] = [out[ni], out[oi]];
+    return { ...q, options: out };
+  }));
   const addQuestion = () => setEditQuestions(p => [...p, { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }], sort_order: p.length }]);
   const removeQuestion = (i: number) => setEditQuestions(p => p.filter((_, qi) => qi !== i));
   const updateR = (i: number, field: string, v: unknown) => setEditResults(p => p.map((r, ri) => ri === i ? { ...r, [field]: v } : r));
@@ -1354,6 +1381,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     checked={viralityEnabled}
                     onChange={v => setViralityEnabled(v)}
                   />
+                  {/* Gwenn (2026-05-14) : voir tous les scores par profil
+                      à la fin du quiz, pas juste le gagnant. Off par défaut
+                      pour ne pas changer le rendu des quizs existants. */}
+                  <SettingsToggle
+                    label={t("optionShowResultsBreakdown")}
+                    hint={t("optionShowResultsBreakdownHint")}
+                    checked={showResultsBreakdown}
+                    onChange={v => setShowResultsBreakdown(v)}
+                  />
                 </section>
 
                 {viralityEnabled && (
@@ -1509,11 +1545,28 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
                                 </select>
                               </div>
+                              {/* Gwenn (2026-05-14) : remontée d'option pour fine-tune
+                                  l'ordre d'affichage après un Mélanger global, sans
+                                  toucher au result_index porté par chaque option. */}
+                              {q.options.length > 1 && (
+                                <div className="absolute top-2 left-2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button type="button" onClick={() => moveOpt(qi, oi, -1)} disabled={oi === 0} aria-label="Monter la réponse" className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronUp className="w-3.5 h-3.5" /></button>
+                                  <button type="button" onClick={() => moveOpt(qi, oi, +1)} disabled={oi === q.options.length - 1} aria-label="Descendre la réponse" className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronDown className="w-3.5 h-3.5" /></button>
+                                </div>
+                              )}
                               {q.options.length > 2 && <button onClick={() => removeOpt(qi, oi)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 rounded p-0.5"><X className="w-3.5 h-3.5" /></button>}
                             </div>
                           ))}
                         </div>
-                        <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>+ Ajouter une option</button>
+                        <div className="flex items-center gap-4">
+                          <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>+ Ajouter une option</button>
+                          {q.options.length > 1 && (
+                            <button type="button" onClick={() => shuffleOpts(qi)} className="text-xs hover:underline inline-flex items-center gap-1" style={{ color: pc }}>
+                              <Shuffle className="w-3 h-3" />
+                              Mélanger les réponses
+                            </button>
+                          )}
+                        </div>
                         <p className="text-center text-xs text-muted-foreground pt-4 italic">Un clic sur une option passe à la question suivante.</p>
                       </div>
                     </div>

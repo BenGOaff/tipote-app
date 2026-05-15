@@ -167,6 +167,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "capture_heading", "capture_subtitle", "capture_first_name",
       "capture_last_name", "capture_phone", "capture_country",
       "show_consent_checkbox",
+      "show_results_breakdown",
       "start_button_text", "result_insight_heading", "result_projection_heading",
       "custom_footer_text", "custom_footer_url",
       "brand_font", "brand_color_primary", "brand_color_background",

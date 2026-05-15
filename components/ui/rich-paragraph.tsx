@@ -2,6 +2,22 @@
 
 import { Fragment } from "react";
 
+// Authors sometimes paste HTML entities (e.g. &nbsp; from a rich editor or a
+// docs snippet) into a plain-text field. We render through React children so
+// the entity stays literal unless we decode it here first.
+function decodeEntities(s: string): string {
+  if (!s || s.indexOf("&") === -1) return s;
+  return s
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
 // Lightweight renderer for short user-authored blurbs.
 // Recognises: blank lines → paragraphs, leading "- " or "• " → bullet list.
 // No HTML parsing, so content is always safe as React children.
@@ -13,7 +29,7 @@ export function RichParagraph({
   className?: string;
 }) {
   const blocks: Array<{ kind: "p"; lines: string[] } | { kind: "ul"; items: string[] }> = [];
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const lines = decodeEntities(text).replace(/\r\n/g, "\n").split("\n");
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];

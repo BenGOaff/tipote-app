@@ -3825,6 +3825,8 @@
     "askGenderLabel": "Demander le genre",
     "optionsTitle": "Options",
     "shareRequestLabel": "Demande de partage",
+    "optionShowResultsBreakdown": "Afficher la répartition complète",
+    "optionShowResultsBreakdownHint": "Les répondants voient le score de chaque profil à côté de leur résultat principal.",
     "uploading": "Envoi…",
     "change": "Changer",
     "addLogo": "Ajouter mon logo",

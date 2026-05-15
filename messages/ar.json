@@ -3825,6 +3825,8 @@
     "askGenderLabel": "اسأل عن الجنس",
     "optionsTitle": "الخيارات",
     "shareRequestLabel": "طلب المشاركة",
+    "optionShowResultsBreakdown": "عرض التوزيع الكامل",
+    "optionShowResultsBreakdownHint": "يرى المجيبون درجة كل ملف بجانب نتيجتهم الرئيسية.",
     "uploading": "جارٍ الرفع…",
     "change": "تغيير",
     "addLogo": "إضافة شعاري",
