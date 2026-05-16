@@ -757,6 +757,15 @@ export default function PublicQuizClient({
     [firstName, gender],
   );
 
+  // Interpolation neutre pour les résultats AUTRES que celui du
+  // visiteur (card "Répartition complète"). Pas de prénom, gender="x"
+  // pour afficher le wording inclusif générique. Cf. bug Adeline,
+  // 17 mai 2026.
+  const interpNeutral = useCallback(
+    (text: string | null | undefined) => makeInterpolator({ name: "", gender: "x" })(text),
+    [],
+  );
+
   // ─── Dynamic Google Font injection (WYSIWYG with editor preview) ───
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -2297,9 +2306,11 @@ export default function PublicQuizClient({
                     return (
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
+                          {/* isMain = profil dominant du visiteur → personnalisé.
+                              Sinon = profil de référence → wording neutre. */}
                           <span
                             className={`tipote-quiz-rich tipote-quiz-rich-inline truncate ${isMain ? "font-semibold" : ""}`}
-                            dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(r.title) || "") }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeRichText((isMain ? interp(r.title) : interpNeutral(r.title)) || "") }}
                           />
                           <span className="flex items-center gap-2 shrink-0">
                             {isMain && (
