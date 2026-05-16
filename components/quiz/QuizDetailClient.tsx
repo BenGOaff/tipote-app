@@ -55,6 +55,7 @@ import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPal
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
+import { stripHtml } from "@/lib/richText";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTutorial } from "@/hooks/useTutorial";
 // SidebarProvider / AppSidebar intentionally NOT imported — the WYSIWYG editor
@@ -450,6 +451,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [fontFamily, setFontFamily] = useState<BrandFontChoice>(DEFAULT_BRAND_FONT);
   const [slug, setSlug] = useState("");
   const [ogDescription, setOgDescription] = useState("");
+  // Vignette OG (image affichée par WhatsApp / iMessage / X quand le quiz
+  // est partagé). Sans upload, c'est notre logo par défaut.
+  const [ogImageUrl, setOgImageUrl] = useState<string | null>(null);
+  const [uploadingOgImage, setUploadingOgImage] = useState(false);
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
@@ -543,6 +548,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     brand_color_background: bgColor,
     slug,
     og_description: ogDescription,
+    og_image_url: ogImageUrl,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
     share_networks: shareNetworks,
@@ -605,6 +611,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.brand_color_background === "string") setBgColor(s.brand_color_background);
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
+    if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
@@ -798,6 +805,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setEditQuestions(q.questions); setEditResults(q.results);
       setSlug(q.slug ?? "");
       setOgDescription(q.og_description ?? "");
+      setOgImageUrl(q.og_image_url ?? null);
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
@@ -920,7 +928,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     // Only process fields that have actual content and don't already contain a gender split.
     const queue = fields.filter((f) => {
       const raw = (f.get() ?? "").toString();
-      const text = raw.replace(/<[^>]*>/g, "").trim();
+      const text = stripHtml(raw);
       if (!text) return false;
       return !/\{[^{}]*\|[^{}]*\|[^{}]*\}/.test(raw);
     });
@@ -936,7 +944,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     for (const f of queue) {
       if (stop) break;
       const raw = (f.get() ?? "").toString();
-      const text = raw.replace(/<[^>]*>/g, "").trim();
+      const text = stripHtml(raw);
       try {
         const res = await fetch("/api/quiz/gender-variants", {
           method: "POST",
@@ -992,6 +1000,33 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       toast.error(`Erreur upload logo : ${msg}`);
     } finally {
       setUploadingLogo(false);
+    }
+  }
+
+  // Vignette OG : image affichée par WhatsApp / iMessage / X / etc. quand
+  // le créateur (ou un visiteur) partage le lien. Sans upload, c'est le
+  // logo Tipote par défaut.
+  async function handleOgImageUpload(file: File) {
+    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    setUploadingOgImage(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `og/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setOgImageUrl(urlData.publicUrl);
+      toast.success("Vignette enregistrée");
+    } catch (err) {
+      console.error("OG image upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(`Erreur upload image : ${msg}`);
+    } finally {
+      setUploadingOgImage(false);
     }
   }
 
@@ -1057,6 +1092,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           // Share + SEO
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
+          og_image_url: ogImageUrl,
           share_networks: shareNetworks,
           // Custom footer — ignored server-side for free plan but we still send it
           custom_footer_text: customFooterText.trim() || null,
@@ -1350,7 +1386,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         label={(() => {
                           // Strip {name}/{m|f|x} placeholders + HTML before truncating
                           // (Marie's #5: sidebar showed literal "{name}, ..." text).
-                          const plain = cleanPlaceholdersForLabel(q.question_text).replace(/<[^>]*>/g, "").trim();
+                          const plain = stripHtml(cleanPlaceholdersForLabel(q.question_text));
                           return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : "Question vide";
                         })()}
                         onClick={() => scrollToSection(`q-${i}`)}
@@ -1387,7 +1423,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           key={`r-${i}`}
                           id={`r-${i}`}
                           index={i}
-                          label={cleanPlaceholdersForLabel(r.title).replace(/<[^>]*>/g, "").trim() || t("emptyResult")}
+                          label={stripHtml(cleanPlaceholdersForLabel(r.title)) || t("emptyResult")}
                           onClick={() => scrollToSection(`r-${i}`)}
                           onRemove={() => removeResult(i)}
                           canDelete={editResults.length > 1}
@@ -2033,7 +2069,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </DialogTitle>
                 <DialogDescription>
                   {rebalanceTarget !== null
-                    ? `L'IA va proposer de réassigner certaines options pour que « ${cleanPlaceholdersForLabel(editResults[rebalanceTarget]?.title).replace(/<[^>]*>/g, "").trim() || `Résultat ${rebalanceTarget + 1}`} » soit atteignable. Le texte de tes questions et résultats reste inchangé.`
+                    ? `L'IA va proposer de réassigner certaines options pour que « ${stripHtml(cleanPlaceholdersForLabel(editResults[rebalanceTarget]?.title)) || `Résultat ${rebalanceTarget + 1}`} » soit atteignable. Le texte de tes questions et résultats reste inchangé.`
                     : ""}
                 </DialogDescription>
               </DialogHeader>
@@ -2166,19 +2202,67 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             </div>
           </CardContent></Card>
 
-          {/* SEO / Open Graph description */}
-          <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold">Aperçu sur les réseaux (SEO)</h3>
-            <p className="text-xs text-muted-foreground">Description utilisée quand un visiteur partage le lien.</p>
-            <Textarea
-              value={ogDescription}
-              onChange={(e) => setOgDescription(e.target.value)}
-              placeholder={t("sharePlaceholder")}
-              rows={2}
-              maxLength={200}
-              className="text-sm"
-            />
-            <p className="text-[10px] text-muted-foreground text-right">{ogDescription.length}/200</p>
+          {/* SEO / Open Graph description + vignette de partage */}
+          <Card><CardContent className="pt-6 space-y-4">
+            <div className="space-y-3">
+              <h3 className="font-semibold">Aperçu sur les réseaux (SEO)</h3>
+              <p className="text-xs text-muted-foreground">Description utilisée quand un visiteur partage le lien.</p>
+              <Textarea
+                value={ogDescription}
+                onChange={(e) => setOgDescription(e.target.value)}
+                placeholder={t("sharePlaceholder")}
+                rows={2}
+                maxLength={200}
+                className="text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground text-right">{ogDescription.length}/200</p>
+            </div>
+
+            {/* Vignette OG — affichée par WhatsApp / iMessage / X / etc.
+                quand le créateur partage le lien. Sans upload, c'est notre
+                logo qui s'affiche. Même pattern que les pages capture /
+                vente Tipote (cf. PageBuilder). */}
+            <div className="space-y-2 pt-2 border-t">
+              <h3 className="font-semibold text-sm">Vignette de partage social</h3>
+              <p className="text-xs text-muted-foreground">Image affichée par WhatsApp, iMessage, X, etc. quand ton lien est partagé. Sans upload, c'est notre logo qui s'affiche.</p>
+              {ogImageUrl ? (
+                <div className="space-y-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ogImageUrl} alt="" className="w-full max-w-sm aspect-[1200/630] rounded-lg border bg-muted/30 object-cover" />
+                  <div className="flex gap-2">
+                    <label className="text-xs px-3 py-1.5 rounded border hover:bg-muted cursor-pointer inline-flex items-center gap-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgImageUpload(f); }}
+                        disabled={uploadingOgImage}
+                      />
+                      {uploadingOgImage ? "Upload…" : "Remplacer"}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setOgImageUrl(null)}
+                      className="text-xs px-3 py-1.5 rounded border hover:bg-destructive/10 text-destructive"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label className="text-xs px-3 py-1.5 rounded border border-dashed hover:bg-muted cursor-pointer inline-flex items-center gap-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgImageUpload(f); }}
+                    disabled={uploadingOgImage}
+                  />
+                  {uploadingOgImage ? "Upload…" : "Téléverser une image"}
+                </label>
+              )}
+              <p className="text-[10px] text-muted-foreground">Format recommandé : 1200 × 630 px (ratio 1.91:1). Max 10 Mo.</p>
+            </div>
           </CardContent></Card>
 
           {/* Custom footer — paid plans only */}

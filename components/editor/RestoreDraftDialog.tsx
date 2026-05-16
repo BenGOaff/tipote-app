@@ -58,12 +58,14 @@ export function RestoreDraftDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onDiscard(); }}>
-      {/* Largeur généreuse : les libellés FR sont longs (~35 chars
-          chacun) et la classe par défaut <Button> a whitespace-nowrap
-          → on retient sm:max-w-lg + on relâche le wrap sur les
-          boutons (whitespace-normal + h-auto + py-2.5) pour que tout
-          tienne lisible sur 2 lignes max si besoin. */}
-      <DialogContent className="sm:max-w-lg">
+      {/* Largeur généreuse + boutons `flex-1 min-w-0` : sans ça, chaque
+          <Button> garde sa largeur naturelle (inline-flex) et déborde
+          du DialogFooter (qui est en flex-row sm:justify-end) quand les
+          deux libellés FR cumulent ~70 chars. `flex-1` les force à se
+          partager l'espace dispo, `min-w-0` autorise le wrap interne du
+          texte. Cf. screenshot Adeline (16 mai 2026) : le bouton blanc
+          dépassait visiblement à gauche du popup. */}
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{t("dialogTitle")}</DialogTitle>
           <DialogDescription>
@@ -75,14 +77,14 @@ export function RestoreDraftDialog({
             variant="outline"
             disabled={loading}
             onClick={onDiscard}
-            className="whitespace-normal text-left h-auto py-2.5 leading-snug"
+            className="flex-1 sm:flex-1 min-w-0 whitespace-normal text-center h-auto py-2.5 leading-snug"
           >
             {t("discardBtn")}
           </Button>
           <Button
             disabled={loading}
             onClick={onRestore}
-            className="gap-2 whitespace-normal text-left h-auto py-2.5 leading-snug"
+            className="flex-1 sm:flex-1 min-w-0 gap-2 whitespace-normal text-center h-auto py-2.5 leading-snug"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : null}
             {t("restoreBtn")}

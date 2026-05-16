@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Monitor, Tablet, Smartphone } from "lucide-react";
+import { stripHtml } from "@/lib/richText";
 
 type QuizOption = { text: string; result_index: number };
 type QuizQuestion = { question_text: string; options: QuizOption[] };
@@ -177,7 +178,7 @@ export default function QuizPreview({
                       }}
                     >
                       <span className="font-medium text-xs text-gray-400 dark:text-gray-500 mr-2">{String.fromCharCode(65 + i)}</span>
-                      {opt.text || t("defaultOption", { n: i + 1 })}
+                      {stripHtml(opt.text) || t("defaultOption", { n: i + 1 })}
                     </button>
                   ))}
                 </div>

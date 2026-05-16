@@ -33,6 +33,7 @@ import {
   Award,
   BarChart3,
 } from "lucide-react";
+import { stripHtml } from "@/lib/richText";
 
 // Donut palette: primary Tipote + tonal variations, repeats if > 7 slices.
 const CHART_COLORS = [
@@ -185,14 +186,19 @@ export default function QuizResultsAnalytics({
         }
         if (countedRespondent) totalAnswered += 1;
       }
-      const data = q.options.map((opt, oIdx) => ({
-        name: truncate(opt.text || t("optionFallback", { n: oIdx + 1 })),
-        fullName: opt.text || t("optionFallback", { n: oIdx + 1 }),
-        value: optionCounts[oIdx],
-      }));
+      const data = q.options.map((opt, oIdx) => {
+        // Champs rich-text rendus en texte plat (chart axis, tooltip,
+        // breakdown). stripHtml décode aussi les entités `&nbsp;`.
+        const plain = stripHtml(opt.text) || t("optionFallback", { n: oIdx + 1 });
+        return {
+          name: truncate(plain),
+          fullName: plain,
+          value: optionCounts[oIdx],
+        };
+      });
       return {
         questionIndex: qIdx,
-        questionText: q.question_text || t("questionFallback", { n: qIdx + 1 }),
+        questionText: stripHtml(q.question_text) || t("questionFallback", { n: qIdx + 1 }),
         totalAnswered,
         data,
       };

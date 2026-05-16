@@ -1419,7 +1419,10 @@ export default function PublicQuizClient({
     return (
       <div className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16" style={rootStyle}>
         <div className="max-w-md w-full space-y-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center">{t.personalizeTitle}</h2>
+          {/* L'écran respecte la charte du quiz : couleur primaire sur
+              le titre (comme la page de résultats), font-family héritée
+              de rootStyle. Tout est personnalisable. */}
+          <h2 className="text-2xl sm:text-3xl font-bold text-center" style={{ color: branding.primaryColor }}>{t.personalizeTitle}</h2>
           <p className="text-muted-foreground text-center">{t.personalizeSubtitle}</p>
           {quiz.ask_first_name && (
             <div className="space-y-1.5">
@@ -1632,7 +1635,7 @@ export default function PublicQuizClient({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={opt.image_url}
-                      alt={opt.text}
+                      alt={stripHtml(opt.text)}
                       className="w-full aspect-video object-cover"
                     />
                   ) : (
@@ -1958,11 +1961,12 @@ export default function PublicQuizClient({
   // they unlock the bonus BY sharing, not just by seeing it next to the
   // results (where it often got missed).
   if (step === "bonus") {
-    const bonusText = (quiz.bonus_description || "").trim();
-    // JB feedback 2026-05-02: when bonus_intro_text is set, render it
-    // verbatim instead of the localized template — creators want full
-    // control over the share-to-unlock paragraph.
-    const customBonusIntro = (quiz.bonus_intro_text || "").trim();
+    // bonus_description et bonus_intro_text sont édités en rich-text →
+    // strip pour l'injection dans la template, sanitize-render pour
+    // le custom intro (préserve gras/italique/couleurs du créateur).
+    const bonusText = stripHtml(quiz.bonus_description);
+    const customBonusIntroHtml = sanitizeRichText(quiz.bonus_intro_text);
+    const hasCustomIntro = stripHtml(quiz.bonus_intro_text).length > 0;
     const allowedNetworks = (quiz.share_networks && quiz.share_networks.length > 0)
       ? quiz.share_networks
       : ["x", "facebook", "linkedin", "whatsapp", "threads"];
@@ -1987,9 +1991,16 @@ export default function PublicQuizClient({
             <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
               {t.bonusStepHeading}
             </h2>
-            <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
-              {customBonusIntro || t.bonusStepIntro(bonusText)}
-            </p>
+            {hasCustomIntro ? (
+              <p
+                className="tipote-quiz-rich tipote-quiz-rich-inline text-muted-foreground text-base leading-relaxed whitespace-pre-line"
+                dangerouslySetInnerHTML={{ __html: customBonusIntroHtml }}
+              />
+            ) : (
+              <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
+                {t.bonusStepIntro(bonusText)}
+              </p>
+            )}
           </div>
 
           {quiz.bonus_image_url && (

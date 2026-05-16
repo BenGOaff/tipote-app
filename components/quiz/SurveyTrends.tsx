@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { stripHtml } from "@/lib/richText";
 
 type SurveyOption = { text: string; result_index: number; image_url?: string | null };
 type SurveyQuestion = {
@@ -252,7 +253,7 @@ function OptionDistribution({ options, counts }: { options: SurveyOption[]; coun
         return (
           <div key={oi} className="space-y-1">
             <div className="flex items-center justify-between text-sm">
-              <span className="truncate">{opt.text || `Option ${oi + 1}`}</span>
+              <span className="truncate">{stripHtml(opt.text) || `Option ${oi + 1}`}</span>
               <span className="text-xs text-muted-foreground">
                 {c} ({sharePct}%)
               </span>
