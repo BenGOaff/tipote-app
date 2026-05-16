@@ -19,7 +19,7 @@ import {
 } from "@/lib/quizBranding";
 import { sanitizeRichText, stripHtml } from "@/lib/richText";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
-import { makeInterpolator, getGenderLabels, type QuizGender } from "@/lib/quizPersonalization";
+import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
 import { ensureExternalUrl } from "@/lib/url";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
@@ -757,12 +757,15 @@ export default function PublicQuizClient({
     [firstName, gender],
   );
 
-  // Interpolation neutre pour les résultats AUTRES que celui du
-  // visiteur (card "Répartition complète"). Pas de prénom, gender="x"
-  // pour afficher le wording inclusif générique. Cf. bug Adeline,
-  // 17 mai 2026.
-  const interpNeutral = useCallback(
-    (text: string | null | undefined) => makeInterpolator({ name: "", gender: "x" })(text),
+  // Étiquette courte pour les résultats AUTRES que celui du visiteur
+  // (card "Répartition complète"). Pas de prénom, pas de "tu es le·la"
+  // en préfixe, pas de marqueurs inclusifs — juste le nom du profil.
+  // Cf. retour Adeline (17 mai 2026).
+  const labelForOtherResult = useCallback(
+    (text: string | null | undefined) => {
+      const neutral = makeInterpolator({ name: "", gender: "x" })(text);
+      return extractResultLabel(neutral);
+    },
     [],
   );
 
@@ -2306,12 +2309,18 @@ export default function PublicQuizClient({
                     return (
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
-                          {/* isMain = profil dominant du visiteur → personnalisé.
-                              Sinon = profil de référence → wording neutre. */}
-                          <span
-                            className={`tipote-quiz-rich tipote-quiz-rich-inline truncate ${isMain ? "font-semibold" : ""}`}
-                            dangerouslySetInnerHTML={{ __html: sanitizeRichText((isMain ? interp(r.title) : interpNeutral(r.title)) || "") }}
-                          />
+                          {/* isMain = profil dominant du visiteur → phrase
+                              personnalisée complète. Sinon = profil de
+                              référence → juste l'étiquette ("Solopreneur
+                              Invisible"), sans prénom ni marqueurs inclusifs. */}
+                          {isMain ? (
+                            <span
+                              className="tipote-quiz-rich tipote-quiz-rich-inline truncate font-semibold"
+                              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(r.title) || "") }}
+                            />
+                          ) : (
+                            <span className="truncate">{labelForOtherResult(r.title)}</span>
+                          )}
                           <span className="flex items-center gap-2 shrink-0">
                             {isMain && (
                               <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
