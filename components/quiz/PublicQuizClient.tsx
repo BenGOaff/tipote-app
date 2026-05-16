@@ -272,7 +272,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMaxLabel: "Tout à fait",
     breakdownTitle: "Répartition complète de tes réponses",
     breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils — voici ton profil dominant et tes traits secondaires.",
-    breakdownMainBadge: "principal",
+    breakdownMainBadge: "Ton résultat",
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -324,7 +324,7 @@ const translations: Record<string, QuizTranslations> = {
     resultCtaDefault: "Découvrir",
     breakdownTitle: "Répartition complète de vos réponses",
     breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils — voici votre profil dominant et vos traits secondaires.",
-    breakdownMainBadge: "principal",
+    breakdownMainBadge: "Votre résultat",
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -376,7 +376,7 @@ const translations: Record<string, QuizTranslations> = {
     resultCtaDefault: "Discover",
     breakdownTitle: "Full breakdown of your answers",
     breakdownSubtitle: "Most people recognise themselves in several profiles — here's your main type and your secondary traits.",
-    breakdownMainBadge: "main",
+    breakdownMainBadge: "Your result",
   },
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
@@ -428,7 +428,7 @@ const translations: Record<string, QuizTranslations> = {
     resultCtaDefault: "Descubrir",
     breakdownTitle: "Desglose completo de tus respuestas",
     breakdownSubtitle: "La mayoría de las personas se reconocen en varios perfiles — aquí tienes tu perfil principal y tus rasgos secundarios.",
-    breakdownMainBadge: "principal",
+    breakdownMainBadge: "Tu resultado",
   },
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
@@ -480,7 +480,7 @@ const translations: Record<string, QuizTranslations> = {
     resultCtaDefault: "Entdecken",
     breakdownTitle: "Vollständige Aufschlüsselung deiner Antworten",
     breakdownSubtitle: "Die meisten erkennen sich in mehreren Profilen wieder — hier ist dein Hauptprofil und deine Nebenausprägungen.",
-    breakdownMainBadge: "Haupt",
+    breakdownMainBadge: "Dein Ergebnis",
   },
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
@@ -532,7 +532,7 @@ const translations: Record<string, QuizTranslations> = {
     resultCtaDefault: "Descobrir",
     breakdownTitle: "Distribuição completa das tuas respostas",
     breakdownSubtitle: "A maioria das pessoas reconhece-se em vários perfis — aqui está o teu perfil principal e os teus traços secundários.",
-    breakdownMainBadge: "principal",
+    breakdownMainBadge: "O teu resultado",
   },
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
@@ -584,7 +584,7 @@ const translations: Record<string, QuizTranslations> = {
     resultCtaDefault: "Scopri",
     breakdownTitle: "Distribuzione completa delle tue risposte",
     breakdownSubtitle: "La maggior parte delle persone si riconosce in più profili — ecco il tuo profilo principale e i tuoi tratti secondari.",
-    breakdownMainBadge: "principale",
+    breakdownMainBadge: "Il tuo risultato",
   },
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
@@ -636,7 +636,7 @@ const translations: Record<string, QuizTranslations> = {
     resultCtaDefault: "اكتشف",
     breakdownTitle: "التوزيع الكامل لإجاباتك",
     breakdownSubtitle: "يتعرّف معظم الأشخاص على أنفسهم في عدة ملفات — هذا هو ملفك الرئيسي وسماتك الثانوية.",
-    breakdownMainBadge: "رئيسي",
+    breakdownMainBadge: "نتيجتك",
   },
 };
 
@@ -2309,18 +2309,15 @@ export default function PublicQuizClient({
                     return (
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
-                          {/* isMain = profil dominant du visiteur → phrase
-                              personnalisée complète. Sinon = profil de
-                              référence → juste l'étiquette ("Solopreneur
-                              Invisible"), sans prénom ni marqueurs inclusifs. */}
-                          {isMain ? (
-                            <span
-                              className="tipote-quiz-rich tipote-quiz-rich-inline truncate font-semibold"
-                              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(r.title) || "") }}
-                            />
-                          ) : (
-                            <span className="truncate">{labelForOtherResult(r.title)}</span>
-                          )}
+                          {/* TOUS les résultats du breakdown affichent
+                              juste l'étiquette courte du profil — sans
+                              prénom, sans marqueurs inclusifs. La phrase
+                              personnalisée complète reste sur le GROS
+                              résultat en pleine page. Le profil dominant
+                              garde l'emphase visuelle (gras + badge). */}
+                          <span className={`truncate ${isMain ? "font-semibold" : ""}`}>
+                            {labelForOtherResult(r.title)}
+                          </span>
                           <span className="flex items-center gap-2 shrink-0">
                             {isMain && (
                               <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
