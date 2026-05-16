@@ -30,7 +30,7 @@ import {
   List, ListOrdered,
   Link as LinkIcon, Image as ImageIcon, Pencil,
   Sparkles, Loader2,
-  Palette, Eraser,
+  Palette, Eraser, Wand2,
 } from "lucide-react";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
@@ -475,13 +475,19 @@ export function RichTextEdit({
           <div className="tiquiz-rich" dangerouslySetInnerHTML={{ __html: sanitizeRichText(previewTransform ? previewTransform(value) : value) }} />
         )}
         <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {/* Deux boutons IA distincts visuellement (cf. confusion Adeline,
+            17 mai 2026 : "j'ai deux étoiles dans les réponses comment
+            savoir lequel est quoi ?") :
+            - ✨ Sparkles → Genderize (génère les variantes Il/Elle/Iel)
+            - 🪄 Wand2    → AI Rewrite (propose 3 reformulations)
+            Le tooltip `title` reste explicite pour chaque action. */}
         {onGenderize && !isEmpty && (
           <button
             type="button"
             onClick={handleGenderize}
             disabled={genderizing}
             title="Générer les variantes de genre (Il / Elle / Iel)"
-            className="absolute top-1 right-6 p-0.5 text-primary/30 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
+            className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
           >
             {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
           </button>
@@ -497,7 +503,7 @@ export function RichTextEdit({
             // one further right.
             className={`absolute top-1 ${onGenderize ? "right-11" : "right-6"} p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity`}
           >
-            {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
           </button>
         )}
       </div>

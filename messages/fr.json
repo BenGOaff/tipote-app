@@ -388,7 +388,21 @@
     "deleteArticleConfirm": "Supprimer cet article ?",
     "signOut": "Se déconnecter",
     "signingOut": "Déconnexion…",
-    "rteMyPalettes": "Mes palettes"
+    "rteMyPalettes": "Mes palettes",
+    "rteBold": "Gras",
+    "rteItalic": "Italique",
+    "rteUnderline": "Souligné",
+    "rteAlignLeft": "Aligner à gauche",
+    "rteAlignCenter": "Centrer",
+    "rteAlignRight": "Aligner à droite",
+    "rteBulletList": "Liste à puces",
+    "rteNumberedList": "Liste numérotée",
+    "rteInsertLink": "Insérer un lien",
+    "rteLinkPrompt": "URL du lien (https://… ou /chemin)",
+    "rteLinkInvalid": "Lien invalide.",
+    "rteInsertImage": "Insérer une image",
+    "rteImagePrompt": "URL de l'image (https://… ou /chemin)",
+    "rteUrlInvalid": "URL invalide."
   },
   "auth": {
     "login": "Se connecter",

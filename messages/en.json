@@ -388,7 +388,21 @@
     "deleteArticleConfirm": "Delete this article?",
     "signOut": "Sign out",
     "signingOut": "Signing out…",
-    "rteMyPalettes": "My palettes"
+    "rteMyPalettes": "My palettes",
+    "rteBold": "Bold",
+    "rteItalic": "Italic",
+    "rteUnderline": "Underline",
+    "rteAlignLeft": "Align left",
+    "rteAlignCenter": "Center",
+    "rteAlignRight": "Align right",
+    "rteBulletList": "Bullet list",
+    "rteNumberedList": "Numbered list",
+    "rteInsertLink": "Insert link",
+    "rteLinkPrompt": "Link URL (https://… or /path)",
+    "rteLinkInvalid": "Invalid link.",
+    "rteInsertImage": "Insert image",
+    "rteImagePrompt": "Image URL (https://… or /path)",
+    "rteUrlInvalid": "Invalid URL."
   },
   "auth": {
     "login": "Sign in",

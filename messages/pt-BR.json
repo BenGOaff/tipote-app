@@ -528,7 +528,21 @@
     "viewAll": "Ver tudo",
     "seeMore": "Ver mais",
     "learnMore": "Saiba mais",
-    "rteMyPalettes": "Minhas paletas"
+    "rteMyPalettes": "Minhas paletas",
+    "rteBold": "Negrito",
+    "rteItalic": "Itálico",
+    "rteUnderline": "Sublinhado",
+    "rteAlignLeft": "Alinhar à esquerda",
+    "rteAlignCenter": "Centralizar",
+    "rteAlignRight": "Alinhar à direita",
+    "rteBulletList": "Lista com marcadores",
+    "rteNumberedList": "Lista numerada",
+    "rteInsertLink": "Inserir link",
+    "rteLinkPrompt": "URL do link (https://… ou /caminho)",
+    "rteLinkInvalid": "Link inválido.",
+    "rteInsertImage": "Inserir imagem",
+    "rteImagePrompt": "URL da imagem (https://… ou /caminho)",
+    "rteUrlInvalid": "URL inválido."
   },
   "auth": {
     "login": "Entrar",

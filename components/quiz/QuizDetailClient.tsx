@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown,
+  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import { toast } from "sonner";
@@ -229,6 +229,8 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
             {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
           </button>
         )}
+        {/* AI Rewrite : icône Wand2 (≠ Sparkles utilisé pour Genderize)
+            — cf. confusion Adeline, 17 mai 2026. */}
         {onAIRewrite && value?.trim() && (
           <button
             type="button"
@@ -237,7 +239,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
             title="Reformuler avec l'IA dans le ton du quiz"
             className={`absolute top-1 ${onGenderize ? "right-11" : "right-6"} p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity`}
           >
-            {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
           </button>
         )}
       </div>

@@ -388,7 +388,21 @@
     "deleteArticleConfirm": "هل تريد حذف هذا المقال؟",
     "signOut": "تسجيل الخروج",
     "signingOut": "جارٍ تسجيل الخروج…",
-    "rteMyPalettes": "لوحاتي"
+    "rteMyPalettes": "لوحاتي",
+    "rteBold": "غامق",
+    "rteItalic": "مائل",
+    "rteUnderline": "تحته خط",
+    "rteAlignLeft": "محاذاة لليسار",
+    "rteAlignCenter": "توسيط",
+    "rteAlignRight": "محاذاة لليمين",
+    "rteBulletList": "قائمة نقطية",
+    "rteNumberedList": "قائمة مرقمة",
+    "rteInsertLink": "إدراج رابط",
+    "rteLinkPrompt": "رابط URL (https://… أو /مسار)",
+    "rteLinkInvalid": "رابط غير صالح.",
+    "rteInsertImage": "إدراج صورة",
+    "rteImagePrompt": "رابط الصورة (https://… أو /مسار)",
+    "rteUrlInvalid": "URL غير صالح."
   },
   "auth": {
     "login": "تسجيل الدخول",
