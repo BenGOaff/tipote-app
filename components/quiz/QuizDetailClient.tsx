@@ -493,6 +493,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedIframe, setCopiedIframe] = useState(false);
   const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
 
   // Section refs for scroll-to
@@ -1153,6 +1154,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // visitor's first name and skips capture in PublicQuizClient.
   const previewUrl = `${publicUrl}?preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("toastLinkCopied")); setTimeout(() => setCopied(false), 2000); }); };
+  const iframeCode = `<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`;
+  const handleCopyIframe = () => { navigator.clipboard.writeText(iframeCode).then(() => { setCopiedIframe(true); toast.success(t("toastIframeCopied")); setTimeout(() => setCopiedIframe(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
   const dndSensors = useSensors(
@@ -2173,9 +2176,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               options={shareDomainOptions}
               onChange={setShareDomain}
             />
+            {/* Single-line editor: prefix + slug input + save + copy.
+                Same shape as on Tiquiz — one row, no redundant readonly
+                mirror underneath. */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1">
-                <span className="text-sm text-muted-foreground font-mono whitespace-nowrap">
+              <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1 min-w-0">
+                <span className="text-sm text-muted-foreground font-mono whitespace-nowrap shrink-0">
                   {shareDomain
                     ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/q/`)
                     : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/")}
@@ -2184,16 +2190,28 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
                   placeholder={quizId}
-                  className="flex-1 bg-transparent outline-none text-sm font-mono px-1 py-1"
+                  className="flex-1 min-w-0 bg-transparent outline-none text-sm font-mono px-1 py-1"
                 />
               </div>
-              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : tc("save")}</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : tc("save")}
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleCopyLink} title={tc("copy")} aria-label={tc("copy")}>
+                {copied ? <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              <Input value={publicUrl} readOnly className="font-mono text-sm bg-muted flex-1" />
-              <Button variant="outline" size="icon" onClick={handleCopyLink}>{copied ? <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" /> : <Copy className="w-4 h-4" />}</Button>
+            <div className="relative">
+              <pre className="text-xs font-mono bg-muted rounded-lg p-3 pr-24 overflow-x-auto border mt-3">{iframeCode}</pre>
+              <Button
+                size="sm"
+                variant="outline"
+                className="absolute top-5 right-2 h-7 px-2"
+                onClick={handleCopyIframe}
+              >
+                {copiedIframe ? <CheckCircle className="w-3.5 h-3.5 mr-1 text-green-500" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+                {copiedIframe ? tc("copied") : tc("copy")}
+              </Button>
             </div>
-            <pre className="text-xs font-mono bg-muted rounded-lg p-3 overflow-x-auto border mt-3">{`<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`}</pre>
           </CardContent></Card>
 
           {/* Share networks */}

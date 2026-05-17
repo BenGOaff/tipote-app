@@ -3977,7 +3977,8 @@
     "imageEmptyHint": "Añade la URL de una imagen",
     "imageUrlPlaceholder": "https://… (URL de imagen)",
     "multiSelectLabel": "Varias respuestas permitidas",
-    "multiSelectHint": "Si está activada, el visitante puede seleccionar varias opciones. Toca cada opción para marcarla y usa el botón «Siguiente» para continuar."
+    "multiSelectHint": "Si está activada, el visitante puede seleccionar varias opciones. Toca cada opción para marcarla y usa el botón «Siguiente» para continuar.",
+    "toastIframeCopied": "¡Código iframe copiado!"
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",

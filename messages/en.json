@@ -3977,7 +3977,8 @@
     "imageEmptyHint": "Add an image URL",
     "imageUrlPlaceholder": "https://… (image URL)",
     "multiSelectLabel": "Multiple answers allowed",
-    "multiSelectHint": "If enabled, the visitor can pick several options. They tap each option to toggle it and use the \"Next\" button to continue."
+    "multiSelectHint": "If enabled, the visitor can pick several options. They tap each option to toggle it and use the \"Next\" button to continue.",
+    "toastIframeCopied": "Iframe code copied!"
   },
   "contentStrategy": {
     "title": "Content strategy",
