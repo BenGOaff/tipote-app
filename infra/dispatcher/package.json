@@ -1,0 +1,14 @@
+{
+  "name": "tipote-tiquiz-dispatcher",
+  "version": "1.0.0",
+  "description": "Tiny router in front of Caddy's catchall :443 that decides whether an incoming custom-domain request belongs to Tipote (port 3000) or Tiquiz (port 3001). Zero deps, pure Node stdlib.",
+  "private": true,
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
