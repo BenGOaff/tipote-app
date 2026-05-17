@@ -6,7 +6,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { fetchOwnedPopquiz } from "@/lib/popquiz/repo";
-import PopquizEditClient from "./PopquizEditClient";
+import PopquizEditClient from "./PopquizEditClientLazy";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Modifier le popquiz – Tiquiz" };
