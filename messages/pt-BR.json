@@ -631,7 +631,11 @@
     "rteInsertImage": "Inserir imagem",
     "rteImagePrompt": "URL da imagem (https://… ou /caminho)",
     "rteUrlInvalid": "URL inválido.",
-    "shareDomain": "Domínio"
+    "shareDomain": "Domínio",
+    "aiRewriteTitle": "Reformular com IA no tom do quiz",
+    "aiRewriteNoResult": "A IA não retornou nada. Tente de novo.",
+    "aiRewriteDismiss": "Manter meu texto",
+    "aiRewriteAgain": "Regenerar"
   },
   "auth": {
     "login": "Entrar",

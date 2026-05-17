@@ -491,7 +491,11 @@
     "rteInsertImage": "إدراج صورة",
     "rteImagePrompt": "رابط الصورة (https://… أو /مسار)",
     "rteUrlInvalid": "URL غير صالح.",
-    "shareDomain": "النطاق"
+    "shareDomain": "النطاق",
+    "aiRewriteTitle": "إعادة الصياغة بالذكاء الاصطناعي بنبرة الاختبار",
+    "aiRewriteNoResult": "لم يقترح الذكاء الاصطناعي شيئًا. حاول مجددًا.",
+    "aiRewriteDismiss": "الاحتفاظ بالنص",
+    "aiRewriteAgain": "إعادة التوليد"
   },
   "auth": {
     "login": "تسجيل الدخول",
