@@ -468,7 +468,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [restoring, setRestoring] = useState(false);
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
-  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   const [copied, setCopied] = useState(false);
 
   // Section refs for scroll-to
@@ -1703,7 +1703,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap">
                   {shareDomain
                     ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/q/`)
-                    : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/")}
+                    : `${shareOrigin}/q/`}
                 </span>
                 <input
                   value={slug}

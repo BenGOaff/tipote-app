@@ -70,6 +70,16 @@ export function useShareDomain(): UseShareDomain {
   const [shareDomain, setShareDomainState] = useState<string | null>(null);
   const [shareDomainOptions, setShareDomainOptions] = useState<string[]>([]);
   const [mainHost, setMainHost] = useState<string | null>(null);
+  // Captured client-side ONLY (in useEffect) so the initial render
+  // shape matches between SSR (window absent → null) and the first
+  // client render (state initialised to null before effect runs).
+  // Without this split, every JSX site that interpolates shareOrigin
+  // triggers React hydration error #418 on routes that get SSR'd.
+  const [clientOrigin, setClientOrigin] = useState<string | null>(null);
+
+  useEffect(() => {
+    setClientOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     let aborted = false;
@@ -98,7 +108,7 @@ export function useShareDomain(): UseShareDomain {
 
   const shareOrigin = shareDomain
     ? `https://${shareDomain}`
-    : (typeof window !== "undefined" ? window.location.origin : "");
+    : (clientOrigin ?? "");
 
   // True when the picked hostname is neither the main host (per API)
   // nor a development origin. We err on the side of "no" during the

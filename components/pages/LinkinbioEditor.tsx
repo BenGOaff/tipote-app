@@ -90,7 +90,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
   const { toast } = useToast();
   const t = useTranslations("linkinbio");
   const tc = useTranslations("common");
-  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Page state
@@ -609,7 +609,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
                   <span className="truncate">
                     {shareDomain
                       ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/p/`)
-                      : (typeof window !== "undefined" ? `${window.location.origin}/p/` : "/p/")}
+                      : `${shareOrigin}/p/`}
                   </span>
                   <Input
                     value={slug}

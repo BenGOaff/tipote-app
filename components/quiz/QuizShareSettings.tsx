@@ -47,7 +47,7 @@ export default function QuizShareSettings({
 }: QuizShareSettingsProps) {
   const t = useTranslations("quizShare");
   const tc = useTranslations("common");
-  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   const [copied, setCopied] = useState<"link" | "iframe" | null>(null);
 
   const effectiveSlug = slug || quizId;
@@ -56,7 +56,7 @@ export default function QuizShareSettings({
   // clean origin/ on custom domain, origin/q/ on the main host.
   const slugPrefix = shareDomain
     ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/q/`)
-    : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/");
+    : `${shareOrigin}/q/`;
   const iframeCode = `<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`;
 
   function copyText(text: string, type: "link" | "iframe") {

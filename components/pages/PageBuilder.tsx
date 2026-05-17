@@ -1256,7 +1256,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   const t = useTranslations("pageBuilder");
   const tc = useTranslations("common");
   const locale = useLocale();
-  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
 
   // Translated device labels
   const deviceLabels = useMemo<Record<Device, string>>(() => ({
@@ -3356,7 +3356,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                   <span className="text-sm text-muted-foreground whitespace-nowrap">
                     {shareDomain
                       ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/p/`)
-                      : (typeof window !== "undefined" ? `${window.location.origin}/p/` : "/p/")}
+                      : `${shareOrigin}/p/`}
                   </span>
                   <input
                     type="text"

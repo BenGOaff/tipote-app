@@ -494,7 +494,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedIframe, setCopiedIframe] = useState(false);
-  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
 
   // Section refs for scroll-to
   const introRef = useRef<HTMLDivElement>(null);
@@ -2184,7 +2184,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap shrink-0">
                   {shareDomain
                     ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/q/`)
-                    : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/")}
+                    : `${shareOrigin}/q/`}
                 </span>
                 <input
                   value={slug}
