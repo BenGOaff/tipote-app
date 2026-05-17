@@ -31,6 +31,9 @@ import { useAutosave } from "@/hooks/use-autosave";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { type PaletteList } from "@/components/editor/UserPalettePicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
+import { useTranslations } from "next-intl";
 import {
   Plus,
   Trash2,
@@ -268,6 +271,8 @@ export default function PopquizEditClient({
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const tc = useTranslations("common");
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
 
@@ -603,10 +608,15 @@ export default function PopquizEditClient({
   // (server-supplied) instead of the current input so the URL only
   // "updates" once the user actually saves.
   const handle = popquiz.slug ?? popquiz.id;
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
-  const publicUrl = `${origin}/pq/${handle}`;
-  const embedUrl = `${origin}/embed/pq/${handle}`;
+  // Public URL honours the share-domain pick (clean /<slug> on custom
+  // domain, /pq/<slug> on the main host). Embed URL keeps the
+  // /embed/pq/ prefix on whichever host the creator picks — iframes
+  // are loaded by visitor browsers, never seen directly, so the
+  // prefix doesn't matter cosmetically; what matters is that the
+  // route exists on that host (middleware allows /embed/ on custom
+  // domains in Phase 4).
+  const publicUrl = buildPublicUrl("pq", handle);
+  const embedUrl = `${shareOrigin}/embed/pq/${handle}`;
   const embedSnippet = buildEmbedSnippet(embedUrl);
 
   async function copyPublicUrl() {
@@ -773,9 +783,15 @@ export default function PopquizEditClient({
                 (optionnel)
               </span>
             </Label>
+            <ShareDomainPicker
+              label={tc("shareDomain")}
+              value={shareDomain}
+              options={shareDomainOptions}
+              onChange={setShareDomain}
+            />
             <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
               <span className="px-2.5 flex items-center text-xs text-muted-foreground bg-muted/50 border-r">
-                /pq/
+                {shareDomain && shareDomain !== "app.tipote.com" ? "/" : "/pq/"}
               </span>
               <input
                 id="slug"

@@ -490,7 +490,8 @@
     "rteLinkInvalid": "رابط غير صالح.",
     "rteInsertImage": "إدراج صورة",
     "rteImagePrompt": "رابط الصورة (https://… أو /مسار)",
-    "rteUrlInvalid": "URL غير صالح."
+    "rteUrlInvalid": "URL غير صالح.",
+    "shareDomain": "النطاق"
   },
   "auth": {
     "login": "تسجيل الدخول",

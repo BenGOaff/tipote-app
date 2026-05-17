@@ -38,6 +38,9 @@ import AppShell from "@/components/AppShell";
 import { PageBanner } from "@/components/PageBanner";
 import { PageContainer } from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -317,6 +320,8 @@ export default function PopquizNewClient({
       setStagedThumbUrl(null);
     }
   }
+  const tc = useTranslations("common");
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
 
@@ -668,10 +673,11 @@ export default function PopquizNewClient({
   }
 
   const handle = publishedSlug ?? publishedId ?? "";
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
-  const publishedUrl = handle ? `${origin}/pq/${handle}` : "";
-  const embedUrl = handle ? `${origin}/embed/pq/${handle}` : "";
+  // Same prefix rules as PopquizEditClient: clean URL on custom
+  // domain, /pq/<handle> on main host. Embed URL keeps the
+  // /embed/pq/ prefix on whichever host the creator picks.
+  const publishedUrl = handle ? buildPublicUrl("pq", handle) : "";
+  const embedUrl = handle ? `${shareOrigin}/embed/pq/${handle}` : "";
   const embedSnippet = embedUrl ? buildEmbedSnippet(embedUrl) : "";
 
   async function copyPublishedUrl() {
@@ -777,9 +783,15 @@ export default function PopquizNewClient({
                 (optionnel)
               </span>
             </Label>
+            <ShareDomainPicker
+              label={tc("shareDomain")}
+              value={shareDomain}
+              options={shareDomainOptions}
+              onChange={setShareDomain}
+            />
             <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
               <span className="px-2.5 flex items-center text-xs text-muted-foreground bg-muted/50 border-r">
-                /pq/
+                {shareDomain && shareDomain !== "app.tipote.com" ? "/" : "/pq/"}
               </span>
               <input
                 id="slug"

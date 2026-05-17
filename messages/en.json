@@ -490,7 +490,8 @@
     "rteLinkInvalid": "Invalid link.",
     "rteInsertImage": "Insert image",
     "rteImagePrompt": "Image URL (https://… or /path)",
-    "rteUrlInvalid": "Invalid URL."
+    "rteUrlInvalid": "Invalid URL.",
+    "shareDomain": "Domain"
   },
   "auth": {
     "login": "Sign in",

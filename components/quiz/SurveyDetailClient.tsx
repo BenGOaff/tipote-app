@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -466,6 +468,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [restoring, setRestoring] = useState(false);
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
+  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   const [copied, setCopied] = useState(false);
 
   // Section refs for scroll-to
@@ -981,9 +984,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     } catch { setStatus(status); }
   };
 
-  // Public URL — prefer custom slug when set, fall back to UUID
+  // Public URL — prefer custom slug when set, fall back to UUID.
+  // Honours the share-domain pick: clean on custom domain, /q/<slug>
+  // on the multi-tenant main host.
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
-  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
+  const publicUrl = buildPublicUrl("q", publicSegment);
   // Owner-side preview URL — kept separate so "Copy link" never copies the
   // preview variant. ?preview_name=Alex pre-fills firstName + skips capture.
   const previewUrl = `${publicUrl}?preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
@@ -1687,10 +1692,18 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           <Card><CardContent className="pt-6 space-y-3">
             <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Lien personnalisé</h3>
             <p className="text-xs text-muted-foreground">Choisis une URL courte et mémorable. Lettres minuscules, chiffres et tirets uniquement.</p>
+            <ShareDomainPicker
+              label={tc("shareDomain")}
+              value={shareDomain}
+              options={shareDomainOptions}
+              onChange={setShareDomain}
+            />
             <div className="flex items-center gap-2">
               <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1">
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap">
-                  {typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/"}
+                  {shareDomain
+                    ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/q/`)
+                    : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/")}
                 </span>
                 <input
                   value={slug}

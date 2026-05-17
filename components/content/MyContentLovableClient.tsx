@@ -18,6 +18,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
 import { stripHtml } from "@/lib/richText";
+import { useShareDomain } from "@/hooks/useShareDomain";
 // Design-system primitives (Phase 2 pilot). Replaces the bulky gradient
 // PageBanner + hand-rolled paddings with a cohesive heading + container +
 // card grammar shared across pages.
@@ -316,6 +317,9 @@ export default function MyContentLovableClient({
   const t = useTranslations("myContent");
   const locale = useLocale();
   const tc = useTranslations("common");
+  // Build share URLs honouring the creator's chosen domain. Falls
+  // back to the current window origin until the hook resolves.
+  const { buildPublicUrl } = useShareDomain();
 
   const [view, setView] = useState<"list" | "calendar">(initialView);
   const [search, setSearch] = useState("");
@@ -1076,9 +1080,7 @@ export default function MyContentLovableClient({
                     <div className="space-y-3">
                       {funnels.map((page) => {
                         const isPublished = page.status === "published";
-                        const publicUrl = typeof window !== "undefined"
-                          ? `${window.location.origin}/p/${page.slug}`
-                          : `/p/${page.slug}`;
+                        const publicUrl = buildPublicUrl("p", page.slug);
                         return (
                           <Card key={page.id} className="p-4">
                             <div className="flex items-start justify-between gap-4">

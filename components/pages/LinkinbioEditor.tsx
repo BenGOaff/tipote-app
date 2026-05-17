@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { useToast } from "@/hooks/use-toast";
 import { buildLinkinbioPage, type LinkinbioPageData, type LinkinbioTheme, type ButtonStyle } from "@/lib/linkinbioBuilder";
 
@@ -88,6 +90,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
   const { toast } = useToast();
   const t = useTranslations("linkinbio");
   const tc = useTranslations("common");
+  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Page state
@@ -301,8 +304,10 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
     setPublishing(false);
   };
 
-  // Copy URL
-  const pageUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
+  // Copy URL — honours the creator's chosen share domain. On a custom
+  // domain the prefix is dropped (just /<slug>); on the main host
+  // we keep /p/<slug> to disambiguate from quizzes and popquizzes.
+  const pageUrl = buildPublicUrl("p", page.slug);
   const copyUrl = () => {
     navigator.clipboard.writeText(pageUrl);
     setCopied(true);
@@ -588,11 +593,24 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
                 </div>
               </div>
 
-              {/* Slug */}
+              {/* Domain picker (only if creator has a verified custom
+                  domain in this project) + slug. Prefix shown next to
+                  the slug input mirrors the actual URL shape: bare on
+                  custom domain, /p/ on the main host. */}
               <div className="space-y-1.5">
+                <ShareDomainPicker
+                  label={tc("shareDomain")}
+                  value={shareDomain}
+                  options={shareDomainOptions}
+                  onChange={setShareDomain}
+                />
                 <Label className="text-xs">{t("slugLabel")}</Label>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="truncate">{typeof window !== "undefined" ? window.location.origin : ""}/p/</span>
+                  <span className="truncate">
+                    {shareDomain
+                      ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/p/`)
+                      : (typeof window !== "undefined" ? `${window.location.origin}/p/` : "/p/")}
+                  </span>
                   <Input
                     value={slug}
                     onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}

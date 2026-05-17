@@ -11,6 +11,8 @@ import {
   Copy, ExternalLink, Globe, Image, Link2, Check, Code,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 
 const SOCIAL_NETWORKS = [
   { id: "facebook", label: "Facebook", icon: "f" },
@@ -44,11 +46,17 @@ export default function QuizShareSettings({
   onShareNetworksChange,
 }: QuizShareSettingsProps) {
   const t = useTranslations("quizShare");
+  const tc = useTranslations("common");
+  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   const [copied, setCopied] = useState<"link" | "iframe" | null>(null);
 
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const effectiveSlug = slug || quizId;
-  const publicUrl = `${baseUrl}/q/${effectiveSlug}`;
+  const publicUrl = buildPublicUrl("q", effectiveSlug);
+  // The label shown next to the slug input mirrors the URL shape:
+  // clean origin/ on custom domain, origin/q/ on the main host.
+  const slugPrefix = shareDomain
+    ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/q/`)
+    : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/");
   const iframeCode = `<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`;
 
   function copyText(text: string, type: "link" | "iframe") {
@@ -110,9 +118,15 @@ export default function QuizShareSettings({
             <CardDescription>{t("shareLinkDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <ShareDomainPicker
+              label={tc("shareDomain")}
+              value={shareDomain}
+              options={shareDomainOptions}
+              onChange={setShareDomain}
+            />
             {onSlugChange && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground shrink-0">{baseUrl}/q/</span>
+                <span className="text-sm text-muted-foreground shrink-0">{slugPrefix}</span>
                 <Input
                   value={slug}
                   onChange={(e) => onSlugChange(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}

@@ -44,6 +44,8 @@ import { CSS } from "@dnd-kit/utilities";
 import PageChatBar from "./PageChatBar";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import LayoutPanel, { isCapturePage } from "./LayoutPanel";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import type { LayoutConfig } from "@/lib/pageLayout";
 import { AssetPicker, type AssetChoice } from "./AssetPicker";
 
@@ -1252,7 +1254,9 @@ const INLINE_EDIT_SCRIPT = `
 
 export default function PageBuilder({ initialPage, onBack }: Props) {
   const t = useTranslations("pageBuilder");
+  const tc = useTranslations("common");
   const locale = useLocale();
+  const { shareDomain, shareDomainOptions, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
 
   // Translated device labels
   const deviceLabels = useMemo<Record<Device, string>>(() => ({
@@ -1869,14 +1873,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, [page.id]);
 
-  // Copy URL
+  // Copy URL — honours the creator's chosen share domain.
   const copyUrl = useCallback(() => {
-    const url = `${window.location.origin}/p/${page.slug}`;
+    const url = buildPublicUrl("p", page.slug);
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  }, [page.slug]);
+  }, [page.slug, buildPublicUrl]);
 
   // Download HTML
   const downloadHtml = useCallback(() => {
@@ -2179,8 +2183,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     }
   }, []);
 
-  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${page.slug}` : `/p/${page.slug}`;
-  const publishPreviewUrl = typeof window !== "undefined" ? `${window.location.origin}/p/${publishSlug}` : `/p/${publishSlug}`;
+  const publicUrl = buildPublicUrl("p", page.slug);
+  const publishPreviewUrl = buildPublicUrl("p", publishSlug);
   const isPublished = page.status === "published";
   const deviceCfg = DEVICE_WIDTHS[device];
 
@@ -3338,8 +3342,22 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 <label className="text-sm font-medium flex items-center gap-1.5 mb-1.5">
                   <Link2 className="w-4 h-4 text-muted-foreground" /> {t("publish.url")}
                 </label>
+                {/* Domain selector renders only when the creator has at
+                    least one verified custom domain on this project. */}
+                <div className="mb-2">
+                  <ShareDomainPicker
+                    label={tc("shareDomain")}
+                    value={shareDomain}
+                    options={shareDomainOptions}
+                    onChange={setShareDomain}
+                  />
+                </div>
                 <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-3 py-2 border">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">{typeof window !== "undefined" ? window.location.origin : ""}/p/</span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+                    {shareDomain
+                      ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/p/`)
+                      : (typeof window !== "undefined" ? `${window.location.origin}/p/` : "/p/")}
+                  </span>
                   <input
                     type="text"
                     value={publishSlug}

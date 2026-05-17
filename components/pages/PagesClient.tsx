@@ -20,6 +20,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PageBanner } from "@/components/PageBanner";
 import { Button } from "@/components/ui/button";
 import { Mascot } from "@/components/ui/mascot";
+import { useShareDomain } from "@/hooks/useShareDomain";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { loadAllOffers, type OfferOption, levelLabel, formatPriceRange } from "@/lib/offers";
@@ -1099,9 +1100,13 @@ function PageCard({ page, onEdit, onArchive, onLeads }: { page: PageSummary; onE
   const t = useTranslations("pages");
   const [copied, setCopied] = useState(false);
   const isPublished = page.status === "published";
+  // Honour the creator's chosen share domain (custom or main host).
+  // On a custom domain the URL collapses to /<slug> via the catch-all;
+  // on the main host it stays /p/<slug>.
+  const { buildPublicUrl } = useShareDomain();
 
   const copyUrl = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/p/${page.slug}`);
+    navigator.clipboard.writeText(buildPublicUrl("p", page.slug));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

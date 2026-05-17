@@ -630,7 +630,8 @@
     "rteLinkInvalid": "Link inválido.",
     "rteInsertImage": "Inserir imagem",
     "rteImagePrompt": "URL da imagem (https://… ou /caminho)",
-    "rteUrlInvalid": "URL inválido."
+    "rteUrlInvalid": "URL inválido.",
+    "shareDomain": "Domínio"
   },
   "auth": {
     "login": "Entrar",
