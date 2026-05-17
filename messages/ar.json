@@ -308,7 +308,8 @@
       "branding": "العلامة التجارية",
       "ai": "الذكاء الاصطناعي والرصيد",
       "pricing": "الاشتراك",
-      "compta": "المحاسبة"
+      "compta": "المحاسبة",
+      "domain": "النطاق"
     },
     "language": {
       "uiTitle": "لغة الواجهة",
@@ -319,7 +320,94 @@
       "saving": "جارٍ الحفظ…",
       "saved": "تم تحديث اللغة",
       "error": "خطأ في الحفظ"
-    }
+    },
+    "customDomainsUpsellTitle": "النطاقات المخصصة ميزة Pro",
+    "domainDeleteTitle": "إزالة هذا النطاق المخصص؟",
+    "toastCopyFailed": "تعذّر النسخ. حدد القيمة يدويًا.",
+    "tabDomain": "النطاق",
+    "errGeneric": "خطأ",
+    "dnsRecordToCreate": "أضف هذا السجل DNS",
+    "registrarOpenConsole": "افتح وحدة تحكم DNS",
+    "toastDomainVerified": "{hostname} متصل ✨",
+    "domainAddDesc": "سأرشدك خطوة بخطوة لتوجيه نطاقك إلى Tipote.",
+    "domainDeleteDesc": "سيتوقف زوار {hostname} عن الوصول إلى مساحتك في Tiquiz. يمكنك إعادة إضافته في أي وقت.",
+    "domainAddTitle": "ربط نطاق مخصص",
+    "domainStatusVerified": "تم التحقق",
+    "registrarDetectedLabel": "المسجل المكتشف:",
+    "domainConfirmBtn": "تأكيد وإضافة",
+    "domainHostnameLabel": "نطاقك",
+    "domainVerifiedSince": "تم التحقق في {date}",
+    "domainStatusPending": "DNS قيد الانتظار",
+    "domainPollingExhausted": "لم ينتشر DNS بعد. اضغط تحقق عندما يكون جاهزًا.",
+    "cancelBtn": "إلغاء",
+    "toastDomainStillPending": "لم يكتشف بعد. سأستمر بالتحقق.",
+    "domainStatusFailed": "فشل التحقق من DNS",
+    "dnsFieldType": "النوع",
+    "toastCopied": "تم النسخ إلى الحافظة",
+    "dnsFieldTarget": "الهدف",
+    "domainVerifyBtn": "تحقق",
+    "toastDomainDeleted": "تمت إزالة النطاق.",
+    "customDomainsDesc": "استخدم عنواناً يحمل علامتك التجارية، مثل pages.your-business.com، بدلاً من عنوان Tipote الافتراضي. تفتح صفحاتك على نطاقك الخاص.",
+    "domainDeleteBtn": "إزالة النطاق",
+    "domainDeleteConfirm": "إزالة",
+    "domainPendingHint": "أضف سجل DNS أدناه، وسنكتشفه تلقائيًا.",
+    "toastDomainAdded": "تمت إضافة النطاق. سنراقب DNS الخاص بك خلال 10 دقائق.",
+    "registrarSteps": {
+      "cloudflare": {
+        "s1": "افتح علامة تبويب DNS لـ {root} في لوحة تحكم Cloudflare.",
+        "s2": "اضغط على \"إضافة سجل\".",
+        "s3": "اختر CNAME، اضبط الاسم على \"{name}\" والهدف على \"{cnameTarget}\".",
+        "s4": "هام: غيّر حالة Proxy إلى \"DNS only\" (السحابة الرمادية) واحفظ."
+      },
+      "ovh": {
+        "s1": "افتح مدير OVH وانتقل إلى نطاقك {root} ثم علامة تبويب منطقة DNS.",
+        "s2": "اضغط \"إضافة إدخال\" واختر CNAME.",
+        "s3": "اضبط النطاق الفرعي على \"{name}\" والهدف على \"{cnameTarget}.\" (مع النقطة في النهاية).",
+        "s4": "أكّد وانتظر بضع دقائق للانتشار."
+      },
+      "godaddy": {
+        "s1": "افتح صفحة إدارة DNS في GoDaddy لـ {root}.",
+        "s2": "اضغط على \"Add New Record\".",
+        "s3": "Type = CNAME, Name = \"{name}\", Value = \"{cnameTarget}\", TTL = 1 Hour.",
+        "s4": "احفظ."
+      },
+      "namecheap": {
+        "s1": "افتح Namecheap → Advanced DNS لـ {root}.",
+        "s2": "اضغط على \"Add New Record\" واختر \"CNAME Record\".",
+        "s3": "Host = \"{name}\", Target = \"{cnameTarget}\", TTL = Automatic.",
+        "s4": "اضغط على علامة الاختيار الخضراء للحفظ."
+      },
+      "gandi": {
+        "s1": "افتح صفحة سجلات DNS في Gandi لـ {root}.",
+        "s2": "اضغط على \"إضافة سجل\".",
+        "s3": "Type CNAME, Name = \"{name}\", Hostname = \"{cnameTarget}.\" (مع النقطة في النهاية).",
+        "s4": "احفظ وانتظر الانتشار."
+      },
+      "google": {
+        "s1": "افتح إعدادات DNS لـ {root}.",
+        "s2": "أضف سجلًا مخصصًا جديدًا.",
+        "s3": "Type = CNAME, Host = \"{name}\", Data = \"{cnameTarget}\".",
+        "s4": "احفظ."
+      },
+      "generic": {
+        "s1": "افتح إدارة DNS لـ {root} في لوحة المسجل.",
+        "s2": "ابحث عن خيار إضافة سجل DNS جديد.",
+        "s3": "أنشئ CNAME باسم \"{name}\" والهدف/القيمة \"{cnameTarget}\".",
+        "s4": "احفظ السجل. سنكتشف التغيير تلقائيًا."
+      }
+    },
+    "domainPollingProgress": "جارٍ التحقق من DNS… ({n}/{total})",
+    "dnsFieldName": "الاسم",
+    "customDomainsTitle": "نطاقك المخصص",
+    "customDomainsUpsellDesc": "قم بترقية خطتك لربط نطاقك الخاص.",
+    "customDomainsUpsellCta": "عرض الخطط",
+    "domainDetectBtn": "متابعة",
+    "domainHostnameHint": "استخدم نطاقًا فرعيًا تتحكم به (موصى به) أو النطاق الجذر.",
+    "domainHostnamePh": "مثال: quiz.your-brand.com",
+    "domainAddBtn": "إضافة نطاق",
+    "domainOpenBtn": "افتح",
+    "errNetwork": "خطأ في الشبكة",
+    "customDomainsEmpty": "لا يوجد نطاق متصل بعد. أضف نطاقًا للبدء."
   },
   "common": {
     "save": "حفظ",

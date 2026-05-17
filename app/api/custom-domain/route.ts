@@ -34,10 +34,22 @@ export async function GET() {
   // own list of custom domains, isolated from the user's other
   // projects as if they were separate accounts.
   const projectId = await getActiveProjectId(supabase, user.id);
+
+  // Plan also fetched here so the Settings UI can render upsell vs
+  // real list in one fetch (no second /api/profile round-trip).
+  // profiles.id == user.id in Tipote.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isPaid = isPaidPlan((profile as { plan?: string | null } | null)?.plan);
+
   if (!projectId) {
     return NextResponse.json({
       ok: true,
       domains: [],
+      isPaid,
       dnsTargetCname: DNS_TARGET_CNAME,
       dnsTargetIp: DNS_TARGET_IP,
     });
@@ -57,6 +69,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     domains: data ?? [],
+    isPaid,
     // Surfaced for the UI so we don't hard-code the target in two places.
     dnsTargetCname: DNS_TARGET_CNAME,
     dnsTargetIp: DNS_TARGET_IP,

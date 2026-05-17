@@ -308,7 +308,8 @@
       "branding": "Branding",
       "ai": "AI & Credits",
       "pricing": "Subscription",
-      "compta": "Accounting"
+      "compta": "Accounting",
+      "domain": "Domain"
     },
     "language": {
       "uiTitle": "Interface language",
@@ -319,7 +320,94 @@
       "saving": "Saving…",
       "saved": "Language updated",
       "error": "Failed to save"
-    }
+    },
+    "customDomainsUpsellTitle": "Custom domains are a Pro feature",
+    "domainDeleteTitle": "Remove this custom domain?",
+    "toastCopyFailed": "Couldn't copy. Try selecting it manually.",
+    "tabDomain": "Domain",
+    "errGeneric": "Error",
+    "dnsRecordToCreate": "Add this DNS record",
+    "registrarOpenConsole": "Open DNS console",
+    "toastDomainVerified": "{hostname} is live ✨",
+    "domainAddDesc": "I'll guide you step by step to point your domain at Tipote.",
+    "domainDeleteDesc": "Visitors of {hostname} will stop reaching your Tiquiz space. You can re-add it any time.",
+    "domainAddTitle": "Connect a custom domain",
+    "domainStatusVerified": "Verified",
+    "registrarDetectedLabel": "Detected registrar:",
+    "domainConfirmBtn": "Confirm and add",
+    "domainHostnameLabel": "Your domain",
+    "domainVerifiedSince": "Verified on {date}",
+    "domainStatusPending": "Pending DNS",
+    "domainPollingExhausted": "DNS hasn't propagated yet. Click Check again when ready.",
+    "cancelBtn": "Cancel",
+    "toastDomainStillPending": "Not detected yet. I'll keep checking.",
+    "domainStatusFailed": "DNS check failed",
+    "dnsFieldType": "Type",
+    "toastCopied": "Copied to clipboard",
+    "dnsFieldTarget": "Target",
+    "domainVerifyBtn": "Check again",
+    "toastDomainDeleted": "Domain removed.",
+    "customDomainsDesc": "Use a URL on your own brand, like pages.your-business.com, instead of the default Tipote address. Your pages open on your own domain.",
+    "domainDeleteBtn": "Remove domain",
+    "domainDeleteConfirm": "Remove",
+    "domainPendingHint": "Add the DNS record below, then we'll detect it automatically.",
+    "toastDomainAdded": "Domain added. We'll watch your DNS for the next 10 minutes.",
+    "registrarSteps": {
+      "cloudflare": {
+        "s1": "Open the DNS tab of {root} in your Cloudflare dashboard.",
+        "s2": "Click \"Add record\".",
+        "s3": "Pick CNAME, set Name to \"{name}\" and Target to \"{cnameTarget}\".",
+        "s4": "IMPORTANT: switch Proxy status to \"DNS only\" (gray cloud), then save."
+      },
+      "ovh": {
+        "s1": "Open the OVH manager, go to your domain {root}, then the DNS zone tab.",
+        "s2": "Click \"Add an entry\" and choose CNAME.",
+        "s3": "Set the sub-domain to \"{name}\" and the target to \"{cnameTarget}.\" (with the trailing dot).",
+        "s4": "Validate and wait a few minutes for propagation."
+      },
+      "godaddy": {
+        "s1": "Open the GoDaddy DNS Management page for {root}.",
+        "s2": "Click \"Add New Record\".",
+        "s3": "Type = CNAME, Name = \"{name}\", Value = \"{cnameTarget}\", TTL = 1 Hour.",
+        "s4": "Save."
+      },
+      "namecheap": {
+        "s1": "Open Namecheap → Advanced DNS for {root}.",
+        "s2": "Click \"Add New Record\" and choose \"CNAME Record\".",
+        "s3": "Host = \"{name}\", Target = \"{cnameTarget}\", TTL = Automatic.",
+        "s4": "Click the green check to save."
+      },
+      "gandi": {
+        "s1": "Open your Gandi DNS records page for {root}.",
+        "s2": "Click \"Add a record\".",
+        "s3": "Type CNAME, Name = \"{name}\", Hostname = \"{cnameTarget}.\" (with the trailing dot).",
+        "s4": "Save and wait for propagation."
+      },
+      "google": {
+        "s1": "Open the DNS settings for {root}.",
+        "s2": "Add a new custom resource record.",
+        "s3": "Type = CNAME, Host = \"{name}\", Data = \"{cnameTarget}\".",
+        "s4": "Save."
+      },
+      "generic": {
+        "s1": "Open the DNS management for {root} in your registrar's dashboard.",
+        "s2": "Find the option to add a new DNS record.",
+        "s3": "Create a CNAME with Name = \"{name}\" and Target/Value = \"{cnameTarget}\".",
+        "s4": "Save the record. We'll detect the change automatically."
+      }
+    },
+    "domainPollingProgress": "Checking DNS… ({n}/{total})",
+    "dnsFieldName": "Name",
+    "customDomainsTitle": "Your custom domain",
+    "customDomainsUpsellDesc": "Upgrade your plan to connect your own domain and serve your quizzes from a branded URL.",
+    "customDomainsUpsellCta": "See plans",
+    "domainDetectBtn": "Continue",
+    "domainHostnameHint": "Use a subdomain you control (recommended) or your apex domain. Anything you can edit DNS for.",
+    "domainHostnamePh": "e.g. quiz.your-brand.com",
+    "domainAddBtn": "Add a domain",
+    "domainOpenBtn": "Open",
+    "errNetwork": "Network error",
+    "customDomainsEmpty": "No domain connected yet. Add one to start using your own URL."
   },
   "common": {
     "save": "Save",

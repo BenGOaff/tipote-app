@@ -48,6 +48,7 @@ import ProjectSourcesSection from "@/components/settings/ProjectSourcesSection";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 import SocialConnections from "@/components/settings/SocialConnections";
 import LegalDocGenerator from "@/components/settings/legal/LegalDocGenerator";
+import { CustomDomainsTab } from "@/components/settings/CustomDomainsTab";
 import type { DocType } from "@/components/settings/legal/types";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -99,7 +100,7 @@ function PinterestIcon({ className }: { className?: string }) {
   );
 }
 
-type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "pricing" | "compta";
+type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "pricing" | "compta" | "domain";
 
 type Props = {
   userEmail: string;
@@ -108,7 +109,7 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources" || s === "compta") return s;
+  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources" || s === "compta" || s === "domain") return s;
   // compat ancien: tab=billing, tab=ai
   if (s === "billing" || s === "pricing" || s === "ai") return "pricing";
   return "profile";
@@ -1365,6 +1366,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <TabsTrigger value="compta" className="gap-2">
           <Calculator className="w-4 h-4" />
           {tSettings("tabs.compta")}
+        </TabsTrigger>
+        <TabsTrigger value="domain" className="gap-2">
+          <LinkIcon className="w-4 h-4" />
+          {tSettings("tabs.domain")}
         </TabsTrigger>
       </TabsList>
 
@@ -3017,6 +3022,14 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             setInitialProfile((prev) => ({ ...(prev ?? {}), ...(next as any) }))
           }
         />
+      </TabsContent>
+
+      {/* DOMAINE — gestion des domaines personnalisés (Pro+).
+          Scopé au projet actif. Dort tant que CUSTOM_DOMAINS_ENABLED
+          n'est pas actif côté env : la tab affiche, la création
+          plante en pré-prod, c'est volontaire pour Phase 6. */}
+      <TabsContent value="domain" className="space-y-6">
+        <CustomDomainsTab />
       </TabsContent>
     </Tabs>
   );

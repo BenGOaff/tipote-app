@@ -393,7 +393,8 @@
       "branding": "Branding",
       "ai": "IA & Créditos",
       "pricing": "Subscrição",
-      "compta": "Contabilidade"
+      "compta": "Contabilidade",
+      "domain": "Domínio"
     },
     "language": {
       "uiTitle": "Idioma da interface",
@@ -418,7 +419,94 @@
     "saveBtn": "Guardar",
     "saved": "Definições guardadas.",
     "errSaving": "Erro ao guardar.",
-    "languageTitle": "Idioma"
+    "languageTitle": "Idioma",
+    "customDomainsUpsellTitle": "Os domínios personalizados são uma funcionalidade Pro",
+    "domainDeleteTitle": "Remover este domínio personalizado?",
+    "toastCopyFailed": "Não foi possível copiar. Selecione manualmente.",
+    "tabDomain": "Domínio",
+    "errGeneric": "Erro",
+    "dnsRecordToCreate": "Adicione este registo DNS",
+    "registrarOpenConsole": "Abrir consola DNS",
+    "toastDomainVerified": "{hostname} está online ✨",
+    "domainAddDesc": "Vou guiar-te passo a passo para apontar o teu domínio para o Tipote.",
+    "domainDeleteDesc": "Os visitantes de {hostname} deixarão de chegar ao seu espaço Tiquiz. Pode voltar a adicioná-lo quando quiser.",
+    "domainAddTitle": "Ligar um domínio personalizado",
+    "domainStatusVerified": "Verificado",
+    "registrarDetectedLabel": "Registo detetado:",
+    "domainConfirmBtn": "Confirmar e adicionar",
+    "domainHostnameLabel": "O seu domínio",
+    "domainVerifiedSince": "Verificado em {date}",
+    "domainStatusPending": "DNS pendente",
+    "domainPollingExhausted": "O DNS ainda não se propagou. Clique em Verificar quando estiver pronto.",
+    "cancelBtn": "Cancelar",
+    "toastDomainStillPending": "Ainda não detetado. Continuo a verificar.",
+    "domainStatusFailed": "Verificação de DNS falhou",
+    "dnsFieldType": "Tipo",
+    "toastCopied": "Copiado para a área de transferência",
+    "dnsFieldTarget": "Destino",
+    "domainVerifyBtn": "Verificar",
+    "toastDomainDeleted": "Domínio removido.",
+    "customDomainsDesc": "Usa um URL da tua marca, tipo pages.o-teu-negocio.com, em vez do endereço Tipote por defeito. As tuas páginas abrem no teu próprio domínio.",
+    "domainDeleteBtn": "Remover domínio",
+    "domainDeleteConfirm": "Remover",
+    "domainPendingHint": "Adicione o registo DNS abaixo, vamos detetá-lo automaticamente.",
+    "toastDomainAdded": "Domínio adicionado. Vou vigiar o seu DNS durante os próximos 10 minutos.",
+    "registrarSteps": {
+      "cloudflare": {
+        "s1": "Abra o separador DNS de {root} no seu painel Cloudflare.",
+        "s2": "Clique em \"Adicionar registo\".",
+        "s3": "Escolha CNAME, defina Nome = \"{name}\" e Destino = \"{cnameTarget}\".",
+        "s4": "IMPORTANTE: mude o proxy para \"DNS only\" (nuvem cinza) e guarde."
+      },
+      "ovh": {
+        "s1": "Abra o manager OVH, vá ao seu domínio {root} e ao separador Zona DNS.",
+        "s2": "Clique em \"Adicionar uma entrada\" e escolha CNAME.",
+        "s3": "Defina o subdomínio como \"{name}\" e o destino como \"{cnameTarget}.\" (com o ponto final).",
+        "s4": "Valide e aguarde alguns minutos pela propagação."
+      },
+      "godaddy": {
+        "s1": "Abra a página DNS Management da GoDaddy para {root}.",
+        "s2": "Clique em \"Add New Record\".",
+        "s3": "Type = CNAME, Name = \"{name}\", Value = \"{cnameTarget}\", TTL = 1 Hour.",
+        "s4": "Guarde."
+      },
+      "namecheap": {
+        "s1": "Abra Namecheap → Advanced DNS para {root}.",
+        "s2": "Clique em \"Add New Record\" e escolha \"CNAME Record\".",
+        "s3": "Host = \"{name}\", Target = \"{cnameTarget}\", TTL = Automatic.",
+        "s4": "Clique no visto verde para guardar."
+      },
+      "gandi": {
+        "s1": "Abra a sua página de registos DNS da Gandi para {root}.",
+        "s2": "Clique em \"Adicionar um registo\".",
+        "s3": "Type CNAME, Name = \"{name}\", Hostname = \"{cnameTarget}.\" (com o ponto final).",
+        "s4": "Guarde e aguarde a propagação."
+      },
+      "google": {
+        "s1": "Abra as definições DNS de {root}.",
+        "s2": "Adicione um novo registo personalizado.",
+        "s3": "Type = CNAME, Host = \"{name}\", Data = \"{cnameTarget}\".",
+        "s4": "Guarde."
+      },
+      "generic": {
+        "s1": "Abra a gestão DNS de {root} no painel do seu registo.",
+        "s2": "Encontre a opção para adicionar um novo registo DNS.",
+        "s3": "Crie um CNAME com Name = \"{name}\" e Target/Value = \"{cnameTarget}\".",
+        "s4": "Guarde o registo. Vamos detetar a alteração automaticamente."
+      }
+    },
+    "domainPollingProgress": "A verificar DNS… ({n}/{total})",
+    "dnsFieldName": "Nome",
+    "customDomainsTitle": "O seu domínio personalizado",
+    "customDomainsUpsellDesc": "Faça upgrade do seu plano para conectar o seu domínio e servir os seus quizzes a partir de um URL com a sua marca.",
+    "customDomainsUpsellCta": "Ver planos",
+    "domainDetectBtn": "Continuar",
+    "domainHostnameHint": "Use um subdomínio que controle (recomendado) ou o seu domínio raiz. Qualquer um cujo DNS possa editar.",
+    "domainHostnamePh": "ex.: quiz.sua-marca.com",
+    "domainAddBtn": "Adicionar um domínio",
+    "domainOpenBtn": "Abrir",
+    "errNetwork": "Erro de rede",
+    "customDomainsEmpty": "Nenhum domínio conectado ainda. Adicione um para começar."
   },
   "common": {
     "save": "Guardar",
