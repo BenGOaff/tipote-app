@@ -4,11 +4,35 @@
 // which fetches page data via the dedicated /api/pages/public/[slug] endpoint.
 
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PublicPageClient from "@/components/pages/PublicPageClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // Force dynamic rendering so published pages are always fresh.
 export const dynamic = "force-dynamic";
+
+const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
+
+// Custom-domain ownership: when a request arrives on a creator's
+// branded hostname, the hosted_page resolved here must belong to the
+// same (user, project) that owns the domain. No-op on the main host.
+async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: string } | null> {
+  const h = await headers();
+  const host = h.get(CUSTOM_HOST_HEADER);
+  if (!host) return null;
+  const { data } = await supabaseAdmin
+    .from("custom_domains")
+    .select("user_id, project_id")
+    .ilike("hostname", host)
+    .eq("status", "verified")
+    .maybeSingle();
+  const userId = (data as { user_id?: string } | null)?.user_id;
+  const projectId = (data as { project_id?: string } | null)?.project_id;
+  if (!userId || !projectId) return null;
+  return { userId, projectId };
+}
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
@@ -62,5 +86,21 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
 // This matches the quiz pattern: server does metadata, client does data fetching.
 export default async function PublicPage({ params }: RouteContext) {
   const { slug } = await params;
+  // Ownership gate on custom domains — see comment on the helper.
+  const scope = await resolveCustomDomainScope();
+  if (scope) {
+    const { data } = await supabaseAdmin
+      .from("hosted_pages")
+      .select("user_id, project_id")
+      .eq("slug", slug)
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const row = data as { user_id?: string; project_id?: string | null } | null;
+    if (!row || row.user_id !== scope.userId || row.project_id !== scope.projectId) {
+      notFound();
+    }
+  }
   return <PublicPageClient page={null} slug={slug} />;
 }

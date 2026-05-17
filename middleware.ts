@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
+import { isReservedPublicSlug } from "@/lib/publicSlug";
 
 /**
  * Invariants (anti-régression)
@@ -22,6 +24,51 @@ import { isAdminEmail } from "@/lib/adminEmails";
 const ACTIVE_PROJECT_COOKIE = "tipote_active_project";
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar", "pt", "pt-BR"];
+
+// Forwarded to route handlers when the request arrived through a
+// creator's custom domain. Route handlers + the catch-all page read
+// it (via `headers()` in server components, or `req.headers` in route
+// handlers) to validate that the resolved content actually belongs
+// to that domain's owner. Same convention as Tiquiz, different
+// header name so the two apps never collide on the same VPS.
+const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
+
+// Bare-slug shape served by app/[publicSlug]/page.tsx at the root of
+// a custom domain (test.ethilife.fr/<slug>). Mirrors sanitizeSlug's
+// regex so we never let through a path the page would then 404 on
+// malformed input — keeps the 404 surface small. Length matches the
+// SLUG_RE in lib/quizBranding.ts (1..50 chars total).
+const BARE_SLUG_RE = /^\/[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$/;
+
+/** Tells whether a request arriving on a creator's custom domain is
+ *  on a path we're willing to serve. Everything else 404s before any
+ *  page handler runs — protects the creator's branded URL from
+ *  exposing dashboard chrome, admin pages, marketing pages, etc. */
+function isPublicTenantPath(pathname: string): boolean {
+  if (
+    pathname.startsWith("/q/") ||
+    pathname.startsWith("/p/") ||
+    pathname.startsWith("/pq/") ||
+    pathname.startsWith("/embed/") ||
+    pathname.startsWith("/api/quiz/") ||
+    pathname.startsWith("/api/popquiz/") ||
+    pathname.startsWith("/api/pages/") ||
+    pathname.startsWith("/api/leads") ||
+    pathname.startsWith("/_next/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt"
+  ) {
+    return true;
+  }
+  // Bare-slug shape served by app/[publicSlug]/page.tsx. Reserved
+  // words are pre-rejected here so the catch-all never has to deal
+  // with them.
+  if (BARE_SLUG_RE.test(pathname)) {
+    const segment = pathname.slice(1);
+    if (!isReservedPublicSlug(segment)) return true;
+  }
+  return false;
+}
 
 /**
  * Detect preferred locale from Accept-Language header.
@@ -82,6 +129,35 @@ function startsWithAny(pathname: string, prefixes: string[]) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // ─────────────────────────────────────────────────────────────────
+  // Custom-domain gate. Runs FIRST so a creator-owned hostname can
+  // never accidentally land on /dashboard, /login, /admin, etc.
+  // Dormant when CUSTOM_DOMAINS_ENABLED is unset (default), so
+  // existing users see absolutely zero behaviour change until Phase 6
+  // flips the env var.
+  //
+  // We do NOT touch the database here — Edge runtime, latency
+  // sensitive. We just detect "Host is not one of ours" and forward
+  // the hostname to route handlers (and the catch-all page) via a
+  // request header. They use supabaseAdmin and can validate
+  // ownership without a second hop.
+  // ─────────────────────────────────────────────────────────────────
+  if (customDomainsEnabled()) {
+    const rawHost = req.headers.get("host");
+    if (!isOwnHost(rawHost)) {
+      const host = normaliseHost(rawHost)!;
+      if (!isPublicTenantPath(pathname) && pathname !== "/") {
+        // Don't expose dashboard / admin / login to the creator's
+        // branded URL. Explicit 404 so visitors don't accidentally
+        // discover those screens via someone else's domain.
+        return new NextResponse("Not found", { status: 404 });
+      }
+      const requestHeaders = new Headers(req.headers);
+      requestHeaders.set(CUSTOM_HOST_HEADER, host);
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+  }
 
   // ✅ Route publique exacte "/" (page login)
   if (pathname === "/") return NextResponse.next();
@@ -250,23 +326,15 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/app/:path*",
-    "/dashboard/:path*",
-    "/strategy/:path*",
-    "/tasks/:path*",
-    "/contents/:path*",
-    "/create/:path*",
-    "/templates/:path*",
-    "/pepites/:path*",
-    "/settings/:path*",
-    "/analytics/:path*",
-    "/admin/:path*",
-    "/automations/:path*",
-    // Only match /widgets page itself (app UI), NOT /widgets/*.js static files
-    // which must be served publicly for cross-origin embedding on external blogs.
-    "/widgets",
-    "/clients/:path*",
-    "/webinars/:path*",
-    "/leads/:path*",
+    // Broad pattern so the custom-domain gate at the top of
+    // middleware() can intercept ANY request whose Host belongs to a
+    // creator's branded domain. Excludes:
+    //   - /api/*    routes handle their own auth, never need locale/onboarding/host-gate
+    //   - /_next/*  framework assets
+    //   - any path with a file extension (.png, .ico, .map, .xml…) —
+    //     static files served straight by Next, no header forwarding needed
+    //   - the /widgets/*.js path explicitly (embeddable widget bundles
+    //     served cross-origin from external sites)
+    "/((?!api|_next|widgets/.*\\.js|.*\\..*).*)",
   ],
 };

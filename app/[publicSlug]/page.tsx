@@ -1,0 +1,202 @@
+// app/[publicSlug]/page.tsx
+//
+// Catch-all that serves Tipote's public content at the root of a
+// creator custom domain — `mybrand.com/<slug>` instead of the longer
+// `/q/<slug>`, `/pq/<slug>` or `/p/<slug>`. The existing prefixed
+// routes still work (backwards-compat with any URL already shared in
+// the wild) and are the only thing that resolves on the main host
+// app.tipote.com, where this catch-all 404s silently because we
+// never want `/dashboard`, `/settings`, `/quiz`, etc. to be shadowed.
+//
+// Routing decision:
+//   1. Reserved word → notFound() (api, embed, robots.txt, _next, …)
+//   2. No custom-domain context (x-tipote-custom-host absent) →
+//      notFound() (we're on the main host or middleware is dormant).
+//   3. Resolve hostname → (user_id, project_id) via custom_domains.
+//   4. Lookup quizzes (active) → render quiz.
+//   5. Else lookup popquizzes (published) → render popquiz.
+//   6. Else lookup hosted_pages (published) → render hosted page.
+//   7. Else notFound().
+//
+// Cross-type uniqueness is enforced at save time (lib/publicSlug +
+// the slug branches of /api/quiz, /api/popquiz, /api/pages) so a
+// single (user, project, slug) only resolves to one content type —
+// no ambiguity here.
+//
+// Per-profile isolation: the lookup is filtered by BOTH user_id AND
+// project_id, so a domain tied to project A only ever serves project
+// A's content — never leaks content from another project of the same
+// user.
+
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
+import PublicQuizClient from "@/components/quiz/PublicQuizClient";
+import PopquizPlayClient from "@/app/pq/[popquizId]/PopquizPlayClient";
+import PublicPageClient from "@/components/pages/PublicPageClient";
+import { isReservedPublicSlug } from "@/lib/publicSlug";
+import { stripHtml } from "@/lib/richText";
+
+export const dynamic = "force-dynamic";
+
+const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
+
+type Props = { params: Promise<{ publicSlug: string }> };
+
+async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: string } | null> {
+  const h = await headers();
+  const host = h.get(CUSTOM_HOST_HEADER);
+  if (!host) return null;
+  const { data } = await supabaseAdmin
+    .from("custom_domains")
+    .select("user_id, project_id")
+    .ilike("hostname", host)
+    .eq("status", "verified")
+    .maybeSingle();
+  const userId = (data as { user_id?: string } | null)?.user_id;
+  const projectId = (data as { project_id?: string } | null)?.project_id;
+  if (!userId || !projectId) return null;
+  return { userId, projectId };
+}
+
+type ResolvedPopquiz = NonNullable<Awaited<ReturnType<typeof fetchPublishedPopquiz>>>;
+type Resolved =
+  | { kind: "quiz"; meta: { title?: string | null; introduction?: string | null; og_image_url?: string | null; og_description?: string | null } }
+  | { kind: "popquiz"; popquiz: ResolvedPopquiz }
+  | { kind: "page"; meta: { title?: string | null; meta_title?: string | null; meta_description?: string | null; og_image_url?: string | null } }
+  | null;
+
+// Single resolver used by both generateMetadata and the page body so
+// the DB isn't hit twice per request. Lookups are project-scoped.
+async function resolve(slug: string, userId: string, projectId: string): Promise<Resolved> {
+  // 1) Quiz first — matches publicSlugServer's cross-type conflict
+  //    precedence so the error messages and resolution agree.
+  const { data: quiz } = await supabaseAdmin
+    .from("quizzes")
+    .select("title, introduction, og_image_url, og_description")
+    .eq("user_id", userId)
+    .eq("project_id", projectId)
+    .ilike("slug", slug)
+    .eq("status", "active")
+    .maybeSingle();
+  if (quiz) return { kind: "quiz", meta: quiz };
+
+  // 2) Popquiz — owner-gate first (cheap), then fetch the full
+  //    object only if it belongs to this (user, project) pair.
+  //    fetchPublishedPopquiz does not expose user_id / project_id on
+  //    the returned shape, hence the split.
+  const { data: pqRow } = await supabaseAdmin
+    .from("popquizzes")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("project_id", projectId)
+    .ilike("slug", slug)
+    .eq("is_published", true)
+    .maybeSingle();
+  if (pqRow) {
+    const popquiz = await fetchPublishedPopquiz(slug);
+    if (popquiz) return { kind: "popquiz", popquiz };
+  }
+
+  // 3) Hosted page (link-in-bio, capture, sales…). status='published'
+  //    matches the same gate as /api/pages/public/[slug].
+  const { data: page } = await supabaseAdmin
+    .from("hosted_pages")
+    .select("title, meta_title, meta_description, og_image_url")
+    .eq("user_id", userId)
+    .eq("project_id", projectId)
+    .ilike("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+  if (page) return { kind: "page", meta: page };
+
+  return null;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { publicSlug } = await params;
+  if (isReservedPublicSlug(publicSlug)) return {};
+  const scope = await resolveCustomDomainScope();
+  if (!scope) return {};
+  const r = await resolve(publicSlug, scope.userId, scope.projectId);
+  if (!r) return {};
+
+  if (r.kind === "quiz") {
+    const ogDescPlain = stripHtml(r.meta.og_description ?? "").trim();
+    const introPlain = stripHtml(r.meta.introduction ?? "").slice(0, 160);
+    const description = (ogDescPlain || introPlain).trim() || undefined;
+    const plainTitle = stripHtml(r.meta.title ?? "");
+    const meta: Metadata = {
+      title: plainTitle || undefined,
+      description,
+      openGraph: {
+        title: plainTitle || undefined,
+        description,
+        type: "website",
+      },
+    };
+    if (r.meta.og_image_url) {
+      meta.openGraph!.images = [{ url: r.meta.og_image_url, width: 1200, height: 630 }];
+    }
+    return meta;
+  }
+
+  if (r.kind === "popquiz") {
+    const p = r.popquiz;
+    return {
+      title: p.title,
+      description: p.description ?? undefined,
+      openGraph: {
+        title: p.title,
+        description: p.description ?? undefined,
+        ...(p.video.thumbnailUrl ? { images: [{ url: p.video.thumbnailUrl }] } : {}),
+      },
+    };
+  }
+
+  // hosted page
+  const meta: Metadata = {
+    title: r.meta.meta_title || r.meta.title || undefined,
+    description: r.meta.meta_description || undefined,
+    openGraph: {
+      title: r.meta.meta_title || r.meta.title || undefined,
+      description: r.meta.meta_description || undefined,
+      type: "website",
+    },
+  };
+  if (r.meta.og_image_url) {
+    meta.openGraph!.images = [{ url: r.meta.og_image_url, width: 1200, height: 630 }];
+  }
+  return meta;
+}
+
+export default async function PublicCatchAll({ params }: Props) {
+  const { publicSlug } = await params;
+  if (isReservedPublicSlug(publicSlug)) notFound();
+
+  const scope = await resolveCustomDomainScope();
+  if (!scope) notFound();
+
+  const r = await resolve(publicSlug, scope.userId, scope.projectId);
+  if (!r) notFound();
+
+  if (r.kind === "quiz") {
+    return <PublicQuizClient quizId={publicSlug} />;
+  }
+
+  if (r.kind === "popquiz") {
+    // Fire-and-forget view bump — mirrors /pq/[popquizId] so analytics
+    // stay consistent whether the URL was the prefixed legacy shape
+    // or the new clean one served from this catch-all.
+    void supabaseAdmin.rpc("log_popquiz_event", {
+      popquiz_id_input: r.popquiz.id,
+      event_type_input: "view",
+    });
+    return <PopquizPlayClient popquiz={r.popquiz} />;
+  }
+
+  // hosted_page
+  return <PublicPageClient page={null} slug={publicSlug} />;
+}

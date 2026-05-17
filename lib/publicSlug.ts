@@ -22,7 +22,10 @@
 // stays safe to import from Edge runtime / client code.
 
 /** Slugs that would collide with Next routes, infra hostnames, or
- *  files browsers expect to find at the root. Lowercase, exact match. */
+ *  files browsers expect to find at the root. Lowercase, exact match.
+ *  Synced with the top-level folders under `app/` — when you add a
+ *  new top-level route, add its segment here so a creator can't
+ *  shadow it via a slug. */
 export const RESERVED_PUBLIC_SLUGS: ReadonlySet<string> = new Set([
   // Next / framework
   "_next",
@@ -32,20 +35,39 @@ export const RESERVED_PUBLIC_SLUGS: ReadonlySet<string> = new Set([
   "sitemap.xml",
   "manifest.json",
   "manifest.webmanifest",
-  // Existing app paths (would shadow them on the main host, or look
-  // confusing on a custom domain where /<slug> is the expected shape)
+  // Public-content prefixes (would shadow them on the main host, or
+  // look confusing on a custom domain where /<slug> is the expected
+  // shape — the catch-all already serves these types without prefix)
   "q", "p", "pq",
+  // Existing Tipote app routes (every top-level dir under app/)
   "embed",
   "app",
+  "admin",
+  "analytics",
+  "auth",
+  "automations",
+  "clients",
+  "contents",
+  "create",
   "dashboard",
-  "settings",
-  "login", "signup", "logout",
-  "auth", "legal",
-  "quiz", "quizzes",
-  "popquiz", "popquizzes",
-  "pages",
-  "leads", "stats", "admin",
+  "leads",
+  "legal",
+  "meta",
   "onboarding",
+  "pages",
+  "pepites",
+  "popquiz", "popquizzes",
+  "quiz", "quizzes",
+  "settings",
+  "strategy",
+  "support",
+  "survey",
+  "tasks",
+  "templates",
+  "webinars",
+  "widgets",
+  // Auth-y / common
+  "login", "signup", "logout",
   // Web-standard "well-known" prefix
   ".well-known",
 ]);

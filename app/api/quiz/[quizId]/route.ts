@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sanitizeRichText } from "@/lib/richText";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
+import { isReservedPublicSlug } from "@/lib/publicSlug";
+import { findCrossTypeSlugConflict } from "@/lib/publicSlugServer";
 import {
   applyFrenchTypography,
   applyFrenchTypographyToHtml,
@@ -148,7 +150,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // PATCH body doesn't change the locale.
     const { data: existing } = await supabase
       .from("quizzes")
-      .select("id, locale")
+      .select("id, locale, project_id")
       .eq("id", quizId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -156,6 +158,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (!existing) {
       return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
     }
+    const existingProjectId = (existing as { project_id?: string | null }).project_id ?? null;
 
     const allowedFields = [
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
@@ -237,6 +240,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleaned)) {
           return NextResponse.json({ ok: false, error: "Slug cannot look like an ID" }, { status: 400 });
         }
+        // Reserved root paths (api, embed, dashboard, robots.txt, …)
+        // — on a creator's custom domain the slug sits at the URL
+        // root, so anything in this list would shadow real routes
+        // (or built-in browser-expected files).
+        if (isReservedPublicSlug(cleaned)) {
+          return NextResponse.json({ ok: false, error: "SLUG_RESERVED" }, { status: 409 });
+        }
         const { data: conflict } = await supabase
           .from("quizzes")
           .select("id")
@@ -246,6 +256,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           .maybeSingle();
         if (conflict) {
           return NextResponse.json({ ok: false, error: "SLUG_TAKEN" }, { status: 409 });
+        }
+        // Cross-type collision: a popquiz or hosted_page of the same
+        // (user, project) owning this slug would make the custom-domain
+        // catch-all ambiguous (mybrand.com/foo could be either).
+        // Refuse the rename. Project-scoped: same slug across projects
+        // is fine, the catch-all resolves with project_id.
+        if (existingProjectId) {
+          const conflictType = await findCrossTypeSlugConflict(
+            user.id,
+            existingProjectId,
+            cleaned,
+            "quiz",
+          );
+          if (conflictType) {
+            return NextResponse.json({ ok: false, error: "SLUG_TAKEN" }, { status: 409 });
+          }
         }
         patch.slug = cleaned;
       }

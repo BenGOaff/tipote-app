@@ -1,9 +1,38 @@
 // app/q/[quizId]/page.tsx
-// Public quiz page (no auth required)
+// Public quiz page (no auth required).
+//
+// Custom-domain ownership: when a request arrives on a creator's
+// branded domain (middleware sets x-tipote-custom-host), the quiz
+// resolved here MUST belong to the same (user, project) that owns
+// the domain. Otherwise a creator could serve another creator's
+// quiz under their own URL — silent impersonation / phishing.
+// Header is only set on custom-domain requests, so the check is a
+// no-op on the main host (existing behaviour preserved).
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
+
+const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
+
+async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: string } | null> {
+  const h = await headers();
+  const host = h.get(CUSTOM_HOST_HEADER);
+  if (!host) return null;
+  const { data } = await supabaseAdmin
+    .from("custom_domains")
+    .select("user_id, project_id")
+    .ilike("hostname", host)
+    .eq("status", "verified")
+    .maybeSingle();
+  const userId = (data as { user_id?: string } | null)?.user_id;
+  const projectId = (data as { project_id?: string } | null)?.project_id;
+  if (!userId || !projectId) return null;
+  return { userId, projectId };
+}
 
 // Force dynamic rendering so quiz metadata/status is always fresh.
 export const dynamic = "force-dynamic";
@@ -63,5 +92,22 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
 
 export default async function PublicQuizPage({ params }: RouteContext) {
   const { quizId } = await params;
+  // Custom-domain ownership gate: refuse to serve a quiz that
+  // doesn't belong to the (user, project) that owns the hostname.
+  // No-op on the main host where the header isn't set.
+  const scope = await resolveCustomDomainScope();
+  if (scope) {
+    const base = supabaseAdmin
+      .from("quizzes")
+      .select("user_id, project_id")
+      .eq("status", "active");
+    const { data } = await (UUID_RE.test(quizId)
+      ? base.eq("id", quizId).maybeSingle()
+      : base.ilike("slug", quizId).maybeSingle());
+    const row = data as { user_id?: string; project_id?: string | null } | null;
+    if (!row || row.user_id !== scope.userId || row.project_id !== scope.projectId) {
+      notFound();
+    }
+  }
   return <PublicQuizClient quizId={quizId} />;
 }

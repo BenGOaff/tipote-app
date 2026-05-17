@@ -11,6 +11,8 @@ import { buildLinkinbioPage, type LinkinbioPageData } from "@/lib/linkinbioBuild
 import { sanitizeHtmlSnapshot } from "@/lib/sanitizeHtml";
 import { parseLayoutConfig } from "@/lib/pageLayout";
 import { checkPublishedSlugAvailable } from "@/lib/hostedPageSlug";
+import { isReservedPublicSlug } from "@/lib/publicSlug";
+import { findCrossTypeSlugConflict } from "@/lib/publicSlugServer";
 import { applySectionOrderToHtml } from "@/lib/pages/applySectionOrderToHtml";
 import { preserveInlineEdits, hasInlineEdits } from "@/lib/pages/preserveInlineEdits";
 
@@ -121,6 +123,40 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   // simultaneously moving it to published; a draft slug can sit on top of an
   // existing published slug harmlessly until the user attempts to publish.
   if ("slug" in updates && typeof updates.slug === "string" && updates.slug) {
+    // Reserved root paths (api, embed, dashboard, robots.txt, …) —
+    // on a creator's custom domain the slug sits at the URL root,
+    // so anything in the reserved set would shadow real routes.
+    if (isReservedPublicSlug(updates.slug)) {
+      return NextResponse.json(
+        { error: `Le slug "${updates.slug}" est réservé. Choisis-en un autre.` },
+        { status: 409 },
+      );
+    }
+    // Cross-type collision against this user's quizzes / popquizzes
+    // in the SAME project. Same rationale as in /api/quiz: the
+    // catch-all serves /<slug> across the three content types, so the
+    // slug must be unique across them within a project.
+    const { data: ownRow } = await supabaseAdmin
+      .from("hosted_pages")
+      .select("project_id")
+      .eq("id", pageId)
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    const ownProjectId = (ownRow as { project_id?: string | null } | null)?.project_id ?? null;
+    if (ownProjectId) {
+      const conflictType = await findCrossTypeSlugConflict(
+        session.user.id,
+        ownProjectId,
+        updates.slug,
+        "hosted_page",
+      );
+      if (conflictType) {
+        return NextResponse.json(
+          { error: `Le slug "${updates.slug}" est déjà utilisé par un de tes ${conflictType === "quiz" ? "quiz" : "popquiz"} dans ce projet. Choisis-en un autre.` },
+          { status: 409 },
+        );
+      }
+    }
     const willBePublished = updates.status === "published";
     if (willBePublished) {
       const slugCheck = await checkPublishedSlugAvailable(supabaseAdmin, updates.slug, pageId);

@@ -10,6 +10,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sanitizeSlug } from "@/lib/quizBranding";
+import { isReservedPublicSlug } from "@/lib/publicSlug";
+import { findCrossTypeSlugConflict } from "@/lib/publicSlugServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +44,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   // "0 rows updated" silent failure RLS yields.
   const { data: existing } = await supabase
     .from("popquizzes")
-    .select("id")
+    .select("id, project_id, user_id")
     .eq("id", popquizId)
     .maybeSingle();
   if (!existing) {
@@ -50,6 +53,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       { status: 404 },
     );
   }
+  const existingProjectId = (existing as { project_id?: string | null }).project_id ?? null;
 
   let body: Record<string, unknown>;
   try {
@@ -99,6 +103,50 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
           },
           { status: 400 },
         );
+      }
+      // Reserved root paths — a popquiz with slug "api" or "embed"
+      // would shadow real routes on a creator's custom domain.
+      if (isReservedPublicSlug(slug)) {
+        return NextResponse.json(
+          { ok: false, error: "SLUG_RESERVED" },
+          { status: 409 },
+        );
+      }
+      // Within-popquiz uniqueness in this project. Scoped on
+      // project_id because two projects can have a popquiz with the
+      // same slug (they serve via their own custom domains, no
+      // ambiguity).
+      if (existingProjectId) {
+        const { data: ownConflict } = await supabaseAdmin
+          .from("popquizzes")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("project_id", existingProjectId)
+          .ilike("slug", slug)
+          .neq("id", popquizId)
+          .limit(1)
+          .maybeSingle();
+        if (ownConflict) {
+          return NextResponse.json(
+            { ok: false, error: "SLUG_TAKEN" },
+            { status: 409 },
+          );
+        }
+        // Cross-type collision with a quiz or hosted_page of the
+        // same (user, project). Same rationale as in /api/quiz: the
+        // catch-all has to be unambiguous.
+        const conflictType = await findCrossTypeSlugConflict(
+          user.id,
+          existingProjectId,
+          slug,
+          "popquiz",
+        );
+        if (conflictType) {
+          return NextResponse.json(
+            { ok: false, error: "SLUG_TAKEN" },
+            { status: 409 },
+          );
+        }
       }
       update.slug = slug;
     } else {
