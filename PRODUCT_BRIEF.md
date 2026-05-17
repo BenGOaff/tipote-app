@@ -199,7 +199,17 @@ Variations à utiliser selon le canal :
 - Une instance Tipote par projet/marque/sub-business
 - Chaque projet a sa propre clé Systeme.io, son onboarding, ses contenus
 - Switch d'un clic
-- Reset par projet sans toucher aux autres (Mai 2026)
+- Reset par projet sans toucher aux autres
+- **Chaque projet a aussi ses propres domaines personnalisés et son propre catalogue de contenus publics** — isolation totale, comme si c'étaient des comptes séparés (voir 7.11)
+
+### 7.11. Domaines personnalisés (Pro+)
+- **Connecte ton propre domaine** à Tipote : `pages.ma-marque.com`, `quiz.mon-business.fr`, ou n'importe quel sous-domaine que tu contrôles
+- **Setup en 2 minutes** : tu poses un seul enregistrement CNAME chez ton registrar (Cloudflare, OVH, GoDaddy, Namecheap, Gandi… détecté automatiquement avec instructions sur-mesure), Tipote vérifie le DNS dans la foulée et émet ton certificat SSL Let's Encrypt sans qu'aucune action de plus soit nécessaire
+- **URLs propres** sur ton domaine : `ma-marque.com/mon-quiz` au lieu de `app.tipote.com/q/mon-quiz` — sans préfixe technique, sans paraître "hébergé chez Tipote"
+- **Une seule URL, tous tes contenus** : quiz, sondages, popquiz, pages de capture, pages de vente, link in bio — tout est servi depuis ton domaine. L'éditeur de chaque contenu te laisse choisir entre tes domaines via un menu déroulant (le custom est sélectionné par défaut puisque tu as payé pour ça)
+- **Sécurité par défaut** : un autre créateur ne peut pas réclamer un domaine déjà connecté chez toi. Et même si quelqu'un connaît l'ID d'un de tes contenus, il ne peut pas l'afficher via son propre domaine — Tipote vérifie systématiquement que le contenu appartient bien au propriétaire du domaine
+- **Multi-marque natif** : si tu as 2 projets (Elite), chacun peut avoir SES propres domaines, indépendants. Le projet A ne voit pas les domaines du projet B, et vice-versa
+- **Backwards-compat** : les URLs existantes (`app.tipote.com/q/...`, `/p/...`, `/pq/...`) continuent de fonctionner. Personne ne perd l'accès à un lien déjà partagé
 
 ## 8. Plans & tarification
 
