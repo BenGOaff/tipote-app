@@ -1358,11 +1358,12 @@ export default function PublicQuizClient({
 
     return (
       <div
-        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col"
         style={rootStyle}
       >
         {toastOverlay}
         {shareOverlay}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-2xl w-full space-y-8 text-center py-16 sm:py-24">
             {branding.logoUrl && (
               <div className="flex justify-center">
@@ -1417,6 +1418,7 @@ export default function PublicQuizClient({
             }}>
               {quiz.start_button_text?.trim() || t.start}
             </Button>
+        </div>
         </div>
         <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
@@ -1786,11 +1788,12 @@ export default function PublicQuizClient({
   if (step === "email") {
     return (
       <div
-        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col"
         style={rootStyle}
       >
         {toastOverlay}
         {shareOverlay}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
             {/* Heading et subtitle de la page capture = champs COURTS.
                 On AJOUTE `tipote-quiz-rich-inline` à `tipote-quiz-rich`
@@ -1950,19 +1953,10 @@ export default function PublicQuizClient({
               </p>
             )}
 
-            {quiz.privacy_url && (
-              <p className="text-xs text-center text-muted-foreground">
-                <a
-                  href={ensureExternalUrl(quiz.privacy_url)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  {t.privacyPolicy}
-                </a>
-              </p>
-            )}
+            {/* Privacy mention sits only inside the consent checkbox above
+                (see <ConsentText>). Product decision 2026-05-17. */}
           </div>
+        </div>
         <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
@@ -1988,11 +1982,12 @@ export default function PublicQuizClient({
 
     return (
       <div
-        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col"
         style={rootStyle}
       >
         {toastOverlay}
         {shareOverlay}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-lg w-full py-12 sm:py-16 space-y-6">
           <div className="text-center space-y-3">
             <div className="flex justify-center">
@@ -2134,18 +2129,9 @@ export default function PublicQuizClient({
             </Button>
           )}
 
-          {quiz.privacy_url && (
-            <p className="text-xs text-center text-muted-foreground">
-              <a
-                href={ensureExternalUrl(quiz.privacy_url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                {t.privacyPolicy}
-              </a>
-            </p>
-          )}
+          {/* Privacy mention sits only inside the consent checkbox at
+              email capture (product decision 2026-05-17). */}
+        </div>
         </div>
         <TipoteFooter
           locale={quiz.locale}
@@ -2166,11 +2152,12 @@ export default function PublicQuizClient({
     const ctaText = interp(quiz.cta_text || "") || t.resultCtaDefault;
     return (
       <div
-        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col"
         style={rootStyle}
       >
         {toastOverlay}
         {shareOverlay}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
             {t.surveyThanksHeading ?? "Thanks for your responses!"}
@@ -2215,6 +2202,7 @@ export default function PublicQuizClient({
             {linkCopied ? (t.copied ?? "Copied!") : (t.surveyShareCta ?? "Share this survey")}
           </Button>
         </div>
+        </div>
       </div>
     );
   }
@@ -2222,11 +2210,12 @@ export default function PublicQuizClient({
   if (step === "result") {
     return (
       <div
-        className="public-surface min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="public-surface min-h-screen flex flex-col"
         style={rootStyle}
       >
         {toastOverlay}
         {shareOverlay}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
             <div className="space-y-3">
               {/* Titre du résultat = rich-text (héritage RichTextEdit).
@@ -2368,18 +2357,8 @@ export default function PublicQuizClient({
             </Card>
           )}
 
-          {quiz.privacy_url && (
-            <p className="text-xs text-center text-muted-foreground">
-              <a
-                href={ensureExternalUrl(quiz.privacy_url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                {t.privacyPolicy}
-              </a>
-            </p>
-          )}
+          {/* Privacy mention sits only inside the consent checkbox at
+              email capture (product decision 2026-05-17). */}
 
           {/* JB feedback 2026-05-02: surface an explicit Restart link so
               visitors can re-take the quiz on demand. The sessionStorage
@@ -2402,6 +2381,7 @@ export default function PublicQuizClient({
             </button>
           )}
           </div>
+        </div>
         <TipoteFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
@@ -2507,7 +2487,7 @@ function TipoteFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
   // brander son footer, on dégage.
   if (customText && customUrl) {
     return (
-      <div className="text-center mt-6 space-y-2">
+      <div className="text-center mt-6 pb-6 px-4 space-y-2">
         {logoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt="" className="max-h-10 w-auto object-contain mx-auto" />
@@ -2523,7 +2503,7 @@ function TipoteFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
   // Free plan or no custom: show Tipote branding (with creator logo, or Tipote fallback)
   const text = tipoteFooterTexts[locale ?? "fr"] ?? tipoteFooterTexts.fr;
   return (
-    <div className="text-center mt-6 space-y-2">
+    <div className="text-center mt-6 pb-6 px-4 space-y-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={logoUrl || "/icon.png"}

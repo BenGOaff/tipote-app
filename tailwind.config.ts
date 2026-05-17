@@ -5,6 +5,12 @@ const config = {
   darkMode: ["class", ".dark"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  // Scope `hover:` styles to devices with a hover-capable pointer. Mobile
+  // Safari otherwise keeps the last-tapped element in `:hover` until the
+  // user taps elsewhere, which surfaces as a pre-selected answer when a
+  // new quiz question mounts at the same screen position. Tailwind v3.5+
+  // defaults to this; we opt-in on 3.4 (Adeline 2026-05-17).
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     container: {
       center: true,
