@@ -129,6 +129,32 @@ Si je touche à cette fonction, ne PAS revenir au regex unifié
 - **Tipote** : Card "Tracking & Pubs" sous Systeme.io dans le tab "Connexions" (cohérent : c'est une "connexion à un service externe").
 - **Tiquiz** : onglet dédié "Tracking" entre Systeme.io et Compte & Tarifs.
 
+## J) PageBuilder iframe : selection-preservation pour les dialogs parent
+
+Quand un bouton de la toolbar inline (Link / Image / Couleur) ouvre un
+Dialog React côté parent, le contentEditable de l'iframe perd le focus →
+la sélection est perdue → exec("createLink") ou exec("foreColor") ne
+sait plus sur quoi agir. Solution implémentée mai 2026 :
+
+1. **Iframe** : `saveSelectionForDialog()` clone le Range avant le
+   `parent.postMessage`. `dialogPaused=true` empêche le blur handler du
+   contentEditable de tear-down la toolbar.
+2. **Parent** : ouvre le Dialog Radix. À la confirmation, postMessage
+   retour vers l'iframe avec le résultat.
+3. **Iframe** : `restoreSelectionFromDialog()` refocus l'élément +
+   `sel.addRange(savedRange)` + **nullifie `savedSelRange` aussitôt**
+   (sinon un cancel-dialog tardif re-restore un range invalidé par
+   l'execCommand qui vient de réécrire les nodes).
+4. **Parent** : sur fermeture du Dialog, post `tipote:cancel-dialog`
+   systématiquement — c'est un no-op si l'apply a déjà consommé le range.
+
+Si je touche à ce flow, vérifier que :
+- la toolbar reste visible pendant que le Dialog est ouvert
+  (dialogPaused respecté dans blur),
+- exec restaure la sélection avant exec (sinon execCommand ne fait rien),
+- `savedSelRange` est nullifié après consommation (sinon double-restore
+  buggy).
+
 ## I) Quand je vais douter pendant le code
 
 1. **Avant de toucher une colonne SQL** : relire section A.

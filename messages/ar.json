@@ -3392,7 +3392,21 @@
     "networkError": "خطأ شبكة",
     "missingColumnsHint": " (قد يكون هناك عمود مفقود — يجب تطبيق أحدث ترحيلات Supabase)",
     "thankYouSaveFailed": "تعذّر حفظ صفحة الشكر: {err}",
-    "liveChanges": "تعديلات مباشرة"
+    "liveChanges": "تعديلات مباشرة",
+    "linkDialog": {
+      "title": "إدراج رابط",
+      "desc": "ألصق الرابط لربطه بالنص المحدد. اتركه فارغًا لإزالة رابط موجود.",
+      "invalid": "رابط غير صالح. استخدم http(s):// أو mailto: أو tel:",
+      "cancel": "إلغاء",
+      "confirm": "إدراج",
+      "remove": "إزالة"
+    },
+    "colorDialog": {
+      "title": "لون النص",
+      "desc": "اختر لونًا من لوحتك أو استخدم المنتقي المخصص.",
+      "custom": "مخصص",
+      "apply": "تطبيق"
+    }
   },
   "clients": {
     "title": "متابعة العملاء",

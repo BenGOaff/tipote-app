@@ -3392,7 +3392,21 @@
     "networkError": "errore di rete",
     "missingColumnsHint": " (potrebbe mancare una colonna — le ultime migrazioni Supabase devono essere applicate)",
     "thankYouSaveFailed": "Impossibile salvare la pagina di ringraziamento: {err}",
-    "liveChanges": "Modifiche in tempo reale"
+    "liveChanges": "Modifiche in tempo reale",
+    "linkDialog": {
+      "title": "Inserisci link",
+      "desc": "Incolla l'URL da associare al testo selezionato. Lascia vuoto per rimuovere un link esistente.",
+      "invalid": "URL non valido. Usa http(s)://, mailto: o tel:",
+      "cancel": "Annulla",
+      "confirm": "Inserisci",
+      "remove": "Rimuovi"
+    },
+    "colorDialog": {
+      "title": "Colore del testo",
+      "desc": "Scegli un colore dalla tua palette o usa il selettore personalizzato.",
+      "custom": "Personalizzato",
+      "apply": "Applica"
+    }
   },
   "clients": {
     "title": "Gestione Clienti",

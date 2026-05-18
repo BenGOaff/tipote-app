@@ -48,6 +48,10 @@ import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import type { LayoutConfig } from "@/lib/pageLayout";
 import { AssetPicker, type AssetChoice } from "./AssetPicker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 
 // ---------- Types ----------
 
@@ -364,37 +368,104 @@ const INLINE_EDIT_SCRIPT = `
   var editableSelectors = 'h1, h2, h3, h4, h5, h6, p, span, li, a, button, blockquote, figcaption, td, th, label, .hero-title, .hero-subtitle, .cta-text, [data-editable]';
   var illustSelectors = '.tp-illust, .tp-visual, .tp-mockup, [data-tipote-visual], svg:not(.tp-toolbar-icon):not(button svg):not(a svg):not(form svg):not(nav svg):not(label svg), .tp-float, [class*="illustration"], [class*="animation"]';
 
-  /* ── Toolbar element (shared, moves to focused element) ── */
+  /* ── Editing toolbar (shared, follows the focused contentEditable) ── */
+  /* Visuals : aligned on Tipote brand (white card + primary accent) instead
+     of the old dark-slate floater. Selection is saved before every parent
+     dialog (link / image / palette) so it survives the focus theft. */
+  var activeEl = null;
+  var savedSelRange = null;
+  var savedSelEl = null;
+  var dialogPaused = false;
+
+  function saveSelectionForDialog() {
+    var sel = window.getSelection();
+    savedSelRange = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0).cloneRange() : null;
+    savedSelEl = activeEl;
+    dialogPaused = true;
+  }
+
+  function restoreSelectionFromDialog() {
+    if (savedSelEl) {
+      try { savedSelEl.focus({ preventScroll: true }); } catch (_) { try { savedSelEl.focus(); } catch (__) {} }
+      activeEl = savedSelEl;
+    }
+    if (savedSelRange) {
+      var sel = window.getSelection();
+      try { sel.removeAllRanges(); sel.addRange(savedSelRange); } catch (_) {}
+      // Consume the saved range — a follow-up cancel-dialog must not
+      // re-restore a now-invalidated range (apply-link / apply-color
+      // can rewrite the surrounding nodes via execCommand).
+      savedSelRange = null;
+    }
+    dialogPaused = false;
+  }
+
+  /* Scoped styles for the toolbar — class names are prefixed and the
+     toolbar lives in document.body so collisions with the page are
+     unlikely. The swatch underline reads --tp-current-color so the
+     foreground colour stays in sync with the focused element. */
+  var tbStyle = document.createElement('style');
+  tbStyle.setAttribute('data-tipote-injected', '1');
+  tbStyle.textContent =
+    '.tipote-toolbar{font-family:system-ui,-apple-system,sans-serif;}'+
+    '.tipote-toolbar .tp-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;background:transparent;color:#475569;padding:0;transition:background .15s,color .15s;}'+
+    '.tipote-toolbar .tp-btn:hover{background:#f1f5f9;color:#0f172a;}'+
+    '.tipote-toolbar .tp-btn.tp-active{background:rgba(93,108,219,.12);color:#5D6CDB;}'+
+    '.tipote-toolbar .tp-sep{width:1px;height:18px;background:#e2e8f0;flex-shrink:0;margin:0 2px;}'+
+    '.tipote-toolbar .tp-color-swatch{position:relative;width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;background:transparent;color:#475569;padding:0;display:flex;align-items:center;justify-content:center;transition:background .15s;}'+
+    '.tipote-toolbar .tp-color-swatch:hover{background:#f1f5f9;color:#0f172a;}'+
+    '.tipote-toolbar .tp-color-swatch::before{content:"A";font-weight:700;font-size:13px;line-height:1;}'+
+    '.tipote-toolbar .tp-color-swatch::after{content:"";position:absolute;left:6px;right:6px;bottom:5px;height:3px;border-radius:2px;background:var(--tp-current-color,#000);box-shadow:0 0 0 1px rgba(0,0,0,.08);}';
+  document.body.appendChild(tbStyle);
+
   var toolbar = document.createElement('div');
   toolbar.className = 'tipote-toolbar';
-  toolbar.style.cssText = 'position:fixed;z-index:99999;display:none;align-items:center;gap:4px;padding:4px 8px;background:#1e293b;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.25);pointer-events:auto;transition:opacity 0.15s;';
   toolbar.setAttribute('data-tipote-injected', '1');
+  toolbar.style.cssText = 'position:fixed;z-index:99999;display:none;align-items:center;gap:2px;padding:4px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 6px 24px rgba(15,23,42,0.12);pointer-events:auto;transition:opacity .15s;';
 
-  var btnStyle = 'display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;border-radius:5px;cursor:pointer;background:transparent;color:rgba(255,255,255,0.7);padding:0;transition:background 0.15s,color 0.15s;';
-  var btnHover = 'background:rgba(255,255,255,0.15);color:#fff;';
-  var sepStyle = 'width:1px;height:18px;background:rgba(255,255,255,0.15);flex-shrink:0;';
+  function svgIcon(p, sw) { return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>'; }
+  var icBold      = svgIcon('<path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/>', 3);
+  var icItalic    = svgIcon('<line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/>', 2.5);
+  var icUnderline = svgIcon('<path d="M6 3v7a6 6 0 006 6 6 6 0 006-6V3"/><line x1="4" y1="21" x2="20" y2="21"/>', 2.5);
+  var icAlignL    = svgIcon('<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>');
+  var icAlignC    = svgIcon('<line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>');
+  var icAlignR    = svgIcon('<line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>');
+  var icUL        = svgIcon('<line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/>');
+  var icOL        = svgIcon('<line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>');
+  var icLink      = svgIcon('<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>');
+  var icImage     = svgIcon('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>');
 
   toolbar.innerHTML =
-    '<button class="tp-fmt-btn" data-cmd="bold" title="Gras (Ctrl+B)" style="' + btnStyle + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/><path d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/></svg></button>' +
-    '<button class="tp-fmt-btn" data-cmd="italic" title="Italique (Ctrl+I)" style="' + btnStyle + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>' +
-    '<button class="tp-fmt-btn" data-cmd="underline" title="Souligner (Ctrl+U)" style="' + btnStyle + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a6 6 0 006 6 6 6 0 006-6V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg></button>' +
-    '<div style="' + sepStyle + '"></div>' +
-    '<button class="tp-fmt-btn" data-cmd="insertUnorderedList" title="Liste à puces" style="' + btnStyle + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>' +
-    '<div style="' + sepStyle + '"></div>' +
-    '<input type="color" class="tp-color-input" title="Couleur du texte" style="width:24px;height:24px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
+    '<button class="tp-btn tp-cmd" data-cmd="bold" title="Gras (Ctrl+B)">' + icBold + '</button>' +
+    '<button class="tp-btn tp-cmd" data-cmd="italic" title="Italique (Ctrl+I)">' + icItalic + '</button>' +
+    '<button class="tp-btn tp-cmd" data-cmd="underline" title="Souligner (Ctrl+U)">' + icUnderline + '</button>' +
+    '<span class="tp-sep"></span>' +
+    '<button class="tp-btn tp-cmd" data-cmd="justifyLeft" title="Aligner à gauche">' + icAlignL + '</button>' +
+    '<button class="tp-btn tp-cmd" data-cmd="justifyCenter" title="Centrer">' + icAlignC + '</button>' +
+    '<button class="tp-btn tp-cmd" data-cmd="justifyRight" title="Aligner à droite">' + icAlignR + '</button>' +
+    '<span class="tp-sep"></span>' +
+    '<button class="tp-btn tp-cmd" data-cmd="insertUnorderedList" title="Liste à puces">' + icUL + '</button>' +
+    '<button class="tp-btn tp-cmd" data-cmd="insertOrderedList" title="Liste numérotée">' + icOL + '</button>' +
+    '<span class="tp-sep"></span>' +
+    '<button class="tp-btn tp-link-btn" title="Insérer un lien">' + icLink + '</button>' +
+    '<button class="tp-btn tp-image-btn" title="Insérer une image">' + icImage + '</button>' +
+    '<span class="tp-sep"></span>' +
+    '<button class="tp-color-swatch" title="Couleur du texte"></button>';
   document.body.appendChild(toolbar);
 
-  /* Formatting button handlers */
-  toolbar.querySelectorAll('.tp-fmt-btn').forEach(function(btn) {
-    btn.addEventListener('mouseenter', function() { btn.style.background = 'rgba(255,255,255,0.15)'; btn.style.color = '#fff'; });
-    btn.addEventListener('mouseleave', function() { btn.style.background = 'transparent'; btn.style.color = 'rgba(255,255,255,0.7)'; });
-    btn.addEventListener('mousedown', function(e) {
-      e.preventDefault(); // preserve text selection
-      e.stopPropagation();
-    });
+  var colorSwatch = toolbar.querySelector('.tp-color-swatch');
+
+  function setSwatchColor(hex) {
+    if (!colorSwatch) return;
+    colorSwatch.style.setProperty('--tp-current-color', hex || '#000000');
+  }
+
+  /* execCommand buttons (bold / italic / align / lists). preventDefault on
+     mousedown is essential so the contentEditable retains its selection. */
+  toolbar.querySelectorAll('.tp-cmd').forEach(function(btn) {
+    btn.addEventListener('mousedown', function(e) { e.preventDefault(); e.stopPropagation(); });
     btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       var cmd = btn.getAttribute('data-cmd');
       if (cmd && activeEl) {
         document.execCommand(cmd, false, null);
@@ -403,37 +474,64 @@ const INLINE_EDIT_SCRIPT = `
     });
   });
 
-  var colorInput = toolbar.querySelector('.tp-color-input');
-  var activeEl = null;
-
-  colorInput.addEventListener('input', function(e) {
-    if (activeEl) {
-      var sel = window.getSelection();
-      if (sel && sel.rangeCount > 0 && !sel.isCollapsed && activeEl.contains(sel.anchorNode)) {
-        // Apply color only to selected text using execCommand
-        document.execCommand('foreColor', false, e.target.value);
-      } else {
-        // No selection: apply to entire element
-        activeEl.style.color = e.target.value;
-      }
-      parent.postMessage({ type: 'tipote:text-edit', tag: activeEl.tagName.toLowerCase(), text: (activeEl.innerText || '').trim(), html: activeEl.innerHTML }, '*');
+  /* Link / image / color all surface a React dialog or popover in the
+     parent because (a) we want shadcn UI consistency and (b) the palette
+     picker is already a React component we shouldn't duplicate in vanilla
+     JS. Selection is saved synchronously before the dialog opens. */
+  var linkBtn = toolbar.querySelector('.tp-link-btn');
+  linkBtn.addEventListener('mousedown', function(e) { e.preventDefault(); e.stopPropagation(); });
+  linkBtn.addEventListener('click', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    if (!activeEl) return;
+    var sel = window.getSelection();
+    var currentHref = '';
+    if (sel && sel.anchorNode) {
+      var node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+      var a = (node && node.closest) ? node.closest('a') : null;
+      if (a) currentHref = a.getAttribute('href') || '';
     }
+    saveSelectionForDialog();
+    parent.postMessage({ type: 'tipote:open-link-dialog', currentHref: currentHref }, '*');
   });
-  colorInput.addEventListener('click', function(e) { e.stopPropagation(); });
 
-  /* ── Illustration overlay element (shared) ── */
+  var imageBtn = toolbar.querySelector('.tp-image-btn');
+  imageBtn.addEventListener('mousedown', function(e) { e.preventDefault(); e.stopPropagation(); });
+  imageBtn.addEventListener('click', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    if (!activeEl) return;
+    saveSelectionForDialog();
+    parent.postMessage({ type: 'tipote:open-image-in-text' }, '*');
+  });
+
+  colorSwatch.addEventListener('mousedown', function(e) { e.preventDefault(); e.stopPropagation(); });
+  colorSwatch.addEventListener('click', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    if (!activeEl) return;
+    var cur = '#000000';
+    try { cur = rgbToHex(getComputedStyle(activeEl).color); } catch (_) {}
+    saveSelectionForDialog();
+    parent.postMessage({ type: 'tipote:open-color-picker', currentColor: cur }, '*');
+  });
+
+  /* ── Illustration overlay element (shared) ──
+     Same white-card styling as the text toolbar so the two floaters
+     read as one design language. */
   var illustOverlay = document.createElement('div');
   illustOverlay.className = 'tipote-illust-overlay';
-  illustOverlay.style.cssText = 'position:fixed;z-index:99998;display:none;align-items:center;justify-content:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);border-radius:10px;pointer-events:auto;';
+  illustOverlay.style.cssText = 'position:fixed;z-index:99998;display:none;align-items:center;justify-content:center;gap:6px;padding:6px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 6px 24px rgba(15,23,42,0.12);pointer-events:auto;font-family:system-ui,-apple-system,sans-serif;';
   illustOverlay.setAttribute('data-tipote-injected', '1');
-  illustOverlay.innerHTML = '<button class="tp-illust-btn tp-illust-delete" title={t("elementActions.delete")} style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,70,70,0.2);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:system-ui;">'+
-    '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="tp-toolbar-icon"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/></svg>'+
-    '</button>'+
-    '<button class="tp-illust-btn tp-illust-replace" title="Remplacer par une image" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:system-ui;">'+
-    '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="tp-toolbar-icon"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'+
-    '</button>'+
-    '<input type="color" class="tp-illust-color" title="Couleur" style="width:28px;height:28px;border:2px solid rgba(255,255,255,0.3);border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
+  illustOverlay.innerHTML = '<button class="tp-illust-btn tp-illust-delete" title="Supprimer" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;border:none;background:transparent;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;">'+
+    '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14"/></svg>'+
+    'Supprimer</button>'+
+    '<button class="tp-illust-btn tp-illust-replace" title="Remplacer par une image" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;border:none;background:transparent;color:#475569;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;">'+
+    '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'+
+    'Remplacer</button>'+
+    '<input type="color" class="tp-illust-color" title="Couleur" style="width:28px;height:28px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;background:none;padding:0;-webkit-appearance:none;appearance:none;overflow:hidden;" />';
   document.body.appendChild(illustOverlay);
+  illustOverlay.querySelectorAll('.tp-illust-btn').forEach(function(btn) {
+    btn.addEventListener('mouseenter', function() { btn.style.background = '#f1f5f9'; });
+    btn.addEventListener('mouseleave', function() { btn.style.background = 'transparent'; });
+  });
 
   var activeIllust = null;
   var illustColorInput = illustOverlay.querySelector('.tp-illust-color');
@@ -492,9 +590,15 @@ const INLINE_EDIT_SCRIPT = `
   });
 
   /* ── Shared positioning helper ── */
+  /* Clamps left/right so the (now wider) toolbar fits inside the iframe
+     viewport even when the focused element is near an edge. */
   function positionAbove(el, overlay) {
     var r = el.getBoundingClientRect();
-    overlay.style.left = Math.max(8, r.left + r.width/2 - overlay.offsetWidth/2) + 'px';
+    var ow = overlay.offsetWidth;
+    var vw = document.documentElement.clientWidth || window.innerWidth;
+    var rawLeft = r.left + r.width/2 - ow/2;
+    var clampedLeft = Math.min(Math.max(8, rawLeft), Math.max(8, vw - ow - 8));
+    overlay.style.left = clampedLeft + 'px';
     overlay.style.top = Math.max(8, r.top - overlay.offsetHeight - 8) + 'px';
   }
 
@@ -642,10 +746,9 @@ const INLINE_EDIT_SCRIPT = `
       toolbar.style.display = 'flex';
       var elCs = getComputedStyle(el);
       var elColor = elCs.color;
-      // Check children for more specific color
       var firstInl = el.querySelector('span, font, strong, em, b, i, a');
       if (firstInl) { var cc = getComputedStyle(firstInl).color; if (cc && cc !== elColor) elColor = cc; }
-      colorInput.value = rgbToHex(elColor);
+      setSwatchColor(rgbToHex(elColor));
       setTimeout(function() { positionAbove(el, toolbar); }, 0);
       highlightEl(el);
       sendElSelected(el);
@@ -653,7 +756,10 @@ const INLINE_EDIT_SCRIPT = `
 
     el.addEventListener('blur', function() {
       setTimeout(function() {
-        if (document.activeElement !== colorInput && document.activeElement !== el) {
+        // Don't tear the toolbar down while a parent dialog is open — the
+        // user will come back to this element after confirming.
+        if (dialogPaused) return;
+        if (document.activeElement !== el && (!toolbar.contains(document.activeElement))) {
           toolbar.style.display = 'none';
           activeEl = null;
         }
@@ -1233,6 +1339,81 @@ const INLINE_EDIT_SCRIPT = `
       elHighlight.style.display = 'none';
       selectedEl = null;
     }
+
+    /* Parent dialog round-trips for link / image / colour. Each handler
+       restores the previously-saved selection so execCommand operates on
+       the same range the user had highlighted before the dialog opened. */
+    if (e.data && e.data.type === 'tipote:cancel-dialog') {
+      dialogPaused = false;
+      restoreSelectionFromDialog();
+    }
+
+    if (e.data && e.data.type === 'tipote:apply-link') {
+      restoreSelectionFromDialog();
+      var url = (e.data.url || '').trim();
+      var el = activeEl;
+      if (!el) return;
+      var sel = window.getSelection();
+      if (!url) {
+        // Empty URL = remove link
+        document.execCommand('unlink', false, null);
+      } else {
+        if (sel && sel.isCollapsed) {
+          // No range selected: insert the URL as link text
+          document.execCommand('insertHTML', false, '<a href="' + url.replace(/"/g,'&quot;') + '" target="_blank" rel="noopener noreferrer">' + url.replace(/</g,'&lt;') + '</a>');
+        } else {
+          document.execCommand('createLink', false, url);
+          // execCommand creates the <a> without target/rel — add them so
+          // the link opens in a new tab and doesn't expose window.opener.
+          if (sel && sel.anchorNode) {
+            var n = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+            var a = n && n.closest ? n.closest('a') : null;
+            if (a) { a.setAttribute('target','_blank'); a.setAttribute('rel','noopener noreferrer'); }
+          }
+        }
+      }
+      parent.postMessage({ type: 'tipote:text-edit', tag: el.tagName.toLowerCase(), text: (el.innerText || '').trim(), html: el.innerHTML }, '*');
+    }
+
+    if (e.data && e.data.type === 'tipote:apply-color') {
+      restoreSelectionFromDialog();
+      var col = e.data.color || '#000000';
+      var el = activeEl;
+      if (!el) return;
+      var sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed && el.contains(sel.anchorNode)) {
+        document.execCommand('foreColor', false, col);
+      } else {
+        el.style.color = col;
+      }
+      setSwatchColor(col);
+      parent.postMessage({ type: 'tipote:text-edit', tag: el.tagName.toLowerCase(), text: (el.innerText || '').trim(), html: el.innerHTML }, '*');
+    }
+
+    if (e.data && e.data.type === 'tipote:insert-image-at-selection') {
+      restoreSelectionFromDialog();
+      var imgUrl = e.data.url || '';
+      var el = activeEl;
+      if (!el || !imgUrl) return;
+      // execCommand 'insertImage' places the <img> at the caret. The
+      // inline-block + max-width:100% keeps it from busting the layout
+      // even on a tight column.
+      document.execCommand('insertImage', false, imgUrl);
+      // Find the image we just inserted (most recent <img> matching url)
+      // and give it sane defaults.
+      var inserted = null;
+      var imgs = el.querySelectorAll('img');
+      for (var i = imgs.length - 1; i >= 0; i--) {
+        if (imgs[i].src === imgUrl) { inserted = imgs[i]; break; }
+      }
+      if (inserted) {
+        inserted.style.maxWidth = '100%';
+        inserted.style.height = 'auto';
+        inserted.style.borderRadius = '8px';
+        inserted.setAttribute('alt', '');
+      }
+      parent.postMessage({ type: 'tipote:text-edit', tag: el.tagName.toLowerCase(), text: (el.innerText || '').trim(), html: el.innerHTML }, '*');
+    }
   });
 
   // Update highlights on scroll
@@ -1520,6 +1701,54 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   // element they just deleted.
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [assetPickerTarget, setAssetPickerTarget] = useState<{ imgId: string; hasOriginal: boolean } | null>(null);
+  // When the iframe toolbar's "image" button is clicked, the AssetPicker is
+  // opened in a "insert at caret" mode: the chosen URL is postMessaged back
+  // as tipote:insert-image-at-selection instead of replacing a placeholder.
+  const [insertImageMode, setInsertImageMode] = useState(false);
+
+  // Inline-edit toolbar dialogs (link / palette). Selection is preserved
+  // inside the iframe via the saveSelectionForDialog() helper there.
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkDraftUrl, setLinkDraftUrl] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [colorPickerCurrent, setColorPickerCurrent] = useState<string>("#000000");
+
+  // User palettes shared with the in-iframe color picker. Loaded once on
+  // mount from /api/profile, then synced back via PATCH when the user
+  // manages them through the picker's manage dialog.
+  const [userPalettes, setUserPalettes] = useState<PaletteList>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = data?.profile?.saved_palettes;
+        if (!cancelled && Array.isArray(list)) setUserPalettes(list as PaletteList);
+      } catch { /* ignore – no palettes is a valid state */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const persistUserPalettes = useCallback(async (next: PaletteList) => {
+    setUserPalettes(next);
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saved_palettes: next }),
+      });
+    } catch { /* non-fatal — palette will re-sync on next load */ }
+  }, []);
+
+  // postMessage helper for the inline-edit dialog round-trips. Resolves
+  // selection-restoration on the iframe side; if the iframe isn't ready
+  // the message is a no-op which is the right failure mode.
+  const postToIframe = useCallback((data: Record<string, unknown>) => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) iframe.contentWindow.postMessage(data, "*");
+  }, []);
 
   // Returns a selector string that works whether the target is an actual <img>
   // (uses data-tipote-img-id) or a deleted-illust container (uses its DOM id).
@@ -1538,9 +1767,41 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   }, []);
 
   const handleAssetChoice = useCallback(async (choice: AssetChoice) => {
+    const iframe = iframeRef.current;
+
+    // "Insert image at caret" branch (triggered by the toolbar's image
+    // button). No target imgId — the iframe finds the saved selection
+    // and execs insertImage there. "restore" is meaningless here.
+    if (insertImageMode) {
+      const finish = (url: string | null) => {
+        if (url && iframe?.contentWindow) {
+          iframe.contentWindow.postMessage(
+            { type: "tipote:insert-image-at-selection", url },
+            "*",
+          );
+          setTimeout(() => saveIframeHtmlRef.current(), 200);
+        } else if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage({ type: "tipote:cancel-dialog" }, "*");
+        }
+        setAssetPickerOpen(false);
+        setInsertImageMode(false);
+      };
+      if (choice.kind === "restore") { finish(null); return; }
+      if (choice.kind === "url") { finish(choice.url); return; }
+      setUploadingImage(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", choice.file);
+        formData.append("contentId", `page-${page.id}-inline-img`);
+        const res = await fetch("/api/upload/image", { method: "POST", body: formData });
+        const data = await res.json();
+        finish(data.ok && data.url ? data.url : null);
+      } catch { finish(null); } finally { setUploadingImage(false); }
+      return;
+    }
+
     if (!assetPickerTarget) return;
     const { imgId } = assetPickerTarget;
-    const iframe = iframeRef.current;
 
     if (choice.kind === "restore") {
       if (iframe?.contentWindow) {
@@ -1588,7 +1849,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     } catch { /* ignore */ } finally {
       setUploadingImage(false);
     }
-  }, [assetPickerTarget, page.id]);
+  }, [assetPickerTarget, insertImageMode, page.id]);
 
   // Extract clean HTML from iframe by removing injected editing UI
   const getCleanIframeHtml = useCallback(() => {
@@ -1703,6 +1964,23 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       }
       if (e.data?.type === "tipote:element-deselected") {
         setSelectedElement(null);
+      }
+
+      // Inline-edit toolbar → parent dialog round-trips
+      if (e.data?.type === "tipote:open-link-dialog") {
+        setLinkDraftUrl(typeof e.data.currentHref === "string" ? e.data.currentHref : "");
+        setLinkError(null);
+        setLinkDialogOpen(true);
+      }
+      if (e.data?.type === "tipote:open-color-picker") {
+        const cur = typeof e.data.currentColor === "string" ? e.data.currentColor : "#000000";
+        setColorPickerCurrent(cur);
+        setColorPickerOpen(true);
+      }
+      if (e.data?.type === "tipote:open-image-in-text") {
+        setInsertImageMode(true);
+        setAssetPickerTarget(null);
+        setAssetPickerOpen(true);
       }
     };
     window.addEventListener("message", handler);
@@ -3686,15 +3964,165 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
         open={assetPickerOpen}
         onOpenChange={(v) => {
           setAssetPickerOpen(v);
-          if (!v) setAssetPickerTarget(null);
+          if (!v) {
+            setAssetPickerTarget(null);
+            // If the picker was opened in "insert at caret" mode and the
+            // user dismissed it without choosing anything, tell the iframe
+            // to drop the saved-selection lock so the toolbar can hide.
+            if (insertImageMode) {
+              postToIframe({ type: "tipote:cancel-dialog" });
+              setInsertImageMode(false);
+            }
+          }
         }}
         htmlPreview={htmlPreview}
         hasOriginal={!!assetPickerTarget?.hasOriginal}
         uploading={uploadingImage}
         onChoose={handleAssetChoice}
       />
+
+      {/* Inline-edit "insert link" dialog. URL is validated against a
+          simple safe-scheme list (http/https/mailto/tel/#anchor). Submitting
+          an empty URL removes the link from the current selection. */}
+      <Dialog
+        open={linkDialogOpen}
+        onOpenChange={(v) => {
+          setLinkDialogOpen(v);
+          // Always notify the iframe on close — the apply path also
+          // consumes the saved range, so a follow-up cancel is a no-op.
+          if (!v) postToIframe({ type: "tipote:cancel-dialog" });
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("linkDialog.title")}</DialogTitle>
+            <DialogDescription>{t("linkDialog.desc")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              autoFocus
+              type="url"
+              inputMode="url"
+              placeholder="https://exemple.com"
+              value={linkDraftUrl}
+              onChange={(e) => { setLinkDraftUrl(e.target.value); if (linkError) setLinkError(null); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const url = linkDraftUrl.trim();
+                  if (url && !isSafeUrl(url)) { setLinkError(t("linkDialog.invalid")); return; }
+                  postToIframe({ type: "tipote:apply-link", url });
+                  setLinkDialogOpen(false);
+                }
+              }}
+            />
+            {linkError && <p className="text-xs text-destructive">{linkError}</p>}
+          </div>
+          <DialogFooter className="gap-2">
+            {linkDraftUrl.trim() && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  postToIframe({ type: "tipote:apply-link", url: "" });
+                  setLinkDialogOpen(false);
+                }}
+              >
+                {t("linkDialog.remove")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                postToIframe({ type: "tipote:cancel-dialog" });
+                setLinkDialogOpen(false);
+              }}
+            >
+              {t("linkDialog.cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                const url = linkDraftUrl.trim();
+                if (url && !isSafeUrl(url)) { setLinkError(t("linkDialog.invalid")); return; }
+                postToIframe({ type: "tipote:apply-link", url });
+                setLinkDialogOpen(false);
+              }}
+            >
+              {t("linkDialog.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inline-edit "text color" dialog. Reuses the same UserPalettePicker
+          users see in the quiz editor so saved palettes are shared. The
+          small native color input under the palette is the fallback when
+          the user wants a one-off colour outside any saved palette. */}
+      <Dialog
+        open={colorPickerOpen}
+        onOpenChange={(v) => {
+          setColorPickerOpen(v);
+          if (!v) postToIframe({ type: "tipote:cancel-dialog" });
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("colorDialog.title")}</DialogTitle>
+            <DialogDescription>{t("colorDialog.desc")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <UserPalettePicker
+              currentColor={colorPickerCurrent}
+              onPick={(color) => {
+                setColorPickerCurrent(color);
+                postToIframe({ type: "tipote:apply-color", color });
+                setColorPickerOpen(false);
+              }}
+              palettes={userPalettes}
+              onChangePalettes={persistUserPalettes}
+            />
+            <div className="flex items-center gap-2 pt-2 border-t">
+              <label className="text-xs text-muted-foreground">{t("colorDialog.custom")}</label>
+              <input
+                type="color"
+                value={colorPickerCurrent}
+                onChange={(e) => setColorPickerCurrent(e.target.value)}
+                className="w-10 h-8 rounded border cursor-pointer"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  postToIframe({ type: "tipote:apply-color", color: colorPickerCurrent });
+                  setColorPickerOpen(false);
+                }}
+              >
+                {t("colorDialog.apply")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+// Safe-URL guard for the inline link dialog. Same shape as the helper in
+// Tiquiz's rich-text-edit.tsx: allow http/https/mailto/tel/anchor only,
+// reject javascript: / data: which would let an attacker exec arbitrary
+// JS via a forged Cmd+K interaction.
+function isSafeUrl(url: string): boolean {
+  const v = url.trim();
+  if (!v) return false;
+  if (v.startsWith("#")) return true;
+  if (/^mailto:/i.test(v)) return true;
+  if (/^tel:/i.test(v)) return true;
+  try {
+    const u = new URL(v.includes("://") ? v : "https://" + v);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch { return false; }
 }
 
 // Client-side render helper

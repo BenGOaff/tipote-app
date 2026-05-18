@@ -3392,7 +3392,21 @@
     "networkError": "network error",
     "missingColumnsHint": " (a column may be missing — the latest Supabase migrations must be applied)",
     "thankYouSaveFailed": "Unable to save the thank-you page: {err}",
-    "liveChanges": "Live changes"
+    "liveChanges": "Live changes",
+    "linkDialog": {
+      "title": "Insert link",
+      "desc": "Paste the URL to attach to the selected text. Leave empty to remove an existing link.",
+      "invalid": "Invalid URL. Use http(s)://, mailto: or tel:",
+      "cancel": "Cancel",
+      "confirm": "Insert",
+      "remove": "Remove"
+    },
+    "colorDialog": {
+      "title": "Text color",
+      "desc": "Pick a color from your palette or use the custom picker.",
+      "custom": "Custom",
+      "apply": "Apply"
+    }
   },
   "clients": {
     "title": "Client Tracking",
