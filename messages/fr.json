@@ -41,7 +41,9 @@
       "positioning": "Positionnement",
       "branding": "Branding",
       "subscription": "Abonnement",
-      "compta": "Compta"
+      "compta": "Compta",
+      "sources": "Sources",
+      "domain": "Domaine"
     }
   },
   "notifications": {

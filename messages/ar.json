@@ -41,7 +41,9 @@
       "positioning": "التموضع",
       "branding": "الهوية البصرية",
       "subscription": "الاشتراك",
-      "compta": "المحاسبة"
+      "compta": "المحاسبة",
+      "sources": "المصادر",
+      "domain": "النطاق"
     }
   },
   "notifications": {

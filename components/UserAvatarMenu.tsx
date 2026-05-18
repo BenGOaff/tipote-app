@@ -10,8 +10,10 @@ import {
   Settings,
   Target,
   Palette,
+  FolderOpen,
   CreditCard,
   Calculator,
+  Globe,
   LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -71,14 +73,20 @@ export function UserAvatarMenu({ userEmail }: Props) {
     }
   }, [router]);
 
+  // Adeline (19 mai 2026) : "il manque des réglages dans le menu
+  // déroulant photo de profil". /settings expose 9 onglets, le menu
+  // n'en avait que 7. On ajoute sources + domain. Order = ordre des
+  // TabsTrigger dans SettingsTabsShell pour cohérence visuelle.
   const settingsTabs = [
     { key: "profile", icon: User, tab: "profile" },
     { key: "connections", icon: Link2, tab: "connections" },
     { key: "settings", icon: Settings, tab: "settings" },
     { key: "positioning", icon: Target, tab: "positioning" },
     { key: "branding", icon: Palette, tab: "branding" },
+    { key: "sources", icon: FolderOpen, tab: "sources" },
     { key: "subscription", icon: CreditCard, tab: "pricing" },
     { key: "compta", icon: Calculator, tab: "compta" },
+    { key: "domain", icon: Globe, tab: "domain" },
   ] as const;
 
   return (

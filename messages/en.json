@@ -41,7 +41,9 @@
       "positioning": "Positioning",
       "branding": "Branding",
       "subscription": "Subscription",
-      "compta": "Accounting"
+      "compta": "Accounting",
+      "sources": "Sources",
+      "domain": "Domain"
     }
   },
   "notifications": {

@@ -41,7 +41,17 @@
       "dark": "Escuro",
       "system": "Sistema"
     },
-    "menu": "Menu",
+    "menu": {
+      "profile": "Perfil",
+      "connections": "Conexões",
+      "settings": "Configurações",
+      "positioning": "Posicionamento",
+      "branding": "Branding",
+      "sources": "Fontes",
+      "subscription": "Assinatura",
+      "compta": "Contabilidade",
+      "domain": "Domínio"
+    },
     "notifications": "Notificações",
     "upgrade": "Fazer upgrade",
     "help": "Ajuda",

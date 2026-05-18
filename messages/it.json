@@ -41,7 +41,9 @@
       "positioning": "Posizionamento",
       "branding": "Branding",
       "subscription": "Abbonamento",
-      "compta": "Contabilità"
+      "compta": "Contabilità",
+      "sources": "Fonti",
+      "domain": "Dominio"
     }
   },
   "notifications": {
