@@ -79,15 +79,14 @@ export function useAutosave<T>({
           // Visibility (Adeline, 18 mai 2026) : avant on silenait toutes
           // les non-200, Adeline voyait juste "Failed to load resource: 500"
           // sans corps. On dump body + status pour qu'elle puisse partager
-          // le détail sans avoir à fouiller les logs serveur.
+          // le détail sans avoir à fouiller les logs serveur. On formate
+          // en string explicite (pas un Object collapsé) pour qu'on voit
+          // la cause directement dans la console.
           let bodyText = "";
           try { bodyText = await res.text(); } catch { /* ignore */ }
-          console.error("[autosave] non-OK response", {
-            status: res.status,
-            statusText: res.statusText,
-            body: bodyText.slice(0, 500),
-            stateSize: serialized.length,
-          });
+          console.error(
+            `[autosave] non-OK ${res.status} ${res.statusText} — body=${bodyText.slice(0, 800)} — stateSize=${serialized.length}`,
+          );
         }
       } catch (err) {
         // Network blip — next state change reattempts. On logge quand
