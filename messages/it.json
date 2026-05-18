@@ -4005,7 +4005,13 @@
     "resultImagePos_bottom": "Basso",
     "resultImageRemove": "Rimuovi immagine",
     "resultImageDropzone": "Aggiungi un'immagine a questo risultato",
-    "resultImageHint": "Clicca o trascina un file (PNG/JPG/GIF, max 10 MB)"
+    "resultImageHint": "Clicca o trascina un file (PNG/JPG/GIF, max 10 MB)",
+    "tieWarningTitle": "{count} possibili pareggi tra i tuoi risultati",
+    "tieWarningHint": "Alcune combinazioni di risposte producono lo stesso punteggio per 2 risultati. Coppie rilevate:",
+    "tieWarningFallback": "In caso di pareggio, il visitatore vede sempre il primo risultato nell'ordine. Modifica i punti di un'opzione per rompere il pareggio.",
+    "tieWarningTruncated": "(quiz molto grande, analisi parziale — potrebbero esserci altri pareggi non elencati).",
+    "optionShowOtherResults": "Mostra gli altri profili al visitatore",
+    "optionShowOtherResultsHint": "Aggiunge una fisarmonica sotto il risultato con tutti gli altri profili possibili, in versione neutra (senza nome o varianti di genere)."
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

@@ -4005,7 +4005,13 @@
     "resultImagePos_bottom": "Bottom",
     "resultImageRemove": "Remove image",
     "resultImageDropzone": "Add an image to this result",
-    "resultImageHint": "Click or drag-and-drop a file (PNG/JPG/GIF, max 10 MB)"
+    "resultImageHint": "Click or drag-and-drop a file (PNG/JPG/GIF, max 10 MB)",
+    "tieWarningTitle": "{count} possible ties between your results",
+    "tieWarningHint": "Some answer combinations produce identical scores across 2 results. Detected pairs:",
+    "tieWarningFallback": "In case of a tie, the visitor will always see the first result in order. Adjust points on an option to break the tie.",
+    "tieWarningTruncated": "(large quiz, partial analysis — there may be other ties not listed).",
+    "optionShowOtherResults": "Show other profiles to the visitor",
+    "optionShowOtherResultsHint": "Adds an accordion below the result with all the other possible profiles, in a neutral version (no first name or gender variants). Lets curious visitors discover what they missed."
   },
   "contentStrategy": {
     "title": "Content strategy",

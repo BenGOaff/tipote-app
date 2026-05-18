@@ -4005,7 +4005,13 @@
     "resultImagePos_bottom": "Abajo",
     "resultImageRemove": "Quitar imagen",
     "resultImageDropzone": "Añadir una imagen al resultado",
-    "resultImageHint": "Haz clic o arrastra un archivo (PNG/JPG/GIF, 10 MB máx.)"
+    "resultImageHint": "Haz clic o arrastra un archivo (PNG/JPG/GIF, 10 MB máx.)",
+    "tieWarningTitle": "{count} empates posibles entre tus resultados",
+    "tieWarningHint": "Algunas combinaciones de respuestas producen el mismo puntaje para 2 resultados. Pares detectados:",
+    "tieWarningFallback": "En caso de empate, el visitante verá siempre el primer resultado en orden. Ajusta puntos en una opción para romper el empate.",
+    "tieWarningTruncated": "(quiz extenso, análisis parcial — puede haber otros empates no listados).",
+    "optionShowOtherResults": "Mostrar otros perfiles al visitante",
+    "optionShowOtherResultsHint": "Añade un acordeón debajo del resultado con todos los otros perfiles posibles, en versión neutra (sin nombre ni variantes de género)."
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",

@@ -4304,7 +4304,13 @@
     "resultImagePos_bottom": "Fundo",
     "resultImageRemove": "Remover imagem",
     "resultImageDropzone": "Adicionar uma imagem a este resultado",
-    "resultImageHint": "Clica ou arrasta um ficheiro (PNG/JPG/GIF, 10 MB máx.)"
+    "resultImageHint": "Clica ou arrasta um ficheiro (PNG/JPG/GIF, 10 MB máx.)",
+    "tieWarningTitle": "{count} empates possíveis entre os teus resultados",
+    "tieWarningHint": "Algumas combinações de respostas produzem a mesma pontuação para 2 resultados. Pares detetados:",
+    "tieWarningFallback": "Em caso de empate, o visitante verá sempre o primeiro resultado pela ordem. Ajusta os pontos de uma opção para desfazer o empate.",
+    "tieWarningTruncated": "(quiz extenso, análise parcial — pode haver outros empates não listados).",
+    "optionShowOtherResults": "Mostrar outros perfis ao visitante",
+    "optionShowOtherResultsHint": "Adiciona um acordeão abaixo do resultado com todos os outros perfis possíveis, em versão neutra (sem nome nem variantes de género)."
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

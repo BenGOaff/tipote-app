@@ -4005,7 +4005,13 @@
     "resultImagePos_bottom": "Bas",
     "resultImageRemove": "Retirer l'image",
     "resultImageDropzone": "Ajouter une image au résultat",
-    "resultImageHint": "Clique ici ou drag-and-drop un fichier (PNG/JPG/GIF, 10 Mo max)"
+    "resultImageHint": "Clique ici ou drag-and-drop un fichier (PNG/JPG/GIF, 10 Mo max)",
+    "tieWarningTitle": "{count} ex-æquo possibles entre tes résultats",
+    "tieWarningHint": "Certaines combinaisons de réponses produisent un score identique pour 2 résultats. Voici les paires détectées :",
+    "tieWarningFallback": "En cas d'ex-æquo, le visiteur verra toujours le premier résultat dans l'ordre. Ajuste les points d'une option pour briser l'égalité.",
+    "tieWarningTruncated": "(quiz volumineux, analyse partielle — il peut y avoir d'autres ex-æquo non listés).",
+    "optionShowOtherResults": "Montrer les autres profils au visiteur",
+    "optionShowOtherResultsHint": "Ajoute un accordéon sous le résultat avec tous les autres profils possibles, en version neutre (sans prénom ni variantes de genre). Le visiteur curieux peut découvrir ce qu'il a manqué."
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",

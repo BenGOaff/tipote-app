@@ -4005,7 +4005,13 @@
     "resultImagePos_bottom": "الأسفل",
     "resultImageRemove": "إزالة الصورة",
     "resultImageDropzone": "إضافة صورة إلى النتيجة",
-    "resultImageHint": "انقر أو اسحب ملفًا (PNG/JPG/GIF، الحد الأقصى 10 ميجابايت)"
+    "resultImageHint": "انقر أو اسحب ملفًا (PNG/JPG/GIF، الحد الأقصى 10 ميجابايت)",
+    "tieWarningTitle": "{count} تعادلات محتملة بين النتائج",
+    "tieWarningHint": "بعض مجموعات الإجابات تنتج نفس النتيجة لنتيجتين. الأزواج المكتشفة:",
+    "tieWarningFallback": "في حالة التعادل، سيرى الزائر دائمًا النتيجة الأولى بالترتيب. عدّل النقاط في خيار لكسر التعادل.",
+    "tieWarningTruncated": "(اختبار كبير، تحليل جزئي — قد توجد تعادلات أخرى غير مذكورة).",
+    "optionShowOtherResults": "إظهار الملفات الأخرى للزائر",
+    "optionShowOtherResultsHint": "يضيف قائمة قابلة للطي أسفل النتيجة بجميع الملفات الأخرى الممكنة، في نسخة محايدة (دون اسم أو متغيرات جنس)."
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

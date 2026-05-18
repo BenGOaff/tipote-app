@@ -44,6 +44,7 @@ import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
+import { analyzeTies, type TieConflict } from "@/lib/quizTieAnalysis";
 
 /** Same demo name used across both repos to substitute {name} placeholders
  *  in the editor preview canvas — gender-neutral, short, works in fr/en. */
@@ -497,6 +498,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // the GDPR-style checkbox. Only flips when the creator opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
   const [showResultsBreakdown, setShowResultsBreakdown] = useState(false);
+  const [showOtherResults, setShowOtherResults] = useState(false);
   const [askFirstName, setAskFirstName] = useState(false);
   const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
@@ -608,6 +610,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     country_required: countryRequired,
     show_consent_checkbox: showConsentCheckbox,
     show_results_breakdown: showResultsBreakdown,
+    show_other_results: showOtherResults,
     ask_first_name: askFirstName,
     ask_gender: askGender,
     virality_enabled: viralityEnabled,
@@ -637,7 +640,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
-    showConsentCheckbox, showResultsBreakdown, askFirstName, askGender,
+    showConsentCheckbox, showResultsBreakdown, showOtherResults, askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor,
@@ -674,6 +677,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
+    if (typeof s.show_other_results === "boolean") setShowOtherResults(s.show_other_results);
     if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
     if (typeof s.ask_gender === "boolean") setAskGender(s.ask_gender);
     if (typeof s.virality_enabled === "boolean") setViralityEnabled(s.virality_enabled);
@@ -874,6 +878,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
       setShowResultsBreakdown((q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true);
+      setShowOtherResults((q as { show_other_results?: boolean | null }).show_other_results === true);
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setFirstNameRequired(q.first_name_required ?? false); setLastNameRequired(q.last_name_required ?? false);
       setPhoneRequired(q.phone_required ?? false); setCountryRequired(q.country_required ?? false);
@@ -1274,6 +1279,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
           show_results_breakdown: showResultsBreakdown,
+          show_other_results: showOtherResults,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
@@ -1418,6 +1424,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         questionsLeading === 0 ? "danger" : questionsLeading < expected ? "warn" : "ok";
       return { questionsLeading, totalQuestions: N, expected, severity };
     });
+  }, [editQuestions, editResults]);
+
+  // Analyseur d'ex-æquo (Adeline, 19 mai 2026). Cf. lib/quizTieAnalysis.ts.
+  const tieAnalysis = useMemo(() => {
+    return analyzeTies(
+      editQuestions.map((q) => ({
+        options: q.options.map((o) => ({ result_index: o.result_index })),
+        config: (q.config ?? null) as { multi_select?: boolean } | null,
+      })),
+      editResults.length,
+    );
   }, [editQuestions, editResults]);
 
   // Helpers
@@ -1852,6 +1869,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     checked={showResultsBreakdown}
                     onChange={v => setShowResultsBreakdown(v)}
                   />
+                  <SettingsToggle
+                    label={t("optionShowOtherResults")}
+                    hint={t("optionShowOtherResultsHint")}
+                    checked={showOtherResults}
+                    onChange={v => setShowOtherResults(v)}
+                  />
                 </section>
 
                 {viralityEnabled && (
@@ -2255,6 +2278,47 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 className="sr-only"
                 onChange={onResultImagePicked}
               />
+
+              {tieAnalysis.conflicts.length > 0 && (
+                <div className="px-6 sm:px-12">
+                  <div className="max-w-2xl mx-auto rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100 px-4 py-3 my-4">
+                    <p className="font-semibold text-sm">
+                      {t("tieWarningTitle", { count: tieAnalysis.conflicts.length })}
+                    </p>
+                    <p className="text-xs opacity-90 mt-1">
+                      {t("tieWarningHint")}
+                    </p>
+                    <ul className="mt-2.5 space-y-1.5 text-xs">
+                      {tieAnalysis.conflicts.map((c: TieConflict, i: number) => {
+                        const titles = c.resultIndices
+                          .map((ri) => extractResultLabel(cleanPlaceholdersForLabel(editResults[ri]?.title)) || `Résultat ${ri + 1}`)
+                          .join(" ↔ ");
+                        const path = c.answers
+                          .map((oi, qi) => {
+                            const q = editQuestions[qi];
+                            if (!q) return null;
+                            const opt = q.options[oi];
+                            if (!opt) return null;
+                            const optLabel = stripHtml(cleanPlaceholdersForLabel(opt.text)).slice(0, 30);
+                            return `Q${qi + 1}: «${optLabel}»`;
+                          })
+                          .filter(Boolean)
+                          .join(" · ");
+                        return (
+                          <li key={i} className="leading-snug">
+                            <span className="font-medium">{titles}</span>
+                            {path && <span className="opacity-75"> — {path}</span>}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p className="text-[11px] opacity-75 mt-2">
+                      {t("tieWarningFallback")}
+                      {tieAnalysis.truncated && " " + t("tieWarningTruncated")}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* ── RESULTS ── */}
               {editResults.map((r, ri) => {

@@ -170,6 +170,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "capture_heading", "capture_subtitle", "capture_first_name",
       "capture_last_name", "capture_phone", "capture_country",
       "phone_required", "first_name_required", "last_name_required", "country_required",
+      "show_other_results",
       "show_consent_checkbox",
       "show_results_breakdown",
       "start_button_text", "result_insight_heading", "result_projection_heading",
