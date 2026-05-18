@@ -3205,7 +3205,9 @@
       "learnMore": "Scopri di più",
       "introTitle": "Suggerimento: ordine diverso mobile / desktop",
       "introBody": "Clicca 📱 o 🖥️ in alto per scegliere lo schermo, poi trascina i blocchi. L'altro schermo non cambia.",
-      "introGotIt": "Capito"
+      "introGotIt": "Capito",
+      "hintTitle": "Trascina per riordinare",
+      "hintBody": "Passa sopra una sezione o un elemento nell'anteprima: una maniglia viola appare nell'angolo in alto a sinistra. Trascinala per spostare. L'ordine si applica al viewport mostrato."
     },
     "controls": {
       "font": "Font",

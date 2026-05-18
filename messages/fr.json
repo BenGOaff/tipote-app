@@ -3205,7 +3205,9 @@
       "learnMore": "En savoir plus",
       "introTitle": "Astuce : ordre différent mobile / ordinateur",
       "introBody": "Clique sur 📱 ou 🖥️ en haut pour choisir l'écran, puis déplace tes blocs. L'autre écran ne bouge pas.",
-      "introGotIt": "Compris"
+      "introGotIt": "Compris",
+      "hintTitle": "Glisse pour réorganiser",
+      "hintBody": "Survole une section ou un élément dans l'aperçu : une poignée violette apparaît en haut à gauche. Glisse-la pour le déplacer. L'ordre s'applique au viewport actuellement affiché."
     },
     "controls": {
       "font": "Police",

@@ -3205,7 +3205,9 @@
       "learnMore": "Saber más",
       "introTitle": "Tip: orden distinto móvil / escritorio",
       "introBody": "Pulsa 📱 o 🖥️ arriba para elegir la pantalla y arrastra tus bloques. La otra pantalla no se toca.",
-      "introGotIt": "Entendido"
+      "introGotIt": "Entendido",
+      "hintTitle": "Arrastra para reordenar",
+      "hintBody": "Pasa el cursor sobre una sección o un elemento en la vista previa: aparece una agarradera morada en la esquina superior izquierda. Arrástrala para mover. El orden se aplica al viewport actualmente mostrado."
     },
     "controls": {
       "font": "Fuente",

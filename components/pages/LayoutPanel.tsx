@@ -55,13 +55,13 @@ export default function LayoutPanel({ value, onChange }: Props) {
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-white/60 flex items-center gap-1">
+        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
           <LayoutIcon /> {t("title")}
         </label>
         <button
           type="button"
           onClick={reset}
-          className="text-[10px] text-white/40 hover:text-white/70 underline"
+          className="text-[10px] text-muted-foreground/80 hover:text-foreground/80 underline"
           title={t("reset")}
         >
           {t("reset")}
@@ -69,12 +69,12 @@ export default function LayoutPanel({ value, onChange }: Props) {
       </div>
 
       {/* Screen toggle: Mobile / Desktop */}
-      <div className="grid grid-cols-2 gap-1 bg-white/5 p-1 rounded-lg">
+      <div className="grid grid-cols-2 gap-1 bg-muted/40 p-1 rounded-lg">
         <button
           type="button"
           onClick={() => setTab("mobile")}
           className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            tab === "mobile" ? "bg-white/15 text-white" : "text-white/50 hover:text-white/80"
+            tab === "mobile" ? "bg-muted text-foreground" : "text-muted-foreground/80 hover:text-foreground"
           }`}
         >
           <Smartphone className="w-3.5 h-3.5" /> {t("screenMobile")}
@@ -83,7 +83,7 @@ export default function LayoutPanel({ value, onChange }: Props) {
           type="button"
           onClick={() => setTab("desktop")}
           className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            tab === "desktop" ? "bg-white/15 text-white" : "text-white/50 hover:text-white/80"
+            tab === "desktop" ? "bg-muted text-foreground" : "text-muted-foreground/80 hover:text-foreground"
           }`}
         >
           <Monitor className="w-3.5 h-3.5" /> {t("screenDesktop")}
@@ -102,18 +102,18 @@ export default function LayoutPanel({ value, onChange }: Props) {
               className={`group rounded-lg border p-2 text-left transition-all ${
                 active
                   ? "border-primary bg-primary/20 ring-1 ring-primary/40"
-                  : "border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25"
+                  : "border-border bg-muted/40 hover:bg-muted hover:border-border"
               }`}
               title={tPresets(p.id)}
             >
               <div className="flex items-center justify-center h-10 mb-1">
                 <svg
                   viewBox="0 0 32 32"
-                  className={`w-8 h-8 ${active ? "text-white" : "text-white/70 group-hover:text-white"}`}
+                  className={`w-8 h-8 ${active ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"}`}
                   dangerouslySetInnerHTML={{ __html: p.thumb }}
                 />
               </div>
-              <div className={`text-[10px] leading-tight text-center ${active ? "text-white font-medium" : "text-white/60"}`}>
+              <div className={`text-[10px] leading-tight text-center ${active ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                 {tPresets(p.id)}
               </div>
             </button>
@@ -125,7 +125,7 @@ export default function LayoutPanel({ value, onChange }: Props) {
       <button
         type="button"
         onClick={() => setAdvancedOpen(v => !v)}
-        className="w-full flex items-center justify-between py-1.5 px-2 rounded-md text-[11px] font-medium text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between py-1.5 px-2 rounded-md text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
       >
         <span className="flex items-center gap-1.5">
           <SlidersHorizontal className="w-3 h-3" /> {t("advanced")}
@@ -192,7 +192,7 @@ export default function LayoutPanel({ value, onChange }: Props) {
         </div>
       )}
 
-      <p className="text-[10px] text-white/40 leading-snug">{t("hint")}</p>
+      <p className="text-[10px] text-muted-foreground/80 leading-snug">{t("hint")}</p>
     </div>
   );
 }
@@ -202,7 +202,7 @@ export default function LayoutPanel({ value, onChange }: Props) {
 function AdvancedRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[10px] font-medium text-white/50 mb-1">{label}</div>
+      <div className="text-[10px] font-medium text-muted-foreground/80 mb-1">{label}</div>
       {children}
     </div>
   );
@@ -216,14 +216,14 @@ function SegmentedControl<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex gap-0.5 bg-white/5 p-0.5 rounded-md">
+    <div className="flex gap-0.5 bg-muted/40 p-0.5 rounded-md">
       {options.map(o => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={`flex-1 px-1.5 py-1 text-[10px] rounded transition-colors ${
-            value === o.value ? "bg-white/20 text-white font-medium" : "text-white/50 hover:text-white/80"
+            value === o.value ? "bg-primary/15 text-foreground font-medium" : "text-muted-foreground/80 hover:text-foreground"
           }`}
         >
           {o.label}

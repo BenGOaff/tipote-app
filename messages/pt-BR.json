@@ -3512,7 +3512,9 @@
       "learnMore": "Saiba mais",
       "introTitle": "Dica: ordem diferente em celular / desktop",
       "introBody": "Clique em 📱 ou 🖥️ no topo para escolher a tela e depois mexa nos blocos. A outra tela não se altera.",
-      "introGotIt": "Entendi"
+      "introGotIt": "Entendi",
+      "hintTitle": "Arraste para reordenar",
+      "hintBody": "Passe o cursor sobre uma seção ou elemento na pré-visualização: uma alça roxa aparece no canto superior esquerdo. Arraste-a para mover. A ordem se aplica ao viewport exibido no momento."
     },
     "controls": {
       "font": "Fonte",

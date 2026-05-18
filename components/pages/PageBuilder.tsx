@@ -719,7 +719,7 @@ const INLINE_EDIT_SCRIPT = `
   }
 
   function highlightEl(el) {
-    if (!el) { elHighlight.style.display = 'none'; return; }
+    if (!el) { elHighlight.style.display = 'none'; elGrip.style.display = 'none'; return; }
     var rect = el.getBoundingClientRect();
     var scrollY = window.scrollY || document.documentElement.scrollTop;
     var scrollX = window.scrollX || document.documentElement.scrollLeft;
@@ -730,7 +730,143 @@ const INLINE_EDIT_SCRIPT = `
     elHighlight.style.height = (rect.height + 4) + 'px';
     var typeLabels = { section:'Section', heading:'Titre', text:'Texte', image:'Image', button:'Bouton', list:'Liste', 'list-item':'Item', row:'Rangée', divider:'Séparateur', nav:'Nav', form:'Form', link:'Lien', blockquote:'Citation', unknown:'' };
     elLabel.textContent = typeLabels[detectElType(el)] || '';
+    /* Mirror the element-level drag grip next to the highlight so the
+       user can grab and reorder the selected element among its siblings
+       (DOM-level reorder, single order shared mobile + desktop). */
+    positionElGripFor(el);
   }
+
+  /* ── Element drag-and-drop ──
+     The grip appears in the top-left of the SELECTED element (one click
+     selects it, second motion drags it). Drop is constrained to siblings
+     sharing the same parent so the user can't accidentally nest a heading
+     inside a button. Per-viewport ordering is intentionally NOT applied
+     to elements — we mutate DOM order so both viewports stay in sync,
+     which is what users expect for in-page elements (text, image, button).
+     Sections retain their per-viewport ordering (see section DnD above). */
+  var elGrip = document.createElement('button');
+  elGrip.setAttribute('data-tipote-injected', '1');
+  elGrip.type = 'button';
+  elGrip.draggable = true;
+  elGrip.title = 'Glisser pour déplacer cet élément';
+  elGrip.style.cssText = 'position:absolute;z-index:99992;width:24px;height:24px;border-radius:6px;border:none;background:#0f172a;color:#fff;display:none;align-items:center;justify-content:center;cursor:grab;box-shadow:0 3px 10px rgba(15,23,42,.3);user-select:none;padding:0;';
+  elGrip.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="19" r="1.4"/><circle cx="15" cy="5" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="19" r="1.4"/></svg>';
+  document.body.appendChild(elGrip);
+
+  var elDropLine = document.createElement('div');
+  elDropLine.setAttribute('data-tipote-injected', '1');
+  elDropLine.style.cssText = 'position:absolute;z-index:99992;background:#0f172a;border-radius:2px;display:none;pointer-events:none;box-shadow:0 0 0 1px rgba(15,23,42,.2);';
+  document.body.appendChild(elDropLine);
+
+  var draggingEl = null;
+  var draggingElParent = null;
+  var elDropTarget = null;
+  var elDropBefore = false;
+  var elDropHorizontal = false;
+
+  function isElementReorderable(el) {
+    if (!el) return false;
+    if (el.matches && el.matches(sectionSelectors)) return false; // sections have their own grip
+    if (el.tagName === 'BODY' || el.tagName === 'HTML') return false;
+    if (el.closest && el.closest('[data-tipote-injected]')) return false;
+    var p = el.parentElement;
+    if (!p) return false;
+    // Need at least one sibling to be reorderable
+    if (p.children.length < 2) return false;
+    return true;
+  }
+
+  function positionElGripFor(el) {
+    if (!el || !isElementReorderable(el)) { elGrip.style.display = 'none'; return; }
+    var rect = el.getBoundingClientRect();
+    var sy = window.scrollY || document.documentElement.scrollTop;
+    var sx = window.scrollX || document.documentElement.scrollLeft;
+    /* Place the grip just outside the top-left of the element. If there's
+       not enough room on the left, dock it inside the top-left instead. */
+    var left = rect.left + sx - 28;
+    if (left < (sx + 4)) left = rect.left + sx + 4;
+    elGrip.style.left = left + 'px';
+    elGrip.style.top = (rect.top + sy + 2) + 'px';
+    elGrip.style.display = 'flex';
+  }
+
+  elGrip.addEventListener('dragstart', function(e) {
+    if (!selectedEl || !isElementReorderable(selectedEl)) { e.preventDefault(); return; }
+    draggingEl = selectedEl;
+    draggingElParent = draggingEl.parentElement;
+    if (!draggingEl.id) draggingEl.id = 'tp-el-' + Date.now() + '-' + Math.random().toString(36).substr(2,4);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', draggingEl.id); } catch (_) {}
+      var ghost = document.createElement('canvas'); ghost.width = 1; ghost.height = 1;
+      try { e.dataTransfer.setDragImage(ghost, 0, 0); } catch (_) {}
+    }
+    elGrip.style.cursor = 'grabbing';
+  });
+  elGrip.addEventListener('dragend', function() {
+    draggingEl = null;
+    draggingElParent = null;
+    elDropTarget = null;
+    elDropLine.style.display = 'none';
+    elGrip.style.cursor = 'grab';
+  });
+
+  /* Element dragover: walk up to find a sibling of the dragged element. */
+  document.addEventListener('dragover', function(e) {
+    if (draggingSectionId) return; /* sections handled separately above */
+    if (!draggingEl || !draggingElParent) return;
+    var target = e.target;
+    while (target && target !== document.body) {
+      if (target.parentElement === draggingElParent && target !== draggingEl) break;
+      target = target.parentElement;
+    }
+    if (!target || target === document.body) { elDropLine.style.display = 'none'; return; }
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    var rect = target.getBoundingClientRect();
+    var parentCs = draggingElParent ? getComputedStyle(draggingElParent) : null;
+    var isHorizontal = !!(parentCs && (
+      (parentCs.display === 'flex' && parentCs.flexDirection !== 'column' && parentCs.flexDirection !== 'column-reverse')
+      || parentCs.display === 'inline'
+      || parentCs.display === 'inline-block'
+    ));
+    var before = isHorizontal ? (e.clientX < rect.left + rect.width / 2) : (e.clientY < rect.top + rect.height / 2);
+    var sy = window.scrollY || document.documentElement.scrollTop;
+    var sx = window.scrollX || document.documentElement.scrollLeft;
+    if (isHorizontal) {
+      elDropLine.style.width = '3px';
+      elDropLine.style.height = rect.height + 'px';
+      elDropLine.style.left = ((before ? rect.left : rect.right) + sx - 1.5) + 'px';
+      elDropLine.style.top  = (rect.top + sy) + 'px';
+    } else {
+      elDropLine.style.height = '2px';
+      elDropLine.style.width = rect.width + 'px';
+      elDropLine.style.left = (rect.left + sx) + 'px';
+      elDropLine.style.top  = ((before ? rect.top : rect.bottom) + sy - 1) + 'px';
+    }
+    elDropLine.style.display = 'block';
+    elDropTarget = target;
+    elDropBefore = before;
+    elDropHorizontal = isHorizontal;
+  });
+
+  document.addEventListener('drop', function(e) {
+    if (draggingSectionId) return;
+    if (!draggingEl || !draggingElParent || !elDropTarget) return;
+    e.preventDefault();
+    if (elDropTarget === draggingEl) return;
+    if (elDropTarget.parentElement !== draggingElParent) return;
+    draggingElParent.insertBefore(
+      draggingEl,
+      elDropBefore ? elDropTarget : elDropTarget.nextSibling,
+    );
+    parent.postMessage({ type: 'tipote:text-edit', tag: 'element-reorder-dnd', text: '' }, '*');
+    elDropLine.style.display = 'none';
+    /* Refresh the highlight + grip in the new location. */
+    highlightEl(draggingEl);
+    draggingEl = null;
+    elDropTarget = null;
+  });
 
   /* ── Make all text elements editable ── */
   document.querySelectorAll(editableSelectors).forEach(function(el) {
@@ -934,8 +1070,22 @@ const INLINE_EDIT_SCRIPT = `
 
   /* ── Section detection: find all top-level page sections so the sidebar can
         list + reorder them. ── */
-  var sectionSelectors = '.tp-header-bar, .tp-hero, .tp-section, .tp-final-cta, .tp-footer, nav, [class*="tp-section"]';
-  var allSections = document.querySelectorAll(sectionSelectors);
+  /* Selector intentionally avoids the substring [class*=tp-section] (it
+     matched inner elements like .tp-section-title and bloated the list
+     with duplicates — Hugo/Adeline mai 2026). The dedupeNested helper
+     also drops any candidate that is a descendant of another candidate,
+     defensive against templates that nest .tp-section inside another. */
+  var sectionSelectors = '.tp-header-bar, .tp-hero, .tp-section, .tp-final-cta, .tp-footer, nav';
+  function dedupeNested(nodeList) {
+    var arr = Array.prototype.slice.call(nodeList);
+    return arr.filter(function(el) {
+      for (var i = 0; i < arr.length; i++) {
+        if (arr[i] !== el && arr[i].contains(el)) return false;
+      }
+      return true;
+    });
+  }
+  var allSections = dedupeNested(document.querySelectorAll(sectionSelectors));
   var sectionList = [];
   var selectedSectionEl = null;
   var sectionHighlight = document.createElement('div');
@@ -943,12 +1093,146 @@ const INLINE_EDIT_SCRIPT = `
   sectionHighlight.setAttribute('data-tipote-injected', '1');
   document.body.appendChild(sectionHighlight);
 
+  /* ── Drag-and-drop in the preview ──
+     A single shared grip handle floats over whichever section the cursor
+     is on. HTML5 native DnD; on drop the parent reorders for the active
+     viewport (the parent already knows which viewport is being previewed
+     so the iframe just sends the new ordered list of IDs). The drop
+     indicator is a thin coloured line between two sections to make the
+     drop position obvious. */
+  var sectionGrip = document.createElement('button');
+  sectionGrip.setAttribute('data-tipote-injected', '1');
+  sectionGrip.type = 'button';
+  sectionGrip.draggable = true;
+  sectionGrip.title = 'Glisser pour déplacer cette section';
+  sectionGrip.style.cssText = 'position:absolute;z-index:99991;width:30px;height:30px;border-radius:8px;border:none;background:#5D6CDB;color:#fff;display:none;align-items:center;justify-content:center;cursor:grab;box-shadow:0 4px 12px rgba(15,23,42,.22);user-select:none;padding:0;';
+  sectionGrip.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="19" r="1.4"/><circle cx="15" cy="5" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="19" r="1.4"/></svg>';
+  document.body.appendChild(sectionGrip);
+
+  var sectionDropLine = document.createElement('div');
+  sectionDropLine.setAttribute('data-tipote-injected', '1');
+  sectionDropLine.style.cssText = 'position:absolute;z-index:99991;height:3px;background:#5D6CDB;border-radius:2px;display:none;pointer-events:none;box-shadow:0 0 0 1px rgba(93,108,219,.3);';
+  document.body.appendChild(sectionDropLine);
+
+  var hoveredGripSection = null;
+  var draggingSectionId = null;
+  var dropTargetSectionId = null;
+  var dropTargetBefore = false;
+  var gripHideTimer = null;
+
+  function positionSectionGrip(section) {
+    if (!section) return;
+    var rect = section.getBoundingClientRect();
+    var sy = window.scrollY || document.documentElement.scrollTop;
+    var sx = window.scrollX || document.documentElement.scrollLeft;
+    sectionGrip.style.left = (rect.left + sx + 8) + 'px';
+    sectionGrip.style.top  = (rect.top  + sy + 8) + 'px';
+  }
+  function showGripFor(section) {
+    if (!section) return;
+    /* Skip while a contentEditable is focused so the grip doesn't get in
+       the way of inline text editing. */
+    if (document.activeElement && document.activeElement.isContentEditable) return;
+    hoveredGripSection = section;
+    sectionGrip.style.display = 'flex';
+    positionSectionGrip(section);
+  }
+  function cancelGripHide() { if (gripHideTimer) { clearTimeout(gripHideTimer); gripHideTimer = null; } }
+  function scheduleGripHide() {
+    cancelGripHide();
+    gripHideTimer = setTimeout(function() {
+      if (!draggingSectionId) {
+        sectionGrip.style.display = 'none';
+        hoveredGripSection = null;
+      }
+    }, 150);
+  }
+  sectionGrip.addEventListener('mouseenter', cancelGripHide);
+  sectionGrip.addEventListener('mouseleave', scheduleGripHide);
+
+  sectionGrip.addEventListener('dragstart', function(e) {
+    if (!hoveredGripSection) { e.preventDefault(); return; }
+    draggingSectionId = hoveredGripSection.id;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', draggingSectionId); } catch (_) {}
+      /* Suppress the native drag ghost so only the drop-line indicator
+         shows up — clean, focused feedback. */
+      var ghost = document.createElement('canvas'); ghost.width = 1; ghost.height = 1;
+      try { e.dataTransfer.setDragImage(ghost, 0, 0); } catch (_) {}
+    }
+    sectionGrip.style.cursor = 'grabbing';
+  });
+  sectionGrip.addEventListener('dragend', function() {
+    draggingSectionId = null;
+    dropTargetSectionId = null;
+    sectionDropLine.style.display = 'none';
+    sectionGrip.style.cursor = 'grab';
+    if (!hoveredGripSection) sectionGrip.style.display = 'none';
+  });
+
+  /* Document-level dragover so the indicator updates everywhere the
+     cursor goes, including over inner section content. */
+  document.addEventListener('dragover', function(e) {
+    if (!draggingSectionId) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : (e.target ? e.target.parentElement : null);
+    while (el && el !== document.body) {
+      if (el.matches && el.matches(sectionSelectors)) break;
+      el = el.parentElement;
+    }
+    if (!el || el === document.body) return;
+    if (el.id === draggingSectionId) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    var rect = el.getBoundingClientRect();
+    var before = e.clientY < (rect.top + rect.height / 2);
+    var sy = window.scrollY || document.documentElement.scrollTop;
+    var sx = window.scrollX || document.documentElement.scrollLeft;
+    sectionDropLine.style.display = 'block';
+    sectionDropLine.style.left  = (rect.left + sx) + 'px';
+    sectionDropLine.style.width = rect.width + 'px';
+    sectionDropLine.style.top   = ((before ? rect.top : rect.bottom) + sy - 1.5) + 'px';
+    dropTargetSectionId = el.id;
+    dropTargetBefore = before;
+  });
+
+  document.addEventListener('drop', function(e) {
+    if (!draggingSectionId || !dropTargetSectionId) return;
+    e.preventDefault();
+    if (dropTargetSectionId === draggingSectionId) return;
+    var nodes = dedupeNested(document.querySelectorAll(sectionSelectors));
+    var ids = [];
+    for (var i = 0; i < nodes.length; i++) ids.push(nodes[i].id);
+    var src = ids.indexOf(draggingSectionId);
+    if (src < 0) return;
+    ids.splice(src, 1);
+    var tgt = ids.indexOf(dropTargetSectionId);
+    if (tgt < 0) return;
+    ids.splice(dropTargetBefore ? tgt : tgt + 1, 0, draggingSectionId);
+    parent.postMessage({ type: 'tipote:section-dnd-reorder', orderedIds: ids }, '*');
+    sectionDropLine.style.display = 'none';
+    draggingSectionId = null;
+    dropTargetSectionId = null;
+  });
+
+  /* Keep the grip glued to its section on scroll/resize. */
+  window.addEventListener('scroll', function() {
+    if (hoveredGripSection && sectionGrip.style.display === 'flex') positionSectionGrip(hoveredGripSection);
+  }, { passive: true });
+  window.addEventListener('resize', function() {
+    if (hoveredGripSection && sectionGrip.style.display === 'flex') positionSectionGrip(hoveredGripSection);
+  });
+
   // Gather section info and send to parent
   allSections.forEach(function(el, i) {
     if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
     var id = el.id || ('tp-auto-section-' + i);
     if (!el.id) el.id = id;
     el.setAttribute('data-tp-section-idx', String(i));
+
+    /* Bring the floating grip in whenever the cursor enters this section. */
+    el.addEventListener('mouseenter', function() { cancelGripHide(); showGripFor(el); });
+    el.addEventListener('mouseleave', function() { scheduleGripHide(); });
 
     var cls = el.className || '';
     var label = 'Section';
@@ -1023,7 +1307,7 @@ const INLINE_EDIT_SCRIPT = `
         selectedSectionEl = null;
         parent.postMessage({ type: 'tipote:text-edit', tag: 'section-delete', text: '' }, '*');
         setTimeout(function() {
-          var remaining = document.querySelectorAll(sectionSelectors);
+          var remaining = dedupeNested(document.querySelectorAll(sectionSelectors));
           var updated = [];
           remaining.forEach(function(el, i) {
             if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
@@ -1054,7 +1338,7 @@ const INLINE_EDIT_SCRIPT = `
       }
       parent.postMessage({ type: 'tipote:text-edit', tag: 'section-move', text: '' }, '*');
       setTimeout(function() {
-        var remaining = document.querySelectorAll(sectionSelectors);
+        var remaining = dedupeNested(document.querySelectorAll(sectionSelectors));
         var updated = [];
         remaining.forEach(function(el, i) {
           if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
@@ -1123,7 +1407,7 @@ const INLINE_EDIT_SCRIPT = `
       }
       parent.postMessage({ type: 'tipote:text-edit', tag: 'section-reorder', text: '' }, '*');
       setTimeout(function() {
-        var remaining = document.querySelectorAll(sectionSelectors);
+        var remaining = dedupeNested(document.querySelectorAll(sectionSelectors));
         var updated = [];
         remaining.forEach(function(el, i) {
           if (el.closest('.tipote-toolbar') || el.closest('.tipote-illust-overlay')) return;
@@ -1497,20 +1781,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     mobile: Array.isArray(initialOrder.mobile) ? initialOrder.mobile : [],
     desktop: Array.isArray(initialOrder.desktop) ? initialOrder.desktop : [],
   });
-
-  // First-time intro: one-shot banner explaining mobile/desktop order.
-  // Persisted in localStorage so it only shows once per browser.
-  const [showOrderIntro, setShowOrderIntro] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      if (!window.localStorage.getItem("tipote:order-intro-seen")) setShowOrderIntro(true);
-    } catch { /* private mode etc. — just don't show */ }
-  }, []);
-  const dismissOrderIntro = useCallback(() => {
-    setShowOrderIntro(false);
-    try { window.localStorage.setItem("tipote:order-intro-seen", "1"); } catch { /* ignore */ }
-  }, []);
 
   // Drag-and-drop sensors for reordering sections. TouchSensor has a small
   // delay so tapping on the arrow buttons inside a row doesn't start a drag.
@@ -1894,7 +2164,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       "illust-delete", "illust-color",
       "section-delete", "section-move", "section-order", "section-reorder",
       "section-style", "element-add", "element-delete", "element-duplicate",
-      "element-move", "element-style", "text-color",
+      "element-move", "element-reorder-dnd", "element-style", "text-color",
     ]);
 
     const handler = (e: MessageEvent) => {
@@ -2398,6 +2668,26 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
     });
   }, [effectiveOrderFor, orderDevice, sections, sectionOrder, applySectionOrder]);
 
+  // Receive the drag-and-drop reorder emitted by the in-iframe grip
+  // handle. Same per-viewport semantics as the dnd-kit handler above:
+  // only the currently-previewed viewport's order is updated, the
+  // other viewport keeps its independent order.
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== "tipote:section-dnd-reorder") return;
+      if (!Array.isArray(e.data.orderedIds)) return;
+      const ids = e.data.orderedIds as string[];
+      const other: OrderDevice = orderDevice === "mobile" ? "desktop" : "mobile";
+      applySectionOrder({
+        ...sectionOrder,
+        [orderDevice]: ids,
+        [other]: sectionOrder[other].length ? sectionOrder[other] : effectiveOrderFor(other, sections),
+      });
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [orderDevice, sectionOrder, sections, applySectionOrder, effectiveOrderFor]);
+
   const addElement = useCallback((elementType: string) => {
     const iframe = iframeRef.current;
     if (iframe?.contentWindow) {
@@ -2796,7 +3086,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               <div>
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs text-muted-foreground">{t("controls.size")}</span>
-                                  <span className="text-[10px] text-muted-foreground/60">{selectedElement.styles.fontSize || "16px"}</span>
+                                  <span className="text-[10px] text-muted-foreground/80">{selectedElement.styles.fontSize || "16px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -2912,10 +3202,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       // Re-apply gradient with new angle
                                     }}
                                   />
-                                  <span className="text-[9px] text-muted-foreground/60">deg</span>
+                                  <span className="text-[9px] text-muted-foreground/80">deg</span>
                                   <button
                                     onClick={() => updateElementStyle(selectedElement.elId, { backgroundImage: "none" })}
-                                    className="p-1 rounded hover:bg-muted text-muted-foreground/60"
+                                    className="p-1 rounded hover:bg-muted text-muted-foreground/80"
                                     title={t("controls.removeGradient")}
                                   >
                                     <X className="w-3 h-3" />
@@ -2926,7 +3216,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               <div>
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs text-muted-foreground">{t("controls.borderRadius")}</span>
-                                  <span className="text-[10px] text-muted-foreground/60">{selectedElement.styles.borderRadius || "0px"}</span>
+                                  <span className="text-[10px] text-muted-foreground/80">{selectedElement.styles.borderRadius || "0px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -2950,7 +3240,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                     onChange={(e) => updateElementStyle(selectedElement.elId, { borderWidth: Number(e.target.value), borderStyle: Number(e.target.value) > 0 ? "solid" : "none" })}
                                     className="w-12 px-1.5 py-1 rounded text-[10px] bg-muted border border-border text-foreground text-center"
                                   />
-                                  <span className="text-[9px] text-muted-foreground/60">px</span>
+                                  <span className="text-[9px] text-muted-foreground/80">px</span>
                                   <input
                                     type="color"
                                     value={selectedElement.styles.borderColor || "#000000"}
@@ -2967,7 +3257,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                   value={selectedElement.href || ""}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { href: e.target.value })}
                                   placeholder="https://..."
-                                  className="w-full px-2 py-1.5 rounded-lg text-xs bg-muted border border-border text-foreground placeholder:text-muted-foreground/50"
+                                  className="w-full px-2 py-1.5 rounded-lg text-xs bg-muted border border-border text-foreground placeholder:text-muted-foreground/70"
                                 />
                               </div>
                             </>
@@ -2996,7 +3286,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               <div>
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs text-muted-foreground">{t("controls.borderRadius")}</span>
-                                  <span className="text-[10px] text-muted-foreground/60">{selectedElement.styles.borderRadius || "0px"}</span>
+                                  <span className="text-[10px] text-muted-foreground/80">{selectedElement.styles.borderRadius || "0px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -3044,7 +3334,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                                 {sectionBgMode === "color" ? (
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[10px] text-muted-foreground/60">{t("controls.color")}</span>
+                                    <span className="text-[10px] text-muted-foreground/80">{t("controls.color")}</span>
                                     <input
                                       type="color"
                                       value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#ffffff"}
@@ -3094,7 +3384,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                         updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${e.target.value}deg, ${c1}, ${c2})` });
                                       }}
                                     />
-                                    <span className="text-[9px] text-muted-foreground/60">°</span>
+                                    <span className="text-[9px] text-muted-foreground/80">°</span>
                                   </div>
                                 )}
                               </div>
@@ -3103,7 +3393,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               <div>
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs text-muted-foreground">{t("controls.paddingV")}</span>
-                                  <span className="text-[10px] text-muted-foreground/60">{parseInt(selectedElement.styles.paddingTop) || 0}px</span>
+                                  <span className="text-[10px] text-muted-foreground/80">{parseInt(selectedElement.styles.paddingTop) || 0}px</span>
                                 </div>
                                 <input
                                   type="range"
@@ -3117,7 +3407,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               <div>
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs text-muted-foreground">{t("controls.paddingH")}</span>
-                                  <span className="text-[10px] text-muted-foreground/60">{parseInt(selectedElement.styles.paddingLeft) || 0}px</span>
+                                  <span className="text-[10px] text-muted-foreground/80">{parseInt(selectedElement.styles.paddingLeft) || 0}px</span>
                                 </div>
                                 <input
                                   type="range"
@@ -3134,7 +3424,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 <div>
                                   <div className="flex items-center justify-between mb-1">
                                     <span className="text-xs text-muted-foreground">{t("controls.borderRadius")}</span>
-                                    <span className="text-[10px] text-muted-foreground/60">{selectedElement.styles.borderRadius || "0px"}</span>
+                                    <span className="text-[10px] text-muted-foreground/80">{selectedElement.styles.borderRadius || "0px"}</span>
                                   </div>
                                   <input
                                     type="range"
@@ -3151,10 +3441,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                           {/* ── COMMON: Margin, Border, Animation (all elements) ── */}
                           <div className="pt-2 border-t border-border">
-                            <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wide">{t("controls.spacing")}</span>
+                            <span className="text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-wide">{t("controls.spacing")}</span>
                             <div className="grid grid-cols-2 gap-2 mt-1.5">
                               <div>
-                                <span className="text-[9px] text-muted-foreground/60">{t("controls.marginTop")}</span>
+                                <span className="text-[9px] text-muted-foreground/80">{t("controls.marginTop")}</span>
                                 <input
                                   type="number"
                                   min={0}
@@ -3165,7 +3455,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 />
                               </div>
                               <div>
-                                <span className="text-[9px] text-muted-foreground/60">{t("controls.marginBottom")}</span>
+                                <span className="text-[9px] text-muted-foreground/80">{t("controls.marginBottom")}</span>
                                 <input
                                   type="number"
                                   min={0}
@@ -3190,16 +3480,6 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                             </select>
                           </div>
 
-                          {/* AI Element Editing */}
-                          <div className="pt-2 border-t border-border">
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <Sparkles className="w-3 h-3 text-primary" />
-                              <span className="text-xs text-muted-foreground">{t("chat.editWithAi")}</span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground/50 mb-1.5">
-                              {t("chat.placeholder")}
-                            </p>
-                          </div>
                         </div>
                       </>
                     ) : (
@@ -3217,101 +3497,24 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           </div>
                         )}
 
-                        {/* Sections list — drag-and-drop + always-visible arrows */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide">{t("elementTypes.section")}s</p>
-                            {sections.length > 1 && (
-                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
-                                <GripVertical className="w-3 h-3" />
-                                <span>{t("reorder.hint")}</span>
-                              </span>
-                            )}
-                          </div>
-                          {/* One-shot intro: first time users land on the editor */}
-                          {showOrderIntro && sections.length > 1 && (
-                            <div className="mb-2 rounded-lg border border-amber-300/30 bg-amber-500/10 p-2.5 text-[11px] text-amber-100">
-                              <div className="flex items-start gap-2">
-                                <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-300" />
-                                <div className="min-w-0">
-                                  <p className="font-semibold mb-0.5">{t("reorder.introTitle")}</p>
-                                  <p className="text-amber-100/80 leading-snug">{t("reorder.introBody")}</p>
-                                  <div className="mt-1.5 flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={dismissOrderIntro}
-                                      className="px-2 py-0.5 rounded-md bg-amber-300/30 hover:bg-amber-300/50 text-amber-50 font-medium"
-                                    >
-                                      {t("reorder.introGotIt")}
-                                    </button>
-                                    <a
-                                      href="/support/article/ordre-mobile-desktop"
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="underline underline-offset-2 text-amber-100/90 hover:text-amber-50"
-                                    >
-                                      {t("reorder.learnMore")}
-                                    </a>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          {/* Active-viewport badge: which order is being edited now */}
-                          {sections.length > 1 && (
-                            <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-blue-400/30 bg-blue-500/10 px-2 py-1.5 text-[10px] text-blue-100">
-                              <span className="flex items-center gap-1.5">
-                                {orderDevice === "mobile" ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
-                                <span className="font-medium">{t(orderDevice === "mobile" ? "reorder.editingMobileOrder" : "reorder.editingDesktopOrder")}</span>
-                              </span>
-                              <a
-                                href="/support/article/ordre-mobile-desktop"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-1 text-blue-200/80 hover:text-blue-100 underline underline-offset-2"
-                              >
-                                <HelpCircle className="w-3 h-3" />
-                                <span>{t("reorder.learnMore")}</span>
-                              </a>
-                            </div>
-                          )}
-                          <div className="space-y-1">
-                            {sections.length === 0 && (
-                              <p className="text-[11px] text-muted-foreground/50 py-2">Clique sur un élément dans l&apos;aperçu</p>
-                            )}
-                            {sections.length > 0 && (
-                              <DndContext
-                                sensors={sortSensors}
-                                collisionDetection={closestCenter}
-                                onDragEnd={handleSectionsDragEnd}
-                              >
-                                <SortableContext
-                                  items={orderedSections.map((s) => s.id)}
-                                  strategy={verticalListSortingStrategy}
-                                >
-                                  {orderedSections.map((s) => (
-                                    <SortableSectionRow
-                                      key={s.id}
-                                      section={s}
-                                      onSelect={() => selectSection(s.id)}
-                                      onMoveUp={() => moveSection(s.id, "up")}
-                                      onMoveDown={() => moveSection(s.id, "down")}
-                                      onDelete={() => deleteSection(s.id)}
-                                      labelMoveUp={t("elementActions.moveUp")}
-                                      labelMoveDown={t("elementActions.moveDown")}
-                                      labelDelete={t("elementActions.delete")}
-                                      labelDrag={t("reorder.drag")}
-                                    />
-                                  ))}
-                                </SortableContext>
-                              </DndContext>
-                            )}
-                          </div>
+                        {/* Reorder hint — actual drag-and-drop happens in
+                            the preview via the grip handle that appears
+                            top-left of each section / selected element.
+                            The active device toggle decides which viewport
+                            order is affected. */}
+                        <div className="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
+                          <p className="text-[11px] text-muted-foreground leading-snug">
+                            <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                              <GripVertical className="w-3 h-3" /> {t("reorder.hintTitle")}
+                            </span>
+                            <br />
+                            {t("reorder.hintBody")}
+                          </p>
                         </div>
 
                         {/* Element palette */}
                         <div className="pt-3 border-t border-border">
-                          <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide mb-2">{t("addElement.title")}</p>
+                          <p className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wide mb-2">{t("addElement.title")}</p>
                           <div className="grid grid-cols-3 gap-1.5">
                             {ELEMENT_PALETTE_KEYS.map((el) => {
                               const Icon = el.icon;
@@ -3363,13 +3566,35 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
               {/* ──── PARAMETRES TAB ──── */}
               {leftTab === "parametres" && (
                 <div className="p-3 space-y-4">
+                  {/* Domaine de partage — visible iff the creator has at
+                      least one verified custom domain on this project.
+                      Default already prefers verified custom domain when
+                      no preference is stored (cf. useShareDomain). */}
+                  {shareDomainOptions.length > 1 && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+                        <Globe className="w-3 h-3" /> {tc("shareDomain")}
+                      </label>
+                      <ShareDomainPicker
+                        label={tc("shareDomain")}
+                        value={shareDomain}
+                        options={shareDomainOptions}
+                        onChange={setShareDomain}
+                      />
+                    </div>
+                  )}
+
                   {/* URL / Slug */}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
                       <Link2 className="w-3 h-3" /> URL
                     </label>
                     <div className="flex items-center gap-1 bg-muted rounded-lg px-2 py-1.5 border border-border text-xs">
-                      <span className="text-muted-foreground/60 whitespace-nowrap">/p/</span>
+                      <span className="text-muted-foreground/80 whitespace-nowrap">
+                        {shareDomain
+                          ? (isCustomDomain ? `${shareDomain}/` : `${shareDomain}/p/`)
+                          : "/p/"}
+                      </span>
                       <input
                         type="text"
                         value={page.slug}
@@ -3390,79 +3615,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     <textarea
                       value={page.meta_description || ""}
                       onChange={(e) => handleSettingUpdate("meta_description", e.target.value)}
-                      className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs resize-none text-foreground placeholder:text-muted-foreground/50"
+                      className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs resize-none text-foreground placeholder:text-muted-foreground/70"
                       rows={2}
                       maxLength={160}
                       placeholder="Description pour Google..."
                     />
-                  </div>
-
-                  {/* Legal links — Mentions / CGV / Confidentialité.
-                      Saved via the column AND mirrored into content_data
-                      server-side so the footer renderer picks them up.
-                      The Import button pulls them from the user's
-                      business profile (Réglages → Mentions légales). */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                        <FileText className="w-3 h-3" /> Liens légaux du footer
-                      </label>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const r = await fetch("/api/profile");
-                            const j = await r.json().catch(() => null);
-                            const p = j?.ok ? j.profile : null;
-                            const t = String(p?.terms_url ?? "").trim();
-                            const c = String(p?.cgv_url ?? "").trim();
-                            const pv = String(p?.privacy_url ?? "").trim();
-                            if (!t && !c && !pv) {
-                              toast.warning("Aucune URL trouvée dans tes réglages. Renseigne-les d'abord dans Réglages → Mentions légales.");
-                              return;
-                            }
-                            // Apply each non-empty value via the same
-                            // debounced save path the inputs use, so
-                            // the public footer rebuilds automatically.
-                            if (t) handleSettingUpdate("legal_mentions_url", t);
-                            if (c) handleSettingUpdate("legal_cgv_url", c);
-                            if (pv) handleSettingUpdate("legal_privacy_url", pv);
-                            toast.success("URLs légales importées depuis tes réglages.");
-                          } catch {
-                            toast.error("Impossible de récupérer les URLs depuis les réglages.");
-                          }
-                        }}
-                        className="text-[10px] text-muted-foreground/80 hover:text-foreground underline underline-offset-2"
-                      >
-                        Importer depuis mes réglages
-                      </button>
-                    </div>
-                    <div className="space-y-1.5">
-                      <input
-                        type="url"
-                        value={page.legal_mentions_url || ""}
-                        onChange={(e) => handleSettingUpdate("legal_mentions_url", e.target.value)}
-                        placeholder="Mentions légales — https://…"
-                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
-                      />
-                      <input
-                        type="url"
-                        value={page.legal_cgv_url || ""}
-                        onChange={(e) => handleSettingUpdate("legal_cgv_url", e.target.value)}
-                        placeholder="CGV — https://…"
-                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
-                      />
-                      <input
-                        type="url"
-                        value={page.legal_privacy_url || ""}
-                        onChange={(e) => handleSettingUpdate("legal_privacy_url", e.target.value)}
-                        placeholder="Politique de confidentialité — https://…"
-                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
-                      />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">
-                      Les liens apparaîtront dans le footer. Vide les champs pour les retirer.
-                    </p>
                   </div>
 
                   {/* Systeme.io tag */}
@@ -3473,7 +3630,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     <SioTagPicker
                       value={page.sio_capture_tag || ""}
                       onChange={(v) => handleSettingUpdate("sio_capture_tag", v)}
-                      variant="dark"
+                      variant="light"
                       placeholder="capture-ebook"
                     />
                   </div>
@@ -3489,7 +3646,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         <img src={page.og_image_url} alt="OG" className="w-full h-20 object-cover" />
                         <button
                           onClick={() => handleSettingUpdate("og_image_url", "")}
-                          className="absolute top-1 right-1 p-1 rounded bg-black/50 text-foreground hover:bg-black/70"
+                          className="absolute top-1 right-1 p-1 rounded bg-black/50 text-white hover:bg-black/70"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -3497,7 +3654,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     ) : (
                       <button
                         onClick={handleOgImageUpload}
-                        className="w-full py-4 border border-dashed border-border rounded-lg text-xs text-muted-foreground/60 hover:bg-muted/40 flex flex-col items-center gap-1"
+                        className="w-full py-4 border border-dashed border-border rounded-lg text-xs text-muted-foreground/80 hover:bg-muted/40 flex flex-col items-center gap-1"
                       >
                         <Upload className="w-4 h-4" />
                         Ajouter
@@ -3514,14 +3671,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         value={page.facebook_pixel_id || ""}
                         onChange={(e) => handleSettingUpdate("facebook_pixel_id", e.target.value.replace(/[^0-9]/g, ""))}
                         placeholder="Facebook Pixel ID"
-                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
+                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/70"
                       />
                       <input
                         type="text"
                         value={page.google_tag_id || ""}
                         onChange={(e) => handleSettingUpdate("google_tag_id", e.target.value.replace(/[^a-zA-Z0-9-]/g, ""))}
                         placeholder="Google Tag (G-XXXX)"
-                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
+                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/70"
                       />
                     </div>
                   </div>
@@ -3568,11 +3725,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="p-2 rounded-lg bg-muted text-center">
                         <p className="text-lg font-bold text-foreground">{page.views_count}</p>
-                        <p className="text-[10px] text-muted-foreground/60">{t("actions.views")}</p>
+                        <p className="text-[10px] text-muted-foreground/80">{t("actions.views")}</p>
                       </div>
                       <div className="p-2 rounded-lg bg-muted text-center">
                         <p className="text-lg font-bold text-foreground">{page.leads_count}</p>
-                        <p className="text-[10px] text-muted-foreground/60">Leads</p>
+                        <p className="text-[10px] text-muted-foreground/80">Leads</p>
                       </div>
                     </div>
                     {page.leads_count > 0 && (

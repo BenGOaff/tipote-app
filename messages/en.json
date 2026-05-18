@@ -3205,7 +3205,9 @@
       "learnMore": "Learn more",
       "introTitle": "Tip: different order on mobile vs desktop",
       "introBody": "Click 📱 or 🖥️ at the top to pick the screen, then drag your blocks. The other screen stays untouched.",
-      "introGotIt": "Got it"
+      "introGotIt": "Got it",
+      "hintTitle": "Drag to reorder",
+      "hintBody": "Hover a section or element in the preview: a purple handle appears in the top-left corner. Drag it to move. The order applies to the currently previewed viewport."
     },
     "controls": {
       "font": "Font",
