@@ -3141,7 +3141,8 @@
   "pageBuilder": {
     "tabs": {
       "builder": "المُنشئ",
-      "settings": "الإعدادات"
+      "settings": "الإعدادات",
+      "chat": "محادثة"
     },
     "nav": {
       "back": "→ رجوع",

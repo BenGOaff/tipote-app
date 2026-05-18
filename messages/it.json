@@ -3141,7 +3141,8 @@
   "pageBuilder": {
     "tabs": {
       "builder": "Builder",
-      "settings": "Impostazioni"
+      "settings": "Impostazioni",
+      "chat": "Chat"
     },
     "nav": {
       "back": "← Indietro",

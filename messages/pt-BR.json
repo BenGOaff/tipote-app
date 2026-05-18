@@ -3448,7 +3448,8 @@
   "pageBuilder": {
     "tabs": {
       "builder": "Construtor",
-      "settings": "Configurações"
+      "settings": "Configurações",
+      "chat": "Chat"
     },
     "nav": {
       "back": "← Voltar",

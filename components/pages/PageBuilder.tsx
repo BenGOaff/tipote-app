@@ -169,7 +169,7 @@ const DEVICE_WIDTHS: Record<Device, { width: number; icon: typeof Monitor }> = {
 
 // ---------- Left sidebar tabs ----------
 
-type LeftTab = "builder" | "parametres";
+type LeftTab = "builder" | "parametres" | "chat";
 
 // ---------- Selected element info from iframe ----------
 
@@ -260,10 +260,10 @@ function SortableSectionRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all text-xs border text-white/80 ${
+      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all text-xs border text-foreground ${
         isDragging
-          ? "bg-white/15 border-blue-400/50 shadow-lg"
-          : "bg-transparent border-transparent hover:bg-white/10"
+          ? "bg-muted border-primary/40 shadow-sm"
+          : "bg-transparent border-transparent hover:bg-muted"
       }`}
     >
       {/* Drag handle — always visible, touch-friendly */}
@@ -271,7 +271,7 @@ function SortableSectionRow({
         type="button"
         {...attributes}
         {...listeners}
-        className="shrink-0 p-1 -ml-1 rounded cursor-grab active:cursor-grabbing touch-none text-white/50 hover:text-white/90 hover:bg-white/10"
+        className="shrink-0 p-1 -ml-1 rounded cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground hover:bg-muted"
         title={labelDrag}
         aria-label={labelDrag}
         onClick={(e) => e.stopPropagation()}
@@ -286,7 +286,7 @@ function SortableSectionRow({
       >
         <span className="block truncate">{section.label}</span>
         {section.anchorId && section.anchorId.startsWith("sc-") && (
-          <span className="block text-[9px] text-blue-300/60 font-mono truncate">#{section.anchorId}</span>
+          <span className="block text-[9px] text-primary/60 font-mono truncate">#{section.anchorId}</span>
         )}
       </button>
       {/* Always-visible controls — critical for mobile / non-technical users */}
@@ -294,7 +294,7 @@ function SortableSectionRow({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
-          className="p-1 rounded hover:bg-white/15 text-white/70 hover:text-white"
+          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
           title={labelMoveUp}
           aria-label={labelMoveUp}
         >
@@ -303,7 +303,7 @@ function SortableSectionRow({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
-          className="p-1 rounded hover:bg-white/15 text-white/70 hover:text-white"
+          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
           title={labelMoveDown}
           aria-label={labelMoveDown}
         >
@@ -312,7 +312,7 @@ function SortableSectionRow({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
+          className="p-1 rounded hover:bg-destructive/10 text-destructive hover:text-destructive"
           title={labelDelete}
           aria-label={labelDelete}
         >
@@ -2652,30 +2652,37 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       {/* ════════════════ MAIN AREA ════════════════ */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
-        {/* ──── LEFT SIDEBAR (Builder + Paramètres + Chat IA) ──── */}
+        {/* ──── LEFT SIDEBAR — same shape as the quiz editor sidebar
+             (w-72, light theme, primary-accent active tab). Three top-level
+             tabs: Builder / Paramètres / Chat (the chat used to sit at the
+             bottom of the Builder tab; promoting it to its own tab matches
+             the quiz editor's flat tab hierarchy and frees vertical room
+             for the element/section list). ──── */}
         {sidebarOpen && (
-          <div className="w-[300px] shrink-0 bg-[#18181b] text-white border-r border-[#27272a] flex flex-col overflow-hidden">
+          <aside className="w-72 shrink-0 border-r bg-background flex flex-col overflow-hidden">
 
-            {/* Tab switcher */}
-            <div className="flex border-b border-white/10">
-              <button
-                onClick={() => setLeftTab("builder")}
-                className={`flex-1 py-2 text-xs font-semibold text-center transition-colors ${
-                  leftTab === "builder" ? "text-white border-b-2 border-white bg-white/10" : "text-white/60 hover:text-white/80"
-                }`}
-              >
-                <Layers className="w-3 h-3 inline mr-1" />
-                {t("tabs.builder")}
-              </button>
-              <button
-                onClick={() => setLeftTab("parametres")}
-                className={`flex-1 py-2 text-xs font-semibold text-center transition-colors ${
-                  leftTab === "parametres" ? "text-white border-b-2 border-white bg-white/10" : "text-white/60 hover:text-white/80"
-                }`}
-              >
-                <Settings className="w-3 h-3 inline mr-1" />
-                {t("tabs.settings")}
-              </button>
+            {/* Tab switcher — same styling as QuizDetailClient */}
+            <div className="flex border-b">
+              {(["builder", "parametres", "chat"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setLeftTab(tab)}
+                  className={`flex-1 px-2 py-2.5 text-xs font-medium transition-colors ${
+                    leftTab === tab
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab === "builder" && <Layers className="w-3 h-3 inline mr-1" />}
+                  {tab === "parametres" && <Settings className="w-3 h-3 inline mr-1" />}
+                  {tab === "chat" && <Sparkles className="w-3 h-3 inline mr-1" />}
+                  {tab === "builder"
+                    ? t("tabs.builder")
+                    : tab === "parametres"
+                      ? t("tabs.settings")
+                      : t("tabs.chat")}
+                </button>
+              ))}
             </div>
 
             {/* Tab content */}
@@ -2691,8 +2698,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       <>
                         {/* Breadcrumb + Back */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-[10px] text-white/50 overflow-hidden">
-                            <button onClick={deselectElement} className="text-blue-300 hover:underline shrink-0">
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70 overflow-hidden">
+                            <button onClick={deselectElement} className="text-primary hover:underline shrink-0">
                               ← {t("nav.back")}
                             </button>
                             {selectedElement.breadcrumb.length > 0 && (
@@ -2711,11 +2718,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                         {/* Element type header */}
                         <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-semibold text-white">{elTypeLabels[selectedElement.elType] || t("elementTypes.element")}</h3>
+                          <h3 className="text-sm font-semibold text-foreground">{elTypeLabels[selectedElement.elType] || t("elementTypes.element")}</h3>
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => duplicateElement(selectedElement.elId)}
-                              className="p-1 rounded hover:bg-white/10 text-white/60"
+                              className="p-1 rounded hover:bg-muted text-muted-foreground"
                               title={t("elementActions.duplicate")}
                             >
                               <CopyIcon className="w-3.5 h-3.5" />
@@ -2725,7 +2732,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 if (selectedElement.elType === "section") moveSection(selectedElement.elId, "up");
                                 else moveElement(selectedElement.elId, "up");
                               }}
-                              className="p-1 rounded hover:bg-white/10 text-white/60"
+                              className="p-1 rounded hover:bg-muted text-muted-foreground"
                               title={t("elementActions.moveUp")}
                             >
                               <ChevronUp className="w-3.5 h-3.5" />
@@ -2735,14 +2742,14 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 if (selectedElement.elType === "section") moveSection(selectedElement.elId, "down");
                                 else moveElement(selectedElement.elId, "down");
                               }}
-                              className="p-1 rounded hover:bg-white/10 text-white/60"
+                              className="p-1 rounded hover:bg-muted text-muted-foreground"
                               title={t("elementActions.moveDown")}
                             >
                               <ChevronDown className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => deleteElement(selectedElement.elId)}
-                              className="p-1 rounded hover:bg-red-500/20 text-red-400"
+                              className="p-1 rounded hover:bg-destructive/10 text-destructive"
                               title={t("elementActions.delete")}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -2758,11 +2765,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                             <>
                               {/* Google Font picker */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">{t("controls.font")}</span>
+                                <span className="text-xs text-muted-foreground block mb-1">{t("controls.font")}</span>
                                 <select
                                   value={(() => { const ff = selectedElement.styles.fontFamily || ""; const match = GOOGLE_FONTS.find(f => ff.includes(f)); return match || ""; })()}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { fontFamily: e.target.value ? `'${e.target.value}', sans-serif` : "inherit" })}
-                                  className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white"
+                                  className="w-full px-2 py-1.5 rounded-lg text-xs bg-muted border border-border text-foreground"
                                 >
                                   <option value="" className="text-gray-900 dark:text-gray-50">{t("controls.default")}</option>
                                   {GOOGLE_FONTS.map(f => <option key={f} value={f} className="text-gray-900 dark:text-gray-50">{f}</option>)}
@@ -2770,7 +2777,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               </div>
 
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-white/60">{t("controls.textColor")}</span>
+                                <span className="text-xs text-muted-foreground">{t("controls.textColor")}</span>
                                 <input
                                   type="color"
                                   value={selectedElement.styles.color || "#000000"}
@@ -2781,15 +2788,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                     }
                                     setSelectedElement((prev) => prev ? { ...prev, styles: { ...prev.styles, color: e.target.value } } : null);
                                   }}
-                                  className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                  className="w-6 h-6 rounded border border-border cursor-pointer"
                                 />
                               </div>
 
                               {/* Font size */}
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">{t("controls.size")}</span>
-                                  <span className="text-[10px] text-white/40">{selectedElement.styles.fontSize || "16px"}</span>
+                                  <span className="text-xs text-muted-foreground">{t("controls.size")}</span>
+                                  <span className="text-[10px] text-muted-foreground/60">{selectedElement.styles.fontSize || "16px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -2803,7 +2810,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               {/* Font weight */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">{t("controls.weight")}</span>
+                                <span className="text-xs text-muted-foreground block mb-1">{t("controls.weight")}</span>
                                 <div className="flex gap-1">
                                   {[
                                     { v: "400", l: t("controls.weightNormal") },
@@ -2816,8 +2823,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       onClick={() => updateElementStyle(selectedElement.elId, { fontWeight: fw.v })}
                                       className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
                                         String(selectedElement.styles.fontWeight) === fw.v
-                                          ? "bg-white/20 border-white/40 text-white font-medium"
-                                          : "border-white/10 text-white/50 hover:bg-white/10"
+                                          ? "bg-muted border-border text-foreground font-medium"
+                                          : "border-border text-muted-foreground/70 hover:bg-muted"
                                       }`}
                                     >
                                       {fw.l}
@@ -2828,7 +2835,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               {/* Text alignment */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">{t("controls.alignment")}</span>
+                                <span className="text-xs text-muted-foreground block mb-1">{t("controls.alignment")}</span>
                                 <div className="flex gap-1">
                                   {[
                                     { v: "left", l: t("controls.alignLeft") },
@@ -2840,8 +2847,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       onClick={() => updateElementStyle(selectedElement.elId, { textAlign: ta.v })}
                                       className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
                                         selectedElement.styles.textAlign === ta.v
-                                          ? "bg-white/20 border-white/40 text-white font-medium"
-                                          : "border-white/10 text-white/50 hover:bg-white/10"
+                                          ? "bg-muted border-border text-foreground font-medium"
+                                          : "border-border text-muted-foreground/70 hover:bg-muted"
                                       }`}
                                     >
                                       {ta.l}
@@ -2856,18 +2863,18 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           {(selectedElement.elType === "button" || selectedElement.elType === "link") && (
                             <>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-white/60">{t("controls.bgColor")}</span>
+                                <span className="text-xs text-muted-foreground">{t("controls.bgColor")}</span>
                                 <input
                                   type="color"
                                   value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#5D6CDB"}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { backgroundColor: e.target.value })}
-                                  className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                  className="w-6 h-6 rounded border border-border cursor-pointer"
                                 />
                               </div>
 
                               {/* Gradient for button */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">{t("controls.gradient")}</span>
+                                <span className="text-xs text-muted-foreground block mb-1">{t("controls.gradient")}</span>
                                 <div className="flex gap-1.5 items-center">
                                   <input
                                     type="color"
@@ -2877,7 +2884,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       const angle = (document.getElementById("btn-grad-angle") as HTMLInputElement)?.value || "135";
                                       updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${e.target.value}, ${c2})` });
                                     }}
-                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                    className="w-6 h-6 rounded border border-border cursor-pointer"
                                     title={t("controls.color1")}
                                   />
                                   <input
@@ -2890,7 +2897,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       const angle = (document.getElementById("btn-grad-angle") as HTMLInputElement)?.value || "135";
                                       updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${c1}, ${e.target.value})` });
                                     }}
-                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                    className="w-6 h-6 rounded border border-border cursor-pointer"
                                     title={t("controls.color2")}
                                   />
                                   <input
@@ -2899,16 +2906,16 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                     defaultValue={135}
                                     min={0}
                                     max={360}
-                                    className="w-14 px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                    className="w-14 px-1.5 py-1 rounded text-[10px] bg-muted border border-border text-foreground text-center"
                                     title="Angle (deg)"
                                     onChange={(e) => {
                                       // Re-apply gradient with new angle
                                     }}
                                   />
-                                  <span className="text-[9px] text-white/40">deg</span>
+                                  <span className="text-[9px] text-muted-foreground/60">deg</span>
                                   <button
                                     onClick={() => updateElementStyle(selectedElement.elId, { backgroundImage: "none" })}
-                                    className="p-1 rounded hover:bg-white/10 text-white/40"
+                                    className="p-1 rounded hover:bg-muted text-muted-foreground/60"
                                     title={t("controls.removeGradient")}
                                   >
                                     <X className="w-3 h-3" />
@@ -2918,8 +2925,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">{t("controls.borderRadius")}</span>
-                                  <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
+                                  <span className="text-xs text-muted-foreground">{t("controls.borderRadius")}</span>
+                                  <span className="text-[10px] text-muted-foreground/60">{selectedElement.styles.borderRadius || "0px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -2933,7 +2940,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                               {/* Border */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">{t("controls.border")}</span>
+                                <span className="text-xs text-muted-foreground block mb-1">{t("controls.border")}</span>
                                 <div className="flex gap-1.5 items-center">
                                   <input
                                     type="number"
@@ -2941,26 +2948,26 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                     max={10}
                                     value={parseInt(selectedElement.styles.borderWidth) || 0}
                                     onChange={(e) => updateElementStyle(selectedElement.elId, { borderWidth: Number(e.target.value), borderStyle: Number(e.target.value) > 0 ? "solid" : "none" })}
-                                    className="w-12 px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                    className="w-12 px-1.5 py-1 rounded text-[10px] bg-muted border border-border text-foreground text-center"
                                   />
-                                  <span className="text-[9px] text-white/40">px</span>
+                                  <span className="text-[9px] text-muted-foreground/60">px</span>
                                   <input
                                     type="color"
                                     value={selectedElement.styles.borderColor || "#000000"}
                                     onChange={(e) => updateElementStyle(selectedElement.elId, { borderColor: e.target.value })}
-                                    className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                    className="w-6 h-6 rounded border border-border cursor-pointer"
                                   />
                                 </div>
                               </div>
 
                               <div>
-                                <span className="text-xs text-white/60 block mb-1">{t("controls.linkUrl")}</span>
+                                <span className="text-xs text-muted-foreground block mb-1">{t("controls.linkUrl")}</span>
                                 <input
                                   type="url"
                                   value={selectedElement.href || ""}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { href: e.target.value })}
                                   placeholder="https://..."
-                                  className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white placeholder:text-white/30"
+                                  className="w-full px-2 py-1.5 rounded-lg text-xs bg-muted border border-border text-foreground placeholder:text-muted-foreground/50"
                                 />
                               </div>
                             </>
@@ -2970,7 +2977,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           {selectedElement.elType === "image" && (
                             <>
                               {selectedElement.imgSrc && (
-                                <div className="rounded-lg border border-white/20 overflow-hidden">
+                                <div className="rounded-lg border border-border overflow-hidden">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img src={selectedElement.imgSrc} alt="" className="w-full h-24 object-cover" />
                                 </div>
@@ -2981,15 +2988,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                     handleIframeImageClick(selectedElement.imgId, !!selectedElement.imgSrc, false);
                                   }
                                 }}
-                                className="w-full py-2 border border-dashed border-white/20 rounded-lg text-xs text-white/60 hover:bg-white/10 flex items-center justify-center gap-1.5"
+                                className="w-full py-2 border border-dashed border-border rounded-lg text-xs text-muted-foreground hover:bg-muted flex items-center justify-center gap-1.5"
                               >
                                 <Upload className="w-3.5 h-3.5" />
                                 {selectedElement.imgSrc ? t("publish.changeImage") : t("publish.addImage")}
                               </button>
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">{t("controls.borderRadius")}</span>
-                                  <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
+                                  <span className="text-xs text-muted-foreground">{t("controls.borderRadius")}</span>
+                                  <span className="text-[10px] text-muted-foreground/60">{selectedElement.styles.borderRadius || "0px"}</span>
                                 </div>
                                 <input
                                   type="range"
@@ -3008,7 +3015,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                             <>
                               {/* Toggle: Solid color vs Gradient */}
                               <div>
-                                <span className="text-xs text-white/60 block mb-1.5">{t("controls.background")}</span>
+                                <span className="text-xs text-muted-foreground block mb-1.5">{t("controls.background")}</span>
                                 <div className="flex gap-1 mb-2">
                                   <button
                                     onClick={() => {
@@ -3017,8 +3024,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                     }}
                                     className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
                                       sectionBgMode === "color"
-                                        ? "bg-white/20 border-white/40 text-white font-medium"
-                                        : "border-white/10 text-white/50 hover:bg-white/10"
+                                        ? "bg-muted border-border text-foreground font-medium"
+                                        : "border-border text-muted-foreground/70 hover:bg-muted"
                                     }`}
                                   >
                                     {t("controls.solidColor")}
@@ -3027,8 +3034,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                     onClick={() => setSectionBgMode("gradient")}
                                     className={`flex-1 py-1 text-[10px] rounded border transition-colors ${
                                       sectionBgMode === "gradient"
-                                        ? "bg-white/20 border-white/40 text-white font-medium"
-                                        : "border-white/10 text-white/50 hover:bg-white/10"
+                                        ? "bg-muted border-border text-foreground font-medium"
+                                        : "border-border text-muted-foreground/70 hover:bg-muted"
                                     }`}
                                   >
                                     {t("controls.gradient")}
@@ -3037,12 +3044,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                                 {sectionBgMode === "color" ? (
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[10px] text-white/40">{t("controls.color")}</span>
+                                    <span className="text-[10px] text-muted-foreground/60">{t("controls.color")}</span>
                                     <input
                                       type="color"
                                       value={selectedElement.styles.backgroundColor !== "transparent" ? selectedElement.styles.backgroundColor : "#ffffff"}
                                       onChange={(e) => updateElementStyle(selectedElement.elId, { backgroundColor: e.target.value })}
-                                      className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                      className="w-6 h-6 rounded border border-border cursor-pointer"
                                     />
                                   </div>
                                 ) : (
@@ -3055,7 +3062,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                         const angle = (document.getElementById("sec-grad-angle-" + selectedElement.elId) as HTMLInputElement)?.value || "135";
                                         updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${e.target.value}, ${c2})` });
                                       }}
-                                      className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                      className="w-6 h-6 rounded border border-border cursor-pointer"
                                       title={t("controls.color1")}
                                     />
                                     <input
@@ -3068,7 +3075,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                         const angle = (document.getElementById("sec-grad-angle-" + selectedElement.elId) as HTMLInputElement)?.value || "135";
                                         updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${angle}deg, ${c1}, ${e.target.value})` });
                                       }}
-                                      className="w-6 h-6 rounded border border-white/20 cursor-pointer"
+                                      className="w-6 h-6 rounded border border-border cursor-pointer"
                                       title={t("controls.color2")}
                                     />
                                     <input
@@ -3077,7 +3084,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                       defaultValue={135}
                                       min={0}
                                       max={360}
-                                      className="w-14 px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                      className="w-14 px-1.5 py-1 rounded text-[10px] bg-muted border border-border text-foreground text-center"
                                       title="Angle"
                                       onChange={(e) => {
                                         const c1El = document.getElementById("sec-grad-c2-" + selectedElement.elId)?.previousElementSibling as HTMLInputElement;
@@ -3087,7 +3094,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                         updateElementStyle(selectedElement.elId, { backgroundImage: `linear-gradient(${e.target.value}deg, ${c1}, ${c2})` });
                                       }}
                                     />
-                                    <span className="text-[9px] text-white/40">°</span>
+                                    <span className="text-[9px] text-muted-foreground/60">°</span>
                                   </div>
                                 )}
                               </div>
@@ -3095,8 +3102,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               {/* Padding */}
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">{t("controls.paddingV")}</span>
-                                  <span className="text-[10px] text-white/40">{parseInt(selectedElement.styles.paddingTop) || 0}px</span>
+                                  <span className="text-xs text-muted-foreground">{t("controls.paddingV")}</span>
+                                  <span className="text-[10px] text-muted-foreground/60">{parseInt(selectedElement.styles.paddingTop) || 0}px</span>
                                 </div>
                                 <input
                                   type="range"
@@ -3109,8 +3116,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               </div>
                               <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-white/60">{t("controls.paddingH")}</span>
-                                  <span className="text-[10px] text-white/40">{parseInt(selectedElement.styles.paddingLeft) || 0}px</span>
+                                  <span className="text-xs text-muted-foreground">{t("controls.paddingH")}</span>
+                                  <span className="text-[10px] text-muted-foreground/60">{parseInt(selectedElement.styles.paddingLeft) || 0}px</span>
                                 </div>
                                 <input
                                   type="range"
@@ -3126,8 +3133,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                               {(selectedElement.elType === "row") && (
                                 <div>
                                   <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs text-white/60">{t("controls.borderRadius")}</span>
-                                    <span className="text-[10px] text-white/40">{selectedElement.styles.borderRadius || "0px"}</span>
+                                    <span className="text-xs text-muted-foreground">{t("controls.borderRadius")}</span>
+                                    <span className="text-[10px] text-muted-foreground/60">{selectedElement.styles.borderRadius || "0px"}</span>
                                   </div>
                                   <input
                                     type="range"
@@ -3143,29 +3150,29 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           )}
 
                           {/* ── COMMON: Margin, Border, Animation (all elements) ── */}
-                          <div className="pt-2 border-t border-white/10">
-                            <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wide">{t("controls.spacing")}</span>
+                          <div className="pt-2 border-t border-border">
+                            <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wide">{t("controls.spacing")}</span>
                             <div className="grid grid-cols-2 gap-2 mt-1.5">
                               <div>
-                                <span className="text-[9px] text-white/40">{t("controls.marginTop")}</span>
+                                <span className="text-[9px] text-muted-foreground/60">{t("controls.marginTop")}</span>
                                 <input
                                   type="number"
                                   min={0}
                                   max={200}
                                   value={parseInt(selectedElement.styles.marginTop) || 0}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { marginTop: Number(e.target.value) })}
-                                  className="w-full px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                  className="w-full px-1.5 py-1 rounded text-[10px] bg-muted border border-border text-foreground text-center"
                                 />
                               </div>
                               <div>
-                                <span className="text-[9px] text-white/40">{t("controls.marginBottom")}</span>
+                                <span className="text-[9px] text-muted-foreground/60">{t("controls.marginBottom")}</span>
                                 <input
                                   type="number"
                                   min={0}
                                   max={200}
                                   value={parseInt(selectedElement.styles.marginBottom) || 0}
                                   onChange={(e) => updateElementStyle(selectedElement.elId, { marginBottom: Number(e.target.value) })}
-                                  className="w-full px-1.5 py-1 rounded text-[10px] bg-white/10 border border-white/20 text-white text-center"
+                                  className="w-full px-1.5 py-1 rounded text-[10px] bg-muted border border-border text-foreground text-center"
                                 />
                               </div>
                             </div>
@@ -3173,10 +3180,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                           {/* Animation */}
                           <div>
-                            <span className="text-xs text-white/60 block mb-1">{t("controls.animation")}</span>
+                            <span className="text-xs text-muted-foreground block mb-1">{t("controls.animation")}</span>
                             <select
                               onChange={(e) => updateElementStyle(selectedElement.elId, { animation: e.target.value })}
-                              className="w-full px-2 py-1.5 rounded-lg text-xs bg-white/10 border border-white/20 text-white"
+                              className="w-full px-2 py-1.5 rounded-lg text-xs bg-muted border border-border text-foreground"
                               defaultValue="none"
                             >
                               {CSS_ANIMATION_KEYS.map(a => <option key={a.value} value={a.value} className="text-gray-900 dark:text-gray-50">{t(a.tKey)}</option>)}
@@ -3184,12 +3191,12 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           </div>
 
                           {/* AI Element Editing */}
-                          <div className="pt-2 border-t border-white/10">
+                          <div className="pt-2 border-t border-border">
                             <div className="flex items-center gap-1.5 mb-1.5">
-                              <Sparkles className="w-3 h-3 text-blue-300" />
-                              <span className="text-xs text-white/60">{t("chat.editWithAi")}</span>
+                              <Sparkles className="w-3 h-3 text-primary" />
+                              <span className="text-xs text-muted-foreground">{t("chat.editWithAi")}</span>
                             </div>
-                            <p className="text-[10px] text-white/30 mb-1.5">
+                            <p className="text-[10px] text-muted-foreground/50 mb-1.5">
                               {t("chat.placeholder")}
                             </p>
                           </div>
@@ -3202,7 +3209,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                             Marie-Paule can flip image/form order per viewport
                             without hunting in the Settings tab. */}
                         {isCapturePage(page) && (
-                          <div className="pb-3 mb-1 border-b border-white/10">
+                          <div className="pb-3 mb-1 border-b border-border">
                             <LayoutPanel
                               value={page.layout_config}
                               onChange={handleLayoutUpdate}
@@ -3213,9 +3220,9 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         {/* Sections list — drag-and-drop + always-visible arrows */}
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
-                            <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide">{t("elementTypes.section")}s</p>
+                            <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide">{t("elementTypes.section")}s</p>
                             {sections.length > 1 && (
-                              <span className="flex items-center gap-1 text-[10px] text-white/50">
+                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
                                 <GripVertical className="w-3 h-3" />
                                 <span>{t("reorder.hint")}</span>
                               </span>
@@ -3270,7 +3277,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           )}
                           <div className="space-y-1">
                             {sections.length === 0 && (
-                              <p className="text-[11px] text-white/30 py-2">Clique sur un élément dans l&apos;aperçu</p>
+                              <p className="text-[11px] text-muted-foreground/50 py-2">Clique sur un élément dans l&apos;aperçu</p>
                             )}
                             {sections.length > 0 && (
                               <DndContext
@@ -3303,8 +3310,8 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         </div>
 
                         {/* Element palette */}
-                        <div className="pt-3 border-t border-white/10">
-                          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wide mb-2">{t("addElement.title")}</p>
+                        <div className="pt-3 border-t border-border">
+                          <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide mb-2">{t("addElement.title")}</p>
                           <div className="grid grid-cols-3 gap-1.5">
                             {ELEMENT_PALETTE_KEYS.map((el) => {
                               const Icon = el.icon;
@@ -3312,7 +3319,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                                 <button
                                   key={el.type}
                                   onClick={() => addElement(el.type)}
-                                  className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all text-white/60 hover:text-white"
+                                  className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all text-muted-foreground hover:text-foreground"
                                 >
                                   <Icon className="w-4 h-4" />
                                   <span className="text-[10px]">{t(el.tKey)}</span>
@@ -3323,27 +3330,33 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         </div>
 
                         {/* Tip */}
-                        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                          <span className="text-[10px] text-white/50">{t("tip")}</span>
+                        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-muted/40 border border-border">
+                          <span className="text-[10px] text-muted-foreground/70">{t("tip")}</span>
                         </div>
                       </>
                     )}
                   </div>
+                </div>
+              )}
 
-                  {/* ──── AI CHAT (bottom of builder tab) ──── */}
-                  <div className="h-[280px] shrink-0 border-t border-white/10 bg-[#162d4a]">
-                    <PageChatBar
-                      pageId={page.id}
-                      templateId={page.template_id}
-                      kind={page.template_kind as "capture" | "vente" | "vitrine"}
-                      contentData={page.content_data}
-                      brandTokens={page.brand_tokens}
-                      onUpdate={handleChatUpdate}
-                      beforeSubmit={chatBeforeSubmit}
-                      locale={page.locale}
-                      compact
-                    />
-                  </div>
+              {/* ──── CHAT TAB (moved out of the Builder bottom so it gets
+                   the full sidebar height — same flat hierarchy as the
+                   quiz editor's tabs). compact=true so the layout fits
+                   the w-72 sidebar gracefully; PageChatBar handles its
+                   own scroll internally. ──── */}
+              {leftTab === "chat" && (
+                <div className="h-full flex flex-col">
+                  <PageChatBar
+                    pageId={page.id}
+                    templateId={page.template_id}
+                    kind={page.template_kind as "capture" | "vente" | "vitrine"}
+                    contentData={page.content_data}
+                    brandTokens={page.brand_tokens}
+                    onUpdate={handleChatUpdate}
+                    beforeSubmit={chatBeforeSubmit}
+                    locale={page.locale}
+                    compact
+                  />
                 </div>
               )}
 
@@ -3352,11 +3365,11 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 <div className="p-3 space-y-4">
                   {/* URL / Slug */}
                   <div>
-                    <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
                       <Link2 className="w-3 h-3" /> URL
                     </label>
-                    <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1.5 border border-white/20 text-xs">
-                      <span className="text-white/40 whitespace-nowrap">/p/</span>
+                    <div className="flex items-center gap-1 bg-muted rounded-lg px-2 py-1.5 border border-border text-xs">
+                      <span className="text-muted-foreground/60 whitespace-nowrap">/p/</span>
                       <input
                         type="text"
                         value={page.slug}
@@ -3364,20 +3377,20 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                           const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-");
                           handleSettingUpdate("slug", val);
                         }}
-                        className="flex-1 bg-transparent font-medium focus:outline-none min-w-0 text-white"
+                        className="flex-1 bg-transparent font-medium focus:outline-none min-w-0 text-foreground"
                       />
                     </div>
                   </div>
 
                   {/* SEO */}
                   <div>
-                    <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
                       <FileText className="w-3 h-3" /> Description SEO
                     </label>
                     <textarea
                       value={page.meta_description || ""}
                       onChange={(e) => handleSettingUpdate("meta_description", e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs resize-none text-white placeholder:text-white/30"
+                      className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs resize-none text-foreground placeholder:text-muted-foreground/50"
                       rows={2}
                       maxLength={160}
                       placeholder="Description pour Google..."
@@ -3391,7 +3404,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                       business profile (Réglages → Mentions légales). */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-white/60 flex items-center gap-1">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                         <FileText className="w-3 h-3" /> Liens légaux du footer
                       </label>
                       <button
@@ -3419,7 +3432,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                             toast.error("Impossible de récupérer les URLs depuis les réglages.");
                           }
                         }}
-                        className="text-[10px] text-white/70 hover:text-white underline underline-offset-2"
+                        className="text-[10px] text-muted-foreground/80 hover:text-foreground underline underline-offset-2"
                       >
                         Importer depuis mes réglages
                       </button>
@@ -3430,31 +3443,31 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         value={page.legal_mentions_url || ""}
                         onChange={(e) => handleSettingUpdate("legal_mentions_url", e.target.value)}
                         placeholder="Mentions légales — https://…"
-                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
+                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
                       />
                       <input
                         type="url"
                         value={page.legal_cgv_url || ""}
                         onChange={(e) => handleSettingUpdate("legal_cgv_url", e.target.value)}
                         placeholder="CGV — https://…"
-                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
+                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
                       />
                       <input
                         type="url"
                         value={page.legal_privacy_url || ""}
                         onChange={(e) => handleSettingUpdate("legal_privacy_url", e.target.value)}
                         placeholder="Politique de confidentialité — https://…"
-                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
+                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
                       />
                     </div>
-                    <p className="text-[10px] text-white/40 mt-1">
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">
                       Les liens apparaîtront dans le footer. Vide les champs pour les retirer.
                     </p>
                   </div>
 
                   {/* Systeme.io tag */}
                   <div>
-                    <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
                       <Tag className="w-3 h-3" /> Tag Systeme.io
                     </label>
                     <SioTagPicker
@@ -3467,16 +3480,16 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                   {/* OG Image */}
                   <div>
-                    <label className="text-xs font-medium text-white/60 flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
                       <ImageIcon className="w-3 h-3" /> Image de partage
                     </label>
                     {page.og_image_url ? (
-                      <div className="relative rounded-lg overflow-hidden border border-white/20">
+                      <div className="relative rounded-lg overflow-hidden border border-border">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={page.og_image_url} alt="OG" className="w-full h-20 object-cover" />
                         <button
                           onClick={() => handleSettingUpdate("og_image_url", "")}
-                          className="absolute top-1 right-1 p-1 rounded bg-black/50 text-white hover:bg-black/70"
+                          className="absolute top-1 right-1 p-1 rounded bg-black/50 text-foreground hover:bg-black/70"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -3484,7 +3497,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                     ) : (
                       <button
                         onClick={handleOgImageUpload}
-                        className="w-full py-4 border border-dashed border-white/20 rounded-lg text-xs text-white/40 hover:bg-white/5 flex flex-col items-center gap-1"
+                        className="w-full py-4 border border-dashed border-border rounded-lg text-xs text-muted-foreground/60 hover:bg-muted/40 flex flex-col items-center gap-1"
                       >
                         <Upload className="w-4 h-4" />
                         Ajouter
@@ -3493,29 +3506,29 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                   </div>
 
                   {/* Tracking */}
-                  <div className="pt-2 border-t border-white/10">
-                    <p className="text-xs font-medium text-white/60 mb-2">Tracking</p>
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Tracking</p>
                     <div className="space-y-2">
                       <input
                         type="text"
                         value={page.facebook_pixel_id || ""}
                         onChange={(e) => handleSettingUpdate("facebook_pixel_id", e.target.value.replace(/[^0-9]/g, ""))}
                         placeholder="Facebook Pixel ID"
-                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
+                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
                       />
                       <input
                         type="text"
                         value={page.google_tag_id || ""}
                         onChange={(e) => handleSettingUpdate("google_tag_id", e.target.value.replace(/[^a-zA-Z0-9-]/g, ""))}
                         placeholder="Google Tag (G-XXXX)"
-                        className="w-full px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder:text-white/30"
+                        className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/50"
                       />
                     </div>
                   </div>
 
                   {/* Responsive layout (capture only) */}
                   {isCapturePage(page) && (
-                    <div className="pt-2 border-t border-white/10">
+                    <div className="pt-2 border-t border-border">
                       <LayoutPanel
                         value={page.layout_config}
                         onChange={handleLayoutUpdate}
@@ -3525,10 +3538,10 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
 
                   {/* Thank-you page (capture only) */}
                   {(page.page_type === "capture" || page.template_kind === "capture") && (
-                    <div className="pt-2 border-t border-white/10">
+                    <div className="pt-2 border-t border-border">
                       <button
                         onClick={() => setShowThankYouModal(true)}
-                        className="w-full py-2 border border-white/20 rounded-lg text-xs font-medium text-white/70 hover:bg-white/10 flex items-center justify-center gap-1.5"
+                        className="w-full py-2 border border-border rounded-lg text-xs font-medium text-muted-foreground/80 hover:bg-muted flex items-center justify-center gap-1.5"
                       >
                         <Check className="w-3 h-3" />
                         {t("thankYou.title")}
@@ -3537,35 +3550,35 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                   )}
 
                   {/* Downloads */}
-                  <div className="pt-2 border-t border-white/10">
-                    <p className="text-xs font-medium text-white/60 mb-2">{t("actions.exports")}</p>
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">{t("actions.exports")}</p>
                     <div className="flex gap-2">
-                      <button onClick={downloadHtml} className="flex-1 py-1.5 border border-white/20 rounded-lg text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1">
+                      <button onClick={downloadHtml} className="flex-1 py-1.5 border border-border rounded-lg text-xs text-muted-foreground/80 hover:bg-muted flex items-center justify-center gap-1">
                         <Download className="w-3 h-3" /> HTML
                       </button>
-                      <button onClick={downloadTextPdf} className="flex-1 py-1.5 border border-white/20 rounded-lg text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1">
+                      <button onClick={downloadTextPdf} className="flex-1 py-1.5 border border-border rounded-lg text-xs text-muted-foreground/80 hover:bg-muted flex items-center justify-center gap-1">
                         <FileDown className="w-3 h-3" /> PDF
                       </button>
                     </div>
                   </div>
 
                   {/* Stats */}
-                  <div className="pt-2 border-t border-white/10">
-                    <p className="text-xs font-medium text-white/60 mb-2">{t("actions.stats")}</p>
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">{t("actions.stats")}</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 rounded-lg bg-white/10 text-center">
-                        <p className="text-lg font-bold text-white">{page.views_count}</p>
-                        <p className="text-[10px] text-white/40">{t("actions.views")}</p>
+                      <div className="p-2 rounded-lg bg-muted text-center">
+                        <p className="text-lg font-bold text-foreground">{page.views_count}</p>
+                        <p className="text-[10px] text-muted-foreground/60">{t("actions.views")}</p>
                       </div>
-                      <div className="p-2 rounded-lg bg-white/10 text-center">
-                        <p className="text-lg font-bold text-white">{page.leads_count}</p>
-                        <p className="text-[10px] text-white/40">Leads</p>
+                      <div className="p-2 rounded-lg bg-muted text-center">
+                        <p className="text-lg font-bold text-foreground">{page.leads_count}</p>
+                        <p className="text-[10px] text-muted-foreground/60">Leads</p>
                       </div>
                     </div>
                     {page.leads_count > 0 && (
                       <button
                         onClick={() => { setShowLeadsModal(true); loadLeads(); }}
-                        className="w-full mt-2 py-1.5 border border-white/20 rounded-lg text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1"
+                        className="w-full mt-2 py-1.5 border border-border rounded-lg text-xs text-muted-foreground/80 hover:bg-muted flex items-center justify-center gap-1"
                       >
                         <Users className="w-3 h-3" /> {t("leads.viewAll")}
                       </button>
@@ -3574,7 +3587,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                 </div>
               )}
             </div>
-          </div>
+          </aside>
         )}
 
         {/* ──── PREVIEW AREA (full width) ──── */}
