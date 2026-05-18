@@ -459,8 +459,75 @@ export function RichTextEdit({
   const baseCls = `${className || ""} cursor-text rounded-lg px-2 py-1 transition-all min-h-[1.2em]`;
   const hasVars = availableVars && (availableVars.name || availableVars.gender);
 
+  // Link / image dialogs — déclarés AVANT le branchement editing/display
+  // pour pouvoir les rendre dans les DEUX branches. Bug Adeline (18 mai
+  // 2026, V2 retour) : "L'ajout du lien dans la case à cocher ne
+  // fonctionne pas du tout. Rien ne se passe quand je sélectionne le
+  // texte et que je clique sur le lien." Cause racine : avant ce
+  // refactor, les <Dialog> n'étaient rendus QUE dans la branche
+  // non-editing. Or le bouton link de la toolbar n'existe que quand
+  // editing=true → quand l'user cliquait dessus, setLinkDialogOpen
+  // flippait mais le composant Dialog n'était jamais monté dans le
+  // tree React, donc rien ne s'affichait.
+  const dialogs = (
+    <>
+      <Dialog open={linkDialogOpen} onOpenChange={(open) => { setLinkDialogOpen(open); if (!open) dialogPausedRef.current = false; }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("rteLinkDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("rteLinkDialogHint")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              type="url"
+              autoFocus
+              value={linkDraftUrl}
+              placeholder="https://…"
+              onChange={(e) => { setLinkDraftUrl(e.target.value); setLinkError(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitLink(); } }}
+            />
+            {linkError && <p className="text-xs text-destructive">{linkError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
+              {t("rteDialogCancel")}
+            </Button>
+            <Button onClick={commitLink}>{t("rteDialogConfirm")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={imageDialogOpen} onOpenChange={(open) => { setImageDialogOpen(open); if (!open) dialogPausedRef.current = false; }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("rteImageDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("rteImageDialogHint")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              type="url"
+              autoFocus
+              value={imageDraftUrl}
+              placeholder="https://…"
+              onChange={(e) => { setImageDraftUrl(e.target.value); setImageError(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitImage(); } }}
+            />
+            {imageError && <p className="text-xs text-destructive">{imageError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImageDialogOpen(false)}>
+              {t("rteDialogCancel")}
+            </Button>
+            <Button onClick={commitImage}>{t("rteDialogConfirm")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
   if (editing) {
     return (
+      <>
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-0.5 rounded-lg border bg-background p-1 shadow-sm sticky top-2 z-20">
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("bold"); }} title={t("rteBold")}><Bold className="w-3.5 h-3.5" /></ToolbarBtn>
@@ -612,6 +679,8 @@ export function RichTextEdit({
           data-placeholder={placeholder}
         />
       </div>
+      {dialogs}
+      </>
     );
   }
 
@@ -707,59 +776,7 @@ export function RichTextEdit({
         </div>
       )}
 
-      {/* Link insertion dialog — styled per Tiquiz design system,
-          replaces window.prompt() (Adeline, 18 mai 2026). */}
-      <Dialog open={linkDialogOpen} onOpenChange={(open) => { setLinkDialogOpen(open); if (!open) dialogPausedRef.current = false; }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("rteLinkDialogTitle")}</DialogTitle>
-            <DialogDescription>{t("rteLinkDialogHint")}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Input
-              type="url"
-              autoFocus
-              value={linkDraftUrl}
-              placeholder="https://…"
-              onChange={(e) => { setLinkDraftUrl(e.target.value); setLinkError(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitLink(); } }}
-            />
-            {linkError && <p className="text-xs text-destructive">{linkError}</p>}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
-              {t("rteDialogCancel")}
-            </Button>
-            <Button onClick={commitLink}>{t("rteDialogConfirm")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={imageDialogOpen} onOpenChange={(open) => { setImageDialogOpen(open); if (!open) dialogPausedRef.current = false; }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("rteImageDialogTitle")}</DialogTitle>
-            <DialogDescription>{t("rteImageDialogHint")}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Input
-              type="url"
-              autoFocus
-              value={imageDraftUrl}
-              placeholder="https://…"
-              onChange={(e) => { setImageDraftUrl(e.target.value); setImageError(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitImage(); } }}
-            />
-            {imageError && <p className="text-xs text-destructive">{imageError}</p>}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setImageDialogOpen(false)}>
-              {t("rteDialogCancel")}
-            </Button>
-            <Button onClick={commitImage}>{t("rteDialogConfirm")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {dialogs}
     </div>
   );
 }

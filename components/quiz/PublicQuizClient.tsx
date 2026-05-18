@@ -2326,7 +2326,7 @@ export default function PublicQuizClient({
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "top" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
               ) : null;
             })()}
             <div className="space-y-3">
@@ -2342,7 +2342,7 @@ export default function PublicQuizClient({
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "after_title" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
               ) : null;
             })()}
 
@@ -2362,7 +2362,7 @@ export default function PublicQuizClient({
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "after_description" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
               ) : null;
             })()}
 
@@ -2390,7 +2390,7 @@ export default function PublicQuizClient({
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "after_insight" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
               ) : null;
             })()}
 
@@ -2418,7 +2418,7 @@ export default function PublicQuizClient({
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "bottom" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
               ) : null;
             })()}
 

@@ -75,9 +75,26 @@ export function useAutosave<T>({
         if (res.ok) {
           lastSerializedRef.current = serialized;
           setLastSavedAt(Date.now());
+        } else {
+          // Visibility (Adeline, 18 mai 2026) : avant on silenait toutes
+          // les non-200, Adeline voyait juste "Failed to load resource: 500"
+          // sans corps. On dump body + status pour qu'elle puisse partager
+          // le détail sans avoir à fouiller les logs serveur.
+          let bodyText = "";
+          try { bodyText = await res.text(); } catch { /* ignore */ }
+          console.error("[autosave] non-OK response", {
+            status: res.status,
+            statusText: res.statusText,
+            body: bodyText.slice(0, 500),
+            stateSize: serialized.length,
+          });
         }
-      } catch {
-        // Network blip — next state change reattempts.
+      } catch (err) {
+        // Network blip — next state change reattempts. On logge quand
+        // même pour qu'un debug puisse remonter (silence == bug invisible).
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error("[autosave] fetch failed", err);
+        }
       } finally {
         if (inFlightRef.current === ctrl) inFlightRef.current = null;
         setSavingDraft(false);
