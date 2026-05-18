@@ -1403,6 +1403,42 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // on the multi-tenant main host.
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const publicUrl = buildPublicUrl("q", publicSegment);
+
+  // Auto-save du slug (Gwenn, 19 mai 2026). Debounce 1s, toast sur
+  // 409 SLUG_TAKEN, met à jour `quiz.slug` local sur succès.
+  useEffect(() => {
+    if (!quiz) return;
+    const trimmed = slug.trim();
+    const canonical = quiz.slug ?? "";
+    if (trimmed === canonical) return;
+    const timer = setTimeout(async () => {
+      const cleanedSlug = trimmed ? sanitizeSlug(trimmed) : null;
+      if (trimmed && !cleanedSlug) {
+        toast.error("Slug invalide (a-z, 0-9, -)");
+        return;
+      }
+      try {
+        const res = await fetch(`/api/quiz/${quizId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: cleanedSlug }),
+        });
+        const json = await res.json().catch(() => null);
+        if (res.status === 409 && json?.error === "SLUG_TAKEN") {
+          toast.error("Ce slug est déjà pris");
+          return;
+        }
+        if (!json?.ok) {
+          console.error("[slug autosave] save failed", json?.error);
+          return;
+        }
+        setQuiz((prev) => prev ? { ...prev, slug: cleanedSlug } : prev);
+      } catch (err) {
+        console.error("[slug autosave] network error", err);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [slug, quiz, quizId]);
   // Owner-side preview URL — kept separate from publicUrl so "Copy link"
   // never copies the preview variant. ?preview_name=Alex pre-fills the
   // visitor's first name and skips capture in PublicQuizClient.
@@ -2740,9 +2776,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               options={shareDomainOptions}
               onChange={setShareDomain}
             />
-            {/* Single-line editor: prefix + slug input + save + copy.
-                Same shape as on Tiquiz — one row, no redundant readonly
-                mirror underneath. */}
+            {/* Gwenn (19 mai 2026) : autosave du slug 1s après le
+                dernier input, plus de bouton "Enregistrer" séparé.
+                Le bouton Copier copie publicUrl (slug + custom domain
+                résolu via buildPublicUrl). */}
             <div className="flex items-center gap-2">
               <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1 min-w-0">
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap shrink-0">
@@ -2757,9 +2794,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   className="flex-1 min-w-0 bg-transparent outline-none text-sm font-mono px-1 py-1"
                 />
               </div>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : tc("save")}
-              </Button>
               <Button size="sm" variant="outline" onClick={handleCopyLink} title={tc("copy")} aria-label={tc("copy")}>
                 {copied ? <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
               </Button>

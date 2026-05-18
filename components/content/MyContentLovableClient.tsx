@@ -72,6 +72,7 @@ import {
   Route,
   Globe,
   ExternalLink,
+  Copy,
   Download,
   Loader2,
   BarChart3,
@@ -88,6 +89,9 @@ import { toast } from "@/components/ui/use-toast";
 
 type QuizListItem = {
   id: string;
+  // Gwenn (19 mai 2026) : slug propagé pour générer une copyLink
+  // qui pointe vers `domain.com/<slug>` (custom) plutôt que le UUID.
+  slug?: string | null;
   title: string;
   status: string;
   // mode='survey' rows still live in the same `quizzes` table — we just
@@ -978,17 +982,37 @@ export default function MyContentLovableClient({
                                       <BarChart3 className="w-4 h-4 mr-2" /> Statistiques
                                     </Link>
                                   </DropdownMenuItem>
-                                  {isActive && (
-                                    <DropdownMenuItem asChild>
-                                      <a
-                                        href={`/q/${qz.id}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        <ExternalLink className="w-4 h-4 mr-2" /> Voir en ligne
-                                      </a>
-                                    </DropdownMenuItem>
-                                  )}
+                                  {isActive && (() => {
+                                    // Gwenn (19 mai 2026) : URL respecte
+                                    // maintenant le slug + custom domain.
+                                    const handle = qz.slug || qz.id;
+                                    const publicUrl = buildPublicUrl("q", handle);
+                                    return (
+                                      <>
+                                        <DropdownMenuItem
+                                          onClick={async () => {
+                                            try {
+                                              await navigator.clipboard.writeText(publicUrl);
+                                              toast({ title: "Lien copié" });
+                                            } catch {
+                                              // silent
+                                            }
+                                          }}
+                                        >
+                                          <Copy className="w-4 h-4 mr-2" /> Copier le lien
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                          <a
+                                            href={publicUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            <ExternalLink className="w-4 h-4 mr-2" /> Voir en ligne
+                                          </a>
+                                        </DropdownMenuItem>
+                                      </>
+                                    );
+                                  })()}
                                   <DropdownMenuItem
                                     className="text-destructive"
                                     onClick={() => setDeleteQuizConfirm(qz)}

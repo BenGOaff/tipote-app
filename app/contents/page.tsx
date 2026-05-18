@@ -157,7 +157,7 @@ export default async function ContentsPage({
   // table with mode='survey'.
   let quizzesQuery = supabase
     .from("quizzes")
-    .select("id, title, status, views_count, shares_count, created_at, mode")
+    .select("id, slug, title, status, views_count, shares_count, created_at, mode")
     .eq("user_id", session.user.id)
     .order("created_at", { ascending: false });
   if (projectId) quizzesQuery = quizzesQuery.eq("project_id", projectId);
@@ -224,6 +224,9 @@ export default async function ContentsPage({
   const quizRows = (quizzesResult?.data as any[]) ?? [];
   const quizzes = quizRows.map((qz: any) => ({
     id: String(qz.id),
+    // Gwenn (19 mai 2026) : slug propagé pour que copyLink utilise
+    // l'URL custom plutôt que `/q/<uuid>`.
+    slug: typeof qz.slug === "string" && qz.slug.trim() ? qz.slug : null,
     title: qz.title ?? "",
     status: qz.status ?? "draft",
     mode: (qz.mode === "survey" ? "survey" : "quiz") as "quiz" | "survey",

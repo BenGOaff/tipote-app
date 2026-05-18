@@ -55,7 +55,10 @@ Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silenci
 - **CSS rich-text** : Tipote `tipote-quiz-rich` / `tipote-quiz-rich-inline` (≠ Tiquiz `tiquiz-rich`). Ne pas confondre quand on copie-colle entre repos.
 - **PublicQuizClient** : dictionnaires inline (`translations: Record<string, QuizTranslations>` dans le fichier), pas `messages/*.json`. 8 entrées (fr / fr-vous / en / es / de / pt / it / ar). Ajouter dans les 8 quand on touche au visiteur.
 - **API `/api/profile`** : Tipote utilise **Zod schema** pour valider le PATCH (≠ Tiquiz qui a un `allowedFields` array). Ajouter une nouvelle colonne nécessite `z.string().trim().max(N).nullable().optional()` dans le schéma `profileUpdateSchema`.
-- **Toast** : Tipote utilise `useToast()` hook custom avec `toast({ title, variant: "destructive" })` (shadcn pattern). Tiquiz utilise `toast.error()` / `toast.success()` (sonner). **Pas confondre quand je porte du code** — ça compile mais ne fonctionne pas.
+- **Toast Tipote** : **dépend du fichier**. Vérifier l'import au top.
+  - `MyContentLovableClient.tsx`, `SettingsTabsShell.tsx` → `import { toast } from "@/components/ui/use-toast"` → `toast({ title, variant: "destructive" })`
+  - `QuizDetailClient.tsx`, `SurveyDetailClient.tsx`, `PublicQuizClient.tsx` → `import { toast } from "sonner"` → `toast.error("…")` / `toast.success("…")`
+  - Si je porte du code de Tiquiz (sonner uniforme) vers Tipote, **toujours regarder le pattern existant** du fichier cible avant de coller.
 
 ---
 
