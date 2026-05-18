@@ -763,16 +763,12 @@ export default function PublicQuizClient({
 
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
-  // Stable session id used to group per-question funnel events on the
-  // server side without storing anything identifying. Generated lazily
-  // on first read, persists across React re-renders.
-  const sessionIdRef = useRef<string>("");
-  if (!sessionIdRef.current && typeof window !== "undefined") {
-    sessionIdRef.current =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  }
+  // NOTE (19 mai 2026) : le sessionIdRef client a été retiré — le
+  // serveur gère maintenant la session via cookie HttpOnly
+  // `tquiz_visit` (cf. app/api/quiz/[id]/track/route.ts). Le client
+  // n'a plus besoin de générer ou maintenir un id de session ; le
+  // browser pose le cookie au premier fetch /track et le renvoie
+  // automatiquement aux suivants.
   // One bucket of "already-tracked" question views per session, so a
   // re-render or a back-button doesn't double-count.
   const trackedQuestionViewsRef = useRef<Set<number>>(new Set());
@@ -905,33 +901,41 @@ export default function PublicQuizClient({
   }, [branding.backgroundColor]);
 
   // ─── Funnel tracking (fire & forget, non-blocking) ───
+  //
+  // Refonte (Adeline, 19 mai 2026) : tous les events passent par le
+  // même endpoint `/api/quiz/[id]/track` qui gère :
+  //   - bot filter (UA)
+  //   - cookie session HttpOnly 30j (dedup serveur)
+  //   - owner exclusion (auth)
+  //   - dedup 24h via (quiz, event, session)
+  //   - INSERT dans quiz_events → trigger bumpe le compteur
+  // Le sessionId n'est plus géré côté client — le browser pose et
+  // renvoie le cookie automatiquement. `trackedRef` reste pour dédup
+  // IN-tab.
   const trackedRef = useCallback(() => {
-    // We use a mutable Set to avoid tracking the same event twice per session
     const s = new Set<string>();
     return s;
   }, [])();
 
   const trackEvent = useCallback(
-    (event: "start" | "complete") => {
+    (event: "view" | "start" | "complete" | "share") => {
       if (previewData || trackedRef.has(event)) return;
       trackedRef.add(event);
       fetch(`/api/quiz/${quizId}/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ event }),
-      }).catch(() => {}); // non-blocking
+        credentials: "same-origin",
+      }).catch(() => {});
     },
     [quizId, previewData, trackedRef],
   );
 
-  // Per-question funnel events. Fired once per question per session
-  // (idempotent via trackedQuestionViewsRef) so a re-render or a
-  // back-then-forward doesn't inflate the counts.
+  // Per-question funnel events. Le sessionId est désormais géré par
+  // cookie côté serveur — on ne l'envoie plus depuis le client.
   const trackQuestionEvent = useCallback(
     (event: "question_view" | "question_answer", questionIndex: number) => {
       if (previewData) return;
-      const sessionId = sessionIdRef.current;
-      if (!sessionId) return;
       if (event === "question_view") {
         if (trackedQuestionViewsRef.current.has(questionIndex)) return;
         trackedQuestionViewsRef.current.add(questionIndex);
@@ -939,16 +943,23 @@ export default function PublicQuizClient({
       fetch(`/api/quiz/${quizId}/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event, questionIndex, sessionId }),
+        body: JSON.stringify({ event, questionIndex }),
         keepalive: true,
+        credentials: "same-origin",
       }).catch(() => {});
     },
     [quizId, previewData],
   );
 
+  // View event au mount — remplace l'ancien tracking server-side
+  // dans le GET /public, qui comptait bots + refreshes.
+  useEffect(() => {
+    if (!quiz) return;
+    trackEvent("view");
+  }, [quiz, trackEvent]);
+
   // Fire one "question_view" event each time the visitor lands on a
-  // new question. Idempotent inside a session via the ref, so a
-  // re-render or a back-navigation doesn't inflate the count.
+  // new question. Idempotent inside a session via the ref.
   useEffect(() => {
     if (step !== "quiz") return;
     trackQuestionEvent("question_view", currentQ);

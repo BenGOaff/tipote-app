@@ -347,11 +347,16 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       tipoteAffiliateId = String((bp as any)?.tipote_affiliate_id ?? "").trim() || null;
     }
 
-    // Increment view count (non-blocking) — sauf en mode aperçu
-    // par le créateur (sinon il bumperait artificiellement ses stats).
-    if (!isOwnerPreview) {
-      admin.from("quizzes").update({ views_count: (quizRes.data.views_count ?? 0) + 1 }).eq("id", quizId).then(() => {});
-    }
+    // Refonte tracking (Adeline, 19 mai 2026) : le view tracking
+    // n'est PLUS fait ici (server-side, à chaque GET) parce que :
+    //   - bots qui n'exécutent pas JS comptaient quand même
+    //   - refreshes / preloads gonflaient les chiffres
+    //   - le créateur qui partageait son lien le voyait compté
+    // Le visiteur fire maintenant un event "view" via POST /track
+    // depuis useEffect au mount → bot filtering + cookie dédup +
+    // owner exclusion + insert via log_quiz_event RPC qui passe par
+    // le trigger pour bumper le compteur. Source de vérité unique.
+    void isOwnerPreview; // ancienne logique remplacée par /track
 
     // Widget resolution: per-quiz override first, else first enabled widget
     // of the creator. An override is only honored if it still exists, still
@@ -805,10 +810,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     if (quiz) {
-      await admin
-        .from("quizzes")
-        .update({ shares_count: (quiz.shares_count ?? 0) + 1 })
-        .eq("id", quizId);
+      // Refonte tracking (19 mai 2026) : via log_quiz_event RPC →
+      // trigger bumpe shares_count. Pas d'UPDATE direct, pour garder
+      // la source de vérité unique (quiz_events). Pas de session_id
+      // ici (event server-side, déclenché par submission de partage —
+      // le visiteur a déjà été suivi via cookie sur view/start/complete).
+      await admin.rpc("log_quiz_event", {
+        quiz_id_input: quizId,
+        event_type_input: "share",
+      });
 
       // ── Auto-apply share tag in Systeme.io (non-blocking) ──
       const shareTagName = String(quiz.sio_share_tag_name ?? "").trim();
