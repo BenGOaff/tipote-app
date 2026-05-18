@@ -13,6 +13,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { buildCanonicalUrl } from "@/lib/publicUrl";
 import PopquizPlayClient from "./PopquizPlayClient";
 
 export const dynamic = "force-dynamic";
@@ -60,12 +61,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { popquizId } = await params;
   const popquiz = await fetchPublishedPopquiz(popquizId);
   if (!popquiz) return { title: "Popquiz" };
+  // og:url + canonical = current request URL so creators on a custom
+  // domain see their branded hostname in iMessage / WhatsApp previews
+  // instead of the global metadataBase. See lib/publicUrl.ts.
+  const canonical = await buildCanonicalUrl(`/pq/${popquizId}`);
+
   return {
     title: popquiz.title,
     description: popquiz.description ?? undefined,
+    ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title: popquiz.title,
       description: popquiz.description ?? undefined,
+      ...(canonical ? { url: canonical } : {}),
       ...(popquiz.video.thumbnailUrl
         ? { images: [{ url: popquiz.video.thumbnailUrl }] }
         : {}),

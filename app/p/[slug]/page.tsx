@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { buildCanonicalUrl } from "@/lib/publicUrl";
 
 // Force dynamic rendering so published pages are always fresh.
 export const dynamic = "force-dynamic";
@@ -62,13 +63,21 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
 
     if (!data) return {};
 
+    // og:url + canonical = the current request URL. When the page is
+    // served via a verified custom domain, this ensures iMessage /
+    // WhatsApp / Slack display the creator's branded hostname instead
+    // of the global metadataBase. See lib/publicUrl.ts.
+    const canonical = await buildCanonicalUrl(`/p/${slug}`);
+
     const meta: Metadata = {
       title: data.meta_title || data.title,
       description: data.meta_description || undefined,
+      ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: data.meta_title || data.title,
         description: data.meta_description || undefined,
         type: "website",
+        ...(canonical ? { url: canonical } : {}),
       },
     };
 

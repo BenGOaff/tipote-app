@@ -129,6 +129,27 @@ Si je touche à cette fonction, ne PAS revenir au regex unifié
 - **Tipote** : Card "Tracking & Pubs" sous Systeme.io dans le tab "Connexions" (cohérent : c'est une "connexion à un service externe").
 - **Tiquiz** : onglet dédié "Tracking" entre Systeme.io et Compte & Tarifs.
 
+## K) OG metadata sur custom domain → toujours utiliser `buildCanonicalUrl`
+
+Next.js `metadataBase` dans `app/layout.tsx` est UNE URL statique. Si je
+laisse `openGraph.url` non défini, Next utilise metadataBase → l'aperçu
+iMessage / WhatsApp affiche `app.tipote.com` même quand l'user est sur
+son custom domain (rapport mai 2026).
+
+Toute nouvelle route publique (= servie à un visiteur lambda, pas le
+dashboard) DOIT :
+1. Importer `buildCanonicalUrl` depuis `@/lib/publicUrl`
+2. Calculer `const canonical = await buildCanonicalUrl(<chemin actuel>)`
+3. Spread `{ url: canonical }` dans `openGraph` ET
+   `alternates: { canonical }` au niveau top-level.
+
+Sinon : iMessage / WhatsApp / Slack lisent `og:url` du HTML retourné et
+affichent ce hostname sous l'aperçu → l'user a payé pour son custom
+domain mais voit l'URL Tipote partout. Bug d'image de marque sévère.
+
+Routes concernées actuellement (Tipote) : `/q/[quizId]`, `/p/[slug]`,
+`/pq/[popquizId]`, `/[publicSlug]`. Mêmes 3 catégories en Tiquiz.
+
 ## J) PageBuilder iframe : selection-preservation pour les dialogs parent
 
 Quand un bouton de la toolbar inline (Link / Image / Couleur) ouvre un

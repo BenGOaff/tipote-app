@@ -15,6 +15,7 @@ import { createClient } from "@supabase/supabase-js";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
+import { buildCanonicalUrl } from "@/lib/publicUrl";
 
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
 
@@ -70,13 +71,22 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     // Title is rich-text in DB → strip pour la balise <title> et l'OG.
     const plainTitle = stripHtml(data.title);
 
+    // og:url + canonical mirror the current request host. Without
+    // this override, Next.js falls back to the global metadataBase
+    // (app.tipote.com) and creators on a verified custom domain see
+    // the wrong hostname in iMessage / WhatsApp share previews.
+    // See lib/publicUrl.ts.
+    const canonical = await buildCanonicalUrl(`/q/${param}`);
+
     const meta: Metadata = {
       title: plainTitle,
       description,
+      ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle,
         description,
         type: "website",
+        ...(canonical ? { url: canonical } : {}),
       },
     };
 

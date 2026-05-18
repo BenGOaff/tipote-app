@@ -38,6 +38,7 @@ import PopquizPlayClient from "@/app/pq/[popquizId]/PopquizPlayClient";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { stripHtml } from "@/lib/richText";
+import { buildCanonicalUrl } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const r = await resolve(publicSlug, scope.userId, scope.projectId);
   if (!r) return {};
 
+  // og:url + canonical = the current request URL (creator's custom
+  // domain). Without this, Next.js falls back to the global
+  // metadataBase (app.tipote.com) and iMessage / WhatsApp display
+  // the wrong hostname under the share preview. See lib/publicUrl.ts.
+  const canonical = await buildCanonicalUrl(`/${publicSlug}`);
+
   if (r.kind === "quiz") {
     const ogDescPlain = stripHtml(r.meta.og_description ?? "").trim();
     const introPlain = stripHtml(r.meta.introduction ?? "").slice(0, 160);
@@ -131,10 +138,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const meta: Metadata = {
       title: plainTitle || undefined,
       description,
+      ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle || undefined,
         description,
         type: "website",
+        ...(canonical ? { url: canonical } : {}),
       },
     };
     if (r.meta.og_image_url) {
@@ -148,9 +157,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: p.title,
       description: p.description ?? undefined,
+      ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: p.title,
         description: p.description ?? undefined,
+        ...(canonical ? { url: canonical } : {}),
         ...(p.video.thumbnailUrl ? { images: [{ url: p.video.thumbnailUrl }] } : {}),
       },
     };
@@ -160,10 +171,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meta: Metadata = {
     title: r.meta.meta_title || r.meta.title || undefined,
     description: r.meta.meta_description || undefined,
+    ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title: r.meta.meta_title || r.meta.title || undefined,
       description: r.meta.meta_description || undefined,
       type: "website",
+      ...(canonical ? { url: canonical } : {}),
     },
   };
   if (r.meta.og_image_url) {
