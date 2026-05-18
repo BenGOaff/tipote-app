@@ -59,6 +59,7 @@ import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { stripHtml } from "@/lib/richText";
+import { isPixelFieldValid } from "@/lib/clientPixels";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTutorial } from "@/hooks/useTutorial";
 // SidebarProvider / AppSidebar intentionally NOT imported — the WYSIWYG editor
@@ -116,7 +117,12 @@ type QuizData = {
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
 };
-type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null; saved_palettes?: unknown };
+type ProfileBrand = {
+  brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null;
+  plan: string | null; privacy_url: string | null; saved_palettes?: unknown;
+  default_meta_pixel_id?: string | null; default_ga4_measurement_id?: string | null;
+  default_google_ads_conversion_id?: string | null; default_google_ads_conversion_label?: string | null;
+};
 interface QuizDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview.
@@ -499,6 +505,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
   const [showResultsBreakdown, setShowResultsBreakdown] = useState(false);
   const [showOtherResults, setShowOtherResults] = useState(false);
+  // Phase B (Adeline, 19 mai 2026) : pixels Meta + Google per-quiz.
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [ga4MeasurementId, setGa4MeasurementId] = useState("");
+  const [googleAdsConversionId, setGoogleAdsConversionId] = useState("");
+  const [googleAdsConversionLabel, setGoogleAdsConversionLabel] = useState("");
+  const [pixelDefaults, setPixelDefaults] = useState<{
+    meta_pixel_id: string | null;
+    ga4_measurement_id: string | null;
+    google_ads_conversion_id: string | null;
+    google_ads_conversion_label: string | null;
+  } | null>(null);
   const [askFirstName, setAskFirstName] = useState(false);
   const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
@@ -611,6 +628,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     show_consent_checkbox: showConsentCheckbox,
     show_results_breakdown: showResultsBreakdown,
     show_other_results: showOtherResults,
+    meta_pixel_id: metaPixelId,
+    ga4_measurement_id: ga4MeasurementId,
+    google_ads_conversion_id: googleAdsConversionId,
+    google_ads_conversion_label: googleAdsConversionLabel,
     ask_first_name: askFirstName,
     ask_gender: askGender,
     virality_enabled: viralityEnabled,
@@ -640,7 +661,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
-    showConsentCheckbox, showResultsBreakdown, showOtherResults, askFirstName, askGender,
+    showConsentCheckbox, showResultsBreakdown, showOtherResults,
+    metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
+    askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor,
@@ -678,6 +701,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
     if (typeof s.show_other_results === "boolean") setShowOtherResults(s.show_other_results);
+    if (typeof s.meta_pixel_id === "string") setMetaPixelId(s.meta_pixel_id);
+    if (typeof s.ga4_measurement_id === "string") setGa4MeasurementId(s.ga4_measurement_id);
+    if (typeof s.google_ads_conversion_id === "string") setGoogleAdsConversionId(s.google_ads_conversion_id);
+    if (typeof s.google_ads_conversion_label === "string") setGoogleAdsConversionLabel(s.google_ads_conversion_label);
     if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
     if (typeof s.ask_gender === "boolean") setAskGender(s.ask_gender);
     if (typeof s.virality_enabled === "boolean") setViralityEnabled(s.virality_enabled);
@@ -865,9 +892,21 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             brand_logo_url: rawProfile.brand_logo_url ?? null,
             plan: rawProfile.plan ?? null,
             privacy_url: rawProfile.privacy_url ?? null,
+            default_meta_pixel_id: rawProfile.default_meta_pixel_id ?? null,
+            default_ga4_measurement_id: rawProfile.default_ga4_measurement_id ?? null,
+            default_google_ads_conversion_id: rawProfile.default_google_ads_conversion_id ?? null,
+            default_google_ads_conversion_label: rawProfile.default_google_ads_conversion_label ?? null,
           }
         : null;
       setProfile(prof);
+      if (prof) {
+        setPixelDefaults({
+          meta_pixel_id: prof.default_meta_pixel_id ?? null,
+          ga4_measurement_id: prof.default_ga4_measurement_id ?? null,
+          google_ads_conversion_id: prof.default_google_ads_conversion_id ?? null,
+          google_ads_conversion_label: prof.default_google_ads_conversion_label ?? null,
+        });
+      }
       setQuiz(q); setLeads(quizRes.leads ?? []);
       setTitle(q.title); setIntroduction(q.introduction ?? "");
       setCtaText(q.cta_text ?? ""); setCtaUrl(q.cta_url ?? "");
@@ -879,6 +918,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
       setShowResultsBreakdown((q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true);
       setShowOtherResults((q as { show_other_results?: boolean | null }).show_other_results === true);
+      setMetaPixelId((q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "");
+      setGa4MeasurementId((q as { ga4_measurement_id?: string | null }).ga4_measurement_id ?? "");
+      setGoogleAdsConversionId((q as { google_ads_conversion_id?: string | null }).google_ads_conversion_id ?? "");
+      setGoogleAdsConversionLabel((q as { google_ads_conversion_label?: string | null }).google_ads_conversion_label ?? "");
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setFirstNameRequired(q.first_name_required ?? false); setLastNameRequired(q.last_name_required ?? false);
       setPhoneRequired(q.phone_required ?? false); setCountryRequired(q.country_required ?? false);
@@ -1280,6 +1323,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           show_consent_checkbox: showConsentCheckbox,
           show_results_breakdown: showResultsBreakdown,
           show_other_results: showOtherResults,
+          meta_pixel_id: metaPixelId.trim() || null,
+          ga4_measurement_id: ga4MeasurementId.trim() || null,
+          google_ads_conversion_id: googleAdsConversionId.trim() || null,
+          google_ads_conversion_label: googleAdsConversionLabel.trim() || null,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
@@ -1875,6 +1922,68 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     checked={showOtherResults}
                     onChange={v => setShowOtherResults(v)}
                   />
+                </section>
+
+                {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026) */}
+                <section className="space-y-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("trackingPixelsTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("trackingPixelsHint")}</p>
+                  </div>
+                  {pixelDefaults &&
+                    !metaPixelId && !ga4MeasurementId && !googleAdsConversionId && !googleAdsConversionLabel &&
+                    (pixelDefaults.meta_pixel_id || pixelDefaults.ga4_measurement_id ||
+                     pixelDefaults.google_ads_conversion_id || pixelDefaults.google_ads_conversion_label) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMetaPixelId(pixelDefaults.meta_pixel_id ?? "");
+                        setGa4MeasurementId(pixelDefaults.ga4_measurement_id ?? "");
+                        setGoogleAdsConversionId(pixelDefaults.google_ads_conversion_id ?? "");
+                        setGoogleAdsConversionLabel(pixelDefaults.google_ads_conversion_label ?? "");
+                      }}
+                      className="text-[11px] text-primary hover:underline self-start"
+                    >
+                      {t("trackingApplyDefaults")}
+                    </button>
+                  )}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium block">{t("trackingMetaLabel")}</label>
+                    <Input value={metaPixelId} onChange={(e) => setMetaPixelId(e.target.value)} placeholder="1234567890123456" className="text-xs h-8" />
+                    {metaPixelId && !isPixelFieldValid("meta_pixel_id", metaPixelId) && (
+                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">
+                      <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingMetaHelp")}</a>
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium block">{t("trackingGa4Label")}</label>
+                    <Input value={ga4MeasurementId} onChange={(e) => setGa4MeasurementId(e.target.value)} placeholder="G-XXXXXXXXXX" className="text-xs h-8" />
+                    {ga4MeasurementId && !isPixelFieldValid("ga4_measurement_id", ga4MeasurementId) && (
+                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">
+                      <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingGa4Help")}</a>
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium block">{t("trackingAdsIdLabel")}</label>
+                    <Input value={googleAdsConversionId} onChange={(e) => setGoogleAdsConversionId(e.target.value)} placeholder="AW-1234567890" className="text-xs h-8" />
+                    {googleAdsConversionId && !isPixelFieldValid("google_ads_conversion_id", googleAdsConversionId) && (
+                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium block">{t("trackingAdsLabelLabel")}</label>
+                    <Input value={googleAdsConversionLabel} onChange={(e) => setGoogleAdsConversionLabel(e.target.value)} placeholder="abcDEF123" className="text-xs h-8" />
+                    {googleAdsConversionLabel && !isPixelFieldValid("google_ads_conversion_label", googleAdsConversionLabel) && (
+                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">
+                      <a href="https://ads.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingAdsHelp")}</a>
+                    </p>
+                  </div>
                 </section>
 
                 {viralityEnabled && (

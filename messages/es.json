@@ -1261,7 +1261,16 @@
       "saveOffer": "Guardar oferta",
       "generatedOfferSaved": "Oferta generada actualizada",
       "priceMin": "Precio mín (€)",
-      "priceMax": "Precio máx (€)"
+      "priceMax": "Precio máx (€)",
+      "trackingDefaultsTitle": "Seguimiento y Anuncios — predeterminados",
+      "trackingDefaultsDesc": "Estos IDs se aplican automáticamente a tus nuevos quizzes. Puedes sobrescribirlos en el editor.",
+      "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
+      "trackingDefaultsMetaHelp": "Encontrar mi Pixel ID en Meta Events Manager",
+      "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+      "trackingDefaultsGa4Help": "Encontrar mi ID en Google Analytics",
+      "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversión",
+      "trackingDefaultsAdsLabelLabel": "Google Ads — Etiqueta de conversión",
+      "trackingDefaultsAdsHelp": "Encontrar mis IDs Google Ads"
     },
     "positioningTab": {
       "nicheTitle": "Mi fórmula de nicho",
@@ -4011,7 +4020,18 @@
     "tieWarningFallback": "En caso de empate, el visitante verá siempre el primer resultado en orden. Ajusta puntos en una opción para romper el empate.",
     "tieWarningTruncated": "(quiz extenso, análisis parcial — puede haber otros empates no listados).",
     "optionShowOtherResults": "Mostrar otros perfiles al visitante",
-    "optionShowOtherResultsHint": "Añade un acordeón debajo del resultado con todos los otros perfiles posibles, en versión neutra (sin nombre ni variantes de género)."
+    "optionShowOtherResultsHint": "Añade un acordeón debajo del resultado con todos los otros perfiles posibles, en versión neutra (sin nombre ni variantes de género).",
+    "trackingPixelsTitle": "Seguimiento y Anuncios",
+    "trackingPixelsHint": "Añade tu Meta Pixel y tags de Google. Los píxeles solo se cargan tras el consentimiento.",
+    "trackingApplyDefaults": "↺ Aplicar mis valores predeterminados",
+    "trackingMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingMetaHelp": "Encontrar mi Pixel ID en Meta Events Manager →",
+    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Help": "Encontrar mi ID en Google Analytics →",
+    "trackingAdsIdLabel": "Google Ads — ID de conversión",
+    "trackingAdsLabelLabel": "Google Ads — Etiqueta de conversión",
+    "trackingAdsHelp": "Encontrar mis IDs Google Ads →",
+    "trackingInvalidFormat": "Formato inválido"
   },
   "contentStrategy": {
     "title": "Estrategia de contenido",

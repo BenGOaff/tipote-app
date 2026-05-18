@@ -51,16 +51,28 @@ Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silenci
 ## E) i18n namespaces — pièges
 
 - **Tipote** : éditeur quiz utilise `useTranslations("quizDetail")` (≠ Tiquiz qui utilise `quizEditor`).
+- **Tipote user settings** : `SettingsTabsShell` utilise `useTranslations("settingsPage")` avec **clés nested** (`reglages.xxx`, `tabs.xxx`). Format hiérarchique en JSON, pas plat.
 - **CSS rich-text** : Tipote `tipote-quiz-rich` / `tipote-quiz-rich-inline` (≠ Tiquiz `tiquiz-rich`). Ne pas confondre quand on copie-colle entre repos.
 - **PublicQuizClient** : dictionnaires inline (`translations: Record<string, QuizTranslations>` dans le fichier), pas `messages/*.json`. 8 entrées (fr / fr-vous / en / es / de / pt / it / ar). Ajouter dans les 8 quand on touche au visiteur.
+- **API `/api/profile`** : Tipote utilise **Zod schema** pour valider le PATCH (≠ Tiquiz qui a un `allowedFields` array). Ajouter une nouvelle colonne nécessite `z.string().trim().max(N).nullable().optional()` dans le schéma `profileUpdateSchema`.
+- **Toast** : Tipote utilise `useToast()` hook custom avec `toast({ title, variant: "destructive" })` (shadcn pattern). Tiquiz utilise `toast.error()` / `toast.success()` (sonner). **Pas confondre quand je porte du code** — ça compile mais ne fonctionne pas.
 
 ---
 
 ## F) Compteurs et événements (post-Phase A tracking)
 
 - **Source de vérité = `quiz_events`** (table log time-series). Les compteurs sur `quizzes` (views_count, etc.) sont **auto-bumpés par trigger** `trg_quiz_events_bump_counter`. **Ne JAMAIS UPDATE les compteurs directement** — utiliser `log_quiz_event` RPC ou INSERT direct dans `quiz_events`.
-- **Dedup via cookie session** : cookie `tquiz_visit` / `tipote_visit` HttpOnly 30j, généré server-side au premier load. Le tracking serveur check `(quiz_id, event_type, session_id, created_at > NOW() - 24h)` avant INSERT.
+- **Dedup via cookie session** : cookie `tquiz_visit` HttpOnly 30j (même nom sur Tipote pour simplicité), généré server-side au premier load. Le tracking serveur check `(quiz_id, event_type, session_id, created_at > NOW() - 24h)` avant INSERT.
 - **Client `trackedRef`** : Set en mémoire pour éviter les doublons IN-tab. Combiné avec le cookie côté serveur, on dédupe correctement même si l'utilisateur ouvre 5 onglets.
+
+## G) Tracking pixels Meta + Google (post-Phase B)
+
+- **Injection des scripts** : via `useEffect` dans `PublicQuizClient` qui crée `<script>` et `appendChild(document.head)` programmatiquement. PAS de composant `<TrackingPixels>` avec next/Script — c'était galère à placer à travers les multiples step branches (intro/quiz/email/result/share).
+- **Strict consent gate** : `pixelsConsentGiven = quiz.show_consent_checkbox === false || consent`. Si pas donné → aucun script injecté → fbq/gtag pas définis → fireQuizPixel silencieux.
+- **fireQuizPixel(event, config)** dans `lib/clientPixels.ts` : appelé en parallèle de `trackEvent(event)`. Le 1er parle aux pixels externes, le 2e à la DB interne. Les deux systèmes cohabitent — pas de fallback de l'un à l'autre.
+- **gtag.js sert GA4 ET Google Ads** sur la même page. On charge un seul `<script src="...gtag/js?id=PRIMARY">` puis on fait `gtag('config', GA4_ID)` ET `gtag('config', ADS_ID)`. Pattern officiel Google.
+- **Conversion fire** : `gtag('event', 'conversion', { send_to: 'AW-XXX/LABEL' })` UNIQUEMENT sur le `complete` event (= visiteur a soumis l'email). Pas sur view ou start.
+- **Per-quiz + défauts user** : 4 colonnes sur `quizzes` + 4 sur `profiles` (préfixe `default_*`). Bouton "↺ Appliquer mes valeurs par défaut" dans l'éditeur quand le user a configuré ses défauts ET que les champs locaux sont vides.
 
 ---
 

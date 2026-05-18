@@ -182,6 +182,11 @@ type ProfileRow = {
   sasu_dirigeant_remunere?: boolean | null;
   content_locale?: string | null;
   address_form?: string | null;
+  // Phase B (Adeline, 19 mai 2026) : défauts pixels Meta + Google
+  default_meta_pixel_id?: string | null;
+  default_ga4_measurement_id?: string | null;
+  default_google_ads_conversion_id?: string | null;
+  default_google_ads_conversion_label?: string | null;
   linkedin_url?: string | null;
   instagram_url?: string | null;
   youtube_url?: string | null;
@@ -377,6 +382,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [contentLocale, setContentLocale] = useState("fr");
   const [addressForm, setAddressForm] = useState("tu");
   const [pendingLocale, startLocaleTransition] = useTransition();
+  // Phase B (Adeline, 19 mai 2026) : défauts pixels Meta + Google.
+  const [defaultMetaPixelId, setDefaultMetaPixelId] = useState("");
+  const [defaultGa4MeasurementId, setDefaultGa4MeasurementId] = useState("");
+  const [defaultGoogleAdsConversionId, setDefaultGoogleAdsConversionId] = useState("");
+  const [defaultGoogleAdsConversionLabel, setDefaultGoogleAdsConversionLabel] = useState("");
 
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
@@ -461,6 +471,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setTipoteAffiliateId(row?.tipote_affiliate_id ?? "");
         setContentLocale(row?.content_locale ?? "fr");
         setAddressForm(row?.address_form ?? "tu");
+        // Phase B (Adeline, 19 mai 2026)
+        setDefaultMetaPixelId(row?.default_meta_pixel_id ?? "");
+        setDefaultGa4MeasurementId(row?.default_ga4_measurement_id ?? "");
+        setDefaultGoogleAdsConversionId(row?.default_google_ads_conversion_id ?? "");
+        setDefaultGoogleAdsConversionLabel(row?.default_google_ads_conversion_label ?? "");
         setLinkedinUrl(row?.linkedin_url ?? "");
         setInstagramUrl(row?.instagram_url ?? "");
         setYoutubeUrl(row?.youtube_url ?? "");
@@ -1178,6 +1193,41 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       (initialProfile?.address_form ?? "tu") !== addressForm
     );
   }, [initialProfile, contentLocale, addressForm]);
+
+  // Phase B (Adeline, 19 mai 2026) : section pixels séparée de la
+  // langue/adresse pour qu'un save sur l'un ne touche pas l'autre.
+  const pixelsDirty = useMemo(() => {
+    return (
+      (initialProfile?.default_meta_pixel_id ?? "") !== defaultMetaPixelId ||
+      (initialProfile?.default_ga4_measurement_id ?? "") !== defaultGa4MeasurementId ||
+      (initialProfile?.default_google_ads_conversion_id ?? "") !== defaultGoogleAdsConversionId ||
+      (initialProfile?.default_google_ads_conversion_label ?? "") !== defaultGoogleAdsConversionLabel
+    );
+  }, [initialProfile, defaultMetaPixelId, defaultGa4MeasurementId, defaultGoogleAdsConversionId, defaultGoogleAdsConversionLabel]);
+  const [pendingPixels, startPixelsTransition] = useTransition();
+  const savePixels = () => {
+    startPixelsTransition(async () => {
+      try {
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            default_meta_pixel_id: defaultMetaPixelId.trim() || null,
+            default_ga4_measurement_id: defaultGa4MeasurementId.trim() || null,
+            default_google_ads_conversion_id: defaultGoogleAdsConversionId.trim() || null,
+            default_google_ads_conversion_label: defaultGoogleAdsConversionLabel.trim() || null,
+          }),
+        });
+        const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string; profile?: ProfileRow };
+        if (!json?.ok) throw new Error(json?.error || tc("error"));
+        const row = json.profile ?? null;
+        setInitialProfile(row);
+        toast({ title: tc("savedShort") || "Sauvegardé" });
+      } catch (err) {
+        toast({ title: err instanceof Error ? err.message : tc("error"), variant: "destructive" });
+      }
+    });
+  };
 
   const saveSettings = () => {
     startLocaleTransition(async () => {
@@ -2453,6 +2503,66 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             )}
           </Card>
         )}
+
+        {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026) */}
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-1">{tSP("reglages.trackingDefaultsTitle")}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{tSP("reglages.trackingDefaultsDesc")}</p>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>{tSP("reglages.trackingDefaultsMetaLabel")}</Label>
+              <Input
+                value={defaultMetaPixelId}
+                onChange={(e) => setDefaultMetaPixelId(e.target.value)}
+                placeholder="1234567890123456"
+              />
+              <p className="text-xs text-muted-foreground">
+                <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  {tSP("reglages.trackingDefaultsMetaHelp")}
+                </a>
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{tSP("reglages.trackingDefaultsGa4Label")}</Label>
+              <Input
+                value={defaultGa4MeasurementId}
+                onChange={(e) => setDefaultGa4MeasurementId(e.target.value)}
+                placeholder="G-XXXXXXXXXX"
+              />
+              <p className="text-xs text-muted-foreground">
+                <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  {tSP("reglages.trackingDefaultsGa4Help")}
+                </a>
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>{tSP("reglages.trackingDefaultsAdsIdLabel")}</Label>
+                <Input
+                  value={defaultGoogleAdsConversionId}
+                  onChange={(e) => setDefaultGoogleAdsConversionId(e.target.value)}
+                  placeholder="AW-1234567890"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{tSP("reglages.trackingDefaultsAdsLabelLabel")}</Label>
+                <Input
+                  value={defaultGoogleAdsConversionLabel}
+                  onChange={(e) => setDefaultGoogleAdsConversionLabel(e.target.value)}
+                  placeholder="abcDEF123"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              <a href="https://ads.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                {tSP("reglages.trackingDefaultsAdsHelp")}
+              </a>
+            </p>
+            <Button variant="outline" className="mt-2" onClick={savePixels} disabled={!pixelsDirty || pendingPixels}>
+              {pendingPixels ? tc("saving") : tc("save")}
+            </Button>
+          </div>
+        </Card>
       </TabsContent>
 
       {/* POSITIONNEMENT */}

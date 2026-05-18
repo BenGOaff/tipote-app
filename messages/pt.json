@@ -1432,7 +1432,16 @@
       "saveOffer": "Guardar oferta",
       "generatedOfferSaved": "Oferta gerada atualizada",
       "priceMin": "Preço mín (€)",
-      "priceMax": "Preço máx (€)"
+      "priceMax": "Preço máx (€)",
+      "trackingDefaultsTitle": "Tracking e Anúncios — padrões",
+      "trackingDefaultsDesc": "Estes IDs aplicam-se automaticamente aos teus novos quizzes. Podes substituí-los no editor.",
+      "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
+      "trackingDefaultsMetaHelp": "Encontrar o meu Pixel ID no Meta Events Manager",
+      "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+      "trackingDefaultsGa4Help": "Encontrar o meu ID no Google Analytics",
+      "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversão",
+      "trackingDefaultsAdsLabelLabel": "Google Ads — Etiqueta de conversão",
+      "trackingDefaultsAdsHelp": "Encontrar os meus IDs Google Ads"
     },
     "positioningTab": {
       "nicheTitle": "A minha fórmula de nicho",
@@ -4310,7 +4319,18 @@
     "tieWarningFallback": "Em caso de empate, o visitante verá sempre o primeiro resultado pela ordem. Ajusta os pontos de uma opção para desfazer o empate.",
     "tieWarningTruncated": "(quiz extenso, análise parcial — pode haver outros empates não listados).",
     "optionShowOtherResults": "Mostrar outros perfis ao visitante",
-    "optionShowOtherResultsHint": "Adiciona um acordeão abaixo do resultado com todos os outros perfis possíveis, em versão neutra (sem nome nem variantes de género)."
+    "optionShowOtherResultsHint": "Adiciona um acordeão abaixo do resultado com todos os outros perfis possíveis, em versão neutra (sem nome nem variantes de género).",
+    "trackingPixelsTitle": "Tracking e Anúncios",
+    "trackingPixelsHint": "Adiciona o teu Pixel Meta e tags Google. Os pixels só carregam após o consentimento.",
+    "trackingApplyDefaults": "↺ Aplicar os meus padrões",
+    "trackingMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingMetaHelp": "Encontrar o meu Pixel ID no Meta Events Manager →",
+    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Help": "Encontrar o meu ID no Google Analytics →",
+    "trackingAdsIdLabel": "Google Ads — ID de conversão",
+    "trackingAdsLabelLabel": "Google Ads — Etiqueta de conversão",
+    "trackingAdsHelp": "Encontrar os meus IDs Google Ads →",
+    "trackingInvalidFormat": "Formato inválido"
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

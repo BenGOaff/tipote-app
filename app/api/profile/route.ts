@@ -117,6 +117,15 @@ const UpdateSchema = z.object({
   pinterest_url: z.string().trim().max(500).optional(),
   threads_url: z.string().trim().max(500).optional(),
   facebook_url: z.string().trim().max(500).optional(),
+
+  // Phase B (Adeline, 19 mai 2026) : défauts pixels Meta + Google
+  // pré-remplis sur les nouveaux quizzes du créateur. Nullable pour
+  // que le user puisse effacer.
+  default_meta_pixel_id: z.string().trim().max(200).nullable().optional(),
+  default_ga4_measurement_id: z.string().trim().max(200).nullable().optional(),
+  default_google_ads_conversion_id: z.string().trim().max(200).nullable().optional(),
+  default_google_ads_conversion_label: z.string().trim().max(200).nullable().optional(),
+
   custom_links: z.array(z.object({
     label: z.string().trim().max(100),
     url: z.string().trim().max(500),

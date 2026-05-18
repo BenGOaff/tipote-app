@@ -1261,7 +1261,16 @@
       "saveOffer": "حفظ العرض",
       "generatedOfferSaved": "تم تحديث العرض المُنشأ",
       "priceMin": "أدنى سعر (€)",
-      "priceMax": "أقصى سعر (€)"
+      "priceMax": "أقصى سعر (€)",
+      "trackingDefaultsTitle": "التتبع والإعلانات — افتراضيات",
+      "trackingDefaultsDesc": "تُطبق هذه المعرّفات تلقائيًا على اختباراتك الجديدة. يمكنك تجاوزها في المحرر.",
+      "trackingDefaultsMetaLabel": "معرّف Meta (Facebook) Pixel",
+      "trackingDefaultsMetaHelp": "العثور على معرّف Pixel في Meta Events Manager",
+      "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+      "trackingDefaultsGa4Help": "العثور على المعرّف في Google Analytics",
+      "trackingDefaultsAdsIdLabel": "Google Ads — معرّف التحويل",
+      "trackingDefaultsAdsLabelLabel": "Google Ads — تسمية التحويل",
+      "trackingDefaultsAdsHelp": "العثور على معرّفات Google Ads"
     },
     "positioningTab": {
       "nicheTitle": "صيغة تخصصي",
@@ -4011,7 +4020,18 @@
     "tieWarningFallback": "في حالة التعادل، سيرى الزائر دائمًا النتيجة الأولى بالترتيب. عدّل النقاط في خيار لكسر التعادل.",
     "tieWarningTruncated": "(اختبار كبير، تحليل جزئي — قد توجد تعادلات أخرى غير مذكورة).",
     "optionShowOtherResults": "إظهار الملفات الأخرى للزائر",
-    "optionShowOtherResultsHint": "يضيف قائمة قابلة للطي أسفل النتيجة بجميع الملفات الأخرى الممكنة، في نسخة محايدة (دون اسم أو متغيرات جنس)."
+    "optionShowOtherResultsHint": "يضيف قائمة قابلة للطي أسفل النتيجة بجميع الملفات الأخرى الممكنة، في نسخة محايدة (دون اسم أو متغيرات جنس).",
+    "trackingPixelsTitle": "التتبع والإعلانات",
+    "trackingPixelsHint": "أضف Pixel Meta وعلامات Google. لا تُحمَّل البكسلات إلا بعد موافقة الزائر.",
+    "trackingApplyDefaults": "↺ تطبيق إعداداتي الافتراضية",
+    "trackingMetaLabel": "معرّف Meta (Facebook) Pixel",
+    "trackingMetaHelp": "العثور على معرّف Pixel في Meta Events Manager ←",
+    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Help": "العثور على المعرّف في Google Analytics ←",
+    "trackingAdsIdLabel": "Google Ads — معرّف التحويل",
+    "trackingAdsLabelLabel": "Google Ads — تسمية التحويل",
+    "trackingAdsHelp": "العثور على معرّفات Google Ads ←",
+    "trackingInvalidFormat": "تنسيق غير صالح"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

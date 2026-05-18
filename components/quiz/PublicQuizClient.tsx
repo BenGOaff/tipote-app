@@ -18,6 +18,7 @@ import {
   type QuizBranding,
 } from "@/lib/quizBranding";
 import { sanitizeRichText, stripHtml } from "@/lib/richText";
+import { fireQuizPixel } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
 import { ensureExternalUrl } from "@/lib/url";
@@ -122,6 +123,11 @@ type PublicQuizData = {
   show_results_breakdown?: boolean | null;
   // Accordéon "Découvre les autres profils" (Adeline, 19 mai 2026)
   show_other_results?: boolean | null;
+  // Phase B (Adeline, 19 mai 2026) : Meta + Google tracking pixels.
+  meta_pixel_id?: string | null;
+  ga4_measurement_id?: string | null;
+  google_ads_conversion_id?: string | null;
+  google_ads_conversion_label?: string | null;
   ask_first_name?: boolean | null;
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
@@ -921,14 +927,24 @@ export default function PublicQuizClient({
     (event: "view" | "start" | "complete" | "share") => {
       if (previewData || trackedRef.has(event)) return;
       trackedRef.add(event);
+      // 1) Tracking interne (quiz_events table) — Phase A
       fetch(`/api/quiz/${quizId}/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ event }),
         credentials: "same-origin",
       }).catch(() => {});
+      // 2) Tracking externe Meta + Google — Phase B
+      if (quiz) {
+        fireQuizPixel(event, {
+          meta_pixel_id: quiz.meta_pixel_id,
+          ga4_measurement_id: quiz.ga4_measurement_id,
+          google_ads_conversion_id: quiz.google_ads_conversion_id,
+          google_ads_conversion_label: quiz.google_ads_conversion_label,
+        });
+      }
     },
-    [quizId, previewData, trackedRef],
+    [quizId, previewData, trackedRef, quiz],
   );
 
   // Per-question funnel events. Le sessionId est désormais géré par
@@ -957,6 +973,51 @@ export default function PublicQuizClient({
     if (!quiz) return;
     trackEvent("view");
   }, [quiz, trackEvent]);
+
+  // Tracking pixels Meta + Google (Adeline, 19 mai 2026, Phase B) :
+  // injection des scripts dans <head> via DOM API, indépendamment des
+  // branches de step. Strict consent gating.
+  useEffect(() => {
+    if (!quiz || previewData) return;
+    const pixelsConsentGiven = quiz.show_consent_checkbox === false || consent;
+    if (!pixelsConsentGiven) return;
+    const metaId = quiz.meta_pixel_id?.trim();
+    const ga4Id = quiz.ga4_measurement_id?.trim();
+    const adsId = quiz.google_ads_conversion_id?.trim();
+    const gtagPrimaryId = ga4Id || adsId;
+    if (!metaId && !gtagPrimaryId) return;
+
+    const injected: HTMLScriptElement[] = [];
+
+    if (metaId && !window.fbq) {
+      const initScript = document.createElement("script");
+      initScript.innerHTML = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${metaId}');fbq('track','PageView');`;
+      document.head.appendChild(initScript);
+      injected.push(initScript);
+    }
+
+    if (gtagPrimaryId && !window.gtag) {
+      const libScript = document.createElement("script");
+      libScript.src = `https://www.googletagmanager.com/gtag/js?id=${gtagPrimaryId}`;
+      libScript.async = true;
+      document.head.appendChild(libScript);
+      injected.push(libScript);
+
+      const initScript = document.createElement("script");
+      const configs: string[] = [];
+      if (ga4Id) configs.push(`gtag('config','${ga4Id}');`);
+      if (adsId) configs.push(`gtag('config','${adsId}');`);
+      initScript.innerHTML = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());${configs.join("")}`;
+      document.head.appendChild(initScript);
+      injected.push(initScript);
+    }
+
+    return () => {
+      injected.forEach((s) => {
+        if (s.parentNode) s.parentNode.removeChild(s);
+      });
+    };
+  }, [quiz, consent, previewData]);
 
   // Fire one "question_view" event each time the visitor lands on a
   // new question. Idempotent inside a session via the ref.
@@ -1302,6 +1363,16 @@ export default function PublicQuizClient({
     if (isPreviewMode) {
       setBonusUnlocked(true);
       return;
+    }
+    // Fire Meta + Google "share" event client-side (server log via
+    // log_quiz_event RPC dans le PATCH ci-dessous).
+    if (quiz) {
+      fireQuizPixel("share", {
+        meta_pixel_id: quiz.meta_pixel_id,
+        ga4_measurement_id: quiz.ga4_measurement_id,
+        google_ads_conversion_id: quiz.google_ads_conversion_id,
+        google_ads_conversion_label: quiz.google_ads_conversion_label,
+      });
     }
     try {
       const res = await fetch(`/api/quiz/${quizId}/public`, {

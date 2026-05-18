@@ -1261,7 +1261,16 @@
       "saveOffer": "Salva offerta",
       "generatedOfferSaved": "Offerta generata aggiornata",
       "priceMin": "Prezzo min (€)",
-      "priceMax": "Prezzo max (€)"
+      "priceMax": "Prezzo max (€)",
+      "trackingDefaultsTitle": "Tracking e Pubblicità — predefiniti",
+      "trackingDefaultsDesc": "Questi ID vengono applicati automaticamente ai tuoi nuovi quiz. Puoi sovrascriverli nell'editor.",
+      "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
+      "trackingDefaultsMetaHelp": "Trovare il mio Pixel ID in Meta Events Manager",
+      "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+      "trackingDefaultsGa4Help": "Trovare il mio ID in Google Analytics",
+      "trackingDefaultsAdsIdLabel": "Google Ads — ID di conversione",
+      "trackingDefaultsAdsLabelLabel": "Google Ads — Etichetta di conversione",
+      "trackingDefaultsAdsHelp": "Trova i miei ID Google Ads"
     },
     "positioningTab": {
       "nicheTitle": "La mia formula di nicchia",
@@ -4011,7 +4020,18 @@
     "tieWarningFallback": "In caso di pareggio, il visitatore vede sempre il primo risultato nell'ordine. Modifica i punti di un'opzione per rompere il pareggio.",
     "tieWarningTruncated": "(quiz molto grande, analisi parziale — potrebbero esserci altri pareggi non elencati).",
     "optionShowOtherResults": "Mostra gli altri profili al visitatore",
-    "optionShowOtherResultsHint": "Aggiunge una fisarmonica sotto il risultato con tutti gli altri profili possibili, in versione neutra (senza nome o varianti di genere)."
+    "optionShowOtherResultsHint": "Aggiunge una fisarmonica sotto il risultato con tutti gli altri profili possibili, in versione neutra (senza nome o varianti di genere).",
+    "trackingPixelsTitle": "Tracking e Pubblicità",
+    "trackingPixelsHint": "Aggiungi il tuo Pixel Meta e i tag Google. I pixel si caricano solo dopo il consenso.",
+    "trackingApplyDefaults": "↺ Applica i miei valori predefiniti",
+    "trackingMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingMetaHelp": "Trova il mio Pixel ID in Meta Events Manager →",
+    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Help": "Trova il mio ID in Google Analytics →",
+    "trackingAdsIdLabel": "Google Ads — ID di conversione",
+    "trackingAdsLabelLabel": "Google Ads — Etichetta di conversione",
+    "trackingAdsHelp": "Trova i miei ID Google Ads →",
+    "trackingInvalidFormat": "Formato non valido"
   },
   "contentStrategy": {
     "title": "Strategia di contenuto",

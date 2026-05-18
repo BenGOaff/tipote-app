@@ -1261,7 +1261,16 @@
       "saveOffer": "Save offer",
       "generatedOfferSaved": "Generated offer updated",
       "priceMin": "Min price (€)",
-      "priceMax": "Max price (€)"
+      "priceMax": "Max price (€)",
+      "trackingDefaultsTitle": "Tracking & Ads — defaults",
+      "trackingDefaultsDesc": "These IDs are automatically applied to your new quizzes. You can override them in the quiz editor.",
+      "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
+      "trackingDefaultsMetaHelp": "Find my Pixel ID in Meta Events Manager",
+      "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+      "trackingDefaultsGa4Help": "Find my ID in Google Analytics",
+      "trackingDefaultsAdsIdLabel": "Google Ads — Conversion ID",
+      "trackingDefaultsAdsLabelLabel": "Google Ads — Conversion Label",
+      "trackingDefaultsAdsHelp": "Find my Google Ads IDs"
     },
     "positioningTab": {
       "nicheTitle": "My niche formula",
@@ -4011,7 +4020,18 @@
     "tieWarningFallback": "In case of a tie, the visitor will always see the first result in order. Adjust points on an option to break the tie.",
     "tieWarningTruncated": "(large quiz, partial analysis — there may be other ties not listed).",
     "optionShowOtherResults": "Show other profiles to the visitor",
-    "optionShowOtherResultsHint": "Adds an accordion below the result with all the other possible profiles, in a neutral version (no first name or gender variants). Lets curious visitors discover what they missed."
+    "optionShowOtherResultsHint": "Adds an accordion below the result with all the other possible profiles, in a neutral version (no first name or gender variants). Lets curious visitors discover what they missed.",
+    "trackingPixelsTitle": "Tracking & Ads",
+    "trackingPixelsHint": "Add your Meta Pixel and Google tags. Pixels only load after visitor consent.",
+    "trackingApplyDefaults": "↺ Apply my defaults",
+    "trackingMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingMetaHelp": "Find my Pixel ID in Meta Events Manager →",
+    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Help": "Find my ID in Google Analytics →",
+    "trackingAdsIdLabel": "Google Ads — Conversion ID",
+    "trackingAdsLabelLabel": "Google Ads — Conversion Label",
+    "trackingAdsHelp": "Find my Google Ads IDs →",
+    "trackingInvalidFormat": "Invalid format"
   },
   "contentStrategy": {
     "title": "Content strategy",

@@ -1261,7 +1261,16 @@
       "saveOffer": "Enregistrer l'offre",
       "generatedOfferSaved": "Offre générée mise à jour",
       "priceMin": "Prix min (€)",
-      "priceMax": "Prix max (€)"
+      "priceMax": "Prix max (€)",
+      "trackingDefaultsTitle": "Tracking & Publicités — valeurs par défaut",
+      "trackingDefaultsDesc": "Ces IDs sont automatiquement appliqués sur tes nouveaux quizzes. Tu peux les surcharger dans l'éditeur d'un quiz.",
+      "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
+      "trackingDefaultsMetaHelp": "Trouver mon Pixel ID dans Meta Events Manager",
+      "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+      "trackingDefaultsGa4Help": "Trouver mon ID dans Google Analytics",
+      "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversion",
+      "trackingDefaultsAdsLabelLabel": "Google Ads — Label de conversion",
+      "trackingDefaultsAdsHelp": "Trouver mes IDs Google Ads"
     },
     "positioningTab": {
       "nicheTitle": "Ma formule de niche",
@@ -4011,7 +4020,18 @@
     "tieWarningFallback": "En cas d'ex-æquo, le visiteur verra toujours le premier résultat dans l'ordre. Ajuste les points d'une option pour briser l'égalité.",
     "tieWarningTruncated": "(quiz volumineux, analyse partielle — il peut y avoir d'autres ex-æquo non listés).",
     "optionShowOtherResults": "Montrer les autres profils au visiteur",
-    "optionShowOtherResultsHint": "Ajoute un accordéon sous le résultat avec tous les autres profils possibles, en version neutre (sans prénom ni variantes de genre). Le visiteur curieux peut découvrir ce qu'il a manqué."
+    "optionShowOtherResultsHint": "Ajoute un accordéon sous le résultat avec tous les autres profils possibles, en version neutre (sans prénom ni variantes de genre). Le visiteur curieux peut découvrir ce qu'il a manqué.",
+    "trackingPixelsTitle": "Tracking & Publicités",
+    "trackingPixelsHint": "Ajoute ton pixel Meta et tes tags Google. Les pixels ne chargent qu'après le consentement du visiteur.",
+    "trackingApplyDefaults": "↺ Appliquer mes valeurs par défaut",
+    "trackingMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingMetaHelp": "Trouver mon Pixel ID dans Meta Events Manager →",
+    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Help": "Trouver mon ID dans Google Analytics →",
+    "trackingAdsIdLabel": "Google Ads — ID de conversion",
+    "trackingAdsLabelLabel": "Google Ads — Label de conversion",
+    "trackingAdsHelp": "Trouver mes IDs Google Ads →",
+    "trackingInvalidFormat": "Format invalide"
   },
   "contentStrategy": {
     "title": "Stratégie de contenu",
