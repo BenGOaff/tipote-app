@@ -89,7 +89,14 @@ Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silenci
 
 ---
 
-## H) Quand je vais douter pendant le code
+## H) Placement UI — visibilité, pas hasard
+
+- **Toujours demander la place exacte** quand j'ajoute une section Settings / Paramètres. Adeline (mai 2026) m'a fait déplacer 2× la même Card "Tracking & Pubs" parce que je l'avais collée "à la fin du tab actuel" sans réfléchir.
+- **Tabs visuels = navigation principale**. Une nouvelle section logiquement séparée (ex. Tracking ≠ Branding) mérite son propre tab, pas un Cards en bout de tab existant.
+- **Tipote** : Card "Tracking & Pubs" sous Systeme.io dans le tab "Connexions" (cohérent : c'est une "connexion à un service externe").
+- **Tiquiz** : onglet dédié "Tracking" entre Systeme.io et Compte & Tarifs.
+
+## I) Quand je vais douter pendant le code
 
 1. **Avant de toucher une colonne SQL** : relire section A.
 2. **Avant de toucher RichTextEdit** : relire section C.

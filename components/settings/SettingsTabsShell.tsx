@@ -1829,6 +1829,70 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </div>
           </div>
         </Card>
+
+        {/* Tracking & Pubs — Adeline (19 mai 2026, Phase B) + Gwenn
+            (déplacé ici sous Systeme.io dans le tab "Connexions" plutôt
+            qu'à la fin du tab Réglages, pour la visibilité). Défauts
+            pixels Meta + Google appliqués aux nouveaux quizzes du
+            créateur ; modifiables per-quiz dans l'éditeur. */}
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-1">{tSP("reglages.trackingDefaultsTitle")}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{tSP("reglages.trackingDefaultsDesc")}</p>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>{tSP("reglages.trackingDefaultsMetaLabel")}</Label>
+              <Input
+                value={defaultMetaPixelId}
+                onChange={(e) => setDefaultMetaPixelId(e.target.value)}
+                placeholder="1234567890123456"
+              />
+              <p className="text-xs text-muted-foreground">
+                <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  {tSP("reglages.trackingDefaultsMetaHelp")}
+                </a>
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{tSP("reglages.trackingDefaultsGa4Label")}</Label>
+              <Input
+                value={defaultGa4MeasurementId}
+                onChange={(e) => setDefaultGa4MeasurementId(e.target.value)}
+                placeholder="G-XXXXXXXXXX"
+              />
+              <p className="text-xs text-muted-foreground">
+                <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  {tSP("reglages.trackingDefaultsGa4Help")}
+                </a>
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>{tSP("reglages.trackingDefaultsAdsIdLabel")}</Label>
+                <Input
+                  value={defaultGoogleAdsConversionId}
+                  onChange={(e) => setDefaultGoogleAdsConversionId(e.target.value)}
+                  placeholder="AW-1234567890"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{tSP("reglages.trackingDefaultsAdsLabelLabel")}</Label>
+                <Input
+                  value={defaultGoogleAdsConversionLabel}
+                  onChange={(e) => setDefaultGoogleAdsConversionLabel(e.target.value)}
+                  placeholder="abcDEF123"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              <a href="https://ads.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                {tSP("reglages.trackingDefaultsAdsHelp")}
+              </a>
+            </p>
+            <Button variant="outline" className="mt-2" onClick={savePixels} disabled={!pixelsDirty || pendingPixels}>
+              {pendingPixels ? tc("saving") : tc("save")}
+            </Button>
+          </div>
+        </Card>
       </TabsContent>
 
       {/* RÉGLAGES */}
@@ -2503,66 +2567,6 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             )}
           </Card>
         )}
-
-        {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026) */}
-        <Card className="p-6">
-          <h3 className="text-lg font-bold mb-1">{tSP("reglages.trackingDefaultsTitle")}</h3>
-          <p className="text-sm text-muted-foreground mb-4">{tSP("reglages.trackingDefaultsDesc")}</p>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>{tSP("reglages.trackingDefaultsMetaLabel")}</Label>
-              <Input
-                value={defaultMetaPixelId}
-                onChange={(e) => setDefaultMetaPixelId(e.target.value)}
-                placeholder="1234567890123456"
-              />
-              <p className="text-xs text-muted-foreground">
-                <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline">
-                  {tSP("reglages.trackingDefaultsMetaHelp")}
-                </a>
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{tSP("reglages.trackingDefaultsGa4Label")}</Label>
-              <Input
-                value={defaultGa4MeasurementId}
-                onChange={(e) => setDefaultGa4MeasurementId(e.target.value)}
-                placeholder="G-XXXXXXXXXX"
-              />
-              <p className="text-xs text-muted-foreground">
-                <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">
-                  {tSP("reglages.trackingDefaultsGa4Help")}
-                </a>
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>{tSP("reglages.trackingDefaultsAdsIdLabel")}</Label>
-                <Input
-                  value={defaultGoogleAdsConversionId}
-                  onChange={(e) => setDefaultGoogleAdsConversionId(e.target.value)}
-                  placeholder="AW-1234567890"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>{tSP("reglages.trackingDefaultsAdsLabelLabel")}</Label>
-                <Input
-                  value={defaultGoogleAdsConversionLabel}
-                  onChange={(e) => setDefaultGoogleAdsConversionLabel(e.target.value)}
-                  placeholder="abcDEF123"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              <a href="https://ads.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">
-                {tSP("reglages.trackingDefaultsAdsHelp")}
-              </a>
-            </p>
-            <Button variant="outline" className="mt-2" onClick={savePixels} disabled={!pixelsDirty || pendingPixels}>
-              {pendingPixels ? tc("saving") : tc("save")}
-            </Button>
-          </div>
-        </Card>
       </TabsContent>
 
       {/* POSITIONNEMENT */}
