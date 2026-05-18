@@ -79,11 +79,20 @@ interface RichTextEditProps {
    * reformule dans le ton du quiz".
    */
   onAIRewrite?: (plainText: string) => Promise<string[] | null>;
+  /**
+   * Drag-and-drop file upload (Adeline, 18 mai 2026 : "possible de drag
+   * and drop à l'emplacement voulu"). When provided, dropping an image
+   * file onto the editing surface triggers an upload via this callback,
+   * and the returned URL is inserted as <img> at the drop position.
+   * Without this callback, drops fall back to the browser default
+   * (typically a navigation), so we explicitly block that.
+   */
+  onImageUpload?: (file: File) => Promise<string | null>;
 }
 
 export function RichTextEdit({
   value, onChange, className, placeholder, style, singleLine, onGenderize, availableVars,
-  previewTransform, onAIRewrite,
+  previewTransform, onAIRewrite, onImageUpload,
 }: RichTextEditProps) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDivElement>(null);
@@ -243,7 +252,14 @@ export function RichTextEdit({
     { hex: "#0ea5e9", label: "Cyan" },
   ];
 
+  // Bug Adeline (18 mai 2026) : "j'ai du cliquer plusieurs fois pour
+  // insérer un lien". Quand Radix Dialog mount, il vole le focus du
+  // contentEditable → onBlur → commit() → setEditing(false) → champ
+  // démonté avant que commitLink() ait pu poser son <a>. Fix : ref
+  // gate `dialogPausedRef` flippé sync AVANT l'ouverture du dialog.
+  const dialogPausedRef = useRef(false);
   const commit = useCallback(() => {
+    if (dialogPausedRef.current) return;
     if (!ref.current) return;
     const clean = sanitizeRichText(ref.current.innerHTML);
     if (clean !== value) onChange(clean);
@@ -274,6 +290,75 @@ export function RichTextEdit({
     }
   };
 
+  // Drag-and-drop image upload (Adeline, mai 2026). On capture le drop
+  // sur la surface contentEditable et on intercepte les fichiers image
+  // pour les uploader via le callback parent. Le drop par défaut du
+  // navigateur essaie de naviguer vers le fichier (ou de l'embarquer
+  // en base64 monstrueux), on bloque les deux. Caret repositionné sur
+  // le point de drop avant insertImage pour respecter "à l'emplacement
+  // voulu". Sans onImageUpload (champ non lié à un upload), on laisse
+  // remonter pour ne pas casser un éventuel drag-and-drop natif d'un
+  // composant parent.
+  const [dropping, setDropping] = useState(false);
+  const [uploadingDrop, setUploadingDrop] = useState(false);
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onImageUpload) return;
+    if (!Array.from(e.dataTransfer?.types ?? []).includes("Files")) return;
+    e.preventDefault();
+    setDropping(true);
+  };
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onImageUpload) return;
+    e.preventDefault();
+    setDropping(false);
+  };
+  const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onImageUpload) return;
+    const files = Array.from(e.dataTransfer?.files ?? []);
+    const image = files.find((f) => f.type.startsWith("image/"));
+    if (!image) return;
+    e.preventDefault();
+    setDropping(false);
+    // Pose le caret là où le user a lâché le fichier — Firefox &
+    // Chromium n'exposent pas la même API alors on essaie les deux.
+    type CaretHost = Document & {
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+      caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    };
+    const doc = document as CaretHost;
+    if (typeof doc.caretRangeFromPoint === "function") {
+      const range = doc.caretRangeFromPoint(e.clientX, e.clientY);
+      if (range) {
+        const sel = window.getSelection();
+        if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+      }
+    } else if (typeof doc.caretPositionFromPoint === "function") {
+      const pos = doc.caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) {
+        const range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        range.collapse(true);
+        const sel = window.getSelection();
+        if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+      }
+    }
+    setUploadingDrop(true);
+    try {
+      const url = await onImageUpload(image);
+      if (!url) return;
+      exec("insertImage", url);
+      const el = ref.current;
+      if (el) {
+        el.querySelectorAll("img").forEach((img) => {
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+        });
+      }
+    } finally {
+      setUploadingDrop(false);
+    }
+  };
+
   // Link / image insertion via styled Dialog (Adeline, 18 mai 2026 :
   // "le texte surligné pour insérer un lien c'est moche, respecte le
   // branding tiquiz tipote, pas les fenêtres moches par défaut").
@@ -290,6 +375,7 @@ export function RichTextEdit({
 
   const onInsertLink = () => {
     saveSelection();
+    dialogPausedRef.current = true;
     setLinkDraftUrl("");
     setLinkError(null);
     setLinkDialogOpen(true);
@@ -300,6 +386,7 @@ export function RichTextEdit({
     if (!url) { setLinkError(t("rteLinkInvalid")); return; }
     if (!isSafeUrl(url)) { setLinkError(t("rteLinkInvalid")); return; }
     setLinkDialogOpen(false);
+    dialogPausedRef.current = false;
     restoreSelection();
     exec("createLink", url);
     const el = ref.current;
@@ -311,11 +398,45 @@ export function RichTextEdit({
     }
   };
 
+  // Toolbar Image button (Adeline, 18 mai 2026 : "je ne vois pas où
+  // ajouter une image sur le résultat"). Quand un onImageUpload est
+  // fourni → on ouvre un file picker direct (UX visible + immédiate
+  // pour les utilisateurs qui ne pensent pas au drag-and-drop). Sinon
+  // → fallback Dialog URL pour les champs non liés à un upload.
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const onInsertImage = () => {
     saveSelection();
+    if (onImageUpload) {
+      fileInputRef.current?.click();
+      return;
+    }
+    dialogPausedRef.current = true;
     setImageDraftUrl("");
     setImageError(null);
     setImageDialogOpen(true);
+  };
+
+  const onPickedImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset so re-picking same file fires onChange
+    if (!file || !onImageUpload) return;
+    if (!file.type.startsWith("image/")) return;
+    setUploadingDrop(true);
+    try {
+      const url = await onImageUpload(file);
+      if (!url) return;
+      restoreSelection();
+      exec("insertImage", url);
+      const el = ref.current;
+      if (el) {
+        el.querySelectorAll("img").forEach((img) => {
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+        });
+      }
+    } finally {
+      setUploadingDrop(false);
+    }
   };
 
   const commitImage = () => {
@@ -323,6 +444,7 @@ export function RichTextEdit({
     if (!url) { setImageError(t("rteUrlInvalid")); return; }
     if (!isSafeUrl(url)) { setImageError(t("rteUrlInvalid")); return; }
     setImageDialogOpen(false);
+    dialogPausedRef.current = false;
     restoreSelection();
     exec("insertImage", url);
     const el = ref.current;
@@ -450,7 +572,8 @@ export function RichTextEdit({
           </>}
           <span className="w-px h-4 bg-border mx-0.5" />
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("rteInsertLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
-          {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={t("rteInsertImage")}><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
+          {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={onImageUpload ? t("rteUploadImage") : t("rteInsertImage")}>{uploadingDrop ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}</ToolbarBtn>}
+          <input ref={fileInputRef} type="file" accept="image/*,image/gif" className="sr-only" onChange={onPickedImageFile} />
           {hasVars && (
             <>
               <span className="w-px h-4 bg-border mx-0.5" />
@@ -472,13 +595,16 @@ export function RichTextEdit({
           onBlur={commit}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
           // Bug récurrent (Béné) : sur les CTA blancs avec backgroundColor
           // sombre passés via className/style (text-white sur fond
           // primaire), le mode édition affichait du blanc-sur-blanc et
           // l'utilisateur ne voyait pas ce qu'il tapait. On override en
           // !text-foreground pendant l'édition pour garantir un contraste
           // lisible avec le bg-white/90, peu importe la couleur héritée.
-          className={`${baseCls} tiquiz-rich w-full bg-white/90 !text-foreground border-2 border-primary/40 outline-none`}
+          className={`${baseCls} tiquiz-rich w-full bg-white/90 !text-foreground border-2 outline-none ${dropping ? "border-primary border-dashed bg-primary/5" : "border-primary/40"}`}
           // Le `style` du parent peut contenir un `color: white` (ex.
           // CTA blanc) — on l'override aussi via inline style pour
           // doubler la garantie de contraste.
@@ -583,7 +709,7 @@ export function RichTextEdit({
 
       {/* Link insertion dialog — styled per Tiquiz design system,
           replaces window.prompt() (Adeline, 18 mai 2026). */}
-      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+      <Dialog open={linkDialogOpen} onOpenChange={(open) => { setLinkDialogOpen(open); if (!open) dialogPausedRef.current = false; }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("rteLinkDialogTitle")}</DialogTitle>
@@ -609,7 +735,7 @@ export function RichTextEdit({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+      <Dialog open={imageDialogOpen} onOpenChange={(open) => { setImageDialogOpen(open); if (!open) dialogPausedRef.current = false; }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("rteImageDialogTitle")}</DialogTitle>

@@ -925,6 +925,31 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     }
   }
 
+  // Drag-and-drop upload pour les RichTextEdit (Adeline, mai 2026).
+  // Cf. QuizDetailClient pour le détail — même contrat ici. Permet
+  // d'incruster une image n'importe où dans le titre/intro/capture
+  // d'un sondage en draggant le fichier à l'emplacement voulu.
+  async function handleRichTextImageUpload(file: File): Promise<string | null> {
+    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return null; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return null; }
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("toastNotLoggedIn")); return null; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `rich-content/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("Rich text image upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(`Erreur upload image : ${msg}`);
+      return null;
+    }
+  }
+
   function toggleShareNetwork(n: ShareNetwork) {
     setShareNetworks((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
   }
@@ -1494,7 +1519,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     </div>
                   )}
                   <InlineEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
@@ -1693,8 +1718,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <RichTextEdit singleLine value={captureHeading || (quiz?.address_form === "vous" ? t("captureHeadingDefaultFormal") : t("captureHeadingDefault"))} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
-                  <RichTextEdit value={captureSubtitle || (quiz?.address_form === "vous" ? t("captureSubtitleDefaultFormal") : t("captureSubtitleDefault"))} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
+                  <RichTextEdit singleLine value={captureHeading || (quiz?.address_form === "vous" ? t("captureHeadingDefaultFormal") : t("captureHeadingDefault"))} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
+                  <RichTextEdit value={captureSubtitle || (quiz?.address_form === "vous" ? t("captureSubtitleDefaultFormal") : t("captureSubtitleDefault"))} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("csvFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}

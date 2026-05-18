@@ -59,6 +59,7 @@ type SurveyAnswer =
   | { kind: "rating"; value: number }
   | { kind: "star"; value: number }
   | { kind: "text"; value: string };
+type ResultImagePosition = "top" | "after_title" | "after_description" | "after_insight" | "bottom";
 type QuizResult = {
   id: string;
   title: string;
@@ -68,6 +69,8 @@ type QuizResult = {
   cta_text: string | null;
   cta_url: string | null;
   sort_order: number;
+  image_url?: string | null;
+  image_position?: ResultImagePosition | null;
 };
 
 type PublicQuizData = {
@@ -2316,6 +2319,16 @@ export default function PublicQuizClient({
         {shareOverlay}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
+            {/* Hero image du résultat (Adeline, mai 2026). Bloc séparé
+                du texte, rendu à la position choisie par le créateur
+                via image_position. */}
+            {(() => {
+              const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
+              return (slot === "top" && resultProfile?.image_url) ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+              ) : null;
+            })()}
             <div className="space-y-3">
               {/* Titre du résultat = rich-text (héritage RichTextEdit).
                   Rendu HTML sanitisé + `tipote-quiz-rich-inline`. */}
@@ -2324,6 +2337,14 @@ export default function PublicQuizClient({
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(resultProfile?.title) || "") || t.resultFallback }}
               />
             </div>
+
+            {(() => {
+              const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
+              return (slot === "after_title" && resultProfile?.image_url) ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+              ) : null;
+            })()}
 
             {resultProfile?.description && (() => {
               const desc = interp(resultProfile.description);
@@ -2335,6 +2356,14 @@ export default function PublicQuizClient({
               ) : (
                 <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{desc}</p>
               );
+            })()}
+
+            {(() => {
+              const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
+              return (slot === "after_description" && resultProfile?.image_url) ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+              ) : null;
             })()}
 
             {resultProfile?.insight && (() => {
@@ -2357,6 +2386,14 @@ export default function PublicQuizClient({
               );
             })()}
 
+            {(() => {
+              const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
+              return (slot === "after_insight" && resultProfile?.image_url) ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+              ) : null;
+            })()}
+
             {resultProfile?.projection && (() => {
               const proj = interp(resultProfile.projection);
               return (
@@ -2375,6 +2412,14 @@ export default function PublicQuizClient({
                   )}
                 </div>
               );
+            })()}
+
+            {(() => {
+              const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
+              return (slot === "bottom" && resultProfile?.image_url) ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={resultProfile.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+              ) : null;
             })()}
 
           {/* Opt-in breakdown card (Gwenn 2026-05-14): exposes every

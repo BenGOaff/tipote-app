@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2,
+  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, Wand2, ImagePlus,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import { toast } from "sonner";
@@ -43,7 +43,7 @@ import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { interpolateText } from "@/lib/quizPersonalization";
+import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 
 /** Same demo name used across both repos to substitute {name} placeholders
  *  in the editor preview canvas — gender-neutral, short, works in fr/en. */
@@ -88,7 +88,9 @@ type QuizQuestion = {
   // in supabase/migrations/20260428_survey_mode.sql.
   config?: Record<string, unknown> | null;
 };
-type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number };
+type ResultImagePosition = "top" | "after_title" | "after_description" | "after_insight" | "bottom";
+const RESULT_IMAGE_POSITIONS: ResultImagePosition[] = ["top", "after_title", "after_description", "after_insight", "bottom"];
+type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
@@ -1084,6 +1086,82 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   }
 
+  // Drag-and-drop upload pour les RichTextEdit (Adeline, mai 2026 :
+  // "ajoute la possibilité d'ajouter une image dans les résultats,
+  // 10Mo max, gif acceptés et possible de drag and drop à l'emplacement
+  // voulu"). Pattern identique à handleBonusImageUpload mais générique :
+  // upload anywhere et retourne l'URL au RichTextEdit qui se charge
+  // d'insérer le <img> au point de drop. Bucket dédié `rich-content/`
+  // pour ne pas mélanger avec les autres images du quiz.
+  async function handleRichTextImageUpload(file: File): Promise<string | null> {
+    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return null; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return null; }
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("toastNotLoggedIn")); return null; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `rich-content/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("Rich text image upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(`Erreur upload image : ${msg}`);
+      return null;
+    }
+  }
+
+  // Image dédiée par résultat (Adeline V2, mai 2026). Itération
+  // précédente prepend du <img> dans la description rich-text —
+  // Adeline a explicitement refusé : l'image doit être un BLOC
+  // SÉPARÉ du texte, position choisie parmi 5 slots logiques.
+  // Migration : 20260519_quiz_results_image.sql.
+  const resultImageInputRef = useRef<HTMLInputElement>(null);
+  const [resultImageTargetRi, setResultImageTargetRi] = useState<number | null>(null);
+  const [resultImageUploading, setResultImageUploading] = useState<number | null>(null);
+  const openResultImagePicker = (ri: number) => {
+    setResultImageTargetRi(ri);
+    resultImageInputRef.current?.click();
+  };
+  const onResultImagePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    const ri = resultImageTargetRi;
+    setResultImageTargetRi(null);
+    if (!file || ri === null) return;
+    setResultImageUploading(ri);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setEditResults((p) => p.map((r, i) => i !== ri ? r : {
+        ...r,
+        image_url: url,
+        image_position: r.image_position ?? "top",
+      }));
+    } finally {
+      setResultImageUploading(null);
+    }
+  };
+  const updateResultImagePosition = (ri: number, pos: ResultImagePosition) => {
+    setEditResults((p) => p.map((r, i) => i !== ri ? r : { ...r, image_position: pos }));
+  };
+  const clearResultImage = (ri: number) => {
+    setEditResults((p) => p.map((r, i) => i !== ri ? r : { ...r, image_url: null }));
+  };
+  async function handleResultImageDrop(file: File, ri: number, pos: ResultImagePosition) {
+    setResultImageUploading(ri);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setEditResults((p) => p.map((r, i) => i !== ri ? r : { ...r, image_url: url, image_position: pos }));
+    } finally {
+      setResultImageUploading(null);
+    }
+  }
+
   function toggleShareNetwork(n: ShareNetwork) {
     setShareNetworks((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
   }
@@ -1186,7 +1264,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             // any plain object and DB column is JSONB.
             config: q.config ?? {},
           })),
-          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i })),
+          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top" })),
         }),
       });
       const json = await res.json();
@@ -1505,7 +1583,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           key={`r-${i}`}
                           id={`r-${i}`}
                           index={i}
-                          label={stripHtml(cleanPlaceholdersForLabel(r.title)) || t("emptyResult")}
+                          label={extractResultLabel(cleanPlaceholdersForLabel(r.title)) || t("emptyResult")}
                           onClick={() => scrollToSection(`r-${i}`)}
                           onRemove={() => removeResult(i)}
                           canDelete={editResults.length > 1}
@@ -1820,7 +1898,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                   )}
                   <InlineEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
@@ -1944,8 +2022,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <RichTextEdit singleLine value={captureHeading || (quiz?.address_form === "vous" ? t("captureHeadingDefaultFormal") : t("captureHeadingDefault"))} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
-                  <RichTextEdit value={captureSubtitle || (quiz?.address_form === "vous" ? t("captureSubtitleDefaultFormal") : t("captureSubtitleDefault"))} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
+                  <RichTextEdit singleLine value={captureHeading || (quiz?.address_form === "vous" ? t("captureHeadingDefaultFormal") : t("captureHeadingDefault"))} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
+                  <RichTextEdit value={captureSubtitle || (quiz?.address_form === "vous" ? t("captureSubtitleDefaultFormal") : t("captureSubtitleDefault"))} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("csvFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
@@ -2113,6 +2191,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </div>
               )}
 
+              {/* Shared hidden file input for the "+ Image" button on
+                  each result panel. One input is enough — the target
+                  result index is tracked in `resultImageTargetRi`. */}
+              <input
+                ref={resultImageInputRef}
+                type="file"
+                accept="image/*,image/gif"
+                className="sr-only"
+                onChange={onResultImagePicked}
+              />
+
               {/* ── RESULTS ── */}
               {editResults.map((r, ri) => {
                 const cov = resultCoverage[ri] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
@@ -2124,6 +2213,54 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 return (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
+                    {/* Image dédiée du résultat (Adeline V2). Bloc
+                        séparé du texte ; position parmi 5 slots. */}
+                    {r.image_url ? (
+                      <div className="rounded-xl border border-border bg-muted/30 p-2 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] text-muted-foreground font-medium">{t("resultImagePosLabel")}</span>
+                          {RESULT_IMAGE_POSITIONS.map((pos) => {
+                            const active = (r.image_position ?? "top") === pos;
+                            return (
+                              <button
+                                key={pos}
+                                type="button"
+                                onClick={() => updateResultImagePosition(ri, pos)}
+                                className={`text-[11px] px-2 py-1 rounded-md transition-colors border ${active ? "border-primary bg-primary text-white" : "border-transparent hover:bg-muted text-muted-foreground"}`}
+                              >
+                                {t(`resultImagePos_${pos}`)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => clearResultImage(ri)}
+                          className="text-xs text-destructive hover:underline px-2"
+                        >
+                          {t("resultImageRemove")}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openResultImagePicker(ri)}
+                        disabled={resultImageUploading === ri}
+                        onDragOver={(e) => { e.preventDefault(); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const f = Array.from(e.dataTransfer?.files ?? []).find(x => x.type.startsWith("image/"));
+                          if (f) void handleResultImageDrop(f, ri, "top");
+                        }}
+                        className="w-full py-8 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground disabled:opacity-50"
+                      >
+                        {resultImageUploading === ri
+                          ? <Loader2 className="w-6 h-6 animate-spin" />
+                          : <ImagePlus className="w-6 h-6" />}
+                        <span className="text-xs">{t("resultImageDropzone")}</span>
+                        <span className="text-[10px] text-muted-foreground/70">{t("resultImageHint")}</span>
+                      </button>
+                    )}
                     {showCoverage && (
                       <div
                         className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
@@ -2156,8 +2293,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         </div>
                       </div>
                     )}
+                    {r.image_url && (r.image_position ?? "top") === "top" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("resultTitlePlaceholder")} />
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} previewTransform={previewInterpolate} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
+                    {r.image_url && r.image_position === "after_title" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
+                    {r.image_url && r.image_position === "after_description" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <InlineEdit
@@ -2167,8 +2316,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           placeholder="Titre du bloc insight…"
                         />
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder="Insight…" />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder="Insight…" />
                     </div>
+                    {r.image_url && r.image_position === "after_insight" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
                         <InlineEdit
@@ -2179,8 +2332,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           placeholder="Titre du bloc projection…"
                         />
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder="Projection…" />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder="Projection…" />
                     </div>
+                    {r.image_url && r.image_position === "bottom" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
                         <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-white font-semibold text-center" placeholder="Texte du CTA…" />
@@ -2189,7 +2346,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                     <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
                       <div className="text-xs font-semibold text-foreground mb-1">Tag Systeme.io pour ce résultat</div>
-                      <p className="text-[11px] text-muted-foreground mb-2">Appliqué au lead qui obtient « {r.title || `Résultat ${ri + 1}`} ». Utilise-le pour segmenter tes automatisations.</p>
+                      {/* Adeline (18 mai 2026) : auparavant on injectait
+                          `r.title` brut dans le hint, ce qui laissait
+                          visibles les placeholders gendrés et le `{name}`
+                          non résolus (ex. "obtient « {**{name},
+                          tu es le·la Solopreneur·se Invisible**} »").
+                          On combine maintenant cleanPlaceholdersForLabel
+                          (interpole {name}→"" + {a|b|c}→inclusif + strip
+                          markdown) puis extractResultLabel (vire le ", tu
+                          es le·la" + les `·xx` inclusifs) pour ne garder
+                          que le label court "Solopreneur Invisible". */}
+                      <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: extractResultLabel(cleanPlaceholdersForLabel(r.title)) || `Résultat ${ri + 1}` })}</p>
                       <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
                     </div>
                   </div>
