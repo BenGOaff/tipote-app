@@ -1654,7 +1654,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           key={`r-${i}`}
                           id={`r-${i}`}
                           index={i}
-                          label={extractResultLabel(cleanPlaceholdersForLabel(r.title)) || t("emptyResult")}
+                          label={stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || t("emptyResult")}
                           onClick={() => scrollToSection(`r-${i}`)}
                           onRemove={() => removeResult(i)}
                           canDelete={editResults.length > 1}
@@ -2291,7 +2291,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <ul className="mt-2.5 space-y-1.5 text-xs">
                       {tieAnalysis.conflicts.map((c: TieConflict, i: number) => {
                         const titles = c.resultIndices
-                          .map((ri) => extractResultLabel(cleanPlaceholdersForLabel(editResults[ri]?.title)) || `Résultat ${ri + 1}`)
+                          .map((ri) => stripHtml(extractResultLabel(cleanPlaceholdersForLabel(editResults[ri]?.title))) || `Résultat ${ri + 1}`)
                           .join(" ↔ ");
                         const path = c.answers
                           .map((oi, qi) => {
@@ -2482,7 +2482,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           markdown) puis extractResultLabel (vire le ", tu
                           es le·la" + les `·xx` inclusifs) pour ne garder
                           que le label court "Solopreneur Invisible". */}
-                      <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: extractResultLabel(cleanPlaceholdersForLabel(r.title)) || `Résultat ${ri + 1}` })}</p>
+                      <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || `Résultat ${ri + 1}` })}</p>
                       <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
                     </div>
                   </div>
