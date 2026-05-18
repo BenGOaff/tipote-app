@@ -495,7 +495,13 @@
     "aiRewriteTitle": "إعادة الصياغة بالذكاء الاصطناعي بنبرة الاختبار",
     "aiRewriteNoResult": "لم يقترح الذكاء الاصطناعي شيئًا. حاول مجددًا.",
     "aiRewriteDismiss": "الاحتفاظ بالنص",
-    "aiRewriteAgain": "إعادة التوليد"
+    "aiRewriteAgain": "إعادة التوليد",
+    "rteLinkDialogTitle": "إدراج رابط",
+    "rteLinkDialogHint": "الصق عنوان URL الذي يجب أن يشير إليه النص المحدد.",
+    "rteImageDialogTitle": "إدراج صورة",
+    "rteImageDialogHint": "الصق عنوان URL للصورة المراد تضمينها.",
+    "rteDialogConfirm": "إدراج",
+    "rteDialogCancel": "إلغاء"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -3978,7 +3984,15 @@
     "imageUrlPlaceholder": "https://… (رابط الصورة)",
     "multiSelectLabel": "السماح بعدّة إجابات",
     "multiSelectHint": "إذا فُعِّلت، يمكن للزائر اختيار عدّة خيارات. ينقر على كل خيار لتفعيله ثم يستخدم زر «التالي» للمتابعة.",
-    "toastIframeCopied": "تم نسخ كود iframe!"
+    "toastIframeCopied": "تم نسخ كود iframe!",
+    "fieldPhoneRequired": "الهاتف مطلوب",
+    "fieldFirstNameRequiredToggle": "جعل الاسم الأول مطلوبًا",
+    "fieldLastNameRequiredToggle": "جعل اسم العائلة مطلوبًا",
+    "fieldCountryRequiredToggle": "جعل البلد مطلوبًا",
+    "previewAddOptionImage": "إضافة صورة",
+    "previewRemoveImage": "إزالة الصورة",
+    "consentTextPlaceholder": "أوافق على سياسة الخصوصية…",
+    "showConsentCheckboxHint": ""
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

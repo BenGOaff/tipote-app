@@ -105,6 +105,10 @@ type PublicQuizData = {
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
   capture_country?: boolean | null;
+  phone_required?: boolean | null;
+  first_name_required?: boolean | null;
+  last_name_required?: boolean | null;
+  country_required?: boolean | null;
   // Some creators (Bénédicte's first user) want to drop the GDPR-style
   // checkbox under the email capture form when their CRM already
   // handles consent upstream. Default true on every existing row.
@@ -161,6 +165,10 @@ type QuizTranslations = {
   phonePlaceholder: string;
   countryPlaceholder: string;
   optional: string;
+  phoneRequiredError: string;
+  firstNameRequiredError: string;
+  lastNameRequiredError: string;
+  countryRequiredError: string;
   viewResult: string;
   privacyPolicy: string;
   defaultConsent: string;
@@ -229,6 +237,10 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "T\u00e9l\u00e9phone",
     countryPlaceholder: "Pays",
     optional: "optionnel",
+    phoneRequiredError: "Le numéro de téléphone est obligatoire.",
+    firstNameRequiredError: "Le prénom est obligatoire.",
+    lastNameRequiredError: "Le nom est obligatoire.",
+    countryRequiredError: "Le pays est obligatoire.",
     viewResult: "Acc\u00e9der aux r\u00e9sultats",
     privacyPolicy: "Politique de confidentialit\u00e9",
     defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
@@ -290,6 +302,10 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "T\u00e9l\u00e9phone",
     countryPlaceholder: "Pays",
     optional: "optionnel",
+    phoneRequiredError: "Le numéro de téléphone est obligatoire.",
+    firstNameRequiredError: "Le prénom est obligatoire.",
+    lastNameRequiredError: "Le nom est obligatoire.",
+    countryRequiredError: "Le pays est obligatoire.",
     viewResult: "Acc\u00e9der aux r\u00e9sultats",
     privacyPolicy: "Politique de confidentialit\u00e9",
     defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
@@ -342,6 +358,10 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Phone",
     countryPlaceholder: "Country",
     optional: "optional",
+    phoneRequiredError: "Phone number is required.",
+    firstNameRequiredError: "First name is required.",
+    lastNameRequiredError: "Last name is required.",
+    countryRequiredError: "Country is required.",
     viewResult: "See my results",
     privacyPolicy: "Privacy policy",
     defaultConsent: "I accept the privacy policy.",
@@ -394,6 +414,10 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Tel\u00e9fono",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
+    phoneRequiredError: "El número de teléfono es obligatorio.",
+    firstNameRequiredError: "El nombre es obligatorio.",
+    lastNameRequiredError: "El apellido es obligatorio.",
+    countryRequiredError: "El país es obligatorio.",
     viewResult: "Ver mis resultados",
     privacyPolicy: "Pol\u00edtica de privacidad",
     defaultConsent: "Acepto la pol\u00edtica de privacidad.",
@@ -446,6 +470,10 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefon",
     countryPlaceholder: "Land",
     optional: "optional",
+    phoneRequiredError: "Telefonnummer ist erforderlich.",
+    firstNameRequiredError: "Vorname ist erforderlich.",
+    lastNameRequiredError: "Nachname ist erforderlich.",
+    countryRequiredError: "Land ist erforderlich.",
     viewResult: "Mein Ergebnis sehen",
     privacyPolicy: "Datenschutzerkl\u00e4rung",
     defaultConsent: "Ich akzeptiere die Datenschutzerkl\u00e4rung.",
@@ -498,6 +526,10 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefone",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
+    phoneRequiredError: "O número de telefone é obrigatório.",
+    firstNameRequiredError: "O nome é obrigatório.",
+    lastNameRequiredError: "O sobrenome é obrigatório.",
+    countryRequiredError: "O país é obrigatório.",
     viewResult: "Ver meu resultado",
     privacyPolicy: "Pol\u00edtica de privacidade",
     defaultConsent: "Aceito a pol\u00edtica de privacidade.",
@@ -550,6 +582,10 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefono",
     countryPlaceholder: "Paese",
     optional: "opzionale",
+    phoneRequiredError: "Il numero di telefono è obbligatorio.",
+    firstNameRequiredError: "Il nome è obbligatorio.",
+    lastNameRequiredError: "Il cognome è obbligatorio.",
+    countryRequiredError: "Il paese è obbligatorio.",
     viewResult: "Vedi il mio risultato",
     privacyPolicy: "Informativa sulla privacy",
     defaultConsent: "Accetto l\u2019informativa sulla privacy.",
@@ -602,6 +638,10 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "\u0627\u0644\u0647\u0627\u062a\u0641",
     countryPlaceholder: "\u0627\u0644\u0628\u0644\u062f",
     optional: "\u0627\u062e\u062a\u064a\u0627\u0631\u064a",
+    phoneRequiredError: "رقم الهاتف مطلوب.",
+    firstNameRequiredError: "الاسم الأول مطلوب.",
+    lastNameRequiredError: "اسم العائلة مطلوب.",
+    countryRequiredError: "البلد مطلوب.",
     viewResult: "\u0639\u0631\u0636 \u0627\u0644\u0646\u062a\u0627\u0626\u062c",
     privacyPolicy: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
     defaultConsent: "\u0623\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629.",
@@ -1094,6 +1134,25 @@ export default function PublicQuizClient({
 
   const handleSubmitEmail = async () => {
     if (!email.trim()) return;
+    // Validation des champs obligatoires (sauf email, déjà checké au
+    // dessus). Adeline + Hugo, 18 mai 2026 — chaque toggle activé
+    // dans l'éditeur devient une barrière à la soumission ici.
+    if (quiz?.capture_first_name && quiz?.first_name_required && !firstName.trim()) {
+      setSubmitError(t.firstNameRequiredError);
+      return;
+    }
+    if (quiz?.capture_last_name && quiz?.last_name_required && !lastName.trim()) {
+      setSubmitError(t.lastNameRequiredError);
+      return;
+    }
+    if (quiz?.capture_phone && quiz?.phone_required && !phone.trim()) {
+      setSubmitError(t.phoneRequiredError);
+      return;
+    }
+    if (quiz?.capture_country && quiz?.country_required && !country.trim()) {
+      setSubmitError(t.countryRequiredError);
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -1708,14 +1767,28 @@ export default function PublicQuizClient({
                       ? toggleMultiOption(oi)
                       : commitAnswer({ kind: "option", optionIndex: oi })
                   }
-                  className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
+                  className={`text-left rounded-xl border-2 overflow-hidden transition-all duration-200 ${
                     isSelected
                       ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
                   }`}
                 >
+                  {/* Per-option image (Hugo, mai 2026 — gamification).
+                      Render whenever image_url is set, regardless of
+                      question_type. Avant : seul le branch image_choice
+                      affichait les vignettes, donc une image uploadée
+                      sur une question multiple_choice "classique" ne
+                      remontait jamais côté visiteur. */}
+                  {opt.image_url && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={opt.image_url}
+                      alt={stripHtml(opt.text)}
+                      className="w-full aspect-video object-cover"
+                    />
+                  )}
                   <span
-                    className="tipote-quiz-rich tipote-quiz-rich-inline text-base font-medium"
+                    className="block tipote-quiz-rich tipote-quiz-rich-inline text-base font-medium p-5"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
                   />
                 </button>
@@ -1835,27 +1908,41 @@ export default function PublicQuizClient({
             })()}
 
             <div className="space-y-4">
+              {/* Convention SaaS classique : asterisk rouge sur les
+                  champs obligatoires, aucun badge sur les optionnels.
+                  L'email est obligatoire d'office. Les autres champs
+                  sont obligatoires ssi le créateur a flippé le toggle
+                  correspondant dans l'éditeur (cf. Adeline + Hugo,
+                  18 mai 2026). */}
               {(quiz.capture_first_name || quiz.capture_last_name) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {quiz.capture_first_name && (
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">{t.firstNamePlaceholder}</label>
+                      <label className="text-sm font-medium">
+                        {t.firstNamePlaceholder}
+                        {quiz.first_name_required && <span className="text-destructive ml-0.5">*</span>}
+                      </label>
                       <Input
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         className="h-11"
+                        required={!!quiz.first_name_required}
                       />
                     </div>
                   )}
                   {quiz.capture_last_name && (
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">{t.lastNamePlaceholder}</label>
+                      <label className="text-sm font-medium">
+                        {t.lastNamePlaceholder}
+                        {quiz.last_name_required && <span className="text-destructive ml-0.5">*</span>}
+                      </label>
                       <Input
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         className="h-11"
+                        required={!!quiz.last_name_required}
                       />
                     </div>
                   )}
@@ -1863,7 +1950,10 @@ export default function PublicQuizClient({
               )}
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Email</label>
+                <label className="text-sm font-medium">
+                  Email
+                  <span className="text-destructive ml-0.5">*</span>
+                </label>
                 <Input
                   type="email"
                   placeholder={t.emailPlaceholder}
@@ -1871,29 +1961,38 @@ export default function PublicQuizClient({
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSubmitEmail()}
                   className="h-11"
+                  required
                 />
               </div>
 
               {quiz.capture_phone && (
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">{t.phonePlaceholder} <span className="text-muted-foreground font-normal">({t.optional})</span></label>
+                  <label className="text-sm font-medium">
+                    {t.phonePlaceholder}
+                    {quiz.phone_required && <span className="text-destructive ml-0.5">*</span>}
+                  </label>
                   <Input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="h-11"
+                    required={!!quiz.phone_required}
                   />
                 </div>
               )}
 
               {quiz.capture_country && (
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">{t.countryPlaceholder}</label>
+                  <label className="text-sm font-medium">
+                    {t.countryPlaceholder}
+                    {quiz.country_required && <span className="text-destructive ml-0.5">*</span>}
+                  </label>
                   <Input
                     type="text"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     className="h-11"
+                    required={!!quiz.country_required}
                   />
                 </div>
               )}
@@ -2416,6 +2515,39 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   const trimmed = text?.trim() ?? "";
   const isStoredDefault = trimmed.length === 0 || ALL_DEFAULT_CONSENTS.has(trimmed);
   const raw = isStoredDefault ? t.defaultConsent : text!;
+
+  // Adeline (18 mai 2026) : le consent text peut maintenant être
+  // rich-text (gras / couleur / taille / police). Si on détecte du
+  // HTML on rend via sanitizeRichText + dangerouslySetInnerHTML —
+  // c'est l'éditeur qui pose le lien <a> directement, donc on n'a
+  // plus besoin de patcher le needle. Le défaut localisé reste plain
+  // text et passe par l'ancien code (needle-link injection).
+  const looksLikeHtml = /<[a-z][\s\S]*?>/i.test(raw);
+  if (looksLikeHtml) {
+    const alreadyHasLink = /<a\s[^>]*href=/i.test(raw);
+    return (
+      <span className="tipote-quiz-rich tipote-quiz-rich-inline">
+        <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(raw) }} />
+        {/* Si l'auteur n'a pas inséré son propre lien et qu'on a un
+            privacy_url renseigné, on l'affiche en suffixe pour ne pas
+            faire disparaître la politique de confidentialité. */}
+        {!alreadyHasLink && privacyUrl && (
+          <>
+            {" "}
+            <a
+              href={ensureExternalUrl(privacyUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-primary hover:text-primary/80 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {t.privacyPolicy}
+            </a>
+          </>
+        )}
+      </span>
+    );
+  }
 
   if (!privacyUrl) return <span>{raw}</span>;
 

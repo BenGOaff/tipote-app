@@ -124,7 +124,10 @@ export default function QuizResultsAnalytics({
     }
     return results
       .map((r) => ({
-        name: r.title || t("untitledResult"),
+        // stripHtml so the pie chart legend doesn't show raw `<span
+        // style="color:…">…</span>` (the result title field is rich
+        // text in DB — cf. rapport Adeline, 17 mai 2026).
+        name: stripHtml(r.title) || t("untitledResult"),
         value: r.id ? counts.get(r.id) ?? 0 : 0,
       }))
       .filter((r) => r.value > 0);
@@ -484,7 +487,7 @@ export default function QuizResultsAnalytics({
                   <tr key={l.id} className="border-b">
                     <td className="px-4 py-3 font-medium">{l.email}</td>
                     <td className="px-4 py-3">{l.first_name ?? "—"}</td>
-                    <td className="px-4 py-3">{l.result_title ?? "—"}</td>
+                    <td className="px-4 py-3">{stripHtml(l.result_title ?? "") || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {l.created_at
                         ? new Date(l.created_at).toLocaleDateString(locale)

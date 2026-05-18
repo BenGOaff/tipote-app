@@ -76,7 +76,7 @@ import {
 } from "@/lib/quizBranding";
 
 // Types
-type QuizOption = { text: string; result_index: number };
+type QuizOption = { text: string; result_index: number; image_url?: string | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
@@ -100,6 +100,7 @@ type QuizData = {
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
+  phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   bonus_intro_text: string | null;
   bonus_unlocked_message: string | null;
@@ -427,6 +428,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [captureLastName, setCaptureLastName] = useState(false);
   const [capturePhone, setCapturePhone] = useState(false);
   const [captureCountry, setCaptureCountry] = useState(false);
+  // Sub-toggles "obligatoire" pour chaque champ de capture (sauf
+  // email, toujours obligatoire). Default false partout → tous les
+  // quiz existants gardent leur comportement (champs optionnels).
+  // Côté visiteur : un asterisk apparait sur les champs flippés,
+  // pas de mention "(optionnel)" sur les autres (convention SaaS
+  // classique). Adeline + Hugo, 18 mai 2026.
+  const [firstNameRequired, setFirstNameRequired] = useState(false);
+  const [lastNameRequired, setLastNameRequired] = useState(false);
+  const [phoneRequired, setPhoneRequired] = useState(false);
+  const [countryRequired, setCountryRequired] = useState(false);
   // Defaults to true so older quizzes (no column value yet) keep showing
   // the GDPR-style checkbox. Only flips when the creator opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
@@ -536,6 +547,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     capture_last_name: captureLastName,
     capture_phone: capturePhone,
     capture_country: captureCountry,
+    first_name_required: firstNameRequired,
+    last_name_required: lastNameRequired,
+    phone_required: phoneRequired,
+    country_required: countryRequired,
     show_consent_checkbox: showConsentCheckbox,
     show_results_breakdown: showResultsBreakdown,
     ask_first_name: askFirstName,
@@ -566,6 +581,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
     captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
+    firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, showResultsBreakdown, askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl,
     shareMessage, locale, sioShareTagName, status,
@@ -597,6 +613,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (typeof s.capture_last_name === "boolean") setCaptureLastName(s.capture_last_name);
     if (typeof s.capture_phone === "boolean") setCapturePhone(s.capture_phone);
     if (typeof s.capture_country === "boolean") setCaptureCountry(s.capture_country);
+    if (typeof s.first_name_required === "boolean") setFirstNameRequired(s.first_name_required);
+    if (typeof s.last_name_required === "boolean") setLastNameRequired(s.last_name_required);
+    if (typeof s.phone_required === "boolean") setPhoneRequired(s.phone_required);
+    if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
     if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
@@ -800,6 +820,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
       setShowResultsBreakdown((q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true);
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
+      setFirstNameRequired(q.first_name_required ?? false); setLastNameRequired(q.last_name_required ?? false);
+      setPhoneRequired(q.phone_required ?? false); setCountryRequired(q.country_required ?? false);
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
@@ -1066,6 +1088,45 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     setShareNetworks((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
   }
 
+  // Per-option image upload (Hugo, 18 mai 2026 : gamifier le quiz en
+  // associant une vignette à chaque réponse). Même pattern Supabase
+  // Storage que bonus / OG, namespace dédié pour ne pas mélanger les
+  // images d'options avec les autres assets. Max 10 Mo, formats image/*
+  // incluant GIF.
+  const [uploadingOptionKey, setUploadingOptionKey] = useState<string | null>(null);
+  async function handleOptionImageUpload(file: File, qi: number, oi: number) {
+    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    const key = `${qi}-${oi}`;
+    setUploadingOptionKey(key);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `quiz-options/${user.id}/${quizId}-q${qi}-o${oi}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setEditQuestions((p) => p.map((q, i) => i !== qi ? q : {
+        ...q,
+        options: q.options.map((o, j) => j === oi ? { ...o, image_url: urlData.publicUrl } : o),
+      }));
+    } catch (err) {
+      console.error("Option image upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(`Erreur upload image : ${msg}`);
+    } finally {
+      setUploadingOptionKey(null);
+    }
+  }
+  function clearOptionImage(qi: number, oi: number) {
+    setEditQuestions((p) => p.map((q, i) => i !== qi ? q : {
+      ...q,
+      options: q.options.map((o, j) => j === oi ? { ...o, image_url: null } : o),
+    }));
+  }
+
   // Save
   const handleSave = async () => {
     if (!title.trim()) { toast.error("Titre requis"); return; }
@@ -1086,6 +1147,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
           capture_phone: capturePhone, capture_country: captureCountry,
+          first_name_required: firstNameRequired, last_name_required: lastNameRequired,
+          phone_required: phoneRequired, country_required: countryRequired,
           ask_first_name: askFirstName, ask_gender: askGender,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
           bonus_intro_text: bonusIntroText.trim() || null,
@@ -1108,9 +1171,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           share_widget_id: selectedShareWidget || null,
           questions: editQuestions.map((q, i) => ({
             question_text: q.question_text,
+            // Bug Hugo (18 mai 2026) : avant ce fix, le payload ne
+            // remontait que {text, result_index} et écrasait silencieusement
+            // l'image_url uploadée par l'éditeur. L'image n'arrivait
+            // donc jamais en base — d'où l'absence côté visiteur.
+            // SurveyDetailClient l'avait déjà, on aligne ici.
             options: q.options.map((o) => ({
               text: o.text,
               result_index: o.result_index,
+              ...(o.image_url ? { image_url: o.image_url } : {}),
             })),
             sort_order: i,
             // Per-question config (multi_select, future knobs). API accepts
@@ -1256,7 +1325,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const removeResult = (i: number) => { setEditResults(p => p.filter((_, ri) => ri !== i)); setEditQuestions(p => p.map(q => ({ ...q, options: q.options.map(o => ({ ...o, result_index: o.result_index > i ? o.result_index - 1 : o.result_index === i ? 0 : o.result_index })) }))); };
   const handleExportCSV = () => {
     if (!leads.length) return;
-    const csv = [[t("csvEmail"), t("csvFirstName"), t("csvLastName"), t("csvResult"), t("csvDate")].join(","), ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", l.result_title ?? "", l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
+    // Strip rich-text formatting from result_title before it lands in
+    // a CSV cell — raw `<span style=…>` markup would otherwise leak
+    // into the spreadsheet (cf. rapport Adeline, 17 mai 2026).
+    const csv = [[t("csvEmail"), t("csvFirstName"), t("csvLastName"), t("csvResult"), t("csvDate")].join(","), ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", stripHtml(l.result_title ?? ""), l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
@@ -1514,6 +1586,38 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <CapturePill label={t("pillPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
                     <CapturePill label="Pays" active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
+                  {/* Sub-toggles "obligatoire" pour chaque champ capturé.
+                      Convention SaaS : asterisk côté visiteur sur les
+                      cases cochées ici, rien sur les autres. L'email
+                      reste obligatoire d'office (pas de toggle). */}
+                  {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
+                    <div className="flex flex-col gap-1.5 pt-1">
+                      {captureFirstName && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                          <input type="checkbox" checked={firstNameRequired} onChange={(e) => setFirstNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                          <span>{t("fieldFirstNameRequiredToggle")}</span>
+                        </label>
+                      )}
+                      {captureLastName && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                          <input type="checkbox" checked={lastNameRequired} onChange={(e) => setLastNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                          <span>{t("fieldLastNameRequiredToggle")}</span>
+                        </label>
+                      )}
+                      {capturePhone && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                          <input type="checkbox" checked={phoneRequired} onChange={(e) => setPhoneRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                          <span>{t("fieldPhoneRequired")}</span>
+                        </label>
+                      )}
+                      {captureCountry && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                          <input type="checkbox" checked={countryRequired} onChange={(e) => setCountryRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                          <span>{t("fieldCountryRequiredToggle")}</span>
+                        </label>
+                      )}
+                    </div>
+                  )}
                   {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
                     <button
                       onClick={() => {
@@ -1764,6 +1868,43 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
+                              {/* Image facultative pour gamifier la réponse (Hugo,
+                                  mai 2026). Vignette si présente + bouton Retirer ;
+                                  sinon petit bouton "+ Image" qui ouvre le picker. */}
+                              {opt.image_url ? (
+                                <div className="relative mb-3 rounded-lg overflow-hidden border border-border bg-muted/30">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={opt.image_url} alt={stripHtml(opt.text)} className="w-full aspect-video object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => clearOptionImage(qi, oi)}
+                                    className="absolute top-1.5 right-1.5 bg-background/90 hover:bg-destructive hover:text-white rounded p-1 shadow"
+                                    aria-label={t("previewRemoveImage")}
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <label className="mb-3 inline-flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors">
+                                  <input
+                                    type="file"
+                                    accept="image/*,image/gif"
+                                    className="sr-only"
+                                    disabled={uploadingOptionKey === `${qi}-${oi}`}
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) void handleOptionImageUpload(f, qi, oi);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                  {uploadingOptionKey === `${qi}-${oi}` ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Plus className="w-3.5 h-3.5" />
+                                  )}
+                                  {t("previewAddOptionImage")}
+                                </label>
+                              )}
                               <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
                               <div className="flex items-center gap-1.5 mt-2">
                                 <span className="text-xs" style={{ color: `${pc}99` }}>+1 point pour le</span>
@@ -1813,6 +1954,27 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
                     {capturePhone && <div><label className="text-sm text-muted-foreground">{t("phoneOptional")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
+                  {/* Adeline (18 mai 2026) : la case à cocher RGPD doit
+                      être éditée WYSIWYG, dans le preview du quiz, pas
+                      dans une sidebar Réglages. Visible ssi le toggle
+                      `Afficher la case à cocher` est ON. Le RichTextEdit
+                      pose automatiquement `target="_blank"` + `rel`
+                      sur les liens insérés, donc cliquer le lien depuis
+                      le quiz ouvre la politique dans un nouvel onglet —
+                      le quiz reste ouvert. */}
+                  {showConsentCheckbox && (
+                    <div className="max-w-md mx-auto flex items-start gap-2 text-sm text-muted-foreground">
+                      <input type="checkbox" readOnly className="mt-1 h-4 w-4 accent-primary cursor-default" />
+                      <div className="flex-1">
+                        <RichTextEdit
+                          value={consentText}
+                          onChange={setConsentText}
+                          className="text-sm"
+                          placeholder={t("consentTextPlaceholder")}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>Accéder aux résultats</button>
                 </div>
               </div>

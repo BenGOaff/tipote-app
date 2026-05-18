@@ -35,6 +35,11 @@ import {
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { useUserPalettes } from "@/components/editor/PalettesContext";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface RichTextEditProps {
   value: string;
@@ -269,13 +274,33 @@ export function RichTextEdit({
     }
   };
 
+  // Link / image insertion via styled Dialog (Adeline, 18 mai 2026 :
+  // "le texte surligné pour insérer un lien c'est moche, respecte le
+  // branding tiquiz tipote, pas les fenêtres moches par défaut").
+  // window.prompt() était une dialogue navigateur (titre "quiz.tipote.com
+  // indique", boutons OK/Annuler stylés OS) → on passe sur le Dialog
+  // Radix du design-system. On snapshot le range AVANT d'ouvrir parce
+  // que Radix steal le focus du contentEditable et perd la sélection.
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkDraftUrl, setLinkDraftUrl] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [imageDraftUrl, setImageDraftUrl] = useState("");
+  const [imageError, setImageError] = useState<string | null>(null);
+
   const onInsertLink = () => {
-    const url = window.prompt(t("rteLinkPrompt"));
-    if (!url) return;
-    if (!isSafeUrl(url)) {
-      window.alert(t("rteLinkInvalid"));
-      return;
-    }
+    saveSelection();
+    setLinkDraftUrl("");
+    setLinkError(null);
+    setLinkDialogOpen(true);
+  };
+
+  const commitLink = () => {
+    const url = linkDraftUrl.trim();
+    if (!url) { setLinkError(t("rteLinkInvalid")); return; }
+    if (!isSafeUrl(url)) { setLinkError(t("rteLinkInvalid")); return; }
+    setLinkDialogOpen(false);
+    restoreSelection();
     exec("createLink", url);
     const el = ref.current;
     if (el) {
@@ -287,12 +312,18 @@ export function RichTextEdit({
   };
 
   const onInsertImage = () => {
-    const url = window.prompt(t("rteImagePrompt"));
-    if (!url) return;
-    if (!isSafeUrl(url)) {
-      window.alert(t("rteUrlInvalid"));
-      return;
-    }
+    saveSelection();
+    setImageDraftUrl("");
+    setImageError(null);
+    setImageDialogOpen(true);
+  };
+
+  const commitImage = () => {
+    const url = imageDraftUrl.trim();
+    if (!url) { setImageError(t("rteUrlInvalid")); return; }
+    if (!isSafeUrl(url)) { setImageError(t("rteUrlInvalid")); return; }
+    setImageDialogOpen(false);
+    restoreSelection();
     exec("insertImage", url);
     const el = ref.current;
     if (el) {
@@ -549,6 +580,60 @@ export function RichTextEdit({
           </div>
         </div>
       )}
+
+      {/* Link insertion dialog — styled per Tiquiz design system,
+          replaces window.prompt() (Adeline, 18 mai 2026). */}
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("rteLinkDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("rteLinkDialogHint")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              type="url"
+              autoFocus
+              value={linkDraftUrl}
+              placeholder="https://…"
+              onChange={(e) => { setLinkDraftUrl(e.target.value); setLinkError(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitLink(); } }}
+            />
+            {linkError && <p className="text-xs text-destructive">{linkError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
+              {t("rteDialogCancel")}
+            </Button>
+            <Button onClick={commitLink}>{t("rteDialogConfirm")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("rteImageDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("rteImageDialogHint")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              type="url"
+              autoFocus
+              value={imageDraftUrl}
+              placeholder="https://…"
+              onChange={(e) => { setImageDraftUrl(e.target.value); setImageError(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitImage(); } }}
+            />
+            {imageError && <p className="text-xs text-destructive">{imageError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImageDialogOpen(false)}>
+              {t("rteDialogCancel")}
+            </Button>
+            <Button onClick={commitImage}>{t("rteDialogConfirm")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
 import { PageBanner } from "@/components/PageBanner";
+import { stripHtml } from "@/lib/richText";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -667,7 +668,7 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                   {detailLead.quiz_result_title && (
                     <div className="flex justify-between items-center py-1.5">
                       <span className="text-sm text-muted-foreground">{t("quizResult")}</span>
-                      <span className="text-sm font-medium">{detailLead.quiz_result_title}</span>
+                      <span className="text-sm font-medium">{stripHtml(detailLead.quiz_result_title)}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center py-1.5">

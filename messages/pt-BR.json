@@ -635,7 +635,13 @@
     "aiRewriteTitle": "Reformular com IA no tom do quiz",
     "aiRewriteNoResult": "A IA não retornou nada. Tente de novo.",
     "aiRewriteDismiss": "Manter meu texto",
-    "aiRewriteAgain": "Regenerar"
+    "aiRewriteAgain": "Regenerar",
+    "rteLinkDialogTitle": "Inserir link",
+    "rteLinkDialogHint": "Cole a URL para a qual o texto selecionado deve apontar.",
+    "rteImageDialogTitle": "Inserir imagem",
+    "rteImageDialogHint": "Cole a URL da imagem a incorporar.",
+    "rteDialogConfirm": "Inserir",
+    "rteDialogCancel": "Cancelar"
   },
   "auth": {
     "login": "Entrar",
@@ -4277,7 +4283,15 @@
     "imageUrlPlaceholder": "https://… (URL da imagem)",
     "multiSelectLabel": "Múltiplas respostas permitidas",
     "multiSelectHint": "Se ativada, o visitante pode selecionar várias opções. Toque em cada opção para marcá-la e use o botão \"Próximo\" para continuar.",
-    "toastIframeCopied": "Código iframe copiado!"
+    "toastIframeCopied": "Código iframe copiado!",
+    "fieldPhoneRequired": "Telefone obrigatório",
+    "fieldFirstNameRequiredToggle": "Tornar o nome obrigatório",
+    "fieldLastNameRequiredToggle": "Tornar o sobrenome obrigatório",
+    "fieldCountryRequiredToggle": "Tornar o país obrigatório",
+    "previewAddOptionImage": "Adicionar imagem",
+    "previewRemoveImage": "Remover imagem",
+    "consentTextPlaceholder": "Concordo com a política de privacidade…",
+    "showConsentCheckboxHint": ""
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",

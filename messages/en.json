@@ -495,7 +495,13 @@
     "aiRewriteTitle": "Rewrite with AI in the quiz tone",
     "aiRewriteNoResult": "The AI returned nothing. Try again.",
     "aiRewriteDismiss": "Keep my text",
-    "aiRewriteAgain": "Regenerate"
+    "aiRewriteAgain": "Regenerate",
+    "rteLinkDialogTitle": "Insert link",
+    "rteLinkDialogHint": "Paste the URL the selected text should point to.",
+    "rteImageDialogTitle": "Insert image",
+    "rteImageDialogHint": "Paste the URL of the image to embed.",
+    "rteDialogConfirm": "Insert",
+    "rteDialogCancel": "Cancel"
   },
   "auth": {
     "login": "Sign in",
@@ -3978,7 +3984,15 @@
     "imageUrlPlaceholder": "https://… (image URL)",
     "multiSelectLabel": "Multiple answers allowed",
     "multiSelectHint": "If enabled, the visitor can pick several options. They tap each option to toggle it and use the \"Next\" button to continue.",
-    "toastIframeCopied": "Iframe code copied!"
+    "toastIframeCopied": "Iframe code copied!",
+    "fieldPhoneRequired": "Phone required",
+    "fieldFirstNameRequiredToggle": "Make first name required",
+    "fieldLastNameRequiredToggle": "Make last name required",
+    "fieldCountryRequiredToggle": "Make country required",
+    "previewAddOptionImage": "Add an image",
+    "previewRemoveImage": "Remove image",
+    "consentTextPlaceholder": "I agree to the privacy policy…",
+    "showConsentCheckboxHint": ""
   },
   "contentStrategy": {
     "title": "Content strategy",
