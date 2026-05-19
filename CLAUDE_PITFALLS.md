@@ -176,6 +176,53 @@ Si je touche à ce flow, vérifier que :
 - `savedSelRange` est nullifié après consommation (sinon double-restore
   buggy).
 
+## L) WORKFLOW DE DÉPLOIEMENT — comprendre où vit vraiment mon code
+
+**Mon code ne va JAMAIS direct en prod.** Il passe par 4 étapes :
+
+1. **Je commit sur ma branche `claude/setup-dev-guidelines-CmXl0`**
+   → visible à https://github.com/BenGOaff/tipote-app/tree/claude/setup-dev-guidelines-CmXl0
+2. **Ben télécharge mon code en local sur son PC** (Windows,
+   `C:\Users\hello\Desktop\tipote-app`) depuis cette branche
+3. **Il push sur `main`** via `git add . && git commit && git push origin main`
+4. **Il déploie sur le VPS** :
+   ```
+   cd /home/tipote/tipote-app
+   git stash && git pull origin main && npm ci && npm run build
+   pm2 restart tipote-prod --update-env
+   ```
+
+**Conséquence critique** : si je viens de pusher 5 commits sur ma branche
+en succession, **ils ne sont en prod qu'après les 4 étapes**. Entre
+chaque commit que je fais et le moment où ça touche la prod, il peut
+s'écouler des heures (Ben doit re-télécharger, re-push main, re-build).
+
+**Quand un user me dit « ton code est sur main » ou « j'ai déployé »** :
+- ça veut dire qu'il a fait étape 3 (push main) ET étape 4 (build VPS)
+- **mais pas forcément avec MES DERNIERS commits** — il a téléchargé à
+  un moment T, mes commits postérieurs à T sont restés sur ma branche
+- avant de conclure « mon code marche pas », **toujours vérifier que le
+  commit sur lequel je base mon analyse est bien le commit qui tourne
+  en prod**. Outils :
+  - `curl -sL <url-prod> | grep <truc-spécifique-au-dernier-commit>`
+  - demander à Ben de faire `git log origin/main -5 --oneline` pour
+    voir le dernier commit sur main
+- si mon dernier commit n'est pas en prod, lui rappeler le merge :
+  ```
+  cd C:\Users\hello\Desktop\tipote-app
+  git fetch origin
+  git checkout main
+  git merge origin/claude/setup-dev-guidelines-CmXl0 -m "merge claude"
+  git push origin main
+  ```
+
+**Conclusion à appliquer SYSTÉMATIQUEMENT** : quand un fix touche un
+truc visible côté visiteur (OG meta, public page, etc.) et que le user
+re-teste, et que ça ne marche pas comme prévu → **AVANT** de re-coder
+ou de spéculer sur un nouveau bug, **vérifier d'abord avec un curl
+direct** que le serveur sert bien la version qui contient mon fix. Si
+non, c'est un problème de pipeline déploiement, pas de code.
+
 ## I) Quand je vais douter pendant le code
 
 1. **Avant de toucher une colonne SQL** : relire section A.
