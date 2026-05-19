@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       step: "keyword",
       code: "keywordMismatch",
       params: { comment: test_comment, keyword: auto.trigger_keyword },
+      detail: `Test comment "${test_comment}" does not contain trigger keyword "${auto.trigger_keyword}".`,
     });
   }
 
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
       step: "connection",
       code: "connectionMissing",
       params: { platform },
+      detail: `No ${platform} account connected. Connect it in Settings → Connections.`,
     });
   }
 
@@ -91,7 +93,13 @@ export async function POST(req: NextRequest) {
   try {
     accessToken = decrypt(conn.access_token_encrypted);
   } catch {
-    return NextResponse.json({ ok: false, step: "token", code: "tokenDecryptFailed", params: {} });
+    return NextResponse.json({
+      ok: false,
+      step: "token",
+      code: "tokenDecryptFailed",
+      params: {},
+      detail: "Token decryption error. Reconnect the account.",
+    });
   }
 
   // Étape 3 : valider le token et vérifier les permissions via l'API.
@@ -113,6 +121,7 @@ export async function POST(req: NextRequest) {
         step: "token",
         code: "ig.tokenInvalid",
         params: { error: err.slice(0, 200) },
+        detail: `Instagram token invalid or expired. Reconnect the account. (${err.slice(0, 200)})`,
       });
     }
 
@@ -129,6 +138,7 @@ export async function POST(req: NextRequest) {
           step: "permissions",
           code: "ig.permMissingManageMessages",
           params: { granted: granted.join(", ") },
+          detail: `Permission "instagram_business_manage_messages" missing. Reconnect Instagram. Granted: ${granted.join(", ")}`,
         });
       }
     }
@@ -153,6 +163,7 @@ export async function POST(req: NextRequest) {
           igUserId,
           fields: accountSub.fields.join(", ") || "—",
         },
+        detail: `Instagram account not subscribed to webhook (POST /${igUserId}/subscribed_apps missing or without "comments"). Current fields: ${accountSub.fields.join(", ") || "—"}`,
       });
     }
 
@@ -172,6 +183,7 @@ export async function POST(req: NextRequest) {
         step: "config",
         code: "ig.envMissing",
         params: {},
+        detail: "INSTAGRAM_META_APP_ID or INSTAGRAM_META_APP_SECRET missing on the server.",
       });
     }
 
@@ -185,6 +197,7 @@ export async function POST(req: NextRequest) {
         step: "app_subscription",
         code: "ig.appSubscriptionMissing",
         params: { appId: metaAppId, error: appSub.error ?? "" },
+        detail: `Meta app (id ${metaAppId}) has no webhook subscription for Instagram. Configure it in Meta Dashboard → Webhooks. (${appSub.error ?? ""})`,
       });
     }
     if (!appSub.active) {
@@ -193,6 +206,7 @@ export async function POST(req: NextRequest) {
         step: "app_subscription",
         code: "ig.appSubscriptionInactive",
         params: { appId: metaAppId },
+        detail: `Meta app (id ${metaAppId}) has an Instagram subscription but it is inactive. Reactivate it in Meta Dashboard → Webhooks.`,
       });
     }
     if (!appSub.fields.includes("comments")) {
@@ -201,6 +215,7 @@ export async function POST(req: NextRequest) {
         step: "app_subscription",
         code: "ig.appSubscriptionFieldsMissing",
         params: { appId: metaAppId, fields: appSub.fields.join(", ") || "—" },
+        detail: `Meta app (id ${metaAppId}) is subscribed to Instagram but missing the "comments" field. Currently: ${appSub.fields.join(", ") || "—"}`,
       });
     }
     if (expectedCallbackUrl && appSub.callbackUrl && appSub.callbackUrl !== expectedCallbackUrl) {
@@ -213,6 +228,7 @@ export async function POST(req: NextRequest) {
           configured: appSub.callbackUrl,
           expected: expectedCallbackUrl,
         },
+        detail: `Meta app (id ${metaAppId}) sends webhooks to ${appSub.callbackUrl} instead of ${expectedCallbackUrl}. Fix Callback URL in Meta Dashboard → Webhooks.`,
       });
     }
 
@@ -224,6 +240,7 @@ export async function POST(req: NextRequest) {
         appFields: appSub.fields.join(", "),
         callbackUrl: appSub.callbackUrl ?? "—",
       },
+      detail: `All good. Account subscribed (${accountSub.fields.join(", ")}), app subscribed (${appSub.fields.join(", ")}), callback ${appSub.callbackUrl ?? "—"}.`,
     });
 
   } else if (platform === "twitter") {

@@ -803,19 +803,28 @@ function AutomationCard({
         body: JSON.stringify({ automation_id: auto.id, test_comment: testInput }),
       });
       const data = await res.json();
-      // L'API retourne maintenant un `code` (clé i18n) + `params`. On
-      // traduit côté client pour que l'output soit toujours dans la
-      // locale active (Adeline 19 mai 2026 : "c'est toujours écrit en
-      // français putain"). Fallback sur `data.detail`/`data.error` si
-      // un platform handler legacy retourne encore du raw.
+      // L'API retourne `code` (clé i18n) + `params` + `detail` (plain-text
+      // fallback). On traduit via t() ; si la clé est manquante, next-intl
+      // retourne le chemin dotté ("automations.test.codes.xxx") — dans ce
+      // cas on bascule sur `data.detail` pour ne JAMAIS afficher un chemin
+      // technique à l'utilisateur (Adeline 19 mai 2026 : "✓ Erreur inconnue").
       let detail: string;
       if (typeof data.code === "string" && data.code.length > 0) {
-        // i18n namespace : automations.test.codes.<code>
-        // Les params peuvent contenir des chaînes brutes (URL, ID, etc.)
-        // qu'on interpole tel quel via t() — pas de risque d'XSS car
-        // c'est du texte affiché dans un <p>.
         const params = (data.params ?? {}) as Record<string, string | number>;
-        detail = t(`test.codes.${data.code}`, params);
+        const key = `test.codes.${data.code}`;
+        const translated = t(key, params);
+        const looksMissing =
+          !translated ||
+          translated === key ||
+          translated === `automations.${key}` ||
+          translated.startsWith("MISSING_MESSAGE");
+        if (!looksMissing) {
+          detail = translated;
+        } else if (typeof data.detail === "string" && data.detail.length > 0) {
+          detail = data.detail;
+        } else {
+          detail = translated || tc("errorUnknown");
+        }
       } else if (typeof data.detail === "string") {
         detail = data.detail;
       } else if (typeof data.error === "string") {

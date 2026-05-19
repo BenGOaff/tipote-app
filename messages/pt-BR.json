@@ -2467,15 +2467,17 @@
         "keywordMismatch": "O comentário «{comment}» não contém a palavra-chave «{keyword}».",
         "connectionMissing": "Conta {platform} não conectada. Conecte em Configurações → Conexões.",
         "tokenDecryptFailed": "Erro ao descriptografar o token. Reconecte a conta.",
-        "ig.tokenInvalid": "Token do Instagram inválido ou expirado. Reconecte a conta. ({error})",
-        "ig.permMissingManageMessages": "Permissão «instagram_business_manage_messages» faltando. Reconecte seu Instagram. Permissões atuais: {granted}",
-        "ig.accountSubscriptionMissing": "Conta Instagram não inscrita no webhook (POST /{igUserId}/subscribed_apps ausente ou sem «comments»). Campos atuais: {fields}.",
-        "ig.envMissing": "INSTAGRAM_META_APP_ID ou INSTAGRAM_META_APP_SECRET faltando no servidor.",
-        "ig.appSubscriptionMissing": "O app Meta (id {appId}) não tem assinatura webhook para Instagram. Configure em Meta Dashboard → Webhooks. ({error})",
-        "ig.appSubscriptionInactive": "O app Meta (id {appId}) tem uma assinatura Instagram inativa. Reative em Meta Dashboard → Webhooks.",
-        "ig.appSubscriptionFieldsMissing": "O app Meta (id {appId}) está assinado ao Instagram mas sem o campo «comments». Adicione em Meta Dashboard → Webhooks → Instagram. Atuais: {fields}.",
-        "ig.appSubscriptionCallbackMismatch": "O app Meta (id {appId}) envia webhooks para {configured} ao invés de {expected}. Corrija o Callback URL em Meta Dashboard → Webhooks → Instagram.",
-        "ig.allChecksOk": "Tudo certo! Conta assinada ({accountFields}), app assinado ({appFields}), callback {callbackUrl}. A automação será acionada em tempo real nos novos comentários."
+        "ig": {
+          "tokenInvalid": "Token do Instagram inválido ou expirado. Reconecte a conta. ({error})",
+          "permMissingManageMessages": "Permissão «instagram_business_manage_messages» faltando. Reconecte seu Instagram. Permissões atuais: {granted}",
+          "accountSubscriptionMissing": "Conta Instagram não inscrita no webhook (POST /{igUserId}/subscribed_apps ausente ou sem «comments»). Campos atuais: {fields}.",
+          "envMissing": "INSTAGRAM_META_APP_ID ou INSTAGRAM_META_APP_SECRET faltando no servidor.",
+          "appSubscriptionMissing": "O app Meta (id {appId}) não tem assinatura webhook para Instagram. Configure em Meta Dashboard → Webhooks. ({error})",
+          "appSubscriptionInactive": "O app Meta (id {appId}) tem uma assinatura Instagram inativa. Reative em Meta Dashboard → Webhooks.",
+          "appSubscriptionFieldsMissing": "O app Meta (id {appId}) está assinado ao Instagram mas sem o campo «comments». Adicione em Meta Dashboard → Webhooks → Instagram. Atuais: {fields}.",
+          "appSubscriptionCallbackMismatch": "O app Meta (id {appId}) envia webhooks para {configured} ao invés de {expected}. Corrija o Callback URL em Meta Dashboard → Webhooks → Instagram.",
+          "allChecksOk": "Tudo certo! Conta assinada ({accountFields}), app assinado ({appFields}), callback {callbackUrl}. A automação será acionada em tempo real nos novos comentários."
+        }
       }
     }
   },
