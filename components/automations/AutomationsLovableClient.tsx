@@ -302,7 +302,7 @@ export default function AutomationsLovableClient() {
     if (!isCommentOnlyPlatform && !form.dm_message.trim()) { toast.error(t("form.errorMessage")); return; }
     if (form.platforms.length === 0) { toast.error(t("form.errorPlatform")); return; }
     // LinkedIn permet "tous les posts" (pas de target obligatoire)
-    if (form.platforms[0] !== "linkedin" && !form.target_post_url.trim()) { toast.error("Choisis un post cible avant de continuer."); return; }
+    if (form.platforms[0] !== "linkedin" && !form.target_post_url.trim()) { toast.error(t("form.errorNoTargetPost")); return; }
 
     setIsSaving(true);
     const supabase = getSupabaseBrowserClient();
@@ -771,7 +771,8 @@ function AutomationCard({
   const [showTest, setShowTest] = useState(false);
   const [testInput, setTestInput] = useState("");
   const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string; step?: string } | null>(null);
+  const [isResubscribing, setIsResubscribing] = useState(false);
 
   const platformIcons: Record<Platform, React.ElementType> = {
     instagram: Instagram,
@@ -802,11 +803,37 @@ function AutomationCard({
         body: JSON.stringify({ automation_id: auto.id, test_comment: testInput }),
       });
       const data = await res.json();
-      setTestResult({ ok: data.ok, detail: data.detail ?? data.error ?? tc("errorUnknown") });
+      setTestResult({ ok: data.ok, detail: data.detail ?? data.error ?? tc("errorUnknown"), step: data.step });
     } catch {
       setTestResult({ ok: false, detail: t("networkError") });
     } finally {
       setIsTesting(false);
+    }
+  }
+
+  // Re-souscrit le webhook Instagram au niveau du compte (= POST /{ig-user-id}/subscribed_apps).
+  // Le test détecte automatiquement quand cette souscription manque (step="webhook_subscription")
+  // et expose ce bouton pour réparer sans avoir à déconnecter/reconnecter le compte.
+  async function runResubscribe() {
+    setIsResubscribing(true);
+    try {
+      const res = await fetch("/api/social/instagram-subscribe", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        setTestResult({
+          ok: true,
+          detail: t("test.resubscribeOk", { fields: (data.fields ?? []).join(", ") || "—" }),
+        });
+      } else {
+        setTestResult({
+          ok: false,
+          detail: t("test.resubscribeFail", { error: data.error ?? "?" }),
+        });
+      }
+    } catch {
+      setTestResult({ ok: false, detail: t("networkError") });
+    } finally {
+      setIsResubscribing(false);
     }
   }
 
@@ -870,7 +897,7 @@ function AutomationCard({
                 onClick={() => { setShowTest((v) => !v); setTestResult(null); }}
                 className="text-primary hover:underline text-xs"
               >
-                {showTest ? "Masquer le test" : "Tester"}
+                {showTest ? t("test.hide") : t("test.show")}
               </button>
             </div>
 
@@ -878,24 +905,44 @@ function AutomationCard({
             {showTest && (
               <div className="mt-3 rounded-lg border border-dashed border-primary/30 bg-primary/3 p-3 space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Simule un commentaire contenant ton mot-clé pour vérifier que tout fonctionne.
+                  {t("test.simulateHint")}
                 </p>
                 <div className="flex gap-2">
                   <Input
                     value={testInput}
                     onChange={(e) => setTestInput(e.target.value)}
-                    placeholder={`ex: ${auto.trigger_keyword}`}
+                    placeholder={t("test.placeholder", { keyword: auto.trigger_keyword })}
                     className="text-xs h-8"
                     onKeyDown={(e) => { if (e.key === "Enter") runTest(); }}
                   />
                   <Button size="sm" className="h-8 shrink-0" onClick={runTest} disabled={isTesting || !testInput.trim()}>
-                    {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Tester"}
+                    {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t("test.run")}
                   </Button>
                 </div>
                 {testResult && (
                   <p className={`text-xs ${testResult.ok ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>
                     {testResult.ok ? "✓" : "✗"} {testResult.detail}
                   </p>
+                )}
+                {testResult && !testResult.ok && testResult.step === "webhook_subscription" && auto.platforms?.includes("instagram") && (
+                  <div className="rounded-md border border-amber-200 dark:border-amber-900/40 bg-amber-50/80 dark:bg-amber-950/30 p-2 space-y-2">
+                    <p className="text-[11px] text-amber-900 dark:text-amber-200">
+                      {t("test.webhookMissingHint")}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs w-full"
+                      onClick={runResubscribe}
+                      disabled={isResubscribing}
+                    >
+                      {isResubscribing ? (
+                        <><Loader2 className="w-3 h-3 animate-spin mr-1" /> {t("test.resubscribing")}</>
+                      ) : (
+                        t("test.resubscribeAction")
+                      )}
+                    </Button>
+                  </div>
                 )}
               </div>
             )}

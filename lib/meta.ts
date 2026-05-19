@@ -1174,3 +1174,87 @@ export async function subscribePageToWebhooks(
 
   return { appOk, pageOk, errors };
 }
+
+/**
+ * Abonne un compte Instagram Business spécifique aux webhooks Meta.
+ *
+ * IMPORTANT — DEUX souscriptions sont nécessaires pour qu'un webhook IG
+ * délivre des events sur un compte donné :
+ *
+ *   A. App-level   : POST /{appId}/subscriptions
+ *      → fait au moment du callback OAuth dans
+ *        app/api/auth/instagram/callback/route.ts (ligne 233+)
+ *      → tells Meta "our app wants comment events for object=instagram"
+ *
+ *   B. Account-level : POST /{ig-user-id}/subscribed_apps
+ *      ← CETTE FONCTION
+ *      → tells Meta "this specific IG Business account should fire events"
+ *      → sans ça, aucun event webhook n'arrive pour le compte, même
+ *        si le verify_token a validé et que la souscription app-level
+ *        est OK (bug ultra-classique IG, Adeline 19 mai 2026 : test
+ *        OK mais auto-replies ne se déclenchent pas en vrai).
+ *
+ * Endpoint Instagram Login (graph.instagram.com), pas Facebook Graph,
+ * et le token est le long-lived user token (PAS un page token).
+ *
+ * Retourne { ok, error } — fail-soft : on log mais on ne crash pas
+ * la connexion si la souscription account-level échoue.
+ */
+export async function subscribeInstagramAccountToWebhooks(
+  igUserId: string,
+  igUserAccessToken: string,
+  fields: string[] = ["comments", "messages", "message_reactions", "messaging_postbacks"],
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const params = new URLSearchParams({
+      access_token: igUserAccessToken,
+      subscribed_fields: fields.join(","),
+    });
+    const res = await fetch(
+      `${INSTAGRAM_GRAPH_BASE}/${igUserId}/subscribed_apps`,
+      { method: "POST", body: params },
+    );
+    const json = await res.json();
+    if (json?.success === true) {
+      return { ok: true };
+    }
+    return { ok: false, error: JSON.stringify(json?.error ?? json) };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Vérifie qu'un compte Instagram Business est bien abonné aux webhooks.
+ * Utile pour la fonction "Tester" côté UI afin de détecter le cas
+ * "souscription app OK mais pas account-level" qui faisait croire à
+ * l'user que tout marchait alors que rien ne firait en vrai.
+ *
+ * Retourne { subscribed, fields } — fields est la liste des channels
+ * (comments, messages, etc.) actuellement actifs sur ce compte.
+ */
+export async function getInstagramAccountSubscription(
+  igUserId: string,
+  igUserAccessToken: string,
+): Promise<{ subscribed: boolean; fields: string[]; error?: string }> {
+  try {
+    const res = await fetch(
+      `${INSTAGRAM_GRAPH_BASE}/${igUserId}/subscribed_apps?access_token=${encodeURIComponent(igUserAccessToken)}`,
+    );
+    const json = await res.json();
+    const apps = Array.isArray(json?.data) ? json.data : [];
+    if (apps.length === 0) {
+      return { subscribed: false, fields: [] };
+    }
+    // On agrège les fields trouvés sur toutes les apps abonnées (en
+    // pratique il n'y en a qu'une pour notre cas).
+    const fields = new Set<string>();
+    for (const app of apps) {
+      const list = Array.isArray(app?.subscribed_fields) ? app.subscribed_fields : [];
+      for (const f of list) fields.add(String(f));
+    }
+    return { subscribed: true, fields: Array.from(fields) };
+  } catch (err) {
+    return { subscribed: false, fields: [], error: err instanceof Error ? err.message : String(err) };
+  }
+}

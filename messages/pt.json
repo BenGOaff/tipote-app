@@ -2405,7 +2405,8 @@
       "tiktokCommentOnly": "Apenas resposta em comentário",
       "tiktokCommentRepliesPlaceholder": "Obrigado pelo teu comentário! 🙌\nBoa, obrigado por participares!\nTop, fico feliz que te interesse! 🔥\nFica anotado, obrigado!\nGenial, obrigado a ti!",
       "tiktokCommentRepliesHint": "Uma variante por linha. Uma resposta aleatória será publicada em resposta ao comentário.",
-      "tiktokNote": "O TikTok não disponibiliza API de DM. A automatização responderá diretamente em comentário sob o post alvo."
+      "tiktokNote": "O TikTok não disponibiliza API de DM. A automatização responderá diretamente em comentário sob o post alvo.",
+      "errorNoTargetPost": "Seleciona primeiro um post alvo."
     },
     "card": {
       "postTargeted": "Post alvo",
@@ -2450,6 +2451,18 @@
         "Fica anotado, obrigado!",
         "Genial, obrigado a ti!"
       ]
+    },
+    "test": {
+      "show": "Testar",
+      "hide": "Ocultar teste",
+      "run": "Testar",
+      "simulateHint": "Simula um comentário com a tua palavra-chave para verificar que tudo funciona.",
+      "placeholder": "ex: {keyword}",
+      "webhookMissingHint": "A tua conta Instagram não está inscrita no webhook Meta (POST /{ig-user-id}/subscribed_apps em falta). Sem isto, nenhum evento em tempo real chega — mesmo se o teste passar, os comentários reais não disparam nada.",
+      "resubscribeAction": "Re-inscrever webhook Instagram",
+      "resubscribing": "A inscrever…",
+      "resubscribeOk": "✓ Webhook re-inscrito (fields: {fields}). Repete o teste ou publica um comentário real.",
+      "resubscribeFail": "✗ Falha na re-inscrição: {error}"
     }
   },
   "autoCommentPanel": {

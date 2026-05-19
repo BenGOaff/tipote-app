@@ -23,6 +23,7 @@ import {
   exchangeInstagramCodeForToken,
   exchangeInstagramForLongLivedToken,
   getInstagramUser,
+  subscribeInstagramAccountToWebhooks,
 } from "@/lib/meta";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { checkSocialConnectionLimit } from "@/lib/planLimits";
@@ -245,6 +246,26 @@ export async function GET(req: NextRequest) {
       }
     } else {
       console.warn("[Instagram callback] Missing INSTAGRAM/META env vars — skipping webhook subscription");
+    }
+
+    // CRITICAL : abonnement au niveau du COMPTE IG (en plus de l'app
+    // level ci-dessus). Sans ce POST /{ig-user-id}/subscribed_apps,
+    // Meta n'envoie aucun event webhook pour ce compte spécifique,
+    // même si la souscription app-level est OK et que le verify_token
+    // a validé. Bug ultra-classique IG (Adeline 19 mai 2026 : test OK
+    // mais auto-replies ne se déclenchent pas en vrai).
+    try {
+      const accountSub = await subscribeInstagramAccountToWebhooks(
+        igUser.id,
+        finalToken,
+      );
+      if (accountSub.ok) {
+        console.log("[Instagram callback] Account-level webhook subscription: OK");
+      } else {
+        console.warn("[Instagram callback] Account-level webhook subscription failed:", accountSub.error);
+      }
+    } catch (err) {
+      console.error("[Instagram callback] Account-level webhook subscription error:", err);
     }
 
     console.log("[Instagram callback] Connection saved successfully!");

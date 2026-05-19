@@ -2139,7 +2139,8 @@
       "tiktokCommentOnly": "Comment reply only",
       "tiktokCommentRepliesPlaceholder": "Thanks for your comment! ...\nGreat, thanks for participating!\nHappy to hear that! ...\nNice one, appreciate it!\nThanks for sharing your thoughts!",
       "tiktokCommentRepliesHint": "One variant per line. A random reply will be posted in response to the comment.",
-      "tiktokNote": "TikTok doesn't provide a DM API. The automation will reply directly in a comment under the target post."
+      "tiktokNote": "TikTok doesn't provide a DM API. The automation will reply directly in a comment under the target post.",
+      "errorNoTargetPost": "Select a target post first."
     },
     "card": {
       "postTargeted": "Targeted post",
@@ -2184,6 +2185,18 @@
         "Noted, thanks!",
         "Awesome, thanks to you!"
       ]
+    },
+    "test": {
+      "show": "Test",
+      "hide": "Hide test",
+      "run": "Test",
+      "simulateHint": "Simulate a comment containing your keyword to check that everything works.",
+      "placeholder": "e.g. {keyword}",
+      "webhookMissingHint": "Your Instagram account is not subscribed to the Meta webhook (POST /{ig-user-id}/subscribed_apps missing). Without this, no realtime events fire — so even if the test passes, real comments won't trigger anything.",
+      "resubscribeAction": "Re-subscribe Instagram webhook",
+      "resubscribing": "Subscribing…",
+      "resubscribeOk": "✓ Webhook re-subscribed (fields: {fields}). Retry the test or post a real comment.",
+      "resubscribeFail": "✗ Re-subscribe failed: {error}"
     }
   },
   "autoCommentPanel": {

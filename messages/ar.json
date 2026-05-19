@@ -2139,7 +2139,8 @@
       "tiktokCommentOnly": "الرد في التعليق فقط",
       "tiktokCommentRepliesPlaceholder": "شكرًا على تعليقك! 🙌\nرائع، شكرًا على مشاركتك!\nسعيد بأن الموضوع يهمّك! 🔥\nتمّ، شكرًا لك!\nممتاز، شكرًا جزيلًا!",
       "tiktokCommentRepliesHint": "متغيّر واحد في كل سطر. سيُنشر ردّ عشوائي تحت التعليق.",
-      "tiktokNote": "لا يوفّر TikTok واجهة API للرسائل المباشرة. ستردّ الأتمتة مباشرةً في تعليق تحت المنشور المستهدف."
+      "tiktokNote": "لا يوفّر TikTok واجهة API للرسائل المباشرة. ستردّ الأتمتة مباشرةً في تعليق تحت المنشور المستهدف.",
+      "errorNoTargetPost": "اختر منشورًا مستهدفًا أولاً."
     },
     "card": {
       "postTargeted": "منشور محدد",
@@ -2184,6 +2185,18 @@
         "ملاحظ، شكرًا!",
         "رائع، شكرًا لك!"
       ]
+    },
+    "test": {
+      "show": "اختبار",
+      "hide": "إخفاء الاختبار",
+      "run": "اختبار",
+      "simulateHint": "حاكِ تعليقًا يحتوي على كلمتك المفتاحية للتحقق من أن كل شيء يعمل.",
+      "placeholder": "مثال: {keyword}",
+      "webhookMissingHint": "حساب Instagram غير مشترك في webhook Meta (POST /{ig-user-id}/subscribed_apps مفقود). بدون ذلك، لا تصل أحداث في الوقت الفعلي — حتى لو نجح الاختبار، فإن التعليقات الحقيقية لن تشغل شيئًا.",
+      "resubscribeAction": "إعادة الاشتراك في webhook Instagram",
+      "resubscribing": "جاري الاشتراك…",
+      "resubscribeOk": "✓ تم إعادة اشتراك webhook (الحقول: {fields}). أعد المحاولة أو انشر تعليقًا حقيقيًا.",
+      "resubscribeFail": "✗ فشل إعادة الاشتراك: {error}"
     }
   },
   "autoCommentPanel": {

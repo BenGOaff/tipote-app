@@ -7,6 +7,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/crypto";
+import {
+  subscribeInstagramAccountToWebhooks,
+  getInstagramAccountSubscription,
+} from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
 
@@ -113,9 +117,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Étape 4 (CRITICAL) : vérifier la souscription account-level aux
+    // webhooks. Bug Adeline 19 mai 2026 : "test OK mais rien n'arrive
+    // en vrai". Cause = sans POST /{ig-user-id}/subscribed_apps, Meta
+    // ne pousse aucun event vers notre webhook même si le token et
+    // les permissions sont OK et que la souscription app-level est
+    // configurée. On vérifie, et si manquant on tente une re-souscription
+    // automatique avant d'échouer.
+    const igUserId = conn.platform_user_id as string;
+    let subStatus = await getInstagramAccountSubscription(igUserId, accessToken);
+
+    if (!subStatus.subscribed) {
+      // Self-heal : on essaie de souscrire immédiatement
+      const repair = await subscribeInstagramAccountToWebhooks(igUserId, accessToken);
+      if (repair.ok) {
+        // Re-vérifie après souscription
+        subStatus = await getInstagramAccountSubscription(igUserId, accessToken);
+      }
+    }
+
+    const subscribed = subStatus.subscribed;
+    const wantedField = "comments";
+    const hasCommentsField = subStatus.fields.includes(wantedField);
+
+    if (!subscribed || !hasCommentsField) {
+      return NextResponse.json({
+        ok: false,
+        step: "webhook_subscription",
+        detail: `Webhook Instagram non abonné au niveau du compte (POST /${igUserId}/subscribed_apps manquant ou sans "comments"). Sans ça, Meta n'envoie aucun event en vrai même si le test passe le mot-clé et le token. Tente une re-souscription via le bouton "Re-souscrire le webhook" ou reconnecte le compte. Champs actuellement abonnés: ${subStatus.fields.join(", ") || "aucun"}.`,
+      });
+    }
+
     return NextResponse.json({
       ok: true,
-      detail: "✓ Mot-clé OK · Token Instagram valide · Permissions OK. Si l'automatisation ne se déclenche pas en vrai, reconnecte ton compte Instagram pour re-enregistrer le webhook Meta.",
+      detail: `✓ Mot-clé OK · Token Instagram valide · Permissions OK · Webhook abonné (fields: ${subStatus.fields.join(", ")}). L'automatisation se déclenchera en temps réel quand un commentaire arrivera.`,
     });
 
   } else if (platform === "twitter") {
