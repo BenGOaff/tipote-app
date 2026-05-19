@@ -2196,7 +2196,21 @@
       "resubscribeAction": "Re-subscribe Instagram webhook",
       "resubscribing": "Subscribing…",
       "resubscribeOk": "✓ Webhook re-subscribed (fields: {fields}). Retry the test or post a real comment.",
-      "resubscribeFail": "✗ Re-subscribe failed: {error}"
+      "resubscribeFail": "✗ Re-subscribe failed: {error}",
+      "codes": {
+        "keywordMismatch": "Comment \"{comment}\" does not contain the keyword \"{keyword}\".",
+        "connectionMissing": "{platform} account not connected. Connect it in Settings → Connections.",
+        "tokenDecryptFailed": "Token decryption failed. Reconnect the account.",
+        "ig.tokenInvalid": "Instagram token invalid or expired. Reconnect your account. ({error})",
+        "ig.permMissingManageMessages": "Permission \"instagram_business_manage_messages\" missing. Reconnect your Instagram account to refresh permissions. Granted now: {granted}",
+        "ig.accountSubscriptionMissing": "Instagram account not subscribed to the webhook (POST /{igUserId}/subscribed_apps missing or without the \"comments\" field). Currently subscribed fields: {fields}.",
+        "ig.envMissing": "INSTAGRAM_META_APP_ID or INSTAGRAM_META_APP_SECRET missing on the server.",
+        "ig.appSubscriptionMissing": "Meta app (id {appId}) has no webhook subscription for Instagram. Configure it in Meta Dashboard → Webhooks. ({error})",
+        "ig.appSubscriptionInactive": "Meta app (id {appId}) has an Instagram subscription but it is inactive. Reactivate it in Meta Dashboard → Webhooks.",
+        "ig.appSubscriptionFieldsMissing": "Meta app (id {appId}) is subscribed to Instagram but missing the \"comments\" field. Add it in Meta Dashboard → Webhooks → Instagram → Subscribe to fields. Currently: {fields}.",
+        "ig.appSubscriptionCallbackMismatch": "Meta app (id {appId}) sends webhooks to {configured} instead of {expected}. Fix the Callback URL in Meta Dashboard → Webhooks → Instagram.",
+        "ig.allChecksOk": "All good! Account subscribed ({accountFields}), app subscribed ({appFields}), callback {callbackUrl}. Automation will trigger in real time on incoming comments."
+      }
     }
   },
   "autoCommentPanel": {

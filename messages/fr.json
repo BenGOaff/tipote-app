@@ -2196,7 +2196,21 @@
       "resubscribeAction": "Re-souscrire le webhook Instagram",
       "resubscribing": "Souscription…",
       "resubscribeOk": "✓ Webhook re-souscrit (fields: {fields}). Retente le test ou poste un commentaire en vrai.",
-      "resubscribeFail": "✗ Échec de la re-souscription : {error}"
+      "resubscribeFail": "✗ Échec de la re-souscription : {error}",
+      "codes": {
+        "keywordMismatch": "Le commentaire « {comment} » ne contient pas le mot-clé « {keyword} ».",
+        "connectionMissing": "Compte {platform} non connecté. Connecte-le dans Réglages → Connexions.",
+        "tokenDecryptFailed": "Erreur de déchiffrement du token. Reconnecte le compte.",
+        "ig.tokenInvalid": "Token Instagram invalide ou expiré. Reconnecte le compte. ({error})",
+        "ig.permMissingManageMessages": "Permission « instagram_business_manage_messages » manquante. Reconnecte ton compte Instagram pour renouveler les permissions. Permissions actuelles : {granted}",
+        "ig.accountSubscriptionMissing": "Compte Instagram non abonné au webhook (POST /{igUserId}/subscribed_apps absent ou sans le champ « comments »). Champs actuels : {fields}.",
+        "ig.envMissing": "INSTAGRAM_META_APP_ID ou INSTAGRAM_META_APP_SECRET manquant côté serveur.",
+        "ig.appSubscriptionMissing": "L'app Meta (id {appId}) n'a aucune souscription webhook pour Instagram. Configure-la dans Meta Dashboard → Webhooks. ({error})",
+        "ig.appSubscriptionInactive": "L'app Meta (id {appId}) a une souscription Instagram mais inactive (active=false). Réactive-la dans Meta Dashboard → Webhooks.",
+        "ig.appSubscriptionFieldsMissing": "L'app Meta (id {appId}) est abonnée à Instagram mais SANS le champ « comments ». Ajoute-le dans Meta Dashboard → Webhooks → Instagram → Subscribe to fields. Champs actuels : {fields}.",
+        "ig.appSubscriptionCallbackMismatch": "L'app Meta (id {appId}) envoie ses webhooks vers {configured} au lieu de {expected}. Corrige le Callback URL dans Meta Dashboard → Webhooks → Instagram.",
+        "ig.allChecksOk": "Tout est bon ! Compte abonné ({accountFields}), app abonnée ({appFields}), callback {callbackUrl}. L'automatisation se déclenchera en temps réel sur les commentaires."
+      }
     }
   },
   "autoCommentPanel": {

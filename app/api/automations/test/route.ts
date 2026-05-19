@@ -10,6 +10,9 @@ import { decrypt } from "@/lib/crypto";
 import {
   subscribeInstagramAccountToWebhooks,
   getInstagramAccountSubscription,
+  getInstagramAppLevelSubscription,
+  getInstagramMetaAppId,
+  getInstagramMetaAppSecret,
 } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +47,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: false,
       step: "keyword",
-      detail: `Le commentaire "${test_comment}" ne contient pas le mot-clé "${auto.trigger_keyword}".`,
+      code: "keywordMismatch",
+      params: { comment: test_comment, keyword: auto.trigger_keyword },
     });
   }
 
@@ -78,7 +82,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: false,
       step: "connection",
-      detail: `Compte ${platform} non connecté. Connecte-le dans Paramètres → Connexions.`,
+      code: "connectionMissing",
+      params: { platform },
     });
   }
 
@@ -86,12 +91,16 @@ export async function POST(req: NextRequest) {
   try {
     accessToken = decrypt(conn.access_token_encrypted);
   } catch {
-    return NextResponse.json({ ok: false, step: "token", detail: "Erreur de déchiffrement du token. Reconnecte le compte." });
+    return NextResponse.json({ ok: false, step: "token", code: "tokenDecryptFailed", params: {} });
   }
 
-  // Étape 3 : valider le token et vérifier les permissions via l'API
+  // Étape 3 : valider le token et vérifier les permissions via l'API.
+  //
+  // Réponse structurée : on retourne `code` (clé i18n) + `params` au lieu
+  // de chaînes hardcodées en français (Adeline 19 mai 2026 : output FR
+  // alors que l'UI peut être dans une autre locale). L'UI traduit via
+  // t(`automations.test.codes.${code}`, params).
   if (platform === "instagram") {
-    // Vérifier que le token est valide et que instagram_business_manage_messages est accordé
     const [meRes, permRes] = await Promise.all([
       fetch(`https://graph.instagram.com/v22.0/me?access_token=${accessToken}`),
       fetch(`https://graph.instagram.com/v22.0/me/permissions?access_token=${accessToken}`),
@@ -99,12 +108,18 @@ export async function POST(req: NextRequest) {
 
     if (!meRes.ok) {
       const err = await meRes.text();
-      return NextResponse.json({ ok: false, step: "token", detail: `Token Instagram invalide ou expiré. Reconnecte le compte. (${err})` });
+      return NextResponse.json({
+        ok: false,
+        step: "token",
+        code: "ig.tokenInvalid",
+        params: { error: err.slice(0, 200) },
+      });
     }
 
+    let granted: string[] = [];
     if (permRes.ok) {
       const permData = await permRes.json();
-      const granted = (permData.data ?? [])
+      granted = (permData.data ?? [])
         .filter((p: { status: string }) => p.status === "granted")
         .map((p: { permission: string }) => p.permission);
 
@@ -112,45 +127,103 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           ok: false,
           step: "permissions",
-          detail: `Permission "instagram_business_manage_messages" manquante. Reconnecte ton compte Instagram pour renouveler les permissions. Permissions actuelles : ${granted.join(", ")}`,
+          code: "ig.permMissingManageMessages",
+          params: { granted: granted.join(", ") },
         });
       }
     }
 
-    // Étape 4 (CRITICAL) : vérifier la souscription account-level aux
-    // webhooks. Bug Adeline 19 mai 2026 : "test OK mais rien n'arrive
-    // en vrai". Cause = sans POST /{ig-user-id}/subscribed_apps, Meta
-    // ne pousse aucun event vers notre webhook même si le token et
-    // les permissions sont OK et que la souscription app-level est
-    // configurée. On vérifie, et si manquant on tente une re-souscription
-    // automatique avant d'échouer.
+    // Étape 4 : vérifier la souscription account-level aux webhooks
+    // (POST /{ig-user-id}/subscribed_apps). Sans ça, Meta ne pousse aucun
+    // event pour ce compte. Self-heal si manquant.
     const igUserId = conn.platform_user_id as string;
-    let subStatus = await getInstagramAccountSubscription(igUserId, accessToken);
-
-    if (!subStatus.subscribed) {
-      // Self-heal : on essaie de souscrire immédiatement
+    let accountSub = await getInstagramAccountSubscription(igUserId, accessToken);
+    if (!accountSub.subscribed) {
       const repair = await subscribeInstagramAccountToWebhooks(igUserId, accessToken);
       if (repair.ok) {
-        // Re-vérifie après souscription
-        subStatus = await getInstagramAccountSubscription(igUserId, accessToken);
+        accountSub = await getInstagramAccountSubscription(igUserId, accessToken);
       }
     }
-
-    const subscribed = subStatus.subscribed;
-    const wantedField = "comments";
-    const hasCommentsField = subStatus.fields.includes(wantedField);
-
-    if (!subscribed || !hasCommentsField) {
+    if (!accountSub.subscribed || !accountSub.fields.includes("comments")) {
       return NextResponse.json({
         ok: false,
         step: "webhook_subscription",
-        detail: `Webhook Instagram non abonné au niveau du compte (POST /${igUserId}/subscribed_apps manquant ou sans "comments"). Sans ça, Meta n'envoie aucun event en vrai même si le test passe le mot-clé et le token. Tente une re-souscription via le bouton "Re-souscrire le webhook" ou reconnecte le compte. Champs actuellement abonnés: ${subStatus.fields.join(", ") || "aucun"}.`,
+        code: "ig.accountSubscriptionMissing",
+        params: {
+          igUserId,
+          fields: accountSub.fields.join(", ") || "—",
+        },
+      });
+    }
+
+    // Étape 5 : vérifier la souscription APP-LEVEL — c'est l'autre
+    // moitié de la chaîne webhook. Sans ça, Meta sait que le compte
+    // est abonné mais ne sait pas vers quelle URL envoyer les events.
+    // C'est le maillon qui manque le plus souvent quand "le test passe
+    // mais aucun event n'arrive en vrai".
+    let metaAppId: string | null = null;
+    let metaAppSecret: string | null = null;
+    try {
+      metaAppId = getInstagramMetaAppId();
+      metaAppSecret = getInstagramMetaAppSecret();
+    } catch {
+      return NextResponse.json({
+        ok: false,
+        step: "config",
+        code: "ig.envMissing",
+        params: {},
+      });
+    }
+
+    const appSub = await getInstagramAppLevelSubscription(metaAppId, metaAppSecret);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const expectedCallbackUrl = appUrl ? `${appUrl}/api/auth/instagram/callback` : null;
+
+    if (!appSub.exists) {
+      return NextResponse.json({
+        ok: false,
+        step: "app_subscription",
+        code: "ig.appSubscriptionMissing",
+        params: { appId: metaAppId, error: appSub.error ?? "" },
+      });
+    }
+    if (!appSub.active) {
+      return NextResponse.json({
+        ok: false,
+        step: "app_subscription",
+        code: "ig.appSubscriptionInactive",
+        params: { appId: metaAppId },
+      });
+    }
+    if (!appSub.fields.includes("comments")) {
+      return NextResponse.json({
+        ok: false,
+        step: "app_subscription",
+        code: "ig.appSubscriptionFieldsMissing",
+        params: { appId: metaAppId, fields: appSub.fields.join(", ") || "—" },
+      });
+    }
+    if (expectedCallbackUrl && appSub.callbackUrl && appSub.callbackUrl !== expectedCallbackUrl) {
+      return NextResponse.json({
+        ok: false,
+        step: "app_subscription",
+        code: "ig.appSubscriptionCallbackMismatch",
+        params: {
+          appId: metaAppId,
+          configured: appSub.callbackUrl,
+          expected: expectedCallbackUrl,
+        },
       });
     }
 
     return NextResponse.json({
       ok: true,
-      detail: `✓ Mot-clé OK · Token Instagram valide · Permissions OK · Webhook abonné (fields: ${subStatus.fields.join(", ")}). L'automatisation se déclenchera en temps réel quand un commentaire arrivera.`,
+      code: "ig.allChecksOk",
+      params: {
+        accountFields: accountSub.fields.join(", "),
+        appFields: appSub.fields.join(", "),
+        callbackUrl: appSub.callbackUrl ?? "—",
+      },
     });
 
   } else if (platform === "twitter") {

@@ -2196,7 +2196,21 @@
       "resubscribeAction": "Re-iscriviti al webhook Instagram",
       "resubscribing": "Iscrizione…",
       "resubscribeOk": "✓ Webhook ri-iscritto (fields: {fields}). Riprova il test o pubblica un commento reale.",
-      "resubscribeFail": "✗ Re-iscrizione fallita: {error}"
+      "resubscribeFail": "✗ Re-iscrizione fallita: {error}",
+      "codes": {
+        "keywordMismatch": "Il commento «{comment}» non contiene la parola chiave «{keyword}».",
+        "connectionMissing": "Account {platform} non connesso. Collegalo in Impostazioni → Connessioni.",
+        "tokenDecryptFailed": "Errore di decifratura del token. Riconnetti l'account.",
+        "ig.tokenInvalid": "Token Instagram non valido o scaduto. Riconnetti l'account. ({error})",
+        "ig.permMissingManageMessages": "Permesso «instagram_business_manage_messages» mancante. Riconnetti il tuo account Instagram. Permessi attuali: {granted}",
+        "ig.accountSubscriptionMissing": "Account Instagram non iscritto al webhook (POST /{igUserId}/subscribed_apps mancante o senza «comments»). Campi attuali: {fields}.",
+        "ig.envMissing": "INSTAGRAM_META_APP_ID o INSTAGRAM_META_APP_SECRET mancanti sul server.",
+        "ig.appSubscriptionMissing": "L'app Meta (id {appId}) non ha sottoscrizioni webhook per Instagram. Configurala in Meta Dashboard → Webhooks. ({error})",
+        "ig.appSubscriptionInactive": "L'app Meta (id {appId}) ha una sottoscrizione Instagram inattiva. Riattivala in Meta Dashboard → Webhooks.",
+        "ig.appSubscriptionFieldsMissing": "L'app Meta (id {appId}) è iscritta a Instagram ma senza il campo «comments». Aggiungilo in Meta Dashboard → Webhooks → Instagram. Attuali: {fields}.",
+        "ig.appSubscriptionCallbackMismatch": "L'app Meta (id {appId}) invia webhook verso {configured} invece di {expected}. Correggi il Callback URL in Meta Dashboard → Webhooks → Instagram.",
+        "ig.allChecksOk": "Tutto a posto! Account iscritto ({accountFields}), app iscritta ({appFields}), callback {callbackUrl}. L'automazione si attiverà in tempo reale sui nuovi commenti."
+      }
     }
   },
   "autoCommentPanel": {

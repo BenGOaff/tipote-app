@@ -2196,7 +2196,21 @@
       "resubscribeAction": "إعادة الاشتراك في webhook Instagram",
       "resubscribing": "جاري الاشتراك…",
       "resubscribeOk": "✓ تم إعادة اشتراك webhook (الحقول: {fields}). أعد المحاولة أو انشر تعليقًا حقيقيًا.",
-      "resubscribeFail": "✗ فشل إعادة الاشتراك: {error}"
+      "resubscribeFail": "✗ فشل إعادة الاشتراك: {error}",
+      "codes": {
+        "keywordMismatch": "التعليق «{comment}» لا يحتوي على الكلمة المفتاحية «{keyword}».",
+        "connectionMissing": "حساب {platform} غير متصل. اربطه في الإعدادات ← الاتصالات.",
+        "tokenDecryptFailed": "فشل فك تشفير الرمز. أعد ربط الحساب.",
+        "ig.tokenInvalid": "رمز Instagram غير صالح أو منتهٍ. أعد ربط الحساب. ({error})",
+        "ig.permMissingManageMessages": "إذن «instagram_business_manage_messages» مفقود. أعد ربط حساب Instagram. الأذونات الحالية: {granted}",
+        "ig.accountSubscriptionMissing": "لم يتم اشتراك حساب Instagram في webhook (POST /{igUserId}/subscribed_apps مفقود أو بدون «comments»). الحقول الحالية: {fields}.",
+        "ig.envMissing": "INSTAGRAM_META_APP_ID أو INSTAGRAM_META_APP_SECRET مفقود على الخادم.",
+        "ig.appSubscriptionMissing": "تطبيق Meta (id {appId}) لا يملك اشتراك webhook لـ Instagram. اضبطه في Meta Dashboard → Webhooks. ({error})",
+        "ig.appSubscriptionInactive": "تطبيق Meta (id {appId}) لديه اشتراك Instagram غير نشط. أعد تفعيله في Meta Dashboard → Webhooks.",
+        "ig.appSubscriptionFieldsMissing": "تطبيق Meta (id {appId}) مشترك في Instagram لكن بدون حقل «comments». أضفه في Meta Dashboard → Webhooks → Instagram. الحالية: {fields}.",
+        "ig.appSubscriptionCallbackMismatch": "تطبيق Meta (id {appId}) يرسل webhooks إلى {configured} بدلًا من {expected}. صحّح Callback URL في Meta Dashboard → Webhooks → Instagram.",
+        "ig.allChecksOk": "كل شيء سليم! الحساب مشترك ({accountFields})، التطبيق مشترك ({appFields})، callback {callbackUrl}. ستعمل الأتمتة في الوقت الفعلي على التعليقات الجديدة."
+      }
     }
   },
   "autoCommentPanel": {

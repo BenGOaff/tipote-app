@@ -803,7 +803,27 @@ function AutomationCard({
         body: JSON.stringify({ automation_id: auto.id, test_comment: testInput }),
       });
       const data = await res.json();
-      setTestResult({ ok: data.ok, detail: data.detail ?? data.error ?? tc("errorUnknown"), step: data.step });
+      // L'API retourne maintenant un `code` (clé i18n) + `params`. On
+      // traduit côté client pour que l'output soit toujours dans la
+      // locale active (Adeline 19 mai 2026 : "c'est toujours écrit en
+      // français putain"). Fallback sur `data.detail`/`data.error` si
+      // un platform handler legacy retourne encore du raw.
+      let detail: string;
+      if (typeof data.code === "string" && data.code.length > 0) {
+        // i18n namespace : automations.test.codes.<code>
+        // Les params peuvent contenir des chaînes brutes (URL, ID, etc.)
+        // qu'on interpole tel quel via t() — pas de risque d'XSS car
+        // c'est du texte affiché dans un <p>.
+        const params = (data.params ?? {}) as Record<string, string | number>;
+        detail = t(`test.codes.${data.code}`, params);
+      } else if (typeof data.detail === "string") {
+        detail = data.detail;
+      } else if (typeof data.error === "string") {
+        detail = data.error;
+      } else {
+        detail = tc("errorUnknown");
+      }
+      setTestResult({ ok: data.ok, detail, step: data.step });
     } catch {
       setTestResult({ ok: false, detail: t("networkError") });
     } finally {

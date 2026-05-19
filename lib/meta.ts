@@ -1225,6 +1225,59 @@ export async function subscribeInstagramAccountToWebhooks(
 }
 
 /**
+ * Vérifie la souscription APP-LEVEL aux webhooks Instagram.
+ * GET /{app-id}/subscriptions retourne ce que l'app reçoit. Pour qu'un
+ * event arrive sur notre webhook il faut :
+ *   - subscription app-level existante avec object=instagram
+ *   - field=comments dans la liste des fields abonnés
+ *   - callback_url égal à notre URL réelle (sinon Meta envoie ailleurs)
+ *   - active=true
+ *
+ * Retourne un breakdown qui permet à la UI de diagnostiquer précisément.
+ * Utilise l'app access token (appId|appSecret).
+ */
+export async function getInstagramAppLevelSubscription(
+  appId: string,
+  appSecret: string,
+): Promise<{
+  exists: boolean;
+  active: boolean;
+  callbackUrl: string | null;
+  fields: string[];
+  error?: string;
+}> {
+  try {
+    const res = await fetch(
+      `${GRAPH_API_BASE}/${appId}/subscriptions?access_token=${encodeURIComponent(`${appId}|${appSecret}`)}`,
+    );
+    const json = await res.json();
+    if (!res.ok) {
+      return { exists: false, active: false, callbackUrl: null, fields: [], error: JSON.stringify(json?.error ?? json) };
+    }
+    const subs = Array.isArray(json?.data) ? json.data : [];
+    const igSub = subs.find((s: { object?: string }) => s.object === "instagram");
+    if (!igSub) {
+      return { exists: false, active: false, callbackUrl: null, fields: [] };
+    }
+    const rawFields = Array.isArray(igSub.fields) ? igSub.fields : [];
+    // fields peut être string[] ou {name,version}[] selon la version Graph
+    const fields: string[] = rawFields.map((f: unknown) => {
+      if (typeof f === "string") return f;
+      if (f && typeof f === "object" && "name" in f) return String((f as { name: string }).name);
+      return "";
+    }).filter(Boolean);
+    return {
+      exists: true,
+      active: igSub.active === true,
+      callbackUrl: typeof igSub.callback_url === "string" ? igSub.callback_url : null,
+      fields,
+    };
+  } catch (err) {
+    return { exists: false, active: false, callbackUrl: null, fields: [], error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
  * Vérifie qu'un compte Instagram Business est bien abonné aux webhooks.
  * Utile pour la fonction "Tester" côté UI afin de détecter le cas
  * "souscription app OK mais pas account-level" qui faisait croire à
