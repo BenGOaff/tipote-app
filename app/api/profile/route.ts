@@ -126,6 +126,11 @@ const UpdateSchema = z.object({
   default_google_ads_conversion_id: z.string().trim().max(200).nullable().optional(),
   default_google_ads_conversion_label: z.string().trim().max(200).nullable().optional(),
 
+  // Nom de marque affiché à la place de "Tipote" dans og:site_name + le
+  // <title> sur les routes publiques servies via un custom domain
+  // (Adeline, 19 mai 2026). Cf. migration 20260519_business_profiles_share_site_name.
+  share_site_name: z.string().trim().max(60).nullable().optional(),
+
   custom_links: z.array(z.object({
     label: z.string().trim().max(100),
     url: z.string().trim().max(500),

@@ -13,7 +13,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { buildCanonicalUrl } from "@/lib/publicUrl";
+import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 import PopquizPlayClient from "./PopquizPlayClient";
 
 export const dynamic = "force-dynamic";
@@ -61,18 +61,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { popquizId } = await params;
   const popquiz = await fetchPublishedPopquiz(popquizId);
   if (!popquiz) return { title: "Popquiz" };
-  // og:url + canonical = current request URL so creators on a custom
-  // domain see their branded hostname in iMessage / WhatsApp previews
-  // instead of the global metadataBase. See lib/publicUrl.ts.
-  const canonical = await buildCanonicalUrl(`/pq/${popquizId}`);
+
+  // Branding owner (helper partagé entre les 4 routes publiques).
+  const ownerScope = await fetchPopquizScope(popquizId);
+  const popquizSlug = (popquiz as { slug?: string | null }).slug?.trim() ?? "";
+  const branding = ownerScope?.userId
+    ? await fetchOwnerBranding(ownerScope.userId, ownerScope.projectId)
+    : null;
+
+  let canonical: string | null = null;
+  if (branding && popquizSlug) {
+    canonical = `https://${branding.customHost}/${popquizSlug}`;
+  }
+  if (!canonical) canonical = await buildCanonicalUrl(`/pq/${popquizId}`);
+
+  const siteName = branding ? (branding.siteName || branding.customHost) : null;
+  const titleOverride = siteName
+    ? { absolute: `${popquiz.title} · ${siteName}` }
+    : popquiz.title;
 
   return {
-    title: popquiz.title,
+    title: titleOverride,
     description: popquiz.description ?? undefined,
+    ...(siteName ? { applicationName: siteName } : {}),
     ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title: popquiz.title,
       description: popquiz.description ?? undefined,
+      ...(siteName ? { siteName } : {}),
       ...(canonical ? { url: canonical } : {}),
       ...(popquiz.video.thumbnailUrl
         ? { images: [{ url: popquiz.video.thumbnailUrl }] }

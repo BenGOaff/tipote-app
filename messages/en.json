@@ -409,7 +409,11 @@
     "domainAddBtn": "Add a domain",
     "domainOpenBtn": "Open",
     "errNetwork": "Network error",
-    "customDomainsEmpty": "No domain connected yet. Add one to start using your own URL."
+    "customDomainsEmpty": "No domain connected yet. Add one to start using your own URL.",
+    "shareSiteNameTitle": "Brand name in shares",
+    "shareSiteNameDesc": "Replaces \"Tipote\" under the share preview on iMessage / WhatsApp / social networks.",
+    "shareSiteNameHint": "Leave empty → we'll show your domain ({fallback}).",
+    "saved": "Saved"
   },
   "common": {
     "save": "Save",

@@ -409,7 +409,11 @@
     "domainAddBtn": "Ajouter un domaine",
     "domainOpenBtn": "Ouvrir",
     "errNetwork": "Erreur réseau",
-    "customDomainsEmpty": "Aucun domaine connecté pour l'instant. Ajoutez-en un pour commencer."
+    "customDomainsEmpty": "Aucun domaine connecté pour l'instant. Ajoutez-en un pour commencer.",
+    "shareSiteNameTitle": "Nom de marque dans les partages",
+    "shareSiteNameDesc": "Remplace « Tipote » dans l'aperçu iMessage / WhatsApp / réseaux sociaux. Affiché sous le titre de la page.",
+    "shareSiteNameHint": "Vide → on affichera ton domaine ({fallback}).",
+    "saved": "Enregistré"
   },
   "common": {
     "save": "Enregistrer",

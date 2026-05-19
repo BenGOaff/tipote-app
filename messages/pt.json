@@ -516,7 +516,10 @@
     "domainAddBtn": "Adicionar um domínio",
     "domainOpenBtn": "Abrir",
     "errNetwork": "Erro de rede",
-    "customDomainsEmpty": "Nenhum domínio conectado ainda. Adicione um para começar."
+    "customDomainsEmpty": "Nenhum domínio conectado ainda. Adicione um para começar.",
+    "shareSiteNameTitle": "Nome da marca nas partilhas",
+    "shareSiteNameDesc": "Substitui «Tipote» na pré-visualização do iMessage / WhatsApp / redes sociais.",
+    "shareSiteNameHint": "Vazio → mostraremos o teu domínio ({fallback})."
   },
   "common": {
     "save": "Guardar",

@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { buildCanonicalUrl } from "@/lib/publicUrl";
+import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 // Force dynamic rendering so published pages are always fresh.
 export const dynamic = "force-dynamic";
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
 
     const { data } = await supabase
       .from("hosted_pages")
-      .select("title, meta_title, meta_description, og_image_url")
+      .select("user_id, project_id, title, meta_title, meta_description, og_image_url")
       .eq("slug", slug)
       .eq("status", "published")
       .order("created_at", { ascending: false })
@@ -63,20 +63,33 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
 
     if (!data) return {};
 
-    // og:url + canonical = the current request URL. When the page is
-    // served via a verified custom domain, this ensures iMessage /
-    // WhatsApp / Slack display the creator's branded hostname instead
-    // of the global metadataBase. See lib/publicUrl.ts.
-    const canonical = await buildCanonicalUrl(`/p/${slug}`);
+    // Branding owner (helper partagé entre les 4 routes publiques).
+    const ownerId = (data as { user_id?: string }).user_id;
+    const ownerProjectId = (data as { project_id?: string | null }).project_id ?? null;
+    const branding = ownerId ? await fetchOwnerBranding(ownerId, ownerProjectId) : null;
+
+    let canonical: string | null = null;
+    if (branding) {
+      canonical = `https://${branding.customHost}/${slug}`;
+    }
+    if (!canonical) canonical = await buildCanonicalUrl(`/p/${slug}`);
+
+    const siteName = branding ? (branding.siteName || branding.customHost) : null;
+    const baseTitle = data.meta_title || data.title;
+    const titleOverride = siteName
+      ? { absolute: `${baseTitle} · ${siteName}` }
+      : baseTitle;
 
     const meta: Metadata = {
-      title: data.meta_title || data.title,
+      title: titleOverride,
       description: data.meta_description || undefined,
+      ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
-        title: data.meta_title || data.title,
+        title: baseTitle,
         description: data.meta_description || undefined,
         type: "website",
+        ...(siteName ? { siteName } : {}),
         ...(canonical ? { url: canonical } : {}),
       },
     };

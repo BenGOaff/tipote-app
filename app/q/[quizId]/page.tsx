@@ -15,7 +15,7 @@ import { createClient } from "@supabase/supabase-js";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
-import { buildCanonicalUrl } from "@/lib/publicUrl";
+import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
 
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     const supabase = createClient(supabaseUrl, supabaseKey);
     const base = supabase
       .from("quizzes")
-      .select("title, introduction, og_image_url, og_description")
+      .select("user_id, project_id, slug, title, introduction, og_image_url, og_description")
       .eq("status", "active");
     const { data } = await (UUID_RE.test(param)
       ? base.eq("id", param).maybeSingle()
@@ -71,21 +71,45 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     // Title is rich-text in DB → strip pour la balise <title> et l'OG.
     const plainTitle = stripHtml(data.title);
 
-    // og:url + canonical mirror the current request host. Without
-    // this override, Next.js falls back to the global metadataBase
-    // (app.tipote.com) and creators on a verified custom domain see
-    // the wrong hostname in iMessage / WhatsApp share previews.
-    // See lib/publicUrl.ts.
-    const canonical = await buildCanonicalUrl(`/q/${param}`);
+    // Branding owner (custom domain vérifié + share_site_name).
+    // Permet de virer toute trace de "Tipote" des meta sociales quand
+    // l'user a son domain brandé. Helper partagé entre les 4 routes
+    // publiques pour rester DRY.
+    const ownerId = (data as { user_id?: string }).user_id;
+    const ownerProjectId = (data as { project_id?: string | null }).project_id ?? null;
+    const quizSlug = (data as { slug?: string | null }).slug?.trim() ?? "";
+    const branding = ownerId ? await fetchOwnerBranding(ownerId, ownerProjectId) : null;
+
+    // Canonical = URL brandée si custom domain + slug, sinon request URL.
+    let canonical: string | null = null;
+    if (branding && quizSlug) {
+      canonical = `https://${branding.customHost}/${quizSlug}`;
+    }
+    if (!canonical) canonical = await buildCanonicalUrl(`/q/${param}`);
+
+    // site_name affiché par iMessage / WhatsApp / FB sous l'aperçu.
+    // - main host : null → fallback "Tipote" via layout (historique)
+    // - custom domain + share_site_name → ce nom
+    // - custom domain sans share_site_name → hostname brandé
+    const siteName = branding ? (branding.siteName || branding.customHost) : null;
+
+    // Title : override `absolute` quand on a un siteName custom — shunte
+    // le template global du layout. Sinon plainTitle nu, le template
+    // ajoute le suffix par défaut.
+    const titleOverride = siteName
+      ? { absolute: `${plainTitle} · ${siteName}` }
+      : plainTitle;
 
     const meta: Metadata = {
-      title: plainTitle,
+      title: titleOverride,
       description,
+      ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle,
         description,
         type: "website",
+        ...(siteName ? { siteName } : {}),
         ...(canonical ? { url: canonical } : {}),
       },
     };

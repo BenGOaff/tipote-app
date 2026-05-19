@@ -409,7 +409,11 @@
     "domainAddBtn": "إضافة نطاق",
     "domainOpenBtn": "افتح",
     "errNetwork": "خطأ في الشبكة",
-    "customDomainsEmpty": "لا يوجد نطاق متصل بعد. أضف نطاقًا للبدء."
+    "customDomainsEmpty": "لا يوجد نطاق متصل بعد. أضف نطاقًا للبدء.",
+    "shareSiteNameTitle": "اسم العلامة في المشاركات",
+    "shareSiteNameDesc": "يحل محل «Tipote» في معاينة iMessage / WhatsApp / الشبكات الاجتماعية.",
+    "shareSiteNameHint": "فارغ → سنعرض نطاقك ({fallback}).",
+    "saved": "تم الحفظ"
   },
   "common": {
     "save": "حفظ",

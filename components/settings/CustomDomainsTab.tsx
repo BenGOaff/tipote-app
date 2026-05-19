@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import { Globe, Loader2, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { CustomDomainRow } from "@/lib/customDomains";
 import type { RegistrarInfo } from "@/lib/registrarDetect";
@@ -43,19 +44,37 @@ export function CustomDomainsTab() {
   // detection somewhere else. Good enough for v1.
   const [registrars, setRegistrars] = useState<Record<string, RegistrarInfo>>({});
 
+  // Nom de marque user-éditable affiché à la place de "Tipote" dans
+  // og:site_name + suffix du <title> sur les routes publiques servies
+  // via custom domain. Per-project (business_profiles.share_site_name).
+  const [shareSiteName, setShareSiteName] = useState("");
+  const [shareSiteNameOriginal, setShareSiteNameOriginal] = useState("");
+  const [savingShareSiteName, setSavingShareSiteName] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/custom-domain");
-        const data = await res.json();
+        // En parallèle : domaines custom + profile pour pré-remplir le
+        // bloc "nom de marque dans les partages".
+        const [domRes, profRes] = await Promise.all([
+          fetch("/api/custom-domain"),
+          fetch("/api/profile"),
+        ]);
+        const domData = await domRes.json().catch(() => null);
+        const profData = await profRes.json().catch(() => null);
         if (cancelled) return;
-        if (data.ok) {
-          setIsPaid(!!data.isPaid);
-          setDomains(data.domains ?? []);
-          setCnameTarget(data.dnsTargetCname ?? "");
+        if (domData?.ok) {
+          setIsPaid(!!domData.isPaid);
+          setDomains(domData.domains ?? []);
+          setCnameTarget(domData.dnsTargetCname ?? "");
         } else {
-          toast.error(data.error ?? t("errGeneric"));
+          toast.error(domData?.error ?? t("errGeneric"));
+        }
+        if (profData?.ok) {
+          const value = (profData.profile?.share_site_name ?? "") as string;
+          setShareSiteName(value);
+          setShareSiteNameOriginal(value);
         }
       } catch {
         if (!cancelled) toast.error(t("errNetwork"));
@@ -67,6 +86,31 @@ export function CustomDomainsTab() {
       cancelled = true;
     };
   }, [t]);
+
+  async function handleSaveShareSiteName() {
+    setSavingShareSiteName(true);
+    try {
+      const trimmed = shareSiteName.trim();
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ share_site_name: trimmed || null }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const next = (data.profile?.share_site_name ?? "") as string;
+        setShareSiteName(next);
+        setShareSiteNameOriginal(next);
+        toast.success(t("saved"));
+      } else {
+        toast.error(data.error ?? t("errGeneric"));
+      }
+    } catch {
+      toast.error(t("errNetwork"));
+    } finally {
+      setSavingShareSiteName(false);
+    }
+  }
 
   function handleCreated(domain: CustomDomainRow, registrar: RegistrarInfo | null) {
     setDomains((prev) => [domain, ...prev]);
@@ -123,41 +167,83 @@ export function CustomDomainsTab() {
     );
   }
 
+  // Le bloc "nom de marque" n'apparaît que quand au moins 1 domain
+  // vérifié — sinon le réglage n'a aucun effet (le backend ne
+  // l'applique que sur les routes servies via un custom domain).
+  const hasVerifiedDomain = domains.some((d) => d.status === "verified");
+  const firstVerifiedHost = domains.find((d) => d.status === "verified")?.hostname || "";
+  const shareSiteNameDirty = shareSiteName.trim() !== shareSiteNameOriginal.trim();
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div className="space-y-1.5">
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            {t("customDomainsTitle")}
-          </CardTitle>
-          <CardDescription>{t("customDomainsDesc")}</CardDescription>
-        </div>
-        <AddCustomDomainDialog
-          cnameTarget={cnameTarget || "connect.tipote.com"}
-          onCreated={handleCreated}
-        />
-      </CardHeader>
-      <CardContent>
-        {domains.length === 0 ? (
-          <div className="rounded-lg border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground">
-            {t("customDomainsEmpty")}
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+          <div className="space-y-1.5">
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              {t("customDomainsTitle")}
+            </CardTitle>
+            <CardDescription>{t("customDomainsDesc")}</CardDescription>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {domains.map((d) => (
-              <CustomDomainCard
-                key={d.id}
-                domain={d}
-                cnameTarget={cnameTarget || "connect.tipote.com"}
-                registrar={registrars[d.id] ?? null}
-                onUpdated={handleUpdated}
-                onDeleted={handleDeleted}
-              />
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          <AddCustomDomainDialog
+            cnameTarget={cnameTarget || "connect.tipote.com"}
+            onCreated={handleCreated}
+          />
+        </CardHeader>
+        <CardContent>
+          {domains.length === 0 ? (
+            <div className="rounded-lg border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+              {t("customDomainsEmpty")}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {domains.map((d) => (
+                <CustomDomainCard
+                  key={d.id}
+                  domain={d}
+                  cnameTarget={cnameTarget || "connect.tipote.com"}
+                  registrar={registrars[d.id] ?? null}
+                  onUpdated={handleUpdated}
+                  onDeleted={handleDeleted}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {hasVerifiedDomain && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              {t("shareSiteNameTitle")}
+            </CardTitle>
+            <CardDescription>{t("shareSiteNameDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex-1 space-y-1.5">
+                <Input
+                  value={shareSiteName}
+                  onChange={(e) => setShareSiteName(e.target.value.slice(0, 60))}
+                  placeholder={firstVerifiedHost || "Mon studio"}
+                  maxLength={60}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("shareSiteNameHint", { fallback: firstVerifiedHost })}
+                </p>
+              </div>
+              <Button
+                onClick={handleSaveShareSiteName}
+                disabled={!shareSiteNameDirty || savingShareSiteName}
+              >
+                {savingShareSiteName ? <Loader2 className="h-4 w-4 animate-spin" /> : t("save")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

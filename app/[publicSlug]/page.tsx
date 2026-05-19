@@ -38,7 +38,7 @@ import PopquizPlayClient from "@/app/pq/[popquizId]/PopquizPlayClient";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { stripHtml } from "@/lib/richText";
-import { buildCanonicalUrl } from "@/lib/publicUrl";
+import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -124,25 +124,35 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const r = await resolve(publicSlug, scope.userId, scope.projectId);
   if (!r) return {};
 
-  // og:url + canonical = the current request URL (creator's custom
-  // domain). Without this, Next.js falls back to the global
-  // metadataBase (app.tipote.com) and iMessage / WhatsApp display
-  // the wrong hostname under the share preview. See lib/publicUrl.ts.
+  // og:url + canonical = current request URL on the creator's custom
+  // domain (la route ne s'active QUE sur un custom domain — sinon scope
+  // est null et on a return {} plus haut).
   const canonical = await buildCanonicalUrl(`/${publicSlug}`);
+
+  // Branding (custom domain + share_site_name) — toujours résoluble ici
+  // puisque scope existe, sauf race condition (domain dé-vérifié).
+  const branding = await fetchOwnerBranding(scope.userId, scope.projectId);
+  const siteName = branding ? (branding.siteName || branding.customHost) : null;
 
   if (r.kind === "quiz") {
     const ogDescPlain = stripHtml(r.meta.og_description ?? "").trim();
     const introPlain = stripHtml(r.meta.introduction ?? "").slice(0, 160);
     const description = (ogDescPlain || introPlain).trim() || undefined;
     const plainTitle = stripHtml(r.meta.title ?? "");
+    const baseTitle = plainTitle || "Quiz";
+    const titleOverride = siteName
+      ? { absolute: `${baseTitle} · ${siteName}` }
+      : (plainTitle || undefined);
     const meta: Metadata = {
-      title: plainTitle || undefined,
+      title: titleOverride,
       description,
+      ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle || undefined,
         description,
         type: "website",
+        ...(siteName ? { siteName } : {}),
         ...(canonical ? { url: canonical } : {}),
       },
     };
@@ -154,13 +164,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (r.kind === "popquiz") {
     const p = r.popquiz;
+    const titleOverride = siteName
+      ? { absolute: `${p.title} · ${siteName}` }
+      : p.title;
     return {
-      title: p.title,
+      title: titleOverride,
       description: p.description ?? undefined,
+      ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: p.title,
         description: p.description ?? undefined,
+        ...(siteName ? { siteName } : {}),
         ...(canonical ? { url: canonical } : {}),
         ...(p.video.thumbnailUrl ? { images: [{ url: p.video.thumbnailUrl }] } : {}),
       },
@@ -168,14 +183,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   // hosted page
+  const baseTitle = r.meta.meta_title || r.meta.title || "Page";
+  const titleOverride = siteName
+    ? { absolute: `${baseTitle} · ${siteName}` }
+    : (r.meta.meta_title || r.meta.title || undefined);
   const meta: Metadata = {
-    title: r.meta.meta_title || r.meta.title || undefined,
+    title: titleOverride,
     description: r.meta.meta_description || undefined,
+    ...(siteName ? { applicationName: siteName } : {}),
     ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title: r.meta.meta_title || r.meta.title || undefined,
       description: r.meta.meta_description || undefined,
       type: "website",
+      ...(siteName ? { siteName } : {}),
       ...(canonical ? { url: canonical } : {}),
     },
   };
