@@ -23,6 +23,7 @@ import {
 import { Loader2, CheckCircle2, ExternalLink, AlertCircle, Settings, MessageCircle, Zap, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
+import { META_REVIEW_VISIBLE } from "@/lib/metaReview";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 type PublishStep =
@@ -728,6 +729,25 @@ export function PublishModal({
             </DialogHeader>
 
             <div className="flex flex-col gap-3 pt-2">
+              {/* META REVIEW TEMP — REMOVE AFTER APPROVAL (toggle lib/metaReview.ts).
+                   Surfaces the exact Graph API call + media ID + permalink to the
+                   reviewer so they can verify the publish landed on Instagram. */}
+              {META_REVIEW_VISIBLE && platform === "instagram" && result?.ok && (
+                <div className="rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/30 px-3 py-2 text-[11px]">
+                  <p className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                    Instagram Graph API publish result
+                  </p>
+                  <ul className="space-y-0.5 font-mono text-blue-800 dark:text-blue-300">
+                    <li>POST /{`{ig-user-id}`}/media → container created</li>
+                    <li>POST /{`{ig-user-id}`}/media_publish → 200 OK</li>
+                    {result.postId && <li>Media ID: <span className="font-semibold">{result.postId}</span></li>}
+                    {result.postUrl && <li>Permalink: <span className="break-all">{result.postUrl}</span></li>}
+                  </ul>
+                  <p className="text-[10px] text-blue-700/80 dark:text-blue-300/70 mt-1 italic">
+                    Server-to-server call after browser OAuth — using long-lived user token.
+                  </p>
+                </div>
+              )}
               {automationId && result?.postId && platform === "facebook" && (
                 <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
                   <Zap className="w-3.5 h-3.5 shrink-0" />

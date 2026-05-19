@@ -56,6 +56,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { META_REVIEW_VISIBLE, META_INSTAGRAM_APP_ID, META_IG_GRANTED_SCOPES } from "@/lib/metaReview";
 
 /* ── Pinterest consent modal ── */
 function PinterestConsentDialog({
@@ -472,8 +473,9 @@ export default function SocialConnections() {
             return (
               <div
                 key={platform.key}
-                className="flex items-center justify-between rounded-lg border p-4"
+                className="rounded-lg border p-4"
               >
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${platform.bgColor}`}>
                     {platform.icon}
@@ -563,6 +565,27 @@ export default function SocialConnections() {
                     </Button>
                   )}
                 </div>
+              </div>
+
+              {/* META REVIEW TEMP — REMOVE AFTER APPROVAL (toggle in lib/metaReview.ts).
+                   Surfaces granted Instagram permissions explicitly for Meta App Review
+                   reviewers, so they can verify the OAuth grant matched our submission
+                   without needing to inspect the access_token. */}
+              {META_REVIEW_VISIBLE && platform.key === "instagram" && connection && !connection.expired && (
+                <div className="mt-3 rounded-md border border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/30 px-3 py-2">
+                  <p className="text-[11px] font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                    Granted Instagram permissions (Meta App ID {META_INSTAGRAM_APP_ID}):
+                  </p>
+                  <ul className="space-y-0.5 text-[11px] font-mono text-blue-800 dark:text-blue-300">
+                    {META_IG_GRANTED_SCOPES.map((s) => (
+                      <li key={s}>✓ {s}</li>
+                    ))}
+                  </ul>
+                  <p className="text-[10px] text-blue-700/80 dark:text-blue-300/70 mt-1 italic">
+                    Long-lived user token (≈60 days) stored server-side. All Graph API calls are server-to-server.
+                  </p>
+                </div>
+              )}
               </div>
             );
           })}

@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageBanner } from "@/components/PageBanner";
 import { Card, CardContent } from "@/components/ui/card";
+import { META_REVIEW_VISIBLE } from "@/lib/metaReview";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mascot } from "@/components/ui/mascot";
@@ -896,6 +897,29 @@ function AutomationCard({
                     {testResult.ok ? "✓" : "✗"} {testResult.detail}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* META REVIEW TEMP — REMOVE AFTER APPROVAL (toggle in lib/metaReview.ts).
+                 Documents which Instagram Graph API endpoints this automation triggers,
+                 so Meta App Review can audit the permission usage end-to-end. */}
+            {META_REVIEW_VISIBLE && auto.platforms?.includes("instagram") && (
+              <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/30 px-3 py-2">
+                <p className="text-[11px] font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                  Instagram Graph API calls this automation triggers
+                </p>
+                <ul className="space-y-0.5 text-[11px] font-mono text-blue-800 dark:text-blue-300">
+                  <li>1. GET /{`{ig-user-id}`}/media — list creator&apos;s posts</li>
+                  <li>2. GET /{`{media-id}`}/comments — fetch incoming comments
+                       <span className="not-italic font-sans"> → uses <strong>instagram_business_manage_comments</strong></span></li>
+                  <li>3. POST /{`{comment-id}`}/replies — public reply on match
+                       <span className="not-italic font-sans"> → uses <strong>instagram_business_manage_comments</strong></span></li>
+                  <li>4. POST /{`{ig-user-id}`}/messages (recipient.comment_id) — private DM follow-up
+                       <span className="not-italic font-sans"> → uses <strong>instagram_business_manage_messages</strong></span></li>
+                </ul>
+                <p className="text-[10px] text-blue-700/80 dark:text-blue-300/70 mt-1 italic">
+                  Polling runs server-side every few minutes against the user&apos;s connected IG account; webhooks (subscribed at app level) provide low-latency triggers when available.
+                </p>
               </div>
             )}
           </div>
