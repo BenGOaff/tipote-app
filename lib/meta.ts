@@ -468,6 +468,12 @@ export async function refreshInstagramLongLivedToken(currentToken: string): Prom
 
 export type InstagramUserInfo = {
   id: string;
+  // user_id : c'est l'IG Business Account ID (format 17841…) — celui que
+  // Meta envoie dans entry.id des webhooks IG. À ne PAS confondre avec
+  // `id` qui est l'IG-scoped User ID (format 26…/35…, spécifique à l'app).
+  // On stocke les deux dans social_connections pour matcher webhooks ET
+  // appels Graph API.
+  user_id?: string;
   username?: string;
   name?: string;
   profile_picture_url?: string;
@@ -480,7 +486,8 @@ export type InstagramUserInfo = {
  * Retourne null si tout échoue (le caller utilise le user_id du code exchange).
  */
 export async function getInstagramUser(userAccessToken: string): Promise<InstagramUserInfo | null> {
-  const fields = "id,username,name,profile_picture_url,account_type";
+  // user_id : nécessaire pour récupérer l'IG Business Account ID (webhooks)
+  const fields = "id,user_id,username,name,profile_picture_url,account_type";
 
   // Tentative 1 : graph.instagram.com (endpoint officiel IG Professional Login)
   const igUrl = `${INSTAGRAM_GRAPH_BASE}/me?fields=${fields}&access_token=${userAccessToken}`;

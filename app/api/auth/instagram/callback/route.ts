@@ -157,6 +157,10 @@ export async function GET(req: NextRequest) {
       project_id: projectId ?? null,
       platform: "instagram" as const,
       platform_user_id: igUser.id,
+      // IG Business Account ID (= entry.id des webhooks Meta). On le stocke
+      // séparément du platform_user_id (= IG-scoped User ID) pour que le
+      // webhook handler puisse matcher entrant ↔ connexion.
+      platform_business_id: igUser.user_id ?? null,
       platform_username: igUser.username ?? igUser.name ?? "Instagram",
       access_token_encrypted: tokenEncrypted,
       refresh_token_encrypted: null,
@@ -404,20 +408,70 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Récupérer le token Instagram depuis la DB
+      // Lookup token Instagram. entry.id du webhook = IG Business Account
+      // ID (format 17841…), différent de l'IG-scoped User ID qu'on stocke
+      // historiquement dans platform_user_id (format 26…/35…). On a donc
+      // une colonne dédiée platform_business_id remplie au OAuth callback.
+      //
+      // Pour les connexions héritées (avant ce fix) où platform_business_id
+      // est NULL : self-heal en interrogeant /me?fields=user_id pour chaque
+      // connexion candidate, et on backfill la colonne dès qu'on trouve
+      // le match. Pas besoin de reconnect côté utilisateur.
       let igAccessToken: string | null = null;
       let connUserId: string | undefined;
       try {
+        // Fast path : lookup direct par business_id
         const { data: conn } = await supabaseAdmin
           .from("social_connections")
-          .select("access_token_encrypted, user_id")
+          .select("id, access_token_encrypted, user_id")
           .eq("platform", "instagram")
-          .eq("platform_user_id", igAccountId)
+          .eq("platform_business_id", igAccountId)
           .maybeSingle();
 
         if (conn?.access_token_encrypted) {
           igAccessToken = decrypt(conn.access_token_encrypted);
           connUserId = conn.user_id;
+        } else {
+          // Slow path : itérer les IG connections sans business_id pour
+          // identifier laquelle correspond à cet IG account ID. La query
+          // /me?fields=user_id retourne l'IG Business Account ID. Quand
+          // on match, on backfill platform_business_id.
+          const { data: legacyConns } = await supabaseAdmin
+            .from("social_connections")
+            .select("id, access_token_encrypted, user_id")
+            .eq("platform", "instagram")
+            .is("platform_business_id", null)
+            .is("disconnected_at", null);
+
+          for (const c of legacyConns ?? []) {
+            try {
+              const tok = decrypt(c.access_token_encrypted);
+              const meRes = await fetch(
+                `https://graph.instagram.com/v22.0/me?fields=id,user_id&access_token=${tok}`,
+              );
+              if (!meRes.ok) continue;
+              const meData = (await meRes.json()) as { id?: string; user_id?: string };
+              const businessId = meData.user_id ?? meData.id;
+              if (!businessId) continue;
+              // Backfill TOUTES les connexions visitées (même si miss) pour
+              // qu'on ne re-interroge pas /me à chaque webhook
+              await supabaseAdmin
+                .from("social_connections")
+                .update({ platform_business_id: businessId })
+                .eq("id", c.id);
+              if (businessId === igAccountId) {
+                igAccessToken = tok;
+                connUserId = c.user_id;
+                console.log(
+                  "[Instagram webhook] Self-heal: backfilled platform_business_id for conn",
+                  c.id,
+                );
+                break;
+              }
+            } catch (e) {
+              console.warn("[Instagram webhook] self-heal skipped conn", c.id, e);
+            }
+          }
         }
       } catch (err) {
         console.error("[Instagram webhook] Token lookup error:", err);
