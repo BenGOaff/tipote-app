@@ -14,7 +14,7 @@
 // POST : reçoit les events webhook Instagram (comments, messages)
 //        vérifie la signature X-Hub-Signature-256 avec INSTAGRAM_META_APP_SECRET (app parente)
 
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -285,14 +285,59 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const signature = req.headers.get("x-hub-signature-256");
 
+  // Observabilité : on log CHAQUE hit dans meta_webhook_receipts AVANT
+  // toute validation. But — si auto_comment_logs reste vide alors que
+  // l'utilisateur poste des commentaires, on saura :
+  //   - aucune row → Meta n'envoie rien (config Dashboard / app review)
+  //   - rows avec signature_valid=false → mauvais secret HMAC
+  //   - rows avec payload_object != "instagram" → autre object envoyé
+  //   - rows avec skipped_reason="no_token" → social_connections orphelin
+  // Cf. /api/social/instagram-webhook-receipts pour consulter.
+  const receiptId = randomUUID();
+  let signatureValid: boolean | null = null;
+  let payloadObject: string | null = null;
+  let entryCount = 0;
+  const logReceipt = async (extra: {
+    processedCount?: number;
+    skippedReason?: string;
+    httpStatus: number;
+    errorMessage?: string;
+  }) => {
+    try {
+      await supabaseAdmin.from("meta_webhook_receipts").insert({
+        id: receiptId,
+        source: "instagram_callback",
+        signature_present: !!signature,
+        signature_valid: signatureValid,
+        payload_object: payloadObject,
+        payload_excerpt: rawBody.slice(0, 2000),
+        entry_count: entryCount,
+        processed_count: extra.processedCount ?? 0,
+        skipped_reason: extra.skippedReason ?? null,
+        http_status: extra.httpStatus,
+        error_message: extra.errorMessage ?? null,
+      });
+    } catch (logErr) {
+      console.error("[Instagram webhook] receipt log insert failed:", logErr);
+    }
+  };
+
   // Vérification signature HMAC — Meta signe avec le secret de l'app parente
   const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET;
   if (appSecret) {
     if (!signature) {
+      signatureValid = false;
+      await logReceipt({ skippedReason: "signature_missing", httpStatus: 401 });
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
     const expected = `sha256=${createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
-    if (signature !== expected) {
+    signatureValid = signature === expected;
+    if (!signatureValid) {
+      await logReceipt({
+        skippedReason: "signature_invalid",
+        httpStatus: 401,
+        errorMessage: `expected ${expected.slice(0, 24)}…, got ${signature.slice(0, 24)}…`,
+      });
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   }
@@ -301,24 +346,36 @@ export async function POST(req: NextRequest) {
   try {
     payload = JSON.parse(rawBody);
   } catch {
+    await logReceipt({ skippedReason: "invalid_json", httpStatus: 400 });
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  payloadObject = payload.object ?? null;
+  entryCount = payload.entry?.length ?? 0;
+
   // Seuls les events Instagram nous intéressent ici
   if (payload.object !== "instagram") {
+    await logReceipt({ skippedReason: "object_not_instagram", httpStatus: 200 });
     return NextResponse.json({ ok: true, skipped: true });
   }
 
   const results = { matched: 0, errors: 0 };
+  const skipReasons: string[] = [];
 
   for (const entry of payload.entry ?? []) {
     const igAccountId = entry.id;
 
     for (const change of entry.changes ?? []) {
       // Commentaires Instagram
-      if (change.field !== "comments") continue;
+      if (change.field !== "comments") {
+        skipReasons.push(`field=${change.field}`);
+        continue;
+      }
       const val = change.value;
-      if (!val.text || !val.from?.id) continue;
+      if (!val.text || !val.from?.id) {
+        skipReasons.push("missing_text_or_from");
+        continue;
+      }
 
       // Récupérer le token Instagram depuis la DB
       let igAccessToken: string | null = null;
@@ -337,10 +394,12 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         console.error("[Instagram webhook] Token lookup error:", err);
+        skipReasons.push(`token_lookup_error:${igAccountId}`);
       }
 
       if (!igAccessToken) {
         console.warn("[Instagram webhook] No token found for IG account:", igAccountId);
+        skipReasons.push(`no_token:${igAccountId}`);
         continue;
       }
 
@@ -358,6 +417,12 @@ export async function POST(req: NextRequest) {
       results.matched++;
     }
   }
+
+  await logReceipt({
+    processedCount: results.matched,
+    skippedReason: results.matched === 0 ? (skipReasons.join("|") || "no_changes") : undefined,
+    httpStatus: 200,
+  });
 
   return NextResponse.json({ ok: true, ...results });
 }
