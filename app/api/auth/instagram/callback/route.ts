@@ -322,21 +322,48 @@ export async function POST(req: NextRequest) {
     }
   };
 
-  // Vérification signature HMAC — Meta signe avec le secret de l'app parente
-  const appSecret = process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET;
-  if (appSecret) {
+  // Vérification signature HMAC — Meta peut signer avec différents secrets
+  // selon la config de l'app (parent FB app vs produit Instagram). Plutôt
+  // que de deviner lequel, on essaye tous les secrets disponibles et on
+  // accepte si l'un match. Évite la régression chaque fois qu'un secret
+  // est rotaté ou qu'on change de combo app parent/IG.
+  //
+  // Ordre d'essai (du plus probable au moins probable pour IG webhooks) :
+  //   1. INSTAGRAM_APP_SECRET       — secret du produit IG (4432330840336592)
+  //   2. INSTAGRAM_META_APP_SECRET  — secret de l'app parent (2408789919563484)
+  //   3. META_APP_SECRET            — fallback env legacy
+  const secretCandidates = Array.from(
+    new Set(
+      [
+        process.env.INSTAGRAM_APP_SECRET,
+        process.env.INSTAGRAM_META_APP_SECRET,
+        process.env.META_APP_SECRET,
+      ].filter((v): v is string => typeof v === "string" && v.length > 0),
+    ),
+  );
+
+  if (secretCandidates.length > 0) {
     if (!signature) {
       signatureValid = false;
       await logReceipt({ skippedReason: "signature_missing", httpStatus: 401 });
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
-    const expected = `sha256=${createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
-    signatureValid = signature === expected;
-    if (!signatureValid) {
+    let matched = false;
+    const expectedList: string[] = [];
+    for (const sec of secretCandidates) {
+      const expected = `sha256=${createHmac("sha256", sec).update(rawBody).digest("hex")}`;
+      expectedList.push(expected);
+      if (signature === expected) {
+        matched = true;
+        break;
+      }
+    }
+    signatureValid = matched;
+    if (!matched) {
       await logReceipt({
         skippedReason: "signature_invalid",
         httpStatus: 401,
-        errorMessage: `expected ${expected.slice(0, 24)}…, got ${signature.slice(0, 24)}…`,
+        errorMessage: `tried ${expectedList.length} secret(s); first expected ${expectedList[0]?.slice(0, 24)}…, got ${signature.slice(0, 24)}…`,
       });
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
