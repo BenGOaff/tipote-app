@@ -17,6 +17,7 @@
 import { getCsrfToken, voyagerLike, voyagerComment } from "./voyager";
 import { getMyRecentPosts, type RecentPostHint } from "./voyagerFeed";
 import { mountBadge } from "./badge";
+import { startFeedInjector } from "./feedInjector";
 
 console.log("[tipote/cs] loaded on", location.href);
 
@@ -301,6 +302,12 @@ new MutationObserver(() => {
     maybeMountBadge();
   }
 }).observe(document, { subtree: true, childList: true });
+
+// Injecteur inline — c'est l'UX principale (Béné, 20 mai 2026 :
+// "comme Kawaak, je scrolle le feed et n'importe où je peux cliquer
+// commenter et j'ai le bouton tipote"). Le badge flottant reste comme
+// fallback sur les permalinks ouverts via popup paste-URL.
+startFeedInjector();
 
 // Auto-trigger matching à l'arrivée sur LinkedIn.
 void pushConnect();
