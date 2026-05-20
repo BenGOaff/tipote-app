@@ -65,8 +65,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Branding owner (helper partagé entre les 4 routes publiques).
   const ownerScope = await fetchPopquizScope(popquizId);
   const popquizSlug = (popquiz as { slug?: string | null }).slug?.trim() ?? "";
+  const customHost = (await headers()).get(CUSTOM_HOST_HEADER);
   const branding = ownerScope?.userId
-    ? await fetchOwnerBranding(ownerScope.userId, ownerScope.projectId)
+    ? await fetchOwnerBranding(ownerScope.userId, ownerScope.projectId, customHost)
     : null;
 
   let canonical: string | null = null;

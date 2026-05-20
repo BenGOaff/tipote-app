@@ -26,6 +26,9 @@ export type CustomDomainRow = {
   ssl_issued_at: string | null;
   created_at: string;
   updated_at: string;
+  // Favicon servi dans l'onglet navigateur pour les routes publiques
+  // de CE domaine. Si null, on retombe sur le favicon Tipote par défaut.
+  favicon_url: string | null;
 };
 
 // Hostnames we control directly. A request whose Host matches one of

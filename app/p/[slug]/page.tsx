@@ -66,7 +66,10 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     // Branding owner (helper partagé entre les 4 routes publiques).
     const ownerId = (data as { user_id?: string }).user_id;
     const ownerProjectId = (data as { project_id?: string | null }).project_id ?? null;
-    const branding = ownerId ? await fetchOwnerBranding(ownerId, ownerProjectId) : null;
+    const customHost = (await headers()).get(CUSTOM_HOST_HEADER);
+    const branding = ownerId
+      ? await fetchOwnerBranding(ownerId, ownerProjectId, customHost)
+      : null;
 
     let canonical: string | null = null;
     if (branding) {

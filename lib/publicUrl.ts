@@ -58,54 +58,82 @@ export type OwnerBranding = {
   faviconUrl: string | null;
 };
 
-/** Lookup owner branding from the (user_id, project_id) of a quiz/popquiz/page owner. */
+/** Lookup owner branding for a public page.
+ *
+ *  When `hostname` is provided (normal case — the page knows its custom
+ *  host via the x-tipote-custom-host header), the favicon is read from
+ *  THAT specific custom_domains row, so users with multiple branded
+ *  domains get one favicon per domain.
+ *
+ *  When `hostname` is omitted we fall back to the first verified domain
+ *  for the (user, project) pair (legacy behaviour). */
 export async function fetchOwnerBranding(
   userId: string,
   projectId: string | null | undefined,
+  hostname?: string | null,
 ): Promise<OwnerBranding | null> {
-  if (!projectId) {
-    // Pas de project_id = ressource héritée legacy. On regarde s'il y a
-    // un seul custom_domain vérifié pour le user et on l'utilise.
-    const { data: cd } = await supabaseAdmin
+  const host = hostname?.toLowerCase().trim() || null;
+
+  // Custom domain lookup. With hostname, we resolve the exact row (and
+  // can also infer project_id from it). Without hostname, fall back to
+  // the first verified domain matching the requested (user, project).
+  type CdRow = { hostname?: string | null; favicon_url?: string | null; project_id?: string | null };
+  let cd: CdRow | null = null;
+  if (host) {
+    const { data } = await supabaseAdmin
       .from("custom_domains")
-      .select("hostname, project_id")
+      .select("hostname, favicon_url, project_id")
+      .eq("user_id", userId)
+      .ilike("hostname", host)
+      .eq("status", "verified")
+      .maybeSingle();
+    cd = (data ?? null) as CdRow | null;
+  } else if (projectId) {
+    const { data } = await supabaseAdmin
+      .from("custom_domains")
+      .select("hostname, favicon_url, project_id")
+      .eq("user_id", userId)
+      .eq("project_id", projectId)
+      .eq("status", "verified")
+      .order("verified_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    cd = (data ?? null) as CdRow | null;
+  } else {
+    const { data } = await supabaseAdmin
+      .from("custom_domains")
+      .select("hostname, favicon_url, project_id")
       .eq("user_id", userId)
       .eq("status", "verified")
       .order("verified_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const host = (cd as { hostname?: string | null } | null)?.hostname?.toLowerCase().trim();
-    if (!host) return null;
-    // Cas legacy (pas de project_id) : on n'a pas de favicon attaché à
-    // un projet précis donc on retombe sur null.
-    return { customHost: host, siteName: null, faviconUrl: null };
+    cd = (data ?? null) as CdRow | null;
   }
 
-  const [{ data: cd }, { data: bp }] = await Promise.all([
-    supabaseAdmin
-      .from("custom_domains")
-      .select("hostname")
-      .eq("user_id", userId)
-      .eq("project_id", projectId)
-      .eq("status", "verified")
-      .order("verified_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabaseAdmin
+  const matchedHost = cd?.hostname?.toLowerCase().trim() || null;
+  if (!matchedHost) return null;
+
+  // siteName still lives on business_profiles (per project). Resolve it
+  // using the project_id of the matched custom_domain.
+  const resolvedProjectId = projectId ?? cd?.project_id ?? null;
+  let siteName: string | null = null;
+  if (resolvedProjectId) {
+    const { data: bp } = await supabaseAdmin
       .from("business_profiles")
-      .select("share_site_name, brand_favicon_url")
+      .select("share_site_name")
       .eq("user_id", userId)
-      .eq("project_id", projectId)
-      .maybeSingle(),
-  ]);
-  const host = (cd as { hostname?: string | null } | null)?.hostname?.toLowerCase().trim();
-  if (!host) return null;
-  const p = bp as { share_site_name?: string | null; brand_favicon_url?: string | null } | null;
-  const siteName = p?.share_site_name?.trim() ?? null;
-  const favicon = p?.brand_favicon_url?.trim() ?? null;
+      .eq("project_id", resolvedProjectId)
+      .maybeSingle();
+    const p = bp as { share_site_name?: string | null } | null;
+    const s = p?.share_site_name?.trim() ?? null;
+    siteName = s && s.length > 0 ? s : null;
+  }
+
+  const favicon = cd?.favicon_url?.trim() ?? null;
   return {
-    customHost: host,
-    siteName: siteName && siteName.length > 0 ? siteName : null,
+    customHost: matchedHost,
+    siteName,
     faviconUrl: favicon && favicon.length > 0 ? favicon : null,
   };
 }

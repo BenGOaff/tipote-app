@@ -15,7 +15,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
-  CheckCircle2, AlertCircle, Loader2, ExternalLink, RefreshCw, Trash2, Clock,
+  CheckCircle2, AlertCircle, Loader2, ExternalLink, RefreshCw, Trash2, Clock, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -26,6 +26,8 @@ import {
 import { toast } from "sonner";
 import type { CustomDomainRow } from "@/lib/customDomains";
 import type { RegistrarInfo } from "@/lib/registrarDetect";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { prepareFaviconForUpload } from "@/lib/clientFaviconUpload";
 import { RegistrarInstructions } from "./RegistrarInstructions";
 
 type Props = {
@@ -54,6 +56,9 @@ export function CustomDomainCard({
   const [verifying, setVerifying] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [removingFavicon, setRemovingFavicon] = useState(false);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-poll state. Counts attempts so we can show "checking…
   // (attempt N/20)" and stop without hammering when DNS won't budge.
@@ -131,6 +136,61 @@ export function CustomDomainCard({
     return stopPolling;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [domain.status]);
+
+  async function persistFaviconUrl(url: string | null): Promise<void> {
+    const res = await fetch(`/api/custom-domain/${domain.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ favicon_url: url }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!data?.ok) throw new Error(data?.error ?? "save_failed");
+    if (data.domain) onUpdated(data.domain as CustomDomainRow);
+  }
+
+  async function handleFaviconUpload(file: File) {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t("errImageTooLarge2"));
+      return;
+    }
+    setUploadingFavicon(true);
+    try {
+      const prepared = await prepareFaviconForUpload(file);
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("not_signed_in");
+      const path = `favicons/${user.id}/${domain.id}-${Date.now()}.${prepared.ext}`;
+      const { error } = await supabase.storage
+        .from("public-assets")
+        .upload(path, prepared.blob, {
+          upsert: true,
+          contentType: prepared.contentType,
+        });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      await persistFaviconUrl(urlData.publicUrl);
+      toast.success(t("faviconUploaded"));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Favicon upload failed:", err);
+      toast.error(t("errFaviconUpload", { msg }));
+    } finally {
+      setUploadingFavicon(false);
+    }
+  }
+
+  async function handleFaviconRemove() {
+    setRemovingFavicon(true);
+    try {
+      await persistFaviconUrl(null);
+      toast.success(t("saved"));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(t("errFaviconUpload", { msg }));
+    } finally {
+      setRemovingFavicon(false);
+    }
+  }
 
   async function handleDelete() {
     setDeleting(true);
@@ -231,6 +291,75 @@ export function CustomDomainCard({
                 cnameTarget={cnameTarget}
                 registrar={registrar}
               />
+            </div>
+          </CardContent>
+        )}
+
+        {/* Favicon — un par domain. Affiché dans l'onglet navigateur
+            des pages publiques servies via ce domaine. */}
+        {domain.status === "verified" && (
+          <CardContent className="pt-0">
+            <div className="border-t pt-4">
+              <div className="flex items-start gap-4">
+                {domain.favicon_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={domain.favicon_url}
+                    alt="Favicon"
+                    className="h-14 w-14 rounded-lg border bg-white object-contain p-1"
+                  />
+                ) : (
+                  <div className="h-14 w-14 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                    <Upload className="h-5 w-5 text-muted-foreground/50" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="text-sm font-medium">{t("faviconTitle")}</div>
+                  <p className="text-xs text-muted-foreground">{t("faviconDesc")}</p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      disabled={uploadingFavicon || removingFavicon}
+                      onClick={() => faviconInputRef.current?.click()}
+                    >
+                      {uploadingFavicon ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Upload className="h-3.5 w-3.5 mr-1.5" />
+                      )}
+                      {t("faviconUploadBtn")}
+                    </Button>
+                    {domain.favicon_url && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={uploadingFavicon || removingFavicon}
+                        onClick={handleFaviconRemove}
+                      >
+                        {removingFavicon ? (
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        ) : null}
+                        {t("faviconRemoveBtn")}
+                      </Button>
+                    )}
+                    <input
+                      ref={faviconInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/x-icon,.ico,.svg"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleFaviconUpload(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         )}

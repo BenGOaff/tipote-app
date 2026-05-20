@@ -413,6 +413,13 @@
     "shareSiteNameTitle": "Nom de marque dans les partages",
     "shareSiteNameDesc": "Remplace « Tipote » dans l'aperçu iMessage / WhatsApp / réseaux sociaux. Affiché sous le titre de la page.",
     "shareSiteNameHint": "Vide → on affichera ton domaine ({fallback}).",
+    "faviconTitle": "Favicon",
+    "faviconDesc": "Affiché dans l'onglet du navigateur sur ce domaine. PNG, JPG, SVG ou ICO — redimensionné automatiquement à 256×256 px.",
+    "faviconUploadBtn": "Charger un favicon",
+    "faviconRemoveBtn": "Retirer",
+    "faviconUploaded": "Favicon chargé",
+    "errFaviconUpload": "Erreur upload favicon : {msg}",
+    "errImageTooLarge2": "Image trop volumineuse (max 5 Mo).",
     "saved": "Enregistré"
   },
   "common": {

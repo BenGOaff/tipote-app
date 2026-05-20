@@ -27,11 +27,9 @@ import type { CustomDomainRow } from "@/lib/customDomains";
 import type { RegistrarInfo } from "@/lib/registrarDetect";
 import { AddCustomDomainDialog } from "./AddCustomDomainDialog";
 import { CustomDomainCard } from "./CustomDomainCard";
-import { ImageUpload } from "./BrandingSettings";
 
 export function CustomDomainsTab() {
   const t = useTranslations("settings");
-  const tBranding = useTranslations("branding");
 
   const [loading, setLoading] = useState(true);
   const [isPaid, setIsPaid] = useState(false);
@@ -52,14 +50,6 @@ export function CustomDomainsTab() {
   const [shareSiteName, setShareSiteName] = useState("");
   const [shareSiteNameOriginal, setShareSiteNameOriginal] = useState("");
   const [savingShareSiteName, setSavingShareSiteName] = useState(false);
-
-  // Favicon — Gwenn, 23 mai 2026. Servi dans l'onglet navigateur sur
-  // les routes publiques uniquement quand l'user a un custom domain
-  // vérifié sur ce projet — sinon le navigateur charge le favicon
-  // du host racine (app.tipote.com) et ce réglage n'a aucun effet.
-  const [faviconUrl, setFaviconUrl] = useState("");
-  const [faviconUrlOriginal, setFaviconUrlOriginal] = useState("");
-  const [savingFavicon, setSavingFavicon] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,9 +75,6 @@ export function CustomDomainsTab() {
           const value = (profData.profile?.share_site_name ?? "") as string;
           setShareSiteName(value);
           setShareSiteNameOriginal(value);
-          const fav = (profData.profile?.brand_favicon_url ?? "") as string;
-          setFaviconUrl(fav);
-          setFaviconUrlOriginal(fav);
         }
       } catch {
         if (!cancelled) toast.error(t("errNetwork"));
@@ -99,31 +86,6 @@ export function CustomDomainsTab() {
       cancelled = true;
     };
   }, [t]);
-
-  async function handleSaveFavicon() {
-    setSavingFavicon(true);
-    try {
-      const trimmed = faviconUrl.trim();
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_favicon_url: trimmed || null }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        const next = (data.profile?.brand_favicon_url ?? "") as string;
-        setFaviconUrl(next);
-        setFaviconUrlOriginal(next);
-        toast.success(t("saved"));
-      } else {
-        toast.error(data.error ?? t("errGeneric"));
-      }
-    } catch {
-      toast.error(t("errNetwork"));
-    } finally {
-      setSavingFavicon(false);
-    }
-  }
 
   async function handleSaveShareSiteName() {
     setSavingShareSiteName(true);
@@ -211,7 +173,6 @@ export function CustomDomainsTab() {
   const hasVerifiedDomain = domains.some((d) => d.status === "verified");
   const firstVerifiedHost = domains.find((d) => d.status === "verified")?.hostname || "";
   const shareSiteNameDirty = shareSiteName.trim() !== shareSiteNameOriginal.trim();
-  const faviconDirty = faviconUrl.trim() !== faviconUrlOriginal.trim();
 
   return (
     <div className="space-y-4">
@@ -250,33 +211,6 @@ export function CustomDomainsTab() {
           )}
         </CardContent>
       </Card>
-
-      {hasVerifiedDomain && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{tBranding("images.faviconLabel")}</CardTitle>
-            <CardDescription>{tBranding("images.faviconDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ImageUpload
-              id="brand-favicon"
-              label={tBranding("images.faviconLabel")}
-              description={tBranding("images.faviconDesc")}
-              value={faviconUrl}
-              onChange={setFaviconUrl}
-              disabled={savingFavicon}
-            />
-            <div className="flex justify-end">
-              <Button
-                onClick={handleSaveFavicon}
-                disabled={!faviconDirty || savingFavicon}
-              >
-                {savingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : t("save")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {hasVerifiedDomain && (
         <Card>
