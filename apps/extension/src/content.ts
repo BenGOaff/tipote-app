@@ -14,22 +14,14 @@
 // On extrait via document.cookie (lisible dans le content script car
 // les cookies linkedin.com ne sont pas HttpOnly pour ce cookie-là).
 
+import { getCsrfToken, voyagerLike, voyagerComment } from "./voyager";
+
 console.log("[tipote/cs] loaded on", location.href);
 
 const VOYAGER_BASE = "https://www.linkedin.com/voyager/api";
 const LINKEDIN_LANG_HINT_KEY = "li_lang";
 const CONNECT_CACHE_KEY = "tipote.cs.lastConnectAt";
 const CONNECT_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
-
-/** Lit le CSRF token depuis le cookie JSESSIONID (format "ajax:<token>"). */
-function getCsrfToken(): string | null {
-  const match = document.cookie.match(/JSESSIONID=([^;]+)/);
-  if (!match) return null;
-  // Le cookie est encodé "ajax:..." ou "%22ajax:%22..." selon les pages.
-  // On décode + on strip les guillemets pour avoir le token brut.
-  const raw = decodeURIComponent(match[1]).replace(/^"+|"+$/g, "");
-  return raw; // LinkedIn accepte "ajax:xxx" tel quel dans le header csrf-token
-}
 
 /** Détecte l'URN du user LinkedIn courant. 2 stratégies, dans cet ordre :
  *  1. `window.__lipi` exposé par certaines pages LinkedIn (variable de
@@ -157,14 +149,36 @@ async function pushConnect(forceFresh = false) {
   if (ok) localStorage.setItem(CONNECT_CACHE_KEY, String(Date.now()));
 }
 
-// Helper debug exposé sur window pour forcer un re-match depuis la
-// console DevTools de LinkedIn (utile pendant le développement de
-// l'extension). Pas remové en prod — c'est juste un point d'entrée
-// nommé, sans surface d'attaque. Cast unknown→Window pour ne pas
-// avoir besoin d'augmenter le global type Window.
-(window as unknown as { tipoteForceMatch?: () => void }).tipoteForceMatch = () => {
+// Helpers debug exposés sur window pour piloter depuis la console
+// DevTools de LinkedIn pendant le développement de l'extension.
+// Pas removés en prod : ce sont juste des points d'entrée nommés, sans
+// surface d'attaque (et utile en cas de support utilisateur).
+const debugBag = window as unknown as {
+  tipoteForceMatch?: () => void;
+  tipoteLike?: (activityUrn: string) => Promise<unknown>;
+  tipoteComment?: (activityUrn: string, text: string) => Promise<unknown>;
+};
+
+debugBag.tipoteForceMatch = () => {
   console.log("[tipote/cs] forcing match…");
   void pushConnect(true);
+};
+
+/** Usage console : tipoteLike("urn:li:activity:7190123456789012345") */
+debugBag.tipoteLike = async (activityUrn: string) => {
+  console.log("[tipote/cs] tipoteLike", activityUrn);
+  const r = await voyagerLike(activityUrn);
+  console.log("[tipote/cs] tipoteLike result", r);
+  return r;
+};
+
+/** Usage console :
+ *  tipoteComment("urn:li:activity:7190123456789012345", "Excellent point !") */
+debugBag.tipoteComment = async (activityUrn: string, text: string) => {
+  console.log("[tipote/cs] tipoteComment", activityUrn, `(${text.length} chars)`);
+  const r = await voyagerComment(activityUrn, text);
+  console.log("[tipote/cs] tipoteComment result", r);
+  return r;
 };
 
 // Auto-trigger à l'arrivée sur une page LinkedIn. Pas besoin d'observer

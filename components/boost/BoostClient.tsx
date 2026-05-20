@@ -205,13 +205,15 @@ export default function BoostClient() {
             </h3>
             {linkedin ? (
               <div className="mt-2 space-y-1">
-                <div className="text-sm font-medium">{linkedin.full_name || "—"}</div>
+                {linkedin.full_name && (
+                  <div className="text-sm font-medium">{linkedin.full_name}</div>
+                )}
                 {linkedin.headline && (
                   <div className="text-xs text-muted-foreground">{linkedin.headline}</div>
                 )}
-                <div className="text-[11px] text-muted-foreground font-mono break-all">
-                  {linkedin.linkedin_urn}
-                </div>
+                {!linkedin.full_name && !linkedin.headline && (
+                  <div className="text-xs text-muted-foreground">Connexion réussie.</div>
+                )}
                 {linkedin.profile_url && (
                   <a
                     href={linkedin.profile_url}

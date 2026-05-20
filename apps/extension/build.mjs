@@ -66,7 +66,25 @@ const ENTRIES = [
 ];
 
 async function copyStatic() {
-  await cp(resolve(ROOT, "manifest.json"), resolve(DIST, "manifest.json"));
+  // Manifest : on lit, on injecte localhost en mode --local pour permettre
+  // le messaging frontend dev → extension, puis on écrit dans dist.
+  // L'asset commit dans le repo reste "clean prod" (= ce qui passe en
+  // review CWS), localhost n'apparaît jamais dans une release.
+  const manifestSrc = JSON.parse(await readFile(resolve(ROOT, "manifest.json"), "utf-8"));
+  if (LOCAL) {
+    manifestSrc.host_permissions = [
+      ...manifestSrc.host_permissions,
+      "http://localhost/*",
+      "http://localhost:3000/*",
+    ];
+    manifestSrc.externally_connectable = manifestSrc.externally_connectable ?? { matches: [] };
+    manifestSrc.externally_connectable.matches = [
+      ...manifestSrc.externally_connectable.matches,
+      "http://localhost:3000/*",
+    ];
+  }
+  await writeFile(resolve(DIST, "manifest.json"), JSON.stringify(manifestSrc, null, 2));
+
   await cp(resolve(ROOT, "src/popup/popup.html"), resolve(DIST, "popup.html"));
   if (existsSync(resolve(ROOT, "public/icons"))) {
     await cp(resolve(ROOT, "public/icons"), resolve(DIST, "icons"), { recursive: true });
@@ -113,7 +131,3 @@ if (WATCH) {
   await rebuildAll();
 }
 
-// Note : `readFile` est importé mais pas utilisé directement — on le
-// garde pour les futures étapes (copie/transformation conditionnelle
-// du manifest, ex : remplacer la version par celle du package.json).
-void readFile;
