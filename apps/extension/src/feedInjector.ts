@@ -1,14 +1,23 @@
-// Injecteur inline LinkedIn — v4 avec diagnostic auto.
+// Injecteur inline LinkedIn — v5.
 //
-// PROBLÈME : sur LinkedIn 2026, on ne sait plus quels selectors LinkedIn
-// expose pour le composer de commentaire. La v3 cherchait
-// [role="textbox"][contenteditable="true"] inside <article> mais ne
-// trouve rien chez Béné.
+// Diag terrain (Béné, 22 mai 2026) :
+//   - LinkedIn 2026 utilise TipTap / ProseMirror (plus Quill).
+//   - Composer = <div contenteditable role="textbox"
+//                  aria-label="Éditeur de texte pour créer un commentaire"
+//                  class="tiptap ProseMirror ...">
+//   - Le composer n'est PLUS dans un <article> — il vit dans son propre
+//     container, à côté du post (overlay-style).
 //
-// SOLUTION : on dump dans la console TOUS les selectors candidats à
-// chaque seconde pendant les 10 premières secondes, pour qu'on voit
-// lesquels matchent et qu'on adapte. C'est de la triangulation
-// terrain, on bricole pas dans le vide.
+// Stratégie v5 (qui marche enfin) :
+//   1. Matcher les contenteditable role=textbox dont l'aria-label
+//      contient "commentaire" — exclut le composer de publication
+//      ("Éditeur de texte pour créer une publication") et la messagerie.
+//   2. Plus de filtre <article>. On accroche notre barre directement
+//      au-dessus du composer.
+//   3. Pour extraire le contenu du post à commenter, on remonte le DOM
+//      depuis l'éditeur jusqu'à trouver le post le plus proche (heuristique
+//      simple : on cherche un ancêtre qui contient au moins 100 chars
+//      de texte qui ne soit pas le composer lui-même).
 
 const INJECTED_ATTR = "data-tipote-injected";
 
@@ -21,110 +30,74 @@ const TONES = [
 
 type ToneKey = (typeof TONES)[number]["key"];
 
-const SELECTORS_TO_DIAG: Array<{ name: string; sel: string }> = [
-  { name: "role=textbox + contenteditable", sel: '[role="textbox"][contenteditable="true"]' },
-  { name: "any contenteditable", sel: '[contenteditable="true"]' },
-  { name: ".ql-editor", sel: ".ql-editor" },
-  { name: ".ql-editor > p", sel: ".ql-editor > p" },
-  { name: ".comments-comment-box__form", sel: ".comments-comment-box__form" },
-  { name: ".comments-comment-texteditor", sel: ".comments-comment-texteditor" },
-  { name: ".comments-comment-box", sel: ".comments-comment-box" },
-  { name: "article", sel: "article" },
-  { name: '[role="article"]', sel: '[role="article"]' },
-  { name: ".feed-shared-update-v2", sel: ".feed-shared-update-v2" },
-  { name: ".feed-shared-social-action-bar", sel: ".feed-shared-social-action-bar" },
-  { name: 'svg#emoji-medium', sel: 'svg[id="emoji-medium"]' },
-  { name: 'svg#image-medium', sel: 'svg[id="image-medium"]' },
-  { name: 'button[aria-label*="ommenter" i]', sel: 'button[aria-label*="ommenter" i]' },
-  { name: 'button[aria-label*="omment" i]', sel: 'button[aria-label*="omment" i]' },
-  { name: 'div[aria-label*="ommenter" i]', sel: 'div[aria-label*="ommenter" i]' },
-  { name: 'textarea[placeholder*="commentaire" i]', sel: 'textarea[placeholder*="commentaire" i]' },
-  { name: 'textarea', sel: 'textarea' },
+/** aria-label des composers qu'on cible. LinkedIn génère des labels en
+ *  français + anglais + autres langues — on matche en case-insensitive
+ *  sur les radicaux "commentaire" / "comment" / "comentario" / "kommentar"
+ *  / "commento". Si LinkedIn ajoute une langue exotique on l'ajoute ici. */
+const COMMENT_ARIA_PATTERNS = [
+  "commentaire",   // FR
+  "comment",       // EN
+  "comentario",    // ES / PT
+  "kommentar",     // DE
+  "commento",      // IT
+  "تعليق",         // AR
 ];
 
-function runDiagnostic(label: string): void {
-  const counts: Record<string, number> = {};
-  for (const { name, sel } of SELECTORS_TO_DIAG) {
-    try {
-      counts[name] = document.querySelectorAll(sel).length;
-    } catch (err) {
-      counts[name] = -1;
-    }
-  }
-  console.log(`[tipote/diag] ${label}`, counts);
+function isCommentComposer(el: HTMLElement): boolean {
+  if (!el.matches('[role="textbox"][contenteditable="true"]')) return false;
+  const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
+  if (!ariaLabel) return false;
+  return COMMENT_ARIA_PATTERNS.some((p) => ariaLabel.includes(p));
 }
 
 export function startFeedInjector(): void {
-  console.log("[tipote/feed] injector v4 starting (with diagnostic)");
-
-  // Diagnostic immédiat puis toutes les 2s pendant 20s.
-  runDiagnostic("t=0s");
-  let diagCount = 0;
-  const diagInterval = setInterval(() => {
-    diagCount++;
-    runDiagnostic(`t=${diagCount * 2}s`);
-    if (diagCount >= 10) clearInterval(diagInterval);
-  }, 2000);
-
-  scanForEditables(document.body);
+  console.log("[tipote/feed] injector v5 starting (TipTap/ProseMirror)");
+  scanForComposers(document.body);
   new MutationObserver((mutations) => {
     for (const m of mutations) {
       for (const node of m.addedNodes) {
-        if (node instanceof HTMLElement) scanForEditables(node);
+        if (node instanceof HTMLElement) scanForComposers(node);
       }
     }
   }).observe(document.body, { childList: true, subtree: true });
-
-  // Expose un helper sur window (isolated world — visible uniquement via
-  // dropdown "context" dans DevTools, sinon utiliser le diagnostic auto).
-  (window as unknown as { tipoteScanComposers?: () => void }).tipoteScanComposers = () => {
-    runDiagnostic("manual scan");
-  };
 }
 
-function scanForEditables(root: HTMLElement): void {
-  // On essaye PLUSIEURS selectors et on garde le premier qui retourne
-  // quelque chose. Approche défensive parce que LinkedIn change tout
-  // régulièrement.
-  const candidates: HTMLElement[] = [];
+function scanForComposers(root: HTMLElement): void {
+  const editables: HTMLElement[] = [];
+  if (isCommentComposer(root)) editables.push(root);
+  editables.push(
+    ...Array.from(root.querySelectorAll<HTMLElement>('[role="textbox"][contenteditable="true"]'))
+      .filter((el) => isCommentComposer(el))
+  );
 
-  // 1. role=textbox + contenteditable (ARIA standard, le plus stable)
-  if (root.matches?.('[role="textbox"][contenteditable="true"]')) candidates.push(root);
-  candidates.push(...Array.from(root.querySelectorAll<HTMLElement>('[role="textbox"][contenteditable="true"]')));
-
-  // 2. .ql-editor (Quill editor — LinkedIn legacy)
-  if (root.matches?.('.ql-editor')) candidates.push(root);
-  candidates.push(...Array.from(root.querySelectorAll<HTMLElement>('.ql-editor')));
-
-  // 3. Any contenteditable inside .comments-comment-box (LinkedIn legacy)
-  candidates.push(...Array.from(root.querySelectorAll<HTMLElement>('.comments-comment-box [contenteditable="true"]')));
-  candidates.push(...Array.from(root.querySelectorAll<HTMLElement>('.comments-comment-texteditor [contenteditable="true"]')));
-
-  // Dedupe
-  const seen = new Set<HTMLElement>();
-  for (const el of candidates) {
-    if (seen.has(el)) continue;
-    seen.add(el);
-    if (el.hasAttribute(INJECTED_ATTR)) continue;
-    // On veut être inside un post — sinon c'est le composer principal
-    // (créer une publi) ou la messagerie. Mais on est tolérant : si on
-    // ne trouve pas d'article, on tente quand même (logé).
-    const article =
-      el.closest("article, [role='article']") ??
-      el.closest(".feed-shared-update-v2") ??
-      el.closest(".comments-comment-box") ??
-      el.closest(".comments-comment-texteditor");
-    if (!article) {
-      console.log("[tipote/feed] editable found but no article-like parent — skip", el);
-      continue;
-    }
-    el.setAttribute(INJECTED_ATTR, "true");
-    console.log("[tipote/feed] new composer detected, injecting Tipote bar", { editable: el, parent: article });
-    injectToneBar(el, article as HTMLElement);
+  for (const editable of editables) {
+    if (editable.hasAttribute(INJECTED_ATTR)) continue;
+    editable.setAttribute(INJECTED_ATTR, "true");
+    console.log("[tipote/feed] composer detected", editable);
+    injectToneBar(editable);
   }
 }
 
-function injectToneBar(editable: HTMLElement, article: HTMLElement): void {
+/** Cherche le post à commenter à partir du composer. Stratégie :
+ *  on remonte le DOM jusqu'à trouver un ancêtre qui contient un texte
+ *  conséquent (>= 80 chars) ET qui ne soit pas juste le composer lui-même.
+ *  On limite la remontée à 8 niveaux pour pas dériver vers le body. */
+function findPostElement(editable: HTMLElement): HTMLElement | null {
+  let node: HTMLElement | null = editable.parentElement;
+  let depth = 0;
+  while (node && depth < 12) {
+    const text = (node.innerText || "").trim();
+    // Exclude le texte de l'éditeur lui-même
+    const editorText = (editable.innerText || "").trim();
+    const otherText = text.length - editorText.length;
+    if (otherText > 80) return node;
+    node = node.parentElement;
+    depth++;
+  }
+  return null;
+}
+
+function injectToneBar(editable: HTMLElement): void {
   let cachedSuggestions: Record<ToneKey, string> | null = null;
   let loading = false;
 
@@ -178,12 +151,14 @@ function injectToneBar(editable: HTMLElement, article: HTMLElement): void {
         if (!cachedSuggestions) {
           loading = true;
           btn.textContent = `${tone.emoji} Génération…`;
-          const content = article.innerText.trim().slice(0, 1500);
+          const post = findPostElement(editable);
+          const content = post ? (post.innerText || "").trim().slice(0, 1500) : "";
           const language = detectLanguage();
+          console.log("[tipote/feed] fetching suggestions, content length =", content.length);
           cachedSuggestions = await fetchSuggestions(content, language);
           loading = false;
         }
-        fillEditable(editable, cachedSuggestions[tone.key]);
+        fillTipTapEditor(editable, cachedSuggestions[tone.key]);
         btn.textContent = `${tone.emoji} ✓`;
         setTimeout(() => {
           btn.textContent = original ?? "";
@@ -203,8 +178,16 @@ function injectToneBar(editable: HTMLElement, article: HTMLElement): void {
     bar.appendChild(btn);
   }
 
-  const wrapper = editable.parentElement?.parentElement ?? editable.parentElement ?? editable;
-  wrapper.parentElement?.insertBefore(bar, wrapper);
+  // Insertion : juste avant l'éditeur. On remonte de 1-2 niveaux pour
+  // s'assurer que la barre soit AU-DESSUS du composer (le wrapper TipTap
+  // a généralement un padding/border qu'on veut pas couper). En fallback,
+  // insertion directe avant l'éditeur.
+  const wrapper = editable.parentElement?.parentElement ?? editable.parentElement;
+  if (wrapper?.parentElement) {
+    wrapper.parentElement.insertBefore(bar, wrapper);
+  } else {
+    editable.parentElement?.insertBefore(bar, editable);
+  }
 }
 
 function detectLanguage(): string {
@@ -226,8 +209,14 @@ async function fetchSuggestions(content: string, language: string): Promise<Reco
   });
 }
 
-function fillEditable(editable: HTMLElement, text: string): void {
+/** Remplit un éditeur TipTap/ProseMirror. ProseMirror est très strict
+ *  sur les mutations DOM — un simple `textContent = text` est ignoré
+ *  silencieusement. Il faut soit utiliser execCommand (qui dispatch les
+ *  bons events), soit dispatcher des InputEvent natifs avec inputType.
+ *  ProseMirror écoute `beforeinput` et `input` — on dispatch les 2. */
+function fillTipTapEditor(editable: HTMLElement, text: string): void {
   editable.focus();
+  // 1. Sélectionne tout le contenu existant
   const sel = window.getSelection();
   if (sel) {
     sel.removeAllRanges();
@@ -235,10 +224,31 @@ function fillEditable(editable: HTMLElement, text: string): void {
     range.selectNodeContents(editable);
     sel.addRange(range);
   }
+  // 2. Tente execCommand (fonctionne sur la plupart des éditeurs)
+  let inserted = false;
   try {
-    document.execCommand("insertText", false, text);
+    inserted = document.execCommand("insertText", false, text);
   } catch {
-    editable.textContent = text;
-    editable.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: text, bubbles: true }));
+    inserted = false;
+  }
+  // 3. Si execCommand n'a rien fait, fallback InputEvent (ProseMirror
+  //    écoute beforeinput avec inputType insertReplacementText).
+  if (!inserted) {
+    const beforeEvent = new InputEvent("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+      inputType: "insertReplacementText",
+      data: text,
+    });
+    editable.dispatchEvent(beforeEvent);
+    if (!beforeEvent.defaultPrevented) {
+      // ProseMirror n'a pas intercepté — on fait du DOM direct.
+      editable.textContent = text;
+    }
+    editable.dispatchEvent(new InputEvent("input", {
+      bubbles: true,
+      inputType: "insertReplacementText",
+      data: text,
+    }));
   }
 }
