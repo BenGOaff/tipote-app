@@ -276,7 +276,15 @@ const ACTIVITY_URN_FROM_URL = /\/feed\/update\/(urn:li:(?:activity|share|ugcPost
 function maybeMountBadge() {
   const m = location.pathname.match(ACTIVITY_URN_FROM_URL) ??
             location.href.match(ACTIVITY_URN_FROM_URL);
-  if (!m) return;
+  if (!m) {
+    // Diag : si on est sur une page qui RESSEMBLE à un permalink mais
+    // que le regex n'a pas matché, on log pour qu'on diagnostique.
+    // Sinon (home feed, profil, etc.) c'est normal de pas matcher.
+    if (location.pathname.includes("/feed/update/") || location.href.includes("/feed/update/")) {
+      console.warn("[tipote/cs] /feed/update detected but no URN extracted", location.href);
+    }
+    return;
+  }
   const urn = m[1];
   console.log("[tipote/cs] /feed/update detected, urn=", urn);
   void mountBadge(urn);
