@@ -52,6 +52,10 @@ export type OwnerBranding = {
   customHost: string;
   /** Nom de marque user-éditable (ex: "Adeline Cirade"). Null si pas rempli. */
   siteName: string | null;
+  /** Favicon custom à afficher dans l'onglet navigateur. Null = on
+   *  retombe sur le /favicon.ico Tipote par défaut. Décision Béné
+   *  (23 mai 2026) : favicon custom UNIQUEMENT quand custom domain. */
+  faviconUrl: string | null;
 };
 
 /** Lookup owner branding from the (user_id, project_id) of a quiz/popquiz/page owner. */
@@ -72,7 +76,9 @@ export async function fetchOwnerBranding(
       .maybeSingle();
     const host = (cd as { hostname?: string | null } | null)?.hostname?.toLowerCase().trim();
     if (!host) return null;
-    return { customHost: host, siteName: null };
+    // Cas legacy (pas de project_id) : on n'a pas de favicon attaché à
+    // un projet précis donc on retombe sur null.
+    return { customHost: host, siteName: null, faviconUrl: null };
   }
 
   const [{ data: cd }, { data: bp }] = await Promise.all([
@@ -87,13 +93,19 @@ export async function fetchOwnerBranding(
       .maybeSingle(),
     supabaseAdmin
       .from("business_profiles")
-      .select("share_site_name")
+      .select("share_site_name, brand_favicon_url")
       .eq("user_id", userId)
       .eq("project_id", projectId)
       .maybeSingle(),
   ]);
   const host = (cd as { hostname?: string | null } | null)?.hostname?.toLowerCase().trim();
   if (!host) return null;
-  const siteName = (bp as { share_site_name?: string | null } | null)?.share_site_name?.trim() ?? null;
-  return { customHost: host, siteName: siteName && siteName.length > 0 ? siteName : null };
+  const p = bp as { share_site_name?: string | null; brand_favicon_url?: string | null } | null;
+  const siteName = p?.share_site_name?.trim() ?? null;
+  const favicon = p?.brand_favicon_url?.trim() ?? null;
+  return {
+    customHost: host,
+    siteName: siteName && siteName.length > 0 ? siteName : null,
+    faviconUrl: favicon && favicon.length > 0 ? favicon : null,
+  };
 }

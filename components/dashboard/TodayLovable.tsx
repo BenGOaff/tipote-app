@@ -783,24 +783,22 @@ export default function TodayLovable() {
           }
         } catch { /* fail-open */ }
 
-        // Current month revenue from offer_metrics
+        // Revenu du mois courant — source de vérité unique : l'endpoint
+        // /api/business/monthly-summary qui priorise la table transactions
+        // (vrais paiements PSP) avec fallback sur offer_metrics seulement
+        // si l'user n'a aucun PSP connecté. C'est le même calcul que celui
+        // affiché par RevenueGoalProgress ; sans cette unification, le
+        // dashboard montrait 2 chiffres divergents (Béné, 23 mai 2026 :
+        // "Objectif mai 447 € / Ta progression 1 551 € sur le même mois").
         let currentMonthRev = 0;
         try {
-          const nowD = new Date();
-          const mStart = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}-01`;
-          const mEnd = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}-31`;
-          const { data: revRows } = await supabase
-            .from("offer_metrics")
-            .select("revenue")
-            .eq("user_id", userId)
-            .eq("is_paid", true)
-            .gte("month", mStart)
-            .lte("month", mEnd)
-            .neq("offer_name", "__email_stats__");
-          if (revRows) {
-            for (const r of revRows as any[]) {
-              currentMonthRev += Number(r.revenue) || 0;
-            }
+          const res = await fetch("/api/business/monthly-summary");
+          const json = await res.json().catch(() => null) as {
+            ok?: boolean;
+            summary?: { current_month_eur?: number };
+          } | null;
+          if (json?.ok && typeof json.summary?.current_month_eur === "number") {
+            currentMonthRev = json.summary.current_month_eur;
           }
         } catch { /* fail-open */ }
 

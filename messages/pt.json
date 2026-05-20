@@ -1784,7 +1784,9 @@
       "logoLabel": "Logótipo da marca",
       "logoDesc": "PNG ou JPG, fundo transparente recomendado, mín. 200 px de largura",
       "photoLabel": "Foto do autor",
-      "photoDesc": "Foto retrato quadrada, mín. 300x300 px"
+      "photoDesc": "Foto retrato quadrada, mín. 300x300 px",
+      "faviconLabel": "Favicon",
+      "faviconDesc": "Apresentado no separador do navegador no teu domínio personalizado. Imagem quadrada, 256×256 px recomendado. PNG ou ICO."
     },
     "tone": {
       "title": "Tom de voz",

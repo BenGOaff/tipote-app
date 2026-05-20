@@ -85,6 +85,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: popquiz.description ?? undefined,
     ...(siteName ? { applicationName: siteName } : {}),
     ...(canonical ? { alternates: { canonical } } : {}),
+    ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
     openGraph: {
       title: popquiz.title,
       description: popquiz.description ?? undefined,

@@ -85,6 +85,7 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
       description: data.meta_description || undefined,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
+      ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
       openGraph: {
         title: baseTitle,
         description: data.meta_description || undefined,

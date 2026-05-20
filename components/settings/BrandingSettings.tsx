@@ -250,6 +250,10 @@ export type BrandingData = {
   brand_color_base?: string | null;
   brand_color_accent?: string | null;
   brand_logo_url?: string | null;
+  // Favicon custom (Gwenn, 23 mai 2026) — affiché dans l'onglet
+  // navigateur sur les pages publiques servies via un custom domain
+  // vérifié de ce projet. Sans custom domain : favicon Tipote par défaut.
+  brand_favicon_url?: string | null;
   brand_author_photo_url?: string | null;
   brand_tone_of_voice?: string | null;
   // Fallback from onboarding
@@ -273,6 +277,7 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
   const [colorBase, setColorBase] = useState(initial?.brand_color_base ?? "#000000");
   const [colorAccent, setColorAccent] = useState(initial?.brand_color_accent ?? "#6366f1");
   const [logoUrl, setLogoUrl] = useState(initial?.brand_logo_url ?? "");
+  const [faviconUrl, setFaviconUrl] = useState(initial?.brand_favicon_url ?? "");
   const [authorPhotoUrl, setAuthorPhotoUrl] = useState(initial?.brand_author_photo_url ?? "");
   const [toneOfVoice, setToneOfVoice] = useState(initial?.brand_tone_of_voice ?? initial?.preferred_tone ?? "");
 
@@ -283,6 +288,7 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
     setColorBase(initial.brand_color_base ?? "#000000");
     setColorAccent(initial.brand_color_accent ?? "#6366f1");
     setLogoUrl(initial.brand_logo_url ?? "");
+    setFaviconUrl(initial.brand_favicon_url ?? "");
     setAuthorPhotoUrl(initial.brand_author_photo_url ?? "");
     setToneOfVoice(initial.brand_tone_of_voice ?? initial.preferred_tone ?? "");
   }, [initial]);
@@ -294,10 +300,11 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
       (i?.brand_color_base ?? "#000000") !== colorBase ||
       (i?.brand_color_accent ?? "#6366f1") !== colorAccent ||
       (i?.brand_logo_url ?? "") !== logoUrl ||
+      (i?.brand_favicon_url ?? "") !== faviconUrl ||
       (i?.brand_author_photo_url ?? "") !== authorPhotoUrl ||
       (i?.brand_tone_of_voice ?? "") !== toneOfVoice
     );
-  }, [initial, font, colorBase, colorAccent, logoUrl, authorPhotoUrl, toneOfVoice]);
+  }, [initial, font, colorBase, colorAccent, logoUrl, faviconUrl, authorPhotoUrl, toneOfVoice]);
 
   const save = () => {
     startTransition(async () => {
@@ -307,6 +314,7 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
         if ((initial?.brand_color_base ?? "#000000") !== colorBase) body.brand_color_base = colorBase;
         if ((initial?.brand_color_accent ?? "#6366f1") !== colorAccent) body.brand_color_accent = colorAccent;
         if ((initial?.brand_logo_url ?? "") !== logoUrl) body.brand_logo_url = logoUrl;
+        if ((initial?.brand_favicon_url ?? "") !== faviconUrl) body.brand_favicon_url = faviconUrl;
         if ((initial?.brand_author_photo_url ?? "") !== authorPhotoUrl) body.brand_author_photo_url = authorPhotoUrl;
         if ((initial?.brand_tone_of_voice ?? "") !== toneOfVoice) body.brand_tone_of_voice = toneOfVoice;
 
@@ -473,6 +481,14 @@ export default function BrandingSettings({ initial, loading, onSaved }: Props) {
             description={t("images.photoDesc")}
             value={authorPhotoUrl}
             onChange={setAuthorPhotoUrl}
+            disabled={loading}
+          />
+          <ImageUpload
+            id="brand-favicon"
+            label={t("images.faviconLabel")}
+            description={t("images.faviconDesc")}
+            value={faviconUrl}
+            onChange={setFaviconUrl}
             disabled={loading}
           />
         </div>

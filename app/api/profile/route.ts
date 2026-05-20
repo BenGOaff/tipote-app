@@ -96,6 +96,10 @@ const UpdateSchema = z.object({
   brand_color_base: z.string().trim().max(30).nullable().optional(),
   brand_color_accent: z.string().trim().max(30).nullable().optional(),
   brand_logo_url: z.string().trim().max(1000).nullable().optional(),
+  // Favicon custom (Gwenn, 23 mai 2026). Affiché dans l'onglet
+  // navigateur UNIQUEMENT sur les pages publiques servies via un
+  // custom domain vérifié de ce projet.
+  brand_favicon_url: z.string().trim().max(1000).nullable().optional(),
   brand_author_photo_url: z.string().trim().max(1000).nullable().optional(),
   brand_tone_of_voice: z.string().trim().max(500).nullable().optional(),
 

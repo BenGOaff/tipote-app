@@ -1518,7 +1518,9 @@
       "logoLabel": "Logo del brand",
       "logoDesc": "PNG o JPG, sfondo trasparente consigliato, min 200px di larghezza",
       "photoLabel": "Foto dell'autore",
-      "photoDesc": "Foto ritratto quadrata, min 300×300px"
+      "photoDesc": "Foto ritratto quadrata, min 300×300px",
+      "faviconLabel": "Favicon",
+      "faviconDesc": "Mostrato nella scheda del browser sul tuo dominio personalizzato. Immagine quadrata, 256×256 px consigliato. PNG o ICO."
     },
     "tone": {
       "title": "Tono di voce",
