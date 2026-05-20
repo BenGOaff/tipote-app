@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Tipote",
-  "description": "Boost organique collaboratif pour tes posts LinkedIn",
+  "name": "Tipote Boost",
+  "short_name": "Tipote",
+  "description": "Booste la portée organique de tes posts LinkedIn grâce à un pod d'engagement collaboratif. Auto-like et commentaires IA validés en 1 clic.",
   "version": "0.1.0",
+  "homepage_url": "https://www.tipote.fr/",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -10,7 +12,7 @@
     "128": "icons/icon-128.png"
   },
   "action": {
-    "default_title": "Tipote",
+    "default_title": "Tipote Boost",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",
@@ -32,22 +34,20 @@
   ],
   "permissions": [
     "storage",
-    "alarms",
-    "cookies"
+    "alarms"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",
-    "https://www.linkedin.com/*",
     "https://app.tipote.com/*",
-    "https://tipote.com/*",
-    "http://localhost/*",
-    "http://localhost:3000/*"
+    "https://tipote.com/*"
   ],
   "externally_connectable": {
     "matches": [
       "https://app.tipote.com/*",
-      "https://tipote.com/*",
-      "http://localhost:3000/*"
+      "https://tipote.com/*"
     ]
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }
