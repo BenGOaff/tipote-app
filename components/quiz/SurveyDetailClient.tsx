@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Sparkles, TrendingUp, Star, MessageCircle, Wand2,
+  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus,
 } from "lucide-react";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
@@ -114,8 +114,13 @@ type QuizLead = {
   bonus_unlocked: boolean;
   created_at: string;
 };
+// 4 slots logiques sur la page d'intro du sondage (idem quiz). Drag-and-
+// drop natif HTML5 entre les positions verticales sous le logo.
+type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
+
 type QuizData = {
   id: string; title: string; slug: string | null;
+  intro_image_url: string | null; intro_image_position: IntroImagePosition | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
@@ -343,6 +348,59 @@ function SettingsToggle({ label, hint, checked, onChange, disabled }: {
 }
 
 // Compact draggable row for the sidebar question list
+// Image draggable + dropzones pour le repositionnement de l'image
+// d'intro entre les 4 slots de la page intro. Mirror des composants
+// ResultDraggableImage / ResultPositionDropZone dans QuizDetailClient.
+function IntroImageDraggable({ url, onDragStart, onDragEnd, onRemove }: {
+  url: string;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="relative group">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt=""
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", "intro-image");
+          onDragStart();
+        }}
+        onDragEnd={onDragEnd}
+        className="w-full h-auto rounded-xl cursor-grab active:cursor-grabbing select-none"
+      />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-2 right-2 bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1.5 shadow opacity-0 group-hover:opacity-100 transition-opacity"
+        aria-label="Retirer l'image"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function IntroImageDropZone({ label, onDrop }: {
+  label: string;
+  onDrop: () => void;
+}) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setHover(true); }}
+      onDragLeave={() => setHover(false)}
+      onDrop={(e) => { e.preventDefault(); setHover(false); onDrop(); }}
+      className={`h-14 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center text-xs font-medium pointer-events-auto ${hover ? "border-primary bg-primary/10 text-primary" : "border-primary/40 bg-primary/5 text-muted-foreground"}`}
+    >
+      ↓ {label} ↓
+    </div>
+  );
+}
+
 function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelete }: {
   id: string; index: number; label: string; onClick: () => void; onRemove: () => void; canDelete: boolean;
 }) {
@@ -444,6 +502,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Vignette OG (image affichée par WhatsApp / iMessage / X quand le
   // sondage est partagé). Cf. demande Adeline (16 mai 2026).
   const [ogImageUrl, setOgImageUrl] = useState<string | null>(null);
+  // Image dédiée à la page d'INTRO du sondage. Même pattern que côté
+  // QuizDetailClient — 1 image + 1 position parmi 4 slots, DnD natif.
+  const [introImageUrl, setIntroImageUrl] = useState<string | null>(null);
+  const [introImagePosition, setIntroImagePosition] = useState<IntroImagePosition>("top");
+  const [introImageUploading, setIntroImageUploading] = useState(false);
+  const [draggingIntroImage, setDraggingIntroImage] = useState(false);
+  const introImageInputRef = useRef<HTMLInputElement>(null);
   const [uploadingOgImage, setUploadingOgImage] = useState(false);
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
@@ -534,6 +599,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     slug,
     og_description: ogDescription,
     og_image_url: ogImageUrl,
+    intro_image_url: introImageUrl,
+    intro_image_position: introImagePosition,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
     share_networks: shareNetworks,
@@ -549,6 +616,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
+    ogImageUrl, introImageUrl, introImagePosition,
     selectedToastWidget, selectedShareWidget,
     editQuestions,
   ]);
@@ -594,6 +662,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
+    if (s.intro_image_url === null || typeof s.intro_image_url === "string") setIntroImageUrl(s.intro_image_url);
+    if (s.intro_image_position === "top" || s.intro_image_position === "after_title" || s.intro_image_position === "after_intro" || s.intro_image_position === "bottom") {
+      setIntroImagePosition(s.intro_image_position);
+    }
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
@@ -710,6 +782,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setSlug(q.slug ?? "");
       setOgDescription(q.og_description ?? "");
       setOgImageUrl(q.og_image_url ?? null);
+      setIntroImageUrl(q.intro_image_url ?? null);
+      setIntroImagePosition((q.intro_image_position as IntroImagePosition | null) ?? "top");
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
@@ -954,6 +1028,37 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     setShareNetworks((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
   }
 
+  // Image d'INTRO du sondage — reuse handleRichTextImageUpload pour le
+  // storage. UX identique au quiz : un emplacement libre dans la page
+  // intro, drag-and-drop natif pour repositionner entre 4 slots.
+  const openIntroImagePicker = () => introImageInputRef.current?.click();
+  const onIntroImagePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setIntroImageUploading(true);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setIntroImageUrl(url);
+      if (!introImagePosition) setIntroImagePosition("top");
+    } finally {
+      setIntroImageUploading(false);
+    }
+  };
+  const clearIntroImage = () => setIntroImageUrl(null);
+  async function handleIntroImageDrop(file: File, pos: IntroImagePosition) {
+    setIntroImageUploading(true);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setIntroImageUrl(url);
+      setIntroImagePosition(pos);
+    } finally {
+      setIntroImageUploading(false);
+    }
+  }
+
   // Per-option image upload (Hugo, mai 2026 — gamification). Same
   // pattern as bonus / OG uploads.
   const [uploadingOptionKey, setUploadingOptionKey] = useState<string | null>(null);
@@ -1002,6 +1107,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         body: JSON.stringify({
           title, introduction, cta_text: ctaText, cta_url: ctaUrl,
           start_button_text: startButtonText || null,
+          intro_image_url: introImageUrl,
+          intro_image_position: introImageUrl ? introImagePosition : null,
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
@@ -1512,14 +1619,83 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               {/* ── INTRO SECTION ── */}
               <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
                 <div className="max-w-2xl w-full space-y-6">
+                  {/* Hidden file input partagé pour le picker intro image */}
+                  <input
+                    ref={introImageInputRef}
+                    type="file"
+                    accept="image/*,image/gif"
+                    className="sr-only"
+                    onChange={onIntroImagePicked}
+                  />
+                  {/* Dropzone — visible UNIQUEMENT quand pas d'image d'intro */}
+                  {!introImageUrl && (
+                    <button
+                      type="button"
+                      onClick={openIntroImagePicker}
+                      disabled={introImageUploading}
+                      onDragOver={(e) => { e.preventDefault(); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const f = Array.from(e.dataTransfer?.files ?? []).find(x => x.type.startsWith("image/"));
+                        if (f) void handleIntroImageDrop(f, "top");
+                      }}
+                      className="w-full py-8 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground disabled:opacity-50"
+                    >
+                      {introImageUploading
+                        ? <Loader2 className="w-6 h-6 animate-spin" />
+                        : <ImagePlus className="w-6 h-6" />}
+                      <span className="text-xs">{t("introImageDropzone")}</span>
+                      <span className="text-[10px] text-muted-foreground/70">{t("introImageHint")}</span>
+                    </button>
+                  )}
+
                   {brandLogoUrl && (
                     <div className="flex justify-center">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
+
+                  {/* slot TOP — entre logo et titre */}
+                  {introImageUrl && (introImagePosition ?? "top") === "top" && (
+                    <IntroImageDraggable url={introImageUrl}
+                      onDragStart={() => setDraggingIntroImage(true)}
+                      onDragEnd={() => setDraggingIntroImage(false)}
+                      onRemove={clearIntroImage} />
+                  )}
+                  {draggingIntroImage && (introImagePosition ?? "top") !== "top" && (
+                    <IntroImageDropZone label={t("introImagePos_top")}
+                      onDrop={() => { setIntroImagePosition("top"); setDraggingIntroImage(false); }} />
+                  )}
+
                   <InlineEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
+
+                  {/* slot AFTER_TITLE — entre titre et intro text */}
+                  {introImageUrl && introImagePosition === "after_title" && (
+                    <IntroImageDraggable url={introImageUrl}
+                      onDragStart={() => setDraggingIntroImage(true)}
+                      onDragEnd={() => setDraggingIntroImage(false)}
+                      onRemove={clearIntroImage} />
+                  )}
+                  {draggingIntroImage && introImagePosition !== "after_title" && (
+                    <IntroImageDropZone label={t("introImagePos_after_title")}
+                      onDrop={() => { setIntroImagePosition("after_title"); setDraggingIntroImage(false); }} />
+                  )}
+
                   <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} previewTransform={previewInterpolate} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+
+                  {/* slot AFTER_INTRO — entre intro text et bouton */}
+                  {introImageUrl && introImagePosition === "after_intro" && (
+                    <IntroImageDraggable url={introImageUrl}
+                      onDragStart={() => setDraggingIntroImage(true)}
+                      onDragEnd={() => setDraggingIntroImage(false)}
+                      onRemove={clearIntroImage} />
+                  )}
+                  {draggingIntroImage && introImagePosition !== "after_intro" && (
+                    <IntroImageDropZone label={t("introImagePos_after_intro")}
+                      onDrop={() => { setIntroImagePosition("after_intro"); setDraggingIntroImage(false); }} />
+                  )}
+
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
@@ -1530,6 +1706,18 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       />
                     </div>
                   </div>
+
+                  {/* slot BOTTOM — sous le bouton */}
+                  {introImageUrl && introImagePosition === "bottom" && (
+                    <IntroImageDraggable url={introImageUrl}
+                      onDragStart={() => setDraggingIntroImage(true)}
+                      onDragEnd={() => setDraggingIntroImage(false)}
+                      onRemove={clearIntroImage} />
+                  )}
+                  {draggingIntroImage && introImagePosition !== "bottom" && (
+                    <IntroImageDropZone label={t("introImagePos_bottom")}
+                      onDrop={() => { setIntroImagePosition("bottom"); setDraggingIntroImage(false); }} />
+                  )}
                 </div>
               </div>
 

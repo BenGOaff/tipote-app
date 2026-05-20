@@ -556,6 +556,38 @@ async function processInstagramComment(params: {
       });
     }
 
+    // Dédup atomique : 1 DM max par (automation, sender). INSERT…
+    // ON CONFLICT DO NOTHING + RETURNING pour décider race-safe si on
+    // doit envoyer ou skip. Sans ça, chaque commentaire avec le mot-clé
+    // déclencherait un nouveau DM même si l'utilisateur en a déjà reçu un
+    // (Béné, 19 mai 2026 : "je reçois trop souvent le DM auto").
+    const { data: claimed, error: claimErr } = await supabaseAdmin
+      .from("social_automation_recipients")
+      .insert({
+        automation_id: matched.id,
+        platform: "instagram",
+        sender_id,
+        first_comment_id: comment_id ?? null,
+        dm_sent_at: new Date().toISOString(),
+      })
+      .select("id")
+      .maybeSingle();
+
+    // ON CONFLICT renvoie une erreur 23505 (duplicate_key) avec maybeSingle :
+    // on traite ça comme un "déjà envoyé". Toute autre erreur = on log mais
+    // on tente l'envoi quand même (mieux vaut un double DM qu'aucun en cas
+    // de bug d'écriture).
+    const alreadySent = claimErr?.code === "23505" || (!claimed && !claimErr);
+    if (alreadySent) {
+      console.log(
+        `[Instagram webhook] DM already sent to ${sender_id} for automation ${matched.id} — skipped`,
+      );
+      return;
+    }
+    if (claimErr && claimErr.code !== "23505") {
+      console.warn("[Instagram webhook] Dedup insert failed (sending anyway):", claimErr);
+    }
+
     // Envoyer un DM Instagram via Private Reply (recipient.comment_id)
     // C'est la méthode ManyChat : le DM est lié au commentaire, contourne les restrictions de messaging window
     const dmText = personalize(matched.dm_message, { prenom: firstName, firstname: firstName });
@@ -569,6 +601,16 @@ async function processInstagramComment(params: {
       }
     } else {
       dmResult = await sendInstagramDM(ig_access_token, ig_account_id, sender_id, dmText);
+    }
+
+    // Si l'envoi a échoué, on supprime le row de dédup pour permettre une
+    // nouvelle tentative au prochain commentaire. Sinon on resterait bloqué
+    // par notre propre dédup alors qu'aucun DM n'est jamais arrivé.
+    if (!dmResult.ok && claimed?.id) {
+      await supabaseAdmin
+        .from("social_automation_recipients")
+        .delete()
+        .eq("id", claimed.id);
     }
 
     // Mettre à jour les stats
