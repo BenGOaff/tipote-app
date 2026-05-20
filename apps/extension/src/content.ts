@@ -48,15 +48,22 @@ async function detectLinkedInUser(): Promise<{
     return null;
   }
   try {
+    // Headers complets Voyager — l'endpoint /me peut refuser si on n'envoie
+    // pas le bon set. csrf-token est obligatoire ; x-restli-protocol-version
+    // est demandé par tous les endpoints Voyager modernes ; les autres
+    // headers x-li-* sont best-effort (LinkedIn les remplit lui-même côté
+    // browser, on duplique pour être safe en contexte content script).
     const res = await fetch(`${VOYAGER_BASE}/me`, {
       credentials: "include",
       headers: {
         "csrf-token": csrf,
         Accept: "application/vnd.linkedin.normalized+json+2.1",
+        "x-restli-protocol-version": "2.0.0",
+        "x-li-lang": "fr_FR",
       },
     });
     if (!res.ok) {
-      console.warn("[tipote/cs] voyager /me failed", res.status);
+      console.warn("[tipote/cs] voyager /me failed", res.status, await res.text().catch(() => ""));
       return null;
     }
     const data = await res.json();
@@ -112,18 +119,25 @@ function detectLanguage(): string {
 
 /** Push au background : POST /api/pod/auth/connect via le SW pour
  *  bénéficier des cookies tipote.com côté SW (pas accessibles depuis
- *  un content script linkedin.com). */
-async function pushConnectIfStale() {
-  // Cache local pour ne pas hammerer Voyager + backend à chaque pageload.
-  const lastAtStr = localStorage.getItem(CONNECT_CACHE_KEY);
-  const lastAt = lastAtStr ? Number(lastAtStr) : 0;
-  if (Date.now() - lastAt < CONNECT_CACHE_TTL_MS) {
-    console.log("[tipote/cs] connect skipped (cached)");
-    return;
+ *  un content script linkedin.com).
+ *
+ *  @param forceFresh true pour ignorer le cache 1h (utile au reload de
+ *  l'extension côté dev, et exposé en console via tipoteForceMatch()). */
+async function pushConnect(forceFresh = false) {
+  if (!forceFresh) {
+    const lastAtStr = localStorage.getItem(CONNECT_CACHE_KEY);
+    const lastAt = lastAtStr ? Number(lastAtStr) : 0;
+    if (Date.now() - lastAt < CONNECT_CACHE_TTL_MS) {
+      console.log("[tipote/cs] connect skipped (cached). Run tipoteForceMatch() in console to bypass.");
+      return;
+    }
   }
 
   const detected = await detectLinkedInUser();
-  if (!detected) return;
+  if (!detected) {
+    console.warn("[tipote/cs] connect aborted: no LinkedIn user detected");
+    return;
+  }
 
   const language = detectLanguage();
   const payload = {
@@ -143,7 +157,17 @@ async function pushConnectIfStale() {
   if (ok) localStorage.setItem(CONNECT_CACHE_KEY, String(Date.now()));
 }
 
+// Helper debug exposé sur window pour forcer un re-match depuis la
+// console DevTools de LinkedIn (utile pendant le développement de
+// l'extension). Pas remové en prod — c'est juste un point d'entrée
+// nommé, sans surface d'attaque. Cast unknown→Window pour ne pas
+// avoir besoin d'augmenter le global type Window.
+(window as unknown as { tipoteForceMatch?: () => void }).tipoteForceMatch = () => {
+  console.log("[tipote/cs] forcing match…");
+  void pushConnect(true);
+};
+
 // Auto-trigger à l'arrivée sur une page LinkedIn. Pas besoin d'observer
 // les SPA-navigations pour le matching v1 (le 1er pageload suffit, c'est
 // stable côté URN). Phase 2.5 ajoutera un observer pour les publications.
-void pushConnectIfStale();
+void pushConnect();
