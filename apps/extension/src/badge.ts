@@ -1,17 +1,20 @@
-// Badge Tipote injecté sur la page LinkedIn /feed/update/<urn>/ quand
-// un post correspond à une tâche d'engagement assignée à l'utilisateur.
-// Le badge est en position fixed bottom-right (n'interfère pas avec le
-// DOM LinkedIn obfusqué) et propose les 4 tons de commentaire pré-générés
-// par l'IA + un bouton "pas pertinent".
+// Badge Tipote injecté sur la page LinkedIn /feed/update/<urn>/.
 //
-// Architecture : on lit les tâches depuis chrome.storage.local (rempli
-// par le service worker qui polle /api/pod/tasks/pending). Match par
-// activity URN.
+// Deux modes :
+//   - "task" : le post correspond à une tâche d'engagement assignée
+//     dans le pod Tipote. Suggestions IA pré-générées au fan-out
+//     (lues depuis chrome.storage.local["tipote.tasks.pending"]).
+//     Auto-like + bump karma à la publication du commentaire.
+//   - "quick" : le post est hors-pod (Béné, 19 mai 2026 : "permettre
+//     de commenter rapidement les posts d'autres users aussi"). On
+//     demande à /api/pod/ai-suggest de générer les 4 suggestions à la
+//     volée à partir du contenu scrapé sur la page. Pas d'auto-like
+//     (l'user peut liker manuellement avec le bouton LinkedIn natif),
+//     pas de karma — c'est juste un outil de productivité de
+//     commentaire IA-assisté.
 //
-// Preact rendu dans un host element créé dynamiquement — on n'importe
-// PAS preact ici parce que le content script doit rester en IIFE petit.
-// On utilise le DOM natif + un peu de templating string. Phase 2.5
-// initial, on peut basculer en Preact plus tard si la complexité monte.
+// Le badge s'inject toujours en shadow DOM bottom-right pour zéro
+// interférence avec le CSS LinkedIn (qui change régulièrement).
 
 import { voyagerLike, voyagerComment } from "./voyager";
 
@@ -39,12 +42,11 @@ const TONE_LABELS: Record<Tone, { label: string; emoji: string }> = {
   ask_question: { label: "Poser une question", emoji: "❓" },
 };
 
-// Suggestions de fallback si l'IA n'a pas encore généré (Phase 3
-// remplacera par les vraies suggestions personnalisées au style du
-// commenteur).
+// Fallback statique si l'IA est down + qu'aucune suggestion n'est
+// dispo via la task. Identique côté serveur dans podAiSuggest.ts.
 const FALLBACK_SUGGESTIONS: Record<Tone, string> = {
-  agree: "Totalement d'accord avec ce point — c'est exactement ce qu'on observe sur le terrain.",
-  disagree: "Intéressant, mais je vois les choses différemment. Le contexte joue beaucoup ici.",
+  agree: "Très juste, c'est exactement ce qu'on observe sur le terrain.",
+  disagree: "Intéressant, mais je vois les choses différemment — le contexte joue beaucoup ici.",
   add_value: "À compléter : ça fonctionne particulièrement bien quand on l'applique en amont.",
   ask_question: "Question : comment tu adaptes ça quand l'équipe n'est pas encore alignée ?",
 };
@@ -52,32 +54,31 @@ const FALLBACK_SUGGESTIONS: Record<Tone, string> = {
 const BADGE_HOST_ID = "tipote-boost-badge-host";
 let mountedForUrn: string | null = null;
 
+type Mode = { kind: "task"; task: Task } | { kind: "quick"; activityUrn: string };
+
 export async function mountBadge(activityUrn: string): Promise<void> {
-  if (mountedForUrn === activityUrn) return; // déjà monté pour ce post
+  if (mountedForUrn === activityUrn) return;
   removeBadge();
 
-  // Cherche la tâche correspondante dans chrome.storage.local.
+  // 1. Match avec une task ?
   const data = await chrome.storage.local.get(["tipote.tasks.pending"]);
   const tasks = (data["tipote.tasks.pending"] as Task[] | undefined) ?? [];
   const task = tasks.find((t) => t.pod_posts?.linkedin_post_urn === activityUrn);
 
-  if (!task) {
-    console.log("[tipote/badge] no task for", activityUrn, "— not mounting");
-    return;
-  }
-  if (task.status !== "pending" && task.status !== "liked") {
-    console.log("[tipote/badge] task wrong status:", task.status);
-    return;
+  let mode: Mode;
+  if (task && (task.status === "pending" || task.status === "liked")) {
+    mode = { kind: "task", task };
+  } else {
+    mode = { kind: "quick", activityUrn };
   }
 
-  console.log("[tipote/badge] mounting for task", task.id);
+  console.log("[tipote/badge] mounting", mode.kind, "for", activityUrn);
 
   const host = document.createElement("div");
   host.id = BADGE_HOST_ID;
   host.attachShadow({ mode: "open" });
   document.body.appendChild(host);
-
-  renderBadge(host.shadowRoot!, task, activityUrn);
+  renderBadge(host.shadowRoot!, mode, activityUrn);
   mountedForUrn = activityUrn;
 }
 
@@ -86,9 +87,40 @@ function removeBadge() {
   mountedForUrn = null;
 }
 
-function renderBadge(root: ShadowRoot, task: Task, activityUrn: string) {
-  // Tout est inline (style + markup) pour rester self-contained dans le
-  // shadow DOM — LinkedIn ne peut ni inspecter ni overrider notre CSS.
+/** Scrape le contenu du post depuis la page (mode quick). LinkedIn
+ *  permalink page = un seul post visible, donc on peut prendre le
+ *  premier <article> ou le titre. Heuristique simple, OK pour v1. */
+function scrapePostContent(): string | null {
+  // <article> est l'élément stable utilisé par LinkedIn pour le post
+  // principal sur les pages /feed/update/. Classes obfusquées mais
+  // le rôle ARIA reste.
+  const article = document.querySelector('article, [role="article"]');
+  if (article) {
+    const text = (article.textContent ?? "").trim();
+    if (text.length > 50) return text.slice(0, 1500);
+  }
+  // Fallback sur le <title> (LinkedIn y met l'auteur + un excerpt).
+  const title = document.title;
+  if (title && !/^LinkedIn$/i.test(title)) return title.slice(0, 500);
+  return null;
+}
+
+function detectLanguageFromCookie(): string {
+  const m = document.cookie.match(/li_lang=([^;]+)/);
+  if (m) return decodeURIComponent(m[1]).slice(0, 2).toLowerCase();
+  return (navigator.language || "fr").slice(0, 2).toLowerCase();
+}
+
+function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
+  const isTask = mode.kind === "task";
+  const liked = isTask && mode.task.status === "liked";
+  const excerpt = isTask ? mode.task.pod_posts.content_excerpt?.slice(0, 140) ?? "" : "";
+
+  // Charge les suggestions selon le mode. En mode task, on les a déjà
+  // (pré-générées au fan-out). En mode quick, on demande au backend.
+  const initialSuggestions =
+    isTask ? mode.task.ai_comment_suggestions : null;
+
   const style = `
     :host { all: initial; }
     .panel {
@@ -110,6 +142,8 @@ function renderBadge(root: ShadowRoot, task: Task, activityUrn: string) {
     .header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .logo { width: 22px; height: 22px; border-radius: 6px; background: #5d6cdb; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
     .title { font-weight: 600; font-size: 13px; flex: 1; }
+    .mode-badge { font-size: 10px; padding: 2px 6px; border-radius: 999px; background: #eef2ff; color: #4338ca; text-transform: uppercase; letter-spacing: 0.5px; }
+    .mode-badge.quick { background: #f0f9ff; color: #0369a1; }
     .close { background: transparent; border: 0; cursor: pointer; color: #888; font-size: 18px; padding: 0 4px; }
     .lead { color: #6b7280; font-size: 12px; margin-bottom: 10px; }
     .tones { display: flex; flex-direction: column; gap: 6px; }
@@ -129,26 +163,31 @@ function renderBadge(root: ShadowRoot, task: Task, activityUrn: string) {
     .status { font-size: 11px; padding: 6px 8px; border-radius: 6px; margin-top: 6px; }
     .status.ok { background: #ecfdf5; color: #047857; }
     .status.err { background: #fee2e2; color: #b91c1c; }
+    .status.loading { background: #f3f4f6; color: #4b5563; }
+    .loader { display: inline-block; width: 12px; height: 12px; border: 2px solid #c7d2fe; border-top-color: #5d6cdb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px; vertical-align: -2px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   `;
-
-  const excerpt = task.pod_posts.content_excerpt?.slice(0, 140) ?? "";
-  const liked = task.status === "liked";
 
   root.innerHTML = `
     <style>${style}</style>
     <div class="panel" role="dialog" aria-label="Tipote Boost">
       <div class="header">
         <div class="logo">T</div>
-        <div class="title">Tipote suggère un commentaire</div>
+        <div class="title">${isTask ? "Boost pod" : "Quick comment"}</div>
+        <span class="mode-badge ${isTask ? "" : "quick"}">${isTask ? "Pod" : "IA"}</span>
         <button class="close" aria-label="Fermer">×</button>
       </div>
-      <div class="lead">
-        ${liked ? "✓ Like envoyé. " : ""}Choisis un ton — tu pourras éditer avant de publier.
+      <div class="lead" id="lead">
+        ${
+          isTask
+            ? `${liked ? "✓ Like envoyé. " : ""}Choisis un ton — tu pourras éditer avant publication.`
+            : "L'IA suggère 4 angles dans 4 tons différents pour commenter rapidement ce post."
+        }
         ${excerpt ? `<div style="margin-top:6px;font-style:italic;color:#6b7280;">"${escapeHtml(excerpt)}…"</div>` : ""}
       </div>
-      <div class="tones">
+      <div class="tones" id="tones-container">
         ${(Object.keys(TONE_LABELS) as Tone[]).map((tone) => `
-          <button class="tone-btn" data-tone="${tone}">
+          <button class="tone-btn" data-tone="${tone}" disabled>
             <span class="tone-emoji">${TONE_LABELS[tone].emoji}</span>
             <span>${TONE_LABELS[tone].label}</span>
           </button>
@@ -158,29 +197,68 @@ function renderBadge(root: ShadowRoot, task: Task, activityUrn: string) {
         <textarea id="editor-text" placeholder="Édite le commentaire avant publication…"></textarea>
         <div class="editor-actions">
           <button class="btn btn-ghost" id="cancel">Retour</button>
-          <button class="btn btn-primary" id="publish">Publier</button>
+          <button class="btn btn-primary" id="publish">Publier sur LinkedIn</button>
         </div>
       </div>
       <div id="status"></div>
-      <button class="decline" id="decline">Pas pertinent pour moi</button>
+      ${isTask ? `<button class="decline" id="decline">Pas pertinent pour moi</button>` : ""}
     </div>
   `;
 
-  // Wire events
-  root.querySelector(".close")?.addEventListener("click", removeBadge);
-
   const editor = root.getElementById("editor") as HTMLDivElement;
   const editorText = root.getElementById("editor-text") as HTMLTextAreaElement;
-  const tonesContainer = root.querySelector(".tones") as HTMLDivElement;
+  const tonesContainer = root.getElementById("tones-container") as HTMLDivElement;
   const statusEl = root.getElementById("status") as HTMLDivElement;
+  const toneButtons = root.querySelectorAll<HTMLButtonElement>(".tone-btn");
   let selectedTone: Tone | null = null;
+  let suggestions: Record<Tone, string> | null =
+    initialSuggestions as Record<Tone, string> | null;
 
-  root.querySelectorAll<HTMLButtonElement>(".tone-btn").forEach((btn) => {
+  root.querySelector(".close")?.addEventListener("click", removeBadge);
+
+  // Active les boutons une fois les suggestions chargées.
+  const enableTones = () => {
+    toneButtons.forEach((b) => (b.disabled = false));
+  };
+
+  if (suggestions) {
+    enableTones();
+  } else {
+    // Mode quick : on charge les suggestions à la volée.
+    showStatus(statusEl, "loading", "<span class='loader'></span>Génération des suggestions IA…");
+    const content = scrapePostContent();
+    const language = detectLanguageFromCookie();
+    chrome.runtime.sendMessage(
+      {
+        type: "ai/suggest",
+        payload: {
+          activity_urn: activityUrn,
+          content_excerpt: content,
+          language,
+        },
+      },
+      (resp: unknown) => {
+        const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
+        if (r?.ok && r.suggestions) {
+          suggestions = r.suggestions as Record<Tone, string>;
+          showStatus(statusEl, "ok", "Choisis un ton ci-dessus.");
+          setTimeout(() => (statusEl.textContent = ""), 1500);
+        } else {
+          // Fallback statique côté badge si l'API a échoué côté SW.
+          suggestions = FALLBACK_SUGGESTIONS;
+          showStatus(statusEl, "err", "IA indisponible — suggestions génériques.");
+        }
+        enableTones();
+      },
+    );
+  }
+
+  toneButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const tone = btn.dataset.tone as Tone;
       selectedTone = tone;
-      const suggestion = task.ai_comment_suggestions?.[tone] ?? FALLBACK_SUGGESTIONS[tone];
-      editorText.value = suggestion;
+      const text = suggestions?.[tone] ?? FALLBACK_SUGGESTIONS[tone];
+      editorText.value = text;
       tonesContainer.style.display = "none";
       editor.classList.add("show");
       editorText.focus();
@@ -202,39 +280,52 @@ function renderBadge(root: ShadowRoot, task: Task, activityUrn: string) {
       return;
     }
     btn.disabled = true;
-    showStatus(statusEl, "ok", "Envoi en cours…");
+    showStatus(statusEl, "loading", "<span class='loader'></span>Envoi en cours…");
 
     try {
-      // 1. Like si pas encore fait
-      if (!liked) {
+      // Auto-like uniquement en mode task. Mode quick : l'user like
+      // manuellement s'il veut, l'extension ne touche pas au like.
+      if (isTask && !liked) {
         const likeResult = await voyagerLike(activityUrn);
         if (likeResult.ok) {
           await new Promise<void>((resolve) => {
             chrome.runtime.sendMessage(
-              { type: "task/like", payload: { taskId: task.id } },
+              { type: "task/like", payload: { taskId: mode.task.id } },
               () => resolve(),
             );
           });
         } else {
-          showStatus(statusEl, "err", `Like échec (${likeResult.status}). On continue avec le commentaire.`);
-          await new Promise((r) => setTimeout(r, 1200));
+          // On continue avec le commentaire même si le like a foiré
+          // (idempotent côté backend de toute façon).
+          console.warn("[tipote/badge] like failed but continuing", likeResult);
         }
       }
-      // 2. Commentaire
+
       const commentResult = await voyagerComment(activityUrn, text);
       if (!commentResult.ok) {
         showStatus(statusEl, "err", `Commentaire échec (${commentResult.status}). Réessaye plus tard.`);
         btn.disabled = false;
         return;
       }
-      // 3. Notif backend
-      await new Promise<void>((resolve) => {
-        chrome.runtime.sendMessage(
-          { type: "task/comment", payload: { taskId: task.id, selectedTone, postedCommentText: text } },
-          () => resolve(),
-        );
-      });
-      showStatus(statusEl, "ok", "✓ Boost envoyé. Merci !");
+
+      // Notif backend seulement en mode task — quick comment ne touche
+      // pas au karma (post hors-pod, c'est juste de la productivité).
+      if (isTask) {
+        await new Promise<void>((resolve) => {
+          chrome.runtime.sendMessage(
+            {
+              type: "task/comment",
+              payload: {
+                taskId: mode.task.id,
+                selectedTone,
+                postedCommentText: text,
+              },
+            },
+            () => resolve(),
+          );
+        });
+      }
+      showStatus(statusEl, "ok", "✓ Commentaire publié.");
       setTimeout(removeBadge, 1800);
     } catch (err) {
       console.warn("[tipote/badge] publish error", err);
@@ -243,21 +334,26 @@ function renderBadge(root: ShadowRoot, task: Task, activityUrn: string) {
     }
   });
 
-  root.getElementById("decline")?.addEventListener("click", async () => {
-    showStatus(statusEl, "ok", "Tâche déclinée. Merci pour le signal.");
-    await new Promise<void>((resolve) => {
-      chrome.runtime.sendMessage(
-        { type: "task/decline", payload: { taskId: task.id, reason: "user_clicked_not_relevant" } },
-        () => resolve(),
-      );
+  if (isTask) {
+    root.getElementById("decline")?.addEventListener("click", async () => {
+      showStatus(statusEl, "ok", "Tâche déclinée. Merci pour le signal.");
+      await new Promise<void>((resolve) => {
+        chrome.runtime.sendMessage(
+          {
+            type: "task/decline",
+            payload: { taskId: mode.task.id, reason: "user_clicked_not_relevant" },
+          },
+          () => resolve(),
+        );
+      });
+      setTimeout(removeBadge, 1200);
     });
-    setTimeout(removeBadge, 1200);
-  });
+  }
 }
 
-function showStatus(el: HTMLDivElement, kind: "ok" | "err", msg: string) {
+function showStatus(el: HTMLDivElement, kind: "ok" | "err" | "loading", html: string) {
   el.className = `status ${kind}`;
-  el.textContent = msg;
+  el.innerHTML = html;
 }
 
 function escapeHtml(s: string): string {

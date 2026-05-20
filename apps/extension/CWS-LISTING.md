@@ -21,19 +21,22 @@ Booste tes posts LinkedIn grâce à un pod d'engagement collaboratif. Auto-like 
 ### Description longue (16 000 caractères max)
 
 ```
-Tipote Boost transforme la portée de tes publications LinkedIn grâce à un pod d'engagement entre membres Tipote.
+Tipote Boost transforme la portée de tes publications LinkedIn grâce à un pod d'engagement entre membres Tipote, ET t'aide à commenter rapidement n'importe quel post avec l'assistance d'une IA.
 
-🚀 Comment ça marche
-Quand tu publies sur LinkedIn, les autres membres du pod reçoivent automatiquement une tâche d'engagement : un like (auto) et 4 suggestions de commentaires générées par IA dans leur style. Ils valident en un clic le commentaire qu'ils veulent poster (ou l'éditent avant). Tes posts gagnent des likes et des commentaires de qualité dans les premières minutes — exactement quand l'algorithme LinkedIn décide de la portée.
+🚀 Mode pod — boost mutuel
+Quand tu publies sur LinkedIn, les autres membres du pod reçoivent automatiquement une suggestion d'engagement : un like et 4 propositions de commentaires générées par IA. Ils valident en un clic le commentaire qu'ils veulent poster (ou l'éditent avant). Tes posts gagnent des likes et des commentaires de qualité dans les premières minutes — exactement quand l'algorithme LinkedIn décide de la portée.
+
+💬 Mode quick comment — n'importe quel post
+Sur n'importe quel post LinkedIn que tu visites, l'extension propose 4 angles de commentaires générés par IA. Tu choisis le ton, tu édites au besoin, tu publies. Productivité maximale, validation toujours manuelle.
 
 ✨ Les 4 tons de commentaires
-- "Je suis d'accord" — pour appuyer ton propos
+- "Je suis d'accord" — pour appuyer un propos
 - "Je ne suis pas d'accord" — pour ouvrir un débat constructif
 - "Ajouter de la valeur" — pour enrichir la discussion
 - "Poser une question" — pour relancer la conversation
 
 🛡️ Anti-spam intégré
-- Maximum 12 actions par heure et par membre
+- Maximum 12 actions par heure et par membre (mode pod)
 - Délais aléatoires entre actions
 - Pause automatique si LinkedIn détecte une activité suspecte
 - Jamais 100% du pod sur un même post (pattern naturel préservé)
