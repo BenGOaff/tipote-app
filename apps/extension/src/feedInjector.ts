@@ -1,23 +1,14 @@
-// Injecteur inline LinkedIn — version v3 simplifiée.
+// Injecteur inline LinkedIn — v4 avec diagnostic auto.
 //
-// Les versions précédentes dépendaient de selectors LinkedIn spécifiques
-// (.feed-shared-social-action-bar, .comments-comment-box__form, SVG IDs
-// emoji-medium/image-medium). En pratique LinkedIn 2026 les a soit
-// renommés soit refactorés — chez Béné, aucun de ces selectors ne match.
+// PROBLÈME : sur LinkedIn 2026, on ne sait plus quels selectors LinkedIn
+// expose pour le composer de commentaire. La v3 cherchait
+// [role="textbox"][contenteditable="true"] inside <article> mais ne
+// trouve rien chez Béné.
 //
-// Stratégie v3 : on ne dépend QUE de signaux universels :
-//   - <article> ou [role="article"] : tout post LinkedIn a l'un des deux
-//   - [role="textbox"][contenteditable="true"] : tout composer de
-//     commentaire utilise ce pattern ARIA (norme accessibilité,
-//     LinkedIn ne peut pas y déroger sans casser leur compliance)
-//
-// Quand un nouveau composer apparaît dans le DOM (= l'user a cliqué
-// "Commenter" sur un post), on insère notre barre 4-tons JUSTE AU-DESSUS
-// du contenteditable. Pas dans le toolbar, plus simple.
-//
-// Quand l'user clique un ton → fetch suggestion IA → on remplit le
-// contenteditable. L'user édite si besoin et publie via le bouton
-// "Publier" natif de LinkedIn.
+// SOLUTION : on dump dans la console TOUS les selectors candidats à
+// chaque seconde pendant les 10 premières secondes, pour qu'on voit
+// lesquels matchent et qu'on adapte. C'est de la triangulation
+// terrain, on bricole pas dans le vide.
 
 const INJECTED_ATTR = "data-tipote-injected";
 
@@ -30,8 +21,51 @@ const TONES = [
 
 type ToneKey = (typeof TONES)[number]["key"];
 
+const SELECTORS_TO_DIAG: Array<{ name: string; sel: string }> = [
+  { name: "role=textbox + contenteditable", sel: '[role="textbox"][contenteditable="true"]' },
+  { name: "any contenteditable", sel: '[contenteditable="true"]' },
+  { name: ".ql-editor", sel: ".ql-editor" },
+  { name: ".ql-editor > p", sel: ".ql-editor > p" },
+  { name: ".comments-comment-box__form", sel: ".comments-comment-box__form" },
+  { name: ".comments-comment-texteditor", sel: ".comments-comment-texteditor" },
+  { name: ".comments-comment-box", sel: ".comments-comment-box" },
+  { name: "article", sel: "article" },
+  { name: '[role="article"]', sel: '[role="article"]' },
+  { name: ".feed-shared-update-v2", sel: ".feed-shared-update-v2" },
+  { name: ".feed-shared-social-action-bar", sel: ".feed-shared-social-action-bar" },
+  { name: 'svg#emoji-medium', sel: 'svg[id="emoji-medium"]' },
+  { name: 'svg#image-medium', sel: 'svg[id="image-medium"]' },
+  { name: 'button[aria-label*="ommenter" i]', sel: 'button[aria-label*="ommenter" i]' },
+  { name: 'button[aria-label*="omment" i]', sel: 'button[aria-label*="omment" i]' },
+  { name: 'div[aria-label*="ommenter" i]', sel: 'div[aria-label*="ommenter" i]' },
+  { name: 'textarea[placeholder*="commentaire" i]', sel: 'textarea[placeholder*="commentaire" i]' },
+  { name: 'textarea', sel: 'textarea' },
+];
+
+function runDiagnostic(label: string): void {
+  const counts: Record<string, number> = {};
+  for (const { name, sel } of SELECTORS_TO_DIAG) {
+    try {
+      counts[name] = document.querySelectorAll(sel).length;
+    } catch (err) {
+      counts[name] = -1;
+    }
+  }
+  console.log(`[tipote/diag] ${label}`, counts);
+}
+
 export function startFeedInjector(): void {
-  console.log("[tipote/feed] injector v3 starting");
+  console.log("[tipote/feed] injector v4 starting (with diagnostic)");
+
+  // Diagnostic immédiat puis toutes les 2s pendant 20s.
+  runDiagnostic("t=0s");
+  let diagCount = 0;
+  const diagInterval = setInterval(() => {
+    diagCount++;
+    runDiagnostic(`t=${diagCount * 2}s`);
+    if (diagCount >= 10) clearInterval(diagInterval);
+  }, 2000);
+
   scanForEditables(document.body);
   new MutationObserver((mutations) => {
     for (const m of mutations) {
@@ -41,40 +75,52 @@ export function startFeedInjector(): void {
     }
   }).observe(document.body, { childList: true, subtree: true });
 
-  // Exposé pour debug console — scan manuellement et logge tout ce
-  // qu'on trouve sur la page courante.
+  // Expose un helper sur window (isolated world — visible uniquement via
+  // dropdown "context" dans DevTools, sinon utiliser le diagnostic auto).
   (window as unknown as { tipoteScanComposers?: () => void }).tipoteScanComposers = () => {
-    const editables = document.querySelectorAll('[role="textbox"][contenteditable="true"]');
-    const articles = document.querySelectorAll('article, [role="article"]');
-    console.log("[tipote/feed] scan: editables=", editables.length, "articles=", articles.length);
-    editables.forEach((ed, i) => {
-      const article = ed.closest("article, [role='article']");
-      console.log(`  editable[${i}]`, ed, "inside article:", !!article);
-    });
+    runDiagnostic("manual scan");
   };
 }
 
 function scanForEditables(root: HTMLElement): void {
-  // Liste tous les contenteditable textbox dans ce sous-arbre.
-  const editables: HTMLElement[] = [];
-  if (root.matches?.('[role="textbox"][contenteditable="true"]')) {
-    editables.push(root);
-  }
-  editables.push(
-    ...Array.from(root.querySelectorAll<HTMLElement>('[role="textbox"][contenteditable="true"]'))
-  );
+  // On essaye PLUSIEURS selectors et on garde le premier qui retourne
+  // quelque chose. Approche défensive parce que LinkedIn change tout
+  // régulièrement.
+  const candidates: HTMLElement[] = [];
 
-  for (const editable of editables) {
-    if (editable.hasAttribute(INJECTED_ATTR)) continue;
-    const article = editable.closest("article, [role='article']") as HTMLElement | null;
+  // 1. role=textbox + contenteditable (ARIA standard, le plus stable)
+  if (root.matches?.('[role="textbox"][contenteditable="true"]')) candidates.push(root);
+  candidates.push(...Array.from(root.querySelectorAll<HTMLElement>('[role="textbox"][contenteditable="true"]')));
+
+  // 2. .ql-editor (Quill editor — LinkedIn legacy)
+  if (root.matches?.('.ql-editor')) candidates.push(root);
+  candidates.push(...Array.from(root.querySelectorAll<HTMLElement>('.ql-editor')));
+
+  // 3. Any contenteditable inside .comments-comment-box (LinkedIn legacy)
+  candidates.push(...Array.from(root.querySelectorAll<HTMLElement>('.comments-comment-box [contenteditable="true"]')));
+  candidates.push(...Array.from(root.querySelectorAll<HTMLElement>('.comments-comment-texteditor [contenteditable="true"]')));
+
+  // Dedupe
+  const seen = new Set<HTMLElement>();
+  for (const el of candidates) {
+    if (seen.has(el)) continue;
+    seen.add(el);
+    if (el.hasAttribute(INJECTED_ATTR)) continue;
+    // On veut être inside un post — sinon c'est le composer principal
+    // (créer une publi) ou la messagerie. Mais on est tolérant : si on
+    // ne trouve pas d'article, on tente quand même (logé).
+    const article =
+      el.closest("article, [role='article']") ??
+      el.closest(".feed-shared-update-v2") ??
+      el.closest(".comments-comment-box") ??
+      el.closest(".comments-comment-texteditor");
     if (!article) {
-      // Pas dans un article = c'est probablement l'éditeur de POST principal
-      // ou la messagerie. On ignore (on ne veut pas polluer ces UI).
+      console.log("[tipote/feed] editable found but no article-like parent — skip", el);
       continue;
     }
-    editable.setAttribute(INJECTED_ATTR, "true");
-    console.log("[tipote/feed] new composer detected, injecting Tipote bar");
-    injectToneBar(editable, article);
+    el.setAttribute(INJECTED_ATTR, "true");
+    console.log("[tipote/feed] new composer detected, injecting Tipote bar", { editable: el, parent: article });
+    injectToneBar(el, article as HTMLElement);
   }
 }
 
@@ -100,13 +146,7 @@ function injectToneBar(editable: HTMLElement, article: HTMLElement): void {
   `;
 
   const logo = document.createElement("span");
-  logo.style.cssText = `
-    color: #5d6cdb;
-    font-weight: 700;
-    font-size: 11px;
-    margin-right: 6px;
-    letter-spacing: 0.3px;
-  `;
+  logo.style.cssText = `color: #5d6cdb; font-weight: 700; font-size: 11px; margin-right: 6px; letter-spacing: 0.3px;`;
   logo.textContent = "Tipote";
   bar.appendChild(logo);
 
@@ -115,32 +155,17 @@ function injectToneBar(editable: HTMLElement, article: HTMLElement): void {
     btn.type = "button";
     btn.setAttribute("aria-label", tone.label);
     btn.style.cssText = `
-      background: white;
-      border: 1px solid #d1d5db;
-      border-radius: 999px;
-      padding: 4px 11px;
-      cursor: pointer;
-      font: inherit;
-      font-size: 11px;
-      color: #374151;
-      transition: background 0.15s, border-color 0.15s;
-      white-space: nowrap;
+      background: white; border: 1px solid #d1d5db; border-radius: 999px;
+      padding: 4px 11px; cursor: pointer; font: inherit; font-size: 11px;
+      color: #374151; transition: background 0.15s; white-space: nowrap;
     `;
     btn.textContent = `${tone.emoji} ${tone.label}`;
-
     btn.addEventListener("mouseenter", () => {
-      if (!btn.disabled) {
-        btn.style.background = "#eef2ff";
-        btn.style.borderColor = "#a5b4fc";
-      }
+      if (!btn.disabled) { btn.style.background = "#eef2ff"; btn.style.borderColor = "#a5b4fc"; }
     });
     btn.addEventListener("mouseleave", () => {
-      if (!btn.disabled) {
-        btn.style.background = "white";
-        btn.style.borderColor = "#d1d5db";
-      }
+      if (!btn.disabled) { btn.style.background = "white"; btn.style.borderColor = "#d1d5db"; }
     });
-
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -149,18 +174,16 @@ function injectToneBar(editable: HTMLElement, article: HTMLElement): void {
       btn.disabled = true;
       btn.style.opacity = "0.6";
       btn.style.cursor = "wait";
-
       try {
         if (!cachedSuggestions) {
           loading = true;
           btn.textContent = `${tone.emoji} Génération…`;
-          const content = extractPostText(article);
+          const content = article.innerText.trim().slice(0, 1500);
           const language = detectLanguage();
           cachedSuggestions = await fetchSuggestions(content, language);
           loading = false;
         }
-        const text = cachedSuggestions[tone.key];
-        fillEditable(editable, text);
+        fillEditable(editable, cachedSuggestions[tone.key]);
         btn.textContent = `${tone.emoji} ✓`;
         setTimeout(() => {
           btn.textContent = original ?? "";
@@ -177,20 +200,11 @@ function injectToneBar(editable: HTMLElement, article: HTMLElement): void {
         loading = false;
       }
     });
-
     bar.appendChild(btn);
   }
 
-  // Insert la barre au-dessus du contenteditable. On cherche un container
-  // parent stable, puis fallback. Le contenteditable LinkedIn est souvent
-  // wrappé dans plusieurs <div> — on remonte 2 niveaux pour avoir un
-  // emplacement visuellement propre, sinon fallback direct.
   const wrapper = editable.parentElement?.parentElement ?? editable.parentElement ?? editable;
   wrapper.parentElement?.insertBefore(bar, wrapper);
-}
-
-function extractPostText(article: HTMLElement): string {
-  return article.innerText.trim().slice(0, 1500);
 }
 
 function detectLanguage(): string {
@@ -199,10 +213,7 @@ function detectLanguage(): string {
   return (navigator.language || "fr").slice(0, 2).toLowerCase();
 }
 
-async function fetchSuggestions(
-  content: string,
-  language: string,
-): Promise<Record<ToneKey, string>> {
+async function fetchSuggestions(content: string, language: string): Promise<Record<ToneKey, string>> {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
       { type: "ai/suggest", payload: { content_excerpt: content, language } },
@@ -215,13 +226,8 @@ async function fetchSuggestions(
   });
 }
 
-/** Remplit le contenteditable de LinkedIn. On efface d'abord le contenu
- *  existant via sélection + replace via execCommand("insertText"). C'est
- *  la méthode qui marche avec les éditeurs React/Quill modernes parce
- *  qu'elle fire un InputEvent que l'éditeur écoute. */
 function fillEditable(editable: HTMLElement, text: string): void {
   editable.focus();
-  // Sélectionne tout le contenu existant
   const sel = window.getSelection();
   if (sel) {
     sel.removeAllRanges();
@@ -229,19 +235,10 @@ function fillEditable(editable: HTMLElement, text: string): void {
     range.selectNodeContents(editable);
     sel.addRange(range);
   }
-  // Insert le nouveau texte — remplace la sélection
   try {
     document.execCommand("insertText", false, text);
   } catch {
     editable.textContent = text;
     editable.dispatchEvent(new InputEvent("input", { inputType: "insertText", data: text, bubbles: true }));
-  }
-  // Place le caret à la fin
-  if (sel) {
-    sel.removeAllRanges();
-    const range = document.createRange();
-    range.selectNodeContents(editable);
-    range.collapse(false);
-    sel.addRange(range);
   }
 }
