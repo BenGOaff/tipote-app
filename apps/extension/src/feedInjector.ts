@@ -135,19 +135,22 @@ function injectToneBar(editable: HTMLElement): void {
   });
   container.appendChild(trigger);
 
-  // Menu dropdown (caché par défaut)
+  // Menu dropdown — attaché au <body> en position:fixed pour ne pas être
+  // rogné par l'overflow:hidden / transform des conteneurs LinkedIn.
   const menu = document.createElement("div");
+  menu.setAttribute("data-tipote-menu", "true");
   menu.style.cssText = `
-    position: absolute; top: calc(100% + 4px); left: 0; z-index: 9999;
+    position: fixed; z-index: 2147483647;
     min-width: 220px;
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
     padding: 4px;
     display: none;
     flex-direction: column;
     gap: 1px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   `;
 
   const menuItems: HTMLButtonElement[] = [];
@@ -209,20 +212,32 @@ function injectToneBar(editable: HTMLElement): void {
     menu.appendChild(item);
     menuItems.push(item);
   }
-  container.appendChild(menu);
+  document.body.appendChild(menu);
 
+  function positionMenu(): void {
+    const rect = trigger.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + 4}px`;
+    menu.style.left = `${rect.left}px`;
+  }
   function openMenu(): void {
+    positionMenu();
     menu.style.display = "flex";
     menuOpen = true;
+    window.addEventListener("scroll", positionMenu, true);
+    window.addEventListener("resize", positionMenu);
     setTimeout(() => document.addEventListener("click", onDocClick), 0);
   }
   function closeMenu(): void {
     menu.style.display = "none";
     menuOpen = false;
+    window.removeEventListener("scroll", positionMenu, true);
+    window.removeEventListener("resize", positionMenu);
     document.removeEventListener("click", onDocClick);
   }
   function onDocClick(e: MouseEvent): void {
-    if (!container.contains(e.target as Node)) closeMenu();
+    if (!container.contains(e.target as Node) && !menu.contains(e.target as Node)) {
+      closeMenu();
+    }
   }
 
   trigger.addEventListener("click", (e) => {
