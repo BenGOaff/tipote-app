@@ -33,11 +33,22 @@ export default function ExtensionPrivacyPage() {
         <section>
           <h2 className="text-lg font-semibold mb-2">À quoi sert l&apos;extension</h2>
           <p>
-            L&apos;extension <strong>Tipote Boost</strong> permet aux membres du pod
-            d&apos;engagement Tipote de booster mutuellement leurs publications LinkedIn,
-            grâce à un système d&apos;auto-like et de suggestions de commentaires
-            générés par IA que tu valides en un clic.
+            L&apos;extension <strong>Tipote Boost</strong> a deux usages :
           </p>
+          <ul className="list-disc ml-5 mt-2 space-y-1">
+            <li>
+              <strong>Mode pod</strong> : booster mutuellement les publications des
+              autres membres du pod d&apos;engagement Tipote, grâce à un système
+              d&apos;auto-like et de suggestions de commentaires générés par IA que
+              tu valides en un clic.
+            </li>
+            <li>
+              <strong>Mode quick comment</strong> : sur n&apos;importe quel post
+              LinkedIn que tu visites, obtenir 4 suggestions de commentaires
+              générés par IA pour répondre rapidement. Validation toujours manuelle,
+              aucun envoi automatique.
+            </li>
+          </ul>
         </section>
 
         <section>

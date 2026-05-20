@@ -215,6 +215,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
+  if (msg?.type === "ai/suggest") {
+    // Mode "quick comment Kawaak-style" : l'extension est sur un post
+    // hors-pod (pas de task pré-générée) et demande au backend de
+    // générer 4 suggestions IA on-demand.
+    void (async () => {
+      const r = await tipotePost<{ ok: boolean; suggestions?: Record<string, string> }>(
+        "/api/pod/ai-suggest",
+        msg.payload,
+      );
+      sendResponse(r.data ?? { ok: false });
+    })();
+    return true;
+  }
+
   return false;
 });
 

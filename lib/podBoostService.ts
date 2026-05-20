@@ -4,6 +4,7 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { SEED_POD_FR_SLUG, POST_ELIGIBILITY_HOURS, type CommentTone } from "@/lib/podBoost";
+import { generateSuggestions, type CommentSuggestions } from "@/lib/podAiSuggest";
 
 /** Hard cap par défaut sur le nb de pod-mates qui reçoivent une tâche
  *  pour un même post. Limite l'inflation de tâches en attendant un
@@ -154,7 +155,16 @@ export async function signalPostPublished(params: {
     };
   }
 
-  // 5. Fan-out par pod.
+  // 5. Génération IA des 4 suggestions de commentaires UNE FOIS pour
+  //    ce post. Mutualisée entre tous les pod-mates pour éviter N appels
+  //    Claude. Si la génération échoue, on a un fallback statique côté
+  //    podAiSuggest — donc on n'a jamais zéro suggestion sur une task.
+  const suggestions = await generateSuggestions({
+    contentExcerpt: contentExcerpt?.slice(0, 1500) ?? null,
+    language: language ?? "fr",
+  });
+
+  // 6. Fan-out par pod, on passe les suggestions à chaque task.
   let tasksCreated = 0;
   for (const podId of podIds) {
     tasksCreated += await fanOutForPod({
@@ -162,6 +172,7 @@ export async function signalPostPublished(params: {
       podId,
       authorUserId,
       postLanguage: language,
+      suggestions,
     });
   }
 
@@ -181,8 +192,9 @@ async function fanOutForPod(params: {
   podId: string;
   authorUserId: string;
   postLanguage: string | null;
+  suggestions: CommentSuggestions;
 }): Promise<number> {
-  const { podPostId, podId, authorUserId, postLanguage } = params;
+  const { podPostId, podId, authorUserId, postLanguage, suggestions } = params;
 
   // Jointure : memberships actives du pod + profil LinkedIn de chacun.
   // Foreign-key implicite : pod_memberships.user_id → pod_linkedin_profiles.user_id.
@@ -230,6 +242,7 @@ async function fanOutForPod(params: {
     pod_id: podId,
     assigned_user_id: c.user_id,
     status: "pending" as const,
+    ai_comment_suggestions: suggestions,
   }));
   const { error, count } = await supabaseAdmin
     .from("pod_engagement_tasks")
