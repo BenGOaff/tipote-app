@@ -100,57 +100,88 @@ function findPostElement(editable: HTMLElement): HTMLElement | null {
 function injectToneBar(editable: HTMLElement): void {
   let cachedSuggestions: Record<ToneKey, string> | null = null;
   let loading = false;
+  let menuOpen = false;
 
-  const bar = document.createElement("div");
-  bar.setAttribute("data-tipote-bar", "true");
-  bar.style.cssText = `
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 10px;
-    margin: 8px 0;
-    background: linear-gradient(to right, #eef2ff, #f5f3ff);
-    border: 1px solid #c7d2fe;
-    border-radius: 10px;
+  // Container relatif pour positionner le menu dropdown en absolute.
+  const container = document.createElement("div");
+  container.setAttribute("data-tipote-bar", "true");
+  container.style.cssText = `
+    position: relative;
+    display: inline-block;
+    margin: 6px 0 8px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 12px;
-    align-items: center;
-    line-height: 1.3;
   `;
 
-  const logo = document.createElement("span");
-  logo.style.cssText = `color: #5d6cdb; font-weight: 700; font-size: 11px; margin-right: 6px; letter-spacing: 0.3px;`;
-  logo.textContent = "Tipote";
-  bar.appendChild(logo);
+  // Bouton trigger : "Tipote ▾" — style Kawaak (compact, branded).
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.setAttribute("aria-label", "Générer un commentaire avec Tipote");
+  trigger.style.cssText = `
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; border: 0; border-radius: 999px;
+    padding: 6px 14px; cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600;
+    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
+    transition: transform 0.1s, box-shadow 0.15s;
+    white-space: nowrap;
+  `;
+  trigger.innerHTML = `<span>✨ Tipote</span><span style="font-size: 10px; opacity: 0.9;">▾</span>`;
+  trigger.addEventListener("mouseenter", () => {
+    trigger.style.boxShadow = "0 2px 6px rgba(99, 102, 241, 0.5)";
+  });
+  trigger.addEventListener("mouseleave", () => {
+    trigger.style.boxShadow = "0 1px 3px rgba(99, 102, 241, 0.3)";
+  });
+  container.appendChild(trigger);
 
+  // Menu dropdown (caché par défaut)
+  const menu = document.createElement("div");
+  menu.style.cssText = `
+    position: absolute; top: calc(100% + 4px); left: 0; z-index: 9999;
+    min-width: 220px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+    display: none;
+    flex-direction: column;
+    gap: 1px;
+  `;
+
+  const menuItems: HTMLButtonElement[] = [];
   for (const tone of TONES) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.setAttribute("aria-label", tone.label);
-    btn.style.cssText = `
-      background: white; border: 1px solid #d1d5db; border-radius: 999px;
-      padding: 4px 11px; cursor: pointer; font: inherit; font-size: 11px;
-      color: #374151; transition: background 0.15s; white-space: nowrap;
+    const item = document.createElement("button");
+    item.type = "button";
+    item.setAttribute("aria-label", tone.label);
+    item.style.cssText = `
+      display: flex; align-items: center; gap: 8px;
+      background: transparent; border: 0; border-radius: 6px;
+      padding: 8px 10px; cursor: pointer; font: inherit; font-size: 13px;
+      color: #374151; text-align: left; width: 100%;
+      transition: background 0.1s;
     `;
-    btn.textContent = `${tone.emoji} ${tone.label}`;
-    btn.addEventListener("mouseenter", () => {
-      if (!btn.disabled) { btn.style.background = "#eef2ff"; btn.style.borderColor = "#a5b4fc"; }
+    item.innerHTML = `<span style="font-size: 16px;">${tone.emoji}</span><span>${tone.label}</span>`;
+    item.addEventListener("mouseenter", () => {
+      if (!item.disabled) item.style.background = "#f3f4f6";
     });
-    btn.addEventListener("mouseleave", () => {
-      if (!btn.disabled) { btn.style.background = "white"; btn.style.borderColor = "#d1d5db"; }
+    item.addEventListener("mouseleave", () => {
+      if (!item.disabled) item.style.background = "transparent";
     });
-    btn.addEventListener("click", async (e) => {
+    item.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
       if (loading) return;
-      const original = btn.textContent;
-      btn.disabled = true;
-      btn.style.opacity = "0.6";
-      btn.style.cursor = "wait";
+      closeMenu();
+      const originalTrigger = trigger.innerHTML;
+      trigger.disabled = true;
+      trigger.style.opacity = "0.7";
+      trigger.style.cursor = "wait";
+      trigger.innerHTML = `<span>${tone.emoji} Génération…</span>`;
       try {
         if (!cachedSuggestions) {
           loading = true;
-          btn.textContent = `${tone.emoji} Génération…`;
           const post = findPostElement(editable);
           const content = post ? (post.innerText || "").trim().slice(0, 1500) : "";
           const language = detectLanguage();
@@ -159,34 +190,56 @@ function injectToneBar(editable: HTMLElement): void {
           loading = false;
         }
         fillTipTapEditor(editable, cachedSuggestions[tone.key]);
-        btn.textContent = `${tone.emoji} ✓`;
+        trigger.innerHTML = `<span>${tone.emoji} Inséré ✓</span>`;
         setTimeout(() => {
-          btn.textContent = original ?? "";
-          btn.disabled = false;
-          btn.style.opacity = "1";
-          btn.style.cursor = "pointer";
-        }, 800);
+          trigger.innerHTML = originalTrigger;
+          trigger.disabled = false;
+          trigger.style.opacity = "1";
+          trigger.style.cursor = "pointer";
+        }, 1000);
       } catch (err) {
         console.warn("[tipote/feed] suggestion fill failed", err);
-        btn.textContent = original ?? "";
-        btn.disabled = false;
-        btn.style.opacity = "1";
-        btn.style.cursor = "pointer";
+        trigger.innerHTML = originalTrigger;
+        trigger.disabled = false;
+        trigger.style.opacity = "1";
+        trigger.style.cursor = "pointer";
         loading = false;
       }
     });
-    bar.appendChild(btn);
+    menu.appendChild(item);
+    menuItems.push(item);
+  }
+  container.appendChild(menu);
+
+  function openMenu(): void {
+    menu.style.display = "flex";
+    menuOpen = true;
+    setTimeout(() => document.addEventListener("click", onDocClick), 0);
+  }
+  function closeMenu(): void {
+    menu.style.display = "none";
+    menuOpen = false;
+    document.removeEventListener("click", onDocClick);
+  }
+  function onDocClick(e: MouseEvent): void {
+    if (!container.contains(e.target as Node)) closeMenu();
   }
 
-  // Insertion : juste avant l'éditeur. On remonte de 1-2 niveaux pour
-  // s'assurer que la barre soit AU-DESSUS du composer (le wrapper TipTap
-  // a généralement un padding/border qu'on veut pas couper). En fallback,
-  // insertion directe avant l'éditeur.
+  trigger.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (menuOpen) closeMenu();
+    else openMenu();
+  });
+
+  // Insertion : juste au-dessus du composer. On remonte de 1-2 niveaux pour
+  // se placer au-dessus du wrapper TipTap (qui a souvent un padding/border
+  // qu'on veut pas couper). Fallback : insertion directe avant l'éditeur.
   const wrapper = editable.parentElement?.parentElement ?? editable.parentElement;
   if (wrapper?.parentElement) {
-    wrapper.parentElement.insertBefore(bar, wrapper);
+    wrapper.parentElement.insertBefore(container, wrapper);
   } else {
-    editable.parentElement?.insertBefore(bar, editable);
+    editable.parentElement?.insertBefore(container, editable);
   }
 }
 
