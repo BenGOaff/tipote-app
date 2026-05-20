@@ -413,6 +413,13 @@
     "shareSiteNameTitle": "Brand name in shares",
     "shareSiteNameDesc": "Replaces \"Tipote\" under the share preview on iMessage / WhatsApp / social networks.",
     "shareSiteNameHint": "Leave empty → we'll show your domain ({fallback}).",
+    "faviconTitle": "Favicon",
+    "faviconDesc": "Shown in the browser tab on this domain. PNG, JPG, SVG or ICO — auto-resized to 256×256 px.",
+    "faviconUploadBtn": "Upload favicon",
+    "faviconRemoveBtn": "Remove",
+    "faviconUploaded": "Favicon uploaded",
+    "errFaviconUpload": "Favicon upload error: {msg}",
+    "errImageTooLarge2": "Image too large (max 5 MB).",
     "saved": "Saved"
   },
   "common": {

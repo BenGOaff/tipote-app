@@ -131,7 +131,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // Branding (custom domain + share_site_name) — toujours résoluble ici
   // puisque scope existe, sauf race condition (domain dé-vérifié).
-  const branding = await fetchOwnerBranding(scope.userId, scope.projectId);
+  const customHost = (await headers()).get(CUSTOM_HOST_HEADER);
+  const branding = await fetchOwnerBranding(scope.userId, scope.projectId, customHost);
   const siteName = branding ? (branding.siteName || branding.customHost) : null;
 
   if (r.kind === "quiz") {

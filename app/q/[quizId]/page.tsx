@@ -78,7 +78,10 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     const ownerId = (data as { user_id?: string }).user_id;
     const ownerProjectId = (data as { project_id?: string | null }).project_id ?? null;
     const quizSlug = (data as { slug?: string | null }).slug?.trim() ?? "";
-    const branding = ownerId ? await fetchOwnerBranding(ownerId, ownerProjectId) : null;
+    const customHost = (await headers()).get(CUSTOM_HOST_HEADER);
+    const branding = ownerId
+      ? await fetchOwnerBranding(ownerId, ownerProjectId, customHost)
+      : null;
 
     // Canonical = URL brandée si custom domain + slug, sinon request URL.
     let canonical: string | null = null;
