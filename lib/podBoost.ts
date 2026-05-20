@@ -51,3 +51,11 @@ export const SEED_POD_FR_SLUG = "fr-global";
  *  Au-delà, l'algo LinkedIn a déjà décidé du sort du post (les premières
  *  heures sont décisives). */
 export const POST_ELIGIBILITY_HOURS = 6;
+
+/** ID Chrome de l'extension Tipote (unpacked local pour la beta privée).
+ *  Quand on publiera sur Chrome Web Store, on aura un ID stable
+ *  différent — surcharge possible via NEXT_PUBLIC_TIPOTE_EXT_ID. Sert
+ *  côté frontend pour appeler chrome.runtime.sendMessage(EXT_ID, …)
+ *  depuis la page /boost (cf. externally_connectable du manifest). */
+export const TIPOTE_EXTENSION_ID =
+  process.env.NEXT_PUBLIC_TIPOTE_EXT_ID ?? "obinohichepembcmpfkgjfjohifejfon";

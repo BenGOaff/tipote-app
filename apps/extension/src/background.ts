@@ -1,56 +1,145 @@
 // Background service worker — orchestrateur central de l'extension.
-// Responsabilités (s'étoffe en Phase 2.2 → 2.6) :
-//   - chrome.alarms : polling périodique de /api/pod/tasks/pending
-//   - relais entre content script LinkedIn et backend Tipote (les
-//     fetch cross-origin sont autorisés depuis le SW sans CORS via
-//     host_permissions du manifest)
-//   - externally_connectable : accepte les messages venant de app.tipote.com
-//     (token push, déconnexion, etc.) — Phase 2.2
+// Responsabilités v2.2 :
+//   - chrome.alarms : polling périodique de /api/pod/me + /api/pod/tasks/pending
+//   - externally_connectable : répond aux ping de app.tipote.com et déclenche
+//     un sync à la demande (bouton "Synchroniser" sur /boost)
+//   - relais entre content script LinkedIn et backend Tipote (les fetch
+//     cross-origin sont autorisés depuis le SW via host_permissions)
 //
-// V0 : juste un log au démarrage + une alarm placeholder pour vérifier
-// que le SW est bien wired. Le reste sera ajouté incrémentalement.
+// Auth = cookies. Le SW fetch /api/pod/* avec `credentials: 'include'`,
+// Chrome attache automatiquement les cookies de app.tipote.com de l'user
+// (Supabase session). Pas de token à pusher manuellement → onboarding 0
+// friction tant que l'user est signed-in dans Chrome sur tipote.com.
 
-import { TASK_POLL_INTERVAL_SECONDS, TIPOTE_API_BASE } from "./config";
+import { STORAGE_KEYS, TASK_POLL_INTERVAL_SECONDS, TIPOTE_API_BASE } from "./config";
 
-const ALARM_POLL_TASKS = "tipote.poll.tasks";
+const ALARM_POLL = "tipote.poll";
+
+// ─── Lifecycle ────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener((details) => {
   console.log("[tipote/bg] installed", { reason: details.reason, api: TIPOTE_API_BASE });
-  // Setup l'alarm périodique. periodInMinutes minimum = 0.5 (30s) en
-  // prod, 0.01 (~600ms) accepté en dev (chrome relaxe la contrainte
-  // pour les unpacked extensions, on en profitera Phase 4 si besoin).
-  chrome.alarms.create(ALARM_POLL_TASKS, {
+  chrome.alarms.create(ALARM_POLL, {
     delayInMinutes: TASK_POLL_INTERVAL_SECONDS / 60,
     periodInMinutes: TASK_POLL_INTERVAL_SECONDS / 60,
   });
+  // Sync immédiat pour récupérer l'état si l'user est déjà signé sur Tipote.
+  void syncMe();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  console.log("[tipote/bg] startup");
+  void syncMe();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name !== ALARM_POLL_TASKS) return;
-  // Phase 2.5 : fetch /api/pod/tasks/pending et stocke en chrome.storage.local.
-  // Pour l'instant on log uniquement pour valider le wiring.
-  console.log("[tipote/bg] alarm fired", alarm.name);
+  if (alarm.name !== ALARM_POLL) return;
+  void syncMe();
+  // Phase 2.5 : pull tasks pending ici aussi.
 });
 
-// Listener pour les messages venant du content script (LinkedIn) ou
-// du popup. Squelette — les handlers concrets viennent Phase 2.3+.
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  console.log("[tipote/bg] msg", msg, "from", sender.tab?.url ?? sender.url);
-  if (msg?.type === "ping") {
-    sendResponse({ ok: true, pong: Date.now() });
-    return true; // gardé async pour cohérence avec les futurs handlers
+// ─── /api/pod/me ──────────────────────────────────────────────────────
+
+type LinkedInProfile = {
+  linkedin_urn: string;
+  full_name: string | null;
+  headline: string | null;
+  profile_url: string | null;
+  language_detected: string | null;
+  connected_at: string;
+};
+type PodMeState = {
+  linkedin_profile: LinkedInProfile | null;
+  memberships: Array<{ pod_id: string; status: string; pods: { id: string; name: string; language: string } }>;
+  karma: { boosts_given: number; boosts_received: number } | null;
+  fetched_at: number;
+};
+
+async function syncMe(): Promise<PodMeState | null> {
+  try {
+    const res = await fetch(`${TIPOTE_API_BASE}/api/pod/me`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      // 401 = pas signed-in sur Tipote, on stocke un état vide.
+      if (res.status === 401) {
+        await chrome.storage.local.set({ [STORAGE_KEYS.CONNECTED_USER]: null });
+      }
+      console.warn("[tipote/bg] syncMe failed", res.status);
+      return null;
+    }
+    const json = await res.json() as Omit<PodMeState, "fetched_at"> & { ok?: boolean };
+    const state: PodMeState = {
+      linkedin_profile: json.linkedin_profile ?? null,
+      memberships: json.memberships ?? [],
+      karma: json.karma ?? null,
+      fetched_at: Date.now(),
+    };
+    await chrome.storage.local.set({ [STORAGE_KEYS.CONNECTED_USER]: state });
+    console.log("[tipote/bg] syncMe ok", {
+      hasProfile: !!state.linkedin_profile,
+      pods: state.memberships.length,
+    });
+    return state;
+  } catch (err) {
+    console.warn("[tipote/bg] syncMe error", err);
+    return null;
   }
-  return false;
-});
+}
 
-// Listener pour les messages venant de app.tipote.com (externally_connectable).
-// Phase 2.2 : recevra le push d'auth (Supabase session) quand l'user click
-// "Connecter l'extension" sur la page /boost de Tipote.
-chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
-  console.log("[tipote/bg] external msg", msg, "from", sender.origin);
+// ─── Messaging — content script ───────────────────────────────────────
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "ping") {
     sendResponse({ ok: true, pong: Date.now() });
     return true;
   }
+  if (msg?.type === "linkedin/connect") {
+    // Le content script LinkedIn nous a détecté l'URN du user.
+    // On fait l'aller-retour POST /api/pod/auth/connect et on stocke
+    // l'état mis à jour.
+    void (async () => {
+      try {
+        const res = await fetch(`${TIPOTE_API_BASE}/api/pod/auth/connect`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(msg.payload),
+        });
+        const json = await res.json().catch(() => ({ ok: false, error: "invalid_response" }));
+        if (json.ok) {
+          await syncMe();
+        }
+        sendResponse(json);
+      } catch (err) {
+        console.warn("[tipote/bg] connect error", err);
+        sendResponse({ ok: false, error: "network" });
+      }
+    })();
+    return true; // réponse async
+  }
+  return false;
+});
+
+// ─── Messaging — externally_connectable (frontend Tipote) ─────────────
+
+chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
+  console.log("[tipote/bg] external msg", msg?.type, "from", sender.origin);
+
+  if (msg?.type === "ping") {
+    sendResponse({ ok: true, pong: Date.now() });
+    return true;
+  }
+
+  if (msg?.type === "sync") {
+    // Bouton "Synchroniser" sur /boost. On force un re-fetch immédiat.
+    void (async () => {
+      const state = await syncMe();
+      sendResponse({ ok: true, state });
+    })();
+    return true; // réponse async
+  }
+
   return false;
 });
