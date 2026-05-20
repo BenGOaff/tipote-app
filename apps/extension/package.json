@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "build:local": "node build.mjs --local",
     "dev": "node build.mjs --watch",
+    "dev:local": "node build.mjs --watch --local",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

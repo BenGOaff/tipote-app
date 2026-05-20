@@ -6,5 +6,7 @@
 declare const process: {
   env: {
     NODE_ENV: "development" | "production";
+    /** Injecté au build par esbuild (cf. build.mjs `define`). */
+    TIPOTE_API_BASE: string;
   };
 };

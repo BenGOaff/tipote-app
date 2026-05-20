@@ -25,8 +25,9 @@ isolated world Chrome).
 ```bash
 cd apps/extension
 npm install
-npm run build       # output dans dist/
-npm run dev         # watch mode
+npm run build        # one-shot, cible https://app.tipote.com
+npm run dev          # watch, cible https://app.tipote.com (par défaut)
+npm run dev:local    # watch, cible http://localhost:3000 (si Next.js dev tourne aussi)
 npm run typecheck
 ```
 
@@ -35,8 +36,11 @@ Charger dans Chrome :
 2. Activer "Developer mode"
 3. "Load unpacked" → sélectionner `apps/extension/dist`
 
-L'extension cible `http://localhost:3000` quand `NODE_ENV=development`
-(`npm run dev`), `https://app.tipote.com` sinon (`npm run build`).
+**Important** : le mode watch (`npm run dev`) cible la **prod** par défaut,
+pas localhost. C'est ce qu'on veut quand on teste l'extension contre le
+vrai backend tout en itérant sur le code de l'extension. Bascule vers
+localhost UNIQUEMENT si tu fais aussi tourner `npm run dev` dans la racine
+Next.js (`http://localhost:3000`).
 
 ## Icônes
 

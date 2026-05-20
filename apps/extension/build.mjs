@@ -15,6 +15,14 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const DIST = resolve(ROOT, "dist");
 const WATCH = process.argv.includes("--watch");
+// L'environnement (= API URL) est INDÉPENDANT du mode watch. Par
+// défaut on cible la prod (app.tipote.com) pour que l'extension chargée
+// en "unpacked" sur Chrome marche directement contre le vrai backend.
+// `--local` (ou TIPOTE_ENV=local) bascule sur http://localhost:3000
+// pour ceux qui font tourner aussi Next.js en local.
+const LOCAL = process.argv.includes("--local") || process.env.TIPOTE_ENV === "local";
+const NODE_ENV = WATCH ? "development" : "production";
+const TIPOTE_API_BASE = LOCAL ? "http://localhost:3000" : "https://app.tipote.com";
 
 // Cible — modules ES2022, supports MV3 service worker + content script.
 const COMMON = {
@@ -24,7 +32,10 @@ const COMMON = {
   sourcemap: WATCH ? "inline" : false,
   minify: !WATCH,
   loader: { ".png": "file", ".svg": "file" },
-  define: { "process.env.NODE_ENV": JSON.stringify(WATCH ? "development" : "production") },
+  define: {
+    "process.env.NODE_ENV": JSON.stringify(NODE_ENV),
+    "process.env.TIPOTE_API_BASE": JSON.stringify(TIPOTE_API_BASE),
+  },
 };
 
 const ENTRIES = [
@@ -72,7 +83,7 @@ async function rebuildAll() {
   await copyStatic();
   // Stamp file pour aider les rechargements manuels.
   await writeFile(resolve(DIST, ".build-stamp"), new Date().toISOString());
-  console.log(`[build] ${new Date().toLocaleTimeString()} — dist/ ready`);
+  console.log(`[build] ${new Date().toLocaleTimeString()} — dist/ ready (api=${TIPOTE_API_BASE})`);
 }
 
 if (WATCH) {
@@ -95,7 +106,7 @@ if (WATCH) {
       console.log(`[watch] static ${file} re-copied`);
     });
   }
-  console.log(`[watch] dist/ ready — press Ctrl+C to stop`);
+  console.log(`[watch] dist/ ready (api=${TIPOTE_API_BASE}) — press Ctrl+C to stop`);
   // Empêche le process de mourir.
   await new Promise(() => {});
 } else {

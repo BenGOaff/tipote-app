@@ -1,11 +1,9 @@
-// Configuration extension. L'API base URL bascule sur localhost en dev
-// (process.env.NODE_ENV substitué au build par esbuild) et sur la prod
-// sinon. Single source of truth pour les fetch côté background et popup.
+// Configuration extension. L'API base URL est injectée au build par
+// esbuild (cf. build.mjs `define`). Par défaut = prod (app.tipote.com).
+// Pour pointer en localhost:3000 : `npm run dev:local` ou
+// `TIPOTE_ENV=local npm run build`.
 
-export const TIPOTE_API_BASE =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"
-    : "https://app.tipote.com";
+export const TIPOTE_API_BASE: string = process.env.TIPOTE_API_BASE;
 
 /** Polling des tâches d'engagement assignées au user. On polle parce
  *  que Supabase Realtime depuis une extension MV3 est tricky (service
