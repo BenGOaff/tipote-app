@@ -1,11 +1,9 @@
-// Popup affiché quand l'user clique sur l'icône de l'extension dans la
-// barre Chrome. Affiche l'état "connecté ou non" en fonction de
-// chrome.storage.local + 2 CTAs distinctes selon le contexte :
-//   - User connecté → ouvre le dashboard /boost
-//   - User non connecté → 2 boutons :
-//       "J'ai un compte" → app.tipote.com/boost (auth Supabase)
-//       "Découvrir Tipote" → tipote.fr (landing commerciale, pour les
-//       gens qui sont tombés sur l'extension par hasard via CWS).
+// Popup affiché quand l'user clique sur l'icône de l'extension.
+// 3 vues selon l'état du user dans chrome.storage.local :
+//   - Pas connecté à Tipote → 2 CTAs (existant / découverte)
+//   - Connecté mais 0 tâche en attente → message "Tu es à jour"
+//   - Connecté + tâches en attente → liste cliquable, chaque tâche ouvre
+//     son permalink LinkedIn (où le content script monte le badge).
 //
 // Lien privacy en bas, requis CWS.
 
@@ -25,8 +23,19 @@ type LinkedInProfile = {
 type StoredUser = {
   linkedin_profile: LinkedInProfile;
   memberships: Array<{ pod_id: string; pods: { name: string } }>;
-  fetched_at: number;
+  karma?: { boosts_given: number; boosts_received: number } | null;
 } | null;
+
+type PendingTask = {
+  id: string;
+  status: string;
+  pod_posts: {
+    linkedin_post_urn: string;
+    post_url: string | null;
+    content_excerpt: string | null;
+    eligible_until: string;
+  };
+};
 
 const styles = {
   card: {
@@ -60,17 +69,33 @@ const styles = {
     textAlign: "center" as const,
     border: "1px solid #5d6cdb",
   },
+  taskItem: {
+    display: "block",
+    padding: "10px 12px",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 10,
+    fontSize: 12,
+    color: "#111",
+    textDecoration: "none",
+    cursor: "pointer" as const,
+  },
 };
 
 function Popup() {
   const [stored, setStored] = useState<StoredUser>(null);
+  const [tasks, setTasks] = useState<PendingTask[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    chrome.storage.local.get([STORAGE_KEYS.CONNECTED_USER], (data) => {
-      setStored(data[STORAGE_KEYS.CONNECTED_USER] ?? null);
-      setLoading(false);
-    });
+    chrome.storage.local.get(
+      [STORAGE_KEYS.CONNECTED_USER, STORAGE_KEYS.PENDING_TASKS],
+      (data) => {
+        setStored(data[STORAGE_KEYS.CONNECTED_USER] ?? null);
+        setTasks((data[STORAGE_KEYS.PENDING_TASKS] as PendingTask[] | undefined) ?? []);
+        setLoading(false);
+      },
+    );
   }, []);
 
   if (loading) {
@@ -96,22 +121,60 @@ function Popup() {
                 {profile.full_name}
               </div>
             )}
-            {stored?.memberships && stored.memberships.length > 0 && (
+            {stored?.karma && (
               <div style={{ marginTop: 4, color: "#047857" }}>
-                {stored.memberships.length} pod
-                {stored.memberships.length > 1 ? "s" : ""} actif
-                {stored.memberships.length > 1 ? "s" : ""}
+                {stored.karma.boosts_given} donnés · {stored.karma.boosts_received} reçus
               </div>
             )}
           </div>
+
+          {/* Tâches en attente */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              {tasks.length === 0
+                ? "Aucune tâche en attente"
+                : `${tasks.length} tâche${tasks.length > 1 ? "s" : ""} en attente`}
+            </div>
+            {tasks.length === 0 ? (
+              <p style={{ fontSize: 12, color: "#888", margin: 0 }}>
+                Tu es à jour. Les nouvelles publications du pod apparaîtront ici.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto" }}>
+                {tasks.map((t) => (
+                  <a
+                    key={t.id}
+                    href={
+                      t.pod_posts.post_url ??
+                      `https://www.linkedin.com/feed/update/${t.pod_posts.linkedin_post_urn}/`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.taskItem}
+                  >
+                    <div style={{ color: "#5d6cdb", fontSize: 11, marginBottom: 4 }}>
+                      → Voir le post
+                    </div>
+                    <div style={{ color: "#374151" }}>
+                      {(t.pod_posts.content_excerpt ?? "Post à booster").slice(0, 120)}
+                      {t.pod_posts.content_excerpt && t.pod_posts.content_excerpt.length > 120
+                        ? "…"
+                        : ""}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div style={{ marginTop: 12 }}>
             <a
               href={`${TIPOTE_API_BASE}/boost`}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ ...styles.primaryBtn, display: "block" }}
+              style={{ ...styles.secondaryBtn, display: "block" }}
             >
-              Voir mon dashboard →
+              Mon dashboard
             </a>
           </div>
         </>
