@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Tipote",
+  "description": "Boost organique collaboratif pour tes posts LinkedIn",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "Tipote",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.linkedin.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "alarms",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://*.linkedin.com/*",
+    "https://www.linkedin.com/*",
+    "https://app.tipote.com/*",
+    "https://tipote.com/*",
+    "http://localhost/*",
+    "http://localhost:3000/*"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "https://app.tipote.com/*",
+      "https://tipote.com/*",
+      "http://localhost:3000/*"
+    ]
+  }
+}

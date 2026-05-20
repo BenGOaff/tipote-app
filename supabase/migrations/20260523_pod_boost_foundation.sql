@@ -93,8 +93,14 @@ create table if not exists pod_posts (
 );
 
 create index if not exists idx_pod_posts_author on pod_posts (author_user_id);
+-- Index sur eligible_until pour le scan rapide "tâches encore actives".
+-- On NE met PAS de WHERE eligible_until > now() ici : now() n'est pas
+-- IMMUTABLE et Postgres rejette les fonctions non-IMMUTABLE dans le
+-- predicate d'un index partiel (erreur 42P17). Le filtre temporel se
+-- fait au niveau requête (cf. /api/pod/tasks/pending). Coût négligeable
+-- vu le volume attendu de pod_posts.
 create index if not exists idx_pod_posts_eligible
-  on pod_posts (eligible_until) where eligible_until > now();
+  on pod_posts (eligible_until);
 
 -- 5. Tâches d'engagement assignées à des pod-mates.
 -- Une row = un (post auteur, engageur). Le backend en crée N par post
