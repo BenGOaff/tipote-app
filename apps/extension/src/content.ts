@@ -15,6 +15,8 @@
 // les cookies linkedin.com ne sont pas HttpOnly pour ce cookie-là).
 
 import { getCsrfToken, voyagerLike, voyagerComment } from "./voyager";
+import { getMyRecentPosts, type RecentPostHint } from "./voyagerFeed";
+import { mountBadge } from "./badge";
 
 console.log("[tipote/cs] loaded on", location.href);
 
@@ -22,6 +24,8 @@ const VOYAGER_BASE = "https://www.linkedin.com/voyager/api";
 const LINKEDIN_LANG_HINT_KEY = "li_lang";
 const CONNECT_CACHE_KEY = "tipote.cs.lastConnectAt";
 const CONNECT_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
+const RECENT_POSTS_KEY = "tipote.cs.recentPostUrns"; // string[]
+const RECENT_POSTS_POLL_MS = 5 * 60 * 1000; // 5 min
 
 /** Détecte l'URN du user LinkedIn courant. 2 stratégies, dans cet ordre :
  *  1. `window.__lipi` exposé par certaines pages LinkedIn (variable de
@@ -157,6 +161,7 @@ const debugBag = window as unknown as {
   tipoteForceMatch?: () => void;
   tipoteLike?: (activityUrn: string) => Promise<unknown>;
   tipoteComment?: (activityUrn: string, text: string) => Promise<unknown>;
+  tipoteRefreshMyPosts?: () => Promise<unknown>;
 };
 
 debugBag.tipoteForceMatch = () => {
@@ -181,7 +186,122 @@ debugBag.tipoteComment = async (activityUrn: string, text: string) => {
   return r;
 };
 
-// Auto-trigger à l'arrivée sur une page LinkedIn. Pas besoin d'observer
-// les SPA-navigations pour le matching v1 (le 1er pageload suffit, c'est
-// stable côté URN). Phase 2.5 ajoutera un observer pour les publications.
+// ─── Phase 2.4 : détection des publications de l'utilisateur ─────────
+// Poll Voyager toutes les 5 min pour récupérer ses N derniers posts.
+// Diff avec ce qu'on a déjà vu (chrome.storage.local) → on push les
+// nouveaux URNs au backend qui déclenchera le fan-out.
+
+async function getStoredRecentUrns(): Promise<string[]> {
+  const data = await chrome.storage.local.get([RECENT_POSTS_KEY]);
+  const arr = data[RECENT_POSTS_KEY];
+  return Array.isArray(arr) ? (arr as string[]) : [];
+}
+
+async function setStoredRecentUrns(urns: string[]): Promise<void> {
+  // Cap à 50 URNs en mémoire — bien plus que ce qu'on poll (10 à la fois).
+  await chrome.storage.local.set({ [RECENT_POSTS_KEY]: urns.slice(0, 50) });
+}
+
+/** Récupère le URN LinkedIn du user depuis chrome.storage.local (mis
+ *  en cache par syncMe côté background après le matching). */
+async function getMyMemberUrn(): Promise<string | null> {
+  const data = await chrome.storage.local.get(["tipote.user"]);
+  const profile = (data["tipote.user"] as
+    { linkedin_profile?: { linkedin_urn?: string } } | null
+  )?.linkedin_profile;
+  return profile?.linkedin_urn ?? null;
+}
+
+async function pollMyRecentPosts(): Promise<{ newPosts: RecentPostHint[]; total: number }> {
+  const myUrn = await getMyMemberUrn();
+  if (!myUrn) {
+    console.log("[tipote/cs] pollMyRecentPosts: no URN cached yet, skip");
+    return { newPosts: [], total: 0 };
+  }
+  const fetched = await getMyRecentPosts(myUrn);
+  if (fetched.length === 0) {
+    return { newPosts: [], total: 0 };
+  }
+  const seen = new Set(await getStoredRecentUrns());
+  const fresh = fetched.filter((p) => !seen.has(p.urn));
+  if (fresh.length > 0) {
+    console.log("[tipote/cs] new posts detected:", fresh.length);
+    // Push au backend, le fan-out vers les pod-mates est fait côté API.
+    for (const post of fresh) {
+      try {
+        const resp = await new Promise<unknown>((resolve) => {
+          chrome.runtime.sendMessage(
+            {
+              type: "post/published",
+              payload: {
+                linkedin_post_urn: post.urn,
+                post_url: post.postUrl,
+                content_excerpt: post.excerpt,
+                language: detectLanguage(),
+              },
+            },
+            resolve,
+          );
+        });
+        console.log("[tipote/cs] post pushed", post.urn, resp);
+      } catch (err) {
+        console.warn("[tipote/cs] post push failed", post.urn, err);
+      }
+    }
+    // Marque tous les URNs (fetched, pas que fresh) comme vus pour ne
+    // pas re-push si on en reperd un de la liste seen.
+    await setStoredRecentUrns([...fetched.map((p) => p.urn), ...seen]);
+  }
+  return { newPosts: fresh, total: fetched.length };
+}
+
+// Polling timer — actif uniquement quand un onglet LinkedIn est ouvert
+// (le content script est lifecycle-tied à la tab).
+setInterval(() => {
+  void pollMyRecentPosts();
+}, RECENT_POSTS_POLL_MS);
+
+// Premier poll après 30s (laisse le temps au matching de se faire si
+// l'extension vient d'être installée).
+setTimeout(() => void pollMyRecentPosts(), 30_000);
+
+// ─── Phase 2.5 : badge sur une page /feed/update/<urn>/ ──────────────
+// Quand l'user navigue vers le permalink d'un post (typiquement via le
+// popup "tâches en attente"), on inject une pastille Tipote avec
+// les 4 tons de commentaire + auto-like. LinkedIn est une SPA donc
+// on observe les changements de URL aussi.
+
+const ACTIVITY_URN_FROM_URL = /\/feed\/update\/(urn:li:(?:activity|share|ugcPost):[A-Za-z0-9_-]+)/;
+
+function maybeMountBadge() {
+  const m = location.pathname.match(ACTIVITY_URN_FROM_URL) ??
+            location.href.match(ACTIVITY_URN_FROM_URL);
+  if (!m) return;
+  const urn = m[1];
+  console.log("[tipote/cs] /feed/update detected, urn=", urn);
+  void mountBadge(urn);
+}
+
+maybeMountBadge();
+
+// LinkedIn = SPA, on observe les changements d'URL pour re-monter le
+// badge si l'user change de post via le router interne.
+let lastHref = location.href;
+new MutationObserver(() => {
+  if (location.href !== lastHref) {
+    lastHref = location.href;
+    maybeMountBadge();
+  }
+}).observe(document, { subtree: true, childList: true });
+
+// Auto-trigger matching à l'arrivée sur LinkedIn.
 void pushConnect();
+
+// Helpers debug supplémentaires Phase 2.4 + 2.5
+debugBag.tipoteRefreshMyPosts = async () => {
+  console.log("[tipote/cs] forcing post poll…");
+  const r = await pollMyRecentPosts();
+  console.log("[tipote/cs] poll result", r);
+  return r;
+};
+
