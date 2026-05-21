@@ -10,6 +10,7 @@
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { STORAGE_KEYS, TIPOTE_API_BASE } from "../config";
+import { t } from "../i18n";
 
 const TIPOTE_LANDING_URL = "https://www.tipote.fr/";
 const TIPOTE_PRIVACY_URL = `${TIPOTE_API_BASE}/legal/extension`;
@@ -99,23 +100,26 @@ function Popup() {
   }, []);
 
   if (loading) {
-    return <p style={{ fontSize: 13, color: "#666" }}>Chargement…</p>;
+    return <p style={{ fontSize: 13, color: "#666" }}>{t("popup.loading")}</p>;
   }
 
   const profile = stored?.linkedin_profile ?? null;
   const isConnected = !!profile;
+  const tasksLabel = tasks.length === 0
+    ? t("popup.noTasksTitle")
+    : `${tasks.length} ${tasks.length > 1 ? t("popup.taskCountPlural") : t("popup.taskCountSingular")}`;
 
   return (
     <div>
       <h1 style={{ fontSize: 16, margin: "0 0 8px", fontWeight: 600 }}>Tipote Boost</h1>
       <p style={{ fontSize: 13, color: "#666", margin: "0 0 12px" }}>
-        Boost organique collaboratif pour LinkedIn
+        {t("popup.tagline")}
       </p>
 
       {isConnected ? (
         <>
           <div style={styles.card}>
-            ✓ Connecté
+            ✓ {t("popup.connected")}
             {profile?.full_name && (
               <div style={{ marginTop: 4, fontWeight: 500, color: "#064e3b" }}>
                 {profile.full_name}
@@ -123,41 +127,39 @@ function Popup() {
             )}
             {stored?.karma && (
               <div style={{ marginTop: 4, color: "#047857" }}>
-                {stored.karma.boosts_given} donnés · {stored.karma.boosts_received} reçus
+                {stored.karma.boosts_given} {t("popup.karmaGiven")} · {stored.karma.boosts_received} {t("popup.karmaReceived")}
               </div>
             )}
           </div>
 
-          {/* Tâches en attente */}
+          {/* Tâches en attente / Pending tasks */}
           <div style={{ marginTop: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
-              {tasks.length === 0
-                ? "Aucune tâche en attente"
-                : `${tasks.length} tâche${tasks.length > 1 ? "s" : ""} en attente`}
+              {tasksLabel}
             </div>
             {tasks.length === 0 ? (
               <p style={{ fontSize: 12, color: "#888", margin: 0 }}>
-                Tu es à jour. Les nouvelles publications du pod apparaîtront ici.
+                {t("popup.noTasksDesc")}
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto" }}>
-                {tasks.map((t) => (
+                {tasks.map((task) => (
                   <a
-                    key={t.id}
+                    key={task.id}
                     href={
-                      t.pod_posts.post_url ??
-                      `https://www.linkedin.com/feed/update/${t.pod_posts.linkedin_post_urn}/`
+                      task.pod_posts.post_url ??
+                      `https://www.linkedin.com/feed/update/${task.pod_posts.linkedin_post_urn}/`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
                     style={styles.taskItem}
                   >
                     <div style={{ color: "#5d6cdb", fontSize: 11, marginBottom: 4 }}>
-                      → Voir le post
+                      {t("popup.viewPost")}
                     </div>
                     <div style={{ color: "#374151" }}>
-                      {(t.pod_posts.content_excerpt ?? "Post à booster").slice(0, 120)}
-                      {t.pod_posts.content_excerpt && t.pod_posts.content_excerpt.length > 120
+                      {(task.pod_posts.content_excerpt ?? t("popup.postFallback")).slice(0, 120)}
+                      {task.pod_posts.content_excerpt && task.pod_posts.content_excerpt.length > 120
                         ? "…"
                         : ""}
                     </div>
@@ -174,14 +176,14 @@ function Popup() {
               rel="noopener noreferrer"
               style={{ ...styles.secondaryBtn, display: "block" }}
             >
-              Mon dashboard
+              {t("popup.dashboard")}
             </a>
           </div>
         </>
       ) : (
         <>
           <p style={{ fontSize: 13, lineHeight: 1.5, margin: "0 0 12px" }}>
-            Pour activer le boost, connecte-toi à Tipote puis ouvre LinkedIn.
+            {t("popup.notConnectedDesc")}
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <a
@@ -190,7 +192,7 @@ function Popup() {
               rel="noopener noreferrer"
               style={styles.primaryBtn}
             >
-              J'ai un compte Tipote →
+              {t("popup.haveAccount")}
             </a>
             <a
               href={TIPOTE_LANDING_URL}
@@ -198,7 +200,7 @@ function Popup() {
               rel="noopener noreferrer"
               style={styles.secondaryBtn}
             >
-              Découvrir Tipote
+              {t("popup.discover")}
             </a>
           </div>
         </>
@@ -220,7 +222,7 @@ function Popup() {
           rel="noopener noreferrer"
           style={{ color: "#999", textDecoration: "underline" }}
         >
-          Politique de confidentialité
+          {t("popup.privacy")}
         </a>
       </div>
     </div>

@@ -409,10 +409,46 @@
 .tipote-quiz-rich-inline h4,
 .tipote-quiz-rich-inline h5,
 .tipote-quiz-rich-inline h6 {
+  /* `display: inline` retiré (21 mai 2026) : empêchait les sauts de
+   * ligne demandés par les users dans leur titre. Display:block reste
+   * le default natif des headings et permet le wrapping multi-ligne. */
   font-weight: inherit;
   margin: 0;
   padding: 0;
-  display: inline;
+}
+
+/* ─── Tailles de typographie quiz : bétonnage anti-override ──────── */
+.tipote-quiz-title {
+  /* `pre-wrap` préserve les `\n` saisis dans le titre tout en gardant
+   * le word-wrap naturel — l'user veut pouvoir passer à la ligne. */
+  white-space: pre-wrap;
+}
+.tipote-quiz-title,
+.tipote-quiz-title * {
+  font-size: 2.25rem !important; /* text-4xl mobile */
+  line-height: 1.1 !important;
+}
+.tipote-quiz-question,
+.tipote-quiz-question * {
+  font-size: 1.875rem !important; /* text-3xl mobile */
+  line-height: 1.15 !important;
+}
+.tipote-quiz-result-title,
+.tipote-quiz-result-title * {
+  font-size: 2.25rem !important;
+  line-height: 1.1 !important;
+}
+@media (min-width: 640px) {
+  .tipote-quiz-title,
+  .tipote-quiz-title *,
+  .tipote-quiz-result-title,
+  .tipote-quiz-result-title * {
+    font-size: 3rem !important;
+  }
+  .tipote-quiz-question,
+  .tipote-quiz-question * {
+    font-size: 2.25rem !important;
+  }
 }
 
 

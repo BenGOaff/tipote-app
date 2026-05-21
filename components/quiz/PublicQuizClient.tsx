@@ -1563,7 +1563,7 @@ export default function PublicQuizClient({
                 — on rend en HTML sanitisé pour que les `<span style="color:…">`
                 appliqués par le créateur apparaissent réellement. */}
             <h1
-              className="tipote-quiz-rich tipote-quiz-rich-inline text-4xl sm:text-5xl font-bold leading-tight"
+              className="tipote-quiz-rich tipote-quiz-rich-inline tipote-quiz-title font-bold leading-tight"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
             />
 
@@ -1973,7 +1973,7 @@ export default function PublicQuizClient({
                   + `tipote-quiz-rich-inline` pour neutraliser les block
                   parasites (sinon la taille saute au milieu de la phrase). */}
               <h2
-                className="tipote-quiz-rich tipote-quiz-rich-inline text-3xl sm:text-4xl font-bold leading-tight"
+                className="tipote-quiz-rich tipote-quiz-rich-inline tipote-quiz-question font-bold leading-tight"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
               />
 
@@ -2473,7 +2473,7 @@ export default function PublicQuizClient({
               {/* Titre du résultat = rich-text (héritage RichTextEdit).
                   Rendu HTML sanitisé + `tipote-quiz-rich-inline`. */}
               <h2
-                className="tipote-quiz-rich tipote-quiz-rich-inline text-4xl sm:text-5xl font-bold leading-tight text-primary"
+                className="tipote-quiz-rich tipote-quiz-rich-inline tipote-quiz-result-title font-bold leading-tight text-primary"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(resultProfile?.title) || "") || t.resultFallback }}
               />
             </div>

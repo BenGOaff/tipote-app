@@ -19,16 +19,23 @@
 //      simple : on cherche un ancêtre qui contient au moins 100 chars
 //      de texte qui ne soit pas le composer lui-même).
 
+import { t } from "./i18n";
+
 const INJECTED_ATTR = "data-tipote-injected";
 
+// Labels traduits via i18n.ts (FR/EN auto). Émojis = universels.
 const TONES = [
-  { key: "agree", label: "Je suis d'accord", emoji: "✅" },
-  { key: "disagree", label: "Je ne suis pas d'accord", emoji: "🤔" },
-  { key: "add_value", label: "Ajouter de la valeur", emoji: "💡" },
-  { key: "ask_question", label: "Poser une question", emoji: "❓" },
+  { key: "agree", emoji: "✅" },
+  { key: "disagree", emoji: "🤔" },
+  { key: "add_value", emoji: "💡" },
+  { key: "ask_question", emoji: "❓" },
 ] as const;
 
 type ToneKey = (typeof TONES)[number]["key"];
+
+function toneLabel(key: ToneKey): string {
+  return t(`tone.${key}` as Parameters<typeof t>[0]);
+}
 
 /** aria-label des composers qu'on cible. LinkedIn génère des labels en
  *  français + anglais + autres langues — on matche en case-insensitive
@@ -115,7 +122,7 @@ function injectToneBar(editable: HTMLElement): void {
   // Bouton trigger : "Tipote ▾" — style Kawaak (compact, branded).
   const trigger = document.createElement("button");
   trigger.type = "button";
-  trigger.setAttribute("aria-label", "Générer un commentaire avec Tipote");
+  trigger.setAttribute("aria-label", t("dropdown.aria"));
   trigger.style.cssText = `
     display: inline-flex; align-items: center; gap: 6px;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -155,9 +162,10 @@ function injectToneBar(editable: HTMLElement): void {
 
   const menuItems: HTMLButtonElement[] = [];
   for (const tone of TONES) {
+    const label = toneLabel(tone.key);
     const item = document.createElement("button");
     item.type = "button";
-    item.setAttribute("aria-label", tone.label);
+    item.setAttribute("aria-label", label);
     item.style.cssText = `
       display: flex; align-items: center; gap: 8px;
       background: transparent; border: 0; border-radius: 6px;
@@ -165,7 +173,7 @@ function injectToneBar(editable: HTMLElement): void {
       color: #374151; text-align: left; width: 100%;
       transition: background 0.1s;
     `;
-    item.innerHTML = `<span style="font-size: 16px;">${tone.emoji}</span><span>${tone.label}</span>`;
+    item.innerHTML = `<span style="font-size: 16px;">${tone.emoji}</span><span>${label}</span>`;
     item.addEventListener("mouseenter", () => {
       if (!item.disabled) item.style.background = "#f3f4f6";
     });
@@ -181,7 +189,7 @@ function injectToneBar(editable: HTMLElement): void {
       trigger.disabled = true;
       trigger.style.opacity = "0.7";
       trigger.style.cursor = "wait";
-      trigger.innerHTML = `<span>${tone.emoji} Génération…</span>`;
+      trigger.innerHTML = `<span>${tone.emoji} ${t("dropdown.generating")}</span>`;
       try {
         if (!cachedSuggestions) {
           loading = true;
@@ -193,7 +201,7 @@ function injectToneBar(editable: HTMLElement): void {
           loading = false;
         }
         fillTipTapEditor(editable, cachedSuggestions[tone.key]);
-        trigger.innerHTML = `<span>${tone.emoji} Inséré ✓</span>`;
+        trigger.innerHTML = `<span>${tone.emoji} ${t("dropdown.inserted")}</span>`;
         setTimeout(() => {
           trigger.innerHTML = originalTrigger;
           trigger.disabled = false;
@@ -209,7 +217,7 @@ function injectToneBar(editable: HTMLElement): void {
           // mort. On log un message clair et on indique le fix à l'user
           // directement via le bouton — pas la peine de console.error.
           console.log("[tipote/feed] extension reloaded — hard-refresh LinkedIn (Ctrl+Shift+R) pour reconnecter");
-          trigger.innerHTML = `<span>↻ Recharge LinkedIn</span>`;
+          trigger.innerHTML = `<span>${t("dropdown.reloadLinkedIn")}</span>`;
         } else {
           console.warn("[tipote/feed] suggestion fill failed", err);
           trigger.innerHTML = originalTrigger;
