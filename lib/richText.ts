@@ -20,12 +20,48 @@ const ALLOWED_ATTR = [
   "class",
 ];
 
-// Only allow inline styles we actually surface in the editor (alignment + color).
-// DOMPurify will strip anything else via ALLOWED_ATTR + CSS sanitizer.
+// Propriétés CSS qu'on RETIRE des `style="..."` collés par l'user
+// (typiquement quand il copie/colle depuis Notion ou Google Docs). Le
+// design system Tipote contrôle ces propriétés au niveau du composant —
+// laisser passer un `font-size: 14px` inline fait sauter le titre
+// responsive du visiteur mobile (cf. report Adeline 21 mai 2026 :
+// titre minuscule en mobile alors que le composant a `text-4xl sm:text-5xl`).
+//
+// On garde par contre : color, background, text-align, font-weight,
+// text-decoration — propriétés que l'user veut légitimement personnaliser.
+const STRIPPED_CSS_PROPS = new Set([
+  "font-size", "font-family", "line-height", "letter-spacing",
+  "word-spacing", "font-stretch",
+]);
+
+// Hook DOMPurify enregistré une seule fois au load du module. S'applique
+// à toutes les sanitisations suivantes (server + client).
+let _hookInstalled = false;
+function installStyleStripperHook(): void {
+  if (_hookInstalled) return;
+  _hookInstalled = true;
+  DOMPurify.addHook("uponSanitizeAttribute", (_node: Element, data: { attrName: string; attrValue: string }) => {
+    if (data.attrName !== "style" || typeof data.attrValue !== "string") return;
+    const filtered = data.attrValue
+      .split(";")
+      .map((decl) => decl.trim())
+      .filter((decl) => {
+        if (!decl) return false;
+        const colonIdx = decl.indexOf(":");
+        if (colonIdx < 0) return false;
+        const prop = decl.slice(0, colonIdx).trim().toLowerCase();
+        return !STRIPPED_CSS_PROPS.has(prop);
+      })
+      .join("; ");
+    data.attrValue = filtered;
+  });
+}
+
 const SAFE_URL_RE = /^(https?:\/\/|mailto:|tel:|\/)/i;
 
 export function sanitizeRichText(input: string | null | undefined): string {
   if (!input) return "";
+  installStyleStripperHook();
   const clean = DOMPurify.sanitize(input, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
