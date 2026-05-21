@@ -201,8 +201,19 @@ function injectToneBar(editable: HTMLElement): void {
           trigger.style.cursor = "pointer";
         }, 1000);
       } catch (err) {
-        console.warn("[tipote/feed] suggestion fill failed", err);
-        trigger.innerHTML = originalTrigger;
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.startsWith("extension_unreachable")) {
+          // Cas hyper fréquent en dev : l'user reload l'extension
+          // (chrome://extensions ↻) sans hard-refresh LinkedIn. Le
+          // content script vit dans l'ancien contexte mais le SW est
+          // mort. On log un message clair et on indique le fix à l'user
+          // directement via le bouton — pas la peine de console.error.
+          console.log("[tipote/feed] extension reloaded — hard-refresh LinkedIn (Ctrl+Shift+R) pour reconnecter");
+          trigger.innerHTML = `<span>↻ Recharge LinkedIn</span>`;
+        } else {
+          console.warn("[tipote/feed] suggestion fill failed", err);
+          trigger.innerHTML = originalTrigger;
+        }
         trigger.disabled = false;
         trigger.style.opacity = "1";
         trigger.style.cursor = "pointer";
@@ -266,14 +277,29 @@ function detectLanguage(): string {
 
 async function fetchSuggestions(content: string, language: string): Promise<Record<ToneKey, string>> {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
-      { type: "ai/suggest", payload: { content_excerpt: content, language } },
-      (resp: unknown) => {
-        const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
-        if (r?.ok && r.suggestions) resolve(r.suggestions as Record<ToneKey, string>);
-        else reject(new Error("ai_suggest_failed"));
-      },
-    );
+    try {
+      chrome.runtime.sendMessage(
+        { type: "ai/suggest", payload: { content_excerpt: content, language } },
+        (resp: unknown) => {
+          // Lire chrome.runtime.lastError ÉVITE le warning "Unchecked
+          // runtime.lastError" et permet de fail proprement quand le
+          // service worker est mort (context invalidated suite reload
+          // extension sans hard refresh LinkedIn).
+          if (chrome.runtime.lastError) {
+            reject(new Error(`extension_unreachable:${chrome.runtime.lastError.message ?? "unknown"}`));
+            return;
+          }
+          const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
+          if (r?.ok && r.suggestions) resolve(r.suggestions as Record<ToneKey, string>);
+          else reject(new Error("ai_suggest_failed"));
+        },
+      );
+    } catch (err) {
+      // Throw synchrone si l'extension a été désactivée pendant qu'on
+      // tient le pointeur chrome.runtime.* — on traite comme une simple
+      // déconnexion temporaire (l'user doit hard-refresh LinkedIn).
+      reject(new Error(`extension_unreachable:${err instanceof Error ? err.message : "unknown"}`));
+    }
   });
 }
 
