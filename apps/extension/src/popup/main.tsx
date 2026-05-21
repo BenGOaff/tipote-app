@@ -82,78 +82,6 @@ const styles = {
   },
 };
 
-/** Petit form qui prend une URL LinkedIn (post permalink ou URN brut)
- *  et ouvre un nouvel onglet vers le permalink correspondant — le
- *  content script s'occupera de monter le badge depuis là. */
-function QuickOpenForm() {
-  const [input, setInput] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-
-  const onSubmit = (e: Event) => {
-    e.preventDefault();
-    setErr(null);
-    const value = input.trim();
-    if (!value) return;
-
-    // Extract URN : soit l'input est déjà un urn:li:..., soit une URL
-    // LinkedIn d'où on extrait le segment activity/share/ugcPost.
-    let urn: string | null = null;
-    const directUrn = value.match(/^urn:li:(?:activity|share|ugcPost):[A-Za-z0-9_-]+$/);
-    if (directUrn) {
-      urn = directUrn[0];
-    } else {
-      const urlUrn = value.match(/urn:li:(?:activity|share|ugcPost):[A-Za-z0-9_-]+/);
-      if (urlUrn) urn = urlUrn[0];
-    }
-
-    if (!urn) {
-      setErr("URL ou URN LinkedIn invalide.");
-      return;
-    }
-
-    const targetUrl = `https://www.linkedin.com/feed/update/${urn}/`;
-    chrome.tabs.create({ url: targetUrl });
-    window.close();
-  };
-
-  return (
-    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <input
-        type="text"
-        value={input}
-        onInput={(e) => setInput((e.target as HTMLInputElement).value)}
-        placeholder="Colle une URL LinkedIn de post…"
-        style={{
-          padding: "6px 8px",
-          fontSize: 12,
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          fontFamily: "inherit",
-          outline: "none",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      />
-      {err && <div style={{ fontSize: 11, color: "#b91c1c" }}>{err}</div>}
-      <button
-        type="submit"
-        style={{
-          background: "#5d6cdb",
-          color: "white",
-          border: 0,
-          padding: "6px 10px",
-          borderRadius: 999,
-          fontSize: 12,
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        Ouvrir le post →
-      </button>
-    </form>
-  );
-}
-
 function Popup() {
   const [stored, setStored] = useState<StoredUser>(null);
   const [tasks, setTasks] = useState<PendingTask[]>([]);
@@ -198,16 +126,6 @@ function Popup() {
                 {stored.karma.boosts_given} donnés · {stored.karma.boosts_received} reçus
               </div>
             )}
-          </div>
-
-          {/* Quick open : paste une URL LinkedIn pour ouvrir le badge.
-              Permet de commenter un post précis sans avoir à scroller
-              jusqu'à lui dans le fil + cliquer son timestamp. */}
-          <div style={{ marginTop: 12, padding: 10, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-              Commenter un post précis
-            </div>
-            <QuickOpenForm />
           </div>
 
           {/* Tâches en attente */}
