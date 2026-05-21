@@ -175,15 +175,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2a) Security headers for public-facing pages (/p/, /q/)
-  //     Prevents domain flagging by antivirus/social networks.
+  // 2a) Security headers for public-facing pages (/p/, /q/).
+  //     Prevents domain flagging by antivirus/social networks while
+  //     STILL allowing third-party sites to iframe-embed the page
+  //     (JB / imagelys.com embed leur quiz sur leur blog Wix/WP).
+  //     `frame-ancestors *` remplace X-Frame-Options pour autoriser
+  //     l'embedding cross-origin — sinon `SAMEORIGIN` bloque tout iframe
+  //     dont le parent n'est pas app.tipote.com lui-même.
   if (pathname.startsWith("/p/") || pathname.startsWith("/q/")) {
     const res = NextResponse.next();
     res.headers.set("X-Content-Type-Options", "nosniff");
-    res.headers.set("X-Frame-Options", "SAMEORIGIN");
     res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
     res.headers.set("Permissions-Policy", "interest-cohort=()");
     res.headers.set("X-DNS-Prefetch-Control", "off");
+    res.headers.set("Content-Security-Policy", "frame-ancestors *");
+    res.headers.delete("X-Frame-Options");
     return res;
   }
 
