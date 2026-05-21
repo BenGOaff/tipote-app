@@ -113,7 +113,7 @@ async function detectLinkedInUser(): Promise<{
       },
     });
     if (!res.ok) {
-      console.warn("[tipote/cs] voyager /me failed", res.status, await res.text().catch(() => ""));
+      console.log("[tipote/cs] voyager /me failed (probably rate-limited or non-feed page) — will retry on next page load", res.status);
       return null;
     }
     const data = await res.json();
@@ -123,7 +123,7 @@ async function detectLinkedInUser(): Promise<{
     const flat = JSON.stringify(data);
     const urnMatch = flat.match(/urn:li:(?:member|person):[A-Za-z0-9_-]+/);
     if (!urnMatch) {
-      console.warn("[tipote/cs] no URN found in voyager /me response");
+      console.log("[tipote/cs] no URN found in voyager /me response — payload format may have changed");
       return null;
     }
     const urn = urnMatch[0];
@@ -185,7 +185,12 @@ async function pushConnect(forceFresh = false) {
 
   const detected = await detectLinkedInUser();
   if (!detected) {
-    console.warn("[tipote/cs] connect aborted: no LinkedIn user detected");
+    // Non-bloquant : l'extension continue de marcher tant que le cache
+    // de matching d'1h reste valide (typical). On retentera au prochain
+    // load de page LinkedIn. Logging en .log et non .warn pour ne pas
+    // alarmer l'user en console DevTools — c'est un cas attendu sur
+    // les pages profile / search où Voyager /me peut être rate-limité.
+    console.log("[tipote/cs] connect skipped: no LinkedIn user detected on this page (will retry on /feed)");
     return;
   }
 
