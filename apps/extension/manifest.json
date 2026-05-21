@@ -3,7 +3,7 @@
   "name": "Tipote Boost",
   "short_name": "Tipote",
   "description": "Booste la portée organique de tes posts LinkedIn grâce à un pod d'engagement collaboratif. Auto-like et commentaires IA validés en 1 clic.",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "homepage_url": "https://www.tipote.fr/",
   "icons": {
     "16": "icons/icon-16.png",
@@ -49,5 +49,11 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["https://*.linkedin.com/*"]
+    }
+  ]
 }

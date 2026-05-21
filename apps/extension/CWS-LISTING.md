@@ -1,6 +1,6 @@
 # Soumission Chrome Web Store — Tipote Boost
 
-Document de référence pour la submission CWS. Copies prêtes à coller, screenshots à produire, justifications des permissions. À jour de la v0.1.0 du manifest.
+Document de référence pour la submission CWS. Copies prêtes à coller, screenshots à produire, justifications des permissions. À jour de la v1.0.0 du manifest (21 mai 2026).
 
 ---
 
@@ -108,6 +108,19 @@ CWS demande de justifier chaque permission. Voici les copies à coller dans le f
 
 > Permet à la page /boost du site Tipote d'envoyer un message à l'extension pour synchroniser l'état du compte (bouton "Synchroniser" affiché par l'utilisateur lui-même).
 
+### `web_accessible_resources: injected.js`
+
+> L'extension expose un petit script (injected.js) chargé dans le contexte de la page LinkedIn pour détecter, par interception réseau locale, les publications créées par l'utilisateur. Cette détection est strictement passive : aucune donnée n'est exfiltrée vers un tiers, seul l'identifiant URN du post créé par l'utilisateur lui-même est transmis au backend Tipote. Cette approche remplace un polling périodique d'endpoints LinkedIn privés, plus stable et moins intrusive.
+
+### Anti-abus intégré (justification "Limited Use")
+
+> Toutes les actions write côté LinkedIn (like, commentaire) sont strictement encadrées côté extension :
+> - Maximum 12 actions par heure et par compte (sliding window persisté localement)
+> - Délai gaussien aléatoire entre 3 et 25 secondes avant chaque action (mean 8s, stddev 4s) pour imiter un comportement humain
+> - Pause automatique de 30 minutes si LinkedIn renvoie HTTP 429
+> - Pause automatique de 24 heures si LinkedIn renvoie un challenge / captcha
+> - L'utilisateur valide systématiquement le commentaire avant publication (4 tons proposés, édition libre du texte)
+
 ---
 
 ## Single purpose (justification single-purpose CWS)
@@ -154,7 +167,7 @@ Conseil : prendre un compte avec quelques boosts donnés / reçus pour que les c
 
 ## Checklist finale avant submit
 
-- [ ] Version 0.1.0 → bumper à 1.0.0 pour la première release publique
+- [x] Version 0.1.0 → bumper à 1.0.0 pour la première release publique (fait 21 mai 2026)
 - [ ] Tester sur 2-3 navigateurs Chrome propres (sans cache extension)
 - [ ] Vérifier que `chrome://extensions` ne montre aucun warning
 - [ ] Confirmer que la page /legal/extension est accessible publiquement (sans login)

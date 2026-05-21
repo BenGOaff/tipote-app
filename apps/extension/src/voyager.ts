@@ -14,10 +14,110 @@
 //   - on essaye d'abord le path "moderne" et on a un fallback sur le
 //     legacy si 4xx (à activer plus tard si besoin).
 //
-// Phase 2.3 : like + comment de base. Phase 2.5 wire-up dans la queue
-// de tâches. Phase 2.6 ajoute le throttle + détection captcha.
+// ─── ANTI-BAN (v1.0) ──────────────────────────────────────────────────
+// LinkedIn bannit les comptes qui font des actions à un rythme non-humain.
+// On encadre tout call de write (like, comment) par un throttle persisté :
+//   - Max 12 actions/heure par compte (sliding window dans chrome.storage)
+//   - Délai gaussien aléatoire (mean 8s, stddev 4s, clamp [3s, 25s])
+//     entre 2 actions consécutives. Une humaine clique pas en <1s.
+//   - Détection 429 → pause 30 min. Détection challenge/captcha → pause
+//     24h (et marquage du compte comme "suspect" côté storage, qui suspend
+//     toute auto-action jusqu'à intervention manuelle de l'user).
+// Cf. CWS-LISTING.md pour la justification soumise à Google.
 
 const VOYAGER_BASE = "https://www.linkedin.com/voyager/api";
+
+const THROTTLE_STORAGE_KEY = "tipote.voyager.throttle";
+const MAX_ACTIONS_PER_HOUR = 12;
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const SUSPECT_PAUSE_MS = 24 * 60 * 60 * 1000;
+const THROTTLE_429_PAUSE_MS = 30 * 60 * 1000;
+
+type ThrottleState = {
+  /** Timestamps (ms) of write actions in the last sliding window. */
+  recentActionTs: number[];
+  /** Until when all write actions are paused (ms epoch). 0 = no pause. */
+  pausedUntil: number;
+  /** Last reason for pause, for diagnostics. */
+  lastPauseReason: string | null;
+};
+
+async function getThrottleState(): Promise<ThrottleState> {
+  try {
+    const data = await chrome.storage.local.get([THROTTLE_STORAGE_KEY]);
+    const s = data[THROTTLE_STORAGE_KEY] as Partial<ThrottleState> | undefined;
+    return {
+      recentActionTs: Array.isArray(s?.recentActionTs) ? s!.recentActionTs : [],
+      pausedUntil: typeof s?.pausedUntil === "number" ? s!.pausedUntil : 0,
+      lastPauseReason: typeof s?.lastPauseReason === "string" ? s!.lastPauseReason : null,
+    };
+  } catch {
+    // chrome.storage indisponible (context invalidated) — comportement
+    // fail-open : on refuse l'action plutôt que de spammer en aveugle.
+    return { recentActionTs: [], pausedUntil: Date.now() + ONE_HOUR_MS, lastPauseReason: "storage_unavailable" };
+  }
+}
+
+async function saveThrottleState(state: ThrottleState): Promise<void> {
+  try {
+    await chrome.storage.local.set({ [THROTTLE_STORAGE_KEY]: state });
+  } catch {
+    // ignore — voir commentaire getThrottleState
+  }
+}
+
+/** Vérifie qu'on peut faire un nouveau write action sans dépasser les
+ *  caps. Retourne null si OK, sinon une raison de refus. */
+async function checkThrottleAllowed(): Promise<{ allowed: boolean; reason: string | null }> {
+  const state = await getThrottleState();
+  const now = Date.now();
+
+  if (state.pausedUntil > now) {
+    const minutesLeft = Math.ceil((state.pausedUntil - now) / 60_000);
+    return { allowed: false, reason: `paused_${state.lastPauseReason}_${minutesLeft}min` };
+  }
+
+  // Sliding window 1h
+  const fresh = state.recentActionTs.filter((ts) => now - ts < ONE_HOUR_MS);
+  if (fresh.length >= MAX_ACTIONS_PER_HOUR) {
+    return { allowed: false, reason: `hourly_cap_${fresh.length}/${MAX_ACTIONS_PER_HOUR}` };
+  }
+
+  return { allowed: true, reason: null };
+}
+
+/** À appeler APRÈS un write action réussi pour comptabiliser. */
+async function recordAction(): Promise<void> {
+  const state = await getThrottleState();
+  const now = Date.now();
+  state.recentActionTs = [...state.recentActionTs.filter((ts) => now - ts < ONE_HOUR_MS), now];
+  await saveThrottleState(state);
+}
+
+/** Marque le compte comme suspect (captcha détecté ou pattern anormal). */
+async function pauseFor(durationMs: number, reason: string): Promise<void> {
+  const state = await getThrottleState();
+  state.pausedUntil = Date.now() + durationMs;
+  state.lastPauseReason = reason;
+  await saveThrottleState(state);
+  console.warn(`[tipote/voyager] PAUSED for ${durationMs / 60_000} min (reason: ${reason})`);
+}
+
+/** Délai gaussien aléatoire avant action (anti-bot human-like). */
+function humanDelayMs(): number {
+  // Box-Muller pour gaussienne
+  const u = Math.random() || Number.MIN_VALUE;
+  const v = Math.random();
+  const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  const mean = 8000;
+  const stddev = 4000;
+  const ms = mean + z * stddev;
+  return Math.max(3000, Math.min(25000, Math.round(ms)));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export type VoyagerResult = {
   ok: boolean;
@@ -65,7 +165,8 @@ function makeTrackingId(): string {
 
 /** Like un post via Voyager. `activityUrn` = identifiant du post,
  *  format `urn:li:activity:xxxxxxxxxxxxxxx` (lu depuis l'attribut DOM
- *  `data-urn` du post LinkedIn). */
+ *  `data-urn` du post LinkedIn). Throttle-encadré : refuse si cap
+ *  horaire atteint ou si compte en pause anti-ban. */
 export async function voyagerLike(activityUrn: string): Promise<VoyagerResult> {
   const csrf = getCsrfToken();
   if (!csrf) {
@@ -75,11 +176,13 @@ export async function voyagerLike(activityUrn: string): Promise<VoyagerResult> {
     return { ok: false, status: 0, url: "", error: "invalid_activity_urn" };
   }
 
-  // L'endpoint moderne est en GraphQL via /graphql?action=execute,
-  // mais on tente d'abord la version "RestLi" classique qui marche
-  // toujours sur la majorité des comptes (LinkedIn déploie GraphQL
-  // progressivement). Si elle renvoie 404 / 405, on bascule (TODO
-  // Phase 2.6 fallback automatique).
+  const gate = await checkThrottleAllowed();
+  if (!gate.allowed) {
+    console.log("[tipote/voyager] like blocked by throttle:", gate.reason);
+    return { ok: false, status: 0, url: "", error: `throttled:${gate.reason}` };
+  }
+  await sleep(humanDelayMs());
+
   const url = `${VOYAGER_BASE}/voyagerSocialDashReactions?action=createReaction`;
   const body = {
     reactionType: "LIKE",
@@ -99,7 +202,10 @@ export async function voyagerLike(activityUrn: string): Promise<VoyagerResult> {
     // LinkedIn renvoie 200/201/204 pour une action OK selon les routes.
     // 409 = déjà liké, on considère ça comme un succès idempotent.
     const ok = res.ok || res.status === 409;
-    return { ok, status: res.status, url, bodyText: text };
+    const result: VoyagerResult = { ok, status: res.status, url, bodyText: text };
+    await handleAntiBanSignals(result);
+    if (ok) await recordAction();
+    return result;
   } catch (err) {
     return {
       ok: false,
@@ -112,7 +218,7 @@ export async function voyagerLike(activityUrn: string): Promise<VoyagerResult> {
 
 // ─── COMMENT ──────────────────────────────────────────────────────────
 
-/** Poste un commentaire sur un post via Voyager. */
+/** Poste un commentaire sur un post via Voyager. Throttle-encadré. */
 export async function voyagerComment(
   activityUrn: string,
   text: string,
@@ -132,9 +238,13 @@ export async function voyagerComment(
     return { ok: false, status: 0, url: "", error: "text_too_long" };
   }
 
-  // Endpoint moderne : /voyagerSocialDashNormComments (LinkedIn a renommé
-  // l'ancien voyagerSocialDashComments en NormComments en 2024).
-  // Si 404, on tente l'ancien chemin (TODO fallback Phase 2.6).
+  const gate = await checkThrottleAllowed();
+  if (!gate.allowed) {
+    console.log("[tipote/voyager] comment blocked by throttle:", gate.reason);
+    return { ok: false, status: 0, url: "", error: `throttled:${gate.reason}` };
+  }
+  await sleep(humanDelayMs());
+
   const url = `${VOYAGER_BASE}/voyagerSocialDashNormComments`;
   const body = {
     commentary: {
@@ -155,12 +265,15 @@ export async function voyagerComment(
     });
     const respText = await res.text().catch(() => "");
     console.log("[tipote/voyager] comment ←", res.status, respText.slice(0, 300));
-    return {
+    const result: VoyagerResult = {
       ok: res.ok,
       status: res.status,
       url,
       bodyText: respText,
     };
+    await handleAntiBanSignals(result);
+    if (res.ok) await recordAction();
+    return result;
   } catch (err) {
     return {
       ok: false,
@@ -168,6 +281,18 @@ export async function voyagerComment(
       url,
       error: err instanceof Error ? err.message : "network",
     };
+  }
+}
+
+/** Centralise la réaction aux signaux anti-bot LinkedIn. Pause le compte
+ *  pour la durée appropriée selon la sévérité. */
+async function handleAntiBanSignals(result: VoyagerResult): Promise<void> {
+  if (isCaptchaSignal(result)) {
+    await pauseFor(SUSPECT_PAUSE_MS, `captcha_${result.status}`);
+    return;
+  }
+  if (isThrottleSignal(result)) {
+    await pauseFor(THROTTLE_429_PAUSE_MS, `rate_limit_${result.status}`);
   }
 }
 

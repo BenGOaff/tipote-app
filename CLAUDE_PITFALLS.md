@@ -264,3 +264,27 @@ curl -sI https://app.tipote.com/q/<quiz-actif> | grep -iE 'frame|content-securit
 ```
 Sortie attendue : `content-security-policy: frame-ancestors *`. Absent
 ou `x-frame-options: SAMEORIGIN` = régression.
+
+## Y) EXTENSION CHROME — détection des publications (v1.0, 21 mai 2026)
+
+**Ne JAMAIS** revenir à un polling périodique de `voyagerFeedDashProfileUpdates` ou autre endpoint Voyager privé pour détecter les publications de l'user. Ces endpoints :
+- Répondent 400/403 sans warning quand LinkedIn change leur signature (cas reel 19-20 mai 2026)
+- Sont rate-limités (risque de griller le compte)
+- Doivent être ré-engineered ~tous les 3-6 mois
+
+**Solution** : `apps/extension/src/injected.ts` — script injecté dans le MAIN world de LinkedIn qui hook `window.fetch` et `XMLHttpRequest.prototype.send`. Quand LinkedIn POST vers son propre endpoint de création de post, on capture la réponse et on extrait l'URN. Émis via `window.postMessage` au content script.
+
+**Si LinkedIn change ses URLs internes de création** (ce qui arrive régulièrement) : étendre la liste `POST_CREATE_PATTERNS` dans `injected.ts`. Diagnostic en regardant les logs `[tipote/injected]` dans la DevTools Console de LinkedIn quand l'user publie un post.
+
+## Z) EXTENSION CHROME — throttle anti-ban OBLIGATOIRE (v1.0, 21 mai 2026)
+
+Toute action write LinkedIn (like, comment) passe par `voyagerLike()` / `voyagerComment()` qui :
+- Vérifie le throttle avant action (refuse si > 12/h ou compte en pause)
+- Wait gaussien aléatoire 3-25s avant fetch (anti-bot human-like)
+- Détecte 429 (rate limit) → pause 30 min
+- Détecte challenge/captcha (401/403 avec body suspect) → pause 24h
+- Track les actions réussies dans `chrome.storage.local["tipote.voyager.throttle"]`
+
+**Ne JAMAIS** ajouter un autre chemin qui appelle directement `fetch` vers `/voyager/api/voyagerSocialDash*` ou autre endpoint write sans passer par ces wrappers. Le compte serait flag/ban en <24h.
+
+Pour debug : `tipoteThrottle()` dans la console DevTools LinkedIn affiche l'état actuel.
