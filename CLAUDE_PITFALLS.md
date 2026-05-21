@@ -235,3 +235,32 @@ non, c'est un problème de pipeline déploiement, pas de code.
 **Toujours finir une migration par `NOTIFY pgrst, 'reload schema';`** quand on a touché à des colonnes/policies/RPC.
 
 **Typecheck systématique** avant commit : `npx tsc --noEmit`. Exit 0 ou je fix.
+
+## X) IFRAME EMBED — ne JAMAIS poser `X-Frame-Options` sur `/q/`, `/p/` (21 mai 2026)
+
+**Cas réel** : JB (compte-sio@imagelys.com) embed ses quiz Tipote via
+iframe sur son blog Systeme.io (imagelys.com). Le 9 mai 2026, commit
+`056ddfb1` a posé `X-Frame-Options: SAMEORIGIN` sur les routes
+publiques /p/ et /q/ dans middleware.ts. Conséquence : tous les iframes
+JB (et n'importe quel autre user qui embed) ont cassé silencieusement —
+"app.tipote.com n'autorise pas la connexion" dans le navigateur.
+
+Fix dans commit `8b41d898` (21 mai) : remplacer par
+`Content-Security-Policy: frame-ancestors *` qui permet l'embedding
+tout en gardant les autres headers de hardening
+(`X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`).
+
+**Règle absolue** : sur les routes publiques d'un quiz/popquiz, **ne
+PAS poser `X-Frame-Options`**. Si je veux durcir, utiliser :
+```ts
+res.headers.set("Content-Security-Policy", "frame-ancestors *");
+res.headers.delete("X-Frame-Options");
+```
+
+**Test de non-régression** à lancer après tout commit qui touche
+`middleware.ts` ou `next.config.ts` :
+```bash
+curl -sI https://app.tipote.com/q/<quiz-actif> | grep -iE 'frame|content-security'
+```
+Sortie attendue : `content-security-policy: frame-ancestors *`. Absent
+ou `x-frame-options: SAMEORIGIN` = régression.

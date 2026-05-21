@@ -176,12 +176,16 @@ export async function middleware(req: NextRequest) {
   }
 
   // 2a) Security headers for public-facing pages (/p/, /q/).
-  //     Prevents domain flagging by antivirus/social networks while
-  //     STILL allowing third-party sites to iframe-embed the page
-  //     (JB / imagelys.com embed leur quiz sur leur blog Wix/WP).
-  //     `frame-ancestors *` remplace X-Frame-Options pour autoriser
-  //     l'embedding cross-origin — sinon `SAMEORIGIN` bloque tout iframe
-  //     dont le parent n'est pas app.tipote.com lui-même.
+  //
+  //     ⚠️ NE JAMAIS poser `X-Frame-Options` ici. Ces routes sont
+  //     embeddable par les users sur leur blog/landing (Systeme.io,
+  //     WordPress, Wix). Régression du 9 mai 2026 (commit 056ddfb1)
+  //     qui a cassé l'embed de JB chez imagelys.com — fix dans
+  //     8b41d898 (21 mai 2026). Voir CLAUDE_PITFALLS.md section X.
+  //
+  //     `frame-ancestors *` autorise l'embedding cross-origin tout
+  //     en gardant les autres hardening headers (anti-MIME-sniff,
+  //     anti-FLoC, etc.).
   if (pathname.startsWith("/p/") || pathname.startsWith("/q/")) {
     const res = NextResponse.next();
     res.headers.set("X-Content-Type-Options", "nosniff");
