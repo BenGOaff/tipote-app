@@ -134,7 +134,21 @@ async function pollTasks(): Promise<PendingTask[]> {
 
 // ─── POST helpers vers le backend Tipote ──────────────────────────────
 
-async function tipotePost<T>(path: string, body: unknown): Promise<{ ok: boolean; status: number; data: T | null }> {
+/** POST vers le backend Tipote avec retry exponentiel sur erreurs
+ *  réseau / 5xx. Pas de retry sur 4xx (la requête est mauvaise, retry
+ *  ne servirait à rien). */
+async function tipotePost<T>(
+  path: string,
+  body: unknown,
+  attempt = 0,
+): Promise<{ ok: boolean; status: number; data: T | null }> {
+  const MAX_ATTEMPTS = 3;
+  const BACKOFF_MS = [0, 1000, 3000];
+
+  if (attempt > 0) {
+    await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt] ?? 5000));
+  }
+
   try {
     const res = await fetch(`${TIPOTE_API_BASE}${path}`, {
       method: "POST",
@@ -143,9 +157,18 @@ async function tipotePost<T>(path: string, body: unknown): Promise<{ ok: boolean
       body: JSON.stringify(body),
     });
     const data = (await res.json().catch(() => null)) as T | null;
+    // Retry on 5xx (transient server error). Pas sur 4xx (req invalide).
+    if (!res.ok && res.status >= 500 && attempt + 1 < MAX_ATTEMPTS) {
+      console.warn(`[tipote/bg] tipotePost ${path} → ${res.status}, retry ${attempt + 1}/${MAX_ATTEMPTS}`);
+      return tipotePost<T>(path, body, attempt + 1);
+    }
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
+    // Erreur réseau (offline, DNS, etc.) — retry
     console.warn("[tipote/bg] tipotePost error", path, err);
+    if (attempt + 1 < MAX_ATTEMPTS) {
+      return tipotePost<T>(path, body, attempt + 1);
+    }
     return { ok: false, status: 0, data: null };
   }
 }

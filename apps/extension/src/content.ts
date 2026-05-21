@@ -15,7 +15,6 @@
 // les cookies linkedin.com ne sont pas HttpOnly pour ce cookie-là).
 
 import { getCsrfToken, voyagerLike, voyagerComment } from "./voyager";
-import { getMyRecentPosts, type RecentPostHint } from "./voyagerFeed";
 import { mountBadge } from "./badge";
 import { startFeedInjector } from "./feedInjector";
 
@@ -25,8 +24,62 @@ const VOYAGER_BASE = "https://www.linkedin.com/voyager/api";
 const LINKEDIN_LANG_HINT_KEY = "li_lang";
 const CONNECT_CACHE_KEY = "tipote.cs.lastConnectAt";
 const CONNECT_CACHE_TTL_MS = 60 * 60 * 1000; // 1h
-const RECENT_POSTS_KEY = "tipote.cs.recentPostUrns"; // string[]
-const RECENT_POSTS_POLL_MS = 5 * 60 * 1000; // 5 min
+const PUSHED_URNS_KEY = "tipote.cs.pushedUrns"; // string[] — URNs déjà annoncés au backend
+const PUSHED_URNS_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+/** Safe wrapper autour de chrome.runtime.sendMessage. Le content script
+ *  peut survivre à un reload de l'extension (avec un contexte invalidé),
+ *  ce qui throw "Extension context invalidated" sur tout appel chrome.*.
+ *  Au lieu de spammer la console, on log un avertissement unique et on
+ *  retourne null. */
+async function safeSendMessage<T = unknown>(msg: unknown): Promise<T | null> {
+  try {
+    return await new Promise<T | null>((resolve) => {
+      try {
+        chrome.runtime.sendMessage(msg, (response) => {
+          // chrome.runtime.lastError doit être lu pour éviter le warning
+          if (chrome.runtime.lastError) {
+            warnContextInvalidatedOnce(chrome.runtime.lastError.message);
+            resolve(null);
+            return;
+          }
+          resolve((response ?? null) as T | null);
+        });
+      } catch (err) {
+        warnContextInvalidatedOnce(err instanceof Error ? err.message : String(err));
+        resolve(null);
+      }
+    });
+  } catch (err) {
+    warnContextInvalidatedOnce(err instanceof Error ? err.message : String(err));
+    return null;
+  }
+}
+
+let _contextWarnedAt = 0;
+function warnContextInvalidatedOnce(msg?: string): void {
+  const now = Date.now();
+  if (now - _contextWarnedAt < 60_000) return; // throttle 1/min
+  _contextWarnedAt = now;
+  console.warn("[tipote/cs] extension context unreachable —", msg ?? "(no message)", "— please hard-refresh LinkedIn (Ctrl+Shift+R) after reloading the extension");
+}
+
+async function safeStorageGet(keys: string[]): Promise<Record<string, unknown>> {
+  try {
+    return (await chrome.storage.local.get(keys)) ?? {};
+  } catch (err) {
+    warnContextInvalidatedOnce(err instanceof Error ? err.message : String(err));
+    return {};
+  }
+}
+
+async function safeStorageSet(items: Record<string, unknown>): Promise<void> {
+  try {
+    await chrome.storage.local.set(items);
+  } catch (err) {
+    warnContextInvalidatedOnce(err instanceof Error ? err.message : String(err));
+  }
+}
 
 /** Détecte l'URN du user LinkedIn courant. 2 stratégies, dans cet ordre :
  *  1. `window.__lipi` exposé par certaines pages LinkedIn (variable de
@@ -146,12 +199,9 @@ async function pushConnect(forceFresh = false) {
   };
 
   console.log("[tipote/cs] sending connect to bg", payload);
-  const resp = await new Promise<unknown>((resolve) => {
-    chrome.runtime.sendMessage({ type: "linkedin/connect", payload }, resolve);
-  });
+  const resp = await safeSendMessage<{ ok?: boolean }>({ type: "linkedin/connect", payload });
   console.log("[tipote/cs] connect response", resp);
-  const ok = (resp as { ok?: boolean })?.ok;
-  if (ok) localStorage.setItem(CONNECT_CACHE_KEY, String(Date.now()));
+  if (resp?.ok) localStorage.setItem(CONNECT_CACHE_KEY, String(Date.now()));
 }
 
 // Helpers debug exposés sur window pour piloter depuis la console
@@ -162,7 +212,7 @@ const debugBag = window as unknown as {
   tipoteForceMatch?: () => void;
   tipoteLike?: (activityUrn: string) => Promise<unknown>;
   tipoteComment?: (activityUrn: string, text: string) => Promise<unknown>;
-  tipoteRefreshMyPosts?: () => Promise<unknown>;
+  tipoteThrottle?: () => Promise<unknown>;
 };
 
 debugBag.tipoteForceMatch = () => {
@@ -187,84 +237,102 @@ debugBag.tipoteComment = async (activityUrn: string, text: string) => {
   return r;
 };
 
-// ─── Phase 2.4 : détection des publications de l'utilisateur ─────────
-// Poll Voyager toutes les 5 min pour récupérer ses N derniers posts.
-// Diff avec ce qu'on a déjà vu (chrome.storage.local) → on push les
-// nouveaux URNs au backend qui déclenchera le fan-out.
+// ─── Détection des publications (v1.0 — interception réseau) ──────────
+// Stratégie remplaçant le polling Voyager (qui répondait 400/403) :
+//
+// On inject un petit script dans le MAIN world de LinkedIn qui hook
+// `window.fetch` et `XMLHttpRequest`. Quand la page LinkedIn elle-même
+// POST vers son endpoint de création de post, on capture l'URN dans la
+// réponse et on émet un `window.postMessage` vers le content script.
+//
+// Avantages vs polling :
+//   - Détection instantanée (au lieu de toutes les 5 min)
+//   - Aucune dépendance à un endpoint Voyager privé qui peut changer
+//   - Pas de quota / risque de throttle car on ne fait aucun call
+//   - Zéro faux positif (on capture exactement ce que LinkedIn crée)
 
-async function getStoredRecentUrns(): Promise<string[]> {
-  const data = await chrome.storage.local.get([RECENT_POSTS_KEY]);
-  const arr = data[RECENT_POSTS_KEY];
-  return Array.isArray(arr) ? (arr as string[]) : [];
-}
-
-async function setStoredRecentUrns(urns: string[]): Promise<void> {
-  // Cap à 50 URNs en mémoire — bien plus que ce qu'on poll (10 à la fois).
-  await chrome.storage.local.set({ [RECENT_POSTS_KEY]: urns.slice(0, 50) });
-}
-
-/** Récupère le URN LinkedIn du user depuis chrome.storage.local (mis
- *  en cache par syncMe côté background après le matching). */
-async function getMyMemberUrn(): Promise<string | null> {
-  const data = await chrome.storage.local.get(["tipote.user"]);
-  const profile = (data["tipote.user"] as
-    { linkedin_profile?: { linkedin_urn?: string } } | null
-  )?.linkedin_profile;
-  return profile?.linkedin_urn ?? null;
-}
-
-async function pollMyRecentPosts(): Promise<{ newPosts: RecentPostHint[]; total: number }> {
-  const myUrn = await getMyMemberUrn();
-  if (!myUrn) {
-    console.log("[tipote/cs] pollMyRecentPosts: no URN cached yet, skip");
-    return { newPosts: [], total: 0 };
+function injectPageWorldScript(): void {
+  try {
+    const s = document.createElement("script");
+    s.src = chrome.runtime.getURL("injected.js");
+    s.async = false;
+    (document.head || document.documentElement).appendChild(s);
+    s.onload = () => s.remove();
+  } catch (err) {
+    warnContextInvalidatedOnce(err instanceof Error ? err.message : String(err));
   }
-  const fetched = await getMyRecentPosts(myUrn);
-  if (fetched.length === 0) {
-    return { newPosts: [], total: 0 };
-  }
-  const seen = new Set(await getStoredRecentUrns());
-  const fresh = fetched.filter((p) => !seen.has(p.urn));
-  if (fresh.length > 0) {
-    console.log("[tipote/cs] new posts detected:", fresh.length);
-    // Push au backend, le fan-out vers les pod-mates est fait côté API.
-    for (const post of fresh) {
-      try {
-        const resp = await new Promise<unknown>((resolve) => {
-          chrome.runtime.sendMessage(
-            {
-              type: "post/published",
-              payload: {
-                linkedin_post_urn: post.urn,
-                post_url: post.postUrl,
-                content_excerpt: post.excerpt,
-                language: detectLanguage(),
-              },
-            },
-            resolve,
-          );
-        });
-        console.log("[tipote/cs] post pushed", post.urn, resp);
-      } catch (err) {
-        console.warn("[tipote/cs] post push failed", post.urn, err);
-      }
-    }
-    // Marque tous les URNs (fetched, pas que fresh) comme vus pour ne
-    // pas re-push si on en reperd un de la liste seen.
-    await setStoredRecentUrns([...fetched.map((p) => p.urn), ...seen]);
-  }
-  return { newPosts: fresh, total: fetched.length };
 }
 
-// Polling timer — actif uniquement quand un onglet LinkedIn est ouvert
-// (le content script est lifecycle-tied à la tab).
-setInterval(() => {
-  void pollMyRecentPosts();
-}, RECENT_POSTS_POLL_MS);
+async function getPushedUrns(): Promise<Record<string, number>> {
+  const data = await safeStorageGet([PUSHED_URNS_KEY]);
+  const obj = data[PUSHED_URNS_KEY] as Record<string, number> | undefined;
+  if (!obj || typeof obj !== "object") return {};
+  // GC entries > TTL
+  const now = Date.now();
+  const fresh: Record<string, number> = {};
+  for (const [urn, ts] of Object.entries(obj)) {
+    if (typeof ts === "number" && now - ts < PUSHED_URNS_TTL_MS) fresh[urn] = ts;
+  }
+  return fresh;
+}
 
-// Premier poll après 30s (laisse le temps au matching de se faire si
-// l'extension vient d'être installée).
-setTimeout(() => void pollMyRecentPosts(), 30_000);
+async function markUrnPushed(urn: string): Promise<void> {
+  const pushed = await getPushedUrns();
+  pushed[urn] = Date.now();
+  await safeStorageSet({ [PUSHED_URNS_KEY]: pushed });
+}
+
+async function handleCapturedPost(urn: string, via: string): Promise<void> {
+  // Normaliser : activity > ugcPost > share. LinkedIn renvoie souvent
+  // ugcPost à la création et activity ensuite. On accepte les 2 mais on
+  // dédoublonne par URN brut tel que reçu.
+  const pushed = await getPushedUrns();
+  if (pushed[urn]) {
+    console.log("[tipote/cs] post already pushed, skip", urn);
+    return;
+  }
+
+  console.log("[tipote/cs] capturing new published post", urn, "via", via);
+  const postUrl = `https://www.linkedin.com/feed/update/${urn}/`;
+  const language = detectLanguage();
+
+  // On laisse 2s à LinkedIn pour finaliser la création (parfois le post
+  // n'est pas immédiatement listable côté backend). Pas critique : si on
+  // est trop tôt et que le fan-out échoue, l'extension reprolongera au
+  // prochain poll de tasks/pending.
+  await new Promise((r) => setTimeout(r, 2000));
+
+  const resp = await safeSendMessage<{ ok?: boolean }>({
+    type: "post/published",
+    payload: {
+      linkedin_post_urn: urn,
+      post_url: postUrl,
+      content_excerpt: null, // on n'a pas le contenu via fetch interception
+      language,
+    },
+  });
+  if (resp?.ok) {
+    await markUrnPushed(urn);
+    console.log("[tipote/cs] post pushed to backend OK", urn);
+  } else {
+    console.warn("[tipote/cs] post push to backend failed", urn, resp);
+  }
+}
+
+window.addEventListener("message", (event: MessageEvent) => {
+  if (event.source !== window) return;
+  const data = event.data as { source?: string; type?: string; payload?: { urn?: string; via?: string } } | null;
+  if (!data || data.source !== "tipote-page") return;
+  if (data.type !== "linkedin/post-created") return;
+  const urn = data.payload?.urn;
+  const via = data.payload?.via ?? "unknown";
+  if (typeof urn !== "string" || !/^urn:li:(activity|ugcPost|share):\d+$/.test(urn)) return;
+  void handleCapturedPost(urn, via);
+});
+
+// Inject le hook réseau dès que possible. document_idle = on est sûr
+// que document.head existe, mais on cap quand même.
+injectPageWorldScript();
 
 // ─── Phase 2.5 : badge sur une page /feed/update/<urn>/ ──────────────
 // Quand l'user navigue vers le permalink d'un post (typiquement via le
@@ -312,11 +380,10 @@ startFeedInjector();
 // Auto-trigger matching à l'arrivée sur LinkedIn.
 void pushConnect();
 
-// Helpers debug supplémentaires Phase 2.4 + 2.5
-debugBag.tipoteRefreshMyPosts = async () => {
-  console.log("[tipote/cs] forcing post poll…");
-  const r = await pollMyRecentPosts();
-  console.log("[tipote/cs] poll result", r);
-  return r;
+// Inspecte l'état du throttle anti-ban depuis la console DevTools.
+debugBag.tipoteThrottle = async () => {
+  const data = await safeStorageGet(["tipote.voyager.throttle"]);
+  console.log("[tipote/cs] throttle state", data["tipote.voyager.throttle"]);
+  return data["tipote.voyager.throttle"];
 };
 

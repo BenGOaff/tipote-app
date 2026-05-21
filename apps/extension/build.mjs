@@ -56,6 +56,16 @@ const ENTRIES = [
     format: "iife",
   },
   {
+    name: "injected",
+    entryPoints: [resolve(ROOT, "src/injected.ts")],
+    outfile: resolve(DIST, "injected.js"),
+    // S'exécute dans le MAIN world de LinkedIn (pas l'isolated world du
+    // content script). Doit être IIFE, ne peut PAS utiliser chrome.*
+    // (le world page n'y a pas accès). Communique avec le content via
+    // window.postMessage.
+    format: "iife",
+  },
+  {
     name: "popup",
     entryPoints: [resolve(ROOT, "src/popup/main.tsx")],
     outfile: resolve(DIST, "popup.js"),
