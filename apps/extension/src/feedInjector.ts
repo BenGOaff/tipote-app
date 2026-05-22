@@ -50,6 +50,19 @@ export function startFeedInjector(): void {
       }
     }
   }).observe(document.body, { childList: true, subtree: true });
+  // Reddit (et autres SPA modernes) lazy-mount le composer au focus :
+  // l'élément n'existe pas dans le DOM tant que l'user n'a pas cliqué
+  // dans la zone "Ajouter un commentaire". On rescan le ciblage du focus
+  // pour rattraper ces composers tardifs.
+  document.addEventListener("focusin", (e) => {
+    const target = e.target;
+    if (target instanceof HTMLElement) {
+      // Scan le sous-arbre du parent — le composer peut être un sibling
+      // ou un wrapper du focused element.
+      const root = target.closest("form, [role='dialog'], [role='article'], faceplate-form, shreddit-comment-composer") as HTMLElement | null;
+      scanForComposers(root ?? target.parentElement ?? document.body, adapter);
+    }
+  });
 }
 
 function scanForComposers(root: HTMLElement, adapter: PlatformAdapter): void {

@@ -17,6 +17,7 @@
 import { getCsrfToken, voyagerLike, voyagerComment } from "./voyager";
 import { mountBadge } from "./badge";
 import { startFeedInjector } from "./feedInjector";
+import { detectPlatform } from "./platforms";
 
 console.log("[tipote/cs] loaded on", location.href);
 
@@ -401,10 +402,9 @@ debugBag.tipoteThrottle = async () => {
 // Diagnostic : liste tous les contenteditable/textarea de la page pour
 // debug quand l'extension ne trouve pas de composer sur un nouveau site.
 // Usage : `tipoteDiag()` dans la console DevTools.
-debugBag.tipoteDiag = async () => {
+debugBag.tipoteDiag = () => {
   console.group("[tipote/diag] DOM scan");
   console.log("hostname:", location.hostname);
-  const { detectPlatform } = await import("./platforms");
   const adapter = detectPlatform();
   console.log("platform adapter:", adapter?.id ?? "NONE (unsupported host)");
 
