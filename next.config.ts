@@ -19,6 +19,25 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // affiliate.tipote.com → toutes les routes deviennent /affiliate/*
+        // Pattern recommandé par Next.js pour le subdomain-to-path mapping
+        // (cf. docs sur le multi-tenant). Plus fiable qu'un middleware
+        // NextResponse.rewrite qui en Next 16 essaie un fetch externe et
+        // crashe en EPROTO sur localhost:3000.
+        {
+          source: "/:path*",
+          has: [{ type: "host", value: "affiliate.tipote.com" }],
+          destination: "/affiliate/:path*",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
 };
 
 export default withNextIntl(nextConfig);
+

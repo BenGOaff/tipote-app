@@ -132,25 +132,11 @@ function startsWithAny(pathname: string, prefixes: string[]) {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ─────────────────────────────────────────────────────────────────
-  // affiliate.tipote.com → rewrite vers /affiliate/* (dashboard affilié)
-  // Le sous-domaine est servi par la même app Tipote mais sur des
-  // routes isolées dans app/affiliate/. Pour pas casser l'auth dashboard
-  // principale ni exposer le menu principal, on rewrite tout depuis le
-  // root du subdomain. Si l'user tape "affiliate.tipote.com/revenus",
-  // on lui sert "/affiliate/revenus".
-  // ─────────────────────────────────────────────────────────────────
-  const hostHeader = normaliseHost(req.headers.get("host"));
-  if (hostHeader === "affiliate.tipote.com") {
-    // Évite la double-réécriture : si le pathname commence déjà par
-    // /affiliate (Next.js rendering interne), on laisse passer.
-    if (!pathname.startsWith("/affiliate") && !pathname.startsWith("/_next/") && !pathname.startsWith("/api/")) {
-      const url = req.nextUrl.clone();
-      url.pathname = `/affiliate${pathname === "/" ? "" : pathname}`;
-      return NextResponse.rewrite(url);
-    }
-    return NextResponse.next();
-  }
+  // NB: le routing affiliate.tipote.com → /affiliate/* est fait dans
+  // next.config.ts via `async rewrites()` (pattern Next.js officiel
+  // pour le subdomain-to-path mapping). On évite NextResponse.rewrite
+  // ici qui en Next 16 essaie un fetch externe et crashe en EPROTO
+  // (https://localhost:3000 wrong version number).
 
   // ─────────────────────────────────────────────────────────────────
   // Custom-domain gate. Runs FIRST so a creator-owned hostname can
