@@ -40,13 +40,14 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
     { url: `${base}/`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 1 },
   ];
 
-  // Quizzes
+  // Quizzes — exclus si seo_noindex=true
   try {
     let q = supabaseAdmin
       .from("quizzes")
-      .select("id, slug, updated_at, project_id")
+      .select("id, slug, updated_at, project_id, seo_noindex")
       .eq("user_id", row.user_id)
       .eq("status", "active")
+      .eq("seo_noindex", false)
       .order("updated_at", { ascending: false })
       .limit(8000);
     if (row.project_id) q = q.eq("project_id", row.project_id);
@@ -63,13 +64,14 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
     console.warn("[sitemap/custom-domain] quizzes fetch error", err);
   }
 
-  // Popquizzes
+  // Popquizzes — exclus si seo_noindex=true
   try {
     let q = supabaseAdmin
       .from("popquizzes")
-      .select("id, slug, updated_at, project_id")
+      .select("id, slug, updated_at, project_id, seo_noindex")
       .eq("user_id", row.user_id)
       .eq("is_published", true)
+      .eq("seo_noindex", false)
       .order("updated_at", { ascending: false })
       .limit(2000);
     if (row.project_id) q = q.eq("project_id", row.project_id);
@@ -84,6 +86,34 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
     }
   } catch (err) {
     console.warn("[sitemap/custom-domain] popquizzes fetch error", err);
+  }
+
+  // Hosted pages (capture / sales / showcase / linkinbio) —
+  // exclus si seo_noindex=true
+  try {
+    let q = supabaseAdmin
+      .from("hosted_pages")
+      .select("id, slug, updated_at, project_id, page_type, seo_noindex")
+      .eq("user_id", row.user_id)
+      .eq("status", "published")
+      .eq("seo_noindex", false)
+      .order("updated_at", { ascending: false })
+      .limit(5000);
+    if (row.project_id) q = q.eq("project_id", row.project_id);
+    const { data } = await q;
+    for (const item of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string; page_type: string }>) {
+      // Sur custom domain les pages sont accessibles en bare-slug.
+      // Priorité plus haute pour les pages de capture / vente (CTA SEO).
+      const priority = item.page_type === "sales" || item.page_type === "capture" ? 0.9 : 0.7;
+      entries.push({
+        url: item.slug ? `${base}/${item.slug}` : `${base}/p/${item.id}`,
+        lastModified: new Date(item.updated_at),
+        changeFrequency: "weekly" as const,
+        priority,
+      });
+    }
+  } catch (err) {
+    console.warn("[sitemap/custom-domain] hosted_pages fetch error", err);
   }
 
   return entries;
@@ -103,8 +133,9 @@ async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const { data } = await supabaseAdmin
       .from("quizzes")
-      .select("id, slug, updated_at, status")
+      .select("id, slug, updated_at, seo_noindex")
       .eq("status", "active")
+      .eq("seo_noindex", false)
       .order("updated_at", { ascending: false })
       .limit(8000);
     for (const item of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
@@ -122,8 +153,9 @@ async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const { data } = await supabaseAdmin
       .from("popquizzes")
-      .select("id, slug, updated_at, is_published")
+      .select("id, slug, updated_at, seo_noindex")
       .eq("is_published", true)
+      .eq("seo_noindex", false)
       .order("updated_at", { ascending: false })
       .limit(2000);
     for (const item of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
@@ -136,6 +168,27 @@ async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch (err) {
     console.warn("[sitemap/main] popquizzes fetch error", err);
+  }
+
+  try {
+    const { data } = await supabaseAdmin
+      .from("hosted_pages")
+      .select("id, slug, updated_at, page_type, seo_noindex")
+      .eq("status", "published")
+      .eq("seo_noindex", false)
+      .order("updated_at", { ascending: false })
+      .limit(5000);
+    for (const item of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string; page_type: string }>) {
+      const priority = item.page_type === "sales" || item.page_type === "capture" ? 0.9 : 0.7;
+      entries.push({
+        url: `${base}/p/${item.slug || item.id}`,
+        lastModified: new Date(item.updated_at),
+        changeFrequency: "weekly" as const,
+        priority,
+      });
+    }
+  } catch (err) {
+    console.warn("[sitemap/main] hosted_pages fetch error", err);
   }
 
   return entries;

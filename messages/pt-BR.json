@@ -5932,5 +5932,57 @@
     "dialogBody": "Existe uma versão auto-salva ({draftWhen}). Você pode restaurá-la ou partir do último salvamento ({savedWhen}).",
     "restoreBtn": "Restaurar a versão auto-salva",
     "discardBtn": "Partir do meu último salvamento"
+  },
+  "helpSeo": {
+    "metaTitle": "Indexar os meus quizzes no Google — Ajuda Tipote",
+    "metaDescription": "Como tornar os teus quizzes visíveis no Google Search, ChatGPT, Perplexity e outros motores de busca / IA. Guia passo a passo.",
+    "title": "Indexar os meus quizzes no Google e nas IA",
+    "subtitle": "Faz com que os teus quizzes apareçam no Google Search, ChatGPT, Perplexity e Claude search — 5 a 10 minutos de configuração, depois é automático.",
+    "s1": {
+      "heading": "Porquê indexar?",
+      "body1": "Quando o Google ou uma IA indexa o teu quiz, qualquer pessoa pode encontrá-lo procurando o teu tema. Três benefícios concretos:",
+      "li1": "Tráfego gratuito recorrente do Google Search — cada pesquisa relevante é uma oportunidade de captar um lead.",
+      "li2": "Quando alguém pergunta ao ChatGPT, Perplexity ou Claude «recomenda-me um quiz sobre X», o teu quiz pode aparecer.",
+      "li3": "Mais partilhas sociais: os visitantes que te encontram via pesquisa partilham frequentemente à sua rede."
+    },
+    "s2": {
+      "heading": "Passo 1 — Submeter o teu sitemap ao Google",
+      "body1": "O Google precisa de um «sitemap» (lista dos teus quizzes) para os indexar. O Tipote gera-o automaticamente.",
+      "li1": "Vai ao Google Search Console: https://search.google.com/search-console",
+      "li2": "Clica em «Adicionar propriedade» e insere o teu domínio (ex. tipote.com OU o teu domínio personalizado).",
+      "li3": "Verifica a propriedade (via registo DNS TXT — o Google orienta-te).",
+      "li4": "No menu à esquerda, vai a «Sitemaps» e insere: sitemap.xml",
+      "li5": "Clica em «Enviar». O Google rastreará os teus quizzes em 1 a 7 dias.",
+      "note": "Não precisas reenviar a cada novo quiz — o sitemap é regenerado automaticamente a cada hora."
+    },
+    "s3": {
+      "heading": "Passo 2 — Com um domínio personalizado",
+      "body1": "Se tens um domínio próprio (ex. quiz.teusite.com), podes indexar os teus quizzes no TEU domínio em vez de tipote.com. Mais poderoso para o teu SEO.",
+      "li1": "Adiciona o teu domínio personalizado ao Google Search Console como «propriedade de domínio».",
+      "li2": "Verifica a propriedade via um registo DNS TXT (o Google dá-te o valor a colar).",
+      "li3": "Submete o sitemap: https://teu-dominio.com/sitemap.xml — listará APENAS os teus quizzes, no TEU URL."
+    },
+    "s4": {
+      "heading": "Passo 3 — Otimizar cada quiz para SEO",
+      "body1": "Quanto melhor for o título e a descrição do teu quiz, mais o Google e as IA o destacam. Boas práticas:",
+      "li1Title": "Título claro (≤60 caracteres)",
+      "li1Body": "É o texto que o Google mostra nos resultados. Inclui a tua palavra-chave principal.",
+      "li2Title": "Descrição (campo «Pré-visualização social» no editor)",
+      "li2Body": "150-160 caracteres que resumem o valor do quiz e incentivam ao clique.",
+      "li3Title": "Slug curto e descritivo",
+      "li3Body": "Não «quiz1» mas «perfil-sistema-nervoso» ou «estilo-foto-fine-art». O slug é o teu URL.",
+      "li4Title": "Imagem de partilha (1200×630 px)",
+      "li4Body": "Aparece no Google Images e nas pré-visualizações iMessage / WhatsApp. Uma boa imagem = +20-30% cliques."
+    },
+    "s5": {
+      "heading": "Passo 4 — Visibilidade nas IA (ChatGPT, Perplexity, Claude)",
+      "body1": "Não precisas configurar nada extra. As IA rastreiam os sites automaticamente via o nosso ficheiro `llms.txt` (um manifesto que geramos por ti) que lista os teus quizzes, a sua descrição e URL num formato otimizado para LLMs.",
+      "note": "Quanto mais preencheres o título, a descrição e a imagem OG no editor, mais precisamente uma IA poderá recomendar o teu quiz aos utilizadores certos."
+    },
+    "s6": {
+      "heading": "Passo 5 — Ocultar um quiz dos motores",
+      "body1": "Se queres manter um quiz privado (apenas via link, sem risco de aparecer no Google), seleciona a caixa «Ocultar este quiz dos motores de busca» na aba SEO do editor do quiz.",
+      "body2": "O quiz mantém-se ativo e partilhável via link direto, mas é excluído do teu sitemap e do ficheiro IA. Ideal para conteúdo interno ou drafts públicos partilhados a um círculo limitado."
+    }
   }
 }

@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
 
     const { data } = await supabase
       .from("hosted_pages")
-      .select("user_id, project_id, title, meta_title, meta_description, og_image_url")
+      .select("user_id, project_id, title, meta_title, meta_description, og_image_url, seo_noindex")
       .eq("slug", slug)
       .eq("status", "published")
       .order("created_at", { ascending: false })
@@ -83,9 +83,13 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
       ? { absolute: `${baseTitle} · ${siteName}` }
       : baseTitle;
 
+    // Respecte le toggle "masquer aux moteurs de recherche" côté builder.
+    const noindex = !!(data as { seo_noindex?: boolean }).seo_noindex;
+
     const meta: Metadata = {
       title: titleOverride,
       description: data.meta_description || undefined,
+      ...(noindex ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } } : {}),
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),

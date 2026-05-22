@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     const supabase = createClient(supabaseUrl, supabaseKey);
     const base = supabase
       .from("quizzes")
-      .select("user_id, project_id, slug, title, introduction, og_image_url, og_description")
+      .select("user_id, project_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
       .eq("status", "active");
     const { data } = await (UUID_RE.test(param)
       ? base.eq("id", param).maybeSingle()
@@ -104,9 +104,13 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
       ? { absolute: `${plainTitle} · ${siteName}` }
       : plainTitle;
 
+    // Respecte le toggle "masquer aux moteurs de recherche" côté éditeur.
+    const noindex = !!(data as { seo_noindex?: boolean }).seo_noindex;
+
     const meta: Metadata = {
       title: titleOverride,
       description,
+      ...(noindex ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } } : {}),
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
