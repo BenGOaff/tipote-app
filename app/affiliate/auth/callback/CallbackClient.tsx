@@ -72,19 +72,33 @@ export default function CallbackClient() {
         // Session établie côté Supabase. Maintenant on demande au serveur
         // de valider que l'email est bien un affilié actif. La table
         // d'affiliés n'est accessible qu'au service role, donc check serveur.
+        // Honor `?next=` for the redirect (cas du flow webhook tag : on
+        // arrive ici depuis le magic link envoyé par notre branche
+        // CONTACT_TAG_ADDED, avec next=/signup pour finaliser).
+        const next = searchParams.get("next");
+
         const verifyRes = await fetch("/affiliate/api/auth/verify", {
           method: "POST",
         });
         const verifyData = await verifyRes.json();
 
         if (!verifyRes.ok || !verifyData.ok) {
-          // L'email Supabase n'est pas un affilié → on signout et redirect
+          // L'email Supabase n'est pas (encore) un affilié actif. Deux
+          // cas possibles :
+          //   1. Inscription via webhook tag → row pas encore créée →
+          //      on redirige vers /signup où l'user finalise (saisie sa)
+          //   2. Vraiment pas affilié → /login avec erreur
+          if (next === "/signup") {
+            router.replace("/signup");
+            return;
+          }
           await supabase.auth.signOut();
           router.replace("/login?error=not_affiliate");
           return;
         }
 
-        router.replace("/");
+        // Affilié déjà actif → dashboard (ou next si demandé)
+        router.replace(next && next.startsWith("/") ? next : "/");
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setErrorMsg(msg);
