@@ -56,14 +56,23 @@ function isComposerEl(el: HTMLElement): boolean {
   }
   // New Reddit : contenteditable (Slate/Lexical-based)
   if (el.matches('[contenteditable="true"]')) {
-    // Filtre via placeholder ou aria-label
+    // 1. Vérifier qu'on n'est PAS sur le composer de recherche
+    const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
+    if (ariaLabel.includes("search") || ariaLabel.includes("recherche")) return false;
+    // 2. Match aria-label / placeholder explicite (idéal)
     if (matchesText(el, COMPOSER_PATTERNS)) return true;
-    // Fallback : Reddit met `data-lexical-editor="true"` sur ses composers
-    if (el.getAttribute("data-lexical-editor") === "true") {
-      // Vérifier qu'on n'est PAS sur le composer de recherche
-      const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
-      if (ariaLabel.includes("search") || ariaLabel.includes("recherche")) return false;
-      return true;
+    // 3. Reddit met `data-lexical-editor="true"` sur tous ses composers
+    if (el.getAttribute("data-lexical-editor") === "true") return true;
+    // 4. Fallback : New Reddit encapsule ses composers dans des Web
+    //    Components <shreddit-comment-input>, <shreddit-composer>, etc.
+    //    Si un ancêtre porte un de ces noms, on accepte.
+    let node: HTMLElement | null = el;
+    for (let i = 0; i < 8 && node; i++) {
+      const tag = node.tagName.toLowerCase();
+      if (tag.startsWith("shreddit-") && (tag.includes("comment") || tag.includes("composer") || tag.includes("reply"))) {
+        return true;
+      }
+      node = node.parentElement;
     }
   }
   return false;

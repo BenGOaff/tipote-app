@@ -50,7 +50,18 @@ function matchesText(el: HTMLElement, patterns: string[]): boolean {
 function isComposerEl(el: HTMLElement): boolean {
   // TikTok = contenteditable, parfois sans role=textbox explicite.
   if (!el.matches('[contenteditable="true"]')) return false;
-  return matchesText(el, COMMENT_PATTERNS);
+  // 1. Match direct aria-label / placeholder (idéal)
+  if (matchesText(el, COMMENT_PATTERNS)) return true;
+  // 2. Fallback : TikTok utilise data-e2e="comment-text" sur le wrapper
+  //    du composer. Si on est dans un ancêtre qui a "comment" dans
+  //    son data-e2e, on considère que c'est un composer.
+  let node: HTMLElement | null = el;
+  for (let i = 0; i < 6 && node; i++) {
+    const e2e = (node.getAttribute("data-e2e") || "").toLowerCase();
+    if (e2e.includes("comment")) return true;
+    node = node.parentElement;
+  }
+  return false;
 }
 
 function findParentPost(composer: HTMLElement): HTMLElement | null {
