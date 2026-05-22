@@ -113,7 +113,19 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
       ...(noindex ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } } : {}),
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
-      ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
+      ...(branding?.faviconUrl
+        ? {
+            icons: {
+              // sizes="any" pour cohérence avec Tiquiz et défensif Firefox :
+              // si un jour quelqu'un ajoute app/favicon.ico (qui auto-injecte
+              // un <link sizes="any">), notre link doit avoir le même attribut
+              // pour gagner sur l'ordre DOM. Cf. Tiquiz CLAUDE_PITFALLS.md O.
+              icon: [{ url: branding.faviconUrl, sizes: "any" }],
+              shortcut: branding.faviconUrl,
+              apple: branding.faviconUrl,
+            },
+          }
+        : {}),
       openGraph: {
         title: plainTitle,
         description,

@@ -149,7 +149,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
-      ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
+      ...(branding?.faviconUrl
+        ? {
+            icons: {
+              // sizes="any" défensif Firefox. Cf. Tiquiz CLAUDE_PITFALLS.md O.
+              icon: [{ url: branding.faviconUrl, sizes: "any" }],
+              shortcut: branding.faviconUrl,
+              apple: branding.faviconUrl,
+            },
+          }
+        : {}),
       openGraph: {
         title: plainTitle || undefined,
         description,
@@ -174,7 +183,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: p.description ?? undefined,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
-      ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
+      ...(branding?.faviconUrl
+        ? {
+            icons: {
+              // sizes="any" défensif Firefox. Cf. Tiquiz CLAUDE_PITFALLS.md O.
+              icon: [{ url: branding.faviconUrl, sizes: "any" }],
+              shortcut: branding.faviconUrl,
+              apple: branding.faviconUrl,
+            },
+          }
+        : {}),
       openGraph: {
         title: p.title,
         description: p.description ?? undefined,
@@ -195,7 +213,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: r.meta.meta_description || undefined,
     ...(siteName ? { applicationName: siteName } : {}),
     ...(canonical ? { alternates: { canonical } } : {}),
-    ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
+    ...(branding?.faviconUrl
+      ? {
+          icons: {
+            // sizes="any" défensif Firefox. Cf. Tiquiz CLAUDE_PITFALLS.md O.
+            icon: [{ url: branding.faviconUrl, sizes: "any" }],
+            shortcut: branding.faviconUrl,
+            apple: branding.faviconUrl,
+          },
+        }
+      : {}),
     openGraph: {
       title: r.meta.meta_title || r.meta.title || undefined,
       description: r.meta.meta_description || undefined,
