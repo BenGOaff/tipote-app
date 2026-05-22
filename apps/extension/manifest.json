@@ -79,6 +79,10 @@
     {
       "resources": ["injected.js"],
       "matches": ["https://*.linkedin.com/*"]
+    },
+    {
+      "resources": ["injected-tiktok.js"],
+      "matches": ["https://*.tiktok.com/*"]
     }
   ]
 }

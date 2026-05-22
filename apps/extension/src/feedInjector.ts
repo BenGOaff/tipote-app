@@ -52,7 +52,10 @@ export function startFeedInjector(): void {
   // contexte console (qui est super peu intuitif).
   setTimeout(() => {
     if (!detectedAny) {
-      console.warn(`[tipote/feed] no composer detected after 8s on ${adapter.id} — running auto-diag`);
+      // Log (pas warn) : sur une page sans composer (subreddit list,
+      // home FB, etc.), c'est normal. Pas la peine de polluer le panneau
+      // erreurs de l'extension.
+      console.log(`[tipote/feed] no composer detected after 8s on ${adapter.id} — running auto-diag`);
       autoDiag(adapter);
     }
   }, 8000);
