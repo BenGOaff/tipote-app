@@ -45,6 +45,7 @@ export const OWN_HOSTS: ReadonlySet<string> = new Set([
   "www.tipote.com",
   "tipote.fr",
   "www.tipote.fr",
+  "affiliate.tipote.com",
   "n8n.tipote.com",
   "tus.tipote.com",
   "videos.tipote.com",

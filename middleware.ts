@@ -133,6 +133,26 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // ─────────────────────────────────────────────────────────────────
+  // affiliate.tipote.com → rewrite vers /affiliate/* (dashboard affilié)
+  // Le sous-domaine est servi par la même app Tipote mais sur des
+  // routes isolées dans app/affiliate/. Pour pas casser l'auth dashboard
+  // principale ni exposer le menu principal, on rewrite tout depuis le
+  // root du subdomain. Si l'user tape "affiliate.tipote.com/revenus",
+  // on lui sert "/affiliate/revenus".
+  // ─────────────────────────────────────────────────────────────────
+  const hostHeader = normaliseHost(req.headers.get("host"));
+  if (hostHeader === "affiliate.tipote.com") {
+    // Évite la double-réécriture : si le pathname commence déjà par
+    // /affiliate (Next.js rendering interne), on laisse passer.
+    if (!pathname.startsWith("/affiliate") && !pathname.startsWith("/_next/") && !pathname.startsWith("/api/")) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/affiliate${pathname === "/" ? "" : pathname}`;
+      return NextResponse.rewrite(url);
+    }
+    return NextResponse.next();
+  }
+
+  // ─────────────────────────────────────────────────────────────────
   // Custom-domain gate. Runs FIRST so a creator-owned hostname can
   // never accidentally land on /dashboard, /login, /admin, etc.
   // Dormant when CUSTOM_DOMAINS_ENABLED is unset (default), so
