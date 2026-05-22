@@ -340,19 +340,22 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   }
   document.body.appendChild(menu);
 
-  // Positionne trigger au-dessus du composer ; cache si composer hors écran.
+  // Positionne trigger au-dessus du composer. En fixed mode, on garde
+  // toujours le trigger visible (display:inline-flex) même si composer
+  // est hors viewport — le browser clip naturellement les éléments
+  // position:fixed à coords hors écran, et quand l'user scroll le
+  // composer dans le viewport, le rAF loop reposition automatiquement.
   function positionTrigger(): void {
-    const rect = composer.getBoundingClientRect();
-    if (!composer.isConnected || rect.width === 0 || rect.height === 0) {
+    if (!composer.isConnected) {
       trigger.style.display = "none";
       return;
     }
-    if (rect.bottom < 0 || rect.top > window.innerHeight) {
+    const rect = composer.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
       trigger.style.display = "none";
       return;
     }
     trigger.style.display = "inline-flex";
-    // Place le trigger au-dessus à gauche du composer ; clamp dans viewport.
     const tRect = trigger.getBoundingClientRect();
     const triggerW = tRect.width || 110;
     const triggerH = tRect.height || 28;
@@ -413,24 +416,42 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   });
 
   if (useFixed) {
-    // Initial position + repositionnement sur scroll/resize (mode TikTok).
-    // PAS de MutationObserver sur document.body : TikTok observe lui-même
-    // body pour son anti-bot SDK, et notre observer créerait une boucle
-    // de feedback qui crash leur RxJS (TypeError 'includes' undefined).
-    // Cleanup minimal : check composer.isConnected à chaque scroll/resize.
-    positionTrigger();
-    const onReposition = (): void => {
+    // Reposition en boucle via requestAnimationFrame. C'est l'approche
+    // la plus robuste : marche sur Reddit (scroll dans un container
+    // interne qui ne bubble pas window), Tiktok, et toutes les SPAs
+    // modernes. Coût négligeable (1 rAF + 1 getBoundingClientRect).
+    let lastTop = -1;
+    let lastLeft = -1;
+    let rafId = 0;
+    const loop = (): void => {
       if (!composer.isConnected) {
         trigger.remove();
         menu.remove();
-        window.removeEventListener("scroll", onReposition, true);
-        window.removeEventListener("resize", onReposition);
+        cancelAnimationFrame(rafId);
         return;
       }
-      reposition();
+      const rect = composer.getBoundingClientRect();
+      // Évite les setStyle inutiles si la position n'a pas changé.
+      if (rect.top !== lastTop || rect.left !== lastLeft) {
+        lastTop = rect.top;
+        lastLeft = rect.left;
+        positionTrigger();
+        if (menuOpen) positionMenu();
+      }
+      rafId = requestAnimationFrame(loop);
     };
-    window.addEventListener("scroll", onReposition, true);
-    window.addEventListener("resize", onReposition);
+    rafId = requestAnimationFrame(loop);
+    // Log de debug (one-shot) pour confirmer la position calculée.
+    setTimeout(() => {
+      const r = composer.getBoundingClientRect();
+      const t = trigger.getBoundingClientRect();
+      console.log(
+        `[tipote/feed] trigger placement (${adapter.id}) — composer rect:`,
+        { top: r.top, left: r.left, width: r.width, height: r.height },
+        "trigger rect:",
+        { top: t.top, left: t.left, width: t.width, height: t.height, display: trigger.style.display },
+      );
+    }, 500);
   } else {
     // Mode inline : le menu en position:fixed doit suivre le scroll/resize
     window.addEventListener("scroll", reposition, true);
