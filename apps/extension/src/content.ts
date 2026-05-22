@@ -218,6 +218,7 @@ const debugBag = window as unknown as {
   tipoteLike?: (activityUrn: string) => Promise<unknown>;
   tipoteComment?: (activityUrn: string, text: string) => Promise<unknown>;
   tipoteThrottle?: () => Promise<unknown>;
+  tipoteDiag?: () => void;
 };
 
 debugBag.tipoteForceMatch = () => {
@@ -395,5 +396,39 @@ debugBag.tipoteThrottle = async () => {
   const data = await safeStorageGet(["tipote.voyager.throttle"]);
   console.log("[tipote/cs] throttle state", data["tipote.voyager.throttle"]);
   return data["tipote.voyager.throttle"];
+};
+
+// Diagnostic : liste tous les contenteditable/textarea de la page pour
+// debug quand l'extension ne trouve pas de composer sur un nouveau site.
+// Usage : `tipoteDiag()` dans la console DevTools.
+debugBag.tipoteDiag = () => {
+  console.group("[tipote/diag] DOM scan");
+  console.log("hostname:", location.hostname);
+  const editables = document.querySelectorAll(
+    '[role="textbox"][contenteditable="true"], [contenteditable="true"], textarea',
+  );
+  console.log(`Found ${editables.length} editable elements (NOT counting shadow DOM):`);
+  editables.forEach((el, i) => {
+    const ae = el.getAttribute("aria-label");
+    const ph = el.getAttribute("placeholder");
+    const dp = el.getAttribute("data-placeholder");
+    const de = el.getAttribute("data-e2e");
+    const tn = el.tagName;
+    console.log(`#${i} <${tn}> aria-label=${JSON.stringify(ae)} placeholder=${JSON.stringify(ph)} data-placeholder=${JSON.stringify(dp)} data-e2e=${JSON.stringify(de)}`, el);
+  });
+  // Scan aussi les shadow roots
+  let shadowCount = 0;
+  document.querySelectorAll("*").forEach((el) => {
+    const sr = (el as HTMLElement & { shadowRoot?: ShadowRoot | null }).shadowRoot;
+    if (sr) {
+      shadowCount++;
+      const inner = sr.querySelectorAll('[contenteditable="true"], textarea');
+      if (inner.length > 0) {
+        console.log(`Shadow root in <${el.tagName.toLowerCase()}> contains ${inner.length} editables:`, inner);
+      }
+    }
+  });
+  console.log(`Total shadow roots scanned: ${shadowCount}`);
+  console.groupEnd();
 };
 

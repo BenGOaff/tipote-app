@@ -58,11 +58,21 @@ function scanForComposers(root: HTMLElement, adapter: PlatformAdapter): void {
 
   // On scan large : tout textbox/contenteditable/textarea potentiel
   // dans le sous-arbre, puis filtrage strict par l'adapter.
-  const all = root.querySelectorAll<HTMLElement>(
-    '[role="textbox"][contenteditable="true"], [contenteditable="true"], textarea',
-  );
-  for (const el of all) {
+  const selector = '[role="textbox"][contenteditable="true"], [contenteditable="true"], textarea';
+  for (const el of root.querySelectorAll<HTMLElement>(selector)) {
     if (adapter.isComposer(el)) candidates.push(el);
+  }
+
+  // Reddit (et de plus en plus de sites modernes) encapsulent leurs
+  // composers dans des Web Components avec Shadow DOM. document.
+  // querySelectorAll ne traverse PAS les shadow roots — il faut
+  // descendre récursivement. On le fait pour TOUS les adapters
+  // (zéro coût si la page n'a pas de shadow DOM, gros gain si oui).
+  for (const shadowEl of walkShadowRoots(root)) {
+    if (adapter.isComposer(shadowEl)) candidates.push(shadowEl);
+    for (const inner of shadowEl.querySelectorAll<HTMLElement>(selector)) {
+      if (adapter.isComposer(inner)) candidates.push(inner);
+    }
   }
 
   for (const composer of candidates) {
@@ -70,6 +80,36 @@ function scanForComposers(root: HTMLElement, adapter: PlatformAdapter): void {
     composer.setAttribute(INJECTED_ATTR, "true");
     console.log(`[tipote/feed] composer detected (${adapter.id})`, composer);
     injectToneBar(composer, adapter);
+  }
+}
+
+/** Visite récursivement tous les Shadow Roots ouverts sous `root` et
+ *  retourne les éléments qu'ils contiennent. Cap profondeur pour
+ *  éviter une page malformée qui boucle. */
+function* walkShadowRoots(root: Element): Generator<HTMLElement> {
+  const stack: Element[] = [root];
+  let visited = 0;
+  while (stack.length > 0 && visited < 5000) {
+    const el = stack.pop()!;
+    visited++;
+    // Si l'élément lui-même a un shadow root ouvert, descend dedans.
+    const sr = (el as HTMLElement & { shadowRoot?: ShadowRoot | null }).shadowRoot;
+    if (sr) {
+      // Tous les éléments du shadow root sont à scanner
+      const allInShadow = sr.querySelectorAll<HTMLElement>("*");
+      for (const x of allInShadow) {
+        yield x;
+        // Si cet élément contient lui-même un shadow root, on continue
+        if ((x as HTMLElement & { shadowRoot?: ShadowRoot | null }).shadowRoot) {
+          stack.push(x);
+        }
+      }
+    }
+    // Continue à descendre dans le DOM normal pour trouver d'autres
+    // hôtes de shadow root.
+    for (const child of el.children) {
+      stack.push(child);
+    }
   }
 }
 
