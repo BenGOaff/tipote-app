@@ -87,12 +87,21 @@ export async function attributeSale(input: AttributeSaleInput): Promise<Attribut
     // — un sa valide format mais inconnu = lien forgé ou ex-affilié banni).
     const { data: affRow } = await supabaseAdmin
       .from("affiliates")
-      .select("sa, status")
+      .select("sa, email, status")
       .eq("sa", conversion.sa)
       .maybeSingle();
-    const aff = affRow as { sa: string; status: string } | null;
+    const aff = affRow as { sa: string; email: string; status: string } | null;
     if (!aff || aff.status !== "active") {
       return { status: "affiliate_not_registered", sa: conversion.sa };
+    }
+
+    // Anti-auto-affiliation : on refuse si l'affilié est le client lui-même
+    // (même email). Évite de toucher des commissions sur ses propres achats.
+    if (aff.email.toLowerCase() === email) {
+      console.log(
+        `[affiliate/attribution] self-attribution refused: sa=${aff.sa} email=${email}`,
+      );
+      return { status: "no_affiliate_match" };
     }
 
     // Calcule la commission selon le palier actuel de l'affilié.
