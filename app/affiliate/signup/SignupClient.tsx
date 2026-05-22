@@ -1,7 +1,30 @@
 "use client";
 
+// app/affiliate/signup/SignupClient.tsx
+//
+// Page d'activation auto venant de Systeme.io via merge tags.
+// URL attendue : /signup?sa={affiliate_id}&email={contact_email}&first_name={first_name}
+//
+// L'affilié confirme ses infos pré-remplies + choisit sa langue +
+// peut OPTIONNELLEMENT définir un mot de passe (sinon il se connecte
+// au magic link uniquement). Submit → POST /affiliate/api/auth/signup.
+
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Eye, EyeOff, Mail, User, KeyRound, Lock, CheckCircle2, ArrowRight, Globe2 } from "lucide-react";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const LOCALE_OPTIONS = [
   { value: "fr", label: "Français" },
@@ -24,10 +47,11 @@ export default function SignupClient() {
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [locale, setLocale] = useState("fr");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Préremplit depuis l'URL au mount.
   useEffect(() => {
     const saParam = searchParams.get("sa") || "";
     const emailParam = searchParams.get("email") || "";
@@ -44,6 +68,13 @@ export default function SignupClient() {
     e.preventDefault();
     setStatus("loading");
     setErrorMsg(null);
+
+    if (password && password.length < 8) {
+      setStatus("error");
+      setErrorMsg("Le mot de passe doit faire au moins 8 caractères.");
+      return;
+    }
+
     try {
       const res = await fetch("/affiliate/api/auth/signup", {
         method: "POST",
@@ -53,6 +84,7 @@ export default function SignupClient() {
           email: email.trim().toLowerCase(),
           display_name: displayName.trim() || null,
           locale,
+          password: password || null,
         }),
       });
       const data = await res.json();
@@ -61,16 +93,20 @@ export default function SignupClient() {
         const reason = data.reason as string | undefined;
         if (reason === "invalid_sa") {
           setErrorMsg(
-            "L'identifiant affilié n'a pas le bon format. Vérifie qu'il commence par « sa » suivi d'une suite de caractères (ex: sa00168...).",
+            "L'identifiant affilié n'a pas le bon format. Vérifie qu'il commence par « sa » suivi d'une suite de caractères.",
           );
         } else if (reason === "email_not_in_systeme") {
           setErrorMsg(
-            "On ne trouve pas cet email dans Systeme.io. Inscris-toi d'abord comme affilié sur Systeme.io, puis reviens ici.",
+            "Cet email n'est pas reconnu dans Systeme.io. Inscris-toi d'abord au programme d'affiliation, puis reviens ici.",
           );
         } else if (reason === "invalid_email") {
           setErrorMsg("Email invalide.");
+        } else if (reason === "weak_password") {
+          setErrorMsg("Le mot de passe doit faire au moins 8 caractères.");
         } else if (reason === "send_failed") {
-          setErrorMsg("Compte créé mais on n'a pas réussi à envoyer le lien de connexion. Contacte le support.");
+          setErrorMsg(
+            "Compte créé mais on n'a pas réussi à envoyer le lien de connexion. Essaie la page de connexion.",
+          );
         } else {
           setErrorMsg("Une erreur s'est produite. Réessaie ou contacte le support.");
         }
@@ -85,138 +121,222 @@ export default function SignupClient() {
 
   if (status === "sent") {
     return (
-      <div className="max-w-md mx-auto mt-12">
-        <div className="bg-emerald-900/30 border border-emerald-700/50 rounded-2xl p-8 text-center">
-          <div className="text-5xl mb-4">🎉</div>
-          <h1 className="text-2xl font-semibold tracking-tight mb-2 text-emerald-100">
-            Bienvenue !
-          </h1>
-          <p className="text-sm text-emerald-200/80 mb-6 leading-relaxed">
-            Ton espace affilié est activé. On t&apos;a envoyé un lien de connexion
-            à <strong>{email}</strong>.<br />
-            Clique sur le lien dans le mail pour accéder à ton dashboard.
-            Pense à vérifier tes spams si tu ne le reçois pas dans la minute.
-          </p>
-          <a
-            href="/login"
-            className="inline-block text-sm text-emerald-200 hover:text-emerald-100 underline"
-          >
-            Déjà inscrit ? Aller à la connexion
-          </a>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-foreground">
+              Tipote<span className="text-primary">™</span>
+            </h1>
+            <p className="text-muted-foreground mt-2">Espace affiliation</p>
+          </div>
+
+          <Card className="border-border shadow-lg">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <CheckCircle2 className="h-7 w-7 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Bienvenue !</CardTitle>
+              <CardDescription className="text-base">
+                Ton compte affilié Tipote est activé.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
+                {password ? (
+                  <>
+                    Tu peux maintenant te connecter avec ton email{" "}
+                    <strong className="text-foreground">{email}</strong> et le mot
+                    de passe que tu viens de définir.
+                  </>
+                ) : (
+                  <>
+                    On t&apos;a envoyé un lien de connexion à{" "}
+                    <strong className="text-foreground">{email}</strong>.
+                    Clique sur le lien dans l&apos;email pour accéder à ton dashboard.
+                    Pense à vérifier tes spams.
+                  </>
+                )}
+              </div>
+              <Button asChild className="w-full">
+                <Link href="/login">
+                  Aller à la connexion
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto mt-12">
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-        <h1 className="text-2xl font-semibold tracking-tight mb-2">
-          Active ton espace Creators
-        </h1>
-        <p className="text-sm text-slate-400 mb-6">
-          Vérifie les infos ci-dessous, on les a pré-remplies depuis Systeme.io.
-          Tu peux corriger si besoin.
-        </p>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground">
+            Tipote<span className="text-primary">™</span>
+          </h1>
+          <p className="text-muted-foreground mt-2">Espace affiliation</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="ton-email@example.com"
-              disabled={status === "loading"}
-              className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-slate-100 placeholder-slate-500 disabled:opacity-50"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              C&apos;est celui de ton compte Systeme.io.
+        <Card className="border-border shadow-lg">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-2xl font-bold">
+              Active ton espace affilié
+            </CardTitle>
+            <CardDescription>
+              Vérifie tes infos pré-remplies depuis Systeme.io. Tu peux corriger
+              si besoin.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ton-email@example.com"
+                    disabled={status === "loading"}
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Celui de ton compte Systeme.io.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="display_name">
+                  Prénom ou nom à afficher{" "}
+                  <span className="text-muted-foreground font-normal">(optionnel)</span>
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="display_name"
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Comment on t'appelle ?"
+                    disabled={status === "loading"}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sa">Identifiant affilié Systeme.io</Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="sa"
+                    type="text"
+                    required
+                    value={sa}
+                    onChange={(e) => setSa(e.target.value)}
+                    placeholder="sa0016..."
+                    disabled={status === "loading"}
+                    className="pl-10 font-mono text-sm"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Tu le trouves dans Systeme.io → dashboard affiliation → ton
+                  lien (la partie après <code>?sa=</code>).
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="locale">Langue</Label>
+                <Select
+                  value={locale}
+                  onValueChange={setLocale}
+                  disabled={status === "loading"}
+                >
+                  <SelectTrigger id="locale" className="pl-10 relative">
+                    <Globe2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LOCALE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  On t&apos;enverra les ressources promo dans cette langue.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label htmlFor="password">
+                  Mot de passe{" "}
+                  <span className="text-muted-foreground font-normal">(optionnel)</span>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minimum 8 caractères"
+                    disabled={status === "loading"}
+                    className="pl-10 pr-10"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? "Masquer" : "Afficher"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Optionnel — sinon tu te connecteras avec un lien envoyé par email.
+                </p>
+              </div>
+
+              {errorMsg && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {errorMsg}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={status === "loading" || !email || !sa}
+              >
+                {status === "loading" ? (
+                  "Activation…"
+                ) : (
+                  <>
+                    Activer mon espace
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <p className="text-xs text-muted-foreground mt-6 text-center leading-relaxed">
+              Tu reçois déjà un email à chaque commission. Cet espace te donne en
+              plus : ressources promos, stats, paliers de commission, et accès
+              démo aux outils Tipote &amp; Tiquiz.
             </p>
-          </div>
-
-          <div>
-            <label htmlFor="display_name" className="block text-sm font-medium text-slate-300 mb-2">
-              Prénom ou nom à afficher{" "}
-              <span className="text-slate-500 font-normal">(optionnel)</span>
-            </label>
-            <input
-              id="display_name"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Comment on t'appelle ?"
-              disabled={status === "loading"}
-              className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-slate-100 placeholder-slate-500 disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="sa" className="block text-sm font-medium text-slate-300 mb-2">
-              Identifiant affilié Systeme.io
-            </label>
-            <input
-              id="sa"
-              type="text"
-              required
-              value={sa}
-              onChange={(e) => setSa(e.target.value)}
-              placeholder="sa0016..."
-              disabled={status === "loading"}
-              className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-slate-100 placeholder-slate-500 disabled:opacity-50 font-mono text-sm"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Tu le trouves dans Systeme.io → ton dashboard affiliation → ton
-              lien (la partie après <code>?sa=</code>).
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor="locale" className="block text-sm font-medium text-slate-300 mb-2">
-              Langue
-            </label>
-            <select
-              id="locale"
-              value={locale}
-              onChange={(e) => setLocale(e.target.value)}
-              disabled={status === "loading"}
-              className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-slate-100 disabled:opacity-50"
-            >
-              {LOCALE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-slate-500 mt-1">
-              On t&apos;enverra les contenus promo dans cette langue.
-            </p>
-          </div>
-
-          {errorMsg && (
-            <div className="bg-red-900/30 border border-red-800/50 rounded-lg p-3 text-sm text-red-200">
-              {errorMsg}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={status === "loading" || !email || !sa}
-            className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {status === "loading" ? "Activation en cours…" : "Activer mon espace"}
-          </button>
-        </form>
-
-        <p className="text-xs text-slate-500 mt-6 text-center">
-          Tu reçois déjà un email à chaque commission. Cet espace te donne en
-          plus : ressources promos, statistiques, paliers de commission, et
-          accès démo aux outils Tipote & Tiquiz.
-        </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
