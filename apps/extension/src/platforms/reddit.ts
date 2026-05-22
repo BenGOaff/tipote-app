@@ -193,4 +193,10 @@ export const redditAdapter: PlatformAdapter = {
   isComposer: isComposerEl,
   findParentPost,
   fillEditor,
+  // Reddit emballe ses composers dans des Web Components <faceplate-form>
+  // / <shreddit-comment-composer> qui utilisent des slots. Une insertion
+  // inline (insertBefore dans le parent du composer) tombe dans un slot
+  // non-rendu → bouton invisible alors que data-tipote-injected="true".
+  // On bascule en trigger position:fixed sur body, visible quoi qu'il arrive.
+  useFixedTrigger: true,
 };

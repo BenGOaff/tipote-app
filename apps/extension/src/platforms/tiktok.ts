@@ -156,4 +156,5 @@ export const tiktokAdapter: PlatformAdapter = {
   // (NotFoundError removeChild). On positionne le trigger en fixed sur
   // body pour rester invisible côté React.
   useFixedTrigger: true,
+  clipboardMode: true,
 };

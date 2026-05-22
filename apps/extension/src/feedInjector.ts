@@ -35,6 +35,8 @@ function toneLabel(key: ToneKey): string {
   return t(`tone.${key}` as Parameters<typeof t>[0]);
 }
 
+let detectedAny = false;
+
 export function startFeedInjector(): void {
   const adapter = detectPlatform();
   if (!adapter) {
@@ -43,6 +45,17 @@ export function startFeedInjector(): void {
   }
   console.log(`[tipote/feed] injector starting for platform: ${adapter.id}`);
   scanForComposers(document.body, adapter);
+  // Auto-diag : si aucun composer détecté après 8s, on dump l'état du
+  // DOM pour faciliter le debug. Le content script tourne en monde isolé
+  // → tipoteDiag() ne s'expose pas dans la console "page" du devtools,
+  // d'où l'autolog. Béné voit le résultat sans avoir à switcher de
+  // contexte console (qui est super peu intuitif).
+  setTimeout(() => {
+    if (!detectedAny) {
+      console.warn(`[tipote/feed] no composer detected after 8s on ${adapter.id} — running auto-diag`);
+      autoDiag(adapter);
+    }
+  }, 8000);
   new MutationObserver((mutations) => {
     for (const m of mutations) {
       for (const node of m.addedNodes) {
@@ -94,9 +107,39 @@ function scanForComposers(root: HTMLElement, adapter: PlatformAdapter): void {
   for (const composer of candidates) {
     if (composer.hasAttribute(INJECTED_ATTR)) continue;
     composer.setAttribute(INJECTED_ATTR, "true");
+    detectedAny = true;
     console.log(`[tipote/feed] composer detected (${adapter.id})`, composer);
     injectToneBar(composer, adapter);
   }
+}
+
+function autoDiag(adapter: PlatformAdapter): void {
+  console.group(`[tipote/diag] auto-scan (${adapter.id})`);
+  const dumpAncestors = (el: Element, depth = 6): string => {
+    const parts: string[] = [];
+    let n: Element | null = el;
+    for (let i = 0; i < depth && n; i++) {
+      const id = n.id ? `#${n.id}` : "";
+      const cls = typeof n.className === "string" && n.className ? `.${n.className.split(" ").slice(0, 2).join(".")}` : "";
+      const role = n.getAttribute("role");
+      parts.push(`<${n.tagName.toLowerCase()}${id}${cls}${role ? `[role=${role}]` : ""}>`);
+      n = n.parentElement;
+    }
+    return parts.join(" > ");
+  };
+  const editables = document.querySelectorAll<HTMLElement>(
+    '[role="textbox"][contenteditable="true"], [contenteditable="true"], textarea',
+  );
+  console.log(`Found ${editables.length} editable elements:`);
+  editables.forEach((el, i) => {
+    const matches = adapter.isComposer(el);
+    console.log(
+      `#${i} <${el.tagName}> isComposer=${matches} aria-label=${JSON.stringify(el.getAttribute("aria-label"))} aria-placeholder=${JSON.stringify(el.getAttribute("aria-placeholder"))} placeholder=${JSON.stringify(el.getAttribute("placeholder"))}`,
+      el,
+    );
+    console.log(`  ancestors: ${dumpAncestors(el)}`);
+  });
+  console.groupEnd();
 }
 
 /** Visite récursivement tous les Shadow Roots ouverts sous `root` et
@@ -267,13 +310,17 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
           loading = false;
         }
         adapter.fillEditor(composer, cachedSuggestions[tone.key]);
-        trigger.innerHTML = `<span>${tone.emoji} ${t("dropdown.inserted")}</span>`;
+        const doneLabel = adapter.clipboardMode ? t("dropdown.copied") : t("dropdown.inserted");
+        trigger.innerHTML = `<span>${tone.emoji} ${doneLabel}</span>`;
+        // Clipboard mode reste affiché plus longtemps : l'user doit
+        // avoir le temps de cliquer dans le composer et coller.
+        const resetDelay = adapter.clipboardMode ? 4000 : 1000;
         setTimeout(() => {
           trigger.innerHTML = originalTrigger;
           trigger.disabled = false;
           trigger.style.opacity = "1";
           trigger.style.cursor = "pointer";
-        }, 1000);
+        }, resetDelay);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.startsWith("extension_unreachable")) {
