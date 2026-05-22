@@ -23,34 +23,23 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         // affiliate.tipote.com → /affiliate/*
-        // ATTENTION : ne pas catch /_next/, /api/ ou /affiliate/ lui-même
-        // sinon les assets statiques (CSS/JS) sont rewrités en
-        // /affiliate/_next/... qui n'existe pas → 404 sur toute la page.
-        // Les trois premières règles sont des pass-through (destination
-        // identique au source) qui matchent et stoppent la chaîne avant
-        // la règle catch-all.
+        // Pattern officiel Next.js avec negative lookahead pour exclure
+        // les paths qui ne doivent PAS être rewrités :
+        //   - /_next/  : assets statiques Next.js
+        //   - /api/    : routes API (gardent leur path d'origine)
+        //   - /affiliate/ : déjà sous /affiliate, pas de double-rewrite
+        //   - /favicon.ico : route handler dynamique au root
+        //
+        // Le précédent essai avec des règles pass-through `source:
+        // "/_next/:path*" destination: "/_next/:path*"` ne matchait
+        // PAS les chemins multi-segments (path-to-regexp v6 a un
+        // comportement subtil avec :path* à la fin). Résultat : tous
+        // les chunks JS/CSS étaient rewrités en /affiliate/_next/...
+        // qui n'existe pas → 404 sur toute la page.
         {
-          source: "/_next/:path*",
+          source: "/:path((?!_next|api|affiliate|favicon\\.ico).*)",
           has: [{ type: "host", value: "affiliate.tipote.com" }],
-          destination: "/_next/:path*",
-        },
-        {
-          source: "/api/:path*",
-          has: [{ type: "host", value: "affiliate.tipote.com" }],
-          destination: "/api/:path*",
-        },
-        {
-          source: "/affiliate/:path*",
-          has: [{ type: "host", value: "affiliate.tipote.com" }],
-          destination: "/affiliate/:path*",
-        },
-        // Catch-all : toutes les autres routes sur affiliate.tipote.com
-        // sont rewritées en /affiliate/*. C'est ça qui fait que
-        // affiliate.tipote.com/login → app/affiliate/login/page.tsx.
-        {
-          source: "/:path*",
-          has: [{ type: "host", value: "affiliate.tipote.com" }],
-          destination: "/affiliate/:path*",
+          destination: "/affiliate/:path",
         },
       ],
       afterFiles: [],
