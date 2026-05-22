@@ -17,18 +17,10 @@
 // affilié avec un sa volé). Pas dans le payload SIO de toute façon.
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sendAffiliateMagicLink } from "@/lib/affiliate/sendMagicLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const supabaseAnon = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false } },
-);
-
-const DASHBOARD_URL = process.env.AFFILIATE_DASHBOARD_URL ?? "https://affiliate.tipote.com";
 
 function extractEmail(body: any): string | null {
   // SIO envoie l'email dans plusieurs structures possibles selon
@@ -95,37 +87,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const firstName = extractFirstName(body);
 
-  try {
-    // Magic link Supabase. shouldCreateUser:true permet d'accueillir
-    // un affilié qui n'a jamais eu de compte Tipote/Supabase. Le
-    // redirectTo route vers notre callback qui détecte si la row
-    // affiliates existe — si non, on envoie vers /signup pour saisie
-    // du sa + activation.
-    const { error } = await supabaseAnon.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: `${DASHBOARD_URL}/auth/callback?next=%2Fsignup`,
-      },
-    });
+  // Envoi du magic link via notre helper custom (Resend + template
+  // bi-marque Tipote × Tiquiz, multilang FR/EN/ES/IT/PT/AR). Évite le
+  // template Supabase par défaut qui est hardcodé pour le dashboard
+  // Tipote principal (et redirige vers app.tipote.com au lieu de
+  // affiliate.tipote.com).
+  const result = await sendAffiliateMagicLink({
+    email,
+    firstName,
+    intent: "signup",
+    // Pas de locale connue depuis SIO (le webhook n'en envoie pas).
+    // Fallback FR. À terme : détecter via Accept-Language ou stocker
+    // la locale du contact dans SIO et l'envoyer.
+    locale: "fr",
+  });
 
-    if (error) {
-      // Rate limit Supabase est silencieux (pas d'erreur), donc une
-      // erreur ici est vraiment un problème (SMTP down, email invalide).
-      console.error(`[affiliate/webhook] signInWithOtp failed email=${email}: ${error.message}`);
-      return NextResponse.json({ ok: false, error: "send_failed" }, { status: 500 });
-    }
-
-    console.log(`[affiliate/webhook] Magic link sent to ${email}${firstName ? ` (${firstName})` : ""}`);
-    return NextResponse.json({
-      ok: true,
-      action: "magic_link_sent",
-      email,
-    });
-  } catch (err) {
-    console.error("[affiliate/webhook] unexpected:", err);
-    return NextResponse.json({ ok: false, error: "unexpected" }, { status: 500 });
+  if (!result.ok) {
+    return NextResponse.json({ ok: false, reason: result.reason }, { status: 500 });
   }
+
+  console.log(`[affiliate/webhook] Magic link sent to ${email}${firstName ? ` (${firstName})` : ""}`);
+  return NextResponse.json({ ok: true, action: "magic_link_sent", email });
 }
 
 // SIO peut faire un OPTIONS preflight selon ses versions. On répond OK
