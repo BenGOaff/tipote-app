@@ -61,21 +61,23 @@ function matchesText(el: HTMLElement, patterns: string[]): boolean {
 }
 
 function isComposerEl(el: HTMLElement): boolean {
-  // Threads expose à la fois `[role="textbox"]` ET juste
-  // `[contenteditable]` selon les contextes. On accepte les deux.
   if (!el.matches('[contenteditable="true"]')) return false;
-  // 1. Match aria-label / placeholder reply
+  // Disqualifier la barre de recherche éventuelle.
+  const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
+  if (ariaLabel.includes("search") || ariaLabel.includes("recherche")) return false;
+
+  // 1. Match aria-label / placeholder reply (multilangue)
   if (matchesText(el, REPLY_ARIA_PATTERNS)) return true;
-  // 2. Fallback : Lexical editor (Meta utilise Lexical sur Threads).
-  //    Si on est dans un wrapper avec role="dialog" (modal de reply) ou
-  //    role="article" (post timeline) ET data-lexical-editor, on accepte.
-  if (el.getAttribute("data-lexical-editor") === "true") {
-    let node: HTMLElement | null = el;
-    for (let i = 0; i < 12 && node; i++) {
-      const role = node.getAttribute("role");
-      if (role === "dialog" || role === "article") return true;
-      node = node.parentElement;
-    }
+  // 2. Lexical editor explicit
+  if (el.getAttribute("data-lexical-editor") === "true") return true;
+  // 3. Fallback : Threads n'a quasi pas d'autres contenteditables. Si on
+  //    est dans un wrapper qui ressemble à un modal de reply ou un
+  //    article, on accepte.
+  let node: HTMLElement | null = el;
+  for (let i = 0; i < 15 && node; i++) {
+    const role = node.getAttribute("role");
+    if (role === "dialog" || role === "article") return true;
+    node = node.parentElement;
   }
   return false;
 }

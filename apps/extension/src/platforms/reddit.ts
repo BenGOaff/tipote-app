@@ -48,43 +48,63 @@ function matchesText(el: HTMLElement, patterns: string[]): boolean {
 }
 
 function isComposerEl(el: HTMLElement): boolean {
+  // Disqualifier d'office la barre de recherche.
+  const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
+  if (ariaLabel.includes("search") || ariaLabel.includes("recherche")) return false;
+
   // Old Reddit : <textarea name="text"> dans le formulaire de comment.
   if (el.tagName === "TEXTAREA") {
     const name = (el.getAttribute("name") || "").toLowerCase();
     if (name === "text") return true;
-    return matchesText(el, COMPOSER_PATTERNS);
-  }
-  // New Reddit : contenteditable (Slate/Lexical-based)
-  if (el.matches('[contenteditable="true"]')) {
-    // 1. Vérifier qu'on n'est PAS sur le composer de recherche
-    const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
-    if (ariaLabel.includes("search") || ariaLabel.includes("recherche")) return false;
-    // 2. Match aria-label / placeholder explicite (idéal)
     if (matchesText(el, COMPOSER_PATTERNS)) return true;
-    // 3. Reddit met `data-lexical-editor="true"` sur tous ses composers
+    // Fallback : textarea dans n'importe quel ancêtre shreddit-* ou
+    // un wrapper dont l'id/class contient "comment".
+    return hasCommentAncestor(el);
+  }
+
+  if (el.matches('[contenteditable="true"]')) {
+    // 1. Match aria-label / placeholder explicite (idéal)
+    if (matchesText(el, COMPOSER_PATTERNS)) return true;
+    // 2. Reddit met `data-lexical-editor="true"` sur ses composers
     if (el.getAttribute("data-lexical-editor") === "true") return true;
-    // 4. Fallback : New Reddit encapsule ses composers dans des Web
-    //    Components <shreddit-comment-*>, <shreddit-composer-*>, ou
-    //    <faceplate-form>. Si un ancêtre porte un de ces noms, on accepte.
-    let node: HTMLElement | null = el;
-    for (let i = 0; i < 10 && node; i++) {
-      const tag = node.tagName.toLowerCase();
-      if (
-        (tag.startsWith("shreddit-") &&
-          (tag.includes("comment") || tag.includes("composer") || tag.includes("reply"))) ||
-        tag === "comment-composer-host" ||
-        tag === "faceplate-textarea-input"
-      ) {
-        return true;
-      }
-      // <faceplate-form> avec name="commentForm" / id qui contient "comment"
-      if (tag === "faceplate-form") {
-        const formName = (node.getAttribute("name") || "").toLowerCase();
-        const formId = (node.id || "").toLowerCase();
-        if (formName.includes("comment") || formId.includes("comment")) return true;
-      }
-      node = node.parentElement;
+    // 3. Fallback large : ancêtre Web Component shreddit-* / faceplate-*
+    //    OU id/class/data-* contenant "comment" / "compose".
+    if (hasCommentAncestor(el)) return true;
+  }
+  return false;
+}
+
+/** Remonte le DOM (max 12 niveaux) à la recherche d'un wrapper qui
+ *  identifie clairement un contexte "comment composer" Reddit. Pas
+ *  parfait — mais beaucoup plus robuste que les selectors stricts qui
+ *  cassent à chaque refonte de Reddit. */
+function hasCommentAncestor(el: HTMLElement): boolean {
+  let node: HTMLElement | null = el;
+  for (let i = 0; i < 12 && node; i++) {
+    const tag = node.tagName.toLowerCase();
+    // <shreddit-comment-composer>, <shreddit-comment-input>, …
+    if (tag.startsWith("shreddit-") && (tag.includes("comment") || tag.includes("composer") || tag.includes("reply"))) {
+      return true;
     }
+    // <faceplate-textarea-input>, <faceplate-form>, …
+    if (tag.startsWith("faceplate-") && (tag.includes("textarea") || tag.includes("editor"))) {
+      return true;
+    }
+    if (tag === "comment-composer-host-app" || tag === "comment-body-header" || tag.includes("composer-host")) {
+      return true;
+    }
+    // id/class/data-* qui annoncent un composer
+    const id = (node.id || "").toLowerCase();
+    const cls = (node.className && typeof node.className === "string" ? node.className : "").toLowerCase();
+    const dataE2e = (node.getAttribute("data-testid") || "").toLowerCase();
+    if (
+      id.includes("comment") || id.includes("composer") || id.includes("reply") ||
+      cls.includes("commentform") || cls.includes("usertext-edit") ||
+      dataE2e.includes("comment") || dataE2e.includes("composer")
+    ) {
+      return true;
+    }
+    node = node.parentElement;
   }
   return false;
 }

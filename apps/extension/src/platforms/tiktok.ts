@@ -83,48 +83,32 @@ function findParentPost(composer: HTMLElement): HTMLElement | null {
   return null;
 }
 
-/** TikTok utilise DraftJS comme X — même technique d'injection :
- *  beforeinput natif que DraftJS intercepte via React, fallback
- *  execCommand sinon. Toute mutation directe du DOM (textContent =)
- *  casse la réconciliation React (NotFoundError removeChild). */
+/** TikTok = DraftJS wrappé. La synthèse de beforeinput cassait la
+ *  réconciliation React (NotFoundError removeChild) parce que TikTok
+ *  ne preventDefault pas le synthetic event mais update quand même son
+ *  state RxJS, puis on doublait avec execCommand → DOM mismatch.
+ *
+ *  Approche : juste focus + execCommand. execCommand génère un VRAI
+ *  input event natif que le browser pipeline propage à DraftJS via
+ *  React-DOM, sans risque de double insertion. */
 function fillEditor(composer: HTMLElement, text: string): void {
   composer.focus();
+  // Positionne le curseur en fin de contenu existant (s'il y en a) ;
+  // ne pas selectNodeContents pour ne pas re-sélectionner le placeholder
+  // DraftJS, ce qui désynchronise sa state interne avec le DOM.
   const sel = window.getSelection();
   if (sel) {
     sel.removeAllRanges();
     const range = document.createRange();
     range.selectNodeContents(composer);
+    range.collapse(false); // collapse au bout = curseur à la fin
     sel.addRange(range);
   }
-
-  let inserted = false;
   try {
-    const beforeEvent = new InputEvent("beforeinput", {
-      bubbles: true,
-      cancelable: true,
-      inputType: "insertText",
-      data: text,
-    });
-    composer.dispatchEvent(beforeEvent);
-    inserted = beforeEvent.defaultPrevented;
+    document.execCommand("insertText", false, text);
   } catch {
-    inserted = false;
+    // ignore
   }
-
-  if (!inserted) {
-    try {
-      inserted = document.execCommand("insertText", false, text);
-    } catch {
-      inserted = false;
-    }
-  }
-
-  // Toujours dispatcher input pour déverrouiller le bouton "Publier".
-  composer.dispatchEvent(new InputEvent("input", {
-    bubbles: true,
-    inputType: "insertText",
-    data: text,
-  }));
 }
 
 export const tiktokAdapter: PlatformAdapter = {
