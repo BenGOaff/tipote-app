@@ -117,4 +117,9 @@ export const tiktokAdapter: PlatformAdapter = {
   isComposer: isComposerEl,
   findParentPost,
   fillEditor,
+  // TikTok réconcilie agressivement son arbre React → toute insertion
+  // d'un node étranger dans le DOM autour du composer casse le diffing
+  // (NotFoundError removeChild). On positionne le trigger en fixed sur
+  // body pour rester invisible côté React.
+  useFixedTrigger: true,
 };

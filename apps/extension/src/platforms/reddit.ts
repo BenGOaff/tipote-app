@@ -86,8 +86,11 @@ function hasCommentAncestor(el: HTMLElement): boolean {
     if (tag.startsWith("shreddit-") && (tag.includes("comment") || tag.includes("composer") || tag.includes("reply"))) {
       return true;
     }
-    // <faceplate-textarea-input>, <faceplate-form>, …
-    if (tag.startsWith("faceplate-") && (tag.includes("textarea") || tag.includes("editor"))) {
+    // <faceplate-form> = Reddit emballe tous ses composers dans ça.
+    // L'aria-label / name peuvent être null (cas observé Béné 22/05/26),
+    // on accepte large : tout faceplate-form contenant un contenteditable
+    // n'a quasi aucune chance d'être autre chose qu'un composer.
+    if (tag === "faceplate-form" || tag === "faceplate-textarea-input") {
       return true;
     }
     if (tag === "comment-composer-host-app" || tag === "comment-body-header" || tag.includes("composer-host")) {

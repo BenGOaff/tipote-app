@@ -34,6 +34,12 @@ export interface PlatformAdapter {
    *  sa propre logique car la profondeur du composer dans le DOM varie. */
   findParentPost(composer: HTMLElement): HTMLElement | null;
 
+  /** Si vrai, le trigger "✨ Tipote" est positionné en `position: fixed`
+   *  attaché à body (utile pour TikTok où l'insertion dans l'arbre DOM
+   *  casse la réconciliation React). Par défaut false : insertion inline
+   *  au-dessus du composer (UX visuelle plus intégrée). */
+  useFixedTrigger?: boolean;
+
   /** Insère du texte dans l'éditeur. Chaque réseau utilise un framework
    *  différent (TipTap LinkedIn, Lexical Meta, DraftJS X) — chaque
    *  adapter a sa propre stratégie. Doit dispatcher les bons events
