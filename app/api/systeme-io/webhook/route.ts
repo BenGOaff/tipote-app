@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { timingSafeEqual } from "crypto";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
+import { attributeSale } from "@/lib/affiliate/attribution";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
@@ -921,6 +922,44 @@ export async function POST(req: NextRequest) {
 
       // ✅ Pas de bonus via webhook. Les crédits sont gérés par ensure_user_credits (DB).
       await ensureUserCredits(userId);
+
+      // ✅ Attribution affiliée (best-effort, ne bloque pas le flow vente)
+      // Cherche dans affiliate_conversions un email matching récent → insert
+      // dans affiliate_commissions. Cf. lib/affiliate/attribution.ts.
+      try {
+        const totalPriceRaw = extractNumber(rawBody, [
+          "order.total_price",
+          "data.order.total_price",
+          "amount",
+          "data.amount",
+        ]);
+        const saleAmountCents = totalPriceRaw ?? 0;
+        if (saleAmountCents > 0 && orderId) {
+          const attribResult = await attributeSale({
+            customer_email: resolvedEmail,
+            sale_amount_cents: saleAmountCents,
+            currency:
+              typeof rawBody?.data?.price_plan?.currency === "string"
+                ? rawBody.data.price_plan.currency.toUpperCase()
+                : "EUR",
+            source_app: "tipote",
+            sio_order_id: String(orderId),
+            product_name:
+              (typeof rawBody?.data?.price_plan?.name === "string"
+                ? rawBody.data.price_plan.name
+                : null) ?? undefined,
+            sale_at: new Date(),
+            raw_payload: rawBody,
+          });
+          if (attribResult.status === "attributed") {
+            console.log(
+              `[Systeme.io webhook] Affiliate attribution OK sa=${attribResult.sa} commission=${attribResult.commission_cents}c order=${orderId}`,
+            );
+          }
+        }
+      } catch (err) {
+        console.error("[Systeme.io webhook] affiliate attribution failed:", err);
+      }
 
       // ✅ Envoie le magic link de connexion au client
       await sendMagicLink(resolvedEmail);
