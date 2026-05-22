@@ -83,42 +83,66 @@ function findParentPost(composer: HTMLElement): HTMLElement | null {
   return null;
 }
 
-/** TikTok = DraftJS wrappé dans une couche RxJS qui surveille les events
- *  du composer. Toute modification "synthétique" (execCommand, beforeinput)
- *  désync l'état RxJS et crash React (NotFoundError removeChild).
+/** TikTok est trop hostile aux extensions — leur anti-bot SDK
+ *  (`secsdk_runtime_bundler`) crash dès qu'on touche au composer ou qu'on
+ *  injecte dans body (NotFoundError removeChild, TypeError 'includes'
+ *  undefined → cascade qui peut crasher toute la SPA, voir "Une erreur
+ *  est survenue" full-page).
  *
- *  Approche pragmatique : dispatcher un `paste` ClipboardEvent natif avec
- *  le texte en clipboardData. DraftJS gère paste comme un event utilisateur
- *  normal — DOM et state restent cohérents. Si paste échoue, fallback
- *  execCommand. */
-function fillEditor(composer: HTMLElement, text: string): void {
-  if (!composer.isConnected) {
-    console.warn("[tipote/tiktok] composer disconnected, abort fill");
-    return;
-  }
-  // Tentative 1 : paste ClipboardEvent (chemin "user normal" pour DraftJS)
+ *  Stratégie : NE PLUS jamais toucher au DOM/composer de TikTok. On copie
+ *  le texte dans le clipboard et on affiche un toast "Texte copié, collez
+ *  avec Ctrl+V". UX moins fluide mais zéro risque de planter TikTok pour
+ *  l'utilisateur. */
+function fillEditor(_composer: HTMLElement, text: string): void {
+  void copyToClipboardAndToast(text);
+}
+
+async function copyToClipboardAndToast(text: string): Promise<void> {
+  let copied = false;
   try {
-    const dt = new DataTransfer();
-    dt.setData("text/plain", text);
-    const pasteEvent = new ClipboardEvent("paste", {
-      bubbles: true,
-      cancelable: true,
-      clipboardData: dt,
-    });
-    const handled = composer.dispatchEvent(pasteEvent);
-    if (handled && pasteEvent.defaultPrevented) {
-      return; // DraftJS a traité le paste, on s'arrête là
+    await navigator.clipboard.writeText(text);
+    copied = true;
+  } catch {
+    // Fallback : créer un textarea temporaire sur body et execCommand copy
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      copied = document.execCommand("copy");
+    } catch {
+      copied = false;
     }
-  } catch {
-    // ClipboardEvent constructor peut throw selon les versions Chrome
+    ta.remove();
   }
-  // Tentative 2 : focus + execCommand (chemin natif input)
-  try {
-    composer.focus();
-    document.execCommand("insertText", false, text);
-  } catch {
-    // ignore
-  }
+  showToast(copied ? "Commentaire copié — collez avec Ctrl+V (Cmd+V)" : "Échec copie clipboard");
+}
+
+function showToast(message: string): void {
+  const existing = document.querySelector("[data-tipote-toast]");
+  if (existing) existing.remove();
+  const toast = document.createElement("div");
+  toast.setAttribute("data-tipote-toast", "true");
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 2147483647;
+    background: #111827; color: white;
+    padding: 10px 18px; border-radius: 999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    opacity: 0; transition: opacity 0.2s;
+  `;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.style.opacity = "1";
+  });
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 250);
+  }, 3500);
 }
 
 export const tiktokAdapter: PlatformAdapter = {
