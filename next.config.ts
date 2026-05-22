@@ -22,11 +22,31 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        // affiliate.tipote.com → toutes les routes deviennent /affiliate/*
-        // Pattern recommandé par Next.js pour le subdomain-to-path mapping
-        // (cf. docs sur le multi-tenant). Plus fiable qu'un middleware
-        // NextResponse.rewrite qui en Next 16 essaie un fetch externe et
-        // crashe en EPROTO sur localhost:3000.
+        // affiliate.tipote.com → /affiliate/*
+        // ATTENTION : ne pas catch /_next/, /api/ ou /affiliate/ lui-même
+        // sinon les assets statiques (CSS/JS) sont rewrités en
+        // /affiliate/_next/... qui n'existe pas → 404 sur toute la page.
+        // Les trois premières règles sont des pass-through (destination
+        // identique au source) qui matchent et stoppent la chaîne avant
+        // la règle catch-all.
+        {
+          source: "/_next/:path*",
+          has: [{ type: "host", value: "affiliate.tipote.com" }],
+          destination: "/_next/:path*",
+        },
+        {
+          source: "/api/:path*",
+          has: [{ type: "host", value: "affiliate.tipote.com" }],
+          destination: "/api/:path*",
+        },
+        {
+          source: "/affiliate/:path*",
+          has: [{ type: "host", value: "affiliate.tipote.com" }],
+          destination: "/affiliate/:path*",
+        },
+        // Catch-all : toutes les autres routes sur affiliate.tipote.com
+        // sont rewritées en /affiliate/*. C'est ça qui fait que
+        // affiliate.tipote.com/login → app/affiliate/login/page.tsx.
         {
           source: "/:path*",
           has: [{ type: "host", value: "affiliate.tipote.com" }],

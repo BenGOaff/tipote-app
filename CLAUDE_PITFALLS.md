@@ -320,3 +320,96 @@ Quand un user signale "le bouton Tipote n'apparaît plus sur <réseau>" :
 2. Vérifier les patterns aria-label de l'adapter concerné (LinkedIn /
    FB / etc. changent leurs traductions parfois)
 3. Étendre la liste de patterns si nouvelle langue
+
+## R) NEXT.JS REWRITES — exclure `/_next/`, `/api/`, et la cible elle-même (22 mai 2026)
+
+**Erreur faite** : pour mapper le sous-domaine `affiliate.tipote.com` →
+chemin `/affiliate/*`, j'ai mis dans `next.config.ts` :
+
+```ts
+{
+  source: "/:path*",
+  has: [{ type: "host", value: "affiliate.tipote.com" }],
+  destination: "/affiliate/:path*",
+}
+```
+
+Résultat : `affiliate.tipote.com/_next/static/css/xyz.css` a été rewrité
+en `/affiliate/_next/static/css/xyz.css` qui n'existe pas → 404 sur
+TOUTES les CSS et JS de la page. La page rendait en HTML pur, no style.
+
+**Règle absolue** : quand tu fais un rewrite "catch-all" basé sur le
+host, AJOUTE des règles de pass-through AVANT pour `/_next/`, `/api/`,
+et la cible elle-même. Sinon ces paths sont catch et tout pète.
+
+Pattern correct :
+
+```ts
+beforeFiles: [
+  // Pass-through : pas de rewrite pour les assets statiques
+  {
+    source: "/_next/:path*",
+    has: [{ type: "host", value: "subdomain.example.com" }],
+    destination: "/_next/:path*",
+  },
+  {
+    source: "/api/:path*",
+    has: [{ type: "host", value: "subdomain.example.com" }],
+    destination: "/api/:path*",
+  },
+  // Pass-through pour la cible elle-même (évite la double-réécriture
+  // si l'user navigue manuellement vers /target/...)
+  {
+    source: "/target/:path*",
+    has: [{ type: "host", value: "subdomain.example.com" }],
+    destination: "/target/:path*",
+  },
+  // Catch-all (DOIT être en dernier)
+  {
+    source: "/:path*",
+    has: [{ type: "host", value: "subdomain.example.com" }],
+    destination: "/target/:path*",
+  },
+],
+```
+
+**Test après chaque rewrite** :
+1. Visiter une page du sous-domaine
+2. Ouvrir DevTools → Network → cocher "JS" et "CSS"
+3. Recharger → tous les 200, aucun 404 sur _next/static/*
+
+Si y'a UN 404 sur un `_next/static/*.css` ou `*.js`, c'est ce bug.
+
+## S) NEXT.JS 16 — NextResponse.rewrite() avec URL object essaie un fetch externe (22 mai 2026)
+
+**Erreur faite** : dans le middleware Next.js 16, j'ai fait :
+
+```ts
+const url = req.nextUrl.clone();
+url.pathname = "/affiliate/login";
+return NextResponse.rewrite(url);  // CRASHE
+```
+
+Résultat : Next.js 16 a changé le comportement de `NextResponse.rewrite()`
+avec un URL object. Au lieu de rewriter en interne, il essaie un fetch
+HTTP externe vers l'URL. Comme l'URL contient `localhost:3000` (via
+Caddy reverse proxy) et que Next sert en HTTP mais essaie HTTPS → erreur
+`EPROTO: wrong version number` → 500 Internal Server Error.
+
+**Règle absolue** : pour mapper un sous-domaine vers un sous-chemin,
+NE PAS utiliser le middleware. Utiliser `next.config.ts` → `async
+rewrites()` avec un filtre `has: [{ type: "host" }]`. C'est résolu
+au build, pas au runtime, donc zéro risque de fetch externe.
+
+Si vraiment besoin de rewrite dynamique côté middleware (rare), utiliser
+le pattern recommandé Next.js :
+
+```ts
+return NextResponse.rewrite(new URL("/path", request.url));
+```
+
+(`new URL(path, request.url)` au lieu de `req.nextUrl.clone()` —
+ça construit une URL relative au même host que la requête, ce qui
+force Next à traiter en interne.)
+
+Mais 90% du temps, `next.config.ts` rewrites est plus simple et plus fiable.
