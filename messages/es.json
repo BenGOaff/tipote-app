@@ -5626,5 +5626,57 @@
     "dialogBody": "Hay una versión auto-guardada ({draftWhen}). Puedes recuperarla o partir de tu último guardado ({savedWhen}).",
     "restoreBtn": "Recuperar la versión auto-guardada",
     "discardBtn": "Partir de mi último guardado"
+  },
+  "helpSeo": {
+    "metaTitle": "Indexar mis quizzes en Google — Ayuda Tipote",
+    "metaDescription": "Cómo hacer que tus quizzes sean visibles en Google Search, ChatGPT, Perplexity y otros motores de búsqueda / IA. Guía paso a paso.",
+    "title": "Indexar mis quizzes en Google y las IA",
+    "subtitle": "Haz que tus quizzes aparezcan en Google Search, ChatGPT, Perplexity y Claude search — 5 a 10 minutos de configuración, luego es automático.",
+    "s1": {
+      "heading": "¿Por qué indexar?",
+      "body1": "Cuando Google o una IA indexa tu quiz, cualquiera puede encontrarlo buscando tu tema. Tres beneficios concretos:",
+      "li1": "Tráfico gratuito recurrente desde Google Search — cada búsqueda relevante es una oportunidad de captar un lead.",
+      "li2": "Cuando alguien le pregunta a ChatGPT, Perplexity o Claude «recomiéndame un quiz sobre X», tu quiz puede aparecer.",
+      "li3": "Más compartidos sociales: los visitantes que te encuentran por búsqueda suelen compartir a su red."
+    },
+    "s2": {
+      "heading": "Paso 1 — Enviar tu sitemap a Google",
+      "body1": "Google necesita un «sitemap» (lista de tus quizzes) para indexarlos. Tipote lo genera automáticamente.",
+      "li1": "Ve a Google Search Console: https://search.google.com/search-console",
+      "li2": "Haz clic en «Añadir propiedad» y entra tu dominio (ej. tipote.com O tu dominio personalizado si tienes uno).",
+      "li3": "Verifica la propiedad (vía registro DNS TXT — Google te guía).",
+      "li4": "En el menú izquierdo, ve a «Sitemaps» y entra: sitemap.xml",
+      "li5": "Haz clic en «Enviar». Google rastreará tus quizzes en 1 a 7 días.",
+      "note": "No necesitas reenviar por cada nuevo quiz — el sitemap se regenera automáticamente cada hora."
+    },
+    "s3": {
+      "heading": "Paso 2 — Con un dominio personalizado",
+      "body1": "Si tienes un dominio propio (ej. quiz.tusitio.com), puedes indexar tus quizzes en TU dominio en lugar de tipote.com. Más potente para tu SEO.",
+      "li1": "Añade tu dominio personalizado a Google Search Console como «propiedad de dominio».",
+      "li2": "Verifica la propiedad vía un registro DNS TXT (Google te da el valor a pegar).",
+      "li3": "Envía el sitemap: https://tu-dominio.com/sitemap.xml — listará ÚNICAMENTE tus quizzes, en TU URL."
+    },
+    "s4": {
+      "heading": "Paso 3 — Optimizar cada quiz para SEO",
+      "body1": "Cuanto mejor titulado y descrito esté tu quiz, más lo destacan Google y las IA. Buenas prácticas:",
+      "li1Title": "Título claro (≤60 caracteres)",
+      "li1Body": "Es el texto que Google muestra en resultados. Incluye tu palabra clave principal.",
+      "li2Title": "Descripción (campo «Vista previa social» en el editor)",
+      "li2Body": "150-160 caracteres que resumen el valor del quiz e incitan al clic.",
+      "li3Title": "Slug corto y descriptivo",
+      "li3Body": "No «quiz1» sino «perfil-sistema-nervioso» o «estilo-foto-fine-art». El slug es tu URL.",
+      "li4Title": "Imagen para compartir (1200×630 px)",
+      "li4Body": "Aparece en Google Images y vistas previas de iMessage / WhatsApp. Una imagen genial = +20-30% clics."
+    },
+    "s5": {
+      "heading": "Paso 4 — Visibilidad en IA (ChatGPT, Perplexity, Claude)",
+      "body1": "No tienes nada extra que configurar. Las IA rastrean los sitios automáticamente vía nuestro archivo `llms.txt` (un manifiesto que generamos por ti) que lista tus quizzes, su descripción y URL en un formato optimizado para LLMs.",
+      "note": "Cuanto más rellenes el título, la descripción y la imagen OG en el editor, más precisamente una IA puede recomendar tu quiz a los usuarios adecuados."
+    },
+    "s6": {
+      "heading": "Paso 5 — Ocultar un quiz a los buscadores",
+      "body1": "Si quieres mantener un quiz privado (solo por enlace, sin riesgo de aparecer en Google), marca la casilla «Ocultar este quiz a los motores de búsqueda» en la pestaña SEO del editor del quiz.",
+      "body2": "El quiz sigue activo y compartible vía su enlace directo, pero se excluye de tu sitemap y archivo IA. Ideal para contenido interno o borradores públicos compartidos a un círculo limitado."
+    }
   }
 }

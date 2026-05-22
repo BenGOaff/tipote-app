@@ -73,6 +73,7 @@ type PageData = {
   meta_title: string;
   meta_description: string;
   og_image_url: string;
+  seo_noindex: boolean;
   legal_mentions_url: string;
   legal_cgv_url: string;
   legal_privacy_url: string;
@@ -3681,6 +3682,28 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
                         className="w-full px-2 py-1.5 bg-muted border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground/70"
                       />
                     </div>
+                  </div>
+
+                  {/* Toggle "masquer aux moteurs de recherche".
+                      Quand coché : sitemap.xml + llms.txt excluent
+                      cette page, et la page sert un
+                      <meta name="robots" content="noindex,nofollow">.
+                      Le lien direct reste partageable. */}
+                  <div className="pt-2 border-t border-border">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!page.seo_noindex}
+                        onChange={(e) => handleSettingUpdate("seo_noindex", e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-foreground">Masquer aux moteurs de recherche</div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Coche si tu ne veux pas que Google, Bing ou les IA (ChatGPT, Perplexity…) indexent cette page.
+                        </p>
+                      </div>
+                    </label>
                   </div>
 
                   {/* Responsive layout (capture only) */}

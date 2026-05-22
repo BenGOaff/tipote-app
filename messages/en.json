@@ -5633,5 +5633,57 @@
     "dialogBody": "We have an auto-saved version ({draftWhen}). You can restore it, or start again from your last save ({savedWhen}).",
     "restoreBtn": "Restore the auto-saved version",
     "discardBtn": "Start from my last save"
+  },
+  "helpSeo": {
+    "metaTitle": "Index my quizzes on Google — Tipote Help",
+    "metaDescription": "How to make your quizzes visible on Google Search, ChatGPT, Perplexity and other search engines / AI tools. Step-by-step guide.",
+    "title": "Index my quizzes on Google and AI tools",
+    "subtitle": "Make your quizzes appear in Google Search, ChatGPT, Perplexity and Claude search — 5 to 10 minutes of setup, then it's automatic.",
+    "s1": {
+      "heading": "Why index?",
+      "body1": "When Google or an AI indexes your quiz, anyone can find it by searching your topic. Three concrete benefits:",
+      "li1": "Free recurring traffic from Google Search — every relevant search is a chance to capture a lead.",
+      "li2": "When someone asks ChatGPT, Perplexity or Claude \"recommend me a quiz about X\", your quiz can be surfaced.",
+      "li3": "More social shares: visitors who find you through search often share to their network."
+    },
+    "s2": {
+      "heading": "Step 1 — Submit your sitemap to Google",
+      "body1": "Google needs a \"sitemap\" (list of your quizzes) to index them. Tipote generates it automatically.",
+      "li1": "Go to Google Search Console: https://search.google.com/search-console",
+      "li2": "Click \"Add a property\" and enter your domain (e.g. tipote.com OR your custom domain if you have one).",
+      "li3": "Verify ownership (via DNS TXT record — Google walks you through).",
+      "li4": "In the left menu, go to \"Sitemaps\" and enter: sitemap.xml",
+      "li5": "Click \"Submit\". Google will crawl your quizzes within 1 to 7 days.",
+      "note": "You don't need to re-submit for each new quiz — the sitemap is regenerated automatically every hour."
+    },
+    "s3": {
+      "heading": "Step 2 — With a custom domain",
+      "body1": "If you have a custom domain (e.g. quiz.yoursite.com), you can index your quizzes on YOUR domain instead of tipote.com. More powerful for your SEO.",
+      "li1": "Add your custom domain to Google Search Console as a \"domain property\".",
+      "li2": "Verify ownership via a DNS TXT record (Google gives you the value to paste).",
+      "li3": "Submit the sitemap: https://your-domain.com/sitemap.xml — it will list ONLY your quizzes, on YOUR URL."
+    },
+    "s4": {
+      "heading": "Step 3 — Optimize each quiz for SEO",
+      "body1": "The better your quiz is titled and described, the more Google and AI will surface it. Best practices:",
+      "li1Title": "Clear title (≤60 characters)",
+      "li1Body": "It's the text Google shows in results. Include your main keyword.",
+      "li2Title": "Description (\"Social preview\" field in the editor)",
+      "li2Body": "150-160 characters summarizing the quiz value and encouraging clicks.",
+      "li3Title": "Short, descriptive slug",
+      "li3Body": "Not \"quiz1\" but \"nervous-system-profile\" or \"fine-art-photo-style\". The slug is your URL.",
+      "li4Title": "Share image (1200×630 px)",
+      "li4Body": "Appears on Google Images and iMessage / WhatsApp previews. A great image = +20-30% clicks."
+    },
+    "s5": {
+      "heading": "Step 4 — Visibility on AI (ChatGPT, Perplexity, Claude)",
+      "body1": "You have nothing extra to set up. AIs automatically crawl sites via our `llms.txt` file (a manifest we generate for you) which lists your quizzes, their description and URL in a format optimized for LLMs.",
+      "note": "The more you fill in the title, description and OG image in the editor, the more precisely an AI can recommend your quiz to the right users."
+    },
+    "s6": {
+      "heading": "Step 5 — Hide a quiz from search engines",
+      "body1": "If you want to keep a quiz private (link-only, no risk of it appearing in Google), check the box \"Hide this quiz from search engines\" in the SEO tab of the quiz editor.",
+      "body2": "The quiz stays active and shareable via its direct link, but is excluded from your sitemap and AI manifest. Ideal for internal content or public drafts shared with a limited circle."
+    }
   }
 }

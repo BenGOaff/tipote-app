@@ -56,7 +56,9 @@ function isPublicTenantPath(pathname: string): boolean {
     pathname.startsWith("/api/leads") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
-    pathname === "/robots.txt"
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/llms.txt"
   ) {
     return true;
   }

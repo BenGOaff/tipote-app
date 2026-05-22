@@ -13,6 +13,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
+import QuizJsonLd from "@/components/quiz/QuizJsonLd";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
@@ -53,7 +54,7 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
     const supabase = createClient(supabaseUrl, supabaseKey);
     const base = supabase
       .from("quizzes")
-      .select("user_id, project_id, slug, title, introduction, og_image_url, og_description")
+      .select("user_id, project_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
       .eq("status", "active");
     const { data } = await (UUID_RE.test(param)
       ? base.eq("id", param).maybeSingle()
@@ -103,9 +104,13 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
       ? { absolute: `${plainTitle} · ${siteName}` }
       : plainTitle;
 
+    // Respecte le toggle "masquer aux moteurs de recherche" côté éditeur.
+    const noindex = !!(data as { seo_noindex?: boolean }).seo_noindex;
+
     const meta: Metadata = {
       title: titleOverride,
       description,
+      ...(noindex ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } } : {}),
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
@@ -147,5 +152,64 @@ export default async function PublicQuizPage({ params }: RouteContext) {
       notFound();
     }
   }
-  return <PublicQuizClient quizId={quizId} />;
+
+  // JSON-LD pour SEO + indexation IA (Schema.org Quiz)
+  const fullDataBase = supabaseAdmin
+    .from("quizzes")
+    .select("id, user_id, project_id, title, og_description, og_image_url, introduction, questions, created_at, updated_at, content_locale")
+    .eq("status", "active");
+  const { data: full } = await (UUID_RE.test(quizId)
+    ? fullDataBase.eq("id", quizId).maybeSingle()
+    : fullDataBase.ilike("slug", quizId).maybeSingle());
+  const fullQuiz = full as
+    | {
+        id: string;
+        user_id: string;
+        project_id: string | null;
+        title: string;
+        og_description: string | null;
+        og_image_url: string | null;
+        introduction: string | null;
+        questions: unknown[] | null;
+        created_at: string;
+        updated_at: string;
+        content_locale: string | null;
+      }
+    | null;
+
+  let authorName: string | null = null;
+  let authorUrl: string | null = null;
+  if (fullQuiz?.user_id && fullQuiz.project_id) {
+    const { data: biz } = await supabaseAdmin
+      .from("business_profiles")
+      .select("share_site_name, brand_website_url")
+      .eq("user_id", fullQuiz.user_id)
+      .eq("project_id", fullQuiz.project_id)
+      .maybeSingle();
+    const b = biz as { share_site_name?: string | null; brand_website_url?: string | null } | null;
+    authorName = b?.share_site_name ?? null;
+    authorUrl = b?.brand_website_url ?? null;
+  }
+
+  const canonical = (await buildCanonicalUrl(`/q/${quizId}`)) ?? "";
+
+  return (
+    <>
+      {fullQuiz && canonical && (
+        <QuizJsonLd
+          canonicalUrl={canonical}
+          title={fullQuiz.title}
+          description={fullQuiz.og_description || fullQuiz.introduction || null}
+          imageUrl={fullQuiz.og_image_url || null}
+          createdAt={fullQuiz.created_at}
+          updatedAt={fullQuiz.updated_at}
+          authorName={authorName}
+          authorUrl={authorUrl}
+          numberOfQuestions={Array.isArray(fullQuiz.questions) ? fullQuiz.questions.length : null}
+          inLanguage={fullQuiz.content_locale}
+        />
+      )}
+      <PublicQuizClient quizId={quizId} />
+    </>
+  );
 }

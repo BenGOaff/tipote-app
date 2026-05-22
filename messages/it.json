@@ -5626,5 +5626,57 @@
     "dialogBody": "Esiste una versione auto-salvata ({draftWhen}). Puoi recuperarla, o ripartire dall'ultimo salvataggio ({savedWhen}).",
     "restoreBtn": "Recupera la versione auto-salvata",
     "discardBtn": "Riparti dall'ultimo salvataggio"
+  },
+  "helpSeo": {
+    "metaTitle": "Indicizzare i miei quiz su Google — Aiuto Tipote",
+    "metaDescription": "Come rendere visibili i tuoi quiz su Google Search, ChatGPT, Perplexity e altri motori di ricerca / IA. Guida passo per passo.",
+    "title": "Indicizzare i miei quiz su Google e sulle IA",
+    "subtitle": "Fai apparire i tuoi quiz su Google Search, ChatGPT, Perplexity e Claude search — 5-10 minuti di setup, poi tutto automatico.",
+    "s1": {
+      "heading": "Perché indicizzare?",
+      "body1": "Quando Google o un'IA indicizza il tuo quiz, chiunque può trovarlo cercando il tuo argomento. Tre vantaggi concreti:",
+      "li1": "Traffico gratuito ricorrente da Google Search — ogni ricerca pertinente è un'occasione per catturare un lead.",
+      "li2": "Quando qualcuno chiede a ChatGPT, Perplexity o Claude «consigliami un quiz su X», il tuo quiz può emergere.",
+      "li3": "Più condivisioni social: chi ti trova via ricerca tende a condividere alla propria rete."
+    },
+    "s2": {
+      "heading": "Passo 1 — Inviare la sitemap a Google",
+      "body1": "Google ha bisogno di una «sitemap» (lista dei tuoi quiz) per indicizzarli. Tipote la genera automaticamente.",
+      "li1": "Vai su Google Search Console: https://search.google.com/search-console",
+      "li2": "Clicca «Aggiungi una proprietà» e inserisci il tuo dominio (es. tipote.com O il tuo dominio personalizzato).",
+      "li3": "Verifica la proprietà (tramite record DNS TXT — Google ti guida).",
+      "li4": "Nel menu a sinistra, vai su «Sitemap» e inserisci: sitemap.xml",
+      "li5": "Clicca «Invia». Google scansionerà i tuoi quiz entro 1-7 giorni.",
+      "note": "Non devi reinviare ad ogni nuovo quiz — la sitemap viene rigenerata automaticamente ogni ora."
+    },
+    "s3": {
+      "heading": "Passo 2 — Con un dominio personalizzato",
+      "body1": "Se hai un dominio proprio (es. quiz.tuosito.com), puoi indicizzare i tuoi quiz sul TUO dominio invece di tipote.com. Più potente per la tua SEO.",
+      "li1": "Aggiungi il tuo dominio personalizzato a Google Search Console come «proprietà dominio».",
+      "li2": "Verifica la proprietà con un record DNS TXT (Google ti dà il valore da incollare).",
+      "li3": "Invia la sitemap: https://tuo-dominio.com/sitemap.xml — elencherà SOLO i tuoi quiz, sul TUO URL."
+    },
+    "s4": {
+      "heading": "Passo 3 — Ottimizzare ogni quiz per la SEO",
+      "body1": "Meglio è titolato e descritto il tuo quiz, più Google e le IA lo mettono in evidenza. Buone pratiche:",
+      "li1Title": "Titolo chiaro (≤60 caratteri)",
+      "li1Body": "È il testo che Google mostra nei risultati. Includi la parola chiave principale.",
+      "li2Title": "Descrizione (campo «Anteprima social» nell'editor)",
+      "li2Body": "150-160 caratteri che riassumono il valore del quiz e incitano al click.",
+      "li3Title": "Slug breve e descrittivo",
+      "li3Body": "Non «quiz1» ma «profilo-sistema-nervoso» o «stile-foto-fine-art». Lo slug è il tuo URL.",
+      "li4Title": "Immagine per condivisione (1200×630 px)",
+      "li4Body": "Appare su Google Images e anteprime iMessage / WhatsApp. Un'immagine bella = +20-30% click."
+    },
+    "s5": {
+      "heading": "Passo 4 — Visibilità sulle IA (ChatGPT, Perplexity, Claude)",
+      "body1": "Non devi configurare altro. Le IA scansionano automaticamente i siti tramite il nostro file `llms.txt` (un manifesto che generiamo per te) che elenca i tuoi quiz, la loro descrizione e l'URL in un formato ottimizzato per LLM.",
+      "note": "Più compili titolo, descrizione e immagine OG nell'editor, più precisamente un'IA può raccomandare il tuo quiz agli utenti giusti."
+    },
+    "s6": {
+      "heading": "Passo 5 — Nascondere un quiz ai motori",
+      "body1": "Se vuoi tenere un quiz privato (solo via link, senza rischio che appaia su Google), seleziona la casella «Nascondi questo quiz ai motori di ricerca» nella tab SEO dell'editor del quiz.",
+      "body2": "Il quiz resta attivo e condivisibile via link diretto, ma viene escluso dalla tua sitemap e dal file IA. Ideale per contenuti interni o bozze pubbliche condivise a un cerchio limitato."
+    }
   }
 }
