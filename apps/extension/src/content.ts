@@ -341,21 +341,13 @@ window.addEventListener("message", (event: MessageEvent) => {
 // URN, injected.js Voyager, badge sur permalink) sur LinkedIn uniquement.
 // Sur FB/Threads/IG/X, seul le feedInjector cross-platform tourne.
 const IS_LINKEDIN = /(?:^|\.)linkedin\.com$/.test(location.hostname);
-const IS_TIKTOK = /(?:^|\.)tiktok\.com$/.test(location.hostname);
 
-// Sur TikTok, on injecte le filler MAIN world au boot pour pouvoir
-// pousser du texte dans le composer DraftJS sans planter leur React.
-if (IS_TIKTOK) {
-  try {
-    const s = document.createElement("script");
-    s.src = chrome.runtime.getURL("injected-tiktok.js");
-    s.async = false;
-    (document.head || document.documentElement).appendChild(s);
-    s.onload = () => s.remove();
-  } catch (err) {
-    console.warn("[tipote/cs] failed to inject TikTok filler", err);
-  }
-}
+// NOTE : on a essayé d'injecter un script MAIN world sur TikTok pour
+// faire un fill direct via la technique Grammarly (execCommand depuis
+// le contexte page). Échec : TikTok crashe à la moindre interaction
+// (NotFoundError removeChild dans leur React). Leur secsdk anti-bot
+// est trop agressif. On reste en mode clipboard pour TikTok (cf.
+// platforms/tiktok.ts).
 
 // ─── Badge sur une page /feed/update/<urn>/ (LinkedIn only) ──────────
 // Quand l'user navigue vers le permalink d'un post, on inject une
