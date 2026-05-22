@@ -1,29 +1,27 @@
-// Injecteur inline LinkedIn — v5.
+// Injecteur inline multi-plateforme.
 //
-// Diag terrain (Béné, 22 mai 2026) :
-//   - LinkedIn 2026 utilise TipTap / ProseMirror (plus Quill).
-//   - Composer = <div contenteditable role="textbox"
-//                  aria-label="Éditeur de texte pour créer un commentaire"
-//                  class="tiptap ProseMirror ...">
-//   - Le composer n'est PLUS dans un <article> — il vit dans son propre
-//     container, à côté du post (overlay-style).
+// Phase 1 (mai 2026, Béné) : supporte LinkedIn (existant) + Facebook +
+// Threads + Instagram + X/Twitter. Pour chaque réseau, on détecte les
+// composers de commentaire/réponse, on insère un bouton "✨ Tipote ▾"
+// qui ouvre un menu de 4 suggestions IA dans 4 tons, l'user clique sur
+// un ton et le texte généré est inséré dans le composer.
 //
-// Stratégie v5 (qui marche enfin) :
-//   1. Matcher les contenteditable role=textbox dont l'aria-label
-//      contient "commentaire" — exclut le composer de publication
-//      ("Éditeur de texte pour créer une publication") et la messagerie.
-//   2. Plus de filtre <article>. On accroche notre barre directement
-//      au-dessus du composer.
-//   3. Pour extraire le contenu du post à commenter, on remonte le DOM
-//      depuis l'éditeur jusqu'à trouver le post le plus proche (heuristique
-//      simple : on cherche un ancêtre qui contient au moins 100 chars
-//      de texte qui ne soit pas le composer lui-même).
+// AUCUNE auto-action. L'user lit, ajuste, publie via le bouton natif
+// du réseau. Risque de ban : zéro sur toutes les plateformes.
+//
+// L'adapter par plateforme (./platforms/*.ts) abstrait :
+//   - isComposer() : reconnaître le bon élément DOM
+//   - findParentPost() : extraire le contexte (le post à commenter)
+//     pour l'envoyer à l'IA
+//   - fillEditor() : insérer du texte dans l'éditeur (chaque réseau
+//     utilise un framework différent — TipTap, Lexical, DraftJS, plain
+//     textarea — d'où la sandbox par adapter).
 
 import { t } from "./i18n";
+import { detectPlatform, type PlatformAdapter } from "./platforms";
 
 const INJECTED_ATTR = "data-tipote-injected";
 
-// Labels traduits via i18n.ts (FR/EN auto). Émojis = universels.
 const TONES = [
   { key: "agree", emoji: "✅" },
   { key: "disagree", emoji: "🤔" },
@@ -37,74 +35,45 @@ function toneLabel(key: ToneKey): string {
   return t(`tone.${key}` as Parameters<typeof t>[0]);
 }
 
-/** aria-label des composers qu'on cible. LinkedIn génère des labels en
- *  français + anglais + autres langues — on matche en case-insensitive
- *  sur les radicaux "commentaire" / "comment" / "comentario" / "kommentar"
- *  / "commento". Si LinkedIn ajoute une langue exotique on l'ajoute ici. */
-const COMMENT_ARIA_PATTERNS = [
-  "commentaire",   // FR
-  "comment",       // EN
-  "comentario",    // ES / PT
-  "kommentar",     // DE
-  "commento",      // IT
-  "تعليق",         // AR
-];
-
-function isCommentComposer(el: HTMLElement): boolean {
-  if (!el.matches('[role="textbox"][contenteditable="true"]')) return false;
-  const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
-  if (!ariaLabel) return false;
-  return COMMENT_ARIA_PATTERNS.some((p) => ariaLabel.includes(p));
-}
-
 export function startFeedInjector(): void {
-  console.log("[tipote/feed] injector v5 starting (TipTap/ProseMirror)");
-  scanForComposers(document.body);
+  const adapter = detectPlatform();
+  if (!adapter) {
+    console.log("[tipote/feed] platform not supported, skip injector");
+    return;
+  }
+  console.log(`[tipote/feed] injector starting for platform: ${adapter.id}`);
+  scanForComposers(document.body, adapter);
   new MutationObserver((mutations) => {
     for (const m of mutations) {
       for (const node of m.addedNodes) {
-        if (node instanceof HTMLElement) scanForComposers(node);
+        if (node instanceof HTMLElement) scanForComposers(node, adapter);
       }
     }
   }).observe(document.body, { childList: true, subtree: true });
 }
 
-function scanForComposers(root: HTMLElement): void {
-  const editables: HTMLElement[] = [];
-  if (isCommentComposer(root)) editables.push(root);
-  editables.push(
-    ...Array.from(root.querySelectorAll<HTMLElement>('[role="textbox"][contenteditable="true"]'))
-      .filter((el) => isCommentComposer(el))
+function scanForComposers(root: HTMLElement, adapter: PlatformAdapter): void {
+  const candidates: HTMLElement[] = [];
+  if (adapter.isComposer(root)) candidates.push(root);
+
+  // On scan large : tout textbox/contenteditable/textarea potentiel
+  // dans le sous-arbre, puis filtrage strict par l'adapter.
+  const all = root.querySelectorAll<HTMLElement>(
+    '[role="textbox"][contenteditable="true"], [contenteditable="true"], textarea',
   );
+  for (const el of all) {
+    if (adapter.isComposer(el)) candidates.push(el);
+  }
 
-  for (const editable of editables) {
-    if (editable.hasAttribute(INJECTED_ATTR)) continue;
-    editable.setAttribute(INJECTED_ATTR, "true");
-    console.log("[tipote/feed] composer detected", editable);
-    injectToneBar(editable);
+  for (const composer of candidates) {
+    if (composer.hasAttribute(INJECTED_ATTR)) continue;
+    composer.setAttribute(INJECTED_ATTR, "true");
+    console.log(`[tipote/feed] composer detected (${adapter.id})`, composer);
+    injectToneBar(composer, adapter);
   }
 }
 
-/** Cherche le post à commenter à partir du composer. Stratégie :
- *  on remonte le DOM jusqu'à trouver un ancêtre qui contient un texte
- *  conséquent (>= 80 chars) ET qui ne soit pas juste le composer lui-même.
- *  On limite la remontée à 8 niveaux pour pas dériver vers le body. */
-function findPostElement(editable: HTMLElement): HTMLElement | null {
-  let node: HTMLElement | null = editable.parentElement;
-  let depth = 0;
-  while (node && depth < 12) {
-    const text = (node.innerText || "").trim();
-    // Exclude le texte de l'éditeur lui-même
-    const editorText = (editable.innerText || "").trim();
-    const otherText = text.length - editorText.length;
-    if (otherText > 80) return node;
-    node = node.parentElement;
-    depth++;
-  }
-  return null;
-}
-
-function injectToneBar(editable: HTMLElement): void {
+function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   let cachedSuggestions: Record<ToneKey, string> | null = null;
   let loading = false;
   let menuOpen = false;
@@ -119,7 +88,6 @@ function injectToneBar(editable: HTMLElement): void {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   `;
 
-  // Bouton trigger : "Tipote ▾" — style Kawaak (compact, branded).
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.setAttribute("aria-label", t("dropdown.aria"));
@@ -142,8 +110,9 @@ function injectToneBar(editable: HTMLElement): void {
   });
   container.appendChild(trigger);
 
-  // Menu dropdown — attaché au <body> en position:fixed pour ne pas être
-  // rogné par l'overflow:hidden / transform des conteneurs LinkedIn.
+  // Menu attaché au <body> en position:fixed pour échapper aux overflow
+  // hidden / transform de la page hôte (LinkedIn, FB, IG ont tous des
+  // wrappers qui clip le dropdown s'il est positionné en absolute).
   const menu = document.createElement("div");
   menu.setAttribute("data-tipote-menu", "true");
   menu.style.cssText = `
@@ -160,7 +129,6 @@ function injectToneBar(editable: HTMLElement): void {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   `;
 
-  const menuItems: HTMLButtonElement[] = [];
   for (const tone of TONES) {
     const label = toneLabel(tone.key);
     const item = document.createElement("button");
@@ -193,14 +161,14 @@ function injectToneBar(editable: HTMLElement): void {
       try {
         if (!cachedSuggestions) {
           loading = true;
-          const post = findPostElement(editable);
+          const post = adapter.findParentPost(composer);
           const content = post ? (post.innerText || "").trim().slice(0, 1500) : "";
           const language = detectLanguage();
-          console.log("[tipote/feed] fetching suggestions, content length =", content.length);
+          console.log(`[tipote/feed] fetching suggestions for ${adapter.id}, content length = ${content.length}`);
           cachedSuggestions = await fetchSuggestions(content, language);
           loading = false;
         }
-        fillTipTapEditor(editable, cachedSuggestions[tone.key]);
+        adapter.fillEditor(composer, cachedSuggestions[tone.key]);
         trigger.innerHTML = `<span>${tone.emoji} ${t("dropdown.inserted")}</span>`;
         setTimeout(() => {
           trigger.innerHTML = originalTrigger;
@@ -211,12 +179,7 @@ function injectToneBar(editable: HTMLElement): void {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.startsWith("extension_unreachable")) {
-          // Cas hyper fréquent en dev : l'user reload l'extension
-          // (chrome://extensions ↻) sans hard-refresh LinkedIn. Le
-          // content script vit dans l'ancien contexte mais le SW est
-          // mort. On log un message clair et on indique le fix à l'user
-          // directement via le bouton — pas la peine de console.error.
-          console.log("[tipote/feed] extension reloaded — hard-refresh LinkedIn (Ctrl+Shift+R) pour reconnecter");
+          console.log(`[tipote/feed] extension reloaded — hard-refresh ${adapter.id} (Ctrl+Shift+R) pour reconnecter`);
           trigger.innerHTML = `<span>${t("dropdown.reloadLinkedIn")}</span>`;
         } else {
           console.warn("[tipote/feed] suggestion fill failed", err);
@@ -229,7 +192,6 @@ function injectToneBar(editable: HTMLElement): void {
       }
     });
     menu.appendChild(item);
-    menuItems.push(item);
   }
   document.body.appendChild(menu);
 
@@ -266,18 +228,20 @@ function injectToneBar(editable: HTMLElement): void {
     else openMenu();
   });
 
-  // Insertion : juste au-dessus du composer. On remonte de 1-2 niveaux pour
-  // se placer au-dessus du wrapper TipTap (qui a souvent un padding/border
-  // qu'on veut pas couper). Fallback : insertion directe avant l'éditeur.
-  const wrapper = editable.parentElement?.parentElement ?? editable.parentElement;
+  // Insertion : juste au-dessus du composer. On remonte de 1-2 niveaux
+  // pour se placer au-dessus du wrapper (chaque réseau a un padding /
+  // border qu'on veut pas couper). Fallback : insertion directe.
+  const wrapper = composer.parentElement?.parentElement ?? composer.parentElement;
   if (wrapper?.parentElement) {
     wrapper.parentElement.insertBefore(container, wrapper);
   } else {
-    editable.parentElement?.insertBefore(container, editable);
+    composer.parentElement?.insertBefore(container, composer);
   }
 }
 
 function detectLanguage(): string {
+  // Cookie LinkedIn `li_lang` est LinkedIn-only, mais on tente quand
+  // même et on tombe sur navigator.language pour les autres réseaux.
   const m = document.cookie.match(/li_lang=([^;]+)/);
   if (m) return decodeURIComponent(m[1]).slice(0, 2).toLowerCase();
   return (navigator.language || "fr").slice(0, 2).toLowerCase();
@@ -289,10 +253,6 @@ async function fetchSuggestions(content: string, language: string): Promise<Reco
       chrome.runtime.sendMessage(
         { type: "ai/suggest", payload: { content_excerpt: content, language } },
         (resp: unknown) => {
-          // Lire chrome.runtime.lastError ÉVITE le warning "Unchecked
-          // runtime.lastError" et permet de fail proprement quand le
-          // service worker est mort (context invalidated suite reload
-          // extension sans hard refresh LinkedIn).
           if (chrome.runtime.lastError) {
             reject(new Error(`extension_unreachable:${chrome.runtime.lastError.message ?? "unknown"}`));
             return;
@@ -303,54 +263,7 @@ async function fetchSuggestions(content: string, language: string): Promise<Reco
         },
       );
     } catch (err) {
-      // Throw synchrone si l'extension a été désactivée pendant qu'on
-      // tient le pointeur chrome.runtime.* — on traite comme une simple
-      // déconnexion temporaire (l'user doit hard-refresh LinkedIn).
       reject(new Error(`extension_unreachable:${err instanceof Error ? err.message : "unknown"}`));
     }
   });
-}
-
-/** Remplit un éditeur TipTap/ProseMirror. ProseMirror est très strict
- *  sur les mutations DOM — un simple `textContent = text` est ignoré
- *  silencieusement. Il faut soit utiliser execCommand (qui dispatch les
- *  bons events), soit dispatcher des InputEvent natifs avec inputType.
- *  ProseMirror écoute `beforeinput` et `input` — on dispatch les 2. */
-function fillTipTapEditor(editable: HTMLElement, text: string): void {
-  editable.focus();
-  // 1. Sélectionne tout le contenu existant
-  const sel = window.getSelection();
-  if (sel) {
-    sel.removeAllRanges();
-    const range = document.createRange();
-    range.selectNodeContents(editable);
-    sel.addRange(range);
-  }
-  // 2. Tente execCommand (fonctionne sur la plupart des éditeurs)
-  let inserted = false;
-  try {
-    inserted = document.execCommand("insertText", false, text);
-  } catch {
-    inserted = false;
-  }
-  // 3. Si execCommand n'a rien fait, fallback InputEvent (ProseMirror
-  //    écoute beforeinput avec inputType insertReplacementText).
-  if (!inserted) {
-    const beforeEvent = new InputEvent("beforeinput", {
-      bubbles: true,
-      cancelable: true,
-      inputType: "insertReplacementText",
-      data: text,
-    });
-    editable.dispatchEvent(beforeEvent);
-    if (!beforeEvent.defaultPrevented) {
-      // ProseMirror n'a pas intercepté — on fait du DOM direct.
-      editable.textContent = text;
-    }
-    editable.dispatchEvent(new InputEvent("input", {
-      bubbles: true,
-      inputType: "insertReplacementText",
-      data: text,
-    }));
-  }
 }

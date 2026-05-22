@@ -107,8 +107,8 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     en: "Inserted ✓",
   },
   "dropdown.reloadLinkedIn": {
-    fr: "↻ Recharge LinkedIn",
-    en: "↻ Reload LinkedIn",
+    fr: "↻ Recharger la page",
+    en: "↻ Reload the page",
   },
 };
 

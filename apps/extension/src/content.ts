@@ -335,25 +335,21 @@ window.addEventListener("message", (event: MessageEvent) => {
   void handleCapturedPost(urn, via);
 });
 
-// Inject le hook réseau dès que possible. document_idle = on est sûr
-// que document.head existe, mais on cap quand même.
-injectPageWorldScript();
+// Détection plateforme — gate les fonctions LinkedIn-specific (matching
+// URN, injected.js Voyager, badge sur permalink) sur LinkedIn uniquement.
+// Sur FB/Threads/IG/X, seul le feedInjector cross-platform tourne.
+const IS_LINKEDIN = /(?:^|\.)linkedin\.com$/.test(location.hostname);
 
-// ─── Phase 2.5 : badge sur une page /feed/update/<urn>/ ──────────────
-// Quand l'user navigue vers le permalink d'un post (typiquement via le
-// popup "tâches en attente"), on inject une pastille Tipote avec
-// les 4 tons de commentaire + auto-like. LinkedIn est une SPA donc
-// on observe les changements de URL aussi.
-
+// ─── Badge sur une page /feed/update/<urn>/ (LinkedIn only) ──────────
+// Quand l'user navigue vers le permalink d'un post, on inject une
+// pastille Tipote avec les 4 tons de commentaire. LinkedIn est une SPA
+// donc on observe les changements d'URL aussi.
 const ACTIVITY_URN_FROM_URL = /\/feed\/update\/(urn:li:(?:activity|share|ugcPost):[A-Za-z0-9_-]+)/;
 
 function maybeMountBadge() {
   const m = location.pathname.match(ACTIVITY_URN_FROM_URL) ??
             location.href.match(ACTIVITY_URN_FROM_URL);
   if (!m) {
-    // Diag : si on est sur une page qui RESSEMBLE à un permalink mais
-    // que le regex n'a pas matché, on log pour qu'on diagnostique.
-    // Sinon (home feed, profil, etc.) c'est normal de pas matcher.
     if (location.pathname.includes("/feed/update/") || location.href.includes("/feed/update/")) {
       console.warn("[tipote/cs] /feed/update detected but no URN extracted", location.href);
     }
@@ -364,26 +360,35 @@ function maybeMountBadge() {
   void mountBadge(urn);
 }
 
-maybeMountBadge();
+if (IS_LINKEDIN) {
+  // Inject le hook réseau dès que possible. document_idle = on est sûr
+  // que document.head existe, mais on cap quand même.
+  injectPageWorldScript();
 
-// LinkedIn = SPA, on observe les changements d'URL pour re-monter le
-// badge si l'user change de post via le router interne.
-let lastHref = location.href;
-new MutationObserver(() => {
-  if (location.href !== lastHref) {
-    lastHref = location.href;
-    maybeMountBadge();
-  }
-}).observe(document, { subtree: true, childList: true });
+  maybeMountBadge();
 
-// Injecteur inline — c'est l'UX principale (Béné, 20 mai 2026 :
-// "comme Kawaak, je scrolle le feed et n'importe où je peux cliquer
-// commenter et j'ai le bouton tipote"). Le badge flottant reste comme
-// fallback sur les permalinks ouverts via popup paste-URL.
+  // LinkedIn = SPA, on observe les changements d'URL pour re-monter le
+  // badge si l'user change de post via le router interne.
+  let lastHref = location.href;
+  new MutationObserver(() => {
+    if (location.href !== lastHref) {
+      lastHref = location.href;
+      maybeMountBadge();
+    }
+  }).observe(document, { subtree: true, childList: true });
+
+  // Auto-trigger matching à l'arrivée sur LinkedIn.
+  void pushConnect();
+}
+
+// Injecteur inline — UX principale, marche sur LinkedIn + FB + Threads
+// + Instagram + X. Auto-détecte la plateforme via location.hostname.
 startFeedInjector();
 
-// Auto-trigger matching à l'arrivée sur LinkedIn.
-void pushConnect();
+// ─── Code legacy (gardé pour le diff visible — déplacé au gate ci-dessus)
+// Les anciennes lignes top-level injectPageWorldScript() / maybeMountBadge()
+// / startFeedInjector() / pushConnect() étaient toutes appelées
+// inconditionnellement. Maintenant gated via IS_LINKEDIN sauf startFeedInjector.
 
 // Inspecte l'état du throttle anti-ban depuis la console DevTools.
 debugBag.tipoteThrottle = async () => {

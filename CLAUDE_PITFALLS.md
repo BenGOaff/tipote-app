@@ -288,3 +288,35 @@ Toute action write LinkedIn (like, comment) passe par `voyagerLike()` / `voyager
 **Ne JAMAIS** ajouter un autre chemin qui appelle directement `fetch` vers `/voyager/api/voyagerSocialDash*` ou autre endpoint write sans passer par ces wrappers. Le compte serait flag/ban en <24h.
 
 Pour debug : `tipoteThrottle()` dans la console DevTools LinkedIn affiche l'état actuel.
+
+## AA) EXTENSION CHROME — multi-plateforme (v1.1.0, 22 mai 2026)
+
+Phase 1 cross-platform : extension supporte LinkedIn (existant) +
+Facebook + Threads + Instagram + X/Twitter en mode "aide rédaction".
+AUCUNE auto-action sur les plateformes Meta / X — risque de ban
+trop élevé (cf. brainstorm Béné). On insère juste le texte dans le
+composer, l'user clique sur le bouton natif du réseau pour publier.
+
+Architecture : `apps/extension/src/platforms/`
+  - types.ts → PlatformAdapter interface (isComposer, findParentPost,
+    fillEditor)
+  - linkedin.ts / facebook.ts / threads.ts / instagram.ts / x.ts →
+    une implémentation par réseau (DOMs et frameworks très différents :
+    TipTap, Lexical, DraftJS, plain textarea)
+  - index.ts → detectPlatform(hostname) pick le bon adapter
+
+**NE JAMAIS** :
+- Ajouter de auto-like / auto-comment / auto-publish sur Meta / X.
+  Ban quasi-certain en <30j. Si on veut un jour étendre l'auto-engagement
+  hors LinkedIn, passer par les API officielles (Meta Graph, X API)
+  avec OAuth user — pas via DOM injection.
+- Coder en dur les selectors d'un réseau sans passer par un adapter.
+  Si LinkedIn rajoute une langue et que le pattern aria-label change,
+  on doit pouvoir extender un seul fichier (`platforms/linkedin.ts`)
+  sans toucher au reste.
+
+Quand un user signale "le bouton Tipote n'apparaît plus sur <réseau>" :
+1. Logger le hostname pour vérifier que detectPlatform() match
+2. Vérifier les patterns aria-label de l'adapter concerné (LinkedIn /
+   FB / etc. changent leurs traductions parfois)
+3. Étendre la liste de patterns si nouvelle langue
