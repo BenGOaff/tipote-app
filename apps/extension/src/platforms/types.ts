@@ -13,7 +13,7 @@
 
 export interface PlatformAdapter {
   /** Identifiant interne (pour les logs et la sélection). */
-  id: "linkedin" | "facebook" | "threads" | "instagram" | "x";
+  id: "linkedin" | "facebook" | "threads" | "instagram" | "x" | "tiktok" | "reddit";
 
   /** Hostnames qui matchent cette plateforme. Match par `endsWith()`.
    *  Ex: "linkedin.com" matche aussi "fr.linkedin.com", "www.linkedin.com". */

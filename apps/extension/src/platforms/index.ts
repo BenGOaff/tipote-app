@@ -9,6 +9,8 @@ import { facebookAdapter } from "./facebook";
 import { threadsAdapter } from "./threads";
 import { instagramAdapter } from "./instagram";
 import { xAdapter } from "./x";
+import { tiktokAdapter } from "./tiktok";
+import { redditAdapter } from "./reddit";
 
 export const ALL_PLATFORMS: PlatformAdapter[] = [
   linkedinAdapter,
@@ -16,6 +18,8 @@ export const ALL_PLATFORMS: PlatformAdapter[] = [
   threadsAdapter,
   instagramAdapter,
   xAdapter,
+  tiktokAdapter,
+  redditAdapter,
 ];
 
 export function detectPlatform(hostname: string = location.hostname): PlatformAdapter | null {
