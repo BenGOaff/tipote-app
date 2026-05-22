@@ -419,32 +419,36 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   });
 
   if (useFixed) {
-    // Reposition en boucle via requestAnimationFrame. C'est l'approche
-    // la plus robuste : marche sur Reddit (scroll dans un container
-    // interne qui ne bubble pas window), Tiktok, et toutes les SPAs
-    // modernes. Coût négligeable (1 rAF + 1 getBoundingClientRect).
-    let lastTop = -1;
-    let lastLeft = -1;
-    let rafId = 0;
-    const loop = (): void => {
+    // Throttled polling : 5Hz au lieu de 60Hz. Reddit et autres SPAs
+    // modernes ne déplacent pas leur composer plus vite que ça côté
+    // user-perceived. Un rAF loop à 60Hz forçait des layouts sync à
+    // chaque frame, ce qui race avec la réconciliation React de TikTok
+    // et déclenche leur NotFoundError removeChild. 200ms est invisible
+    // côté user mais ENORME pour ne pas interférer avec React.
+    let lastTop = Number.NaN;
+    let lastLeft = Number.NaN;
+    let intervalId = 0;
+    const tick = (): void => {
       if (!composer.isConnected) {
         trigger.remove();
         menu.remove();
-        cancelAnimationFrame(rafId);
+        clearInterval(intervalId);
         return;
       }
       const rect = composer.getBoundingClientRect();
-      // Évite les setStyle inutiles si la position n'a pas changé.
       if (rect.top !== lastTop || rect.left !== lastLeft) {
         lastTop = rect.top;
         lastLeft = rect.left;
         positionTrigger();
         if (menuOpen) positionMenu();
       }
-      rafId = requestAnimationFrame(loop);
     };
-    rafId = requestAnimationFrame(loop);
-    // Log de debug (one-shot) pour confirmer la position calculée.
+    positionTrigger();
+    intervalId = window.setInterval(tick, 200);
+    // Scroll/resize en complément : reposition immédiat sans attendre
+    // les 200ms, pour ne pas avoir de lag visible sur scroll rapide.
+    window.addEventListener("scroll", tick, true);
+    window.addEventListener("resize", tick);
     setTimeout(() => {
       const r = composer.getBoundingClientRect();
       const t = trigger.getBoundingClientRect();

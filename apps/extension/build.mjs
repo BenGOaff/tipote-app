@@ -66,15 +66,6 @@ const ENTRIES = [
     format: "iife",
   },
   {
-    name: "injected-tiktok",
-    entryPoints: [resolve(ROOT, "src/injected-tiktok.ts")],
-    outfile: resolve(DIST, "injected-tiktok.js"),
-    // MAIN world TikTok : fill du composer DraftJS via focus + execCommand
-    // (technique Grammarly). Évite le NotFoundError removeChild qu'on
-    // déclenche depuis l'isolated world.
-    format: "iife",
-  },
-  {
     name: "popup",
     entryPoints: [resolve(ROOT, "src/popup/main.tsx")],
     outfile: resolve(DIST, "popup.js"),

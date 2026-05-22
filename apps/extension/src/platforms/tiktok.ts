@@ -83,47 +83,15 @@ function findParentPost(composer: HTMLElement): HTMLElement | null {
   return null;
 }
 
-/** TikTok = DraftJS dans un wrapper React très fragile. Toute mutation
- *  ou event synthétique depuis l'isolated world du content script
- *  désynchronise sa state interne → cascade NotFoundError removeChild.
+/** TikTok est trop hostile aux extensions — leur anti-bot SDK
+ *  (`secsdk_runtime_bundler`) + React fragile crashent dès qu'on touche
+ *  au composer OU qu'on dispatche un event dessus, même depuis le MAIN
+ *  world (technique Grammarly testée, fail). Cf. draft-js#616.
  *
- *  Stratégie (technique Grammarly, cf. draft-js#616) : on délègue
- *  l'insertion à un script MAIN world (injected-tiktok.js) qui :
- *    1. focus() le composer
- *    2. crée un Range explicite et le place au curseur
- *    3. document.execCommand("insertText") — DraftJS l'intercepte via
- *       son handler beforeinput React et update son EditorState
- *       proprement, sans bypass du state.
- *
- *  Si l'injection MAIN world échoue (script bloqué, timeout, etc.),
- *  fallback clipboard + toast "Ctrl+V". */
+ *  Stratégie : clipboard + toast "Collez avec Ctrl+V". Limitation
+ *  acceptée — TikTok n'est pas une cible viable pour le fill direct. */
 function fillEditor(_composer: HTMLElement, text: string): void {
-  const nonce = `tipote-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  let fallbackTimer = 0;
-
-  const onResponse = (e: MessageEvent): void => {
-    if (e.source !== window) return;
-    const data = e.data as { type?: string; nonce?: string; ok?: boolean; reason?: string } | null;
-    if (!data || data.type !== "tipote:tiktok-fill-result" || data.nonce !== nonce) return;
-    window.removeEventListener("message", onResponse);
-    clearTimeout(fallbackTimer);
-    if (!data.ok) {
-      console.warn("[tipote/tiktok] MAIN-world fill failed, falling back to clipboard:", data.reason);
-      void copyToClipboardAndToast(text);
-    }
-  };
-
-  window.addEventListener("message", onResponse);
-  window.postMessage({ type: "tipote:tiktok-fill", nonce, text }, "*");
-
-  // Fallback : si le MAIN world ne répond pas en 1.5s (script pas chargé,
-  // bloqué par CSP, etc.), on bascule sur clipboard pour ne pas laisser
-  // l'user sans rien.
-  fallbackTimer = window.setTimeout(() => {
-    window.removeEventListener("message", onResponse);
-    console.warn("[tipote/tiktok] MAIN-world fill timeout, falling back to clipboard");
-    void copyToClipboardAndToast(text);
-  }, 1500);
+  void copyToClipboardAndToast(text);
 }
 
 async function copyToClipboardAndToast(text: string): Promise<void> {
@@ -185,7 +153,5 @@ export const tiktokAdapter: PlatformAdapter = {
   // (NotFoundError removeChild). On positionne le trigger en fixed sur
   // body pour rester invisible côté React.
   useFixedTrigger: true,
-  // PAS de clipboardMode : on tente le fill direct via MAIN world. Si
-  // ça échoue, fillEditor bascule en clipboard + toast (transparent
-  // pour l'UI principale).
+  clipboardMode: true,
 };
