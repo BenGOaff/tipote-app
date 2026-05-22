@@ -1,36 +1,105 @@
-// app/sitemap.ts
+// app/sitemap.ts — host-aware.
 //
-// Sitemap dynamique exposant tous les contenus publics indexables :
-//   - quiz publiés (status='active'), avec leur slug ou id
-//   - popquiz publiés (status='active' / draft=false)
-//   - pages /p/<slug>
+// Dispatch sur l'en-tête `x-tipote-custom-host` que pose le middleware
+// quand la requête vient d'un domaine personnalisé d'un user (custom
+// domain Pro). Scope par (user_id, project_id) car Tipote est
+// multi-projet.
 //
-// Cap à 10000 entries pour rester sous la limite Google par-sitemap
-// (50000 / 50MB). Au-delà, faudra splitter en sitemap-index.
-//
-// Régénéré automatiquement toutes les heures (revalidate) pour que les
-// nouveaux contenus publiés soient découvrables par Google rapidement
-// sans attendre le prochain deploy.
+// `revalidate = 3600` → régen 1h.
 
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export const revalidate = 3600; // 1h
+const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
+
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const h = await headers();
+  const customHost = h.get(CUSTOM_HOST_HEADER);
+
+  if (customHost) {
+    return buildCustomDomainSitemap(customHost.toLowerCase().trim());
+  }
+  return buildMainHostSitemap();
+}
+
+async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sitemap> {
+  const { data: cd } = await supabaseAdmin
+    .from("custom_domains")
+    .select("user_id, project_id")
+    .ilike("hostname", host)
+    .eq("status", "verified")
+    .maybeSingle();
+  const row = cd as { user_id?: string; project_id?: string | null } | null;
+  if (!row?.user_id) return [];
+
+  const base = `https://${host}`;
+  const entries: MetadataRoute.Sitemap = [
+    { url: `${base}/`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 1 },
+  ];
+
+  // Quizzes
+  try {
+    let q = supabaseAdmin
+      .from("quizzes")
+      .select("id, slug, updated_at, project_id")
+      .eq("user_id", row.user_id)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(8000);
+    if (row.project_id) q = q.eq("project_id", row.project_id);
+    const { data } = await q;
+    for (const item of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
+      entries.push({
+        url: item.slug ? `${base}/${item.slug}` : `${base}/q/${item.id}`,
+        lastModified: new Date(item.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      });
+    }
+  } catch (err) {
+    console.warn("[sitemap/custom-domain] quizzes fetch error", err);
+  }
+
+  // Popquizzes
+  try {
+    let q = supabaseAdmin
+      .from("popquizzes")
+      .select("id, slug, updated_at, project_id")
+      .eq("user_id", row.user_id)
+      .eq("is_published", true)
+      .order("updated_at", { ascending: false })
+      .limit(2000);
+    if (row.project_id) q = q.eq("project_id", row.project_id);
+    const { data } = await q;
+    for (const item of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
+      entries.push({
+        url: item.slug ? `${base}/${item.slug}` : `${base}/pq/${item.id}`,
+        lastModified: new Date(item.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      });
+    }
+  } catch (err) {
+    console.warn("[sitemap/custom-domain] popquizzes fetch error", err);
+  }
+
+  return entries;
+}
+
+async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://app.tipote.com").replace(/\/$/, "");
 
-  // ─── Pages statiques (landing, légales) ──────────────────────────
   const staticRoutes = ["", "/legal/extension", "/legal/privacy", "/legal/mentions"];
-  const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((route) => ({
+  const entries: MetadataRoute.Sitemap = staticRoutes.map((route) => ({
     url: `${base}${route || "/"}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: route === "" ? 1 : 0.4,
   }));
 
-  // ─── Quiz publiés ────────────────────────────────────────────────
-  let quizEntries: MetadataRoute.Sitemap = [];
   try {
     const { data } = await supabaseAdmin
       .from("quizzes")
@@ -38,20 +107,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .eq("status", "active")
       .order("updated_at", { ascending: false })
       .limit(8000);
-    if (Array.isArray(data)) {
-      quizEntries = (data as Array<{ id: string; slug: string | null; updated_at: string }>).map((q) => ({
-        url: `${base}/q/${q.slug || q.id}`,
-        lastModified: new Date(q.updated_at),
+    for (const item of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
+      entries.push({
+        url: `${base}/q/${item.slug || item.id}`,
+        lastModified: new Date(item.updated_at),
         changeFrequency: "weekly" as const,
         priority: 0.8,
-      }));
+      });
     }
   } catch (err) {
-    console.warn("[sitemap] failed to fetch quizzes", err);
+    console.warn("[sitemap/main] quizzes fetch error", err);
   }
 
-  // ─── Popquiz publiés ─────────────────────────────────────────────
-  let popquizEntries: MetadataRoute.Sitemap = [];
   try {
     const { data } = await supabaseAdmin
       .from("popquizzes")
@@ -59,17 +126,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .eq("is_published", true)
       .order("updated_at", { ascending: false })
       .limit(2000);
-    if (Array.isArray(data)) {
-      popquizEntries = (data as Array<{ id: string; slug: string | null; updated_at: string }>).map((p) => ({
-        url: `${base}/pq/${p.slug || p.id}`,
-        lastModified: new Date(p.updated_at),
+    for (const item of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
+      entries.push({
+        url: `${base}/pq/${item.slug || item.id}`,
+        lastModified: new Date(item.updated_at),
         changeFrequency: "weekly" as const,
         priority: 0.7,
-      }));
+      });
     }
   } catch (err) {
-    console.warn("[sitemap] failed to fetch popquizzes", err);
+    console.warn("[sitemap/main] popquizzes fetch error", err);
   }
 
-  return [...staticEntries, ...quizEntries, ...popquizEntries];
+  return entries;
 }

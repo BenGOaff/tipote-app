@@ -1,18 +1,31 @@
-// app/robots.ts
+// app/robots.ts — host-aware (cf. sitemap.ts).
 //
-// Politique de crawl pour les bots (Google, Bing, etc.). Bloque tout
-// ce qui est privé (dashboard, settings, admin, API) et autorise les
-// pages publiques (/q/<id>, /p/<slug>, /pq/<id>, et les bare slugs
-// servis sur custom domains).
+// Sur main host (app.tipote.com) : robots avec disallow des paths
+// privés + sitemap pointant vers app.tipote.com/sitemap.xml.
 //
-// /api/track est volontairement DISALLOW pour pas que les bots
-// déclenchent des events analytics fantômes.
+// Sur custom domain user : robots minimal — le middleware bloque déjà
+// tous les paths non-publics avec 404. Le sitemap pointe vers le
+// sitemap user-scoped servi par le même host.
 
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
 
-export default function robots(): MetadataRoute.Robots {
+const CUSTOM_HOST_HEADER = "x-tipote-custom-host";
+
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const h = await headers();
+  const customHost = h.get(CUSTOM_HOST_HEADER);
+
+  if (customHost) {
+    const base = `https://${customHost.toLowerCase().trim()}`;
+    return {
+      rules: [{ userAgent: "*", allow: "/" }],
+      sitemap: `${base}/sitemap.xml`,
+      host: base,
+    };
+  }
+
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://app.tipote.com").replace(/\/$/, "");
-
   return {
     rules: [
       {
