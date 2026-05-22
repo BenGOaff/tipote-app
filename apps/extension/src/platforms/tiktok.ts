@@ -83,28 +83,38 @@ function findParentPost(composer: HTMLElement): HTMLElement | null {
   return null;
 }
 
-/** TikTok = DraftJS wrappé. La synthèse de beforeinput cassait la
- *  réconciliation React (NotFoundError removeChild) parce que TikTok
- *  ne preventDefault pas le synthetic event mais update quand même son
- *  state RxJS, puis on doublait avec execCommand → DOM mismatch.
+/** TikTok = DraftJS wrappé dans une couche RxJS qui surveille les events
+ *  du composer. Toute modification "synthétique" (execCommand, beforeinput)
+ *  désync l'état RxJS et crash React (NotFoundError removeChild).
  *
- *  Approche : juste focus + execCommand. execCommand génère un VRAI
- *  input event natif que le browser pipeline propage à DraftJS via
- *  React-DOM, sans risque de double insertion. */
+ *  Approche pragmatique : dispatcher un `paste` ClipboardEvent natif avec
+ *  le texte en clipboardData. DraftJS gère paste comme un event utilisateur
+ *  normal — DOM et state restent cohérents. Si paste échoue, fallback
+ *  execCommand. */
 function fillEditor(composer: HTMLElement, text: string): void {
-  composer.focus();
-  // Positionne le curseur en fin de contenu existant (s'il y en a) ;
-  // ne pas selectNodeContents pour ne pas re-sélectionner le placeholder
-  // DraftJS, ce qui désynchronise sa state interne avec le DOM.
-  const sel = window.getSelection();
-  if (sel) {
-    sel.removeAllRanges();
-    const range = document.createRange();
-    range.selectNodeContents(composer);
-    range.collapse(false); // collapse au bout = curseur à la fin
-    sel.addRange(range);
+  if (!composer.isConnected) {
+    console.warn("[tipote/tiktok] composer disconnected, abort fill");
+    return;
   }
+  // Tentative 1 : paste ClipboardEvent (chemin "user normal" pour DraftJS)
   try {
+    const dt = new DataTransfer();
+    dt.setData("text/plain", text);
+    const pasteEvent = new ClipboardEvent("paste", {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: dt,
+    });
+    const handled = composer.dispatchEvent(pasteEvent);
+    if (handled && pasteEvent.defaultPrevented) {
+      return; // DraftJS a traité le paste, on s'arrête là
+    }
+  } catch {
+    // ClipboardEvent constructor peut throw selon les versions Chrome
+  }
+  // Tentative 2 : focus + execCommand (chemin natif input)
+  try {
+    composer.focus();
     document.execCommand("insertText", false, text);
   } catch {
     // ignore

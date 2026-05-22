@@ -353,23 +353,24 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   });
 
   if (useFixed) {
-    // Initial position + repositionnement sur scroll/resize (mode TikTok)
+    // Initial position + repositionnement sur scroll/resize (mode TikTok).
+    // PAS de MutationObserver sur document.body : TikTok observe lui-même
+    // body pour son anti-bot SDK, et notre observer créerait une boucle
+    // de feedback qui crash leur RxJS (TypeError 'includes' undefined).
+    // Cleanup minimal : check composer.isConnected à chaque scroll/resize.
     positionTrigger();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    // Cleanup quand le composer disparaît (navigation SPA)
-    const cleanupObserver = new MutationObserver(() => {
+    const onReposition = (): void => {
       if (!composer.isConnected) {
         trigger.remove();
         menu.remove();
-        window.removeEventListener("scroll", reposition, true);
-        window.removeEventListener("resize", reposition);
-        cleanupObserver.disconnect();
-      } else {
-        positionTrigger();
+        window.removeEventListener("scroll", onReposition, true);
+        window.removeEventListener("resize", onReposition);
+        return;
       }
-    });
-    cleanupObserver.observe(document.body, { childList: true, subtree: true });
+      reposition();
+    };
+    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("resize", onReposition);
   } else {
     // Mode inline : le menu en position:fixed doit suivre le scroll/resize
     window.addEventListener("scroll", reposition, true);

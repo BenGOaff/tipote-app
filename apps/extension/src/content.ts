@@ -401,10 +401,28 @@ debugBag.tipoteThrottle = async () => {
 // Diagnostic : liste tous les contenteditable/textarea de la page pour
 // debug quand l'extension ne trouve pas de composer sur un nouveau site.
 // Usage : `tipoteDiag()` dans la console DevTools.
-debugBag.tipoteDiag = () => {
+debugBag.tipoteDiag = async () => {
   console.group("[tipote/diag] DOM scan");
   console.log("hostname:", location.hostname);
-  const editables = document.querySelectorAll(
+  const { detectPlatform } = await import("./platforms");
+  const adapter = detectPlatform();
+  console.log("platform adapter:", adapter?.id ?? "NONE (unsupported host)");
+
+  const dumpAncestors = (el: Element, depth = 8): string => {
+    const parts: string[] = [];
+    let n: Element | null = el;
+    for (let i = 0; i < depth && n; i++) {
+      const id = n.id ? `#${n.id}` : "";
+      const cls = typeof n.className === "string" && n.className ? `.${n.className.split(" ")[0]}` : "";
+      const role = n.getAttribute("role");
+      const dataTestid = n.getAttribute("data-testid");
+      parts.push(`<${n.tagName.toLowerCase()}${id}${cls}${role ? `[role=${role}]` : ""}${dataTestid ? `[testid=${dataTestid}]` : ""}>`);
+      n = n.parentElement;
+    }
+    return parts.join(" > ");
+  };
+
+  const editables = document.querySelectorAll<HTMLElement>(
     '[role="textbox"][contenteditable="true"], [contenteditable="true"], textarea',
   );
   console.log(`Found ${editables.length} editable elements (NOT counting shadow DOM):`);
@@ -413,18 +431,27 @@ debugBag.tipoteDiag = () => {
     const ph = el.getAttribute("placeholder");
     const dp = el.getAttribute("data-placeholder");
     const de = el.getAttribute("data-e2e");
-    const tn = el.tagName;
-    console.log(`#${i} <${tn}> aria-label=${JSON.stringify(ae)} placeholder=${JSON.stringify(ph)} data-placeholder=${JSON.stringify(dp)} data-e2e=${JSON.stringify(de)}`, el);
+    const matches = adapter?.isComposer(el) ?? false;
+    console.log(
+      `#${i} <${el.tagName}> isComposer=${matches} aria-label=${JSON.stringify(ae)} placeholder=${JSON.stringify(ph)} data-placeholder=${JSON.stringify(dp)} data-e2e=${JSON.stringify(de)}`,
+      el,
+    );
+    console.log(`  ancestors: ${dumpAncestors(el)}`);
   });
+
   // Scan aussi les shadow roots
   let shadowCount = 0;
   document.querySelectorAll("*").forEach((el) => {
     const sr = (el as HTMLElement & { shadowRoot?: ShadowRoot | null }).shadowRoot;
     if (sr) {
       shadowCount++;
-      const inner = sr.querySelectorAll('[contenteditable="true"], textarea');
+      const inner = sr.querySelectorAll<HTMLElement>('[contenteditable="true"], textarea');
       if (inner.length > 0) {
         console.log(`Shadow root in <${el.tagName.toLowerCase()}> contains ${inner.length} editables:`, inner);
+        inner.forEach((c, i) => {
+          const matches = adapter?.isComposer(c) ?? false;
+          console.log(`  shadow#${i} isComposer=${matches}`, c);
+        });
       }
     }
   });
