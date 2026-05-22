@@ -50,13 +50,14 @@ function matchesText(el: HTMLElement, patterns: string[]): boolean {
 function isComposerEl(el: HTMLElement): boolean {
   // TikTok = contenteditable, parfois sans role=textbox explicite.
   if (!el.matches('[contenteditable="true"]')) return false;
-  // 1. Match direct aria-label / placeholder (idéal)
+  // 1. TikTok utilise DraftJS — la classe `public-DraftEditor-content`
+  //    est posée sur le composer principal (signature DraftJS).
+  if (el.classList.contains("public-DraftEditor-content")) return true;
+  // 2. Match direct aria-label / placeholder
   if (matchesText(el, COMMENT_PATTERNS)) return true;
-  // 2. Fallback : TikTok utilise data-e2e="comment-text" sur le wrapper
-  //    du composer. Si on est dans un ancêtre qui a "comment" dans
-  //    son data-e2e, on considère que c'est un composer.
+  // 3. Fallback : data-e2e="comment-text" / "comment-input" sur ancêtre
   let node: HTMLElement | null = el;
-  for (let i = 0; i < 6 && node; i++) {
+  for (let i = 0; i < 8 && node; i++) {
     const e2e = (node.getAttribute("data-e2e") || "").toLowerCase();
     if (e2e.includes("comment")) return true;
     node = node.parentElement;
@@ -82,6 +83,10 @@ function findParentPost(composer: HTMLElement): HTMLElement | null {
   return null;
 }
 
+/** TikTok utilise DraftJS comme X — même technique d'injection :
+ *  beforeinput natif que DraftJS intercepte via React, fallback
+ *  execCommand sinon. Toute mutation directe du DOM (textContent =)
+ *  casse la réconciliation React (NotFoundError removeChild). */
 function fillEditor(composer: HTMLElement, text: string): void {
   composer.focus();
   const sel = window.getSelection();
@@ -91,26 +96,35 @@ function fillEditor(composer: HTMLElement, text: string): void {
     range.selectNodeContents(composer);
     sel.addRange(range);
   }
+
   let inserted = false;
   try {
-    inserted = document.execCommand("insertText", false, text);
-  } catch {
-    inserted = false;
-  }
-  if (!inserted) {
-    composer.dispatchEvent(new InputEvent("beforeinput", {
+    const beforeEvent = new InputEvent("beforeinput", {
       bubbles: true,
       cancelable: true,
       inputType: "insertText",
       data: text,
-    }));
-    composer.textContent = text;
-    composer.dispatchEvent(new InputEvent("input", {
-      bubbles: true,
-      inputType: "insertText",
-      data: text,
-    }));
+    });
+    composer.dispatchEvent(beforeEvent);
+    inserted = beforeEvent.defaultPrevented;
+  } catch {
+    inserted = false;
   }
+
+  if (!inserted) {
+    try {
+      inserted = document.execCommand("insertText", false, text);
+    } catch {
+      inserted = false;
+    }
+  }
+
+  // Toujours dispatcher input pour déverrouiller le bouton "Publier".
+  composer.dispatchEvent(new InputEvent("input", {
+    bubbles: true,
+    inputType: "insertText",
+    data: text,
+  }));
 }
 
 export const tiktokAdapter: PlatformAdapter = {

@@ -11,9 +11,11 @@ const REPLY_ARIA_PATTERNS = [
   // EN
   "reply to",
   "reply",
+  "post your reply",
   // FR
   "répondre à",
   "répondre",
+  "publier votre réponse",
   // ES
   "responder a",
   "responder",
@@ -28,30 +30,59 @@ const REPLY_ARIA_PATTERNS = [
 ];
 
 const POST_ARIA_PATTERNS = [
+  // EN
   "start a thread",
+  "what's new",
+  "what's happening",
+  // FR
   "commencer un fil",
+  "quoi de neuf",
+  "démarrer un fil",
+  // ES
   "iniciar un hilo",
+  "qué está pasando",
+  // PT
   "começar uma thread",
+  "o que há de novo",
+  // DE
   "thread starten",
+  "was gibt's neues",
+  // IT
   "inizia un thread",
+  "che c'è di nuovo",
 ];
 
-function matchesAria(el: HTMLElement, patterns: string[]): boolean {
+function matchesText(el: HTMLElement, patterns: string[]): boolean {
   const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
-  if (!ariaLabel) return false;
-  return patterns.some((p) => ariaLabel.includes(p));
+  const placeholder = (el.getAttribute("placeholder") || "").toLowerCase();
+  const dataPlaceholder = (el.getAttribute("data-placeholder") || "").toLowerCase();
+  const haystack = `${ariaLabel} ${placeholder} ${dataPlaceholder}`;
+  return patterns.some((p) => haystack.includes(p));
 }
 
 function isComposerEl(el: HTMLElement): boolean {
   // Threads expose à la fois `[role="textbox"]` ET juste
   // `[contenteditable]` selon les contextes. On accepte les deux.
   if (!el.matches('[contenteditable="true"]')) return false;
-  return matchesAria(el, REPLY_ARIA_PATTERNS);
+  // 1. Match aria-label / placeholder reply
+  if (matchesText(el, REPLY_ARIA_PATTERNS)) return true;
+  // 2. Fallback : Lexical editor (Meta utilise Lexical sur Threads).
+  //    Si on est dans un wrapper avec role="dialog" (modal de reply) ou
+  //    role="article" (post timeline) ET data-lexical-editor, on accepte.
+  if (el.getAttribute("data-lexical-editor") === "true") {
+    let node: HTMLElement | null = el;
+    for (let i = 0; i < 12 && node; i++) {
+      const role = node.getAttribute("role");
+      if (role === "dialog" || role === "article") return true;
+      node = node.parentElement;
+    }
+  }
+  return false;
 }
 
 function isPostComposerEl(el: HTMLElement): boolean {
   if (!el.matches('[contenteditable="true"]')) return false;
-  return matchesAria(el, POST_ARIA_PATTERNS);
+  return matchesText(el, POST_ARIA_PATTERNS);
 }
 
 function findParentPost(composer: HTMLElement): HTMLElement | null {

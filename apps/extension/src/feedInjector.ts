@@ -54,13 +54,16 @@ export function startFeedInjector(): void {
 
 function scanForComposers(root: HTMLElement, adapter: PlatformAdapter): void {
   const candidates: HTMLElement[] = [];
-  if (adapter.isComposer(root)) candidates.push(root);
+  const isMatch = (el: HTMLElement): boolean =>
+    adapter.isComposer(el) || (adapter.isPostComposer?.(el) ?? false);
+
+  if (isMatch(root)) candidates.push(root);
 
   // On scan large : tout textbox/contenteditable/textarea potentiel
   // dans le sous-arbre, puis filtrage strict par l'adapter.
   const selector = '[role="textbox"][contenteditable="true"], [contenteditable="true"], textarea';
   for (const el of root.querySelectorAll<HTMLElement>(selector)) {
-    if (adapter.isComposer(el)) candidates.push(el);
+    if (isMatch(el)) candidates.push(el);
   }
 
   // Reddit (et de plus en plus de sites modernes) encapsulent leurs
@@ -69,9 +72,9 @@ function scanForComposers(root: HTMLElement, adapter: PlatformAdapter): void {
   // descendre récursivement. On le fait pour TOUS les adapters
   // (zéro coût si la page n'a pas de shadow DOM, gros gain si oui).
   for (const shadowEl of walkShadowRoots(root)) {
-    if (adapter.isComposer(shadowEl)) candidates.push(shadowEl);
+    if (isMatch(shadowEl)) candidates.push(shadowEl);
     for (const inner of shadowEl.querySelectorAll<HTMLElement>(selector)) {
-      if (adapter.isComposer(inner)) candidates.push(inner);
+      if (isMatch(inner)) candidates.push(inner);
     }
   }
 
@@ -118,28 +121,27 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   let loading = false;
   let menuOpen = false;
 
-  // Container relatif pour positionner le menu dropdown en absolute.
-  const container = document.createElement("div");
-  container.setAttribute("data-tipote-bar", "true");
-  container.style.cssText = `
-    position: relative;
-    display: inline-block;
-    margin: 6px 0 8px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  `;
-
+  // Le trigger est attaché à <body> en position:fixed, PAS dans le DOM
+  // managé par React de la page hôte. TikTok / Meta / X font de la
+  // réconciliation aggressive et toute insertion d'un noeud étranger
+  // dans leur tree casse leur diffing (`removeChild` errors). En
+  // restant sur body, on est invisible pour leur React.
   const trigger = document.createElement("button");
   trigger.type = "button";
+  trigger.setAttribute("data-tipote-trigger", "true");
   trigger.setAttribute("aria-label", t("dropdown.aria"));
   trigger.style.cssText = `
-    display: inline-flex; align-items: center; gap: 6px;
+    position: fixed; z-index: 2147483646;
+    align-items: center; gap: 6px;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
     color: white; border: 0; border-radius: 999px;
     padding: 6px 14px; cursor: pointer;
-    font: inherit; font-size: 12px; font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px; font-weight: 600;
     box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
-    transition: transform 0.1s, box-shadow 0.15s;
+    transition: box-shadow 0.15s, opacity 0.15s;
     white-space: nowrap;
+    display: none;
   `;
   trigger.innerHTML = `<span>✨ Tipote</span><span style="font-size: 10px; opacity: 0.9;">▾</span>`;
   trigger.addEventListener("mouseenter", () => {
@@ -148,7 +150,7 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   trigger.addEventListener("mouseleave", () => {
     trigger.style.boxShadow = "0 1px 3px rgba(99, 102, 241, 0.3)";
   });
-  container.appendChild(trigger);
+  document.body.appendChild(trigger);
 
   // Menu attaché au <body> en position:fixed pour échapper aux overflow
   // hidden / transform de la page hôte (LinkedIn, FB, IG ont tous des
@@ -235,28 +237,67 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   }
   document.body.appendChild(menu);
 
+  // Positionne trigger au-dessus du composer ; cache si composer hors écran.
+  function positionTrigger(): void {
+    const rect = composer.getBoundingClientRect();
+    if (!composer.isConnected || rect.width === 0 || rect.height === 0) {
+      trigger.style.display = "none";
+      return;
+    }
+    if (rect.bottom < 0 || rect.top > window.innerHeight) {
+      trigger.style.display = "none";
+      return;
+    }
+    trigger.style.display = "inline-flex";
+    // Place le trigger au-dessus à gauche du composer ; clamp dans viewport.
+    const tRect = trigger.getBoundingClientRect();
+    const triggerW = tRect.width || 110;
+    const triggerH = tRect.height || 28;
+    let top = rect.top - triggerH - 4;
+    if (top < 4) top = rect.top + 4; // overlap si pas la place au-dessus
+    let left = rect.left;
+    const maxLeft = window.innerWidth - triggerW - 8;
+    if (left > maxLeft) left = maxLeft;
+    if (left < 8) left = 8;
+    trigger.style.top = `${top}px`;
+    trigger.style.left = `${left}px`;
+  }
+
   function positionMenu(): void {
     const rect = trigger.getBoundingClientRect();
-    menu.style.top = `${rect.bottom + 4}px`;
-    menu.style.left = `${rect.left}px`;
+    // Estime la largeur du menu (min-width 220)
+    const menuW = Math.max(menu.offsetWidth, 220);
+    const menuH = menu.offsetHeight || 200;
+    let top = rect.bottom + 4;
+    if (top + menuH > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - menuH - 4);
+    }
+    let left = rect.left;
+    if (left + menuW > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - menuW - 8);
+    }
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
   }
+
+  function reposition(): void {
+    positionTrigger();
+    if (menuOpen) positionMenu();
+  }
+
   function openMenu(): void {
-    positionMenu();
     menu.style.display = "flex";
     menuOpen = true;
-    window.addEventListener("scroll", positionMenu, true);
-    window.addEventListener("resize", positionMenu);
+    positionMenu();
     setTimeout(() => document.addEventListener("click", onDocClick), 0);
   }
   function closeMenu(): void {
     menu.style.display = "none";
     menuOpen = false;
-    window.removeEventListener("scroll", positionMenu, true);
-    window.removeEventListener("resize", positionMenu);
     document.removeEventListener("click", onDocClick);
   }
   function onDocClick(e: MouseEvent): void {
-    if (!container.contains(e.target as Node) && !menu.contains(e.target as Node)) {
+    if (!trigger.contains(e.target as Node) && !menu.contains(e.target as Node)) {
       closeMenu();
     }
   }
@@ -268,15 +309,25 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
     else openMenu();
   });
 
-  // Insertion : juste au-dessus du composer. On remonte de 1-2 niveaux
-  // pour se placer au-dessus du wrapper (chaque réseau a un padding /
-  // border qu'on veut pas couper). Fallback : insertion directe.
-  const wrapper = composer.parentElement?.parentElement ?? composer.parentElement;
-  if (wrapper?.parentElement) {
-    wrapper.parentElement.insertBefore(container, wrapper);
-  } else {
-    composer.parentElement?.insertBefore(container, composer);
-  }
+  // Initial position + listeners de repositionnement
+  positionTrigger();
+  window.addEventListener("scroll", reposition, true);
+  window.addEventListener("resize", reposition);
+
+  // Surveille le retrait du composer (page navigation, dismiss…) pour
+  // cleanup le trigger et le menu de body.
+  const cleanupObserver = new MutationObserver(() => {
+    if (!composer.isConnected) {
+      trigger.remove();
+      menu.remove();
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+      cleanupObserver.disconnect();
+    } else {
+      positionTrigger();
+    }
+  });
+  cleanupObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 function detectLanguage(): string {
