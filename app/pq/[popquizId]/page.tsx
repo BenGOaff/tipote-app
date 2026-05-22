@@ -86,7 +86,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: popquiz.description ?? undefined,
     ...(siteName ? { applicationName: siteName } : {}),
     ...(canonical ? { alternates: { canonical } } : {}),
-    ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
+    ...(branding?.faviconUrl
+      ? {
+          icons: {
+            // sizes="any" défensif Firefox. Cf. Tiquiz CLAUDE_PITFALLS.md O.
+            icon: [{ url: branding.faviconUrl, sizes: "any" }],
+            shortcut: branding.faviconUrl,
+            apple: branding.faviconUrl,
+          },
+        }
+      : {}),
     openGraph: {
       title: popquiz.title,
       description: popquiz.description ?? undefined,
