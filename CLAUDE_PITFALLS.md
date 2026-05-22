@@ -321,9 +321,9 @@ Quand un user signale "le bouton Tipote n'apparaît plus sur <réseau>" :
    FB / etc. changent leurs traductions parfois)
 3. Étendre la liste de patterns si nouvelle langue
 
-## R) NEXT.JS REWRITES — exclure `/_next/`, `/api/`, et la cible elle-même (22 mai 2026)
+## R) NEXT.JS REWRITES — utiliser negative lookahead, PAS de pass-through (22 mai 2026, v2)
 
-**Erreur faite** : pour mapper le sous-domaine `affiliate.tipote.com` →
+**Erreur initiale** : pour mapper le sous-domaine `affiliate.tipote.com` →
 chemin `/affiliate/*`, j'ai mis dans `next.config.ts` :
 
 ```ts
@@ -336,47 +336,53 @@ chemin `/affiliate/*`, j'ai mis dans `next.config.ts` :
 
 Résultat : `affiliate.tipote.com/_next/static/css/xyz.css` a été rewrité
 en `/affiliate/_next/static/css/xyz.css` qui n'existe pas → 404 sur
-TOUTES les CSS et JS de la page. La page rendait en HTML pur, no style.
+TOUTES les CSS et JS de la page.
 
-**Règle absolue** : quand tu fais un rewrite "catch-all" basé sur le
-host, AJOUTE des règles de pass-through AVANT pour `/_next/`, `/api/`,
-et la cible elle-même. Sinon ces paths sont catch et tout pète.
+**Première tentative de fix qui ne marche PAS** : ajouter des règles
+"pass-through" avant le catch-all :
 
-Pattern correct :
+```ts
+// CETTE APPROCHE NE MARCHE PAS
+beforeFiles: [
+  { source: "/_next/:path*", has: [...], destination: "/_next/:path*" },
+  { source: "/:path*", has: [...], destination: "/affiliate/:path*" },
+]
+```
+
+Pourquoi ça ne marche pas : `path-to-regexp` v6 (le parser des sources
+Next.js) a un bug subtil avec `:path*` à la fin sur des chemins
+multi-segments. La règle pass-through `/_next/:path*` ne matche PAS
+`/_next/static/chunks/file.js`, donc la requête tombe sur le catch-all
+qui foire.
+
+**Solution qui marche** : negative lookahead dans le source du
+catch-all, AVEC un nom de capture qui contient le pattern regex :
 
 ```ts
 beforeFiles: [
-  // Pass-through : pas de rewrite pour les assets statiques
   {
-    source: "/_next/:path*",
+    source: "/:path((?!_next|api|affiliate|favicon\\.ico).*)",
     has: [{ type: "host", value: "subdomain.example.com" }],
-    destination: "/_next/:path*",
-  },
-  {
-    source: "/api/:path*",
-    has: [{ type: "host", value: "subdomain.example.com" }],
-    destination: "/api/:path*",
-  },
-  // Pass-through pour la cible elle-même (évite la double-réécriture
-  // si l'user navigue manuellement vers /target/...)
-  {
-    source: "/target/:path*",
-    has: [{ type: "host", value: "subdomain.example.com" }],
-    destination: "/target/:path*",
-  },
-  // Catch-all (DOIT être en dernier)
-  {
-    source: "/:path*",
-    has: [{ type: "host", value: "subdomain.example.com" }],
-    destination: "/target/:path*",
+    destination: "/affiliate/:path",
   },
 ],
 ```
 
+C'est le pattern OFFICIEL de la doc Next.js
+(<https://nextjs.org/docs/app/api-reference/config/next-config-js/rewrites#regex-path-matching>).
+Une seule règle, pas de pass-through, pas de surprise.
+
+**Comment l'écrire** :
+- `/:path` : capture nommée
+- `((?!a|b|c).*)` : regex qui matche tout SAUF ce qui commence par a, b, ou c
+- `\\.` pour escaper un point littéral dans `favicon\\.ico`
+- Destination utilise le nom de capture : `/target/:path`
+
 **Test après chaque rewrite** :
 1. Visiter une page du sous-domaine
 2. Ouvrir DevTools → Network → cocher "JS" et "CSS"
-3. Recharger → tous les 200, aucun 404 sur _next/static/*
+3. Recharger → tous les 200, aucun 404 sur `_next/static/*`
+4. ET vérifier que ton root `/` du sous-domaine rewrite bien (capture vide capturée par `.*`)
 
 Si y'a UN 404 sur un `_next/static/*.css` ou `*.js`, c'est ce bug.
 
