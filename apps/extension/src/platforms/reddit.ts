@@ -64,13 +64,24 @@ function isComposerEl(el: HTMLElement): boolean {
     // 3. Reddit met `data-lexical-editor="true"` sur tous ses composers
     if (el.getAttribute("data-lexical-editor") === "true") return true;
     // 4. Fallback : New Reddit encapsule ses composers dans des Web
-    //    Components <shreddit-comment-input>, <shreddit-composer>, etc.
-    //    Si un ancêtre porte un de ces noms, on accepte.
+    //    Components <shreddit-comment-*>, <shreddit-composer-*>, ou
+    //    <faceplate-form>. Si un ancêtre porte un de ces noms, on accepte.
     let node: HTMLElement | null = el;
-    for (let i = 0; i < 8 && node; i++) {
+    for (let i = 0; i < 10 && node; i++) {
       const tag = node.tagName.toLowerCase();
-      if (tag.startsWith("shreddit-") && (tag.includes("comment") || tag.includes("composer") || tag.includes("reply"))) {
+      if (
+        (tag.startsWith("shreddit-") &&
+          (tag.includes("comment") || tag.includes("composer") || tag.includes("reply"))) ||
+        tag === "comment-composer-host" ||
+        tag === "faceplate-textarea-input"
+      ) {
         return true;
+      }
+      // <faceplate-form> avec name="commentForm" / id qui contient "comment"
+      if (tag === "faceplate-form") {
+        const formName = (node.getAttribute("name") || "").toLowerCase();
+        const formId = (node.id || "").toLowerCase();
+        if (formName.includes("comment") || formId.includes("comment")) return true;
       }
       node = node.parentElement;
     }
