@@ -2,6 +2,14 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+## Workflow Git — RÈGLE ABSOLUE
+
+**Avant TOUT push, lire `CLAUDE_WORKFLOW.md`.**
+
+Résumé : je ne pousse JAMAIS sur `main`. Je pousse uniquement sur la
+branche `claude/setup-dev-guidelines-CmXl0`. Béné est seule maître de
+`main` côté GitHub.
+
 ## Claude personal notes — pitfalls + conventions
 
 **Avant de coder, lire `CLAUDE_PITFALLS.md` (pense-bête perso).**
