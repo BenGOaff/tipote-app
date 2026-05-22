@@ -47,7 +47,8 @@
   ],
   "permissions": [
     "storage",
-    "alarms"
+    "alarms",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",

@@ -36,9 +36,16 @@ export interface PlatformAdapter {
 
   /** Si vrai, le trigger "✨ Tipote" est positionné en `position: fixed`
    *  attaché à body (utile pour TikTok où l'insertion dans l'arbre DOM
-   *  casse la réconciliation React). Par défaut false : insertion inline
-   *  au-dessus du composer (UX visuelle plus intégrée). */
+   *  casse la réconciliation React, et Reddit qui place le bouton dans
+   *  un slot non rendu). Par défaut false : insertion inline au-dessus
+   *  du composer (UX visuelle plus intégrée). */
   useFixedTrigger?: boolean;
+
+  /** Si vrai, l'adapter ne touche pas le DOM/composer : fillEditor copie
+   *  juste dans le clipboard. L'UI doit afficher "Copié — Ctrl+V" au
+   *  lieu de "Inséré ✓". Utilisé pour TikTok qui crashe à toute
+   *  interaction avec leur composer. */
+  clipboardMode?: boolean;
 
   /** Insère du texte dans l'éditeur. Chaque réseau utilise un framework
    *  différent (TipTap LinkedIn, Lexical Meta, DraftJS X) — chaque

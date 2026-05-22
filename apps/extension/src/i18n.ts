@@ -106,6 +106,10 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     fr: "Inséré ✓",
     en: "Inserted ✓",
   },
+  "dropdown.copied": {
+    fr: "Copié — collez (Ctrl+V)",
+    en: "Copied — paste (Ctrl+V)",
+  },
   "dropdown.reloadLinkedIn": {
     fr: "↻ Recharger la page",
     en: "↻ Reload the page",
