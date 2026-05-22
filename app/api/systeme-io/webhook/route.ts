@@ -609,6 +609,82 @@ export async function POST(req: NextRequest) {
     const bodyEventType = (rawBody?.type ?? rawBody?.event ?? rawBody?.event_type ?? rawBody?.eventName ?? rawBody?.data?.type ?? "") as string;
     const eventType = String(headerEventType || bodyEventType || "").trim();
 
+    // ─── Branche AFFILIATE — déclenche l'envoi du magic link dashboard ───
+    // Quand SIO ajoute le tag `tiquiz-affilié` ou `tipote-affilié` à un
+    // contact (= nouvel affilié approuvé), on lui envoie automatiquement
+    // un magic link Supabase qui le redirige sur /affiliate/signup pour
+    // qu'il finalise (saisie du sa, password optionnel).
+    //
+    // Pas idempotent au sens DB : Supabase signInWithOtp est rate-limité
+    // côté Supabase et l'utilisateur ne reçoit pas 2 mails à 10s d'écart
+    // grâce à leur cooldown interne. En cas de retry du webhook, c'est OK.
+    if (/CONTACT[._-]?TAG[._-]?ADDED/i.test(eventType) || /tag[._-]?added/i.test(eventType)) {
+      const tagName = String(
+        rawBody?.tag?.name ??
+          rawBody?.data?.tag?.name ??
+          rawBody?.data?.tag_name ??
+          "",
+      ).toLowerCase();
+      const affTagMatch = /^(tiquiz|tipote)-affili[ée]$/i.test(tagName);
+      if (affTagMatch) {
+        const contactEmail = String(
+          rawBody?.contact?.email ??
+            rawBody?.data?.contact?.email ??
+            rawBody?.customer?.email ??
+            rawBody?.data?.customer?.email ??
+            rawBody?.email ??
+            "",
+        )
+          .trim()
+          .toLowerCase();
+
+        if (!contactEmail) {
+          console.warn(`[Systeme.io webhook] Affiliate tag ${tagName} added but no contact email in payload`);
+          await markProcessed(eventId, eventType, rawBody);
+          return NextResponse.json({ ok: false, skipped: "no_email" });
+        }
+
+        try {
+          const dashboardUrl =
+            process.env.AFFILIATE_DASHBOARD_URL ?? "https://affiliate.tipote.com";
+          // Magic link Supabase. shouldCreateUser:true pour les
+          // affiliés qui n'ont jamais eu de compte Tipote/Supabase.
+          // emailRedirectTo pointe sur notre callback avec un next= qui
+          // route vers /signup (saisie du sa une fois loggué).
+          const { error } = await supabaseAnon.auth.signInWithOtp({
+            email: contactEmail,
+            options: {
+              shouldCreateUser: true,
+              emailRedirectTo: `${dashboardUrl}/auth/callback?next=%2Fsignup`,
+            },
+          });
+          if (error) {
+            console.error(
+              `[Systeme.io webhook] Affiliate magic link send failed email=${contactEmail}: ${error.message}`,
+            );
+            await markProcessed(eventId, eventType, rawBody);
+            return NextResponse.json({ ok: false, error: "send_failed" }, { status: 500 });
+          }
+          console.log(
+            `[Systeme.io webhook] Affiliate magic link sent tag=${tagName} email=${contactEmail}`,
+          );
+          await markProcessed(eventId, eventType, rawBody);
+          return NextResponse.json({
+            ok: true,
+            action: "affiliate_magic_link_sent",
+            email: contactEmail,
+            tag: tagName,
+          });
+        } catch (err) {
+          console.error("[Systeme.io webhook] Affiliate branch unexpected error:", err);
+          return NextResponse.json({ ok: false, error: "unexpected" }, { status: 500 });
+        }
+      }
+      // Tag ajouté qui n'est PAS un tag affilié : on laisse passer
+      // (rien à faire, on continue éventuellement vers les autres
+      // branches du webhook).
+    }
+
     if (eventType && TRANSIENT_FAILURE_RE.test(eventType)) {
       console.log(`[Systeme.io webhook] Ignoring transient failure type=${eventType}`);
       return NextResponse.json({ ok: true, skipped: "transient_failure", event_type: eventType });

@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Eye, EyeOff, Mail, User, KeyRound, Lock, CheckCircle2, ArrowRight, Globe2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,10 +59,25 @@ export default function SignupClient() {
     const first = searchParams.get("first_name") || "";
     const last = searchParams.get("last_name") || "";
     setSa(saParam);
-    setEmail(emailParam.toLowerCase());
+    if (emailParam) setEmail(emailParam.toLowerCase());
     const fullName = [first, last].filter(Boolean).join(" ").trim();
     if (fullName) setDisplayName(fullName);
     setLocale(detectBrowserLocale());
+
+    // Fallback : si pas d'email dans l'URL, on regarde la session
+    // Supabase. Cas du flow webhook tag où l'user arrive logged-in mais
+    // sans merge tags dans l'URL (juste après magic link).
+    if (!emailParam) {
+      (async () => {
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.email) setEmail(user.email.toLowerCase());
+        } catch {
+          // ignore
+        }
+      })();
+    }
   }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
