@@ -120,29 +120,48 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   let cachedSuggestions: Record<ToneKey, string> | null = null;
   let loading = false;
   let menuOpen = false;
+  const useFixed = adapter.useFixedTrigger === true;
 
-  // Le trigger est attaché à <body> en position:fixed, PAS dans le DOM
-  // managé par React de la page hôte. TikTok / Meta / X font de la
-  // réconciliation aggressive et toute insertion d'un noeud étranger
-  // dans leur tree casse leur diffing (`removeChild` errors). En
-  // restant sur body, on est invisible pour leur React.
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.setAttribute("data-tipote-trigger", "true");
   trigger.setAttribute("aria-label", t("dropdown.aria"));
-  trigger.style.cssText = `
-    position: fixed; z-index: 2147483646;
-    align-items: center; gap: 6px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white; border: 0; border-radius: 999px;
-    padding: 6px 14px; cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 12px; font-weight: 600;
-    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
-    transition: box-shadow 0.15s, opacity 0.15s;
-    white-space: nowrap;
-    display: none;
-  `;
+  // Empêcher le vol de focus : le composer doit rester focused quand
+  // on clique sur Tipote, sinon (notamment TikTok / DraftJS) le blur
+  // déclenche un rerender React qui casse au moment de notre execCommand.
+  trigger.addEventListener("mousedown", (e) => e.preventDefault());
+  if (useFixed) {
+    // Mode TikTok : trigger attaché à <body> en position:fixed pour rester
+    // invisible côté React de la page hôte. Repositionné via getBoundingClientRect.
+    trigger.style.cssText = `
+      position: fixed; z-index: 2147483646;
+      align-items: center; gap: 6px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white; border: 0; border-radius: 999px;
+      padding: 6px 14px; cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 12px; font-weight: 600;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
+      transition: box-shadow 0.15s, opacity 0.15s;
+      white-space: nowrap;
+      display: none;
+    `;
+  } else {
+    // Mode inline (LinkedIn, FB, IG, Threads, X, Reddit) : intégration
+    // visuelle au-dessus du composer. Plus propre, c'est ce qu'on avait
+    // historiquement.
+    trigger.style.cssText = `
+      display: inline-flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white; border: 0; border-radius: 999px;
+      padding: 6px 14px; cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 12px; font-weight: 600;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
+      transition: box-shadow 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    `;
+  }
   trigger.innerHTML = `<span>✨ Tipote</span><span style="font-size: 10px; opacity: 0.9;">▾</span>`;
   trigger.addEventListener("mouseenter", () => {
     trigger.style.boxShadow = "0 2px 6px rgba(99, 102, 241, 0.5)";
@@ -150,7 +169,29 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   trigger.addEventListener("mouseleave", () => {
     trigger.style.boxShadow = "0 1px 3px rgba(99, 102, 241, 0.3)";
   });
-  document.body.appendChild(trigger);
+
+  let container: HTMLElement;
+  if (useFixed) {
+    document.body.appendChild(trigger);
+    container = trigger; // référence pour onDocClick / cleanup
+  } else {
+    container = document.createElement("div");
+    container.setAttribute("data-tipote-bar", "true");
+    container.style.cssText = `
+      position: relative;
+      display: inline-block;
+      margin: 6px 0 8px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    `;
+    container.appendChild(trigger);
+    // Insertion au-dessus du composer (l'historique qui marche sur LI/FB/IG)
+    const wrapper = composer.parentElement?.parentElement ?? composer.parentElement;
+    if (wrapper?.parentElement) {
+      wrapper.parentElement.insertBefore(container, wrapper);
+    } else {
+      composer.parentElement?.insertBefore(container, composer);
+    }
+  }
 
   // Menu attaché au <body> en position:fixed pour échapper aux overflow
   // hidden / transform de la page hôte (LinkedIn, FB, IG ont tous des
@@ -184,6 +225,8 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
       transition: background 0.1s;
     `;
     item.innerHTML = `<span style="font-size: 16px;">${tone.emoji}</span><span>${label}</span>`;
+    // mousedown.preventDefault pour ne pas voler le focus du composer.
+    item.addEventListener("mousedown", (e) => e.preventDefault());
     item.addEventListener("mouseenter", () => {
       if (!item.disabled) item.style.background = "#f3f4f6";
     });
@@ -281,7 +324,7 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   }
 
   function reposition(): void {
-    positionTrigger();
+    if (useFixed) positionTrigger();
     if (menuOpen) positionMenu();
   }
 
@@ -297,7 +340,7 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
     document.removeEventListener("click", onDocClick);
   }
   function onDocClick(e: MouseEvent): void {
-    if (!trigger.contains(e.target as Node) && !menu.contains(e.target as Node)) {
+    if (!container.contains(e.target as Node) && !menu.contains(e.target as Node)) {
       closeMenu();
     }
   }
@@ -309,25 +352,29 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
     else openMenu();
   });
 
-  // Initial position + listeners de repositionnement
-  positionTrigger();
-  window.addEventListener("scroll", reposition, true);
-  window.addEventListener("resize", reposition);
-
-  // Surveille le retrait du composer (page navigation, dismiss…) pour
-  // cleanup le trigger et le menu de body.
-  const cleanupObserver = new MutationObserver(() => {
-    if (!composer.isConnected) {
-      trigger.remove();
-      menu.remove();
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-      cleanupObserver.disconnect();
-    } else {
-      positionTrigger();
-    }
-  });
-  cleanupObserver.observe(document.body, { childList: true, subtree: true });
+  if (useFixed) {
+    // Initial position + repositionnement sur scroll/resize (mode TikTok)
+    positionTrigger();
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    // Cleanup quand le composer disparaît (navigation SPA)
+    const cleanupObserver = new MutationObserver(() => {
+      if (!composer.isConnected) {
+        trigger.remove();
+        menu.remove();
+        window.removeEventListener("scroll", reposition, true);
+        window.removeEventListener("resize", reposition);
+        cleanupObserver.disconnect();
+      } else {
+        positionTrigger();
+      }
+    });
+    cleanupObserver.observe(document.body, { childList: true, subtree: true });
+  } else {
+    // Mode inline : le menu en position:fixed doit suivre le scroll/resize
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+  }
 }
 
 function detectLanguage(): string {
