@@ -10,21 +10,11 @@
 // dashboard.
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendAffiliateMagicLink } from "@/lib/affiliate/sendMagicLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const DASHBOARD_URL = process.env.AFFILIATE_DASHBOARD_URL ?? "https://affiliate.tipote.com";
-
-// Client anon Supabase pour signInWithOtp (jamais le service role,
-// qui ne peut pas envoyer de magic links destinés au public).
-const supabaseAnon = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false } },
-);
 
 function isEmail(v: unknown): v is string {
   if (typeof v !== "string") return false;
@@ -49,30 +39,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   //    les cas (404 / banned / not_affiliate). Évite l'énumération.
   const { data } = await supabaseAdmin
     .from("affiliates")
-    .select("sa, status")
+    .select("sa, status, locale, display_name")
     .ilike("email", email)
     .maybeSingle();
-  const row = data as { sa: string; status: string } | null;
+  const row = data as { sa: string; status: string; locale: string | null; display_name: string | null } | null;
   if (!row || row.status !== "active") {
     // Délai artificiel pour pas leak via timing l'existence de l'email.
     await new Promise((r) => setTimeout(r, 250));
     return NextResponse.json({ ok: false, reason: "not_affiliate" }, { status: 200 });
   }
 
-  // 2. Envoi du magic link Supabase. shouldCreateUser:true autorise
-  //    un affilié à se connecter même s'il n'a jamais été user Tipote
-  //    (compte auth.users créé à la volée, sans profile Tipote).
-  const { error } = await supabaseAnon.auth.signInWithOtp({
+  // 2. Envoi du magic link via notre helper custom (Resend + template
+  //    bi-marque Tipote × Tiquiz, multilang). Utilise la locale stockée
+  //    de l'affilié.
+  const result = await sendAffiliateMagicLink({
     email,
-    options: {
-      shouldCreateUser: true,
-      emailRedirectTo: `${DASHBOARD_URL}/auth/callback`,
-    },
+    intent: "login",
+    locale: row.locale ?? "fr",
+    firstName: row.display_name,
   });
 
-  if (error) {
-    console.error("[affiliate/auth/start] signInWithOtp error:", error.message);
-    return NextResponse.json({ ok: false, reason: "send_failed" }, { status: 500 });
+  if (!result.ok) {
+    return NextResponse.json({ ok: false, reason: result.reason }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

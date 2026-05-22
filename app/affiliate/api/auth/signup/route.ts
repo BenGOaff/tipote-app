@@ -15,20 +15,12 @@
 //   5. Envoie un magic link Supabase pour qu'il puisse se connecter.
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { findContactByEmail } from "@/lib/systemeIoClient";
+import { sendAffiliateMagicLink } from "@/lib/affiliate/sendMagicLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const DASHBOARD_URL = process.env.AFFILIATE_DASHBOARD_URL ?? "https://affiliate.tipote.com";
-
-const supabaseAnon = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false } },
-);
 
 function isValidSa(sa: unknown): sa is string {
   return typeof sa === "string" && /^sa[a-f0-9]{20,80}$/i.test(sa);
@@ -150,17 +142,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 3b. Pas de password OU password set a échoué → envoi du magic link.
-  const { error: otpErr } = await supabaseAnon.auth.signInWithOtp({
+  // 3b. Pas de password OU password set a échoué → envoi du magic link
+  // via notre helper Resend (template bi-marque, multilang).
+  const linkResult = await sendAffiliateMagicLink({
     email,
-    options: {
-      shouldCreateUser: true,
-      emailRedirectTo: `${DASHBOARD_URL}/auth/callback`,
-    },
+    intent: "login",
+    locale,
+    firstName: displayName,
   });
-
-  if (otpErr) {
-    console.error("[affiliate/signup] signInWithOtp error:", otpErr.message);
+  if (!linkResult.ok) {
     return NextResponse.json({ ok: false, reason: "send_failed" }, { status: 500 });
   }
 
