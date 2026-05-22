@@ -1,19 +1,16 @@
 // app/affiliate/page.tsx
 //
-// Vue d'ensemble du dashboard affilié. Affichage des stats clés :
-//   - Lien d'affiliation à copier
-//   - Clics / inscriptions / ventes / commission
-//   - Palier de commission courant + progression
-//   - Guide de lancement (gamification, sprint 3)
-//
-// Toutes les pages /affiliate/* requièrent une session affiliée active.
-// Le gating est fait ici via getAffiliateSession() → si null on redirect
-// vers /login. Pas de middleware-level auth pour pas mélanger avec le
-// gating dashboard principal Tipote.
+// Vue d'ensemble du dashboard affiliation. Design system Tipote
+// (Card, Button, icônes lucide, light theme).
 
 import { redirect } from "next/navigation";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, ArrowRight } from "lucide-react";
+
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AffiliateNav } from "./components/AffiliateNav";
 import AffiliateLinkCopy from "./components/AffiliateLinkCopy";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +62,7 @@ const TIERS = [
   { minSales: 25, rate: 0.5, label: "25+ ventes" },
 ];
 
-function currentTier(salesCount: number): { rate: number; label: string; nextTarget: number | null } {
+function currentTier(salesCount: number) {
   let active = TIERS[0];
   let next: typeof TIERS[number] | null = null;
   for (let i = 0; i < TIERS.length; i++) {
@@ -74,172 +71,189 @@ function currentTier(salesCount: number): { rate: number; label: string; nextTar
       next = TIERS[i + 1] ?? null;
     }
   }
-  return {
-    rate: active.rate,
-    label: active.label,
-    nextTarget: next?.minSales ?? null,
-  };
+  return { rate: active.rate, label: active.label, nextTarget: next?.minSales ?? null };
 }
 
 export default async function AffiliateOverviewPage() {
   const session = await getAffiliateSession();
-  if (!session) {
-    redirect("/login");
-  }
+  if (!session) redirect("/login");
 
   const stats = await fetchStats(session.sa);
   const tier = currentTier(stats.total_sales);
   const linkUrl = `https://www.tipote.fr/?sa=${session.sa}`;
+  const conversionRate =
+    stats.total_clicks > 0
+      ? `${((stats.total_sales / stats.total_clicks) * 100).toFixed(1)}%`
+      : "—";
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Bonjour {session.display_name ?? session.email.split("@")[0]} 👋
-        </h1>
-        <p className="text-slate-400 mt-1">
-          Voici ta vue d&apos;ensemble du programme Tipote × Tiquiz.
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <AffiliateNav displayName={session.display_name ?? session.email.split("@")[0]} />
 
-      {/* Lien d'affiliation */}
-      <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
-        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">
-          Ton lien d&apos;affiliation
-        </h2>
-        <AffiliateLinkCopy url={linkUrl} />
-        <p className="text-xs text-slate-500 mt-3">
-          Tu peux remplacer la page de destination par n&apos;importe quelle URL
-          tipote.fr, tipote.com ou tipote.blog : ajoute juste{" "}
-          <code className="bg-slate-800 px-1.5 py-0.5 rounded">?sa={session.sa}</code> à la fin.
-        </p>
-      </section>
-
-      {/* Stats */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Clics" value={stats.total_clicks.toLocaleString("fr-FR")} icon="✨" />
-        <StatCard
-          label="Inscriptions"
-          value={stats.total_conversions.toLocaleString("fr-FR")}
-          icon="👥"
-        />
-        <StatCard label="Ventes" value={stats.total_sales.toLocaleString("fr-FR")} icon="🛒" />
-        <StatCard
-          label="Taux conversion"
-          value={
-            stats.total_clicks > 0
-              ? `${((stats.total_sales / stats.total_clicks) * 100).toFixed(1)}%`
-              : "—"
-          }
-          icon="📈"
-        />
-      </section>
-
-      {/* Gains */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <GainCard
-          label="Gains totaux"
-          value={eur(stats.total_commission_cents)}
-          color="from-amber-500/20 to-orange-500/10 border-amber-700/40"
-          textColor="text-amber-300"
-        />
-        <GainCard
-          label="En attente"
-          value={eur(stats.pending_commission_cents)}
-          color="from-yellow-500/20 to-yellow-600/10 border-yellow-700/40"
-          textColor="text-yellow-300"
-        />
-        <GainCard
-          label="Déjà payé"
-          value={eur(stats.paid_commission_cents)}
-          color="from-emerald-500/20 to-green-600/10 border-emerald-700/40"
-          textColor="text-emerald-300"
-        />
-      </section>
-
-      {/* Palier de commission */}
-      <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Palier de commission</h2>
-          <span className="text-3xl font-bold text-indigo-400">{Math.round(tier.rate * 100)}%</span>
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Bonjour {session.display_name ?? session.email.split("@")[0]} 👋
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Voici ta vue d&apos;ensemble du programme d&apos;affiliation Tipote × Tiquiz.
+          </p>
         </div>
-        <p className="text-sm text-slate-400 mb-4">
-          Tu es actuellement au palier <strong>{tier.label}</strong>.
-          {tier.nextTarget !== null && (
-            <>
-              {" "}
-              Plus que{" "}
-              <strong className="text-indigo-400">
-                {tier.nextTarget - stats.total_sales}
-              </strong>{" "}
-              vente{tier.nextTarget - stats.total_sales > 1 ? "s" : ""} pour atteindre le palier suivant.
-            </>
-          )}
-        </p>
-        <div className="space-y-2">
-          {TIERS.map((t, i) => {
-            const reached = stats.total_sales >= t.minSales;
-            const active = i === TIERS.findIndex((x) => x.minSales === tier.nextTarget) - 1 ||
-                           (tier.nextTarget === null && i === TIERS.length - 1);
-            return (
-              <div
-                key={t.minSales}
-                className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
-                  active
-                    ? "bg-indigo-900/30 border-indigo-700/50"
-                    : reached
-                      ? "bg-slate-800/40 border-slate-700"
-                      : "bg-slate-900/40 border-slate-800 opacity-60"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">{reached ? "✓" : "○"}</span>
-                  <span className="text-sm font-medium">{t.label}</span>
-                </div>
-                <span className="text-sm font-bold">{Math.round(t.rate * 100)}%</span>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Ton lien d&apos;affiliation
+            </CardTitle>
+            <CardDescription>
+              Tu peux remplacer la destination par n&apos;importe quelle URL
+              tipote.fr, tipote.com ou tipote.blog — ajoute juste{" "}
+              <code className="bg-muted px-1.5 py-0.5 rounded text-foreground">
+                ?sa={session.sa}
+              </code>{" "}
+              à la fin.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AffiliateLinkCopy url={linkUrl} />
+          </CardContent>
+        </Card>
+
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard icon={MousePointerClick} label="Clics" value={stats.total_clicks.toLocaleString("fr-FR")} />
+          <StatCard icon={Users} label="Inscriptions" value={stats.total_conversions.toLocaleString("fr-FR")} />
+          <StatCard icon={ShoppingCart} label="Ventes" value={stats.total_sales.toLocaleString("fr-FR")} />
+          <StatCard icon={TrendingUp} label="Taux conversion" value={conversionRate} />
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <GainCard label="Gains totaux" value={eur(stats.total_commission_cents)} variant="primary" />
+          <GainCard label="En attente" value={eur(stats.pending_commission_cents)} variant="warning" />
+          <GainCard label="Déjà payé" value={eur(stats.paid_commission_cents)} variant="success" />
+        </section>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Palier de commission</CardTitle>
               </div>
-            );
-          })}
-        </div>
-      </section>
+              <Badge variant="default" className="text-base px-3 py-1">
+                {Math.round(tier.rate * 100)}%
+              </Badge>
+            </div>
+            <CardDescription>
+              Tu es actuellement au palier <strong className="text-foreground">{tier.label}</strong>.
+              {tier.nextTarget !== null && (
+                <>
+                  {" "}
+                  Plus que{" "}
+                  <strong className="text-primary">
+                    {tier.nextTarget - stats.total_sales}
+                  </strong>{" "}
+                  vente{tier.nextTarget - stats.total_sales > 1 ? "s" : ""} pour
+                  atteindre le palier suivant.
+                </>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {TIERS.map((t, i) => {
+              const reached = stats.total_sales >= t.minSales;
+              const isCurrent = reached && (TIERS[i + 1] ? stats.total_sales < TIERS[i + 1].minSales : true);
+              return (
+                <div
+                  key={t.minSales}
+                  className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
+                    isCurrent
+                      ? "border-primary bg-primary/5"
+                      : reached
+                        ? "border-border bg-muted/50"
+                        : "border-border opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`text-lg ${reached ? "text-primary" : "text-muted-foreground"}`}>
+                      {reached ? "✓" : "○"}
+                    </span>
+                    <span className="text-sm font-medium">{t.label}</span>
+                    {isCurrent && (
+                      <Badge variant="outline" className="text-xs">
+                        Palier actuel
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-sm font-bold">{Math.round(t.rate * 100)}%</span>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
 
-      {/* Coming soon */}
-      <section className="bg-slate-900/30 border border-dashed border-slate-700 rounded-2xl p-6 text-center">
-        <p className="text-sm text-slate-400">
-          🚧 Bientôt : ressources promos, guide de lancement gamifié, classement, contenus multilangues.
-        </p>
-      </section>
+        <Card className="bg-muted/30 border-dashed">
+          <CardContent className="py-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              🚧 Bientôt : ressources promo par canal, guide de lancement,
+              calculateur de revenus, classement, contenus multilangues.
+            </p>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }
 
-function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase tracking-wider text-slate-500">{label}</span>
-        <span className="text-lg opacity-60">{icon}</span>
-      </div>
-      <div className="text-2xl font-bold">{value}</div>
-    </div>
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="text-2xl font-bold tracking-tight">{value}</div>
+      </CardContent>
+    </Card>
   );
 }
 
 function GainCard({
   label,
   value,
-  color,
-  textColor,
+  variant,
 }: {
   label: string;
   value: string;
-  color: string;
-  textColor: string;
+  variant: "primary" | "warning" | "success";
 }) {
+  const variantClasses = {
+    primary: "border-primary/30 bg-primary/5",
+    warning: "border-amber-300/40 bg-amber-50 dark:bg-amber-950/20",
+    success: "border-emerald-300/40 bg-emerald-50 dark:bg-emerald-950/20",
+  }[variant];
+
+  const textClasses = {
+    primary: "text-primary",
+    warning: "text-amber-700 dark:text-amber-300",
+    success: "text-emerald-700 dark:text-emerald-300",
+  }[variant];
+
   return (
-    <div className={`bg-gradient-to-br ${color} border rounded-2xl p-5`}>
-      <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">{label}</div>
-      <div className={`text-3xl font-bold ${textColor}`}>{value}</div>
-    </div>
+    <Card className={variantClasses}>
+      <CardContent className="pt-6">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{label}</div>
+        <div className={`text-3xl font-bold tracking-tight ${textClasses}`}>{value}</div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function AffiliateLinkCopy({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
@@ -16,24 +19,31 @@ export default function AffiliateLinkCopy({ url }: { url: string }) {
   }
 
   return (
-    <div className="flex items-stretch gap-2">
-      <input
+    <div className="flex items-center gap-2">
+      <Input
         type="text"
         readOnly
         value={url}
         onClick={(e) => (e.target as HTMLInputElement).select()}
-        className="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-sm font-mono text-slate-300 focus:outline-none focus:border-indigo-500"
+        className="font-mono text-sm flex-1"
       />
-      <button
+      <Button
         onClick={handleCopy}
-        className={`px-5 py-3 rounded-xl font-medium text-sm transition ${
-          copied
-            ? "bg-emerald-600 text-white"
-            : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white"
-        }`}
+        variant={copied ? "default" : "default"}
+        className="shrink-0"
       >
-        {copied ? "✓ Copié !" : "Copier"}
-      </button>
+        {copied ? (
+          <>
+            <Check className="mr-2 h-4 w-4" />
+            Copié
+          </>
+        ) : (
+          <>
+            <Copy className="mr-2 h-4 w-4" />
+            Copier
+          </>
+        )}
+      </Button>
     </div>
   );
 }

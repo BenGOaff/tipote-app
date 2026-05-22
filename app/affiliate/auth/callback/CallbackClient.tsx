@@ -95,27 +95,40 @@ export default function CallbackClient() {
 
   if (status === "error") {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-slate-900/60 border border-red-800/50 rounded-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-xl font-semibold mb-2 text-red-200">Lien invalide ou expiré</h1>
-          <p className="text-sm text-slate-400 mb-6">
-            {errorMsg || "Ce lien a peut-être déjà été utilisé ou est expiré (30 min max)."}
-          </p>
-          <button
-            onClick={() => router.replace("/login")}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium"
-          >
-            Demander un nouveau lien
-          </button>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-foreground">
+              Tipote<span className="text-primary">™</span>
+            </h1>
+            <p className="text-muted-foreground mt-2">Espace affiliation</p>
+          </div>
+          <div className="bg-card border border-destructive/30 rounded-lg p-6 text-center shadow-lg">
+            <h2 className="text-lg font-semibold mb-2 text-destructive">
+              Lien invalide ou expiré
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              {errorMsg || "Ce lien a peut-être déjà été utilisé ou est expiré (30 min max)."}
+            </p>
+            <button
+              onClick={() => router.replace("/login")}
+              className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition"
+            >
+              Demander un nouveau lien
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center">
-        <p className="text-slate-300">Validation en cours…</p>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="text-center">
+        <div className="text-4xl font-bold text-foreground mb-2">
+          Tipote<span className="text-primary">™</span>
+        </div>
+        <p className="text-muted-foreground">Validation en cours…</p>
       </div>
     </div>
   );

@@ -43,7 +43,13 @@ function isEmail(v: unknown): v is string {
 const ALLOWED_LOCALES = new Set(["fr", "en", "es", "it", "pt", "ar"]);
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  let body: { sa?: string; email?: string; display_name?: string | null; locale?: string };
+  let body: {
+    sa?: string;
+    email?: string;
+    display_name?: string | null;
+    locale?: string;
+    password?: string | null;
+  };
   try {
     body = await req.json();
   } catch {
@@ -63,6 +69,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     ? body.display_name.trim().slice(0, 80) || null
     : null;
   const locale = ALLOWED_LOCALES.has(body.locale ?? "") ? (body.locale as string) : "fr";
+  const password = typeof body.password === "string" && body.password.length > 0
+    ? body.password
+    : null;
+  if (password !== null && password.length < 8) {
+    return NextResponse.json({ ok: false, reason: "weak_password" }, { status: 400 });
+  }
 
   // 1. Vérifier que l'email existe dans Systeme.io. Empêche un visiteur
   //    de créer un faux compte avec un sa volé + email inventé.
@@ -102,7 +114,43 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "db_error" }, { status: 500 });
   }
 
-  // 3. Envoi du magic link Supabase pour qu'il se connecte.
+  // 3a. Si l'user a fourni un mot de passe, on crée/met-à-jour son
+  //     compte auth.users via l'admin API et on set le password. Ça
+  //     lui permet de se connecter direct sans passer par le magic link.
+  if (password) {
+    try {
+      // Tente de récupérer l'user existant
+      const { data: { users }, error: listErr } =
+        await supabaseAdmin.auth.admin.listUsers();
+      if (listErr) throw listErr;
+      const existing = users?.find(
+        (u) => (u.email ?? "").toLowerCase() === email,
+      );
+
+      if (existing) {
+        // Update le password
+        await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+          password,
+          email_confirm: true,
+        });
+      } else {
+        // Crée le compte avec password
+        await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+        });
+      }
+      // Compte créé avec password → l'user peut se connecter direct.
+      // Pas besoin d'envoyer un magic link.
+      return NextResponse.json({ ok: true, has_password: true });
+    } catch (err) {
+      console.error("[affiliate/signup] password set error:", err);
+      // Fall through au magic link en fallback
+    }
+  }
+
+  // 3b. Pas de password OU password set a échoué → envoi du magic link.
   const { error: otpErr } = await supabaseAnon.auth.signInWithOtp({
     email,
     options: {
@@ -113,9 +161,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (otpErr) {
     console.error("[affiliate/signup] signInWithOtp error:", otpErr.message);
-    // L'affilié est créé en DB, mais l'envoi du lien a échoué. On
-    // retourne quand même ok:true pour pas confondre l'user, mais on
-    // marque send_failed pour debug si il rapporte.
     return NextResponse.json({ ok: false, reason: "send_failed" }, { status: 500 });
   }
 
