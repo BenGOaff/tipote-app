@@ -2978,7 +2978,14 @@
     "unpublish": "إلغاء النشر",
     "openInNewTab": "علامة تبويب جديدة",
     "customColor": "لون مخصص",
-    "resetColor": "إعادة تعيين"
+    "resetColor": "إعادة تعيين",
+    "avatarUpload": "تحميل صورة الملف الشخصي",
+    "avatarChange": "تغيير الصورة",
+    "avatarRemove": "إزالة الصورة",
+    "avatarHint": "PNG أو JPG أو GIF. بحد أقصى 10 ميغابايت. يُفضل الشكل المربع.",
+    "avatarFormatHint": "تنسيق غير مدعوم. استخدم PNG أو JPG أو GIF.",
+    "avatarTooLarge": "الملف كبير جدًا (الحد الأقصى 10 ميغابايت).",
+    "avatarUploadError": "فشل تحميل الصورة."
   },
   "pages": {
     "headerTitle": "صفحاتي",

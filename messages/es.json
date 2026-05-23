@@ -2978,7 +2978,14 @@
     "unpublish": "Despublicar",
     "openInNewTab": "Nueva pestaña",
     "customColor": "Color personalizado",
-    "resetColor": "Restablecer"
+    "resetColor": "Restablecer",
+    "avatarUpload": "Subir foto de perfil",
+    "avatarChange": "Cambiar foto",
+    "avatarRemove": "Quitar foto",
+    "avatarHint": "PNG, JPG o GIF. Máx 10 MB. Se recomienda imagen cuadrada.",
+    "avatarFormatHint": "Formato no compatible. Usa PNG, JPG o GIF.",
+    "avatarTooLarge": "Archivo demasiado grande (máx 10 MB).",
+    "avatarUploadError": "Error al subir la foto."
   },
   "pages": {
     "headerTitle": "Mis Páginas",
