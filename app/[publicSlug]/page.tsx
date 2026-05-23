@@ -35,6 +35,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import { TrackingPixels } from "@/components/tracking/TrackingPixels";
+import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import PopquizPlayClient from "@/app/pq/[popquizId]/PopquizPlayClient";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
@@ -249,12 +250,13 @@ export default async function PublicCatchAll({ params }: Props) {
   if (!r) notFound();
 
   if (r.kind === "quiz") {
+    const pixels = await resolveEffectivePixels(r.meta, scope.userId, scope.projectId);
     return (
       <>
         <TrackingPixels
-          metaPixelId={r.meta.meta_pixel_id}
-          ga4MeasurementId={r.meta.ga4_measurement_id}
-          googleAdsConversionId={r.meta.google_ads_conversion_id}
+          metaPixelId={pixels.metaPixelId}
+          ga4MeasurementId={pixels.ga4MeasurementId}
+          googleAdsConversionId={pixels.googleAdsConversionId}
         />
         <PublicQuizClient quizId={publicSlug} />
       </>

@@ -330,10 +330,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     let fallbackPrivacyUrl = "";
     let brandFallback: { brand_font: string | null; brand_color_base: string | null; brand_logo_url: string | null } = { brand_font: null, brand_color_base: null, brand_logo_url: null };
     let tipoteAffiliateId: string | null = null;
+    let pixelDefaults: { meta: string | null; ga4: string | null; ads: string | null; adsLabel: string | null } = { meta: null, ga4: null, ads: null, adsLabel: null };
     if (quizUserId) {
       let bpQuery = admin
         .from("business_profiles")
-        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url, tipote_affiliate_id")
+        .select("address_form, privacy_url, brand_font, brand_color_base, brand_logo_url, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label")
         .eq("user_id", quizUserId);
       if (quizProjectId) bpQuery = bpQuery.eq("project_id", quizProjectId);
       const { data: bp } = await bpQuery.maybeSingle();
@@ -345,6 +346,12 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         brand_logo_url: (bp as any)?.brand_logo_url ?? null,
       };
       tipoteAffiliateId = String((bp as any)?.tipote_affiliate_id ?? "").trim() || null;
+      pixelDefaults = {
+        meta: String((bp as any)?.default_meta_pixel_id ?? "").trim() || null,
+        ga4: String((bp as any)?.default_ga4_measurement_id ?? "").trim() || null,
+        ads: String((bp as any)?.default_google_ads_conversion_id ?? "").trim() || null,
+        adsLabel: String((bp as any)?.default_google_ads_conversion_label ?? "").trim() || null,
+      };
     }
 
     // Refonte tracking (Adeline, 19 mai 2026) : le view tracking
@@ -432,6 +439,21 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       ...quizPublic
     } = quizRes.data as any;
     const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
+
+    // Pixel effectif : fallback sur les défauts business_profile si le
+    // quiz n'a aucun ID, pour que les events conversion (Lead/share)
+    // côté client fired sur le bon pixel. Le pixel server-rendered
+    // (PageView) applique la même logique. Cf. PITFALLS section U.
+    const quizHasPixel =
+      String(quizPublic.meta_pixel_id ?? "").trim() ||
+      String(quizPublic.ga4_measurement_id ?? "").trim() ||
+      String(quizPublic.google_ads_conversion_id ?? "").trim();
+    if (!quizHasPixel) {
+      quizPublic.meta_pixel_id = pixelDefaults.meta;
+      quizPublic.ga4_measurement_id = pixelDefaults.ga4;
+      quizPublic.google_ads_conversion_id = pixelDefaults.ads;
+      quizPublic.google_ads_conversion_label = pixelDefaults.adsLabel;
+    }
 
     // Custom footer is a paid-plan feature: if the creator is on free, hide it
     // at render time too (guards against downgrades where the field is still
