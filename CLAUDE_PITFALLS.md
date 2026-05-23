@@ -474,3 +474,62 @@ if (!win) { /* fallback popup-bloqué */ }
 **Règle générale** : si tu utilises `window.open` AVEC `noopener` et
 que tu testes la valeur de retour, c'est un bug. Soit tu fais sans
 noopener (avec opener=null manuel), soit tu n'as pas de fallback.
+
+## U) Pixel Meta : server-render obligatoire pour la détection (23 mai 2026)
+
+**Bug Gwenn (23/05)** : elle teste sa pub Meta sur un quiz Tiquiz et
+son extension Pixel Helper affiche "no pixel" sur toutes les pages
+(intro, capture, résultat). Le pixel ETAIT pourtant configuré sur son
+quiz.
+
+**Cause** : l'injection du script pixel se faisait côté CLIENT via
+`useEffect` dans `PublicQuizClient.tsx`, après le mount React. Deux
+problèmes :
+
+1. **Race condition consent** : si `show_consent_checkbox=true`
+   (défaut), le script ne se chargeait jamais avant que le visiteur
+   coche la case. Pixel Helper voit la page avant le consent → "no
+   pixel".
+2. **Détection retardée** : même avec consent ON, Pixel Helper scanne
+   la page au premier paint. L'injection client arrivait après → soit
+   l'extension affiche "not detected", soit elle finit par le voir
+   mais l'user a déjà fermé l'extension.
+
+**Fix** : server-render le pixel via `<TrackingPixels>` dans la route
+page. Le script est dans le HTML envoyé au browser, Pixel Helper le
+détecte instantanément.
+
+```tsx
+// app/q/[quizId]/page.tsx (server component)
+import { TrackingPixels } from "@/components/tracking/TrackingPixels";
+
+return (
+  <>
+    <TrackingPixels
+      metaPixelId={fullQuiz.meta_pixel_id}
+      ga4MeasurementId={fullQuiz.ga4_measurement_id}
+    />
+    <PublicQuizClient quizId={quizId} />
+  </>
+);
+```
+
+**À NE PAS oublier en parallèle** :
+- Retirer l'injection client-side dans `PublicQuizClient.tsx` (sinon
+  double init).
+- Retirer le `fireQuizPixel("view")` du trackEvent("view") car
+  l'init script fire déjà PageView (sinon double PageView dans les
+  rapports Meta/GA).
+- Sur les pages publiques de TYPE hosted_page (Tipote `/p/[slug]` et
+  `/[publicSlug]` pour kind="page"), le pixel doit aussi être au
+  parent (le html_snapshot est dans un iframe srcDoc et Pixel
+  Helper voit la fenêtre parente). Cf. `app/p/[slug]/page.tsx`.
+
+**Routes couvertes** :
+- Tiquiz : `/q/[quizId]` ✅ + `/[publicSlug]` ✅
+- Tipote : `/q/[quizId]` ✅ + `/p/[slug]` ✅ + `/[publicSlug]` ✅
+- Popquiz : pas de pixel column en V1 (acceptable, à ajouter si user demande)
+
+**Pour un nouveau type de page publique** : faut toujours fetch les
+pixel IDs côté server et passer à `<TrackingPixels>`. Pas de pixel
+client-side uniquement.

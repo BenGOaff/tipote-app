@@ -14,6 +14,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import QuizJsonLd from "@/components/quiz/QuizJsonLd";
+import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
@@ -165,10 +166,12 @@ export default async function PublicQuizPage({ params }: RouteContext) {
     }
   }
 
-  // JSON-LD pour SEO + indexation IA (Schema.org Quiz)
+  // JSON-LD pour SEO + indexation IA (Schema.org Quiz). On profite de
+  // cette query pour aussi récupérer les pixel IDs server-side et les
+  // injecter via <TrackingPixels> (Pixel Helper les détecte au load).
   const fullDataBase = supabaseAdmin
     .from("quizzes")
-    .select("id, user_id, project_id, title, og_description, og_image_url, introduction, questions, created_at, updated_at, content_locale")
+    .select("id, user_id, project_id, title, og_description, og_image_url, introduction, questions, created_at, updated_at, content_locale, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("status", "active");
   const { data: full } = await (UUID_RE.test(quizId)
     ? fullDataBase.eq("id", quizId).maybeSingle()
@@ -186,6 +189,9 @@ export default async function PublicQuizPage({ params }: RouteContext) {
         created_at: string;
         updated_at: string;
         content_locale: string | null;
+        meta_pixel_id: string | null;
+        ga4_measurement_id: string | null;
+        google_ads_conversion_id: string | null;
       }
     | null;
 
@@ -219,6 +225,13 @@ export default async function PublicQuizPage({ params }: RouteContext) {
           authorUrl={authorUrl}
           numberOfQuestions={Array.isArray(fullQuiz.questions) ? fullQuiz.questions.length : null}
           inLanguage={fullQuiz.content_locale}
+        />
+      )}
+      {fullQuiz && (
+        <TrackingPixels
+          metaPixelId={fullQuiz.meta_pixel_id}
+          ga4MeasurementId={fullQuiz.ga4_measurement_id}
+          googleAdsConversionId={fullQuiz.google_ads_conversion_id}
         />
       )}
       <PublicQuizClient quizId={quizId} />
