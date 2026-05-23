@@ -17,6 +17,7 @@ import {
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { AffiliateNav } from "../components/AffiliateNav";
+import { getDict, normaliseLocale } from "../i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -75,27 +76,25 @@ export default async function SupportPage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
 
+  const t = getDict(normaliseLocale(session.locale));
+
   return (
     <div className="min-h-screen bg-background">
       <AffiliateNav displayName={session.display_name ?? session.email.split("@")[0]} />
 
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Support</h1>
-          <p className="text-muted-foreground mt-1">
-            Questions fréquentes + contact direct si tu as besoin d&apos;aide.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t.support.page_title}</h1>
+          <p className="text-muted-foreground mt-1">{t.support.page_subtitle}</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
-              Contacter l&apos;équipe
+              {t.support.contact_title}
             </CardTitle>
-            <CardDescription>
-              Question, bug, suggestion, commission manquante… on répond sous 2-3 jours ouvrés.
-            </CardDescription>
+            <CardDescription>{t.support.contact_description}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row gap-2">
             <Button asChild>
@@ -103,7 +102,7 @@ export default async function SupportPage() {
                 href={`mailto:hello@tipote.com?subject=Support%20Affiliation%20-%20${encodeURIComponent(session.email)}`}
               >
                 <Mail className="mr-2 h-4 w-4" />
-                Envoyer un email au support
+                {t.support.contact_button}
               </a>
             </Button>
             <RestartTourButton />
@@ -114,7 +113,7 @@ export default async function SupportPage() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <HelpCircle className="h-4 w-4 text-primary" />
-              Questions fréquentes
+              {t.support.faq_title}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -136,8 +135,7 @@ export default async function SupportPage() {
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-5">
             <p className="text-sm">
-              <strong>📜 Pour les conditions complètes</strong> (commission, paliers, exclusions,
-              durée de cookie, fiscalité, dispute…) :
+              <strong>{t.support.terms_card_title}</strong>
             </p>
             <Button variant="outline" asChild className="mt-3">
               <a
@@ -145,7 +143,7 @@ export default async function SupportPage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Voir les CGV affiliation
+                {t.support.terms_card_button}
                 <ExternalLink className="ml-2 h-3.5 w-3.5" />
               </a>
             </Button>

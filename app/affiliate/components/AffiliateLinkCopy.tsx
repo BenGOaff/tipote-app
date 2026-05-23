@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useDict } from "../i18n/context";
 
 export default function AffiliateLinkCopy({ url }: { url: string }) {
+  const t = useDict();
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -27,20 +29,16 @@ export default function AffiliateLinkCopy({ url }: { url: string }) {
         onClick={(e) => (e.target as HTMLInputElement).select()}
         className="font-mono text-sm flex-1"
       />
-      <Button
-        onClick={handleCopy}
-        variant={copied ? "default" : "default"}
-        className="shrink-0"
-      >
+      <Button onClick={handleCopy} variant="default" className="shrink-0">
         {copied ? (
           <>
             <Check className="mr-2 h-4 w-4" />
-            Copié
+            {t.common.copied}
           </>
         ) : (
           <>
             <Copy className="mr-2 h-4 w-4" />
-            Copier
+            {t.common.copy}
           </>
         )}
       </Button>

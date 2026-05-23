@@ -7,6 +7,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getDict, interpolate, normaliseLocale } from "./i18n";
+import type { AffiliateDict } from "./i18n/types";
 import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, ArrowRight, Gift } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,14 +18,13 @@ import { AffiliateNav } from "./components/AffiliateNav";
 import { AffiliateTour } from "./components/AffiliateTour";
 import AffiliateLinkCopy from "./components/AffiliateLinkCopy";
 
-async function TrialTipoteCard({ sa }: { sa: string }) {
+async function TrialTipoteCard({ sa, t }: { sa: string; t: AffiliateDict }) {
   const { data } = await supabaseAdmin
     .from("affiliates")
     .select("trial_activated_at, trial_expires_at")
     .eq("sa", sa)
     .maybeSingle();
   const row = data as { trial_activated_at: string | null; trial_expires_at: string | null } | null;
-  // Affiché seulement si pas encore activé.
   if (row?.trial_activated_at) return null;
 
   return (
@@ -35,16 +36,14 @@ async function TrialTipoteCard({ sa }: { sa: string }) {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-base">
-              🎁 Ton mois Tipote Elite gratuit t&apos;attend
+              {t.overview.trial_cta_title}
             </h3>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-              Active ton trial 1 mois pour tester Tipote en Elite, créer du
-              contenu de promo authentique, et mieux vendre l&apos;outil à
-              ton audience. À utiliser quand tu veux.
+              {t.overview.trial_cta_description}
             </p>
             <Button asChild className="mt-3">
               <Link href="/trial-tipote">
-                Voir mon trial
+                {t.overview.trial_cta_button}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -120,6 +119,9 @@ export default async function AffiliateOverviewPage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
 
+  const t = getDict(normaliseLocale(session.locale));
+  const displayName = session.display_name ?? session.email.split("@")[0];
+
   // Stats + onboarded_at en parallèle (un seul round-trip Supabase)
   const [stats, { data: meta }] = await Promise.all([
     fetchStats(session.sa),
@@ -140,7 +142,7 @@ export default async function AffiliateOverviewPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AffiliateNav displayName={session.display_name ?? session.email.split("@")[0]} />
+      <AffiliateNav displayName={displayName} />
       {/* Tutoriel guidé : s'auto-déclenche si onboardedAt = null (premier
           login) ; sinon dormant. Peut être relancé via l'événement
           "affiliate-tour-start" depuis Support. */}
@@ -149,26 +151,19 @@ export default async function AffiliateOverviewPage() {
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Bonjour {session.display_name ?? session.email.split("@")[0]} 👋
+            {interpolate(t.overview.greeting, { name: displayName })}
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Voici ta vue d&apos;ensemble du programme d&apos;affiliation Tipote × Tiquiz.
-          </p>
+          <p className="text-muted-foreground mt-1">{t.overview.subtitle}</p>
         </div>
 
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              Ton lien d&apos;affiliation
+              {t.overview.link_card_title}
             </CardTitle>
             <CardDescription>
-              Tu peux remplacer la destination par n&apos;importe quelle URL
-              tipote.fr, tipote.com ou tipote.blog — ajoute juste{" "}
-              <code className="bg-muted px-1.5 py-0.5 rounded text-foreground">
-                ?sa={session.sa}
-              </code>{" "}
-              à la fin.
+              {interpolate(t.overview.link_card_help, { sa: session.sa })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -177,16 +172,16 @@ export default async function AffiliateOverviewPage() {
         </Card>
 
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={MousePointerClick} label="Clics" value={stats.total_clicks.toLocaleString("fr-FR")} />
-          <StatCard icon={Users} label="Inscriptions" value={stats.total_conversions.toLocaleString("fr-FR")} />
-          <StatCard icon={ShoppingCart} label="Ventes" value={stats.total_sales.toLocaleString("fr-FR")} />
-          <StatCard icon={TrendingUp} label="Taux conversion" value={conversionRate} />
+          <StatCard icon={MousePointerClick} label={t.overview.stat_clicks} value={stats.total_clicks.toLocaleString("fr-FR")} />
+          <StatCard icon={Users} label={t.overview.stat_signups} value={stats.total_conversions.toLocaleString("fr-FR")} />
+          <StatCard icon={ShoppingCart} label={t.overview.stat_sales} value={stats.total_sales.toLocaleString("fr-FR")} />
+          <StatCard icon={TrendingUp} label={t.overview.stat_conversion_rate} value={conversionRate} />
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <GainCard label="Gains totaux" value={eur(stats.total_commission_cents)} variant="primary" />
-          <GainCard label="En attente" value={eur(stats.pending_commission_cents)} variant="warning" />
-          <GainCard label="Déjà payé" value={eur(stats.paid_commission_cents)} variant="success" />
+          <GainCard label={t.overview.gain_total} value={eur(stats.total_commission_cents)} variant="primary" />
+          <GainCard label={t.overview.gain_pending} value={eur(stats.pending_commission_cents)} variant="warning" />
+          <GainCard label={t.overview.gain_paid} value={eur(stats.paid_commission_cents)} variant="success" />
         </section>
 
         <Card>
@@ -194,34 +189,31 @@ export default async function AffiliateOverviewPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Palier de commission</CardTitle>
+                <CardTitle className="text-lg">{t.overview.tier_card_title}</CardTitle>
               </div>
               <Badge variant="default" className="text-base px-3 py-1">
                 {Math.round(tier.rate * 100)}%
               </Badge>
             </div>
             <CardDescription>
-              Tu es actuellement au palier <strong className="text-foreground">{tier.label}</strong>.
+              {interpolate(t.overview.tier_current, { label: tier.label })}
               {tier.nextTarget !== null && (
                 <>
                   {" "}
-                  Plus que{" "}
-                  <strong className="text-primary">
-                    {tier.nextTarget - stats.total_sales}
-                  </strong>{" "}
-                  vente{tier.nextTarget - stats.total_sales > 1 ? "s" : ""} pour
-                  atteindre le palier suivant.
+                  {interpolate(t.overview.tier_remaining, {
+                    count: tier.nextTarget - stats.total_sales,
+                  })}
                 </>
               )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {TIERS.map((t, i) => {
-              const reached = stats.total_sales >= t.minSales;
+            {TIERS.map((tierItem, i) => {
+              const reached = stats.total_sales >= tierItem.minSales;
               const isCurrent = reached && (TIERS[i + 1] ? stats.total_sales < TIERS[i + 1].minSales : true);
               return (
                 <div
-                  key={t.minSales}
+                  key={tierItem.minSales}
                   className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
                     isCurrent
                       ? "border-primary bg-primary/5"
@@ -234,28 +226,26 @@ export default async function AffiliateOverviewPage() {
                     <span className={`text-lg ${reached ? "text-primary" : "text-muted-foreground"}`}>
                       {reached ? "✓" : "○"}
                     </span>
-                    <span className="text-sm font-medium">{t.label}</span>
+                    <span className="text-sm font-medium">{tierItem.label}</span>
                     {isCurrent && (
                       <Badge variant="outline" className="text-xs">
-                        Palier actuel
+                        {t.overview.tier_current_badge}
                       </Badge>
                     )}
                   </div>
-                  <span className="text-sm font-bold">{Math.round(t.rate * 100)}%</span>
+                  <span className="text-sm font-bold">{Math.round(tierItem.rate * 100)}%</span>
                 </div>
               );
             })}
           </CardContent>
         </Card>
 
-        {/* CTA trial Tipote — affiché seulement si pas encore activé */}
-        <TrialTipoteCard sa={session.sa} />
+        <TrialTipoteCard sa={session.sa} t={t} />
 
         <Card className="bg-muted/30 border-dashed">
           <CardContent className="py-6 text-center">
             <p className="text-sm text-muted-foreground">
-              🚧 Bientôt : guide de lancement 6 étapes, classement anonymisé,
-              contenus multilangues, badges.
+              {t.overview.coming_soon}
             </p>
           </CardContent>
         </Card>

@@ -15,8 +15,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useDict } from "../i18n/context";
+import { interpolate } from "../i18n";
 
 export function TrialActivateButton({ email }: { email: string }) {
+  const t = useDict();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,19 +32,18 @@ export function TrialActivateButton({ email }: { email: string }) {
       const data = await res.json();
       if (!res.ok || !data.ok) {
         if (data.reason === "already_paid_user") {
-          setError(data.message ?? "Tu as déjà un compte Tipote payant.");
+          setError(data.message ?? t.trial.err_already_paid);
         } else if (data.reason === "already_activated") {
-          setError("Ton trial a déjà été activé. Reload la page.");
+          setError(t.trial.err_already_activated);
         } else {
-          setError("Une erreur s'est produite. Réessaie ou contacte le support.");
+          setError(t.trial.err_generic);
         }
         setLoading(false);
         return;
       }
-      // Reload côté server pour afficher le state "actif"
       router.refresh();
     } catch {
-      setError("Impossible de contacter le serveur.");
+      setError(t.trial.err_network);
       setLoading(false);
     }
   }
@@ -51,35 +53,30 @@ export function TrialActivateButton({ email }: { email: string }) {
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button size="lg" className="w-full">
-            Activer mon trial Tipote 1 mois
+            {t.trial.activate_button}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Activer ton trial Tipote ?</AlertDialogTitle>
+            <AlertDialogTitle>{t.trial.activate_modal_title}</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                Tu vas débloquer <strong>30 jours d&apos;accès Elite gratuit</strong> à
-                Tipote sur ton compte ({email}).
+                {interpolate(t.trial.activate_modal_body_1, { email })}
               </span>
               <span className="block">
-                C&apos;est offert <strong>UNE seule fois</strong>. Tu ne peux pas
-                réactiver plus tard.
+                {t.trial.activate_modal_body_2}
               </span>
               <span className="block text-amber-700 dark:text-amber-300 flex gap-2 mt-3">
                 <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <span>
-                  Si tu as déjà un compte Tipote payant, l&apos;activation sera
-                  refusée pour ne pas écraser ton plan actuel.
-                </span>
+                <span>{t.trial.activate_modal_warning}</span>
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={loading}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={loading}>{t.trial.activate_modal_cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleActivate} disabled={loading}>
-              {loading ? "Activation…" : "Oui, activer maintenant"}
+              {loading ? t.trial.activate_loading : t.trial.activate_modal_confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

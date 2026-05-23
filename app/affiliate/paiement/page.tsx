@@ -11,6 +11,7 @@ import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { AffiliateNav } from "../components/AffiliateNav";
 import { PaymentForm } from "./PaymentForm";
+import { getDict, normaliseLocale } from "../i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function PaiementPage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
 
+  const t = getDict(normaliseLocale(session.locale));
   const info = await fetchPaymentInfo(session.sa);
 
   return (
@@ -45,22 +47,17 @@ export default async function PaiementPage() {
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Paiement</h1>
-          <p className="text-muted-foreground mt-1">
-            Configure ton moyen de paiement pour recevoir tes commissions.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t.paiement.page_title}</h1>
+          <p className="text-muted-foreground mt-1">{t.paiement.page_subtitle}</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-primary" />
-              Méthode de paiement
+              {t.paiement.method_title}
             </CardTitle>
-            <CardDescription>
-              Tu peux choisir l&apos;une ou l&apos;autre méthode. PayPal est plus rapide, le
-              virement bancaire (RIB) est gratuit pour toi.
-            </CardDescription>
+            <CardDescription>{t.paiement.method_description}</CardDescription>
           </CardHeader>
           <CardContent>
             <PaymentForm initial={info} />
@@ -71,24 +68,13 @@ export default async function PaiementPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <Info className="h-4 w-4 text-primary" />
-              Conditions de paiement
+              {t.paiement.conditions_title}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>
-              <strong className="text-foreground">Fréquence</strong> : les commissions sont
-              versées le <strong className="text-foreground">10 de chaque mois</strong>,
-              minimum 30 jours après la vente (délai d&apos;éventuelle annulation client).
-            </p>
-            <p>
-              <strong className="text-foreground">Seuil minimum</strong> :{" "}
-              <strong className="text-foreground">50 €</strong>. Si ton solde éligible est
-              inférieur le 10, on reporte au mois suivant.
-            </p>
-            <p>
-              <strong className="text-foreground">Devise</strong> : EUR. Pour PayPal,
-              vérifie que ton compte accepte EUR.
-            </p>
+            <p>{t.paiement.conditions_frequency}</p>
+            <p>{t.paiement.conditions_minimum}</p>
+            <p>{t.paiement.conditions_currency}</p>
           </CardContent>
         </Card>
       </main>

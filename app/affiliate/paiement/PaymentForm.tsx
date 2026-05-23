@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useDict } from "../i18n/context";
 
 type Initial = {
   paypal_email: string | null;
@@ -14,7 +15,7 @@ type Initial = {
 };
 
 export function PaymentForm({ initial }: { initial: Initial }) {
-  // Onglet par défaut : ce qui est déjà configuré (PayPal en priorité).
+  const t = useDict();
   const [tab, setTab] = useState<"paypal" | "iban">(
     initial.iban_number && !initial.paypal_email ? "iban" : "paypal",
   );
@@ -54,14 +55,14 @@ export function PaymentForm({ initial }: { initial: Initial }) {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        setError(data.reason ?? "Erreur lors de la sauvegarde.");
+        setError(data.reason ?? t.paiement.err_generic);
         setLoading(false);
         return;
       }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch {
-      setError("Impossible de contacter le serveur.");
+      setError(t.login.err_network);
     } finally {
       setLoading(false);
     }
@@ -72,59 +73,54 @@ export function PaymentForm({ initial }: { initial: Initial }) {
       <TabsList className="grid w-full grid-cols-2 mb-4">
         <TabsTrigger value="paypal" className="gap-1.5">
           <CreditCard className="h-4 w-4" />
-          PayPal
+          {t.paiement.tab_paypal}
         </TabsTrigger>
         <TabsTrigger value="iban" className="gap-1.5">
           <Building2 className="h-4 w-4" />
-          Virement (RIB)
+          {t.paiement.tab_iban}
         </TabsTrigger>
       </TabsList>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <TabsContent value="paypal" className="space-y-4 mt-0">
           <div className="space-y-2">
-            <Label htmlFor="paypal_email">Email PayPal</Label>
+            <Label htmlFor="paypal_email">{t.paiement.label_paypal_email}</Label>
             <Input
               id="paypal_email"
               type="email"
-              placeholder="ton-email@paypal.com"
+              placeholder={t.paiement.placeholder_paypal_email}
               value={paypalEmail}
               onChange={(e) => setPaypalEmail(e.target.value)}
               autoComplete="email"
             />
-            <p className="text-xs text-muted-foreground">
-              L&apos;email associé à ton compte PayPal. Tes commissions seront virées
-              directement.
-            </p>
+            <p className="text-xs text-muted-foreground">{t.paiement.paypal_hint}</p>
           </div>
         </TabsContent>
 
         <TabsContent value="iban" className="space-y-4 mt-0">
           <div className="space-y-2">
-            <Label htmlFor="iban_holder">Titulaire du compte</Label>
+            <Label htmlFor="iban_holder">{t.paiement.label_iban_holder}</Label>
             <Input
               id="iban_holder"
               type="text"
-              placeholder="Prénom Nom"
+              placeholder={t.paiement.placeholder_iban_holder}
               value={ibanHolder}
               onChange={(e) => setIbanHolder(e.target.value)}
               autoComplete="name"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="iban_number">IBAN</Label>
+            <Label htmlFor="iban_number">{t.paiement.label_iban_number}</Label>
             <Input
               id="iban_number"
               type="text"
-              placeholder="FR76 1234 5678 9012 3456 7890 123"
+              placeholder={t.paiement.placeholder_iban_number}
               value={ibanNumber}
               onChange={(e) => setIbanNumber(e.target.value)}
               autoComplete="off"
               className="font-mono"
             />
-            <p className="text-xs text-muted-foreground">
-              Espaces ignorés. Format IBAN international (max 34 caractères).
-            </p>
+            <p className="text-xs text-muted-foreground">{t.paiement.iban_hint}</p>
           </div>
         </TabsContent>
 
@@ -137,12 +133,12 @@ export function PaymentForm({ initial }: { initial: Initial }) {
         {success && (
           <div className="rounded-lg border border-emerald-300/40 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300 flex gap-2">
             <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <span>Méthode de paiement enregistrée.</span>
+            <span>{t.paiement.success}</span>
           </div>
         )}
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Sauvegarde…" : "Sauvegarder"}
+          {loading ? t.paiement.saving : t.paiement.save_button}
         </Button>
       </form>
     </Tabs>

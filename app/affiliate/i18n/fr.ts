@@ -1,0 +1,367 @@
+// app/affiliate/i18n/fr.ts
+// Source de vérité française pour l'espace affilié. Toutes les autres
+// langues sont des traductions de ce fichier.
+
+import type { AffiliateDict } from "./types";
+
+export const FR: AffiliateDict = {
+  common: {
+    copy: "Copier",
+    copied: "Copié",
+    save: "Sauvegarder",
+    saving: "Sauvegarde…",
+    cancel: "Annuler",
+    next: "Suivant",
+    back: "Retour",
+    skip: "Passer",
+    close: "Fermer",
+    learn_more: "En savoir plus",
+    coming_soon: "Bientôt disponible",
+    optional: "optionnel",
+    days: "jours",
+    day_singular: "jour",
+    just_now: "à l'instant",
+  },
+  layout: {
+    page_title: "Tipote Affiliation",
+    page_description:
+      "Espace affiliés Tipote — suivi des commissions, ressources promo, paliers de gain.",
+    space_subtitle: "Espace affiliation",
+    copyright: "© {year} Tipote — Programme d'affiliation",
+  },
+  nav: {
+    overview: "Vue d'ensemble",
+    promouvoir: "Promouvoir",
+    trial: "Trial Tipote",
+    revenus: "Revenus",
+    paiement: "Paiement",
+    support: "Support",
+    logout: "Déconnexion",
+  },
+  login: {
+    title_password: "Connexion",
+    title_magic: "Recevoir un lien magique",
+    description_password: "Accède à ton espace affilié Tipote × Tiquiz",
+    description_magic: "On t'envoie un lien à usage unique par email",
+    banner_not_affiliate:
+      "Cet email n'est pas reconnu comme un affilié actif. Inscris-toi d'abord via le bouton dans ton compte Systeme.io.",
+    label_email: "Email",
+    label_password: "Mot de passe",
+    placeholder_email: "ton-email@example.com",
+    forgot_password: "Oublié ?",
+    show_password: "Afficher le mot de passe",
+    hide_password: "Masquer le mot de passe",
+    signing_in: "Connexion…",
+    sign_in: "Se connecter",
+    switch_to_magic: "Recevoir un lien magique par email",
+    switch_to_password: "Revenir à la connexion mot de passe",
+    magic_link_info: "Pas de mot de passe à retenir. Clique sur le lien dans l'email pour te connecter.",
+    sending_magic_link: "Envoi…",
+    send_magic_link: "Envoyer le lien",
+    magic_link_sent: "Lien envoyé à {email}. Vérifie ta boîte (et tes spams).",
+    no_account: "Pas encore affilié ?",
+    discover_program: "Découvrir le programme d'affiliation",
+    err_fill_credentials: "Renseigne ton email et ton mot de passe.",
+    err_invalid_credentials: "Email ou mot de passe incorrect.",
+    err_fill_email: "Renseigne ton email.",
+    err_rate_limit: "Trop de tentatives. Réessaie dans quelques minutes.",
+    err_send_failed: "Impossible d'envoyer le lien. Réessaie.",
+    err_not_affiliate:
+      "Cet email n'est pas reconnu comme un affilié actif. Inscris-toi d'abord via Systeme.io.",
+    err_generic: "Une erreur s'est produite. Réessaie.",
+    err_network: "Impossible de contacter le serveur. Vérifie ta connexion.",
+  },
+  signup: {
+    title: "Active ton espace affilié",
+    description: "Vérifie tes infos pré-remplies depuis Systeme.io. Tu peux corriger si besoin.",
+    success_title: "Bienvenue !",
+    success_with_password:
+      "Tu peux maintenant te connecter avec ton email {email} et le mot de passe que tu viens de définir.",
+    success_with_magic_link:
+      "On t'a envoyé un lien de connexion à {email}. Clique sur le lien dans l'email pour accéder à ton dashboard. Pense à vérifier tes spams.",
+    go_to_login: "Aller à la connexion",
+    label_email: "Email",
+    label_email_hint: "Celui de ton compte Systeme.io.",
+    label_display_name: "Prénom ou nom à afficher",
+    label_display_name_hint: "",
+    placeholder_display_name: "Comment on t'appelle ?",
+    label_sa: "Identifiant affilié Systeme.io",
+    label_sa_hint:
+      "Tu le trouves dans Systeme.io → dashboard affiliation → ton lien (la partie après ?sa=).",
+    label_locale: "Langue",
+    label_locale_hint: "On t'enverra les ressources promo dans cette langue.",
+    label_password: "Mot de passe",
+    label_password_hint: "Optionnel — sinon tu te connecteras avec un lien envoyé par email.",
+    placeholder_password: "Minimum 8 caractères",
+    activate: "Activer mon espace",
+    activating: "Activation…",
+    info_bottom:
+      "Tu reçois déjà un email à chaque commission. Cet espace te donne en plus : ressources promos, stats, paliers de commission, et accès démo aux outils Tipote & Tiquiz.",
+    err_invalid_sa:
+      "L'identifiant affilié n'a pas le bon format. Vérifie qu'il commence par « sa » suivi d'une suite de caractères.",
+    err_email_not_in_systeme:
+      "Cet email n'est pas reconnu dans Systeme.io. Inscris-toi d'abord au programme d'affiliation, puis reviens ici.",
+    err_invalid_email: "Email invalide.",
+    err_weak_password: "Le mot de passe doit faire au moins 8 caractères.",
+    err_send_failed:
+      "Compte créé mais on n'a pas réussi à envoyer le lien de connexion. Essaie la page de connexion.",
+    err_generic: "Une erreur s'est produite. Réessaie ou contacte le support.",
+    err_network: "Impossible de contacter le serveur. Vérifie ta connexion.",
+  },
+  callback: {
+    validating: "Validation en cours…",
+    err_title: "Lien invalide ou expiré",
+    err_default: "Ce lien a peut-être déjà été utilisé ou est expiré (30 min max).",
+    request_new_link: "Demander un nouveau lien",
+  },
+  overview: {
+    greeting: "Bonjour {name} 👋",
+    subtitle: "Voici ta vue d'ensemble du programme d'affiliation Tipote × Tiquiz.",
+    link_card_title: "Ton lien d'affiliation",
+    link_card_help:
+      "Tu peux remplacer la destination par n'importe quelle URL tipote.fr, tipote.com ou tipote.blog — ajoute juste ?sa={sa} à la fin.",
+    stat_clicks: "Clics",
+    stat_signups: "Inscriptions",
+    stat_sales: "Ventes",
+    stat_conversion_rate: "Taux conversion",
+    gain_total: "Gains totaux",
+    gain_pending: "En attente",
+    gain_paid: "Déjà payé",
+    tier_card_title: "Palier de commission",
+    tier_current: "Tu es actuellement au palier {label}.",
+    tier_remaining: "Plus que {count} ventes pour atteindre le palier suivant.",
+    tier_current_badge: "Palier actuel",
+    coming_soon: "🚧 Bientôt : guide de lancement 6 étapes, classement anonymisé, badges.",
+    trial_cta_title: "🎁 Ton mois Tipote Elite gratuit t'attend",
+    trial_cta_description:
+      "Active ton trial 1 mois pour tester Tipote en Elite, créer du contenu de promo authentique, et mieux vendre l'outil à ton audience. À utiliser quand tu veux.",
+    trial_cta_button: "Voir mon trial",
+  },
+  promouvoir: {
+    page_title: "Promouvoir",
+    page_subtitle:
+      "Tout le matériel prêt à copier-coller pour ramener des leads. Ton lien tracké est injecté automatiquement partout.",
+    main_link_title: "Lien principal d'affiliation",
+    main_link_description: "Ton lien tracké universel. Plus loin tu trouveras des variantes par destination.",
+    tab_links: "Liens",
+    tab_emails: "Emails",
+    tab_posts: "Réseaux",
+    tab_visuels: "Visuels",
+    links_info:
+      "💡 Tu peux aussi rajouter ?sa={sa} à la fin de n'importe quelle URL tipote.fr, tipote.com ou tipote.blog. Tu peux par exemple promouvoir un article de blog spécifique, la commission te sera attribuée si le visiteur achète dans les 90 jours.",
+    emails_info_title: "📧 Séquence email evergreen — 8 mails",
+    emails_info_body:
+      "Cadence recommandée : 1 mail tous les 2 jours, ou 1 par semaine sur 2 mois. Variable {first_name} = celle de Systeme.io (laisse-la telle quelle pour la perso à l'envoi). Ton lien tracké et ton prénom sont déjà injectés.",
+    posts_info_title: "📱 Séquence réseaux — 24 posts sur 8 jours",
+    posts_info_body:
+      "Pour chaque jour, un visuel + 3 versions adaptées (Instagram, LinkedIn, X/Twitter). Cadence recommandée : 1 jour par jour pendant 8 jours, ou étalé sur 2 semaines pour un rythme plus tranquille. Le lien tracké est injecté dans les posts LinkedIn et X (sur Instagram, mets-le en bio).",
+    visuels_info_title: "🖼️ Visuels promo — format Instagram 1080×1350",
+    visuels_info_body:
+      "8 visuels uniques + 1 carrousel de 10 slides. Format adapté Instagram / LinkedIn / X. Clic droit → enregistrer, ou bouton télécharger sur chaque visuel.",
+    conditions_title: "Conditions du programme",
+    conditions_cookie:
+      "Cookie 90 jours : ta commission est attribuée même si le visiteur achète jusqu'à 90 jours après son premier clic.",
+    conditions_lasttouch:
+      "Last-touch : si un visiteur a cliqué sur plusieurs liens d'affiliés différents, c'est le dernier clic avant l'achat qui compte.",
+    conditions_tiers:
+      "Paliers progressifs : tu commences à 40% de commission, tu passes à 45% à partir de 10 ventes cumulées, et 50% à partir de 25 ventes.",
+    see_full_terms: "Voir les CGV complètes",
+  },
+  revenus: {
+    page_title: "Revenus",
+    page_subtitle: "Suivi de tes commissions sur Tipote & Tiquiz.",
+    total_gains: "Gains totaux",
+    pending: "En attente",
+    approved: "Approuvées",
+    paid: "Déjà payées",
+    history_title: "Historique des commissions",
+    history_description:
+      "Les {count} dernières commissions associées à ton compte. Une commission passe en Approuvée après 30 jours (sans annulation client) puis en Payée le 10 de chaque mois selon ton seuil.",
+    empty_title: "Aucune commission pour le moment.",
+    empty_subtitle: "Partage ton lien pour commencer à toucher des commissions !",
+    th_date: "Date",
+    th_product: "Produit",
+    th_customer: "Client",
+    th_sale: "Vente",
+    th_commission: "Commission",
+    th_status: "Statut",
+    status_pending: "En attente",
+    status_approved: "Approuvée",
+    status_paid: "Payée",
+    status_cancelled: "Annulée",
+    status_rejected: "Rejetée",
+    calculator_title: "Combien tu peux gagner",
+    calculator_subtitle:
+      "Estimation basée sur les taux de conversion moyens du programme. À adapter à ton audience.",
+    calculator_visitors: "Visiteurs envoyés par mois",
+    calculator_conversion_rate: "Taux de conversion (%)",
+    calculator_rate_hint:
+      "Moyenne observée sur le programme : 2 à 4 %. Les audiences chaudes (newsletter engagée, réseaux nichés) montent à 5-8 %.",
+    calculator_sales_per_month: "Ventes estimées / mois",
+    calculator_revenue_per_month: "Revenus estimés / mois",
+    calculator_revenue_per_year: "Revenus estimés / an",
+    calculator_disclaimer:
+      "Calcul basé sur panier moyen {avgCart}, avec taux de commission de {rate}% (palier en fonction de tes {totalSales} ventes cumulées + ventes projetées). Les résultats réels peuvent varier.",
+  },
+  paiement: {
+    page_title: "Paiement",
+    page_subtitle: "Configure ton moyen de paiement pour recevoir tes commissions.",
+    method_title: "Méthode de paiement",
+    method_description:
+      "Tu peux choisir l'une ou l'autre méthode. PayPal est plus rapide, le virement bancaire (RIB) est gratuit pour toi.",
+    tab_paypal: "PayPal",
+    tab_iban: "Virement (RIB)",
+    label_paypal_email: "Email PayPal",
+    placeholder_paypal_email: "ton-email@paypal.com",
+    paypal_hint:
+      "L'email associé à ton compte PayPal. Tes commissions seront virées directement.",
+    label_iban_holder: "Titulaire du compte",
+    placeholder_iban_holder: "Prénom Nom",
+    label_iban_number: "IBAN",
+    placeholder_iban_number: "FR76 1234 5678 9012 3456 7890 123",
+    iban_hint: "Espaces ignorés. Format IBAN international (max 34 caractères).",
+    save_button: "Sauvegarder",
+    saving: "Sauvegarde…",
+    success: "Méthode de paiement enregistrée.",
+    err_invalid_paypal_email: "Email PayPal invalide.",
+    err_invalid_iban: "IBAN invalide.",
+    err_iban_incomplete: "Renseigne titulaire et IBAN.",
+    err_generic: "Erreur lors de la sauvegarde.",
+    conditions_title: "Conditions de paiement",
+    conditions_frequency:
+      "Fréquence : les commissions sont versées le 10 de chaque mois, minimum 30 jours après la vente (délai d'éventuelle annulation client).",
+    conditions_minimum:
+      "Seuil minimum : 50 €. Si ton solde éligible est inférieur le 10, on reporte au mois suivant.",
+    conditions_currency: "Devise : EUR. Pour PayPal, vérifie que ton compte accepte EUR.",
+  },
+  support: {
+    page_title: "Support",
+    page_subtitle: "Questions fréquentes + contact direct si tu as besoin d'aide.",
+    contact_title: "Contacter l'équipe",
+    contact_description: "Question, bug, suggestion, commission manquante… on répond sous 2-3 jours ouvrés.",
+    contact_button: "Envoyer un email au support",
+    restart_tour_button: "Refaire le tour guidé",
+    faq_title: "Questions fréquentes",
+    terms_card_title:
+      "📜 Pour les conditions complètes (commission, paliers, exclusions, durée de cookie, fiscalité, dispute…) :",
+    terms_card_button: "Voir les CGV affiliation",
+  },
+  trial: {
+    page_title: "Trial Tipote 1 mois offert",
+    page_subtitle:
+      "Profite de Tipote en Elite gratuitement pendant 30 jours pour tester l'outil et créer du contenu de promo.",
+    not_activated_title: "Ton trial Tipote t'attend",
+    not_activated_subtitle: "Une activation, valable 30 jours, à utiliser quand tu veux.",
+    feature_1: "Plan Elite débloqué pour ton compte Tipote (le plus complet)",
+    feature_2: "Création illimitée de quiz, popquizs, pages link-in-bio",
+    feature_3: "Accès aux pépites IA, à la stratégie, aux templates premium",
+    feature_4: "Idéal pour créer des screenshots, des vidéos démo, du contenu promo",
+    feature_5: "Aucune carte bancaire requise. Stop automatique à J+30.",
+    timing_title: "⏰ Tu choisis quand activer",
+    timing_body:
+      "Tu ne peux activer ton trial qu'UNE seule fois. Réserve-le pour le bon moment — quand tu as 2h devant toi pour explorer, créer ton premier quiz, et capturer du contenu pour ta promo.",
+    activate_button: "Activer mon trial Tipote 1 mois",
+    activate_loading: "Activation…",
+    activate_modal_title: "Activer ton trial Tipote ?",
+    activate_modal_body_1:
+      "Tu vas débloquer 30 jours d'accès Elite gratuit à Tipote sur ton compte ({email}).",
+    activate_modal_body_2: "C'est offert UNE seule fois. Tu ne peux pas réactiver plus tard.",
+    activate_modal_warning:
+      "Si tu as déjà un compte Tipote payant, l'activation sera refusée pour ne pas écraser ton plan actuel.",
+    activate_modal_confirm: "Oui, activer maintenant",
+    activate_modal_cancel: "Annuler",
+    err_already_paid: "Tu as déjà un compte Tipote payant.",
+    err_already_activated: "Ton trial a déjà été activé. Reload la page.",
+    err_generic: "Une erreur s'est produite. Réessaie ou contacte le support.",
+    err_network: "Impossible de contacter le serveur.",
+    why_offered_title: "Pourquoi on t'offre ça ?",
+    why_offered_body_1:
+      "Tu seras un meilleur ambassadeur en ayant vu Tipote tourner avec tes propres données. Tu pourras montrer des screenshots authentiques à ton audience, faire une vidéo « voilà ce que j'ai créé avec Tipote en 10 min », et répondre aux questions de tes leads avec précision.",
+    why_offered_body_2:
+      "C'est gagnant-gagnant : on te facilite la vente, tu touches tes commissions plus facilement.",
+    active_title: "Trial actif",
+    active_subtitle: "Ton compte Tipote est en plan Elite jusqu'au {date}.",
+    active_remaining_singular: "{count} jour restant",
+    active_remaining_plural: "{count} jours restants",
+    today_label: "Aujourd'hui",
+    end_label: "Fin du trial",
+    access_tipote: "Accéder à Tipote",
+    ideas_title: "Bonnes idées de contenu à créer maintenant",
+    idea_screencast:
+      "⏱️ Screencast 5 minutes : montre la création d'un quiz Tiquiz de bout en bout. Poste-le en Reel / short YouTube.",
+    idea_screenshots:
+      "📸 Screenshots avant/après : ton dashboard vide vs. après 30 leads captés. Avant/après c'est ce qui convertit le mieux.",
+    idea_niche:
+      "🧪 Test sur ta propre niche : crée un quiz adapté à ton audience (ex: « Quel type de [ton métier] es-tu ? »), partage-le sur ta liste, raconte les résultats.",
+    idea_bonus:
+      "🎁 Bonus exclusif : promets à tes affiliés d'envoyer ton quiz template gratuit en bonus s'ils s'inscrivent via ton lien. Effet d'urgence + valeur ajoutée.",
+    expired_title: "Ton trial s'est terminé",
+    expired_subtitle:
+      "Il a expiré le {date}. Ton compte Tipote est repassé en plan gratuit.",
+    expired_body_1:
+      "Tu as testé Tipote en Elite pendant 30 jours. Tu connais maintenant l'outil dans ses détails. C'est tout ce qu'il fallait pour bien le vendre à ton audience.",
+    expired_body_2:
+      "Si tu veux continuer à l'utiliser pour toi-même (sur ton propre business), prends un abonnement Elite. Tu peux aussi continuer à promouvoir Tipote depuis ton compte gratuit — les liens d'affiliation et les ressources promo restent disponibles ici.",
+    discover_plans: "Découvrir les plans Tipote",
+    continue_promoting: "Continuer à promouvoir",
+  },
+  tour: {
+    step1_title: "Bienvenue dans l'espace affilié 👋",
+    step1_subtitle: "1 minute pour comprendre comment ça marche.",
+    step1_body_1:
+      "Tu fais maintenant partie du programme d'affiliation Tipote × Tiquiz. Tu touches une commission de 40 à 50% sur chaque vente générée par ton lien.",
+    step1_body_2: "Voici les 4 trucs à savoir pour démarrer en force.",
+    step2_title: "Ton lien d'affiliation tracké",
+    step2_subtitle: "Le seul truc à retenir pour toucher tes commissions.",
+    step2_body_intro: "Sur ta vue d'ensemble, tu trouves ton lien principal : tipote.fr/?sa=ton_id",
+    step2_bullet_cookie:
+      "Cookie 90 jours — même si le client achète 3 mois après son clic, c'est toi qui touches.",
+    step2_bullet_lasttouch:
+      "Last-touch — si plusieurs affiliés ont influencé, c'est le dernier clic qui compte.",
+    step2_bullet_anywhere:
+      "Tu peux rajouter ?sa=ton_id à n'importe quelle URL tipote.fr/.com/.blog.",
+    step3_title: "Onglet Promouvoir — tout le matos prêt",
+    step3_subtitle: "Emails, posts réseaux, visuels. Copy-paste partout.",
+    step3_body_intro: "L'onglet Promouvoir contient :",
+    step3_bullet_emails: "8 emails evergreen prêts à copier (séquence sur 2 semaines)",
+    step3_bullet_posts: "24 posts (8 jours × 3 réseaux : Instagram / LinkedIn / X)",
+    step3_bullet_visuals: "18 visuels téléchargeables (format Instagram 1080×1350)",
+    step3_body_outro:
+      "Ton lien tracké est automatiquement injecté dans tous les emails et posts. Tu cliques « Copier », tu colles. C'est tout.",
+    step4_title: "🎁 1 mois Tipote Elite offert",
+    step4_subtitle: "Pour tester l'outil et créer du contenu authentique.",
+    step4_body_1:
+      "On t'offre 30 jours d'accès Elite à Tipote pour que tu testes l'outil, captures des screenshots de TON propre dashboard, et puisses faire des démos vidéo authentiques.",
+    step4_body_2:
+      "C'est une seule fois dans ta vie d'affilié. Réserve-le pour quand tu auras 2h devant toi pour explorer à fond. Onglet Trial Tipote dans la nav.",
+    step5_title: "Tes paliers de commission",
+    step5_subtitle: "Plus tu vends, plus ta com' monte.",
+    step5_body_intro: "Tu démarres à 40%. Ta commission augmente automatiquement :",
+    step5_tier_low: "0–9 ventes",
+    step5_tier_mid: "10–24 ventes",
+    step5_tier_high: "25+ ventes",
+    step5_body_outro:
+      "Paiement le 10 de chaque mois, à partir de 50€ accumulés. PayPal ou virement, à toi de choisir dans Paiement.",
+    skip: "Passer",
+    finish: "C'est parti !",
+    next: "Suivant",
+  },
+  banner: {
+    title_active: "Trial Tipote actif",
+    expires_today: "— expire aujourd'hui",
+    expires_singular: "— plus que 1 jour",
+    expires_plural: "— plus que {days} jours",
+    offered_via_affiliate: "(offert via ton compte affilié)",
+    keep_tipote: "Garder Tipote ?",
+    my_trial: "Mon trial",
+  },
+  locale_switcher: {
+    label: "Langue",
+    fr: "Français",
+    en: "English",
+    es: "Español",
+    it: "Italiano",
+    pt: "Português",
+    ar: "العربية",
+  },
+};

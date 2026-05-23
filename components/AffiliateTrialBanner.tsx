@@ -3,13 +3,17 @@
 // Bandeau qui s'affiche dans le dashboard Tipote (haut de page) quand
 // l'utilisateur est en trial affilié actif. Indique les jours restants.
 //
-// Server component qui lit profiles.trial_expires_at. À placer dans
-// le layout du dashboard Tipote (app/app/layout.tsx ou équivalent).
+// Server component qui lit profiles.trial_expires_at. Mounté dans le
+// root layout Tipote. Utilise les traductions affilié (getDict du
+// dossier /app/affiliate/i18n) avec fallback sur la locale Tipote
+// next-intl pour suivre le choix global de l'user.
 
 import Link from "next/link";
 import { Gift, ArrowRight } from "lucide-react";
+import { getLocale } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getDict, interpolate, normaliseLocale } from "@/app/affiliate/i18n";
 
 function daysUntil(dateIso: string): number {
   return Math.ceil((new Date(dateIso).getTime() - Date.now()) / (24 * 3600 * 1000));
@@ -31,9 +35,21 @@ export async function AffiliateTrialBanner() {
 
   const expiresAt = profile.trial_expires_at;
   const daysLeft = daysUntil(expiresAt);
-  if (daysLeft < 0) return null; // expiré, le cron downgrade au prochain tick
+  if (daysLeft < 0) return null;
+
+  // Locale : on suit la locale Tipote de l'user (cookie ui_locale).
+  // Pas besoin de lire la locale affiliate spécifiquement — le banner
+  // s'affiche dans le contexte Tipote, donc on respecte ce choix-là.
+  const tipoteLocale = await getLocale();
+  const t = getDict(normaliseLocale(tipoteLocale));
 
   const isUrgent = daysLeft <= 3;
+  const remainingText =
+    daysLeft === 0
+      ? t.banner.expires_today
+      : daysLeft === 1
+        ? t.banner.expires_singular
+        : interpolate(t.banner.expires_plural, { days: daysLeft });
 
   return (
     <div
@@ -46,15 +62,11 @@ export async function AffiliateTrialBanner() {
       <div className="flex items-center gap-2 min-w-0">
         <Gift className={`h-4 w-4 flex-shrink-0 ${isUrgent ? "text-amber-600 dark:text-amber-400" : "text-primary"}`} />
         <span className="truncate">
-          <strong>Trial Tipote actif</strong>{" "}
-          {daysLeft === 0
-            ? "— expire aujourd'hui"
-            : daysLeft === 1
-              ? "— plus que 1 jour"
-              : `— plus que ${daysLeft} jours`}
+          <strong>{t.banner.title_active}</strong>{" "}
+          {remainingText}
           {!isUrgent && (
             <span className="text-muted-foreground ml-1 hidden sm:inline">
-              (offert via ton compte affilié)
+              {t.banner.offered_via_affiliate}
             </span>
           )}
         </span>
@@ -65,14 +77,14 @@ export async function AffiliateTrialBanner() {
             href="https://www.tipote.fr/commande"
             className="underline text-xs font-medium whitespace-nowrap"
           >
-            Garder Tipote ?
+            {t.banner.keep_tipote}
           </Link>
         )}
         <Link
           href="https://affiliate.tipote.com/trial-tipote"
           className="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap"
         >
-          Mon trial
+          {t.banner.my_trial}
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
