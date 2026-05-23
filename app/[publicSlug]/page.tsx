@@ -271,16 +271,34 @@ export default async function PublicCatchAll({ params }: Props) {
       popquiz_id_input: r.popquiz.id,
       event_type_input: "view",
     });
-    return <PopquizPlayClient popquiz={r.popquiz} />;
+    // Popquiz hérite du pixel par défaut du créateur (scope = owner
+    // du custom domain).
+    const pqPixels = await resolveEffectivePixels({}, scope.userId, scope.projectId);
+    return (
+      <>
+        <TrackingPixels
+          metaPixelId={pqPixels.metaPixelId}
+          ga4MeasurementId={pqPixels.ga4MeasurementId}
+          googleAdsConversionId={pqPixels.googleAdsConversionId}
+        />
+        <PopquizPlayClient popquiz={r.popquiz} />
+      </>
+    );
   }
 
-  // hosted_page
+  // hosted_page : pixel par page, sinon fallback défaut business_profile.
+  let pageMeta = r.meta.facebook_pixel_id?.trim() || null;
+  let pageGa4 = r.meta.google_tag_id?.trim() || null;
+  if (!pageMeta && !pageGa4) {
+    const fallback = await resolveEffectivePixels({}, scope.userId, scope.projectId);
+    pageMeta = fallback.metaPixelId;
+    pageGa4 = fallback.ga4MeasurementId;
+  }
   return (
     <>
-      <TrackingPixels
-        metaPixelId={r.meta.facebook_pixel_id}
-        ga4MeasurementId={r.meta.google_tag_id}
-      />
+      {(pageMeta || pageGa4) && (
+        <TrackingPixels metaPixelId={pageMeta} ga4MeasurementId={pageGa4} />
+      )}
       <PublicPageClient page={null} slug={publicSlug} />
     </>
   );

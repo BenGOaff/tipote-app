@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 import { TrackingPixels } from "@/components/tracking/TrackingPixels";
+import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
@@ -137,25 +138,35 @@ export default async function PublicPage({ params }: RouteContext) {
   // Pixel server-side : on lookup les IDs sur la page pour les
   // injecter via <TrackingPixels>. Sans ça le pixel n'est que dans
   // l'iframe html_snapshot et Pixel Helper qui regarde le parent ne
-  // le détecte pas — exactement le bug Gwenn pour les pages
-  // d'affiliation Tipote.
+  // le détecte pas. Si la page n'a pas de pixel explicite, on
+  // fallback sur le défaut business_profile (sinon poser le pixel
+  // dans /settings n'a aucun effet sur les pages — bug Béné 23/05).
   const { data: pixelData } = await supabaseAdmin
     .from("hosted_pages")
-    .select("facebook_pixel_id, google_tag_id")
+    .select("facebook_pixel_id, google_tag_id, user_id, project_id")
     .eq("slug", slug)
     .eq("status", "published")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const px = pixelData as { facebook_pixel_id?: string | null; google_tag_id?: string | null } | null;
+  const px = pixelData as {
+    facebook_pixel_id?: string | null;
+    google_tag_id?: string | null;
+    user_id?: string | null;
+    project_id?: string | null;
+  } | null;
+  let pageMeta = px?.facebook_pixel_id?.trim() || null;
+  let pageGa4 = px?.google_tag_id?.trim() || null;
+  if (!pageMeta && !pageGa4 && px?.user_id) {
+    const fallback = await resolveEffectivePixels({}, px.user_id, px.project_id);
+    pageMeta = fallback.metaPixelId;
+    pageGa4 = fallback.ga4MeasurementId;
+  }
 
   return (
     <>
-      {px && (
-        <TrackingPixels
-          metaPixelId={px.facebook_pixel_id}
-          ga4MeasurementId={px.google_tag_id}
-        />
+      {(pageMeta || pageGa4) && (
+        <TrackingPixels metaPixelId={pageMeta} ga4MeasurementId={pageGa4} />
       )}
       <PublicPageClient page={null} slug={slug} />
     </>

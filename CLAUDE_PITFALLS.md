@@ -533,3 +533,23 @@ return (
 **Pour un nouveau type de page publique** : faut toujours fetch les
 pixel IDs côté server et passer à `<TrackingPixels>`. Pas de pixel
 client-side uniquement.
+
+### U bis) Hosted pages : fallback pixel sur le défaut profil aussi (23 mai 2026)
+
+Suite du fix U. Les hosted_pages (capture, sales, showcase,
+link-in-bio) utilisent les colonnes `facebook_pixel_id` /
+`google_tag_id` (PAS meta_pixel_id comme les quizzes). Le 1er fix
+ne lisait QUE ces colonnes page-level → si le créateur a mis son
+pixel dans /settings (défaut business_profile) et pas sur la page,
+aucun pixel rendu (bug Béné, page de capture sans pixel).
+
+Fix : fallback sur resolveEffectivePixels({}, user_id, project_id)
+quand la page n'a pas de pixel explicite. Mapping :
+- facebook_pixel_id ← default_meta_pixel_id
+- google_tag_id      ← default_ga4_measurement_id
+
+Routes : app/p/[slug]/page.tsx + app/[publicSlug]/page.tsx (kind=page).
+
+RÈGLE : toute nouvelle page publique doit fallback sur le défaut
+profil quand le pixel par-contenu est vide. resolveEffectivePixels
+est le point unique.

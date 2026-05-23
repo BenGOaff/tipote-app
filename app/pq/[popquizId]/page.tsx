@@ -15,6 +15,8 @@ import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 import PopquizPlayClient from "./PopquizPlayClient";
+import { TrackingPixels } from "@/components/tracking/TrackingPixels";
+import { resolveEffectivePixels } from "@/lib/effectivePixels";
 
 export const dynamic = "force-dynamic";
 
@@ -131,5 +133,24 @@ export default async function PublicPopquizPage({ params }: Props) {
     event_type_input: "view",
   });
 
-  return <PopquizPlayClient popquiz={popquiz} />;
+  // Pixel : popquiz hérite du défaut profil du créateur (pas de
+  // colonne pixel dédiée). resolveEffectivePixels avec un quiz vide
+  // retourne les défauts business_profile.
+  const pqScope = await fetchPopquizScope(popquizId);
+  const pixels = pqScope
+    ? await resolveEffectivePixels({}, pqScope.userId, pqScope.projectId)
+    : null;
+
+  return (
+    <>
+      {pixels && (
+        <TrackingPixels
+          metaPixelId={pixels.metaPixelId}
+          ga4MeasurementId={pixels.ga4MeasurementId}
+          googleAdsConversionId={pixels.googleAdsConversionId}
+        />
+      )}
+      <PopquizPlayClient popquiz={popquiz} />
+    </>
+  );
 }
