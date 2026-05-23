@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus,
+  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu,
 } from "lucide-react";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
@@ -493,6 +493,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Editor state
   const [mainTab, setMainTab] = useState<"create" | "share" | "trends">("create");
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
+  // Sidebar : ouverte par défaut sur desktop, fermée sur mobile.
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  }, []);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_BRAND_COLOR_PRIMARY);
   const [bgColor, setBgColor] = useState<string>(DEFAULT_BRAND_COLOR_BACKGROUND);
@@ -1304,9 +1311,20 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {mainTab === "create" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setSidebarOpen((o) => !o)}
+              title={sidebarOpen ? "Fermer le panneau" : "Ouvrir le panneau"}
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" asChild><Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
-          <span className="font-semibold text-sm truncate max-w-[200px]">{title || "Mon quiz"}</span>
+          <span className="font-semibold text-sm truncate max-w-[160px] sm:max-w-[200px]">{title || "Mon quiz"}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
           {(["create","share","trends"] as const).map(tab => (
@@ -1364,9 +1382,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
       {/* MAIN: CRÉER TAB */}
       {mainTab === "create" && (
-        <div className="flex flex-1 overflow-hidden">
-          {/* LEFT SIDEBAR */}
-          <aside className="w-72 border-r bg-background flex flex-col shrink-0">
+        <div className="flex flex-1 overflow-hidden relative">
+          {/* LEFT SIDEBAR — overlay full-width sur mobile, statique lg+ */}
+          {sidebarOpen && (
+          <aside className="w-full lg:w-72 lg:shrink-0 border-r bg-background flex flex-col absolute lg:relative inset-y-0 left-0 z-30 lg:z-auto">
             <div className="flex border-b">
               {(["edition","design","settings"] as const).map(tab => (
                 <button key={tab} onClick={() => setLeftTab(tab)} className={`flex-1 px-2 py-2.5 text-xs font-medium ${leftTab === tab ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}>
@@ -1611,6 +1630,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               </div>)}
             </div>
           </aside>
+          )}
 
           {/* RIGHT: LIVE PREVIEW — all sections stacked, exactly as visitor sees it */}
           <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, fontFamily }}>
