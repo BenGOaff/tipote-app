@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { AffiliateNav } from "./components/AffiliateNav";
 import { AffiliateTour } from "./components/AffiliateTour";
 import AffiliateLinkCopy from "./components/AffiliateLinkCopy";
+import { LaunchGuideCard } from "./components/LaunchGuideCard";
 
 async function TrialTipoteCard({ sa, t }: { sa: string; t: AffiliateDict }) {
   const { data } = await supabaseAdmin
@@ -241,6 +242,8 @@ export default async function AffiliateOverviewPage() {
         </Card>
 
         <TrialTipoteCard sa={session.sa} t={t} />
+
+        <LaunchGuideCard sa={session.sa} locale={session.locale} />
 
         <Card className="bg-muted/30 border-dashed">
           <CardContent className="py-6 text-center">
