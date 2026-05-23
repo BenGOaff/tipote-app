@@ -15,6 +15,7 @@ import { createClient } from "@supabase/supabase-js";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import QuizJsonLd from "@/components/quiz/QuizJsonLd";
 import { TrackingPixels } from "@/components/tracking/TrackingPixels";
+import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
@@ -211,6 +212,13 @@ export default async function PublicQuizPage({ params }: RouteContext) {
 
   const canonical = (await buildCanonicalUrl(`/q/${quizId}`)) ?? "";
 
+  // Pixel effectif : valeur par quiz, sinon fallback sur le défaut du
+  // business_profile (sinon poser le pixel dans /settings n'a aucun
+  // effet sur les quiz existants).
+  const pixels = fullQuiz
+    ? await resolveEffectivePixels(fullQuiz, fullQuiz.user_id, fullQuiz.project_id)
+    : null;
+
   return (
     <>
       {fullQuiz && canonical && (
@@ -227,11 +235,11 @@ export default async function PublicQuizPage({ params }: RouteContext) {
           inLanguage={fullQuiz.content_locale}
         />
       )}
-      {fullQuiz && (
+      {pixels && (
         <TrackingPixels
-          metaPixelId={fullQuiz.meta_pixel_id}
-          ga4MeasurementId={fullQuiz.ga4_measurement_id}
-          googleAdsConversionId={fullQuiz.google_ads_conversion_id}
+          metaPixelId={pixels.metaPixelId}
+          ga4MeasurementId={pixels.ga4MeasurementId}
+          googleAdsConversionId={pixels.googleAdsConversionId}
         />
       )}
       <PublicQuizClient quizId={quizId} />
