@@ -16,6 +16,21 @@ import { ensureExternalUrl } from "@/lib/url";
 import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
 import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
 
+// Fire l'event conversion Meta Lead + GA4 generate_lead. Le pixel est
+// server-rendered au parent (TrackingPixels) donc window.fbq/gtag
+// existent ici. C'est LA conversion qu'un créateur optimise pour sa
+// pub Meta sur une page de capture / link-in-bio. Silencieux si pas
+// de pixel configuré (typeof guard).
+function fireLeadPixel(): void {
+  if (typeof window === "undefined") return;
+  const w = window as unknown as {
+    fbq?: (...a: unknown[]) => void;
+    gtag?: (...a: unknown[]) => void;
+  };
+  try { w.fbq?.("track", "Lead"); } catch { /* no-op */ }
+  try { w.gtag?.("event", "generate_lead"); } catch { /* no-op */ }
+}
+
 type PublicPageData = {
   id: string;
   title: string;
@@ -192,6 +207,10 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
       if (msg === "tipote:capture") {
         // Simple CTA click — open capture overlay
         setShowCapture(true);
+      } else if (msg === "tipote:lead") {
+        // Lead capturé depuis un bloc capture link-in-bio (dans l'iframe).
+        // On fire l'event conversion côté parent où vit le pixel.
+        fireLeadPixel();
       } else if (msg.startsWith("tipote:capture:")) {
         // Inline form submitted with pre-filled data — auto-submit the lead
         try {
@@ -211,6 +230,7 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
                 }),
               }).then(() => {
                 setCaptureSuccess(true);
+                fireLeadPixel();
                 // Auto-redirect only if no custom CTAs configured
                 const hasCtas = (Array.isArray(page.thank_you_ctas) && page.thank_you_ctas.length > 0) || !!page.thank_you_cta_url;
                 if (page.payment_url && !hasCtas) {
@@ -243,6 +263,7 @@ export default function PublicPageClient({ page: serverPage, slug, toastWidgetId
         }),
       });
       setCaptureSuccess(true);
+      fireLeadPixel();
 
       // Auto-redirect to payment URL ONLY if no custom CTA button is configured
       // (if user set CTAs or a thank_you_cta_url, they want manual click, not auto-redirect)

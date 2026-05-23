@@ -13,10 +13,10 @@
 ### Pixel Meta / GA / Ads (bug Gwenn — RÉSOLU)
 - ✅ Server-render le pixel sur toutes les pages publiques (quiz, survey,
   popquiz, hosted pages, link-in-bio, custom domains) — Tipote + Tiquiz
-- ✅ Fallback sur le défaut profil pour les quiz/popquiz sans pixel explicite
+- ✅ Fallback sur le défaut profil pour les quiz/popquiz/pages sans pixel explicite
 - ✅ Migration business_profiles default_* (Tipote) pour le save settings
-- Popquiz héritent du défaut profil (pas de pixel par-popquiz). Si un user
-  veut un pixel spécifique par popquiz un jour → ajouter colonnes + UI éditeur.
+- ✅ autoConfig=false pour couper les events parasites (SubscribedButtonClick)
+- ✅ Event Lead/conversion sur les pages de capture + link-in-bio (pas que les quiz)
 - À considérer plus tard : Conversion API server-side (CAPI) en back-up du
   pixel client (résiste aux ad-blockers). Pas demandé pour l'instant.
 
