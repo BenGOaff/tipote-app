@@ -17,6 +17,15 @@
 // Strategy "afterInteractive" : Next attend que la page soit
 // interactive avant de loader le script. Suffisamment tôt pour le
 // tracking, suffisamment tard pour ne pas bloquer LCP.
+//
+// autoConfig DÉSACTIVÉ (fbq('set','autoConfig',false,...)) : par
+// défaut le pixel Meta détecte AUTOMATIQUEMENT les clics de bouton et
+// pose des events parasites (SubscribedButtonClick à chaque "Suivant"
+// dans le quiz — remonté par Gwenn 23/05). On ne veut QUE nos events
+// explicites et propres : PageView (vue), QuizStart (début du quiz),
+// Lead (= "Prospect" Meta, soumission du formulaire de capture). Ces
+// 3-là suffisent pour optimiser une campagne Meta Ads sur la
+// conversion. Le reste est du bruit qui brouille l'algo pub.
 
 import Script from "next/script";
 
@@ -48,6 +57,7 @@ export function TrackingPixels({
             dangerouslySetInnerHTML={{
               __html: `
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('set','autoConfig',false,'${meta}');
 fbq('init','${meta}');
 fbq('track','PageView');
               `.trim(),
