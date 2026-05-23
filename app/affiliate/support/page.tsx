@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { HelpCircle, Mail, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RestartTourButton } from "./RestartTourButton";
 import {
   Accordion,
   AccordionContent,
@@ -96,7 +97,7 @@ export default async function SupportPage() {
               Question, bug, suggestion, commission manquante… on répond sous 2-3 jours ouvrés.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col sm:flex-row gap-2">
             <Button asChild>
               <a
                 href={`mailto:hello@tipote.com?subject=Support%20Affiliation%20-%20${encodeURIComponent(session.email)}`}
@@ -105,6 +106,7 @@ export default async function SupportPage() {
                 Envoyer un email au support
               </a>
             </Button>
+            <RestartTourButton />
           </CardContent>
         </Card>
 

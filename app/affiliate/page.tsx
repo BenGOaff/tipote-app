@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AffiliateNav } from "./components/AffiliateNav";
+import { AffiliateTour } from "./components/AffiliateTour";
 import AffiliateLinkCopy from "./components/AffiliateLinkCopy";
 
 async function TrialTipoteCard({ sa }: { sa: string }) {
@@ -119,7 +120,17 @@ export default async function AffiliateOverviewPage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
 
-  const stats = await fetchStats(session.sa);
+  // Stats + onboarded_at en parallèle (un seul round-trip Supabase)
+  const [stats, { data: meta }] = await Promise.all([
+    fetchStats(session.sa),
+    supabaseAdmin
+      .from("affiliates")
+      .select("onboarded_at")
+      .eq("sa", session.sa)
+      .maybeSingle(),
+  ]);
+  const onboardedAt = (meta as { onboarded_at: string | null } | null)?.onboarded_at ?? null;
+
   const tier = currentTier(stats.total_sales);
   const linkUrl = `https://www.tipote.fr/?sa=${session.sa}`;
   const conversionRate =
@@ -130,6 +141,10 @@ export default async function AffiliateOverviewPage() {
   return (
     <div className="min-h-screen bg-background">
       <AffiliateNav displayName={session.display_name ?? session.email.split("@")[0]} />
+      {/* Tutoriel guidé : s'auto-déclenche si onboardedAt = null (premier
+          login) ; sinon dormant. Peut être relancé via l'événement
+          "affiliate-tour-start" depuis Support. */}
+      <AffiliateTour onboardedAt={onboardedAt} />
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div>
