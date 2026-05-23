@@ -286,13 +286,19 @@ export default async function PublicCatchAll({ params }: Props) {
     );
   }
 
-  // hosted_page
+  // hosted_page : pixel par page, sinon fallback défaut business_profile.
+  let pageMeta = r.meta.facebook_pixel_id?.trim() || null;
+  let pageGa4 = r.meta.google_tag_id?.trim() || null;
+  if (!pageMeta && !pageGa4) {
+    const fallback = await resolveEffectivePixels({}, scope.userId, scope.projectId);
+    pageMeta = fallback.metaPixelId;
+    pageGa4 = fallback.ga4MeasurementId;
+  }
   return (
     <>
-      <TrackingPixels
-        metaPixelId={r.meta.facebook_pixel_id}
-        ga4MeasurementId={r.meta.google_tag_id}
-      />
+      {(pageMeta || pageGa4) && (
+        <TrackingPixels metaPixelId={pageMeta} ga4MeasurementId={pageGa4} />
+      )}
       <PublicPageClient page={null} slug={publicSlug} />
     </>
   );
