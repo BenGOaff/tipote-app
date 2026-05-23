@@ -6,38 +6,31 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
-  ArrowLeft, Plus, Trash2, GripVertical, Eye, EyeOff,
-  ExternalLink, Globe, Loader2, Check, Copy, Link2,
-  Type, Users, Mail, Smartphone, Monitor, Image as ImageIcon,
-  Palette, Save,
+  ArrowLeft, Loader2, ExternalLink, Globe, Check, Copy,
+  Smartphone, Monitor, Image as ImageIcon,
+  Link2, Type, Users, Mail,
 } from "lucide-react";
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { useToast } from "@/hooks/use-toast";
 import { buildLinkinbioPage, type LinkinbioPageData, type LinkinbioTheme, type ButtonStyle } from "@/lib/linkinbioBuilder";
+import { SortableLinkinbioBlock, type LinkinbioBlockData } from "./SortableLinkinbioBlock";
 
 // ─── Types ───
 
-type LinkBlock = {
-  id: string;
-  block_type: "link" | "header" | "social_icons" | "capture_form";
-  title: string;
-  url: string;
-  icon_url: string;
-  social_links: { platform: string; url: string }[];
-  enabled: boolean;
-  sort_order: number;
-  clicks_count: number;
-  open_in_new_tab: boolean;
-  color: string | null;
-};
+type LinkBlock = LinkinbioBlockData;
 
 type PageData = {
   id: string;
@@ -65,12 +58,6 @@ type Props = {
   initialPage: PageData;
   onBack: () => void;
 };
-
-const SOCIAL_PLATFORMS = [
-  "instagram", "linkedin", "youtube", "tiktok", "twitter",
-  "facebook", "pinterest", "threads", "spotify", "whatsapp",
-  "telegram", "website", "email",
-];
 
 const THEMES: { id: LinkinbioTheme; label: string; preview: string }[] = [
   { id: "minimal", label: "Minimal", preview: "bg-gray-50 dark:bg-gray-900/40 text-gray-900 dark:text-gray-50" },
@@ -117,8 +104,16 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
   const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("mobile");
   const [activeTab, setActiveTab] = useState<"links" | "design" | "seo">("links");
 
-  // Drag state
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  // DndKit sensors — pattern aligné sur SortableQuestionList du quiz.
+  // Distance 8 évite les click qui déclenchent un drag par erreur.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  // Auto-save 3s debounce — pattern aligné sur QuizFormClient.
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasUnsavedChanges = useRef(false);
 
   // Load links
   useEffect(() => {
@@ -235,28 +230,20 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
     } catch { /* ignore */ }
   };
 
-  // Drag & drop
-  const handleDragStart = (idx: number) => setDragIdx(idx);
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === idx) return;
-    setLinks((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(dragIdx, 1);
-      next.splice(idx, 0, moved);
-      return next;
-    });
-    setDragIdx(idx);
-  };
-  const handleDragEnd = async () => {
-    setDragIdx(null);
-    // Save new order
-    const orderedIds = links.map((l) => l.id);
+  // Drag & drop via DndKit (cohérent avec SortableQuestionList du quiz).
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = links.findIndex((l) => l.id === active.id);
+    const newIndex = links.findIndex((l) => l.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove(links, oldIndex, newIndex);
+    setLinks(reordered);
     try {
       await fetch(`/api/pages/${page.id}/links/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderedIds }),
+        body: JSON.stringify({ orderedIds: reordered.map((l) => l.id) }),
       });
     } catch { /* ignore */ }
   };
@@ -295,35 +282,54 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
     if (avatarInputRef.current) avatarInputRef.current.value = "";
   };
 
-  // Save page settings
-  const savePage = async () => {
-    setSaving(true);
-    try {
-      const contentData = {
-        ...(page.content_data || {}),
-        bio,
-        theme,
-        buttonStyle,
-        avatarUrl: avatarUrl || null,
-      };
-      await fetch(`/api/pages/${page.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: displayName,
-          slug,
-          content_data: contentData,
-          meta_title: metaTitle,
-          meta_description: metaDescription,
-        }),
-      });
-      setPage((p) => ({ ...p, title: displayName, slug, content_data: contentData, meta_title: metaTitle, meta_description: metaDescription }));
-      toast({ title: t("saved") });
-    } catch {
-      toast({ title: tc("error"), variant: "destructive" });
-    }
-    setSaving(false);
-  };
+  // Save page settings (manuel + auto-save). silent=true pour ne pas
+  // afficher de toast à chaque auto-save.
+  const savePage = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!silent) setSaving(true);
+      try {
+        const contentData = {
+          ...(page.content_data || {}),
+          bio,
+          theme,
+          buttonStyle,
+          avatarUrl: avatarUrl || null,
+        };
+        await fetch(`/api/pages/${page.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: displayName,
+            slug,
+            content_data: contentData,
+            meta_title: metaTitle,
+            meta_description: metaDescription,
+          }),
+        });
+        setPage((p) => ({ ...p, title: displayName, slug, content_data: contentData, meta_title: metaTitle, meta_description: metaDescription }));
+        hasUnsavedChanges.current = false;
+        if (!silent) toast({ title: t("saved") });
+      } catch {
+        if (!silent) toast({ title: tc("error"), variant: "destructive" });
+      }
+      if (!silent) setSaving(false);
+    },
+    [page, bio, theme, buttonStyle, avatarUrl, displayName, slug, metaTitle, metaDescription, t, tc, toast],
+  );
+
+  // Auto-save 3s debounce — pattern aligné sur QuizFormClient.
+  // Se déclenche à chaque change sur les champs de la page.
+  useEffect(() => {
+    if (loading) return; // skip le premier render avant que les links soient chargés
+    hasUnsavedChanges.current = true;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      savePage({ silent: true });
+    }, 3000);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [displayName, bio, slug, theme, buttonStyle, avatarUrl, metaTitle, metaDescription, loading, savePage]);
 
   // Publish / unpublish
   const togglePublish = async () => {
@@ -356,61 +362,6 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // ─── Social icons editor for a social_icons block ───
-  const SocialIconsEditor = ({ link }: { link: LinkBlock }) => {
-    const socials = link.social_links || [];
-    const [newPlatform, setNewPlatform] = useState("");
-    const [newUrl, setNewUrl] = useState("");
-
-    const addSocial = () => {
-      if (!newPlatform || !newUrl) return;
-      const updated = [...socials, { platform: newPlatform, url: newUrl }];
-      updateLink(link.id, { social_links: updated } as any);
-      setNewPlatform("");
-      setNewUrl("");
-    };
-
-    const removeSocial = (idx: number) => {
-      const updated = socials.filter((_, i) => i !== idx);
-      updateLink(link.id, { social_links: updated } as any);
-    };
-
-    return (
-      <div className="space-y-2 mt-2">
-        {socials.map((s, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm">
-            <span className="capitalize font-medium w-20 truncate">{s.platform}</span>
-            <span className="text-muted-foreground truncate flex-1 text-xs">{s.url}</span>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeSocial(i)}>
-              <Trash2 className="w-3 h-3" />
-            </Button>
-          </div>
-        ))}
-        <div className="flex gap-2">
-          <Select value={newPlatform} onValueChange={setNewPlatform}>
-            <SelectTrigger className="w-32 h-8 text-xs">
-              <SelectValue placeholder={t("platform")} />
-            </SelectTrigger>
-            <SelectContent>
-              {SOCIAL_PLATFORMS.map((p) => (
-                <SelectItem key={p} value={p} className="text-xs capitalize">{p}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={newUrl}
-            onChange={(e) => setNewUrl(e.target.value)}
-            placeholder="https://..."
-            className="h-8 text-xs flex-1"
-          />
-          <Button size="sm" variant="outline" className="h-8 px-2" onClick={addSocial} disabled={!newPlatform || !newUrl}>
-            <Plus className="w-3 h-3" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
   // ─── RENDER ───
 
   return (
@@ -426,8 +377,8 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
             <h2 className="text-sm font-bold truncate">{t("title")}</h2>
             <p className="text-xs text-muted-foreground truncate">{page.slug}</p>
           </div>
-          <Button size="sm" variant="outline" onClick={savePage} disabled={saving}>
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          <Button size="sm" variant="outline" onClick={() => savePage()} disabled={saving}>
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           </Button>
           <Button
             size="sm"
@@ -475,7 +426,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
             <>
               {/* Profile section */}
               <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("profileSection")}</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("profileSection")}</Label>
 
                 {/* Avatar uploader */}
                 <div className="flex items-center gap-3">
@@ -540,12 +491,17 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
                 />
               </div>
 
-              <hr />
+              <hr className="opacity-0" />
 
               {/* Links list */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("blocksSection")}</Label>
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("blocksSection")}</Label>
+                  {links.length > 0 && (
+                    <span className="text-[11px] text-muted-foreground">
+                      {links.length} {links.length > 1 ? "blocs" : "bloc"}
+                    </span>
+                  )}
                 </div>
 
                 {loading ? (
@@ -553,127 +509,39 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {links.map((link, idx) => (
-                      <div
-                        key={link.id}
-                        draggable
-                        onDragStart={() => handleDragStart(idx)}
-                        onDragOver={(e) => handleDragOver(e, idx)}
-                        onDragEnd={handleDragEnd}
-                        className={`rounded-lg border bg-card p-3 transition-shadow ${
-                          dragIdx === idx ? "shadow-lg ring-2 ring-primary/30" : ""
-                        } ${!link.enabled ? "opacity-50" : ""}`}
-                      >
-                        <div className="flex items-start gap-2">
-                          <GripVertical className="w-4 h-4 text-muted-foreground mt-1 cursor-grab shrink-0" />
-
-                          <div className="flex-1 min-w-0 space-y-2">
-                            {/* Block type badge */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1.5 py-0.5 rounded bg-muted">
-                                {link.block_type === "link" ? "🔗" : link.block_type === "header" ? "📝" : link.block_type === "social_icons" ? "📱" : "📧"}
-                                {" "}{link.block_type}
-                              </span>
-                              {link.clicks_count > 0 && (
-                                <span className="text-[10px] text-muted-foreground">{link.clicks_count} {t("clicks")}</span>
-                              )}
-                            </div>
-
-                            {/* Title */}
-                            <Input
-                              value={link.title}
-                              onChange={(e) => updateLink(link.id, { title: e.target.value })}
-                              className="h-7 text-xs"
-                              placeholder={t("titlePlaceholder")}
-                            />
-
-                            {/* URL (for link type) */}
-                            {link.block_type === "link" && (
-                              <>
-                                <Input
-                                  value={link.url}
-                                  onChange={(e) => updateLink(link.id, { url: e.target.value })}
-                                  className="h-7 text-xs"
-                                  placeholder="https://..."
-                                />
-                                <div className="flex items-center justify-between pt-1">
-                                  <label className="text-[11px] text-muted-foreground flex items-center gap-1.5 cursor-pointer">
-                                    <Switch
-                                      checked={link.open_in_new_tab !== false}
-                                      onCheckedChange={(v) => updateLink(link.id, { open_in_new_tab: v })}
-                                      className="scale-75 -my-1"
-                                    />
-                                    {t("openInNewTab")}
-                                  </label>
-                                  <div className="flex items-center gap-1.5">
-                                    <input
-                                      type="color"
-                                      value={link.color || "#000000"}
-                                      onChange={(e) => updateLink(link.id, { color: e.target.value })}
-                                      className="h-6 w-6 rounded border border-border cursor-pointer bg-transparent"
-                                      aria-label={t("customColor")}
-                                      title={t("customColor")}
-                                    />
-                                    {link.color && (
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-5 w-5 text-muted-foreground"
-                                        onClick={() => updateLink(link.id, { color: null })}
-                                        title={t("resetColor")}
-                                      >
-                                        <Trash2 className="w-2.5 h-2.5" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              </>
-                            )}
-
-                            {/* Social icons editor */}
-                            {link.block_type === "social_icons" && <SocialIconsEditor link={link} />}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex flex-col gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => updateLink(link.id, { enabled: !link.enabled })}
-                            >
-                              {link.enabled ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-destructive"
-                              onClick={() => deleteLink(link.id)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={links.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-3">
+                        {links.map((link) => (
+                          <SortableLinkinbioBlock
+                            key={link.id}
+                            link={link}
+                            onUpdate={(patch) => updateLink(link.id, patch)}
+                            onDelete={() => deleteLink(link.id)}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
                 )}
 
                 {/* Add block buttons */}
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => addBlock("link")}>
-                    <Link2 className="w-3 h-3" /> {t("addLink")}
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => addBlock("header")}>
-                    <Type className="w-3 h-3" /> {t("addHeader")}
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => addBlock("social_icons")}>
-                    <Users className="w-3 h-3" /> {t("addSocial")}
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => addBlock("capture_form")}>
-                    <Mail className="w-3 h-3" /> {t("addCapture")}
-                  </Button>
+                <div className="pt-1">
+                  <p className="text-[11px] text-muted-foreground mb-2">{t("addBlockLabel")}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" className="h-9 text-xs gap-2 justify-start" onClick={() => addBlock("link")}>
+                      <Link2 className="w-3.5 h-3.5 text-primary" /> {t("addLink")}
+                    </Button>
+                    <Button variant="outline" className="h-9 text-xs gap-2 justify-start" onClick={() => addBlock("header")}>
+                      <Type className="w-3.5 h-3.5 text-primary" /> {t("addHeader")}
+                    </Button>
+                    <Button variant="outline" className="h-9 text-xs gap-2 justify-start" onClick={() => addBlock("social_icons")}>
+                      <Users className="w-3.5 h-3.5 text-primary" /> {t("addSocial")}
+                    </Button>
+                    <Button variant="outline" className="h-9 text-xs gap-2 justify-start" onClick={() => addBlock("capture_form")}>
+                      <Mail className="w-3.5 h-3.5 text-primary" /> {t("addCapture")}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </>
@@ -683,7 +551,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
             <div className="space-y-5">
               {/* Theme */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("themeLabel")}</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("themeLabel")}</Label>
                 <div className="grid grid-cols-5 gap-2">
                   {THEMES.map((th) => (
                     <button
@@ -701,7 +569,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
 
               {/* Button style */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("buttonStyleLabel")}</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("buttonStyleLabel")}</Label>
                 <div className="grid grid-cols-5 gap-2">
                   {BUTTON_STYLES.map((bs) => (
                     <button
