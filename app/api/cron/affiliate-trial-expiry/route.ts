@@ -17,15 +17,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendEmail } from "@/lib/email";
+import { timingSafeEqual } from "node:crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
-const INTERNAL_KEY =
-  process.env.NOTIFICATIONS_INTERNAL_KEY ||
-  process.env.CRON_SECRET ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "";
+const CRON_SECRET = process.env.CRON_SECRET?.trim() || "";
+
+function authorise(req: NextRequest): boolean {
+  if (!CRON_SECRET) return false;
+  const provided = req.headers.get("x-cron-secret") ?? "";
+  if (provided.length !== CRON_SECRET.length) return false;
+  return timingSafeEqual(Buffer.from(provided), Buffer.from(CRON_SECRET));
+}
 
 type ExpiringProfile = {
   id: string;
@@ -91,13 +96,10 @@ async function sendExpiryEmail(profile: ExpiringProfile): Promise<void> {
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  // Auth
-  const authHeader = req.headers.get("authorization") ?? "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const url = new URL(req.url);
-  const cronSecret = url.searchParams.get("secret") ?? "";
-  if (!INTERNAL_KEY || (token !== INTERNAL_KEY && cronSecret !== INTERNAL_KEY)) {
-    return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
+  // Auth — même pattern X-Cron-Secret que les autres crons Tipote
+  // (sio-sync-sales, sio-reconcile, sync-payments, business-milestones).
+  if (!authorise(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const now = new Date();
