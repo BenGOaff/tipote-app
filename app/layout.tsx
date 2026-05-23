@@ -3,6 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Providers from "@/components/Providers";
 import { HotjarTracker } from "@/components/HotjarTracker";
+import { AffiliateTrialBanner } from "@/components/AffiliateTrialBanner";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { RTL_LOCALES } from "@/i18n/config";
@@ -31,7 +32,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans antialiased">
         <HotjarTracker />
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers>{children}</Providers>
+          <Providers>
+            {/* Bandeau "trial Tipote actif" si user affilié en trial.
+                Server component qui retourne null si pas applicable. */}
+            <AffiliateTrialBanner />
+            {children}
+          </Providers>
         </NextIntlClientProvider>
       </body>
     </html>

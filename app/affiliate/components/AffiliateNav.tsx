@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Megaphone, Wallet, CreditCard, HelpCircle, LogOut } from "lucide-react";
+import { LayoutDashboard, Megaphone, Wallet, CreditCard, HelpCircle, LogOut, Gift } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/", label: "Vue d'ensemble", icon: LayoutDashboard },
   { href: "/promouvoir", label: "Promouvoir", icon: Megaphone },
+  { href: "/trial-tipote", label: "Trial Tipote", icon: Gift },
   { href: "/revenus", label: "Revenus", icon: Wallet },
   { href: "/paiement", label: "Paiement", icon: CreditCard },
   { href: "/support", label: "Support", icon: HelpCircle },
