@@ -1,4 +1,4 @@
-# TODO affiliate — à reprendre demain matin
+# TODO affiliate
 
 ## 🚨 Bugs à fixer en priorité
 
@@ -89,3 +89,56 @@ flow signup-via-webhook validé en prod) :
 - Sous-domaine `affiliate.tipote.com` routé via `next.config.ts`
   rewrites + Caddy vhost
 - Webhook `/api/affiliate/webhook` qui réagit aux inscriptions form SIO
+
+## 🎁 Trial Tipote 1 mois pour affiliés (idée Béné, 22/05 soir)
+
+**Objectif** : permettre aux affiliés d'avoir un compte Tipote Elite
+GRATUIT pendant 1 mois pour pouvoir tester l'outil, créer des contenus
+de promo, comprendre la valeur, mieux le vendre.
+
+**Mécanique** :
+- Bouton "Activer mon trial Tipote 1 mois" dans le dashboard affilié
+  (peut être sur Overview ou un nouvel onglet "Trial Tipote")
+- One-shot : un affilié ne peut activer le trial QU'UNE seule fois
+  (champ `trial_activated_at` sur affiliates)
+- L'affilié choisit QUAND il l'active (pas auto au signup pour qu'il
+  puisse le réserver pour le bon moment)
+- Au clic : on upgrade son compte Tipote Elite via upsertProfile,
+  + on stocke `trial_expires_at = now() + 30 jours`
+- Cron quotidien (à étendre /api/cron/...) qui downgrade les comptes
+  dont `trial_expires_at < now()` ET `plan_source = 'affiliate_trial'`
+- Bandeau dans Tipote app : "Trial affilié actif — expire dans X jours"
+- À J-3 et J-1 avant expiration : email de rappel
+
+**Migration SQL** :
+```sql
+alter table affiliates
+  add column if not exists trial_activated_at timestamptz,
+  add column if not exists trial_expires_at timestamptz;
+
+alter table profiles
+  add column if not exists trial_expires_at timestamptz;
+-- plan_source acceptera 'affiliate_trial' en plus des valeurs actuelles
+```
+
+**Schema d'écran (à coder)** :
+- Page `/affiliate/trial-tipote` :
+  - Si pas encore activé : explication + bouton "Activer maintenant"
+    (avec confirmation modale : "Tu auras 30 jours d'accès Elite à
+    Tipote pour tester et créer du contenu. C'est offert UNE seule
+    fois. Tu peux activer plus tard si tu préfères. Tu confirmes ?")
+  - Si en cours : countdown "Plus que X jours" + lien vers app.tipote.com
+  - Si expiré : message "Ton trial s'est terminé. Pour continuer à
+    utiliser Tipote, prends un abonnement [lien]"
+
+**Côté UX trust** : "C'est offert pour t'aider à mieux vendre Tipote
+à ton audience. Tu auras tout vu, créé, testé. Tu seras un meilleur
+ambassadeur derrière. Win-win."
+
+**Edge cases à gérer** :
+- Affilié qui a DEJA un compte Tipote payant : pas de trial à offrir
+  (sauf si free → upgrade temporaire en Elite, puis re-down à free ?)
+  À discuter avec Béné selon sa préférence.
+- Affilié qui annule son trial avant la fin : on downgrade direct.
+- Tag SIO `tipote-trial-actif` posé pendant le trial, retiré à
+  expiration (pour pouvoir target l'affilié avec des emails specifiques).
