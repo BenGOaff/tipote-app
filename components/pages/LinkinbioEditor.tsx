@@ -102,6 +102,9 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
   const [metaDescription, setMetaDescription] = useState(page.meta_description || "");
   const [copied, setCopied] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("mobile");
+  // Mobile : on bascule entre édition et aperçu (chacun prend tout
+  // l'écran). Sur lg+ les deux sont visibles côte à côte.
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [activeTab, setActiveTab] = useState<"links" | "design" | "seo">("links");
 
   // DndKit sensors — pattern aligné sur SortableQuestionList du quiz.
@@ -365,9 +368,31 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
   // ─── RENDER ───
 
   return (
-    <div className="flex flex-1 min-h-0">
+    <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+      {/* Mobile : barre de bascule édition / aperçu. Cachée sur lg+ où
+          les deux panneaux sont visibles côte à côte. */}
+      <div className="lg:hidden flex items-center justify-center gap-1 py-2 border-b bg-background shrink-0">
+        <Button
+          variant={mobileView === "edit" ? "default" : "outline"}
+          size="sm"
+          className="h-8 px-4 text-xs"
+          onClick={() => setMobileView("edit")}
+        >
+          {t("mobileEdit")}
+        </Button>
+        <Button
+          variant={mobileView === "preview" ? "default" : "outline"}
+          size="sm"
+          className="h-8 px-4 text-xs gap-1"
+          onClick={() => setMobileView("preview")}
+        >
+          <Smartphone className="w-3.5 h-3.5" />
+          {t("mobilePreview")}
+        </Button>
+      </div>
+
       {/* Left panel: editor */}
-      <div className="w-[420px] shrink-0 bg-background flex flex-col overflow-hidden">
+      <div className={`${mobileView === "edit" ? "flex" : "hidden lg:flex"} w-full lg:w-[420px] lg:shrink-0 bg-background flex-col overflow-hidden min-h-0`}>
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b">
           <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
@@ -643,9 +668,9 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
       </div>
 
       {/* Right panel: preview */}
-      <div className="flex-1 bg-muted/30 flex flex-col">
+      <div className={`${mobileView === "preview" ? "flex" : "hidden lg:flex"} flex-1 bg-muted/30 flex-col min-h-0`}>
         {/* Preview device toggle */}
-        <div className="flex items-center justify-center gap-2 py-3 border-b bg-background">
+        <div className="flex items-center justify-center gap-2 py-3 border-b bg-background shrink-0">
           <Button
             variant={previewDevice === "mobile" ? "default" : "outline"}
             size="sm"
@@ -664,10 +689,11 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
           </Button>
         </div>
 
-        {/* Preview iframe */}
-        <div className="flex-1 flex items-start justify-center p-6 overflow-auto">
+        {/* Preview iframe — padding réduit en mobile pour ne pas
+            déborder de l'écran (la frame mobile fait 375px). */}
+        <div className="flex-1 flex items-start justify-center p-3 sm:p-6 overflow-auto">
           <div
-            className="bg-white dark:bg-card rounded-2xl shadow-xl overflow-hidden transition-all duration-300"
+            className="bg-white dark:bg-card rounded-2xl shadow-xl overflow-hidden transition-all duration-300 max-w-full"
             style={{
               width: previewDevice === "mobile" ? 375 : 800,
               height: previewDevice === "mobile" ? 667 : "auto",

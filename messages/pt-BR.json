@@ -3295,7 +3295,9 @@
     "addBlockLabel": "Adicionar um bloco",
     "blockHide": "Ocultar este bloco",
     "blockShow": "Mostrar este bloco",
-    "blockDelete": "Excluir este bloco"
+    "blockDelete": "Excluir este bloco",
+    "mobileEdit": "Edição",
+    "mobilePreview": "Visualização"
   },
   "pages": {
     "headerTitle": "Minhas páginas",

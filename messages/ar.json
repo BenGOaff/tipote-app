@@ -2989,7 +2989,9 @@
     "addBlockLabel": "إضافة كتلة",
     "blockHide": "إخفاء هذه الكتلة",
     "blockShow": "إظهار هذه الكتلة",
-    "blockDelete": "حذف هذه الكتلة"
+    "blockDelete": "حذف هذه الكتلة",
+    "mobileEdit": "تحرير",
+    "mobilePreview": "معاينة"
   },
   "pages": {
     "headerTitle": "صفحاتي",

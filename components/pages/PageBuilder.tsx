@@ -1767,9 +1767,15 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
   // when the user has explicitly accepted the overwrite.
   const hasInlineEditsRef = useRef<boolean>(false);
 
-  // Left sidebar
+  // Left sidebar — fermée par défaut sur mobile (gain d'écran),
+  // ouverte par défaut sur desktop. Détecté côté client uniquement.
   const [leftTab, setLeftTab] = useState<LeftTab>("builder");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  }, []);
 
   // Section & element selection
   const [sections, setSections] = useState<SectionInfo[]>([]);
@@ -2941,7 +2947,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
       )}
 
       {/* ════════════════ MAIN AREA ════════════════ */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
 
         {/* ──── LEFT SIDEBAR — same shape as the quiz editor sidebar
              (w-72, light theme, primary-accent active tab). Three top-level
@@ -2950,7 +2956,7 @@ export default function PageBuilder({ initialPage, onBack }: Props) {
              the quiz editor's flat tab hierarchy and frees vertical room
              for the element/section list). ──── */}
         {sidebarOpen && (
-          <aside className="w-72 shrink-0 border-r bg-background flex flex-col overflow-hidden">
+          <aside className="w-full lg:w-72 lg:shrink-0 border-r bg-background flex flex-col overflow-hidden absolute lg:relative inset-y-0 left-0 z-30 lg:z-auto">
 
             {/* Tab switcher — same styling as QuizDetailClient */}
             <div className="flex border-b">
