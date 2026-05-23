@@ -530,6 +530,10 @@ function libCapture(btn){
   }).then(function(){
     form.style.display='none';
     ok.style.display='block';
+    // Prévient la fenêtre parente (PublicPageClient) pour fire l'event
+    // Meta Lead / GA generate_lead. La capture vit dans l'iframe srcDoc
+    // mais le pixel est sur le parent — d'où le postMessage bridge.
+    try { parent.postMessage('tipote:lead','*'); } catch(e){}
   }).catch(function(){
     btn.disabled=false;
     btn.textContent='Retry';
