@@ -162,6 +162,23 @@ export type AffiliateDict = {
     guide_step_email_body: string;
     guide_step_post_title: string;
     guide_step_post_body: string;
+    // Badges
+    badges_title: string;
+    badges_subtitle: string;
+    badges_progress: string; // "{done}/{total} débloqués"
+    badge_locked: string;
+    badge_first_click_title: string;
+    badge_first_click_body: string;
+    badge_first_signup_title: string;
+    badge_first_signup_body: string;
+    badge_first_sale_title: string;
+    badge_first_sale_body: string;
+    badge_tier_mid_title: string;
+    badge_tier_mid_body: string;
+    badge_tier_high_title: string;
+    badge_tier_high_body: string;
+    badge_100eur_title: string;
+    badge_100eur_body: string;
   };
 
   // ─── Promouvoir ──────────────────────────────────────────────────

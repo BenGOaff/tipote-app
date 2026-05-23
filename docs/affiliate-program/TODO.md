@@ -65,11 +65,12 @@ flow signup-via-webhook validé en prod) :
   l'espace affilié) : 4-5 étapes au premier login pour expliquer le
   cookie 90j, l'onglet Promouvoir, le calculateur Revenus, le paiement.
   Compteur completion stocké dans `affiliates.onboarded_at`.
-- **Gamification** : badges (1ère vente, top 10 du mois, palier passé),
-  classement anonymisé style "ff-***" (à l'image FunnelForge).
-  ✅ Guide de lancement 6 étapes (fait 23/05) : 3 steps auto-détectées
-  (profil/paiement/trial) + 3 self-attestées (lien copié, 1er email,
-  1er post). Carte sur l'overview tant que < 6/6, puis bandeau bravo.
+- **Gamification** : classement anonymisé style "ff-***" (à l'image
+  FunnelForge), reste à faire.
+  ✅ Guide de lancement 6 étapes (fait 23/05).
+  ✅ Badges 6 paliers (fait 23/05) : premier clic, première inscription,
+  première vente, palier 45%, palier 50%, 100€ gagnés. Dérivé de
+  affiliate_stats, pas de schéma dédié. Top 10 du mois en V2.
 - **Version Tipote du contenu Promouvoir** : actuellement tout le matos
   est centré Tiquiz (8 emails, 24 posts, 18 visuels). Faire la version
   Tipote équivalente quand Béné aura rédigé.
