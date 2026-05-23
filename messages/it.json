@@ -2975,7 +2975,10 @@
     "published": "Pagina pubblicata!",
     "unpublished": "Pagina depubblicata",
     "publish": "Pubblica",
-    "unpublish": "Depubblica"
+    "unpublish": "Depubblica",
+    "openInNewTab": "Nuova scheda",
+    "customColor": "Colore personalizzato",
+    "resetColor": "Reimposta"
   },
   "pages": {
     "headerTitle": "Le mie pagine",

@@ -437,3 +437,40 @@ return NextResponse.rewrite(new URL("/path", request.url));
 force Next à traiter en interne.)
 
 Mais 90% du temps, `next.config.ts` rewrites est plus simple et plus fiable.
+
+## T) window.open avec noopener retourne null par spec → cassé pour la détection popup-bloqué (23 mai 2026)
+
+**Symptôme remonté par Eric (Link in Bio)** : quand il cliquait sur
+un bouton de sa page Link in Bio publiée, deux pages s'ouvraient
+(la destination), ET sa page Link in Bio disparaissait (remplacée
+par la destination dans l'onglet courant).
+
+**Cause** : dans `components/pages/PublicPageClient.tsx`, le click
+handler injecté faisait :
+
+```js
+win = window.open(href, '_blank', 'noopener,noreferrer');
+if (!win) {
+  window.top.location.href = href; // FALLBACK popup-bloqué
+}
+```
+
+`window.open(..., 'noopener')` retourne **toujours null par spec**
+([MDN](https://developer.mozilla.org/en-US/docs/Web/API/Window/open#return_value)),
+peu importe que la popup ait été ouverte ou bloquée. Donc le
+fallback `window.top.location.href = href` se déclenchait
+SYSTÉMATIQUEMENT, ce qui faisait disparaître la page Link in Bio en
+plus du nouvel onglet ouvert nativement par target="_blank".
+
+**Fix** : retirer `'noopener,noreferrer'` du 3e arg pour récupérer
+la vraie ref de la fenêtre, puis null l'opener à la main :
+
+```js
+win = window.open(href, '_blank'); // pas de noopener ici
+if (win) { try { win.opener = null; } catch(ex) {} }
+if (!win) { /* fallback popup-bloqué */ }
+```
+
+**Règle générale** : si tu utilises `window.open` AVEC `noopener` et
+que tu testes la valeur de retour, c'est un bug. Soit tu fais sans
+noopener (avec opener=null manuel), soit tu n'as pas de fallback.

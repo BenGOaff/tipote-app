@@ -67,18 +67,19 @@ find /home/user/tipote-app/components/pages -name "Linkinbio*"
 
 ## Plan d'attaque suggéré
 
-1. **Quick wins** (2h) : ajout des marges/padding qui manquent + toggle
-   "ouvrir dans nouvel onglet" par bouton + investigate le bug
-   "2 pages s'ouvrent".
-2. **Color override par bouton** (1h) : champ couleur dans le panneau
-   d'édition de chaque bouton, avec fallback sur la couleur du thème.
-3. **Refonte UI** (1 jour) : remplacer le layout actuel par
+1. ✅ **Quick wins** (fait 23/05) : marges du profil bumpées (28→44px),
+   toggle "ouvrir dans nouvel onglet" par bouton, color override par
+   bouton, BUG "2 pages s'ouvrent" trouvé et fixé (cf. PITFALLS
+   section T) — `window.open` avec noopener retournait toujours null
+   par spec donc le fallback `window.top.location.href` se
+   déclenchait systématiquement.
+2. **Refonte UI** (1 jour) : remplacer le layout actuel par
    Card/Section shadcn, alignement avec PageBuilder.tsx, padding
    responsive standards Tipote.
-4. **Drag-and-drop** (1 jour) : si pas déjà en place, ajouter
+3. **Drag-and-drop** (1 jour) : si pas déjà en place, ajouter
    `@dnd-kit/sortable` (probablement déjà dep) pour réorganiser les
    blocs. Réutiliser le DnD de PageBuilder si compatible.
-5. **Image uploader profil** (4h) : Drop zone + preview + upload bucket
+4. **Image uploader profil** (4h) : Drop zone + preview + upload bucket
    `public-assets` (path : `linkinbio/<auth.uid()>/avatar.png`). Cf.
    `lib/clientFaviconUpload.ts` pour le pattern d'upload bucket.
 
