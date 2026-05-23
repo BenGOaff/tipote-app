@@ -375,14 +375,32 @@ Une seule règle, pas de pass-through, pas de surprise.
 **Comment l'écrire** :
 - `/:path` : capture nommée
 - `((?!a|b|c).*)` : regex qui matche tout SAUF ce qui commence par a, b, ou c
-- `\\.` pour escaper un point littéral dans `favicon\\.ico`
+- `\\.` pour escaper un point littéral dans `robots\\.txt` ou `favicon\\.ico`
 - Destination utilise le nom de capture : `/target/:path`
+
+**⚠️ Liste à exclure systématiquement** : penser à TOUS les fichiers
+statiques accessibles au root du domaine, pas juste `_next` et `api` :
+- `_next` (assets Next.js)
+- `api` (route handlers API)
+- la cible elle-même (`affiliate` dans notre cas) pour éviter
+  /affiliate/affiliate/...
+- `favicon` (PAS `favicon\\.ico` ! Catch aussi favicon.png, favicon-
+  192x192.png, etc — n'importe quel fichier commençant par favicon)
+- `robots\\.txt`
+- `sitemap\\.xml`
+- tout autre asset au root (manifest.json, opensearch.xml, ads.txt...)
+
+J'ai déjà failli oublier `favicon.png` deux fois (22 mai 2026, le
+fix initial n'excluait que `favicon\\.ico` → la page affiliate était
+sans favicon parce que /favicon.png partait dans le rewrite).
 
 **Test après chaque rewrite** :
 1. Visiter une page du sous-domaine
-2. Ouvrir DevTools → Network → cocher "JS" et "CSS"
-3. Recharger → tous les 200, aucun 404 sur `_next/static/*`
-4. ET vérifier que ton root `/` du sous-domaine rewrite bien (capture vide capturée par `.*`)
+2. Ouvrir DevTools → Network → cocher "JS" et "CSS" puis "Doc" et "Img"
+3. Recharger → tous les 200, aucun 404
+4. Vérifier l'onglet du navigateur : le favicon doit être correct
+5. ET vérifier que ton root `/` du sous-domaine rewrite bien (capture
+   vide capturée par `.*`)
 
 Si y'a UN 404 sur un `_next/static/*.css` ou `*.js`, c'est ce bug.
 
