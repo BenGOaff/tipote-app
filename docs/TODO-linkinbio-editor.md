@@ -73,15 +73,17 @@ find /home/user/tipote-app/components/pages -name "Linkinbio*"
    section T) — `window.open` avec noopener retournait toujours null
    par spec donc le fallback `window.top.location.href` se
    déclenchait systématiquement.
-2. **Refonte UI** (1 jour) : remplacer le layout actuel par
+2. ✅ **Image uploader profil** (fait 23/05) : avatar uploader dans
+   le panneau profil de l'éditeur, accepte PNG/JPG/GIF, max 10 Mo,
+   réutilise `/api/upload/image` avec contentId `linkinbio-<page>`.
+   Override per-page via `content_data.avatarUrl`, fallback sur la
+   `business_profiles.brand_author_photo_url` si vide.
+3. **Refonte UI** (1 jour) : remplacer le layout actuel par
    Card/Section shadcn, alignement avec PageBuilder.tsx, padding
    responsive standards Tipote.
-3. **Drag-and-drop** (1 jour) : si pas déjà en place, ajouter
-   `@dnd-kit/sortable` (probablement déjà dep) pour réorganiser les
-   blocs. Réutiliser le DnD de PageBuilder si compatible.
-4. **Image uploader profil** (4h) : Drop zone + preview + upload bucket
-   `public-assets` (path : `linkinbio/<auth.uid()>/avatar.png`). Cf.
-   `lib/clientFaviconUpload.ts` pour le pattern d'upload bucket.
+4. **Drag-and-drop** : déjà en place (HTML5 native dans
+   LinkinbioEditor lignes ~232). Peut-être migrer vers
+   `@dnd-kit/sortable` plus tard pour le polish mobile.
 
 ## À communiquer à Eric après fix
 

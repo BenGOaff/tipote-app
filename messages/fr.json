@@ -2985,7 +2985,14 @@
     "unpublish": "Dépublier",
     "openInNewTab": "Nouvel onglet",
     "customColor": "Couleur personnalisée",
-    "resetColor": "Réinitialiser"
+    "resetColor": "Réinitialiser",
+    "avatarUpload": "Ajouter une photo de profil",
+    "avatarChange": "Changer la photo",
+    "avatarRemove": "Retirer la photo",
+    "avatarHint": "PNG, JPG ou GIF. Max 10 Mo. Rond et carré recommandés.",
+    "avatarFormatHint": "Format non supporté. Utilise PNG, JPG ou GIF.",
+    "avatarTooLarge": "Fichier trop volumineux (max 10 Mo).",
+    "avatarUploadError": "Erreur d'upload de la photo."
   },
   "pages": {
     "headerTitle": "Mes Pages",

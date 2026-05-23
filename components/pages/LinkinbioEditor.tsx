@@ -108,6 +108,9 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
   const [slug, setSlug] = useState(page.slug || "");
   const [theme, setTheme] = useState<LinkinbioTheme>(page.content_data?.theme || "minimal");
   const [buttonStyle, setButtonStyle] = useState<ButtonStyle>(page.content_data?.buttonStyle || "rounded");
+  const [avatarUrl, setAvatarUrl] = useState<string>(page.content_data?.avatarUrl || "");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [metaTitle, setMetaTitle] = useState(page.meta_title || "");
   const [metaDescription, setMetaDescription] = useState(page.meta_description || "");
   const [copied, setCopied] = useState(false);
@@ -137,7 +140,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
       pageId: page.id,
       bio,
       displayName,
-      avatarUrl: undefined, // will use branding from profile
+      avatarUrl: avatarUrl || undefined,
       logoUrl: undefined,
       links: links.map((l) => ({
         id: l.id,
@@ -166,7 +169,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
       locale: page.locale || "fr",
     };
     return buildLinkinbioPage(pageData);
-  }, [links, bio, displayName, theme, buttonStyle, metaTitle, metaDescription, page]);
+  }, [links, bio, displayName, avatarUrl, theme, buttonStyle, metaTitle, metaDescription, page]);
 
   // Update preview iframe
   useEffect(() => {
@@ -258,6 +261,40 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
     } catch { /* ignore */ }
   };
 
+  // Avatar upload — reuse /api/upload/image with contentId=linkinbio-<page>
+  const uploadAvatar = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: tc("error"), description: t("avatarFormatHint"), variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: tc("error"), description: t("avatarTooLarge"), variant: "destructive" });
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("contentId", `linkinbio-${page.id}`);
+      const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        toast({ title: tc("error"), description: data.error ?? t("avatarUploadError"), variant: "destructive" });
+        return;
+      }
+      setAvatarUrl(data.url);
+    } catch {
+      toast({ title: tc("error"), variant: "destructive" });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const clearAvatar = () => {
+    setAvatarUrl("");
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  };
+
   // Save page settings
   const savePage = async () => {
     setSaving(true);
@@ -267,6 +304,7 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
         bio,
         theme,
         buttonStyle,
+        avatarUrl: avatarUrl || null,
       };
       await fetch(`/api/pages/${page.id}`, {
         method: "PATCH",
@@ -438,6 +476,55 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
               {/* Profile section */}
               <div className="space-y-3">
                 <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("profileSection")}</Label>
+
+                {/* Avatar uploader */}
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+                    className="relative h-16 w-16 rounded-full border-2 border-dashed border-border bg-muted/30 flex items-center justify-center overflow-hidden hover:border-primary/50 transition-colors group shrink-0"
+                    aria-label={t("avatarUpload")}
+                    title={t("avatarUpload")}
+                  >
+                    {uploadingAvatar ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    ) : avatarUrl ? (
+                      <>
+                        <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                        <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-medium">
+                          {t("avatarChange")}
+                        </span>
+                      </>
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium">{avatarUrl ? t("avatarChange") : t("avatarUpload")}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{t("avatarHint")}</p>
+                    {avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={clearAvatar}
+                        className="text-[11px] text-destructive hover:underline mt-0.5"
+                      >
+                        {t("avatarRemove")}
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/gif"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadAvatar(f);
+                      if (avatarInputRef.current) avatarInputRef.current.value = "";
+                    }}
+                    className="hidden"
+                  />
+                </div>
+
                 <Input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}

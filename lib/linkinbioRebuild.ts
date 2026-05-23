@@ -62,7 +62,8 @@ export async function rebuildLinkinbioSnapshot(
       pageId,
       bio: cd.bio || "",
       displayName: (page as any).title || "",
-      avatarUrl: prof?.brand_author_photo_url || undefined,
+      // Override par page si défini, sinon fallback sur la photo de profil.
+      avatarUrl: cd.avatarUrl || prof?.brand_author_photo_url || undefined,
       logoUrl: prof?.brand_logo_url || undefined,
       links: links.map((l: any) => ({
         id: l.id,
@@ -73,6 +74,8 @@ export async function rebuildLinkinbioSnapshot(
         social_links: l.social_links,
         enabled: l.enabled,
         sort_order: l.sort_order,
+        open_in_new_tab: l.open_in_new_tab,
+        color: l.color,
       })),
       theme: cd.theme || "minimal",
       buttonStyle: cd.buttonStyle || "rounded",
