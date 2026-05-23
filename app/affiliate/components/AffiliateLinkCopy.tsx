@@ -15,6 +15,12 @@ export default function AffiliateLinkCopy({ url }: { url: string }) {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      // Marque l'étape "lien copié" du guide de lancement (best-effort).
+      fetch("/affiliate/api/guide", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ step: "link_copied", done: true }),
+      }).catch(() => {});
     } catch {
       // ignore
     }

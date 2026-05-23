@@ -142,6 +142,26 @@ export type AffiliateDict = {
     trial_cta_title: string;
     trial_cta_description: string;
     trial_cta_button: string;
+    // Launch guide
+    guide_title: string;
+    guide_subtitle: string;
+    guide_progress: string; // "{done}/{total} étapes"
+    guide_completed_title: string;
+    guide_completed_body: string;
+    guide_mark_done: string;
+    guide_mark_undone: string;
+    guide_step_profile_title: string;
+    guide_step_profile_body: string;
+    guide_step_link_title: string;
+    guide_step_link_body: string;
+    guide_step_payment_title: string;
+    guide_step_payment_body: string;
+    guide_step_trial_title: string;
+    guide_step_trial_body: string;
+    guide_step_email_title: string;
+    guide_step_email_body: string;
+    guide_step_post_title: string;
+    guide_step_post_body: string;
   };
 
   // ─── Promouvoir ──────────────────────────────────────────────────
