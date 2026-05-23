@@ -119,7 +119,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Missing linkId" }, { status: 400 });
   }
 
-  const allowed = ["title", "url", "icon_url", "social_links", "enabled"];
+  const allowed = ["title", "url", "icon_url", "social_links", "enabled", "open_in_new_tab", "color"];
   const updates: Record<string, any> = {};
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];

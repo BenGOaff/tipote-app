@@ -35,6 +35,8 @@ type LinkBlock = {
   enabled: boolean;
   sort_order: number;
   clicks_count: number;
+  open_in_new_tab: boolean;
+  color: string | null;
 };
 
 type PageData = {
@@ -146,6 +148,8 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
         social_links: l.social_links,
         enabled: l.enabled,
         sort_order: l.sort_order,
+        open_in_new_tab: l.open_in_new_tab,
+        color: l.color,
       })),
       theme,
       buttonStyle,
@@ -499,12 +503,45 @@ export default function LinkinbioEditor({ initialPage, onBack }: Props) {
 
                             {/* URL (for link type) */}
                             {link.block_type === "link" && (
-                              <Input
-                                value={link.url}
-                                onChange={(e) => updateLink(link.id, { url: e.target.value })}
-                                className="h-7 text-xs"
-                                placeholder="https://..."
-                              />
+                              <>
+                                <Input
+                                  value={link.url}
+                                  onChange={(e) => updateLink(link.id, { url: e.target.value })}
+                                  className="h-7 text-xs"
+                                  placeholder="https://..."
+                                />
+                                <div className="flex items-center justify-between pt-1">
+                                  <label className="text-[11px] text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+                                    <Switch
+                                      checked={link.open_in_new_tab !== false}
+                                      onCheckedChange={(v) => updateLink(link.id, { open_in_new_tab: v })}
+                                      className="scale-75 -my-1"
+                                    />
+                                    {t("openInNewTab")}
+                                  </label>
+                                  <div className="flex items-center gap-1.5">
+                                    <input
+                                      type="color"
+                                      value={link.color || "#000000"}
+                                      onChange={(e) => updateLink(link.id, { color: e.target.value })}
+                                      className="h-6 w-6 rounded border border-border cursor-pointer bg-transparent"
+                                      aria-label={t("customColor")}
+                                      title={t("customColor")}
+                                    />
+                                    {link.color && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5 text-muted-foreground"
+                                        onClick={() => updateLink(link.id, { color: null })}
+                                        title={t("resetColor")}
+                                      >
+                                        <Trash2 className="w-2.5 h-2.5" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
                             )}
 
                             {/* Social icons editor */}

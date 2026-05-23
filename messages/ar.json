@@ -2975,7 +2975,10 @@
     "published": "تم نشر الصفحة!",
     "unpublished": "تم إلغاء نشر الصفحة",
     "publish": "نشر",
-    "unpublish": "إلغاء النشر"
+    "unpublish": "إلغاء النشر",
+    "openInNewTab": "علامة تبويب جديدة",
+    "customColor": "لون مخصص",
+    "resetColor": "إعادة تعيين"
   },
   "pages": {
     "headerTitle": "صفحاتي",

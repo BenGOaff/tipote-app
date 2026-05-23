@@ -3281,7 +3281,10 @@
     "published": "Página publicada!",
     "unpublished": "Página despublicada",
     "publish": "Publicar",
-    "unpublish": "Despublicar"
+    "unpublish": "Despublicar",
+    "openInNewTab": "Nova aba",
+    "customColor": "Cor personalizada",
+    "resetColor": "Redefinir"
   },
   "pages": {
     "headerTitle": "Minhas páginas",

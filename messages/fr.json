@@ -2982,7 +2982,10 @@
     "published": "Page publiée !",
     "unpublished": "Page dépubliée",
     "publish": "Publier",
-    "unpublish": "Dépublier"
+    "unpublish": "Dépublier",
+    "openInNewTab": "Nouvel onglet",
+    "customColor": "Couleur personnalisée",
+    "resetColor": "Réinitialiser"
   },
   "pages": {
     "headerTitle": "Mes Pages",

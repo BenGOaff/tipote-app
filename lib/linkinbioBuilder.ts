@@ -17,6 +17,8 @@ export type LinkinbioLink = {
   social_links?: { platform: string; url: string }[];
   enabled: boolean;
   sort_order: number;
+  open_in_new_tab?: boolean; // défaut true côté DB
+  color?: string | null; // hex #RRGGBB override, null = thème global
 };
 
 export type LinkinbioPageData = {
@@ -202,7 +204,7 @@ a { text-decoration: none; color: inherit; }
 /* Profile header */
 .lib-profile {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 44px;
 }
 .lib-avatar {
   width: 88px;
@@ -428,7 +430,18 @@ ${Array.from({ length: 20 }, (_, i) => `.lib-links > *:nth-child(${i + 1}) { ani
 
 function blockLink(link: LinkinbioLink, pageId: string): string {
   const hasIcon = !!link.icon_url;
-  return `<a href="${esc(link.url || "#")}" class="lib-link${hasIcon ? " has-icon" : ""}" data-link-id="${esc(link.id)}" data-page-id="${esc(pageId)}" target="_blank" rel="noopener noreferrer">${
+  const newTab = link.open_in_new_tab !== false;
+  const targetRel = newTab
+    ? ` target="_blank" rel="noopener noreferrer"`
+    : "";
+  // Override couleur par bouton : on applique en inline pour que ça
+  // batte le CSS du thème, peu importe le style (filled/outlined/shadow).
+  let styleAttr = "";
+  if (link.color && /^#[0-9a-fA-F]{3,8}$/.test(link.color)) {
+    const txt = readableTextOn(link.color);
+    styleAttr = ` style="background:${link.color};border-color:${link.color};color:${txt};"`;
+  }
+  return `<a href="${esc(link.url || "#")}" class="lib-link${hasIcon ? " has-icon" : ""}" data-link-id="${esc(link.id)}" data-page-id="${esc(pageId)}"${targetRel}${styleAttr}>${
     hasIcon ? `<img src="${esc(link.icon_url)}" alt="" class="lib-link-icon" loading="lazy">` : ""
   }${esc(link.title)}</a>`;
 }

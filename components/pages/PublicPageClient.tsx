@@ -920,12 +920,20 @@ function injectCaptureScript(page: PublicPageData): string {
     e.stopPropagation();
     var win = null;
     try {
-      win = window.open(href, '_blank', 'noopener,noreferrer');
+      // Pas de 'noopener' dans le 3e arg : window.open avec noopener
+      // retourne toujours null par spec, on ne peut donc pas distinguer
+      // popup-bloqué d'un succès. Sans noopener on récupère la ref →
+      // on null l'opener à la main pour garder le bénéfice sécurité.
+      // Le bug d'Eric : avec noopener, on tombait toujours dans le
+      // fallback window.top.location.href qui remplaçait la page
+      // Link in Bio par la destination du bouton. Cf. PITFALLS.md.
+      win = window.open(href, '_blank');
+      if (win) { try { win.opener = null; } catch(ex) {} }
     } catch(ex) { /* popup blocked by extension */ }
     if (!win) {
-      // Popup blocked — bring the user out of the sandboxed iframe
-      // by navigating the top window instead. allow-top-navigation
-      // makes this safe even with the strict sandbox.
+      // Popup vraiment bloqué — on sort l'utilisateur de l'iframe
+      // sandboxée en naviguant le top window. allow-top-navigation
+      // rend ça safe même avec le sandbox strict.
       try { window.top.location.href = href; }
       catch(ex) { window.location.href = href; }
     }
