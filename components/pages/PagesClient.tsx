@@ -476,10 +476,15 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AppSidebar />
+        {/* AppSidebar masquée quand on est dans un éditeur pour
+            laisser tout l'écran au wysiwyg (pattern aligné sur
+            QuizDetailClient). PageHeader pareil. */}
+        {!isEditorView && <AppSidebar />}
 
         <main className="flex-1 overflow-auto bg-background flex flex-col">
-          <PageHeader left={!isEditorView ? <h1 className="text-lg font-display font-bold truncate">{t("headerTitle")}</h1> : undefined} userEmail={userEmail} />
+          {!isEditorView && (
+            <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("headerTitle")}</h1>} userEmail={userEmail} />
+          )}
 
           {/* ==================== LINKINBIO EDITOR ==================== */}
           {view === "linkinbio-edit" && editPage && (

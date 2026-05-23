@@ -2996,7 +2996,9 @@
     "avatarHint": "PNG, JPG or GIF. Max 10 MB. Square images recommended.",
     "avatarFormatHint": "Unsupported format. Use PNG, JPG or GIF.",
     "avatarTooLarge": "File too large (max 10 MB).",
-    "avatarUploadError": "Photo upload failed."
+    "avatarUploadError": "Photo upload failed.",
+    "mobileEdit": "Edit",
+    "mobilePreview": "Preview"
   },
   "pages": {
     "headerTitle": "My Pages",

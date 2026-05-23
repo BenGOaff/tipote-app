@@ -2989,7 +2989,9 @@
     "addBlockLabel": "Aggiungi un blocco",
     "blockHide": "Nascondi questo blocco",
     "blockShow": "Mostra questo blocco",
-    "blockDelete": "Elimina questo blocco"
+    "blockDelete": "Elimina questo blocco",
+    "mobileEdit": "Modifica",
+    "mobilePreview": "Anteprima"
   },
   "pages": {
     "headerTitle": "Le mie pagine",
