@@ -3,15 +3,56 @@
 // Vue d'ensemble du dashboard affiliation. Design system Tipote
 // (Card, Button, icônes lucide, light theme).
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, ArrowRight } from "lucide-react";
+import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, ArrowRight, Gift } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { AffiliateNav } from "./components/AffiliateNav";
 import AffiliateLinkCopy from "./components/AffiliateLinkCopy";
+
+async function TrialTipoteCard({ sa }: { sa: string }) {
+  const { data } = await supabaseAdmin
+    .from("affiliates")
+    .select("trial_activated_at, trial_expires_at")
+    .eq("sa", sa)
+    .maybeSingle();
+  const row = data as { trial_activated_at: string | null; trial_expires_at: string | null } | null;
+  // Affiché seulement si pas encore activé.
+  if (row?.trial_activated_at) return null;
+
+  return (
+    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
+      <CardContent className="pt-6">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Gift className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-base">
+              🎁 Ton mois Tipote Elite gratuit t&apos;attend
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+              Active ton trial 1 mois pour tester Tipote en Elite, créer du
+              contenu de promo authentique, et mieux vendre l&apos;outil à
+              ton audience. À utiliser quand tu veux.
+            </p>
+            <Button asChild className="mt-3">
+              <Link href="/trial-tipote">
+                Voir mon trial
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -192,11 +233,14 @@ export default async function AffiliateOverviewPage() {
           </CardContent>
         </Card>
 
+        {/* CTA trial Tipote — affiché seulement si pas encore activé */}
+        <TrialTipoteCard sa={session.sa} />
+
         <Card className="bg-muted/30 border-dashed">
           <CardContent className="py-6 text-center">
             <p className="text-sm text-muted-foreground">
-              🚧 Bientôt : ressources promo par canal, guide de lancement,
-              calculateur de revenus, classement, contenus multilangues.
+              🚧 Bientôt : guide de lancement 6 étapes, classement anonymisé,
+              contenus multilangues, badges.
             </p>
           </CardContent>
         </Card>
