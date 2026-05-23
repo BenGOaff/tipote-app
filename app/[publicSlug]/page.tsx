@@ -34,6 +34,7 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
+import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import PopquizPlayClient from "@/app/pq/[popquizId]/PopquizPlayClient";
 import PublicPageClient from "@/components/pages/PublicPageClient";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
@@ -64,9 +65,9 @@ async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: 
 
 type ResolvedPopquiz = NonNullable<Awaited<ReturnType<typeof fetchPublishedPopquiz>>>;
 type Resolved =
-  | { kind: "quiz"; meta: { title?: string | null; introduction?: string | null; og_image_url?: string | null; og_description?: string | null } }
+  | { kind: "quiz"; meta: { title?: string | null; introduction?: string | null; og_image_url?: string | null; og_description?: string | null; meta_pixel_id?: string | null; ga4_measurement_id?: string | null; google_ads_conversion_id?: string | null } }
   | { kind: "popquiz"; popquiz: ResolvedPopquiz }
-  | { kind: "page"; meta: { title?: string | null; meta_title?: string | null; meta_description?: string | null; og_image_url?: string | null } }
+  | { kind: "page"; meta: { title?: string | null; meta_title?: string | null; meta_description?: string | null; og_image_url?: string | null; facebook_pixel_id?: string | null; google_tag_id?: string | null } }
   | null;
 
 // Single resolver used by both generateMetadata and the page body so
@@ -76,7 +77,7 @@ async function resolve(slug: string, userId: string, projectId: string): Promise
   //    precedence so the error messages and resolution agree.
   const { data: quiz } = await supabaseAdmin
     .from("quizzes")
-    .select("title, introduction, og_image_url, og_description")
+    .select("title, introduction, og_image_url, og_description, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("user_id", userId)
     .eq("project_id", projectId)
     .ilike("slug", slug)
@@ -105,7 +106,7 @@ async function resolve(slug: string, userId: string, projectId: string): Promise
   //    matches the same gate as /api/pages/public/[slug].
   const { data: page } = await supabaseAdmin
     .from("hosted_pages")
-    .select("title, meta_title, meta_description, og_image_url")
+    .select("title, meta_title, meta_description, og_image_url, facebook_pixel_id, google_tag_id")
     .eq("user_id", userId)
     .eq("project_id", projectId)
     .ilike("slug", slug)
@@ -248,7 +249,16 @@ export default async function PublicCatchAll({ params }: Props) {
   if (!r) notFound();
 
   if (r.kind === "quiz") {
-    return <PublicQuizClient quizId={publicSlug} />;
+    return (
+      <>
+        <TrackingPixels
+          metaPixelId={r.meta.meta_pixel_id}
+          ga4MeasurementId={r.meta.ga4_measurement_id}
+          googleAdsConversionId={r.meta.google_ads_conversion_id}
+        />
+        <PublicQuizClient quizId={publicSlug} />
+      </>
+    );
   }
 
   if (r.kind === "popquiz") {
@@ -263,5 +273,13 @@ export default async function PublicCatchAll({ params }: Props) {
   }
 
   // hosted_page
-  return <PublicPageClient page={null} slug={publicSlug} />;
+  return (
+    <>
+      <TrackingPixels
+        metaPixelId={r.meta.facebook_pixel_id}
+        ga4MeasurementId={r.meta.google_tag_id}
+      />
+      <PublicPageClient page={null} slug={publicSlug} />
+    </>
+  );
 }

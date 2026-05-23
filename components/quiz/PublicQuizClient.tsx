@@ -938,8 +938,11 @@ export default function PublicQuizClient({
         body: JSON.stringify({ event }),
         credentials: "same-origin",
       }).catch(() => {});
-      // 2) Tracking externe Meta + Google — Phase B
-      if (quiz) {
+      // 2) Tracking externe Meta + Google — Phase B. On ne fire PAS
+      // "view" : l'init script du pixel (server-rendered) fire déjà
+      // PageView au load, re-fire ici causerait un doublon dans les
+      // rapports Meta/GA.
+      if (quiz && event !== "view") {
         fireQuizPixel(event, {
           meta_pixel_id: quiz.meta_pixel_id,
           ga4_measurement_id: quiz.ga4_measurement_id,
@@ -978,50 +981,12 @@ export default function PublicQuizClient({
     trackEvent("view");
   }, [quiz, trackEvent]);
 
-  // Tracking pixels Meta + Google (Adeline, 19 mai 2026, Phase B) :
-  // injection des scripts dans <head> via DOM API, indépendamment des
-  // branches de step. Strict consent gating.
-  useEffect(() => {
-    if (!quiz || previewData) return;
-    const pixelsConsentGiven = quiz.show_consent_checkbox === false || consent;
-    if (!pixelsConsentGiven) return;
-    const metaId = quiz.meta_pixel_id?.trim();
-    const ga4Id = quiz.ga4_measurement_id?.trim();
-    const adsId = quiz.google_ads_conversion_id?.trim();
-    const gtagPrimaryId = ga4Id || adsId;
-    if (!metaId && !gtagPrimaryId) return;
-
-    const injected: HTMLScriptElement[] = [];
-
-    if (metaId && !window.fbq) {
-      const initScript = document.createElement("script");
-      initScript.innerHTML = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${metaId}');fbq('track','PageView');`;
-      document.head.appendChild(initScript);
-      injected.push(initScript);
-    }
-
-    if (gtagPrimaryId && !window.gtag) {
-      const libScript = document.createElement("script");
-      libScript.src = `https://www.googletagmanager.com/gtag/js?id=${gtagPrimaryId}`;
-      libScript.async = true;
-      document.head.appendChild(libScript);
-      injected.push(libScript);
-
-      const initScript = document.createElement("script");
-      const configs: string[] = [];
-      if (ga4Id) configs.push(`gtag('config','${ga4Id}');`);
-      if (adsId) configs.push(`gtag('config','${adsId}');`);
-      initScript.innerHTML = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());${configs.join("")}`;
-      document.head.appendChild(initScript);
-      injected.push(initScript);
-    }
-
-    return () => {
-      injected.forEach((s) => {
-        if (s.parentNode) s.parentNode.removeChild(s);
-      });
-    };
-  }, [quiz, consent, previewData]);
+  // Pixels Meta + GA + Google Ads sont désormais server-rendered par
+  // <TrackingPixels> dans app/q/[quizId]/page.tsx (Pixel Helper les
+  // détecte au premier paint, plus de race condition consent / mount /
+  // fbq init). Le code client se contente de fire les events
+  // conversion via fireQuizPixel() au moment où ils arrivent.
+  // Cf. CLAUDE_PITFALLS.md section U.
 
   // Fire one "question_view" event each time the visitor lands on a
   // new question. Idempotent inside a session via the ref.

@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PublicPageClient from "@/components/pages/PublicPageClient";
+import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
@@ -132,5 +133,31 @@ export default async function PublicPage({ params }: RouteContext) {
       notFound();
     }
   }
-  return <PublicPageClient page={null} slug={slug} />;
+
+  // Pixel server-side : on lookup les IDs sur la page pour les
+  // injecter via <TrackingPixels>. Sans ça le pixel n'est que dans
+  // l'iframe html_snapshot et Pixel Helper qui regarde le parent ne
+  // le détecte pas — exactement le bug Gwenn pour les pages
+  // d'affiliation Tipote.
+  const { data: pixelData } = await supabaseAdmin
+    .from("hosted_pages")
+    .select("facebook_pixel_id, google_tag_id")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const px = pixelData as { facebook_pixel_id?: string | null; google_tag_id?: string | null } | null;
+
+  return (
+    <>
+      {px && (
+        <TrackingPixels
+          metaPixelId={px.facebook_pixel_id}
+          ga4MeasurementId={px.google_tag_id}
+        />
+      )}
+      <PublicPageClient page={null} slug={slug} />
+    </>
+  );
 }
