@@ -10,9 +10,15 @@
 
 ## 🔜 À faire ensuite (par ordre de priorité suggéré)
 
-### Pixel Meta / GA / Ads (URGENT — bug Gwenn)
-- ✅ Server-render le pixel sur toutes les pages publiques pour fiabilité (en cours, ce sprint)
-- À vérifier : que les conversion API (server-side) sont aussi fired pour back-up du pixel client
+### Pixel Meta / GA / Ads (bug Gwenn — RÉSOLU)
+- ✅ Server-render le pixel sur toutes les pages publiques (quiz, survey,
+  popquiz, hosted pages, link-in-bio, custom domains) — Tipote + Tiquiz
+- ✅ Fallback sur le défaut profil pour les quiz/popquiz sans pixel explicite
+- ✅ Migration business_profiles default_* (Tipote) pour le save settings
+- Popquiz héritent du défaut profil (pas de pixel par-popquiz). Si un user
+  veut un pixel spécifique par popquiz un jour → ajouter colonnes + UI éditeur.
+- À considérer plus tard : Conversion API server-side (CAPI) en back-up du
+  pixel client (résiste aux ad-blockers). Pas demandé pour l'instant.
 
 ### Traductions ES/IT/PT/AR du dashboard affilié
 Actuellement les 4 locales sont des stubs qui re-exportent EN. Quand on aura des
