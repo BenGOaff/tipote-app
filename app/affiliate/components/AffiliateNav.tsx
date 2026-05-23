@@ -6,28 +6,30 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Megaphone, Wallet, CreditCard, HelpCircle, LogOut, Gift } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useDict } from "../i18n/context";
+import { LocaleSwitcher } from "./LocaleSwitcher";
 
 type NavItem = {
   href: string;
-  label: string;
+  key: "overview" | "promouvoir" | "trial" | "revenus" | "paiement" | "support";
   icon: React.ComponentType<{ className?: string }>;
 };
 
 const NAV: NavItem[] = [
-  { href: "/", label: "Vue d'ensemble", icon: LayoutDashboard },
-  { href: "/promouvoir", label: "Promouvoir", icon: Megaphone },
-  { href: "/trial-tipote", label: "Trial Tipote", icon: Gift },
-  { href: "/revenus", label: "Revenus", icon: Wallet },
-  { href: "/paiement", label: "Paiement", icon: CreditCard },
-  { href: "/support", label: "Support", icon: HelpCircle },
+  { href: "/", key: "overview", icon: LayoutDashboard },
+  { href: "/promouvoir", key: "promouvoir", icon: Megaphone },
+  { href: "/trial-tipote", key: "trial", icon: Gift },
+  { href: "/revenus", key: "revenus", icon: Wallet },
+  { href: "/paiement", key: "paiement", icon: CreditCard },
+  { href: "/support", key: "support", icon: HelpCircle },
 ];
 
 export function AffiliateNav({ displayName }: { displayName: string }) {
+  const t = useDict();
   const pathname = usePathname();
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
@@ -45,23 +47,21 @@ export function AffiliateNav({ displayName }: { displayName: string }) {
             Tipote<span className="text-primary">™</span>
           </span>
           <span className="text-xs text-muted-foreground uppercase tracking-widest border-l border-border pl-3">
-            Affiliation
+            {t.layout.space_subtitle}
           </span>
         </Link>
         <div className="flex items-center gap-2">
+          <LocaleSwitcher />
           <span className="text-sm text-muted-foreground hidden md:inline">
             {displayName}
           </span>
-          <Button variant="ghost" size="sm" onClick={handleLogout} title="Déconnexion">
+          <Button variant="ghost" size="sm" onClick={handleLogout} title={t.nav.logout}>
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>
       <nav className="max-w-6xl mx-auto px-6 flex items-center gap-1 overflow-x-auto">
         {NAV.map((item) => {
-          // pathname relatif au sous-domaine (le rewrite next.config map déjà
-          // affiliate.tipote.com → /affiliate/), donc le pathname côté browser
-          // ne contient PAS le préfixe /affiliate.
           const isActive =
             item.href === "/"
               ? pathname === "/" || pathname === "/affiliate"
@@ -79,7 +79,7 @@ export function AffiliateNav({ displayName }: { displayName: string }) {
               }`}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              {t.nav[item.key]}
             </Link>
           );
         })}

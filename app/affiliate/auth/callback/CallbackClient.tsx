@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { useDict } from "../../i18n/context";
 
 function parseHashParams(hash: string): Record<string, string> {
   const h = (hash || "").replace(/^#/, "").trim();
@@ -22,6 +23,7 @@ function parseHashParams(hash: string): Record<string, string> {
 }
 
 export default function CallbackClient() {
+  const t = useDict();
   const router = useRouter();
   const searchParams = useSearchParams();
   const ranRef = useRef(false);
@@ -115,20 +117,16 @@ export default function CallbackClient() {
             <h1 className="text-4xl font-bold text-foreground">
               Tipote<span className="text-primary">™</span>
             </h1>
-            <p className="text-muted-foreground mt-2">Espace affiliation</p>
+            <p className="text-muted-foreground mt-2">{t.layout.space_subtitle}</p>
           </div>
           <div className="bg-card border border-destructive/30 rounded-lg p-6 text-center shadow-lg">
-            <h2 className="text-lg font-semibold mb-2 text-destructive">
-              Lien invalide ou expiré
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              {errorMsg || "Ce lien a peut-être déjà été utilisé ou est expiré (30 min max)."}
-            </p>
+            <h2 className="text-lg font-semibold mb-2 text-destructive">{t.callback.err_title}</h2>
+            <p className="text-sm text-muted-foreground mb-6">{errorMsg || t.callback.err_default}</p>
             <button
               onClick={() => router.replace("/login")}
               className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition"
             >
-              Demander un nouveau lien
+              {t.callback.request_new_link}
             </button>
           </div>
         </div>
@@ -142,7 +140,7 @@ export default function CallbackClient() {
         <div className="text-4xl font-bold text-foreground mb-2">
           Tipote<span className="text-primary">™</span>
         </div>
-        <p className="text-muted-foreground">Validation en cours…</p>
+        <p className="text-muted-foreground">{t.callback.validating}</p>
       </div>
     </div>
   );

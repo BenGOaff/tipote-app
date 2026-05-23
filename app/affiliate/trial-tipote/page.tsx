@@ -1,11 +1,6 @@
 // app/affiliate/trial-tipote/page.tsx
 //
 // Page de gestion du trial Tipote 1 mois pour les affiliés.
-// Trois états possibles selon affiliates.trial_activated_at et
-// trial_expires_at :
-//   1. Pas encore activé → écran d'explication + bouton "Activer"
-//   2. Trial actif → countdown "X jours restants" + lien app.tipote.com
-//   3. Trial expiré → message "C'est terminé" + CTA upgrade
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -18,6 +13,8 @@ import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { AffiliateNav } from "../components/AffiliateNav";
 import { TrialActivateButton } from "./TrialActivateButton";
+import { getDict, interpolate, normaliseLocale } from "../i18n";
+import type { AffiliateDict } from "../i18n/types";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +40,16 @@ function daysBetween(from: Date, to: Date): number {
   return Math.ceil(ms / (24 * 3600 * 1000));
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", {
+function formatDate(iso: string, locale: string): string {
+  const localeMap: Record<string, string> = {
+    fr: "fr-FR",
+    en: "en-US",
+    es: "es-ES",
+    it: "it-IT",
+    pt: "pt-PT",
+    ar: "ar",
+  };
+  return new Date(iso).toLocaleDateString(localeMap[locale] ?? "fr-FR", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -54,6 +59,9 @@ function formatDate(iso: string): string {
 export default async function TrialTipotePage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
+
+  const locale = normaliseLocale(session.locale);
+  const t = getDict(locale);
 
   const trial = await fetchTrial(session.sa);
   const now = new Date();
@@ -73,48 +81,41 @@ export default async function TrialTipotePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Gift className="h-7 w-7 text-primary" />
-            Trial Tipote 1 mois offert
+            {t.trial.page_title}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Profite de Tipote en Elite gratuitement pendant 30 jours pour
-            tester l&apos;outil et créer du contenu de promo.
+            {t.trial.page_subtitle}
           </p>
         </div>
 
-        {!isActivated && <TrialNotActivated email={session.email} />}
-        {isActive && expiresAt && <TrialActive expiresAt={expiresAt} now={now} />}
-        {isExpired && expiresAt && <TrialExpired expiresAt={expiresAt} />}
+        {!isActivated && <TrialNotActivated email={session.email} t={t} />}
+        {isActive && expiresAt && <TrialActive expiresAt={expiresAt} now={now} t={t} locale={locale} />}
+        {isExpired && expiresAt && <TrialExpired expiresAt={expiresAt} t={t} locale={locale} />}
       </main>
     </div>
   );
 }
 
-function TrialNotActivated({ email }: { email: string }) {
+function TrialNotActivated({ email, t }: { email: string; t: AffiliateDict }) {
   return (
     <>
       <Card className="border-primary/30 bg-primary/5">
         <CardHeader>
-          <CardTitle className="text-xl">Ton trial Tipote t&apos;attend</CardTitle>
-          <CardDescription>
-            Une activation, valable 30 jours, à utiliser quand tu veux.
-          </CardDescription>
+          <CardTitle className="text-xl">{t.trial.not_activated_title}</CardTitle>
+          <CardDescription>{t.trial.not_activated_subtitle}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3 text-sm">
-            <FeatureLine text="Plan Elite débloqué pour ton compte Tipote (le plus complet)" />
-            <FeatureLine text="Création illimitée de quiz, popquizs, pages link-in-bio" />
-            <FeatureLine text="Accès aux pépites IA, à la stratégie, aux templates premium" />
-            <FeatureLine text="Idéal pour créer des screenshots, des vidéos démo, du contenu promo" />
-            <FeatureLine text="Aucune carte bancaire requise. Stop automatique à J+30." />
+            <FeatureLine text={t.trial.feature_1} />
+            <FeatureLine text={t.trial.feature_2} />
+            <FeatureLine text={t.trial.feature_3} />
+            <FeatureLine text={t.trial.feature_4} />
+            <FeatureLine text={t.trial.feature_5} />
           </div>
 
           <div className="rounded-lg bg-background/60 border border-border p-4 text-sm space-y-2">
-            <p className="font-medium">⏰ Tu choisis quand activer</p>
-            <p className="text-muted-foreground">
-              Tu ne peux activer ton trial qu&apos;UNE seule fois. Réserve-le
-              pour le bon moment — quand tu as 2h devant toi pour explorer,
-              créer ton premier quiz, et capturer du contenu pour ta promo.
-            </p>
+            <p className="font-medium">{t.trial.timing_title}</p>
+            <p className="text-muted-foreground">{t.trial.timing_body}</p>
           </div>
 
           <TrialActivateButton email={email} />
@@ -123,30 +124,25 @@ function TrialNotActivated({ email }: { email: string }) {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Pourquoi on t&apos;offre ça ?</CardTitle>
+          <CardTitle className="text-base">{t.trial.why_offered_title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-          <p>
-            Tu seras un meilleur ambassadeur en ayant{" "}
-            <strong className="text-foreground">vu Tipote tourner avec tes propres données</strong>.
-            Tu pourras montrer des screenshots authentiques à ton audience,
-            faire une vidéo &quot;voilà ce que j&apos;ai créé avec Tipote en 10 min&quot;,
-            et répondre aux questions de tes leads avec précision.
-          </p>
-          <p>
-            C&apos;est gagnant-gagnant : on te facilite la vente, tu touches
-            tes commissions plus facilement.
-          </p>
+          <p>{t.trial.why_offered_body_1}</p>
+          <p>{t.trial.why_offered_body_2}</p>
         </CardContent>
       </Card>
     </>
   );
 }
 
-function TrialActive({ expiresAt, now }: { expiresAt: Date; now: Date }) {
+function TrialActive({ expiresAt, now, t, locale }: { expiresAt: Date; now: Date; t: AffiliateDict; locale: string }) {
   const daysRemaining = daysBetween(now, expiresAt);
   const totalDays = 30;
   const progressPercent = Math.max(0, Math.min(100, (daysRemaining / totalDays) * 100));
+  const remainingText = interpolate(
+    daysRemaining > 1 ? t.trial.active_remaining_plural : t.trial.active_remaining_singular,
+    { count: daysRemaining },
+  );
 
   return (
     <>
@@ -155,25 +151,22 @@ function TrialActive({ expiresAt, now }: { expiresAt: Date; now: Date }) {
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl flex items-center gap-2">
               <Sparkles className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-              Trial actif
+              {t.trial.active_title}
             </CardTitle>
             <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600">
               <Clock className="h-3 w-3 mr-1" />
-              {daysRemaining} {daysRemaining > 1 ? "jours" : "jour"} restant
-              {daysRemaining > 1 ? "s" : ""}
+              {remainingText}
             </Badge>
           </div>
           <CardDescription>
-            Ton compte Tipote est en plan <strong>Elite</strong> jusqu&apos;au{" "}
-            <strong>{formatDate(expiresAt.toISOString())}</strong>.
+            {interpolate(t.trial.active_subtitle, { date: formatDate(expiresAt.toISOString(), locale) })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Barre de progression */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Aujourd&apos;hui</span>
-              <span>Fin du trial</span>
+              <span>{t.trial.today_label}</span>
+              <span>{t.trial.end_label}</span>
             </div>
             <div className="h-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-full overflow-hidden">
               <div
@@ -189,7 +182,7 @@ function TrialActive({ expiresAt, now }: { expiresAt: Date; now: Date }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Accéder à Tipote
+              {t.trial.access_tipote}
               <ExternalLink className="ml-2 h-4 w-4" />
             </a>
           </Button>
@@ -198,57 +191,31 @@ function TrialActive({ expiresAt, now }: { expiresAt: Date; now: Date }) {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Bonnes idées de contenu à créer maintenant</CardTitle>
+          <CardTitle className="text-base">{t.trial.ideas_title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-          <p>
-            ⏱️ <strong className="text-foreground">Screencast 5 minutes</strong> : montre la création
-            d&apos;un quiz Tiquiz de bout en bout. Poste-le en Reel /
-            short YouTube.
-          </p>
-          <p>
-            📸 <strong className="text-foreground">Screenshots avant/après</strong> : ton dashboard
-            vide vs. après 30 leads captés. Avant/après c&apos;est ce
-            qui convertit le mieux.
-          </p>
-          <p>
-            🧪 <strong className="text-foreground">Test sur ta propre niche</strong> : crée un quiz
-            adapté à ton audience (ex: &quot;Quel type de [ton métier] es-tu ?&quot;),
-            partage-le sur ta liste, raconte les résultats.
-          </p>
-          <p>
-            🎁 <strong className="text-foreground">Bonus exclusif</strong> : promets à tes affiliés
-            d&apos;envoyer ton quiz template gratuit en bonus s&apos;ils s&apos;inscrivent
-            via ton lien. Effet d&apos;urgence + valeur ajoutée.
-          </p>
+          <p>{t.trial.idea_screencast}</p>
+          <p>{t.trial.idea_screenshots}</p>
+          <p>{t.trial.idea_niche}</p>
+          <p>{t.trial.idea_bonus}</p>
         </CardContent>
       </Card>
     </>
   );
 }
 
-function TrialExpired({ expiresAt }: { expiresAt: Date }) {
+function TrialExpired({ expiresAt, t, locale }: { expiresAt: Date; t: AffiliateDict; locale: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Ton trial s&apos;est terminé</CardTitle>
+        <CardTitle className="text-xl">{t.trial.expired_title}</CardTitle>
         <CardDescription>
-          Il a expiré le <strong>{formatDate(expiresAt.toISOString())}</strong>.
-          Ton compte Tipote est repassé en plan gratuit.
+          {interpolate(t.trial.expired_subtitle, { date: formatDate(expiresAt.toISOString(), locale) })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Tu as testé Tipote en Elite pendant 30 jours. Tu connais maintenant
-          l&apos;outil dans ses détails. C&apos;est tout ce qu&apos;il fallait pour bien
-          le vendre à ton audience.
-        </p>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Si tu veux continuer à l&apos;utiliser pour toi-même (sur ton propre
-          business), prends un abonnement Elite. Tu peux aussi continuer à
-          promouvoir Tipote depuis ton compte gratuit — les liens
-          d&apos;affiliation et les ressources promo restent disponibles ici.
-        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed">{t.trial.expired_body_1}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">{t.trial.expired_body_2}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button asChild>
             <a
@@ -256,12 +223,12 @@ function TrialExpired({ expiresAt }: { expiresAt: Date }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Découvrir les plans Tipote
+              {t.trial.discover_plans}
               <ExternalLink className="ml-2 h-4 w-4" />
             </a>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/promouvoir">Continuer à promouvoir</Link>
+            <Link href="/promouvoir">{t.trial.continue_promoting}</Link>
           </Button>
         </div>
       </CardContent>

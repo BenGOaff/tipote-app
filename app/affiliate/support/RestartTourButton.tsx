@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlayCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useDict } from "../i18n/context";
 
 export function RestartTourButton() {
+  const t = useDict();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -33,12 +35,12 @@ export function RestartTourButton() {
       {done ? (
         <>
           <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
-          Redirection…
+          {t.common.saving}
         </>
       ) : (
         <>
           <PlayCircle className="mr-2 h-4 w-4" />
-          {loading ? "Préparation…" : "Refaire le tour guidé"}
+          {loading ? t.common.saving : t.support.restart_tour_button}
         </>
       )}
     </Button>

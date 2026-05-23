@@ -26,6 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDict } from "../i18n/context";
+import { interpolate } from "../i18n";
 
 const LOCALE_OPTIONS = [
   { value: "fr", label: "Français" },
@@ -43,6 +45,7 @@ function detectBrowserLocale(): string {
 }
 
 export default function SignupClient() {
+  const t = useDict();
   const searchParams = useSearchParams();
   const [sa, setSa] = useState("");
   const [email, setEmail] = useState("");
@@ -87,7 +90,7 @@ export default function SignupClient() {
 
     if (password && password.length < 8) {
       setStatus("error");
-      setErrorMsg("Le mot de passe doit faire au moins 8 caractères.");
+      setErrorMsg(t.signup.err_weak_password);
       return;
     }
 
@@ -108,30 +111,24 @@ export default function SignupClient() {
         setStatus("error");
         const reason = data.reason as string | undefined;
         if (reason === "invalid_sa") {
-          setErrorMsg(
-            "L'identifiant affilié n'a pas le bon format. Vérifie qu'il commence par « sa » suivi d'une suite de caractères.",
-          );
+          setErrorMsg(t.signup.err_invalid_sa);
         } else if (reason === "email_not_in_systeme") {
-          setErrorMsg(
-            "Cet email n'est pas reconnu dans Systeme.io. Inscris-toi d'abord au programme d'affiliation, puis reviens ici.",
-          );
+          setErrorMsg(t.signup.err_email_not_in_systeme);
         } else if (reason === "invalid_email") {
-          setErrorMsg("Email invalide.");
+          setErrorMsg(t.signup.err_invalid_email);
         } else if (reason === "weak_password") {
-          setErrorMsg("Le mot de passe doit faire au moins 8 caractères.");
+          setErrorMsg(t.signup.err_weak_password);
         } else if (reason === "send_failed") {
-          setErrorMsg(
-            "Compte créé mais on n'a pas réussi à envoyer le lien de connexion. Essaie la page de connexion.",
-          );
+          setErrorMsg(t.signup.err_send_failed);
         } else {
-          setErrorMsg("Une erreur s'est produite. Réessaie ou contacte le support.");
+          setErrorMsg(t.signup.err_generic);
         }
         return;
       }
       setStatus("sent");
     } catch {
       setStatus("error");
-      setErrorMsg("Impossible de contacter le serveur. Vérifie ta connexion.");
+      setErrorMsg(t.signup.err_network);
     }
   }
 
@@ -143,7 +140,7 @@ export default function SignupClient() {
             <h1 className="text-4xl font-bold text-foreground">
               Tipote<span className="text-primary">™</span>
             </h1>
-            <p className="text-muted-foreground mt-2">Espace affiliation</p>
+            <p className="text-muted-foreground mt-2">{t.layout.space_subtitle}</p>
           </div>
 
           <Card className="border-border shadow-lg">
@@ -151,31 +148,20 @@ export default function SignupClient() {
               <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                 <CheckCircle2 className="h-7 w-7 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Bienvenue !</CardTitle>
+              <CardTitle className="text-2xl">{t.signup.success_title}</CardTitle>
               <CardDescription className="text-base">
-                Ton compte affilié Tipote est activé.
+                {t.signup.description}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-                {password ? (
-                  <>
-                    Tu peux maintenant te connecter avec ton email{" "}
-                    <strong className="text-foreground">{email}</strong> et le mot
-                    de passe que tu viens de définir.
-                  </>
-                ) : (
-                  <>
-                    On t&apos;a envoyé un lien de connexion à{" "}
-                    <strong className="text-foreground">{email}</strong>.
-                    Clique sur le lien dans l&apos;email pour accéder à ton dashboard.
-                    Pense à vérifier tes spams.
-                  </>
-                )}
+                {password
+                  ? interpolate(t.signup.success_with_password, { email })
+                  : interpolate(t.signup.success_with_magic_link, { email })}
               </div>
               <Button asChild className="w-full">
                 <Link href="/login">
-                  Aller à la connexion
+                  {t.signup.go_to_login}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -193,24 +179,19 @@ export default function SignupClient() {
           <h1 className="text-4xl font-bold text-foreground">
             Tipote<span className="text-primary">™</span>
           </h1>
-          <p className="text-muted-foreground mt-2">Espace affiliation</p>
+          <p className="text-muted-foreground mt-2">{t.layout.space_subtitle}</p>
         </div>
 
         <Card className="border-border shadow-lg">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-bold">
-              Active ton espace affilié
-            </CardTitle>
-            <CardDescription>
-              Vérifie tes infos pré-remplies depuis Systeme.io. Tu peux corriger
-              si besoin.
-            </CardDescription>
+            <CardTitle className="text-2xl font-bold">{t.signup.title}</CardTitle>
+            <CardDescription>{t.signup.description}</CardDescription>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t.signup.label_email}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -219,20 +200,18 @@ export default function SignupClient() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="ton-email@example.com"
+                    placeholder={t.login.placeholder_email}
                     disabled={status === "loading"}
                     className="pl-10"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Celui de ton compte Systeme.io.
-                </p>
+                <p className="text-xs text-muted-foreground">{t.signup.label_email_hint}</p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="display_name">
-                  Prénom ou nom à afficher{" "}
-                  <span className="text-muted-foreground font-normal">(optionnel)</span>
+                  {t.signup.label_display_name}{" "}
+                  <span className="text-muted-foreground font-normal">({t.common.optional})</span>
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -241,7 +220,7 @@ export default function SignupClient() {
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Comment on t'appelle ?"
+                    placeholder={t.signup.placeholder_display_name}
                     disabled={status === "loading"}
                     className="pl-10"
                   />
@@ -249,7 +228,7 @@ export default function SignupClient() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sa">Identifiant affilié Systeme.io</Label>
+                <Label htmlFor="sa">{t.signup.label_sa}</Label>
                 <div className="relative">
                   <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -263,14 +242,11 @@ export default function SignupClient() {
                     className="pl-10 font-mono text-sm"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Tu le trouves dans Systeme.io → dashboard affiliation → ton
-                  lien (la partie après <code>?sa=</code>).
-                </p>
+                <p className="text-xs text-muted-foreground">{t.signup.label_sa_hint}</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="locale">Langue</Label>
+                <Label htmlFor="locale">{t.signup.label_locale}</Label>
                 <Select
                   value={locale}
                   onValueChange={setLocale}
@@ -288,15 +264,13 @@ export default function SignupClient() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  On t&apos;enverra les ressources promo dans cette langue.
-                </p>
+                <p className="text-xs text-muted-foreground">{t.signup.label_locale_hint}</p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-border">
                 <Label htmlFor="password">
-                  Mot de passe{" "}
-                  <span className="text-muted-foreground font-normal">(optionnel)</span>
+                  {t.signup.label_password}{" "}
+                  <span className="text-muted-foreground font-normal">({t.common.optional})</span>
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -305,7 +279,7 @@ export default function SignupClient() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 8 caractères"
+                    placeholder={t.signup.placeholder_password}
                     disabled={status === "loading"}
                     className="pl-10 pr-10"
                     autoComplete="new-password"
@@ -314,14 +288,12 @@ export default function SignupClient() {
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={showPassword ? "Masquer" : "Afficher"}
+                    aria-label={showPassword ? t.login.hide_password : t.login.show_password}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Optionnel — sinon tu te connecteras avec un lien envoyé par email.
-                </p>
+                <p className="text-xs text-muted-foreground">{t.signup.label_password_hint}</p>
               </div>
 
               {errorMsg && (
@@ -336,10 +308,10 @@ export default function SignupClient() {
                 disabled={status === "loading" || !email || !sa}
               >
                 {status === "loading" ? (
-                  "Activation…"
+                  t.signup.activating
                 ) : (
                   <>
-                    Activer mon espace
+                    {t.signup.activate}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
@@ -347,9 +319,7 @@ export default function SignupClient() {
             </form>
 
             <p className="text-xs text-muted-foreground mt-6 text-center leading-relaxed">
-              Tu reçois déjà un email à chaque commission. Cet espace te donne en
-              plus : ressources promos, stats, paliers de commission, et accès
-              démo aux outils Tipote &amp; Tiquiz.
+              {t.signup.info_bottom}
             </p>
           </CardContent>
         </Card>

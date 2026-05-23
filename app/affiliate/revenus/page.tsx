@@ -20,6 +20,8 @@ import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { AffiliateNav } from "../components/AffiliateNav";
 import { RevenueCalculator } from "./RevenueCalculator";
+import { getDict, interpolate, normaliseLocale } from "../i18n";
+import type { AffiliateDict } from "../i18n/types";
 
 export const dynamic = "force-dynamic";
 
@@ -100,20 +102,25 @@ function maskEmail(email: string): string {
   return `${visibleLocal}***@${domain}`;
 }
 
-const STATUS_CONFIG: Record<
+function statusConfig(t: AffiliateDict): Record<
   Commission["status"],
   { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }
-> = {
-  pending: { label: "En attente", variant: "secondary", icon: Clock },
-  approved: { label: "Approuvée", variant: "default", icon: CheckCircle2 },
-  paid: { label: "Payée", variant: "default", icon: CheckCircle2 },
-  cancelled: { label: "Annulée", variant: "outline", icon: XCircle },
-  rejected: { label: "Rejetée", variant: "destructive", icon: XCircle },
-};
+> {
+  return {
+    pending: { label: t.revenus.status_pending, variant: "secondary", icon: Clock },
+    approved: { label: t.revenus.status_approved, variant: "default", icon: CheckCircle2 },
+    paid: { label: t.revenus.status_paid, variant: "default", icon: CheckCircle2 },
+    cancelled: { label: t.revenus.status_cancelled, variant: "outline", icon: XCircle },
+    rejected: { label: t.revenus.status_rejected, variant: "destructive", icon: XCircle },
+  };
+}
 
 export default async function RevenusPage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
+
+  const t = getDict(normaliseLocale(session.locale));
+  const sConfig = statusConfig(t);
 
   const [commissions, totals] = await Promise.all([
     fetchCommissions(session.sa),
@@ -126,31 +133,29 @@ export default async function RevenusPage() {
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Revenus</h1>
-          <p className="text-muted-foreground mt-1">
-            Suivi de tes commissions sur Tipote &amp; Tiquiz.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t.revenus.page_title}</h1>
+          <p className="text-muted-foreground mt-1">{t.revenus.page_subtitle}</p>
         </div>
 
         <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <TotalCard
-            label="Gains totaux"
+            label={t.revenus.total_gains}
             value={eur(totals.total_commission_cents)}
             icon={Wallet}
             highlight
           />
           <TotalCard
-            label="En attente"
+            label={t.revenus.pending}
             value={eur(totals.pending_commission_cents)}
             icon={Clock}
           />
           <TotalCard
-            label="Approuvées"
+            label={t.revenus.approved}
             value={eur(totals.approved_commission_cents)}
             icon={Calendar}
           />
           <TotalCard
-            label="Déjà payées"
+            label={t.revenus.paid}
             value={eur(totals.paid_commission_cents)}
             icon={CheckCircle2}
           />
@@ -158,40 +163,34 @@ export default async function RevenusPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Historique des commissions</CardTitle>
+            <CardTitle className="text-lg">{t.revenus.history_title}</CardTitle>
             <CardDescription>
-              Les {commissions.length} dernières commissions associées à ton compte. Une commission
-              passe en <strong>Approuvée</strong> après 30 jours (sans annulation client) puis en{" "}
-              <strong>Payée</strong> le 10 de chaque mois selon ton seuil.
+              {interpolate(t.revenus.history_description, { count: commissions.length })}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {commissions.length === 0 ? (
               <div className="py-12 text-center">
                 <Wallet className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  Aucune commission pour le moment.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Partage ton lien pour commencer à toucher des commissions !
-                </p>
+                <p className="text-sm text-muted-foreground">{t.revenus.empty_title}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t.revenus.empty_subtitle}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Produit</TableHead>
-                      <TableHead>Client</TableHead>
-                      <TableHead className="text-right">Vente</TableHead>
-                      <TableHead className="text-right">Commission</TableHead>
-                      <TableHead>Statut</TableHead>
+                      <TableHead>{t.revenus.th_date}</TableHead>
+                      <TableHead>{t.revenus.th_product}</TableHead>
+                      <TableHead>{t.revenus.th_customer}</TableHead>
+                      <TableHead className="text-right">{t.revenus.th_sale}</TableHead>
+                      <TableHead className="text-right">{t.revenus.th_commission}</TableHead>
+                      <TableHead>{t.revenus.th_status}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {commissions.map((c) => {
-                      const sc = STATUS_CONFIG[c.status];
+                      const sc = sConfig[c.status];
                       const Icon = sc.icon;
                       return (
                         <TableRow key={c.id}>
@@ -238,11 +237,9 @@ export default async function RevenusPage() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              Combien tu peux gagner
+              {t.revenus.calculator_title}
             </CardTitle>
-            <CardDescription>
-              Estimation basée sur les taux de conversion moyens du programme. À adapter à ton audience.
-            </CardDescription>
+            <CardDescription>{t.revenus.calculator_subtitle}</CardDescription>
           </CardHeader>
           <CardContent>
             <RevenueCalculator currentTier={totals.total_sales} />

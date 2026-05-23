@@ -3,6 +3,8 @@
 import { useState, useMemo } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { useDict } from "../i18n/context";
+import { interpolate } from "../i18n";
 
 // Mêmes paliers que lib/affiliate/attribution.ts
 const TIERS = [
@@ -34,6 +36,7 @@ function eur(value: number): string {
 }
 
 export function RevenueCalculator({ currentTier }: { currentTier: number }) {
+  const t = useDict();
   const [visitors, setVisitors] = useState(200);
   const [conversionRate, setConversionRate] = useState(3); // %
 
@@ -54,7 +57,7 @@ export function RevenueCalculator({ currentTier }: { currentTier: number }) {
     <div className="space-y-6">
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium">Visiteurs envoyés par mois</label>
+          <label className="text-sm font-medium">{t.revenus.calculator_visitors}</label>
           <span className="text-lg font-bold">{visitors.toLocaleString("fr-FR")}</span>
         </div>
         <Slider
@@ -82,7 +85,7 @@ export function RevenueCalculator({ currentTier }: { currentTier: number }) {
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium">Taux de conversion (%)</label>
+          <label className="text-sm font-medium">{t.revenus.calculator_conversion_rate}</label>
           <span className="text-lg font-bold">{conversionRate}%</span>
         </div>
         <Slider
@@ -94,22 +97,22 @@ export function RevenueCalculator({ currentTier }: { currentTier: number }) {
           className="my-2"
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Moyenne observée sur le programme : 2 à 4 %. Les audiences chaudes
-          (newsletter engagée, réseaux nichés) montent à 5-8 %.
+          {t.revenus.calculator_rate_hint}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 border-t border-border">
-        <Stat label="Ventes estimées / mois" value={projected.sales.toLocaleString("fr-FR")} />
-        <Stat label="Revenus estimés / mois" value={eur(projected.revenueMonth)} highlight />
-        <Stat label="Revenus estimés / an" value={eur(projected.revenueYear)} success />
+        <Stat label={t.revenus.calculator_sales_per_month} value={projected.sales.toLocaleString("fr-FR")} />
+        <Stat label={t.revenus.calculator_revenue_per_month} value={eur(projected.revenueMonth)} highlight />
+        <Stat label={t.revenus.calculator_revenue_per_year} value={eur(projected.revenueYear)} success />
       </div>
 
       <p className="text-xs text-muted-foreground text-center">
-        Calcul basé sur panier moyen <strong className="text-foreground">{AVG_CART_EUR} €</strong>,
-        avec taux de commission de <strong className="text-foreground">{Math.round(projected.rate * 100)}%</strong>{" "}
-        (palier en fonction de tes {currentTier} ventes cumulées + ventes projetées).
-        Les résultats réels peuvent varier.
+        {interpolate(t.revenus.calculator_disclaimer, {
+          avgCart: `${AVG_CART_EUR} €`,
+          rate: Math.round(projected.rate * 100),
+          totalSales: currentTier,
+        })}
       </p>
     </div>
   );
