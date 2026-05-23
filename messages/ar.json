@@ -2985,7 +2985,11 @@
     "avatarHint": "PNG أو JPG أو GIF. بحد أقصى 10 ميغابايت. يُفضل الشكل المربع.",
     "avatarFormatHint": "تنسيق غير مدعوم. استخدم PNG أو JPG أو GIF.",
     "avatarTooLarge": "الملف كبير جدًا (الحد الأقصى 10 ميغابايت).",
-    "avatarUploadError": "فشل تحميل الصورة."
+    "avatarUploadError": "فشل تحميل الصورة.",
+    "addBlockLabel": "إضافة كتلة",
+    "blockHide": "إخفاء هذه الكتلة",
+    "blockShow": "إظهار هذه الكتلة",
+    "blockDelete": "حذف هذه الكتلة"
   },
   "pages": {
     "headerTitle": "صفحاتي",

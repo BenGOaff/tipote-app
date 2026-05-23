@@ -2985,7 +2985,11 @@
     "avatarHint": "PNG, JPG o GIF. Máx 10 MB. Se recomienda imagen cuadrada.",
     "avatarFormatHint": "Formato no compatible. Usa PNG, JPG o GIF.",
     "avatarTooLarge": "Archivo demasiado grande (máx 10 MB).",
-    "avatarUploadError": "Error al subir la foto."
+    "avatarUploadError": "Error al subir la foto.",
+    "addBlockLabel": "Añadir un bloque",
+    "blockHide": "Ocultar este bloque",
+    "blockShow": "Mostrar este bloque",
+    "blockDelete": "Eliminar este bloque"
   },
   "pages": {
     "headerTitle": "Mis Páginas",
