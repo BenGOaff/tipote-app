@@ -21,9 +21,10 @@
   pixel client (résiste aux ad-blockers). Pas demandé pour l'instant.
 
 ### Traductions ES/IT/PT/AR du dashboard affilié
-Actuellement les 4 locales sont des stubs qui re-exportent EN. Quand on aura des
-affiliés de ces langues, traduire proprement les 7 dicts (`app/affiliate/i18n/`).
-~3-4h. Pattern identique à la traduction EN existante.
+✅ Fait (24/05) : les 4 locales sont désormais des traductions complètes
+et naturelles (plus des stubs EN). Tous les placeholders préservés.
+Typecheck garantit la complétude (AffiliateDict). AR en RTL (le layout
+applique dir="rtl" automatiquement).
 
 ### Classement top 10 anonymisé
 Dernière brique gamification (style "ff-***" comme FunnelForge). Pas urgent
