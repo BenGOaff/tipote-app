@@ -129,6 +129,9 @@ const UpdateSchema = z.object({
   default_ga4_measurement_id: z.string().trim().max(200).nullable().optional(),
   default_google_ads_conversion_id: z.string().trim().max(200).nullable().optional(),
   default_google_ads_conversion_label: z.string().trim().max(200).nullable().optional(),
+  // Token Conversions API Meta (secret server-side) — apparié au pixel
+  // par défaut pour l'envoi des Lead côté serveur (dédup avec le pixel).
+  default_meta_capi_token: z.string().trim().max(500).nullable().optional(),
 
   // Nom de marque affiché à la place de "Tipote" dans og:site_name + le
   // <title> sur les routes publiques servies via un custom domain
