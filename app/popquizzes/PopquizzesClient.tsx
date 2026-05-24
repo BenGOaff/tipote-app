@@ -108,7 +108,7 @@ export function PopquizzesClient({
   }
 
   return (
-    <>
+    <div className="max-w-[1200px] mx-auto w-full space-y-5">
       {/* Bannière gradient — même pattern visuel que /quizzes pour la
           cohérence cross-list. CTA primaire à droite. */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
@@ -302,6 +302,6 @@ export function PopquizzesClient({
             : ""
         }
       />
-    </>
+    </div>
   );
 }

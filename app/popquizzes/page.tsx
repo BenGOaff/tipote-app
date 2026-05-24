@@ -81,7 +81,7 @@ export default async function PopquizzesListPage() {
   const isPaid = isPaidPlan(plan);
 
   return (
-    <AppShell userEmail={user.email ?? ""} headerTitle="Mes Popquiz">
+    <AppShell userEmail={user.email ?? ""} headerTitle="Mes Popquiz" contentClassName="flex-1 p-4 sm:p-5 lg:p-6">
       <PopquizzesClient
         popquizzes={popquizzes}
         isPaid={isPaid}
