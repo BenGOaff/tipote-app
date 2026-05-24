@@ -222,8 +222,13 @@ const tus = new Server({
     if (!c) throw httpError(401, "Missing claims");
     return relPathFromClaims(c);
   },
-  generateUrl(_req, { proto, host, baseUrl, path: p, id }) {
-    return `${proto}://${host}${baseUrl}${p}/${encodeURIComponent(id)}`;
+  generateUrl(_req, { proto, host, path: p, id }) {
+    // NB: on n'utilise PAS `baseUrl` ici — selon la version de
+    // @tus/server installée il peut être `undefined`, ce qui produisait
+    // des URLs `https://<host>undefined/files/...` (ERR_NAME_NOT_RESOLVED
+    // → "failed to resume upload"). proto+host+path suffisent et sont
+    // toujours renseignés (via respectForwardedHeaders + Caddy).
+    return `${proto}://${host}${p}/${encodeURIComponent(id)}`;
   },
   getFileIdFromRequest(req) {
     const u = req.url || "";
