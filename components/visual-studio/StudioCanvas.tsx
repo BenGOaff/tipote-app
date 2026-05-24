@@ -1,35 +1,30 @@
 "use client";
 
-// Canvas Konva du Studio visuels. Chargé UNIQUEMENT côté client
-// (next/dynamic ssr:false depuis ImageStudio) car Konva touche `window`.
+// Canvas Fabric.js du Studio visuels — moteur d'édition.
 //
-// WYSIWYG : on édite directement sur le visuel. Le canvas gère la
-// sélection (clic), l'entrée en édition (double-clic) et le déplacement
-// (drag) des calques texte, et REMONTE la position écran de l'élément
-// sélectionné. La barre d'outils flottante + le champ d'édition inline
-// sont rendus en HTML par ImageStudio, ancrés sur cette position.
+// Chargé UNIQUEMENT côté client (next/dynamic ssr:false) : Fabric touche
+// le DOM/canvas et son package interdit l'import côté Node (exports.node
+// = null). L'édition de texte est NATIVE (caret + sélection dans le
+// canvas) → on peut styliser une PARTIE du texte (un mot en gras/couleur)
+// via setSelectionStyles. C'est tout l'intérêt de Fabric vs Konva ici.
 //
-// Échelle : Stage = taille d'AFFICHAGE (fournie par le parent via
-// fitDisplay), Layer scalé, calques en coords de RENDU (1080×…). Export
-// pleine résolution via pixelRatio = renderWidth/displayWidth.
+// Repère : on travaille en pixels d'AFFICHAGE (pas de zoom viewport, pour
+// que getBoundingRect donne directement la position écran de la barre
+// flottante). L'export applique multiplier = renderWidth/displayWidth pour
+// un PNG pleine résolution.
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Stage, Layer, Rect, Text, Image as KonvaImage } from "react-konva";
-import type Konva from "konva";
+import { useEffect, useRef } from "react";
+import { Canvas, Textbox, Rect, FabricImage, Gradient } from "fabric";
+import type { FabricObject } from "fabric";
+import { fontStackFor } from "@/lib/visualStudio/presets";
 import type {
   BackgroundSpec,
   BrandKit,
   StudioFormat,
-  TextLayer,
   TextLayerId,
 } from "@/lib/visualStudio/types";
 
-export interface StudioCanvasHandle {
-  /** Exporte le visuel courant en PNG pleine résolution (renderWidth×renderHeight). */
-  toBlob: () => Promise<Blob>;
-}
-
-/** Rectangle en pixels d'AFFICHAGE, relatif au coin haut-gauche du Stage. */
+/** Rectangle en pixels d'AFFICHAGE, relatif au coin haut-gauche du canvas. */
 export interface ScreenRect {
   left: number;
   top: number;
@@ -37,234 +32,416 @@ export interface ScreenRect {
   height: number;
 }
 
+/** État du texte sélectionné, remonté pour que la barre flottante le reflète. */
+export interface SelectionInfo {
+  rect: ScreenRect;
+  bold: boolean;
+  fill: string;
+  fontFamily: string;
+  align: "left" | "center" | "right";
+  isEditing: boolean;
+}
+
+/** Patch de style appliqué à la sélection courante (ou tout l'objet). */
+export interface StylePatch {
+  toggleBold?: boolean;
+  fontFamily?: string;
+  fill?: string;
+  align?: "left" | "center" | "right";
+  fontDelta?: number;
+}
+
+export interface StudioCanvasHandle {
+  toBlob: () => Promise<Blob>;
+  /** Applique un style. `range` force une plage (mot sélectionné) même si
+   *  Fabric a quitté le mode édition (clic sur la barre HTML). */
+  applyStyle: (patch: StylePatch, range?: { start: number; end: number } | null) => void;
+  /** Plage actuellement sélectionnée dans le texte en édition, sinon null. */
+  getSelectionRange: () => { start: number; end: number } | null;
+  enterEdit: () => void;
+  deleteActive: () => void;
+  addText: () => void;
+}
+
 interface StudioCanvasProps {
   format: StudioFormat;
   displayWidth: number;
   displayHeight: number;
   background: BackgroundSpec;
-  layers: TextLayer[];
   brand: BrandKit;
   showLogo: boolean;
-  selectedId: TextLayerId | null;
-  editingId: TextLayerId | null;
-  onSelect: (id: TextLayerId | null) => void;
-  onRequestEdit: (id: TextLayerId) => void;
-  /** Position écran du calque sélectionné (null = rien de sélectionné). */
-  onSelectedRect: (rect: ScreenRect | null) => void;
-  onLayerMove: (id: TextLayerId, xFrac: number, yFrac: number) => void;
-  /**
-   * Expose la poignée d'export. Callback plutôt que ref : react-konva est
-   * chargé via next/dynamic(ssr:false) et le forward-ref ne traverse pas
-   * le wrapper dynamic de façon fiable.
-   */
+  initialText?: Partial<Record<TextLayerId, string>>;
+  onSelectionChange: (info: SelectionInfo | null) => void;
   onReady?: (handle: StudioCanvasHandle) => void;
 }
 
-function useHtmlImage(src?: string | null): HTMLImageElement | null {
-  // On stocke {src, img} et on DÉRIVE le retour : pas de setState synchrone
-  // dans l'effet (le setState n'a lieu que dans le callback `load`).
-  const [loaded, setLoaded] = useState<{ src: string; img: HTMLImageElement } | null>(null);
-  useEffect(() => {
-    if (!src) return;
-    const image = new window.Image();
-    // Indispensable pour exporter le canvas sans le "tainter" quand le
-    // fond/logo vient d'une autre origine (videos.tipote.com expose ACAO *).
-    image.crossOrigin = "anonymous";
-    const onLoad = () => setLoaded({ src, img: image });
-    image.addEventListener("load", onLoad);
-    image.src = src;
-    return () => image.removeEventListener("load", onLoad);
-  }, [src]);
-  return src && loaded?.src === src ? loaded.img : null;
-}
-
-/** Couvre la zone (w×h) en gardant le ratio de l'image (object-fit: cover). */
-function coverRect(
-  imgW: number,
-  imgH: number,
-  boxW: number,
-  boxH: number,
-): { x: number; y: number; width: number; height: number } {
-  if (!imgW || !imgH) return { x: 0, y: 0, width: boxW, height: boxH };
-  const scale = Math.max(boxW / imgW, boxH / imgH);
-  const width = imgW * scale;
-  const height = imgH * scale;
-  return { x: (boxW - width) / 2, y: (boxH - height) / 2, width, height };
-}
+const isBoldWeight = (w: unknown) => w === "bold" || w === 700 || w === "700";
 
 export function StudioCanvas({
   format,
   displayWidth,
   displayHeight,
   background,
-  layers,
   brand,
   showLogo,
-  selectedId,
-  editingId,
-  onSelect,
-  onRequestEdit,
-  onSelectedRect,
-  onLayerMove,
+  initialText,
+  onSelectionChange,
   onReady,
 }: StudioCanvasProps) {
-  const stageRef = useRef<Konva.Stage>(null);
-  const layerRef = useRef<Konva.Layer>(null);
-  const nodesRef = useRef<Map<TextLayerId, Konva.Text>>(new Map());
-  const lastRectKey = useRef<string>("");
+  const elRef = useRef<HTMLCanvasElement>(null);
+  const fcRef = useRef<Canvas | null>(null);
+  const bgRef = useRef<FabricObject | null>(null);
+  const logoRef = useRef<FabricObject | null>(null);
 
-  const scale = displayWidth / format.width;
-  const bgImage = useHtmlImage(background.mode === "image" ? background.imageUrl : null);
-  const logoImage = useHtmlImage(showLogo ? brand.logoUrl : null);
+  // Valeurs courantes lues par les méthodes du handle (créé une fois).
+  const dimsRef = useRef({ w: displayWidth, h: displayHeight });
+  const formatRef = useRef(format);
+  const prevDimsRef = useRef({ w: displayWidth, h: displayHeight });
+  dimsRef.current = { w: displayWidth, h: displayHeight };
+  formatRef.current = format;
 
-  // Remonte la position écran du calque (dé-doublonnée pour éviter les
-  // boucles de rendu). onSelectedRect est un callback parent, pas un
-  // setState local → conforme à react-hooks/set-state-in-effect.
-  const reportRect = useCallback(
-    (id: TextLayerId | null) => {
-      const node = id ? nodesRef.current.get(id) : null;
-      const stage = stageRef.current;
-      if (!node || !stage) {
-        if (lastRectKey.current !== "null") {
-          lastRectKey.current = "null";
-          onSelectedRect(null);
-        }
+  const selCbRef = useRef(onSelectionChange);
+  selCbRef.current = onSelectionChange;
+
+  // ── Création du canvas (une seule fois) ───────────────────────
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+
+    const canvas = new Canvas(el, {
+      width: dimsRef.current.w,
+      height: dimsRef.current.h,
+      selection: false,
+      preserveObjectStacking: true,
+    });
+    fcRef.current = canvas;
+
+    const reportSelection = () => {
+      const obj = canvas.getActiveObject() as Textbox | null;
+      if (!obj || (obj as { layerId?: string }).layerId === undefined) {
+        selCbRef.current(null);
         return;
       }
-      const r = node.getClientRect({ relativeTo: stage });
-      const key = `${r.x}|${r.y}|${r.width}|${r.height}`;
-      if (key !== lastRectKey.current) {
-        lastRectKey.current = key;
-        onSelectedRect({ left: r.x, top: r.y, width: r.width, height: r.height });
+      const r = obj.getBoundingRect();
+      const editingRange =
+        !!obj.isEditing && obj.selectionStart !== obj.selectionEnd;
+      let bold: boolean;
+      let fill: string;
+      let fontFamily: string;
+      if (editingRange) {
+        const styles = obj.getSelectionStyles(obj.selectionStart, obj.selectionEnd, true) as Array<
+          Record<string, unknown>
+        >;
+        const first = styles[0] ?? {};
+        bold = isBoldWeight(first.fontWeight ?? obj.fontWeight);
+        fill = String(first.fill ?? obj.fill);
+        fontFamily = String(first.fontFamily ?? obj.fontFamily);
+      } else {
+        bold = isBoldWeight(obj.fontWeight);
+        fill = String(obj.fill);
+        fontFamily = String(obj.fontFamily);
       }
-    },
-    [onSelectedRect],
-  );
+      selCbRef.current({
+        rect: { left: r.left, top: r.top, width: r.width, height: r.height },
+        bold,
+        fill,
+        fontFamily,
+        align: (obj.textAlign as SelectionInfo["align"]) ?? "center",
+        isEditing: !!obj.isEditing,
+      });
+    };
 
-  // Recalcule la position quand la sélection, les calques, le format ou
-  // l'échelle changent (ex: après changement de taille de police).
+    canvas.on("selection:created", reportSelection);
+    canvas.on("selection:updated", reportSelection);
+    canvas.on("selection:cleared", () => selCbRef.current(null));
+    canvas.on("object:moving", reportSelection);
+    canvas.on("object:scaling", reportSelection);
+    canvas.on("object:modified", reportSelection);
+    canvas.on("text:selection:changed", reportSelection);
+    canvas.on("text:changed", reportSelection);
+    canvas.on("text:editing:entered", reportSelection);
+    canvas.on("text:editing:exited", reportSelection);
+
+    // Calques texte initiaux (3) — en coords d'affichage.
+    const W = dimsRef.current.w;
+    const H = dimsRef.current.h;
+    const mk = (
+      id: TextLayerId,
+      text: string,
+      xF: number,
+      yF: number,
+      wF: number,
+      sF: number,
+      bold: boolean,
+      fill: string,
+      opacity: number,
+    ) => {
+      const tb = new Textbox(text, {
+        left: xF * W,
+        top: yF * H,
+        width: wF * W,
+        fontSize: sF * W,
+        fontFamily: fontStackFor(brand.font),
+        fontWeight: bold ? "bold" : "normal",
+        fill,
+        opacity,
+        textAlign: "center",
+        lineHeight: 1.18,
+        editable: true,
+        objectCaching: false,
+      });
+      (tb as { layerId?: string }).layerId = id;
+      // Texte : on garde seulement les poignées latérales (largeur),
+      // pas le scaling par coin (qui déformerait), pas la rotation.
+      tb.setControlsVisibility({
+        tl: false, tr: false, bl: false, br: false, mt: false, mb: false, mtr: false,
+      });
+      return tb;
+    };
+
+    const headline = mk("headline", initialText?.headline ?? "Ton accroche ici", 0.08, 0.1, 0.84, 0.082, true, brand.textColor, 1);
+    const subline = mk("subline", initialText?.subline ?? "Un sous-titre court qui appuie le bénéfice.", 0.1, 0.34, 0.8, 0.04, false, brand.textColor, 0.82);
+    const cta = mk("cta", initialText?.cta ?? "Découvre maintenant →", 0.1, 0.84, 0.8, 0.05, true, brand.primaryColor, 1);
+    canvas.add(headline, subline, cta);
+    canvas.renderAll();
+
+    const handle: StudioCanvasHandle = {
+      async toBlob() {
+        const c = fcRef.current;
+        if (!c) throw new Error("Canvas non prêt");
+        if (c.getActiveObject()) c.discardActiveObject();
+        c.renderAll();
+        const multiplier = formatRef.current.width / dimsRef.current.w;
+        const dataUrl = c.toDataURL({ format: "png", multiplier });
+        const res = await fetch(dataUrl);
+        return await res.blob();
+      },
+      getSelectionRange() {
+        const c = fcRef.current;
+        const obj = c?.getActiveObject() as Textbox | null;
+        if (!obj || !obj.isEditing) return null;
+        if (obj.selectionStart === obj.selectionEnd) return null;
+        return { start: obj.selectionStart, end: obj.selectionEnd };
+      },
+      applyStyle(patch, range) {
+        const c = fcRef.current;
+        const obj = c?.getActiveObject() as Textbox | null;
+        if (!c || !obj) return;
+        const useRange = range ?? (obj.isEditing && obj.selectionStart !== obj.selectionEnd
+          ? { start: obj.selectionStart, end: obj.selectionEnd }
+          : null);
+
+        if (patch.fontFamily !== undefined) {
+          if (useRange) obj.setSelectionStyles({ fontFamily: patch.fontFamily }, useRange.start, useRange.end);
+          else obj.set({ fontFamily: patch.fontFamily });
+        }
+        if (patch.fill !== undefined) {
+          if (useRange) obj.setSelectionStyles({ fill: patch.fill }, useRange.start, useRange.end);
+          else obj.set({ fill: patch.fill });
+        }
+        if (patch.toggleBold) {
+          if (useRange) {
+            const styles = obj.getSelectionStyles(useRange.start, useRange.end, true) as Array<Record<string, unknown>>;
+            const allBold = styles.length > 0 && styles.every((s) => isBoldWeight(s.fontWeight ?? obj.fontWeight));
+            obj.setSelectionStyles({ fontWeight: allBold ? "normal" : "bold" }, useRange.start, useRange.end);
+          } else {
+            obj.set({ fontWeight: isBoldWeight(obj.fontWeight) ? "normal" : "bold" });
+          }
+        }
+        if (patch.align) obj.set({ textAlign: patch.align });
+        if (patch.fontDelta) {
+          obj.set({ fontSize: Math.max(8, (obj.fontSize ?? 20) + patch.fontDelta) });
+        }
+        c.requestRenderAll();
+        reportSelection();
+      },
+      enterEdit() {
+        const c = fcRef.current;
+        const obj = c?.getActiveObject() as Textbox | null;
+        if (!c || !obj) return;
+        obj.enterEditing();
+        obj.selectAll();
+        c.requestRenderAll();
+        reportSelection();
+      },
+      deleteActive() {
+        const c = fcRef.current;
+        const obj = c?.getActiveObject();
+        if (!c || !obj) return;
+        c.remove(obj);
+        c.discardActiveObject();
+        c.requestRenderAll();
+        selCbRef.current(null);
+      },
+      addText() {
+        const c = fcRef.current;
+        if (!c) return;
+        const W2 = dimsRef.current.w;
+        const tb = new Textbox("Nouveau texte", {
+          left: W2 * 0.12,
+          top: dimsRef.current.h * 0.45,
+          width: W2 * 0.76,
+          fontSize: W2 * 0.05,
+          fontFamily: fontStackFor(brand.font),
+          fill: brand.textColor,
+          textAlign: "center",
+          lineHeight: 1.18,
+          editable: true,
+          objectCaching: false,
+        });
+        (tb as { layerId?: string }).layerId = `extra-${Date.now()}`;
+        tb.setControlsVisibility({ tl: false, tr: false, bl: false, br: false, mt: false, mb: false, mtr: false });
+        c.add(tb);
+        c.setActiveObject(tb);
+        c.requestRenderAll();
+        reportSelection();
+      },
+    };
+    onReady?.(handle);
+
+    return () => {
+      canvas.dispose();
+      fcRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Dimensions / changement de format : rescale les calques ───
   useEffect(() => {
-    reportRect(selectedId);
-  }, [selectedId, layers, format, displayWidth, editingId, reportRect]);
+    const c = fcRef.current;
+    if (!c) return;
+    const prev = prevDimsRef.current;
+    const rx = displayWidth / prev.w;
+    const ry = displayHeight / prev.h;
+    c.setDimensions({ width: displayWidth, height: displayHeight });
+    if (rx !== 1 || ry !== 1) {
+      c.getObjects().forEach((o) => {
+        if ((o as { layerId?: string }).layerId === undefined) return;
+        o.set({
+          left: (o.left ?? 0) * rx,
+          top: (o.top ?? 0) * ry,
+          width: (o.width ?? 0) * rx,
+          fontSize: ((o as Textbox).fontSize ?? 20) * rx,
+        });
+        o.setCoords();
+      });
+    }
+    prevDimsRef.current = { w: displayWidth, h: displayHeight };
+    c.requestRenderAll();
+  }, [displayWidth, displayHeight]);
 
-  const exportPng = useCallback(async (): Promise<Blob> => {
-    const stage = stageRef.current;
-    if (!stage) throw new Error("Canvas non prêt");
-    const canvas = stage.toCanvas({ pixelRatio: format.width / displayWidth });
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("Export PNG échoué"))),
-        "image/png",
-      );
-    });
-  }, [format.width, displayWidth]);
-
+  // ── Fond (uni / dégradé / image) ──────────────────────────────
   useEffect(() => {
-    onReady?.({ toBlob: exportPng });
-  }, [onReady, exportPng]);
+    const c = fcRef.current;
+    if (!c) return;
+    let cancelled = false;
 
-  // Si une vraie webfont se charge après le 1er rendu, on force un redraw
-  // pour que Konva recalcule les métriques (sinon rendu avec le fallback).
+    if (bgRef.current) {
+      c.remove(bgRef.current);
+      bgRef.current = null;
+    }
+
+    const place = (obj: FabricObject) => {
+      if (cancelled) return;
+      (obj as { layerId?: string }).layerId = undefined;
+      obj.set({ selectable: false, evented: false });
+      bgRef.current = obj;
+      c.add(obj);
+      c.sendObjectToBack(obj);
+      c.requestRenderAll();
+    };
+
+    if (background.mode === "image" && background.imageUrl) {
+      FabricImage.fromURL(background.imageUrl, { crossOrigin: "anonymous" })
+        .then((img) => {
+          if (cancelled || !img.width || !img.height) return;
+          const scale = Math.max(displayWidth / img.width, displayHeight / img.height);
+          img.set({
+            scaleX: scale,
+            scaleY: scale,
+            left: (displayWidth - img.width * scale) / 2,
+            top: (displayHeight - img.height * scale) / 2,
+          });
+          place(img);
+        })
+        .catch(() => {});
+    } else {
+      const rect = new Rect({ left: 0, top: 0, width: displayWidth, height: displayHeight });
+      if (background.mode === "gradient") {
+        rect.set(
+          "fill",
+          new Gradient({
+            type: "linear",
+            coords: { x1: 0, y1: 0, x2: 0, y2: displayHeight },
+            colorStops: [
+              { offset: 0, color: background.color },
+              { offset: 1, color: background.color2 || background.color },
+            ],
+          }),
+        );
+      } else {
+        rect.set("fill", background.color);
+      }
+      place(rect);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [background, displayWidth, displayHeight]);
+
+  // ── Logo ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const c = fcRef.current;
+    if (!c) return;
+    let cancelled = false;
+
+    if (logoRef.current) {
+      c.remove(logoRef.current);
+      logoRef.current = null;
+    }
+    if (!showLogo || !brand.logoUrl) {
+      c.requestRenderAll();
+      return;
+    }
+
+    FabricImage.fromURL(brand.logoUrl, { crossOrigin: "anonymous" })
+      .then((img) => {
+        if (cancelled || !img.width) return;
+        const targetW = displayWidth * 0.26;
+        const scale = targetW / img.width;
+        img.set({
+          scaleX: scale,
+          scaleY: scale,
+          left: (displayWidth - targetW) / 2,
+          top: displayHeight * 0.04,
+          selectable: false,
+          evented: false,
+        });
+        (img as { layerId?: string }).layerId = undefined;
+        logoRef.current = img;
+        c.add(img);
+        c.requestRenderAll();
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showLogo, brand.logoUrl, displayWidth, displayHeight]);
+
+  // Redraw quand les webfonts sont prêtes (sinon métriques sur fallback).
   useEffect(() => {
     const fonts = document.fonts;
     if (!fonts?.ready) return;
     let alive = true;
     fonts.ready.then(() => {
-      if (alive) layerRef.current?.draw();
+      if (alive) fcRef.current?.requestRenderAll();
     });
     return () => {
       alive = false;
     };
   }, []);
 
-  const logoW = format.width * 0.26;
-  const logoH = logoImage ? (logoImage.height / logoImage.width) * logoW : 0;
-
-  return (
-    <Stage
-      ref={stageRef}
-      width={displayWidth}
-      height={displayHeight}
-      onMouseDown={(e) => {
-        if (e.target === e.target.getStage()) onSelect(null);
-      }}
-      onTouchStart={(e) => {
-        if (e.target === e.target.getStage()) onSelect(null);
-      }}
-      style={{ borderRadius: 12, overflow: "hidden" }}
-    >
-      <Layer ref={layerRef} scaleX={scale} scaleY={scale}>
-        {/* Fond */}
-        {background.mode === "gradient" ? (
-          <Rect
-            x={0}
-            y={0}
-            width={format.width}
-            height={format.height}
-            fillLinearGradientStartPoint={{ x: 0, y: 0 }}
-            fillLinearGradientEndPoint={{ x: 0, y: format.height }}
-            fillLinearGradientColorStops={[0, background.color, 1, background.color2 || background.color]}
-          />
-        ) : (
-          <Rect x={0} y={0} width={format.width} height={format.height} fill={background.color} />
-        )}
-
-        {background.mode === "image" && bgImage && (
-          <KonvaImage
-            image={bgImage}
-            {...coverRect(bgImage.width, bgImage.height, format.width, format.height)}
-            listening={false}
-          />
-        )}
-
-        {/* Logo */}
-        {showLogo && logoImage && (
-          <KonvaImage
-            image={logoImage}
-            x={(format.width - logoW) / 2}
-            y={format.height * 0.04}
-            width={logoW}
-            height={logoH}
-            listening={false}
-          />
-        )}
-
-        {/* Calques texte — WYSIWYG : sélection / double-clic édition / drag */}
-        {layers
-          .filter((l) => l.enabled && l.text.trim())
-          .map((l) => (
-            <Text
-              key={l.id}
-              ref={(node) => {
-                if (node) nodesRef.current.set(l.id, node);
-                else nodesRef.current.delete(l.id);
-              }}
-              text={l.text}
-              x={l.xFrac * format.width}
-              y={l.yFrac * format.height}
-              width={l.widthFrac * format.width}
-              fontSize={l.fontScale * format.width}
-              fontFamily={l.fontFamily}
-              fontStyle={l.fontStyle}
-              fill={l.fill}
-              opacity={l.opacity}
-              align={l.align}
-              wrap="word"
-              lineHeight={1.18}
-              visible={editingId !== l.id}
-              draggable
-              onClick={() => onSelect(l.id)}
-              onTap={() => onSelect(l.id)}
-              onDblClick={() => onRequestEdit(l.id)}
-              onDblTap={() => onRequestEdit(l.id)}
-              onDragMove={() => reportRect(l.id)}
-              onDragEnd={(e) => {
-                onLayerMove(l.id, e.target.x() / format.width, e.target.y() / format.height);
-                reportRect(l.id);
-              }}
-            />
-          ))}
-      </Layer>
-    </Stage>
-  );
+  return <canvas ref={elRef} />;
 }

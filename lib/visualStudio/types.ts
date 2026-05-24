@@ -45,27 +45,9 @@ export interface BackgroundSpec {
   imageUrl?: string | null;
 }
 
+// Identifiants des 3 calques texte de base (l'IA peut les pré-remplir
+// via `initialText`). Le rendu/édition réel est géré par Fabric.js.
 export type TextLayerId = "headline" | "subline" | "cta";
-
-/**
- * Un calque texte. Les positions/tailles sont stockées en FRACTIONS des
- * dimensions de rendu (0..1) pour rester valides quand on change de format.
- */
-export interface TextLayer {
-  id: TextLayerId;
-  text: string;
-  xFrac: number;
-  yFrac: number;
-  widthFrac: number;
-  /** Taille de police relative à la largeur de rendu (fontSize = fontScale * width). */
-  fontScale: number;
-  fontFamily: string;
-  fontStyle: "normal" | "bold";
-  fill: string;
-  align: "left" | "center" | "right";
-  opacity: number;
-  enabled: boolean;
-}
 
 export interface StudioResult {
   /** URL exploitable par l'hôte (renvoyée par `upload`, sinon object URL local). */

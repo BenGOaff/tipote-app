@@ -5,13 +5,7 @@
 //   4:5  → portrait feed (occupe le max de hauteur en feed mobile)
 //   9:16 → story / reel plein écran
 
-import type {
-  BrandKit,
-  StudioFormat,
-  StudioFormatId,
-  TextLayer,
-  TextLayerId,
-} from "./types";
+import type { BrandKit, StudioFormat, StudioFormatId } from "./types";
 
 export const FORMATS: Record<StudioFormatId, StudioFormat> = {
   "1:1": { id: "1:1", label: "Carré 1:1", width: 1080, height: 1080 },
@@ -94,58 +88,3 @@ export const BRAND_PRESETS = {
     font: "Inter",
   },
 } satisfies Record<string, BrandKit>;
-
-/**
- * Construit les 3 calques texte par défaut, positionnés en fractions
- * (indépendant du format). L'IA pourra remplacer ces textes via initialText.
- */
-export function buildDefaultLayers(
-  brand: BrandKit,
-  initialText?: Partial<Record<TextLayerId, string>>,
-): TextLayer[] {
-  const font = fontStackFor(brand.font);
-  return [
-    {
-      id: "headline",
-      text: initialText?.headline ?? "Ton accroche ici",
-      xFrac: 0.08,
-      yFrac: 0.1,
-      widthFrac: 0.84,
-      fontScale: 0.082,
-      fontFamily: font,
-      fontStyle: "bold",
-      fill: brand.textColor,
-      align: "center",
-      opacity: 1,
-      enabled: true,
-    },
-    {
-      id: "subline",
-      text: initialText?.subline ?? "Un sous-titre court qui appuie le bénéfice.",
-      xFrac: 0.1,
-      yFrac: 0.34,
-      widthFrac: 0.8,
-      fontScale: 0.04,
-      fontFamily: font,
-      fontStyle: "normal",
-      fill: brand.textColor,
-      align: "center",
-      opacity: 0.82,
-      enabled: true,
-    },
-    {
-      id: "cta",
-      text: initialText?.cta ?? "Découvre maintenant →",
-      xFrac: 0.1,
-      yFrac: 0.84,
-      widthFrac: 0.8,
-      fontScale: 0.05,
-      fontFamily: font,
-      fontStyle: "bold",
-      fill: brand.primaryColor,
-      align: "center",
-      opacity: 1,
-      enabled: true,
-    },
-  ];
-}

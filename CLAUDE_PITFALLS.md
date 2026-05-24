@@ -593,48 +593,54 @@ modèles d'image 2026 plafonnent à ~94-96 % de précision sur le texte →
 inacceptable pour des CTA/branding. Donc :
 - L'IA génère le **fond** (image d'ambiance), `gpt-image-1` derrière une
   abstraction (réutilise `OPENAI_API_KEY_OWNER`). Phase 2.
-- Le **texte/CTA/logo** sont des **calques déterministes** (Konva) →
+- Le **texte/CTA/logo** sont des **objets déterministes** (Fabric.js) →
   orthographe + couleurs de marque + position 100 % maîtrisées.
+
+**Moteur = Fabric.js v6** (PAS Konva). Choisi car Konva ne fait pas de
+rich text : Béné veut styliser une PARTIE du texte (un mot en gras /
+couleur). Fabric `Textbox` + `setSelectionStyles` le fait nativement,
+avec édition de texte NATIVE dans le canvas (caret + sélection). Konva a
+été retiré (deps supprimées le 24/05).
 
 **Le module** :
 - `lib/visualStudio/{types,presets}.ts` — contrat + formats (1:1 1080²,
   4:5 1080×1350, 9:16 1080×1920) + brand presets (Tiquiz/Tipote partagent
   #2E386E texte / #5D6CDB CTA / Inter ; vert #C1FF6F Tipote, turquoise
-  #20BBE6 Tiquiz).
-- `components/visual-studio/StudioCanvas.tsx` — Konva, **client-only**.
+  #20BBE6 Tiquiz). `FONT_OPTIONS` = stacks CSS complètes.
+- `components/visual-studio/StudioCanvas.tsx` — Fabric, **client-only**.
 - `components/visual-studio/ImageStudio.tsx` — modale contrôlée, contrat
   calqué sur `ArticleEditorModal` (`open/onOpenChange/onApply`).
 
 **Pièges techniques (déjà rencontrés)** :
-1. **Konva = `window` → SSR crash**. StudioCanvas DOIT être chargé via
-   `dynamic(() => import(...).then(m => m.StudioCanvas), { ssr: false })`.
-   Ne JAMAIS importer react-konva au scope module d'un composant rendu
-   au SSR. `import type { StudioCanvasHandle }` (type-only) est OK.
+1. **Fabric interdit l'import côté Node** (`exports.node = null`) → SSR
+   crash. StudioCanvas DOIT être chargé via `dynamic(() => import(...).
+   then(m => m.StudioCanvas), { ssr: false })`. `import type {…}` OK.
 2. **ref à travers `next/dynamic` ne traverse pas** → pas de forwardRef.
-   On expose l'export via un callback `onReady(handle)`.
-3. **Export pleine résolution** : Stage = taille d'AFFICHAGE, Layer scalé,
-   calques en coords de RENDU. Export = `stage.toCanvas({ pixelRatio:
-   renderWidth/displayWidth })` puis `canvas.toBlob`. Positions des
-   calques stockées en **fractions** (0..1) → robustes au changement de
-   format.
-4. **CORS export** : `image.crossOrigin = "anonymous"` sur tout fond/logo
-   distant, sinon le canvas est "tainted" et `toBlob` jette. nginx
-   videos.tipote.com expose déjà `ACAO *`.
+   On expose le handle (toBlob/applyStyle/…) via callback `onReady`.
+3. **Pas de zoom viewport** : objets en pixels d'AFFICHAGE → `obj.
+   getBoundingRect()` donne directement la position écran pour ancrer la
+   barre flottante HTML. Export pleine résolution = `canvas.toDataURL({
+   multiplier: renderWidth/displayWidth })`. Au changement de format, on
+   rescale les objets `layerId` par le ratio des dimensions.
+4. **CORS export** : `FabricImage.fromURL(url, { crossOrigin:
+   "anonymous" })` sur tout fond/logo distant, sinon canvas "tainted" et
+   `toDataURL` jette. nginx videos.tipote.com expose déjà `ACAO *`.
 5. **Lint repo** : `react-hooks/set-state-in-effect` est une ERREUR. Pas
-   de `setState` synchrone dans le corps d'un effet → dériver l'état
-   (cf. `useHtmlImage`).
+   de `setState` synchrone dans le corps d'un effet.
 6. **WYSIWYG OBLIGATOIRE (rappel section G)** : 1ère version mettait
-   l'édition des textes dans le panneau latéral → Béné a rejeté (24/05).
-   L'édition de CONTENU se fait SUR le visuel. Technique : le canvas
-   remonte le rect écran du calque sélectionné (`node.getClientRect({
-   relativeTo: stage })`), et on superpose en HTML une barre d'outils
-   flottante + un `<textarea>` d'édition inline (double-clic) calés sur
-   ce rect. Le panneau latéral ne garde que format / fond / logo /
-   visibilité des calques — JAMAIS la saisie de texte.
-7. **Export pendant édition** : le calque édité est `visible={false}`
-   (textarea HTML par-dessus). Avant `toBlob`, remettre `editingId=null`
-   ET attendre 2× `requestAnimationFrame` pour que Konva ré-affiche le
-   calque, sinon le texte manque sur le PNG.
+   l'édition texte dans le panneau latéral → Béné a rejeté (24/05).
+   L'édition de CONTENU se fait SUR le visuel (Fabric gère le caret).
+   Panneau latéral = format / fond / logo / "Ajouter un texte" — JAMAIS
+   la saisie de contenu.
+7. **Style sur une plage (un mot)** : barre flottante HTML hors canvas.
+   - Boutons (gras/taille/align) : `onMouseDown preventDefault` pour NE
+     PAS faire perdre la sélection d'édition Fabric.
+   - Contrôles natifs (select police / input color) : capturer la plage
+     via `getSelectionRange()` au `onMouseDown`, puis `applyStyle(patch,
+     range)` au change — `setSelectionStyles` marche même hors édition.
+8. **Polices** : passer des STACKS CSS complètes (avec générique) à
+   Fabric, sinon rendu serif quand la webfont n'est pas chargée (bug
+   Inter→serif 24/05). Redraw sur `document.fonts.ready`.
 
 **STOCKAGE (décision Béné, 24/05)** : NE PAS utiliser Supabase Storage
 (limites). Réutiliser le pipeline self-host des vidéos popquiz : TUS
