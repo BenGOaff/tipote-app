@@ -73,6 +73,9 @@ type Resolved =
 
 // Single resolver used by both generateMetadata and the page body so
 // the DB isn't hit twice per request. Lookups are project-scoped.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function resolve(slug: string, userId: string, projectId: string): Promise<Resolved> {
   // 1) Quiz first — matches publicSlugServer's cross-type conflict
   //    precedence so the error messages and resolution agree.
@@ -90,14 +93,19 @@ async function resolve(slug: string, userId: string, projectId: string): Promise
   //    object only if it belongs to this (user, project) pair.
   //    fetchPublishedPopquiz does not expose user_id / project_id on
   //    the returned shape, hence the split.
-  const { data: pqRow } = await supabaseAdmin
+  //    Le `slug` peut être l'ID (UUID) : un popquiz sans slug custom
+  //    génère une URL live avec `popquiz.id` (handle = slug ?? id) →
+  //    sur custom domain ça donne `/<uuid>`. On matche donc par id si
+  //    c'est un UUID, sinon par slug (sinon 404 systématique).
+  const pqGate = supabaseAdmin
     .from("popquizzes")
     .select("id")
     .eq("user_id", userId)
     .eq("project_id", projectId)
-    .ilike("slug", slug)
-    .eq("is_published", true)
-    .maybeSingle();
+    .eq("is_published", true);
+  const { data: pqRow } = await (
+    UUID_RE.test(slug) ? pqGate.eq("id", slug) : pqGate.ilike("slug", slug)
+  ).maybeSingle();
   if (pqRow) {
     const popquiz = await fetchPublishedPopquiz(slug);
     if (popquiz) return { kind: "popquiz", popquiz };

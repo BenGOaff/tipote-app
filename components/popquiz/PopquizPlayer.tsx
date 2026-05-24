@@ -451,6 +451,9 @@ export function PopquizPlayer({
 }: PopquizPlayerProps) {
   const playerRef = useRef<MediaPlayerInstance>(null);
   const [snap, dispatch] = useReducer(reducer, undefined, initialSnapshot);
+  // Affiché si la vidéo ne charge pas (réseau, ou lien signé expiré sur
+  // une page laissée ouverte longtemps). Message gracieux + recharge.
+  const [loadError, setLoadError] = useState(false);
 
   const cues = useMemo(
     () => [...popquiz.cues].sort((a, b) => a.timestampMs - b.timestampMs),
@@ -515,6 +518,7 @@ export function PopquizPlayer({
         playsInline
         crossOrigin
         className="w-full h-full"
+        onError={() => setLoadError(true)}
         onPlay={() => dispatch({ type: "PLAY" })}
         onPause={() => dispatch({ type: "PAUSE" })}
         onEnded={() => dispatch({ type: "ENDED" })}
@@ -543,6 +547,26 @@ export function PopquizPlayer({
           <DurationReporter onChange={onDurationChange} />
         ) : null}
       </MediaPlayer>
+
+      {loadError ? (
+        <div className="absolute inset-0 z-30 grid place-items-center bg-black/85 px-6 text-center">
+          <div className="max-w-sm space-y-3">
+            <p className="text-white text-base font-medium">
+              La vidéo n&apos;a pas pu se charger.
+            </p>
+            <p className="text-white/70 text-sm">
+              Le lien de lecture a peut-être expiré. Recharge la page pour réessayer.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+            >
+              Recharger la page
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {activeCue ? (
         <div
