@@ -1,5 +1,42 @@
 # TODO — Sprint en cours (à reprendre)
 
+> **Dernière session : 24/05/2026 (soir).** Commencer par « 🌅 À reprendre demain ».
+
+## 🌅 À reprendre demain (priorité)
+
+### 1. Vérifier le tracking Meta (pixel + CAPI) — code livré, EN ATTENTE config + déploiement
+Le code est poussé (Tipote + Tiquiz). Il reste des actions côté Meta/déploiement :
+- [ ] **Déployer** Tipote + Tiquiz et **appliquer les 2 migrations** `*_meta_capi_token.sql`
+      AVANT/avec le deploy (sinon la sauvegarde des réglages plante : colonne manquante).
+- [ ] **Générer le token CAPI** : Events Manager → dataset → Paramètres → Conversions API
+      → « Générer un token d'accès » → le coller dans Réglages → Tracking
+      (nouveau champ « Token Conversions API Meta »).
+- [ ] **Couper le bruit** : Events Manager → dataset → Paramètres → désactiver le suivi
+      automatique des événements (Boutons). Ne casse plus la détection cette fois.
+- [ ] **Vérifs (Gwenn)** : Pixel Helper détecte le pixel ; colonne Intégration = « Meta Pixel »
+      (et plus « Aucune intégration ») ; Test des événements = PageView + QuizStart + Lead ;
+      le **Lead affiche « 2 sources »** (= déduplication navigateur+serveur OK).
+- [ ] Si erreur CAPI dans Test des événements → me transmettre le message exact de Meta.
+
+### 2. Vérifs visuelles post-déploiement
+- [ ] `/popquizzes` (Tipote) : largeur + espacement alignés sur les autres pages (Leads).
+- [ ] Quiz compact dans le popquiz (Tipote + Tiquiz) sur mobile : centré, lisible, aéré.
+- [ ] Studio visuels : italique + souligné par mot (pas pu tester en visuel côté dev).
+- [ ] Sélecteur de clé API SIO par quiz (Tiquiz) : visible près du tag, choix persistant.
+
+## ✅ Livré le 24/05 (session soir)
+- Quiz compact dans l'overlay popquiz : centrage vertical (fix 100vh iframe), police `vmin`
+  adaptative paysage/portrait, police d'intro réduite sur mobile, espacement inter-éléments
+  garanti — **Tiquiz + Tipote**
+- Sélecteur de clé API Systeme.io **par quiz** monté dans l'éditeur (backend déjà en place) — Tiquiz
+- Pixel Meta : **réactivation autoConfig** (corrige « Aucune intégration » + ré-active
+  l'Advanced Matching) + events enrichis (`content_name`, `eventID`) — Tiquiz + Tipote
+- **Conversions API serveur** (event Lead, `user_data` hashé SHA-256, dédup via `event_id`
+  partagé) — Tiquiz + Tipote. No-op tant que le token n'est pas configuré.
+- Studio visuels : **rich text complété** (italique + souligné par plage) — Tipote
+- `/popquizzes` (Tipote) : mise en page alignée sur les autres pages (conteneur
+  `max-w-[1200px] mx-auto space-y-5` qui manquait)
+
 ## ✅ Livré récemment
 - Dashboard affilié multilang (FR/EN + stubs ES/IT/PT/AR)
 - Guide de lancement 6 étapes + badges 6 paliers
@@ -10,15 +47,19 @@
 
 ## 🔜 À faire ensuite (par ordre de priorité suggéré)
 
-### Pixel Meta / GA / Ads (bug Gwenn — RÉSOLU)
+### Pixel Meta / GA / Ads (bug Gwenn — code livré, vérif en attente)
 - ✅ Server-render le pixel sur toutes les pages publiques (quiz, survey,
   popquiz, hosted pages, link-in-bio, custom domains) — Tipote + Tiquiz
 - ✅ Fallback sur le défaut profil pour les quiz/popquiz/pages sans pixel explicite
 - ✅ Migration business_profiles default_* (Tipote) pour le save settings
-- ✅ autoConfig=false pour couper les events parasites (SubscribedButtonClick)
 - ✅ Event Lead/conversion sur les pages de capture + link-in-bio (pas que les quiz)
-- À considérer plus tard : Conversion API server-side (CAPI) en back-up du
-  pixel client (résiste aux ad-blockers). Pas demandé pour l'instant.
+- ✅ (24/05) **autoConfig RÉACTIVÉ** : le `autoConfig=false` cassait la reconnaissance
+  du pixel (« Aucune intégration » remonté par Gwenn 24/05) et l'Advanced Matching.
+  Retour au code standard. Le bruit SubscribedButtonClick se coupe désormais dans
+  l'UI Events Manager (toggle), pas en code.
+- ✅ (24/05) **Conversions API server-side (CAPI)** pour l'event Lead : envoi serveur
+  dédupliqué avec le pixel (`event_id` partagé), `user_data` hashé. ⚠️ Nécessite
+  token CAPI + migration + déploiement → voir « 🌅 À reprendre demain ».
 
 ### Traductions ES/IT/PT/AR du dashboard affilié
 ✅ Fait (24/05) : les 4 locales sont désormais des traductions complètes
