@@ -40,6 +40,9 @@ export interface SelectionInfo {
   fontFamily: string;
   align: "left" | "center" | "right";
   isEditing: boolean;
+  /** Plage sélectionnée en édition (-1 si pas d'édition/plage). */
+  selStart: number;
+  selEnd: number;
 }
 
 /** Patch de style appliqué à la sélection courante (ou tout l'objet). */
@@ -148,6 +151,8 @@ export function StudioCanvas({
         fontFamily,
         align: (obj.textAlign as SelectionInfo["align"]) ?? "center",
         isEditing: !!obj.isEditing,
+        selStart: editingRange ? obj.selectionStart : -1,
+        selEnd: editingRange ? obj.selectionEnd : -1,
       });
     };
 
@@ -188,6 +193,8 @@ export function StudioCanvas({
         textAlign: "center",
         lineHeight: 1.18,
         editable: true,
+        selectable: true,
+        evented: true,
         objectCaching: false,
       });
       (tb as { layerId?: string }).layerId = id;
@@ -287,6 +294,8 @@ export function StudioCanvas({
           textAlign: "center",
           lineHeight: 1.18,
           editable: true,
+          selectable: true,
+          evented: true,
           objectCaching: false,
         });
         (tb as { layerId?: string }).layerId = `extra-${Date.now()}`;
@@ -299,7 +308,26 @@ export function StudioCanvas({
     };
     onReady?.(handle);
 
+    // Le Dialog s'ouvre avec une animation (zoom/translate). Si Fabric
+    // mesure le canvas pendant l'animation, l'offset de hit-detection est
+    // figé au mauvais endroit → les clics sont décalés et seuls les
+    // éléments du haut répondent (bug "seul le titre est sélectionnable").
+    // On re-synchronise dimensions + offset une fois la mise en page stable.
+    const resync = () => {
+      const c = fcRef.current;
+      if (!c) return;
+      c.setDimensions({ width: dimsRef.current.w, height: dimsRef.current.h });
+      c.calcOffset();
+      c.requestRenderAll();
+    };
+    const raf = requestAnimationFrame(() => requestAnimationFrame(resync));
+    const t1 = setTimeout(resync, 250);
+    window.addEventListener("resize", resync);
+
     return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      window.removeEventListener("resize", resync);
       canvas.dispose();
       fcRef.current = null;
     };
@@ -327,6 +355,7 @@ export function StudioCanvas({
       });
     }
     prevDimsRef.current = { w: displayWidth, h: displayHeight };
+    c.calcOffset();
     c.requestRenderAll();
   }, [displayWidth, displayHeight]);
 
