@@ -170,6 +170,13 @@ export const EN: AffiliateDict = {
     badge_tier_high_body: "25 cumulative sales. You're at the top rate.",
     badge_100eur_title: "€100 earned",
     badge_100eur_body: "Three-digit milestone crossed. The machine is humming.",
+    leaderboard_title: "Monthly leaderboard",
+    leaderboard_subtitle: "Anonymized top 10 affiliates this month.",
+    leaderboard_you: "You",
+    leaderboard_sales: "sales",
+    leaderboard_empty: "The leaderboard will appear once several affiliates have sales this month.",
+    leaderboard_your_rank: "Your rank",
+    leaderboard_unranked: "No sale this month yet — get started!",
   },
   promouvoir: {
     page_title: "Promote",
