@@ -26,6 +26,8 @@ import {
   AlignRight,
   Upload,
   Bold,
+  Italic,
+  Underline,
   Trash2,
   Minus,
   Plus,
@@ -427,6 +429,12 @@ function FloatingToolbar({
 
       <ToolbarBtn active={info.bold} title="Gras" onClick={() => handle.applyStyle({ toggleBold: true })}>
         <Bold className="h-3.5 w-3.5" />
+      </ToolbarBtn>
+      <ToolbarBtn active={info.italic} title="Italique" onClick={() => handle.applyStyle({ toggleItalic: true })}>
+        <Italic className="h-3.5 w-3.5" />
+      </ToolbarBtn>
+      <ToolbarBtn active={info.underline} title="Souligné" onClick={() => handle.applyStyle({ toggleUnderline: true })}>
+        <Underline className="h-3.5 w-3.5" />
       </ToolbarBtn>
 
       <ToolbarBtn title="Réduire" onClick={() => handle.applyStyle({ fontDelta: -2 })}>

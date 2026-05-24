@@ -36,6 +36,8 @@ export interface ScreenRect {
 export interface SelectionInfo {
   rect: ScreenRect;
   bold: boolean;
+  italic: boolean;
+  underline: boolean;
   fill: string;
   fontFamily: string;
   align: "left" | "center" | "right";
@@ -48,6 +50,8 @@ export interface SelectionInfo {
 /** Patch de style appliqué à la sélection courante (ou tout l'objet). */
 export interface StylePatch {
   toggleBold?: boolean;
+  toggleItalic?: boolean;
+  toggleUnderline?: boolean;
   fontFamily?: string;
   fill?: string;
   align?: "left" | "center" | "right";
@@ -129,6 +133,8 @@ export function StudioCanvas({
       const editingRange =
         !!obj.isEditing && obj.selectionStart !== obj.selectionEnd;
       let bold: boolean;
+      let italic: boolean;
+      let underline: boolean;
       let fill: string;
       let fontFamily: string;
       if (editingRange) {
@@ -137,16 +143,22 @@ export function StudioCanvas({
         >;
         const first = styles[0] ?? {};
         bold = isBoldWeight(first.fontWeight ?? obj.fontWeight);
+        italic = String(first.fontStyle ?? obj.fontStyle) === "italic";
+        underline = Boolean(first.underline ?? obj.underline);
         fill = String(first.fill ?? obj.fill);
         fontFamily = String(first.fontFamily ?? obj.fontFamily);
       } else {
         bold = isBoldWeight(obj.fontWeight);
+        italic = obj.fontStyle === "italic";
+        underline = Boolean(obj.underline);
         fill = String(obj.fill);
         fontFamily = String(obj.fontFamily);
       }
       selCbRef.current({
         rect: { left: r.left, top: r.top, width: r.width, height: r.height },
         bold,
+        italic,
+        underline,
         fill,
         fontFamily,
         align: (obj.textAlign as SelectionInfo["align"]) ?? "center",
@@ -253,6 +265,24 @@ export function StudioCanvas({
             obj.setSelectionStyles({ fontWeight: allBold ? "normal" : "bold" }, useRange.start, useRange.end);
           } else {
             obj.set({ fontWeight: isBoldWeight(obj.fontWeight) ? "normal" : "bold" });
+          }
+        }
+        if (patch.toggleItalic) {
+          if (useRange) {
+            const styles = obj.getSelectionStyles(useRange.start, useRange.end, true) as Array<Record<string, unknown>>;
+            const allItalic = styles.length > 0 && styles.every((s) => String(s.fontStyle ?? obj.fontStyle) === "italic");
+            obj.setSelectionStyles({ fontStyle: allItalic ? "normal" : "italic" }, useRange.start, useRange.end);
+          } else {
+            obj.set({ fontStyle: obj.fontStyle === "italic" ? "normal" : "italic" });
+          }
+        }
+        if (patch.toggleUnderline) {
+          if (useRange) {
+            const styles = obj.getSelectionStyles(useRange.start, useRange.end, true) as Array<Record<string, unknown>>;
+            const allUnder = styles.length > 0 && styles.every((s) => Boolean(s.underline ?? obj.underline));
+            obj.setSelectionStyles({ underline: !allUnder }, useRange.start, useRange.end);
+          } else {
+            obj.set({ underline: !obj.underline });
           }
         }
         if (patch.align) obj.set({ textAlign: patch.align });
