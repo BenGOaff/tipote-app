@@ -184,6 +184,7 @@ type ProfileRow = {
   address_form?: string | null;
   // Phase B (Adeline, 19 mai 2026) : défauts pixels Meta + Google
   default_meta_pixel_id?: string | null;
+  default_meta_capi_token?: string | null;
   default_ga4_measurement_id?: string | null;
   default_google_ads_conversion_id?: string | null;
   default_google_ads_conversion_label?: string | null;
@@ -384,6 +385,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const [pendingLocale, startLocaleTransition] = useTransition();
   // Phase B (Adeline, 19 mai 2026) : défauts pixels Meta + Google.
   const [defaultMetaPixelId, setDefaultMetaPixelId] = useState("");
+  const [defaultMetaCapiToken, setDefaultMetaCapiToken] = useState("");
   const [defaultGa4MeasurementId, setDefaultGa4MeasurementId] = useState("");
   const [defaultGoogleAdsConversionId, setDefaultGoogleAdsConversionId] = useState("");
   const [defaultGoogleAdsConversionLabel, setDefaultGoogleAdsConversionLabel] = useState("");
@@ -473,6 +475,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setAddressForm(row?.address_form ?? "tu");
         // Phase B (Adeline, 19 mai 2026)
         setDefaultMetaPixelId(row?.default_meta_pixel_id ?? "");
+        setDefaultMetaCapiToken(row?.default_meta_capi_token ?? "");
         setDefaultGa4MeasurementId(row?.default_ga4_measurement_id ?? "");
         setDefaultGoogleAdsConversionId(row?.default_google_ads_conversion_id ?? "");
         setDefaultGoogleAdsConversionLabel(row?.default_google_ads_conversion_label ?? "");
@@ -1199,11 +1202,12 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const pixelsDirty = useMemo(() => {
     return (
       (initialProfile?.default_meta_pixel_id ?? "") !== defaultMetaPixelId ||
+      (initialProfile?.default_meta_capi_token ?? "") !== defaultMetaCapiToken ||
       (initialProfile?.default_ga4_measurement_id ?? "") !== defaultGa4MeasurementId ||
       (initialProfile?.default_google_ads_conversion_id ?? "") !== defaultGoogleAdsConversionId ||
       (initialProfile?.default_google_ads_conversion_label ?? "") !== defaultGoogleAdsConversionLabel
     );
-  }, [initialProfile, defaultMetaPixelId, defaultGa4MeasurementId, defaultGoogleAdsConversionId, defaultGoogleAdsConversionLabel]);
+  }, [initialProfile, defaultMetaPixelId, defaultMetaCapiToken, defaultGa4MeasurementId, defaultGoogleAdsConversionId, defaultGoogleAdsConversionLabel]);
   const [pendingPixels, startPixelsTransition] = useTransition();
   const savePixels = () => {
     startPixelsTransition(async () => {
@@ -1213,6 +1217,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             default_meta_pixel_id: defaultMetaPixelId.trim() || null,
+            default_meta_capi_token: defaultMetaCapiToken.trim() || null,
             default_ga4_measurement_id: defaultGa4MeasurementId.trim() || null,
             default_google_ads_conversion_id: defaultGoogleAdsConversionId.trim() || null,
             default_google_ads_conversion_label: defaultGoogleAdsConversionLabel.trim() || null,
@@ -1850,6 +1855,18 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline">
                   {tSP("reglages.trackingDefaultsMetaHelp")}
                 </a>
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Token Conversions API Meta (optionnel)</Label>
+              <Input
+                value={defaultMetaCapiToken}
+                onChange={(e) => setDefaultMetaCapiToken(e.target.value)}
+                placeholder="EAAG… (token d'accès Conversions API)"
+                autoComplete="off"
+              />
+              <p className="text-xs text-muted-foreground">
+                {"Active l'envoi serveur des conversions (résiste aux bloqueurs de pub, améliore le matching, dédupliqué avec le pixel). Events Manager → ton dataset → Paramètres → Conversions API → « Générer un token d'accès ». À utiliser avec le pixel ci-dessus."}
               </p>
             </div>
             <div className="space-y-1.5">

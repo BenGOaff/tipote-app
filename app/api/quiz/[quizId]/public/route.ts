@@ -13,6 +13,7 @@ import { isNewLeadLocked } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
 import { resolveSioApiKey } from "@/lib/sio/resolveApiKey";
+import { sendCapiLead } from "@/lib/metaCapi";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -601,7 +602,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // Verify quiz is active
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, project_id, title")
+      .select("id, user_id, project_id, title, meta_pixel_id")
       .eq("id", quizId)
       .eq("status", "active")
       .maybeSingle();
@@ -618,6 +619,19 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const rawGender = String(body.gender ?? "").trim().toLowerCase();
     const gender: "m" | "f" | "x" | null = rawGender === "m" || rawGender === "f" || rawGender === "x" ? rawGender : null;
     const answers = Array.isArray(body.answers) ? body.answers : null;
+
+    // Données requête pour la Conversions API (Lead server-side). Le
+    // meta_event_id vient du pixel navigateur → dédup. fbp/fbc/IP/UA
+    // améliorent la qualité de correspondance (EMQ).
+    const metaEventId = String(body.meta_event_id ?? "").trim();
+    const clientIp =
+      (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+      req.headers.get("x-real-ip") ||
+      null;
+    const userAgent = req.headers.get("user-agent");
+    const referer = req.headers.get("referer");
+    const fbp = req.cookies.get("_fbp")?.value ?? null;
+    const fbc = req.cookies.get("_fbc")?.value ?? null;
 
     // Upsert lead (unique on quiz_id + email)
     const { data: lead, error } = await admin
@@ -779,6 +793,40 @@ export async function POST(req: NextRequest, context: RouteContext) {
         }
       })();
     }
+
+    // ── Meta Conversions API : Lead server-side (dédup via event_id
+    //    partagé avec le pixel navigateur). Fire-and-forget, no-op si
+    //    pas de pixel/token configuré. Le token (secret) reste serveur.
+    (async () => {
+      try {
+        if (!metaEventId) return;
+        let bpQuery = admin
+          .from("business_profiles")
+          .select("default_meta_pixel_id, default_meta_capi_token")
+          .eq("user_id", quiz.user_id);
+        if (quiz.project_id) bpQuery = bpQuery.eq("project_id", quiz.project_id);
+        const { data: bp } = await bpQuery.maybeSingle();
+        const p = bp as {
+          default_meta_pixel_id?: string | null;
+          default_meta_capi_token?: string | null;
+        } | null;
+        const pixelId =
+          String((quiz as { meta_pixel_id?: string | null }).meta_pixel_id ?? "").trim() ||
+          (p?.default_meta_pixel_id?.trim() ?? "");
+        const token = p?.default_meta_capi_token?.trim() ?? "";
+        if (!pixelId || !token) return;
+        await sendCapiLead({
+          pixelId,
+          token,
+          eventId: metaEventId,
+          eventSourceUrl: referer,
+          contentName: (quiz as { title?: string | null }).title ?? null,
+          user: { email, firstName, lastName, phone, country, clientIp, userAgent, fbp, fbc },
+        });
+      } catch (e) {
+        console.error("[Tipote][CAPI] Lead POST error:", e);
+      }
+    })();
 
     return NextResponse.json({ ok: true, leadId: lead?.id });
   } catch (e) {

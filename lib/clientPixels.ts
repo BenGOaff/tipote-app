@@ -32,12 +32,16 @@ export type QuizPixelConfig = {
 // titre du quiz → aide l'algo Meta à regrouper/optimiser les events.
 export type QuizPixelParams = {
   contentName?: string | null;
+  // event_id imposé (sinon généré). Sert à DÉDUPLIQUER avec l'event
+  // serveur (Conversions API) : même event_id des deux côtés = 1 event.
+  eventId?: string | null;
 };
 
 // ID de déduplication par event. Évite le double-comptage (ex: un event
-// re-fired) et permet un dédoublonnage si on branche un jour la
-// Conversions API serveur (même eventID des deux côtés = 1 seul event).
-function makeEventId(): string {
+// re-fired) et permet le dédoublonnage avec la Conversions API serveur
+// (même eventID des deux côtés = 1 seul event). Exporté pour que le Lead
+// puisse partager son id entre le pixel navigateur et l'appel CAPI.
+export function newEventId(): string {
   try {
     const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
     if (c?.randomUUID) return c.randomUUID();
@@ -91,7 +95,7 @@ export function fireQuizPixel(
     if (params.contentName) eventParams.content_name = params.contentName;
     try {
       // 4e arg = options Meta ({ eventID }) pour la déduplication.
-      window.fbq(method, name, eventParams, { eventID: makeEventId() });
+      window.fbq(method, name, eventParams, { eventID: params.eventId || newEventId() });
     } catch {
       // fbq peut throw si pas init — silent fail.
     }
