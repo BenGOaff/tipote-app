@@ -37,8 +37,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-const FINAL_W = 1280;
-const FINAL_H = 720;
+const FINAL_W = 1920;
+const FINAL_H = 1080;
 const PREVIEW_W = 480;
 const PREVIEW_H = 270;
 const MIN_SCALE = 1;
@@ -250,7 +250,7 @@ export function ThumbnailPicker({
                 </span>
               </div>
               <p className="text-[12px] text-muted-foreground mt-0.5">
-                Format conseillé : 1280×720 (16/9). PNG, JPG ou WebP, max 5 Mo.
+                Format conseillé : 1920×1080 (16/9). PNG, JPG ou WebP, max 5 Mo.
               </p>
             </div>
           </div>
@@ -505,7 +505,7 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
           </DialogTitle>
           <DialogDescription>
             Drag pour repositionner, slider pour zoomer. Export en
-            1280×720 JPEG.
+            1920×1080 JPEG.
           </DialogDescription>
         </DialogHeader>
 
