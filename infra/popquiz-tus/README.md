@@ -17,10 +17,15 @@ vient UNIQUEMENT des claims du JWT (le client ne choisit pas où ça
 atterrit). Le JWT est signé côté Next par `lib/popquiz/playback.ts`
 (`signUploadToken`) avec le secret par app.
 
-## Mise à jour (ajout du kind `visual`)
+## Mise à jour (kind `visual` + fix URL d'upload)
 
-Ce fichier ajoute `visual` à `KIND_RE` et au mapping des noms de
-fichiers (`visual.<ext>`) — le reste est identique à la version en prod.
+Ce fichier :
+1. ajoute `visual` à `KIND_RE` et au mapping des noms (`visual.<ext>`) ;
+2. **corrige `generateUrl`** : il dépendait de `baseUrl` qui peut être
+   `undefined` selon la version de `@tus/server` → URLs
+   `https://<host>undefined/files/...` (ERR_NAME_NOT_RESOLVED, "failed to
+   resume upload"). On construit désormais l'URL avec `proto`+`host`+`path`
+   uniquement. **Ce fix répare les uploads vidéo Tipote ET Tiquiz.**
 
 Sur le VPS, **vérifier le diff** avant de copier (sécurité anti-typo) :
 
