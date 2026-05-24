@@ -956,7 +956,7 @@ export default function PublicQuizClient({
           ga4_measurement_id: quiz.ga4_measurement_id,
           google_ads_conversion_id: quiz.google_ads_conversion_id,
           google_ads_conversion_label: quiz.google_ads_conversion_label,
-        });
+        }, { contentName: stripHtml(quiz.title) });
       }
     },
     [quizId, previewData, trackedRef, quiz],
@@ -1349,7 +1349,7 @@ export default function PublicQuizClient({
         ga4_measurement_id: quiz.ga4_measurement_id,
         google_ads_conversion_id: quiz.google_ads_conversion_id,
         google_ads_conversion_label: quiz.google_ads_conversion_label,
-      });
+      }, { contentName: stripHtml(quiz.title) });
     }
     try {
       const res = await fetch(`/api/quiz/${quizId}/public`, {
