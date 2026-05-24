@@ -207,6 +207,11 @@ export const IT: AffiliateDict = {
     conditions_tiers:
       "Livelli progressivi: parti dal 40% di commissione, passi al 45% da 10 vendite cumulate e al 50% da 25 vendite.",
     see_full_terms: "Vedi le condizioni complete",
+    edit_button: "Modifica",
+    edit_reset: "Ripristina il modello",
+    edit_badge: "Personalizzato",
+    edit_hint: "Adatta questo testo alla tua voce. Mantieni le variabili come {first_name} e il link — vengono sostituiti automaticamente alla copia.",
+    edit_saved: "Modifiche salvate",
   },
   revenus: {
     page_title: "Guadagni",

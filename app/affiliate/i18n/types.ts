@@ -211,6 +211,11 @@ export type AffiliateDict = {
     conditions_lasttouch: string;
     conditions_tiers: string;
     see_full_terms: string;
+    edit_button: string;
+    edit_reset: string;
+    edit_badge: string;
+    edit_hint: string;
+    edit_saved: string;
   };
 
   // ─── Revenus ─────────────────────────────────────────────────────
