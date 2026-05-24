@@ -94,16 +94,21 @@ async function probeFile(file: File): Promise<ProbeResult> {
     video.onseeked = () => {
       try {
         const canvas = document.createElement("canvas");
-        const w = video.videoWidth || 640;
-        const h = video.videoHeight || 360;
-        canvas.width = 640;
-        canvas.height = Math.round((h / w) * 640);
+        const w = video.videoWidth || 1920;
+        const h = video.videoHeight || 1080;
+        // Vignette par défaut en 1920×1080 (16:9). On dessine la frame en
+        // "cover" (centrée, recadrée) pour remplir sans déformer ni bandes.
+        canvas.width = 1920;
+        canvas.height = 1080;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           cleanup();
           return resolve({ thumb: null, durationMs });
         }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const coverScale = Math.max(1920 / w, 1080 / h);
+        const dw = w * coverScale;
+        const dh = h * coverScale;
+        ctx.drawImage(video, (1920 - dw) / 2, (1080 - dh) / 2, dw, dh);
         canvas.toBlob(
           (blob) => {
             cleanup();
