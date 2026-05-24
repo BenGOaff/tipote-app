@@ -13,6 +13,7 @@ import type { Metadata } from "next";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { normaliseLocale, getDict } from "./i18n";
 import { AffiliateI18nProvider } from "./i18n/context";
+import { AffiliateSidebar } from "./components/AffiliateSidebar";
 
 export async function generateMetadata(): Promise<Metadata> {
   // Pour la metadata, on lit la locale de la session si dispo, sinon FR.
@@ -42,9 +43,26 @@ export default async function AffiliateLayout({ children }: { children: React.Re
   // toucher au root layout (qui reste LTR pour app.tipote.com).
   const dir = locale === "ar" ? "rtl" : "ltr";
 
+  // Shell avec sidebar gauche pour les pages authentifiées (cohérent
+  // avec l'app principale). Sur /login, /signup, /auth/callback la
+  // session est nulle → on rend les enfants pleine largeur (ces pages
+  // ont leur propre mise en page centrée).
+  const displayName = session
+    ? session.display_name ?? session.email.split("@")[0]
+    : "";
+
   return (
     <AffiliateI18nProvider locale={locale}>
-      <div dir={dir}>{children}</div>
+      <div dir={dir}>
+        {session ? (
+          <div className="min-h-screen lg:flex bg-background">
+            <AffiliateSidebar displayName={displayName} />
+            <div className="flex-1 min-w-0">{children}</div>
+          </div>
+        ) : (
+          children
+        )}
+      </div>
     </AffiliateI18nProvider>
   );
 }

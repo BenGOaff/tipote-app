@@ -17,7 +17,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
-import { AffiliateNav } from "../components/AffiliateNav";
 import AffiliateLinkCopy from "../components/AffiliateLinkCopy";
 import { EmailCard } from "./components/EmailCard";
 import { PostDayCard } from "./components/PostDayCard";
@@ -72,9 +71,7 @@ export default async function PromouvoirPage() {
   const displayName = session.display_name ?? session.email.split("@")[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      <AffiliateNav displayName={displayName} />
-
+    <>
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.promouvoir.page_title}</h1>
@@ -217,6 +214,6 @@ export default async function PromouvoirPage() {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </>
   );
 }

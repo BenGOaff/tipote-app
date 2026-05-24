@@ -18,7 +18,6 @@ import {
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { AffiliateNav } from "../components/AffiliateNav";
 import { RevenueCalculator } from "./RevenueCalculator";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
 import type { AffiliateDict } from "../i18n/types";
@@ -128,9 +127,7 @@ export default async function RevenusPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <AffiliateNav displayName={session.display_name ?? session.email.split("@")[0]} />
-
+    <>
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.revenus.page_title}</h1>
@@ -246,7 +243,7 @@ export default async function RevenusPage() {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </>
   );
 }
 
