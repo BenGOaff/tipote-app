@@ -47,12 +47,12 @@ import {
   Eye,
   Link as LinkIcon,
   Square as SquareIcon,
+  ArrowLeft,
+  Loader2,
 } from "lucide-react";
-import AppShell from "@/components/AppShell";
-import { PageBanner } from "@/components/PageBanner";
-import { PageContainer } from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
@@ -205,11 +205,13 @@ function TimelineStrip({
 }
 
 export default function PopquizEditClient({
-  userEmail,
   popquiz,
   quizzes,
 }: {
-  userEmail: string;
+  // userEmail n'est plus utilisé depuis qu'on a quitté AppShell pour le
+  // shell wysiwyg fullscreen (aligné sur l'éditeur quiz). Gardé dans le
+  // type pour ne pas casser le parent qui le passe encore.
+  userEmail?: string;
   popquiz: Popquiz;
   quizzes: QuizOption[];
 }) {
@@ -696,8 +698,11 @@ export default function PopquizEditClient({
   );
 
   return (
-    <AppShell userEmail={userEmail} headerTitle="Modifier le popquiz" contentClassName="flex-1">
-      <UserPalettesProvider palettes={savedPalettes}>
+    <UserPalettesProvider palettes={savedPalettes}>
+      {/* Shell wysiwyg fullscreen aligné sur l'éditeur quiz : plus de
+          sidebar applicative globale, top bar avec retour + titre +
+          statut + actions de sauvegarde/publication. */}
+      <div className="h-screen flex flex-col">
       <RestoreDraftDialog
         open={!!pendingDraft}
         draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
@@ -707,16 +712,76 @@ export default function PopquizEditClient({
         onDiscard={onDiscardDraft}
         locale={popquiz.locale || "fr"}
       />
-      <PageContainer>
-      <PageBanner
-        icon={<Video className="h-5 w-5" />}
-        title={title || "Popquiz"}
-        subtitle={
-          isPublished
-            ? "Publié — visible à l'adresse partagée."
-            : "Brouillon — non visible publiquement."
-        }
-      />
+
+      {/* ───── TOP BAR ───── */}
+      <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/popquizzes")}
+            title="Retour à mes popquiz"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <Video className="w-4 h-4 text-primary shrink-0 hidden sm:block" />
+          <span className="font-semibold text-sm truncate max-w-[120px] sm:max-w-[240px]">
+            {title || "Popquiz"}
+          </span>
+          <Badge variant={isPublished ? "default" : "secondary"} className="shrink-0">
+            {isPublished ? "Publié" : "Brouillon"}
+          </Badge>
+          {savingDraft && (
+            <span className="text-[11px] text-muted-foreground hidden sm:inline-flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Brouillon enregistré
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isPublished ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => handleSave(false)}
+                type="button"
+                title="Repasser ce popquiz en brouillon (plus accessible publiquement)"
+              >
+                <EyeOff className="size-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">{saving ? "…" : "Dépublier"}</span>
+              </Button>
+              <Button size="sm" disabled={saving} onClick={() => handleSave(true)} type="button">
+                <Save className="size-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">{saving ? "Enregistrement…" : "Enregistrer"}</span>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => handleSave(false)}
+                type="button"
+                title="Sauvegarder en brouillon (pas encore visible publiquement)"
+              >
+                <Save className="size-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">{saving ? "…" : "Brouillon"}</span>
+              </Button>
+              <Button size="sm" disabled={saving} onClick={() => handleSave(true)} type="button">
+                <Sparkles className="size-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">{saving ? "Publication…" : "Publier"}</span>
+              </Button>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* ───── BODY (scroll) ───── */}
+      <div className="flex-1 overflow-auto bg-muted/20">
+      <div className="max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-6">
 
       <Card>
         <CardContent className="py-5 space-y-4">
@@ -804,7 +869,7 @@ export default function PopquizEditClient({
             </div>
             <p className="text-[11px] text-muted-foreground">
               Lettres minuscules, chiffres et tirets. Vide → on retombe
-              sur l'identifiant généré.
+              sur l&apos;identifiant généré.
             </p>
           </div>
 
@@ -1133,7 +1198,7 @@ export default function PopquizEditClient({
 
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Code d'intégration
+                Code d&apos;intégration
               </Label>
               <textarea
                 readOnly
@@ -1183,60 +1248,9 @@ export default function PopquizEditClient({
         </p>
       ) : null}
 
-      {/* Barre d'actions contextualisée à l'état de publication.
-          Gwenn 2026-05-04 : avant, un seul bouton "Enregistrer" et un
-          toggle œil minuscule rendaient la publication non évidente.
-          Nouveau : deux actions explicites côte à côte, dont la
-          principale (Publier / Enregistrer modifs) en bouton primaire. */}
-      <div className="flex flex-wrap items-center gap-2 justify-end">
-        <Button
-          variant="ghost"
-          disabled={saving}
-          onClick={() => router.push("/popquizzes")}
-          type="button"
-          className="mr-auto"
-        >
-          ← Retour à mes popquiz
-        </Button>
-
-        {isPublished ? (
-          <>
-            <Button
-              variant="outline"
-              disabled={saving}
-              onClick={() => handleSave(false)}
-              type="button"
-              title="Repasser ce popquiz en brouillon (plus accessible publiquement)"
-            >
-              <EyeOff className="size-4 mr-2" />
-              {saving ? "…" : "Dépublier"}
-            </Button>
-            <Button disabled={saving} onClick={() => handleSave(true)} type="button">
-              <Save className="size-4 mr-2" />
-              {saving ? "Enregistrement…" : "Enregistrer les modifications"}
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              variant="outline"
-              disabled={saving}
-              onClick={() => handleSave(false)}
-              type="button"
-              title="Sauvegarder en brouillon (pas encore visible publiquement)"
-            >
-              <Save className="size-4 mr-2" />
-              {saving ? "…" : "Enregistrer brouillon"}
-            </Button>
-            <Button disabled={saving} onClick={() => handleSave(true)} type="button">
-              <Sparkles className="size-4 mr-2" />
-              {saving ? "Publication…" : "Publier"}
-            </Button>
-          </>
-        )}
-      </div>
-      </PageContainer>
-      </UserPalettesProvider>
-    </AppShell>
+      </div>{/* /max-w container */}
+      </div>{/* /body scroll */}
+      </div>{/* /h-screen shell */}
+    </UserPalettesProvider>
   );
 }
