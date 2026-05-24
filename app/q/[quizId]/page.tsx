@@ -41,7 +41,10 @@ async function resolveCustomDomainScope(): Promise<{ userId: string; projectId: 
 // Force dynamic rendering so quiz metadata/status is always fresh.
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: Promise<{ quizId: string }> };
+type RouteContext = {
+  params: Promise<{ quizId: string }>;
+  searchParams?: Promise<{ compact?: string }>;
+};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -147,8 +150,10 @@ export async function generateMetadata({ params }: RouteContext): Promise<Metada
   }
 }
 
-export default async function PublicQuizPage({ params }: RouteContext) {
+export default async function PublicQuizPage({ params, searchParams }: RouteContext) {
   const { quizId } = await params;
+  // Mode compact : quiz affiché dans l'overlay popquiz (iframe ?compact=1).
+  const isCompact = ((await searchParams)?.compact ?? "") === "1";
   // Custom-domain ownership gate: refuse to serve a quiz that
   // doesn't belong to the (user, project) that owns the hostname.
   // No-op on the main host where the header isn't set.
@@ -242,7 +247,7 @@ export default async function PublicQuizPage({ params }: RouteContext) {
           googleAdsConversionId={pixels.googleAdsConversionId}
         />
       )}
-      <PublicQuizClient quizId={quizId} />
+      <PublicQuizClient quizId={quizId} compact={isCompact} />
     </>
   );
 }

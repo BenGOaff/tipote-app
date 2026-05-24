@@ -451,6 +451,82 @@
   }
 }
 
+/* ──────────────────────────────────────────────────────────────
+ * Quiz en mode COMPACT — affiché dans l'overlay popquiz (iframe
+ * /q/[id]?compact=1). Réduit marges / paddings / typo pour tenir
+ * dans la fenêtre vidéo sans scroll pénible.
+ * Scopé sous [data-pq-compact] (posé sur <html> par
+ * PublicQuizClient) → AUCUN impact sur le quiz affiché normalement.
+ * Tailles en `vmin` → s'adaptent AUTOMATIQUEMENT à la fenêtre vidéo,
+ * qu'elle soit paysage (1920×1080) ou portrait (1080×1920). */
+/* Centrage vertical : en iframe, 100vh est souvent mal calculé →
+ * le contenu se colle en haut avec du vide en bas. On force la
+ * hauteur pleine via height:100% (chaîne html>body>step) pour que
+ * le `justify-center` existant centre vraiment dans la fenêtre vidéo. */
+html[data-pq-compact],
+html[data-pq-compact] body {
+  height: 100% !important;
+}
+[data-pq-compact] .min-h-screen {
+  min-height: 100% !important;
+}
+[data-pq-compact] .py-16,
+[data-pq-compact] .py-24 {
+  padding-top: clamp(0.4rem, 2vh, 1.1rem) !important;
+  padding-bottom: clamp(0.4rem, 2vh, 1.1rem) !important;
+}
+/* Espacement INTER-ÉLÉMENTS. Scopé en `vh` → sur un popup mobile court,
+ * vh est petit → les marges s'effondreraient au minimum et tout collerait
+ * (« trop tassé »). On remonte nettement les planchers (min) pour garantir
+ * de l'air même sur petit écran, et on garde un peu de fluidité via vh. */
+[data-pq-compact] .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: clamp(1rem, 3vh, 1.6rem) !important;
+}
+[data-pq-compact] .space-y-6 > :not([hidden]) ~ :not([hidden]),
+[data-pq-compact] .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: clamp(0.75rem, 2.2vh, 1.1rem) !important;
+}
+[data-pq-compact] .gap-3 {
+  gap: clamp(0.65rem, 2vmin, 1rem) !important;
+}
+/* Écran d'INTRO : titre + description. Le titre était figé à 2.25rem
+ * (mobile) / 3rem (PC) en !important et N'ÉTAIT PAS couvert par les
+ * règles question/résultat → énorme sur le popup mobile. On le passe en
+ * vmin. Spécificité (0,2,1) > la règle @media 640px (0,1,1) → gagne sans
+ * media query, quelle que soit la largeur de l'iframe. */
+[data-pq-compact] .tipote-quiz-title,
+[data-pq-compact] .tipote-quiz-title * {
+  font-size: clamp(1rem, 4.6vmin, 1.85rem) !important;
+  line-height: 1.18 !important;
+}
+[data-pq-compact] .text-lg {
+  font-size: clamp(0.78rem, 2.6vmin, 1.05rem) !important;
+  line-height: 1.35 !important;
+}
+/* Titre de question : plus petit + fluide selon l'espace dispo */
+[data-pq-compact] .tipote-quiz-question,
+[data-pq-compact] .tipote-quiz-question * {
+  font-size: clamp(0.9rem, 4.2vmin, 1.5rem) !important;
+  line-height: 1.22 !important;
+}
+/* Options : texte + padding réduits */
+[data-pq-compact] .grid button .text-base {
+  font-size: clamp(0.8rem, 3vmin, 1rem) !important;
+}
+[data-pq-compact] .grid button .p-5 {
+  padding: clamp(0.5rem, 1.8vmin, 0.95rem) !important;
+}
+[data-pq-compact] .tipote-quiz-result-title,
+[data-pq-compact] .tipote-quiz-result-title * {
+  font-size: clamp(1.1rem, 5vmin, 2rem) !important;
+}
+@media (min-width: 640px) {
+  [data-pq-compact] .sm\:py-24 {
+    padding-top: clamp(0.4rem, 2vh, 1.25rem) !important;
+    padding-bottom: clamp(0.4rem, 2vh, 1.25rem) !important;
+  }
+}
+
 
 /* ───────────────────────────────────────────
  * Popquiz player — fix YouTube/Vimeo iframe

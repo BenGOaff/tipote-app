@@ -151,6 +151,9 @@ interface PublicQuizClientProps {
   quizId: string;
   /** If provided, skip the API fetch and use this data directly (preview mode). */
   previewData?: PublicQuizData | null;
+  /** Mode compact : quiz affiché dans l'overlay popquiz (iframe). Pose
+   *  data-pq-compact sur <html> → overrides CSS (cf. globals.css). */
+  compact?: boolean;
   /** Toast widget ID for social proof overlay (server-resolved, optional). */
   toastWidgetId?: string | null;
   /** Social share widget ID (server-resolved, optional). */
@@ -729,6 +732,7 @@ export default function PublicQuizClient({
   previewData,
   toastWidgetId: serverToastId,
   shareWidgetId: serverShareId,
+  compact = false,
 }: PublicQuizClientProps) {
   const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
   const [loading, setLoading] = useState(!previewData);
@@ -904,11 +908,15 @@ export default function PublicQuizClient({
     const prevBody = document.body.style.backgroundColor;
     document.documentElement.style.backgroundColor = branding.backgroundColor;
     document.body.style.backgroundColor = branding.backgroundColor;
+    // Mode compact (quiz dans l'overlay popquiz) : marqueur sur <html>
+    // pour scoper les overrides CSS (cf. globals.css [data-pq-compact]).
+    if (compact) document.documentElement.setAttribute("data-pq-compact", "");
     return () => {
       document.documentElement.style.backgroundColor = prevHtml;
       document.body.style.backgroundColor = prevBody;
+      if (compact) document.documentElement.removeAttribute("data-pq-compact");
     };
-  }, [branding.backgroundColor]);
+  }, [branding.backgroundColor, compact]);
 
   // ─── Funnel tracking (fire & forget, non-blocking) ───
   //
