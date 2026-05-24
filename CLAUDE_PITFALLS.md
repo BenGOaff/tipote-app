@@ -581,3 +581,62 @@ client avec tz au mount (on a retiré le court-circuit
 **Checklist** : clés + lignes même helper ; jamais toISOString().slice
 pour un bucket affiché ; endpoint serveur → accepter `tz`. Surfaces :
 QuizResultsAnalytics, /api/quiz/[id]/analytics.
+
+## W) STUDIO VISUELS — module réutilisable IA + édition canvas (24 mai 2026)
+
+**But** : générateur/éditeur de visuels marketing (posts, stories, covers
+blog, hero pages) portable sur affiliate / Tiquiz / Tipote. Démarré sur
+le dashboard affilié (`promouvoir > Visuels`) comme terrain d'entraînement.
+
+**Décision d'archi (ne pas dévier)** : HYBRIDE, jamais "tout IA". Les
+modèles d'image 2026 plafonnent à ~94-96 % de précision sur le texte →
+inacceptable pour des CTA/branding. Donc :
+- L'IA génère le **fond** (image d'ambiance), `gpt-image-1` derrière une
+  abstraction (réutilise `OPENAI_API_KEY_OWNER`). Phase 2.
+- Le **texte/CTA/logo** sont des **calques déterministes** (Konva) →
+  orthographe + couleurs de marque + position 100 % maîtrisées.
+
+**Le module** :
+- `lib/visualStudio/{types,presets}.ts` — contrat + formats (1:1 1080²,
+  4:5 1080×1350, 9:16 1080×1920) + brand presets (Tiquiz/Tipote partagent
+  #2E386E texte / #5D6CDB CTA / Inter ; vert #C1FF6F Tipote, turquoise
+  #20BBE6 Tiquiz).
+- `components/visual-studio/StudioCanvas.tsx` — Konva, **client-only**.
+- `components/visual-studio/ImageStudio.tsx` — modale contrôlée, contrat
+  calqué sur `ArticleEditorModal` (`open/onOpenChange/onApply`).
+
+**Pièges techniques (déjà rencontrés)** :
+1. **Konva = `window` → SSR crash**. StudioCanvas DOIT être chargé via
+   `dynamic(() => import(...).then(m => m.StudioCanvas), { ssr: false })`.
+   Ne JAMAIS importer react-konva au scope module d'un composant rendu
+   au SSR. `import type { StudioCanvasHandle }` (type-only) est OK.
+2. **ref à travers `next/dynamic` ne traverse pas** → pas de forwardRef.
+   On expose l'export via un callback `onReady(handle)`.
+3. **Export pleine résolution** : Stage = taille d'AFFICHAGE, Layer scalé,
+   calques en coords de RENDU. Export = `stage.toCanvas({ pixelRatio:
+   renderWidth/displayWidth })` puis `canvas.toBlob`. Positions des
+   calques stockées en **fractions** (0..1) → robustes au changement de
+   format.
+4. **CORS export** : `image.crossOrigin = "anonymous"` sur tout fond/logo
+   distant, sinon le canvas est "tainted" et `toBlob` jette. nginx
+   videos.tipote.com expose déjà `ACAO *`.
+5. **Lint repo** : `react-hooks/set-state-in-effect` est une ERREUR. Pas
+   de `setState` synchrone dans le corps d'un effet → dériver l'état
+   (cf. `useHtmlImage`).
+
+**STOCKAGE (décision Béné, 24/05)** : NE PAS utiliser Supabase Storage
+(limites). Réutiliser le pipeline self-host des vidéos popquiz : TUS
+(`tus.tipote.com/files/`) → `/srv/popquiz-videos/<app>/raw/<uid>/<id>/
+<kind>.<ext>` → servi signé via nginx `videos.tipote.com` (secure_link).
+Helpers dans `lib/popquiz/playback.ts` (`signUploadToken`,
+`signedPlaybackUrl`). nginx sert déjà n'importe quel PNG signé.
+⚠️ Le serveur TUS (`/opt/popquiz-tus`, **hors repo**) valide `kind` :
+ajouter `kind:"visual"` y nécessite une modif serveur. Sinon réutiliser
+un `kind` image déjà autorisé (`thumbnail`/`thumbnail-custom`, voir
+`ALLOWED_THUMB_EXT`) = zéro modif serveur. Le module reste agnostique :
+l'hôte injecte `upload(blob) => url`.
+
+**Portage Tiquiz/Tipote** : nourrir `brandKit` via `resolveQuizBranding()`
+(business_profiles), brancher `upload` sur le pipeline TUS, ouvrir la
+modale depuis chaque "Ajouter/Modifier une image" (éditeur quiz,
+PageBuilder hero, articles blog).
