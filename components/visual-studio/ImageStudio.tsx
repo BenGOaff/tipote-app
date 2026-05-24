@@ -11,7 +11,7 @@
 // texte pour la mettre en gras / d'une autre couleur via la barre
 // flottante. Aucune saisie de contenu dans le panneau latéral (pitfalls G).
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import {
@@ -43,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 
 import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
 import type {
@@ -109,6 +110,27 @@ export function ImageStudio({
 
   const format = FORMATS[formatId];
   const { displayWidth, displayHeight } = fitDisplay(format, PREVIEW_MAX_W, PREVIEW_MAX_H);
+
+  // Palette de marque surfacée dans le picker (couleurs prêtes à l'emploi).
+  const brandPalette = useMemo(
+    () => [
+      {
+        id: "brand",
+        name: brandKit.name,
+        colors: Array.from(
+          new Set(
+            [
+              brandKit.primaryColor,
+              brandKit.textColor,
+              brandKit.accentColor,
+              brandKit.backgroundColor,
+            ].filter((c): c is string => !!c),
+          ),
+        ),
+      },
+    ],
+    [brandKit],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -241,18 +263,28 @@ export function ImageStudio({
                 </div>
 
                 {background.mode !== "image" && (
-                  <div className="flex items-center gap-3">
-                    <ColorField
-                      label="Couleur"
-                      value={background.color}
-                      onChange={(c) => setBackground((b) => ({ ...b, color: c }))}
-                    />
-                    {background.mode === "gradient" && (
-                      <ColorField
-                        label="vers"
-                        value={background.color2 || brandKit.primaryColor}
-                        onChange={(c) => setBackground((b) => ({ ...b, color2: c }))}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <ColorSwatchPicker
+                        value={background.color}
+                        onChange={(c) => setBackground((b) => ({ ...b, color: c }))}
+                        label="Couleur de fond"
+                        userPalettes={brandPalette}
+                        userPalettesLabel={`Palette ${brandKit.name}`}
                       />
+                      {background.mode === "gradient" ? "Début" : "Couleur"}
+                    </div>
+                    {background.mode === "gradient" && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <ColorSwatchPicker
+                          value={background.color2 || brandKit.primaryColor}
+                          onChange={(c) => setBackground((b) => ({ ...b, color2: c }))}
+                          label="Couleur de fin"
+                          userPalettes={brandPalette}
+                          userPalettesLabel={`Palette ${brandKit.name}`}
+                        />
+                        Fin
+                      </div>
                     )}
                   </div>
                 )}
@@ -319,8 +351,11 @@ export function ImageStudio({
 
                 {selection && handleRef.current && (
                   <FloatingToolbar
+                    key={`${selection.selStart}:${selection.selEnd}:${Math.round(selection.rect.left)}:${Math.round(selection.rect.top)}`}
                     info={selection}
                     handle={handleRef.current}
+                    userPalettes={brandPalette}
+                    brandName={brandKit.name}
                     top={toolbarTop}
                     left={toolbarLeft}
                   />
@@ -349,19 +384,28 @@ export function ImageStudio({
 function FloatingToolbar({
   info,
   handle,
+  userPalettes,
+  brandName,
   top,
   left,
 }: {
   info: SelectionInfo;
   handle: StudioCanvasHandle;
+  userPalettes: Array<{ id: string; name: string; colors: string[] }>;
+  brandName: string;
   top: number;
   left: number;
 }) {
   // Plage capturée au mousedown (avant que Fabric ne quitte l'édition au
-  // clic sur un contrôle natif comme le sélecteur de couleur/police).
+  // clic sur un contrôle hors-canvas comme le picker couleur/police). On
+  // ne stocke QUE les plages valides : les interactions internes du picker
+  // (drag HSV) renvoient null et ne doivent pas écraser la plage du mot.
+  // La barre est re-montée par sa `key` à chaque nouvelle sélection, donc
+  // savedRange repart à zéro proprement.
   const savedRange = useRef<{ start: number; end: number } | null>(null);
   const captureRange = () => {
-    savedRange.current = handle.getSelectionRange();
+    const r = handle.getSelectionRange();
+    if (r) savedRange.current = r;
   };
 
   return (
@@ -405,18 +449,15 @@ function FloatingToolbar({
 
       <span className="mx-0.5 h-5 w-px bg-border" />
 
-      <label
-        className="flex h-7 w-7 items-center justify-center rounded hover:bg-muted cursor-pointer"
-        title="Couleur"
-        onMouseDown={captureRange}
-      >
-        <input
-          type="color"
+      <span className="scale-90" onMouseDownCapture={captureRange}>
+        <ColorSwatchPicker
           value={/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(info.fill) ? info.fill : "#000000"}
-          onChange={(e) => handle.applyStyle({ fill: e.target.value }, savedRange.current)}
-          className="h-4 w-4 cursor-pointer border-0 bg-transparent p-0"
+          onChange={(c) => handle.applyStyle({ fill: c }, savedRange.current)}
+          label="Couleur du texte"
+          userPalettes={userPalettes}
+          userPalettesLabel={`Palette ${brandName}`}
         />
-      </label>
+      </span>
 
       <ToolbarBtn title="Éditer le texte" onClick={() => handle.enterEdit()}>Aa</ToolbarBtn>
       <ToolbarBtn title="Supprimer" onClick={() => handle.deleteActive()}>
@@ -453,25 +494,3 @@ function ToolbarBtn({
   );
 }
 
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (hex: string) => void;
-}) {
-  return (
-    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-7 w-7 rounded border border-border bg-transparent p-0 cursor-pointer"
-        aria-label={label || "Couleur"}
-      />
-      {label}
-    </label>
-  );
-}

@@ -641,6 +641,19 @@ avec édition de texte NATIVE dans le canvas (caret + sélection). Konva a
 8. **Polices** : passer des STACKS CSS complètes (avec générique) à
    Fabric, sinon rendu serif quand la webfont n'est pas chargée (bug
    Inter→serif 24/05). Redraw sur `document.fonts.ready`.
+9. **Fabric dans une modale → hit-detection décalée** (bug 24/05 "seul
+   le titre est sélectionnable"). Le Dialog s'anime (zoom/translate) à
+   l'ouverture ; si Fabric mesure pendant l'anim, l'offset est figé faux
+   → clics décalés, seuls les éléments du haut répondent. Fix :
+   `setDimensions()` + `calcOffset()` après stabilisation (rAF ×2 +
+   `setTimeout(250)` + listener resize), et `calcOffset()` au changement
+   de format.
+10. **Color picker = `ColorSwatchPicker`** (`components/ui/`, react-colorful
+    + swatches + `userPalettes`), JAMAIS `<input type=color>` (moche,
+    rejeté 24/05). Surfacer la palette de marque via `userPalettes`. Pour
+    colorer UN MOT : capturer la plage Fabric en `onMouseDownCapture`
+    (phase capture = avant que Fabric quitte l'édition), ne stocker que
+    les plages valides, et re-monter la barre via `key` par sélection.
 
 **STOCKAGE (décision Béné, 24/05) — IMPLÉMENTÉ** : PAS de Supabase Storage.
 On réutilise le pipeline self-host des vidéos popquiz : TUS
