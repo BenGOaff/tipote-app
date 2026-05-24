@@ -59,6 +59,7 @@ export interface TextLayer {
   widthFrac: number;
   /** Taille de police relative à la largeur de rendu (fontSize = fontScale * width). */
   fontScale: number;
+  fontFamily: string;
   fontStyle: "normal" | "bold";
   fill: string;
   align: "left" | "center" | "right";

@@ -21,6 +21,37 @@ export const FORMATS: Record<StudioFormatId, StudioFormat> = {
 
 export const ALL_FORMATS: StudioFormatId[] = ["1:1", "4:5", "9:16"];
 
+/**
+ * Calcule la taille d'AFFICHAGE du visuel (preview) pour tenir dans une
+ * boîte maxW×maxH en gardant le ratio. Source UNIQUE de vérité partagée
+ * par le canvas Konva et les calques HTML superposés (toolbar, textarea
+ * d'édition inline) — sinon désalignement.
+ */
+export function fitDisplay(
+  format: StudioFormat,
+  maxW: number,
+  maxH: number,
+): { displayWidth: number; displayHeight: number; scale: number } {
+  const ratio = format.width / format.height;
+  let displayWidth = maxW;
+  let displayHeight = displayWidth / ratio;
+  if (displayHeight > maxH) {
+    displayHeight = maxH;
+    displayWidth = displayHeight * ratio;
+  }
+  return { displayWidth, displayHeight, scale: displayWidth / format.width };
+}
+
+/** Polices proposées (toutes garanties dispo navigateur + export canvas). */
+export const FONT_OPTIONS = [
+  { label: "Inter", value: "Inter" },
+  { label: "Arial", value: "Arial" },
+  { label: "Georgia", value: "Georgia" },
+  { label: "Times", value: "Times New Roman" },
+  { label: "Courier", value: "Courier New" },
+  { label: "Trebuchet", value: "Trebuchet MS" },
+] as const;
+
 // Brand kits par défaut. Tiquiz & Tipote partagent la base de marque
 // (#2E386E texte / #5D6CDB CTA / Inter). On les expose nommés pour que
 // l'app hôte (ou l'affilié) en pioche un sans le redéclarer.
@@ -55,6 +86,7 @@ export function buildDefaultLayers(
   brand: BrandKit,
   initialText?: Partial<Record<TextLayerId, string>>,
 ): TextLayer[] {
+  const font = brand.font || "Inter";
   return [
     {
       id: "headline",
@@ -63,6 +95,7 @@ export function buildDefaultLayers(
       yFrac: 0.1,
       widthFrac: 0.84,
       fontScale: 0.082,
+      fontFamily: font,
       fontStyle: "bold",
       fill: brand.textColor,
       align: "center",
@@ -76,6 +109,7 @@ export function buildDefaultLayers(
       yFrac: 0.34,
       widthFrac: 0.8,
       fontScale: 0.04,
+      fontFamily: font,
       fontStyle: "normal",
       fill: brand.textColor,
       align: "center",
@@ -89,6 +123,7 @@ export function buildDefaultLayers(
       yFrac: 0.84,
       widthFrac: 0.8,
       fontScale: 0.05,
+      fontFamily: font,
       fontStyle: "bold",
       fill: brand.primaryColor,
       align: "center",

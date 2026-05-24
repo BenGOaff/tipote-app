@@ -623,6 +623,18 @@ inacceptable pour des CTA/branding. Donc :
 5. **Lint repo** : `react-hooks/set-state-in-effect` est une ERREUR. Pas
    de `setState` synchrone dans le corps d'un effet → dériver l'état
    (cf. `useHtmlImage`).
+6. **WYSIWYG OBLIGATOIRE (rappel section G)** : 1ère version mettait
+   l'édition des textes dans le panneau latéral → Béné a rejeté (24/05).
+   L'édition de CONTENU se fait SUR le visuel. Technique : le canvas
+   remonte le rect écran du calque sélectionné (`node.getClientRect({
+   relativeTo: stage })`), et on superpose en HTML une barre d'outils
+   flottante + un `<textarea>` d'édition inline (double-clic) calés sur
+   ce rect. Le panneau latéral ne garde que format / fond / logo /
+   visibilité des calques — JAMAIS la saisie de texte.
+7. **Export pendant édition** : le calque édité est `visible={false}`
+   (textarea HTML par-dessus). Avant `toBlob`, remettre `editingId=null`
+   ET attendre 2× `requestAnimationFrame` pour que Konva ré-affiche le
+   calque, sinon le texte manque sur le PNG.
 
 **STOCKAGE (décision Béné, 24/05)** : NE PAS utiliser Supabase Storage
 (limites). Réutiliser le pipeline self-host des vidéos popquiz : TUS

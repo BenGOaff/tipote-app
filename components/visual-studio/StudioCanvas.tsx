@@ -3,35 +3,59 @@
 // Canvas Konva du Studio visuels. Chargé UNIQUEMENT côté client
 // (next/dynamic ssr:false depuis ImageStudio) car Konva touche `window`.
 //
-// Principe d'échelle : le Stage est dimensionné à la taille d'AFFICHAGE
-// (calculée pour tenir dans maxWidth×maxHeight), et un Layer scalé dessine
-// les éléments en coordonnées de RENDU (1080×…). À l'export on applique
-// pixelRatio = renderWidth/displayWidth pour sortir le PNG pleine résolution.
+// WYSIWYG : on édite directement sur le visuel. Le canvas gère la
+// sélection (clic), l'entrée en édition (double-clic) et le déplacement
+// (drag) des calques texte, et REMONTE la position écran de l'élément
+// sélectionné. La barre d'outils flottante + le champ d'édition inline
+// sont rendus en HTML par ImageStudio, ancrés sur cette position.
+//
+// Échelle : Stage = taille d'AFFICHAGE (fournie par le parent via
+// fitDisplay), Layer scalé, calques en coords de RENDU (1080×…). Export
+// pleine résolution via pixelRatio = renderWidth/displayWidth.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Stage, Layer, Rect, Text, Image as KonvaImage } from "react-konva";
 import type Konva from "konva";
-import type { BackgroundSpec, BrandKit, StudioFormat, TextLayer } from "@/lib/visualStudio/types";
+import type {
+  BackgroundSpec,
+  BrandKit,
+  StudioFormat,
+  TextLayer,
+  TextLayerId,
+} from "@/lib/visualStudio/types";
 
 export interface StudioCanvasHandle {
   /** Exporte le visuel courant en PNG pleine résolution (renderWidth×renderHeight). */
   toBlob: () => Promise<Blob>;
 }
 
+/** Rectangle en pixels d'AFFICHAGE, relatif au coin haut-gauche du Stage. */
+export interface ScreenRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 interface StudioCanvasProps {
   format: StudioFormat;
+  displayWidth: number;
+  displayHeight: number;
   background: BackgroundSpec;
   layers: TextLayer[];
   brand: BrandKit;
   showLogo: boolean;
-  maxWidth: number;
-  maxHeight: number;
-  /** Remontée d'un déplacement de calque (en fractions). */
-  onLayerMove: (id: TextLayer["id"], xFrac: number, yFrac: number) => void;
+  selectedId: TextLayerId | null;
+  editingId: TextLayerId | null;
+  onSelect: (id: TextLayerId | null) => void;
+  onRequestEdit: (id: TextLayerId) => void;
+  /** Position écran du calque sélectionné (null = rien de sélectionné). */
+  onSelectedRect: (rect: ScreenRect | null) => void;
+  onLayerMove: (id: TextLayerId, xFrac: number, yFrac: number) => void;
   /**
-   * Expose la poignée d'export au parent. On passe par un callback plutôt
-   * qu'une ref car react-konva est chargé via next/dynamic(ssr:false) et
-   * le forward-ref ne traverse pas le wrapper dynamic de façon fiable.
+   * Expose la poignée d'export. Callback plutôt que ref : react-konva est
+   * chargé via next/dynamic(ssr:false) et le forward-ref ne traverse pas
+   * le wrapper dynamic de façon fiable.
    */
   onReady?: (handle: StudioCanvasHandle) => void;
 }
@@ -54,7 +78,7 @@ function useHtmlImage(src?: string | null): HTMLImageElement | null {
   return src && loaded?.src === src ? loaded.img : null;
 }
 
-/** Couvre la zone (w×h) en gardant le ratio de l'image (équivalent object-fit: cover). */
+/** Couvre la zone (w×h) en gardant le ratio de l'image (object-fit: cover). */
 function coverRect(
   imgW: number,
   imgH: number,
@@ -70,120 +94,162 @@ function coverRect(
 
 export function StudioCanvas({
   format,
+  displayWidth,
+  displayHeight,
   background,
   layers,
   brand,
   showLogo,
-  maxWidth,
-  maxHeight,
+  selectedId,
+  editingId,
+  onSelect,
+  onRequestEdit,
+  onSelectedRect,
   onLayerMove,
   onReady,
 }: StudioCanvasProps) {
-    const stageRef = useRef<Konva.Stage>(null);
+  const stageRef = useRef<Konva.Stage>(null);
+  const nodesRef = useRef<Map<TextLayerId, Konva.Text>>(new Map());
+  const lastRectKey = useRef<string>("");
 
-    // Dimensions d'affichage : on tient dans la boîte en gardant le ratio.
-    const ratio = format.width / format.height;
-    let displayWidth = maxWidth;
-    let displayHeight = displayWidth / ratio;
-    if (displayHeight > maxHeight) {
-      displayHeight = maxHeight;
-      displayWidth = displayHeight * ratio;
-    }
-    const scale = displayWidth / format.width;
+  const scale = displayWidth / format.width;
+  const bgImage = useHtmlImage(background.mode === "image" ? background.imageUrl : null);
+  const logoImage = useHtmlImage(showLogo ? brand.logoUrl : null);
 
-    const bgImage = useHtmlImage(background.mode === "image" ? background.imageUrl : null);
-    const logoImage = useHtmlImage(showLogo ? brand.logoUrl : null);
-
-    const exportPng = useCallback(async (): Promise<Blob> => {
+  // Remonte la position écran du calque (dé-doublonnée pour éviter les
+  // boucles de rendu). onSelectedRect est un callback parent, pas un
+  // setState local → conforme à react-hooks/set-state-in-effect.
+  const reportRect = useCallback(
+    (id: TextLayerId | null) => {
+      const node = id ? nodesRef.current.get(id) : null;
       const stage = stageRef.current;
-      if (!stage) throw new Error("Canvas non prêt");
-      const canvas = stage.toCanvas({ pixelRatio: format.width / displayWidth });
-      return await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error("Export PNG échoué"))),
-          "image/png",
-        );
-      });
-    }, [format.width, displayWidth]);
+      if (!node || !stage) {
+        if (lastRectKey.current !== "null") {
+          lastRectKey.current = "null";
+          onSelectedRect(null);
+        }
+        return;
+      }
+      const r = node.getClientRect({ relativeTo: stage });
+      const key = `${r.x}|${r.y}|${r.width}|${r.height}`;
+      if (key !== lastRectKey.current) {
+        lastRectKey.current = key;
+        onSelectedRect({ left: r.x, top: r.y, width: r.width, height: r.height });
+      }
+    },
+    [onSelectedRect],
+  );
 
-    useEffect(() => {
-      onReady?.({ toBlob: exportPng });
-    }, [onReady, exportPng]);
+  // Recalcule la position quand la sélection, les calques, le format ou
+  // l'échelle changent (ex: après changement de taille de police).
+  useEffect(() => {
+    reportRect(selectedId);
+  }, [selectedId, layers, format, displayWidth, editingId, reportRect]);
 
-    const fontFamily = brand.font || "Inter";
+  const exportPng = useCallback(async (): Promise<Blob> => {
+    const stage = stageRef.current;
+    if (!stage) throw new Error("Canvas non prêt");
+    const canvas = stage.toCanvas({ pixelRatio: format.width / displayWidth });
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Export PNG échoué"))),
+        "image/png",
+      );
+    });
+  }, [format.width, displayWidth]);
 
-    // Logo en haut-centre, largeur = 26% de la largeur de rendu.
-    const logoW = format.width * 0.26;
-    const logoH = logoImage ? (logoImage.height / logoImage.width) * logoW : 0;
+  useEffect(() => {
+    onReady?.({ toBlob: exportPng });
+  }, [onReady, exportPng]);
 
-    return (
-      <Stage
-        ref={stageRef}
-        width={displayWidth}
-        height={displayHeight}
-        style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.12)" }}
-      >
-        <Layer scaleX={scale} scaleY={scale}>
-          {/* Fond */}
-          {background.mode === "gradient" ? (
-            <Rect
-              x={0}
-              y={0}
-              width={format.width}
-              height={format.height}
-              fillLinearGradientStartPoint={{ x: 0, y: 0 }}
-              fillLinearGradientEndPoint={{ x: 0, y: format.height }}
-              fillLinearGradientColorStops={[0, background.color, 1, background.color2 || background.color]}
+  const logoW = format.width * 0.26;
+  const logoH = logoImage ? (logoImage.height / logoImage.width) * logoW : 0;
+
+  return (
+    <Stage
+      ref={stageRef}
+      width={displayWidth}
+      height={displayHeight}
+      onMouseDown={(e) => {
+        if (e.target === e.target.getStage()) onSelect(null);
+      }}
+      onTouchStart={(e) => {
+        if (e.target === e.target.getStage()) onSelect(null);
+      }}
+      style={{ borderRadius: 12, overflow: "hidden" }}
+    >
+      <Layer scaleX={scale} scaleY={scale}>
+        {/* Fond */}
+        {background.mode === "gradient" ? (
+          <Rect
+            x={0}
+            y={0}
+            width={format.width}
+            height={format.height}
+            fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+            fillLinearGradientEndPoint={{ x: 0, y: format.height }}
+            fillLinearGradientColorStops={[0, background.color, 1, background.color2 || background.color]}
+          />
+        ) : (
+          <Rect x={0} y={0} width={format.width} height={format.height} fill={background.color} />
+        )}
+
+        {background.mode === "image" && bgImage && (
+          <KonvaImage
+            image={bgImage}
+            {...coverRect(bgImage.width, bgImage.height, format.width, format.height)}
+            listening={false}
+          />
+        )}
+
+        {/* Logo */}
+        {showLogo && logoImage && (
+          <KonvaImage
+            image={logoImage}
+            x={(format.width - logoW) / 2}
+            y={format.height * 0.04}
+            width={logoW}
+            height={logoH}
+            listening={false}
+          />
+        )}
+
+        {/* Calques texte — WYSIWYG : sélection / double-clic édition / drag */}
+        {layers
+          .filter((l) => l.enabled && l.text.trim())
+          .map((l) => (
+            <Text
+              key={l.id}
+              ref={(node) => {
+                if (node) nodesRef.current.set(l.id, node);
+                else nodesRef.current.delete(l.id);
+              }}
+              text={l.text}
+              x={l.xFrac * format.width}
+              y={l.yFrac * format.height}
+              width={l.widthFrac * format.width}
+              fontSize={l.fontScale * format.width}
+              fontFamily={l.fontFamily}
+              fontStyle={l.fontStyle}
+              fill={l.fill}
+              opacity={l.opacity}
+              align={l.align}
+              wrap="word"
+              lineHeight={1.18}
+              visible={editingId !== l.id}
+              draggable
+              onClick={() => onSelect(l.id)}
+              onTap={() => onSelect(l.id)}
+              onDblClick={() => onRequestEdit(l.id)}
+              onDblTap={() => onRequestEdit(l.id)}
+              onDragMove={() => reportRect(l.id)}
+              onDragEnd={(e) => {
+                onLayerMove(l.id, e.target.x() / format.width, e.target.y() / format.height);
+                reportRect(l.id);
+              }}
             />
-          ) : (
-            <Rect x={0} y={0} width={format.width} height={format.height} fill={background.color} />
-          )}
-
-          {background.mode === "image" && bgImage && (
-            <KonvaImage
-              image={bgImage}
-              {...coverRect(bgImage.width, bgImage.height, format.width, format.height)}
-              listening={false}
-            />
-          )}
-
-          {/* Logo */}
-          {showLogo && logoImage && (
-            <KonvaImage
-              image={logoImage}
-              x={(format.width - logoW) / 2}
-              y={format.height * 0.04}
-              width={logoW}
-              height={logoH}
-              listening={false}
-            />
-          )}
-
-          {/* Calques texte (déplaçables) */}
-          {layers
-            .filter((l) => l.enabled && l.text.trim())
-            .map((l) => (
-              <Text
-                key={l.id}
-                text={l.text}
-                x={l.xFrac * format.width}
-                y={l.yFrac * format.height}
-                width={l.widthFrac * format.width}
-                fontSize={l.fontScale * format.width}
-                fontFamily={fontFamily}
-                fontStyle={l.fontStyle}
-                fill={l.fill}
-                opacity={l.opacity}
-                align={l.align}
-                wrap="word"
-                lineHeight={1.18}
-                draggable
-                onDragEnd={(e) => {
-                  onLayerMove(l.id, e.target.x() / format.width, e.target.y() / format.height);
-                }}
-              />
-            ))}
-        </Layer>
-      </Stage>
-    );
+          ))}
+      </Layer>
+    </Stage>
+  );
 }
