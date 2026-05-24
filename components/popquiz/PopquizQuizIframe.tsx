@@ -21,7 +21,7 @@ export function PopquizQuizIframe({ quizId }: { quizId: string }) {
     <>
       <iframe
         key={quizId}
-        src={`/q/${quizId}`}
+        src={`/q/${quizId}?compact=1`}
         className="absolute inset-0 w-full h-full border-0 bg-background"
         title="Quiz"
         allow="autoplay; clipboard-write"
