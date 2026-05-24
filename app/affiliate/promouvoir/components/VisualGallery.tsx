@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ImageStudio } from "@/components/visual-studio/ImageStudio";
 import { BRAND_PRESETS } from "@/lib/visualStudio/presets";
+import { uploadVisual } from "@/lib/visualStudio/uploadVisual";
 import type { StudioResult } from "@/lib/visualStudio/types";
 import type { VisualAsset } from "../content/visuels-fr";
 
@@ -20,14 +21,17 @@ export function VisualGallery({
   const [studioOpen, setStudioOpen] = useState(false);
 
   function handleApply(result: StudioResult) {
-    // V1 affilié : téléchargement direct du PNG produit. Le stockage
-    // serveur (pipeline TUS) sera branché via la prop `upload` ensuite.
+    // Le visuel est déjà stocké côté serveur (prop `upload`). Ici on
+    // déclenche en plus le téléchargement local — via le blob, fiable
+    // même si result.url est une URL distante signée (cross-origin).
+    const href = URL.createObjectURL(result.blob);
     const a = document.createElement("a");
-    a.href = result.url;
+    a.href = href;
     a.download = `visuel-tiquiz-${result.format.replace(":", "x")}-${Date.now()}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    URL.revokeObjectURL(href);
   }
 
   return (
@@ -55,7 +59,8 @@ export function VisualGallery({
         onOpenChange={setStudioOpen}
         brandKit={BRAND_PRESETS.tiquiz}
         title="Studio visuel Tiquiz"
-        applyLabel="Télécharger le visuel"
+        applyLabel="Enregistrer & télécharger"
+        upload={uploadVisual}
         onApply={handleApply}
       />
       <section>
