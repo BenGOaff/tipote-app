@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,7 +53,10 @@ export async function GET(
     );
   }
 
-  const period = parsePeriod(new URL(req.url).searchParams.get("period"));
+  const reqUrl = new URL(req.url);
+  const period = parsePeriod(reqUrl.searchParams.get("period"));
+  // Fuseau du client pour bucketiser le graphe sur son jour local.
+  const tzOffset = parseTzOffset(reqUrl.searchParams.get("tz"));
 
   // Ownership + base counters in one shot
   const { data: quiz, error: quizErr } = await supabase
@@ -110,12 +114,12 @@ export async function GET(
     }))
     .sort((a, b) => b.count - a.count);
 
-  // Daily series. Fill missing days with 0 so the line doesn't have
-  // surprise gaps — visually misleading otherwise.
+  // Daily series. Bucketing en jour LOCAL du créateur (tzOffset) — clés
+  // ET leads — pour que "aujourd'hui" ne soit jamais vide à cause d'un
+  // décalage UTC (bug Adeline 24/05). Fill des jours manquants à 0.
   const dayMap = new Map<string, number>();
   for (const l of leads) {
-    const d = new Date(l.created_at);
-    const k = d.toISOString().slice(0, 10);
+    const k = dateKeyForOffset(new Date(l.created_at), tzOffset);
     dayMap.set(k, (dayMap.get(k) ?? 0) + 1);
   }
   const leadsByDay = (() => {
@@ -123,18 +127,19 @@ export async function GET(
     const start = period.sinceISO
       ? new Date(period.sinceISO)
       : new Date(leads[0]!.created_at);
-    const end = new Date();
     const out: { date: string; count: number }[] = [];
-    const cursor = new Date(
-      Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()),
-    );
-    const endDay = new Date(
-      Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()),
-    );
-    while (cursor.getTime() <= endDay.getTime()) {
-      const k = cursor.toISOString().slice(0, 10);
-      out.push({ date: k, count: dayMap.get(k) ?? 0 });
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    const endKey = dateKeyForOffset(new Date(), tzOffset);
+    let t = start.getTime();
+    let seen = "";
+    const guard = Date.now() + 24 * 3600 * 1000;
+    while (t <= guard) {
+      const k = dateKeyForOffset(new Date(t), tzOffset);
+      if (k !== seen) {
+        out.push({ date: k, count: dayMap.get(k) ?? 0 });
+        seen = k;
+      }
+      if (k === endKey) break;
+      t += 24 * 3600 * 1000;
     }
     // Cap at 365 days for "all time" with very old quizzes — recharts
     // would still render but the x-axis would be unreadable.

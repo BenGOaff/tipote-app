@@ -34,6 +34,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { stripHtml } from "@/lib/richText";
+import { localDateKey } from "@/lib/dateKeys";
 
 // Donut palette: primary Tipote + tonal variations, repeats if > 7 slices.
 const CHART_COLORS = [
@@ -134,6 +135,9 @@ export default function QuizResultsAnalytics({
   }, [leads, results, t]);
 
   // ─── Lead acquisition trend (last 30 days) ───────────────────────────────
+  // Bucketing en jour LOCAL du créateur (pas UTC) via localDateKey, pour
+  // les clés de jours ET pour les leads — sinon décalage de fuseau et
+  // "aujourd'hui" apparaît vide (bug Adeline 24/05). Cf. lib/dateKeys.
   const trendData = useMemo(() => {
     const days: { date: string; label: string; count: number }[] = [];
     const today = new Date();
@@ -141,7 +145,7 @@ export default function QuizResultsAnalytics({
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = localDateKey(d);
       days.push({
         date: key,
         label: d.toLocaleDateString(locale, {
@@ -154,7 +158,7 @@ export default function QuizResultsAnalytics({
     const idx = new Map(days.map((d, i) => [d.date, i]));
     for (const lead of leads) {
       if (!lead.created_at) continue;
-      const key = lead.created_at.slice(0, 10);
+      const key = localDateKey(new Date(lead.created_at));
       const i = idx.get(key);
       if (i !== undefined) days[i].count += 1;
     }

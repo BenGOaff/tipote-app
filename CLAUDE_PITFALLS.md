@@ -553,3 +553,31 @@ Routes : app/p/[slug]/page.tsx + app/[publicSlug]/page.tsx (kind=page).
 RÈGLE : toute nouvelle page publique doit fallback sur le défaut
 profil quand le pixel par-contenu est vide. resolveEffectivePixels
 est le point unique.
+
+## V) STATS time-series : TOUJOURS bucketiser par jour LOCAL du créateur (24 mai 2026)
+
+**Bug récurrent (Adeline 24/05, sur quiz.tipote.com = Tiquiz mais même
+code ici)** : 6 leads faits aujourd'hui, mais le graphe "Leads sur les
+30 derniers jours" du quiz affichait ZÉRO pour aujourd'hui. La liste
+des leads montrait bien les 6.
+
+**Cause** : mélange de conventions de fuseau dans le bucketing par jour.
+`QuizResultsAnalytics.tsx` générait les clés via
+`d.toISOString().slice(0,10)` (jour UTC) mais bucketisait les leads via
+`lead.created_at.slice(0,10)` (jour brut) → décalage de fuseau → les
+leads d'aujourd'hui ne tombaient dans aucun bucket.
+
+**RÈGLE DÉFINITIVE** : tout bucketing par jour des time-series stats se
+fait selon le **jour LOCAL du créateur**, via `lib/dateKeys.ts` :
+- Client → `localDateKey(date)` pour LES CLÉS *et* les lignes.
+- Serveur → client passe `&tz=${new Date().getTimezoneOffset()}`,
+  serveur bucketise via `dateKeyForOffset(date, tzOffset)`.
+
+⚠️ Cas SSR (app/quiz/[id]/analytics/page.tsx prefetch) : le serveur ne
+connaît pas le fuseau au SSR → le QuizAnalyticsClient REFAIT un fetch
+client avec tz au mount (on a retiré le court-circuit
+`period === initial.period`). Sans ça le 1er paint reste en UTC.
+
+**Checklist** : clés + lignes même helper ; jamais toISOString().slice
+pour un bucket affiché ; endpoint serveur → accepter `tz`. Surfaces :
+QuizResultsAnalytics, /api/quiz/[id]/analytics.
