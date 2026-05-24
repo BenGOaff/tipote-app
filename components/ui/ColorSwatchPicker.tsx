@@ -11,6 +11,7 @@
 // courante qui ouvre le popover ; clic-out ferme.
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { HexColorPicker } from "react-colorful";
 
 const SWATCHES: Array<{ hex: string; label: string }> = [
@@ -46,12 +47,35 @@ interface Props {
 export function ColorSwatchPicker({ value, onChange, label, disabled, userPalettes, userPalettesLabel }: Props) {
   const [open, setOpen] = useState(false);
   const [hexInput, setHexInput] = useState(value);
+  // Position du popover, rendu en portal (position: fixed) pour ne JAMAIS
+  // être coupé par un parent en overflow:hidden (cards, toolbars…).
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
+  const POP_W = 240; // largeur w-60
+
+  function computePos() {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return null;
+    return {
+      top: r.bottom + 4,
+      left: Math.max(8, Math.min(r.left, window.innerWidth - POP_W - 8)),
+    };
+  }
+
+  // Reposition sur scroll/resize tant que le popover est ouvert.
+  // (Effet = uniquement des listeners ; le setState a lieu dans le callback.)
   useEffect(() => {
-    if (!open) setHexInput(value);
-  }, [open, value]);
+    if (!open) return;
+    const place = () => setPos(computePos());
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
 
   // Click-out → ferme.
   useEffect(() => {
@@ -83,16 +107,24 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
         ref={btnRef}
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          const next = !open;
+          if (next) {
+            setHexInput(value);
+            setPos(computePos());
+          }
+          setOpen(next);
+        }}
         className="size-9 rounded-md border border-border/60 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow transition"
         style={{ backgroundColor: value || "#ffffff" }}
         aria-label={label ?? "Choisir une couleur"}
         title={value}
       />
-      {open && !disabled ? (
+      {open && !disabled && pos ? createPortal(
         <div
           ref={popRef}
-          className="absolute z-30 top-full left-0 mt-1 w-60 rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
+          style={{ position: "fixed", top: pos.top, left: pos.left }}
+          className="z-[60] w-60 rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
         >
           {/* HSV square + hue slider — composant react-colorful.
               On force la largeur full pour que le carré HSV remplisse
@@ -184,7 +216,8 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
       {/* Override la largeur par défaut de react-colorful (200px) pour
           coller au popover et donner un peu plus de surface au carré. */}
