@@ -27,11 +27,15 @@ Typecheck garantit la complétude (AffiliateDict). AR en RTL (le layout
 applique dir="rtl" automatiquement).
 
 ### Classement top 10 anonymisé
-Dernière brique gamification (style "ff-***" comme FunnelForge). Pas urgent
-tant que la base d'affiliés n'est pas assez grosse (10+). Quand on l'aura :
-- Vue agrégée Supabase qui rank par total_commission_cents du mois
-- Pseudonyme stable par affilié (hash de sa)
-- Carte sur l'overview qui affiche le top 10 (ton rang masqué si tu n'es pas dedans)
+✅ Fait (24/05) : LeaderboardCard sur l'overview. Rank par nombre de
+ventes du mois (égalité départagée par commission cumulée), pseudonyme
+stable "aff-xxxx" dérivé du sa, ligne "Toi" mise en avant, rang affiché
+même hors top 10. Masqué tant que < 3 affiliés actifs ce mois (message
+d'attente). Carte "coming_soon" retirée de l'overview.
+
+## ⏳ En attente de validation Béné avant de faire
+- Mettre le lien vers le dashboard affilié dans les réglages Tiquiz +
+  Tipote (UNIQUEMENT après validation complète de Béné).
 
 ### PopquizEditClient WYSIWYG
 Pour aligner sur le pattern quiz, popquiz devrait passer de AppShell + form-style

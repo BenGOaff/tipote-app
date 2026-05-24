@@ -171,6 +171,13 @@ export const AR: AffiliateDict = {
     badge_tier_high_body: "25 مبيعة متراكمة. أنت عند المعدّل الأقصى.",
     badge_100eur_title: "100 € مكتسبة",
     badge_100eur_body: "تجاوزت عتبة الثلاثة أرقام. الآلة تعمل.",
+    leaderboard_title: "ترتيب الشهر",
+    leaderboard_subtitle: "أفضل 10 مسوّقين مجهولين هذا الشهر.",
+    leaderboard_you: "أنت",
+    leaderboard_sales: "مبيعات",
+    leaderboard_empty: "سيظهر الترتيب بمجرد تحقيق عدة مسوّقين مبيعات هذا الشهر.",
+    leaderboard_your_rank: "ترتيبك",
+    leaderboard_unranked: "لا مبيعات بعد هذا الشهر — انطلق!",
   },
   promouvoir: {
     page_title: "الترويج",

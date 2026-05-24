@@ -179,6 +179,14 @@ export type AffiliateDict = {
     badge_tier_high_body: string;
     badge_100eur_title: string;
     badge_100eur_body: string;
+    // Leaderboard
+    leaderboard_title: string;
+    leaderboard_subtitle: string;
+    leaderboard_you: string;
+    leaderboard_sales: string;
+    leaderboard_empty: string;
+    leaderboard_your_rank: string;
+    leaderboard_unranked: string;
   };
 
   // ─── Promouvoir ──────────────────────────────────────────────────
