@@ -109,6 +109,7 @@ export function StudioCanvas({
   onReady,
 }: StudioCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
+  const layerRef = useRef<Konva.Layer>(null);
   const nodesRef = useRef<Map<TextLayerId, Konva.Text>>(new Map());
   const lastRectKey = useRef<string>("");
 
@@ -162,6 +163,20 @@ export function StudioCanvas({
     onReady?.({ toBlob: exportPng });
   }, [onReady, exportPng]);
 
+  // Si une vraie webfont se charge après le 1er rendu, on force un redraw
+  // pour que Konva recalcule les métriques (sinon rendu avec le fallback).
+  useEffect(() => {
+    const fonts = document.fonts;
+    if (!fonts?.ready) return;
+    let alive = true;
+    fonts.ready.then(() => {
+      if (alive) layerRef.current?.draw();
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const logoW = format.width * 0.26;
   const logoH = logoImage ? (logoImage.height / logoImage.width) * logoW : 0;
 
@@ -178,7 +193,7 @@ export function StudioCanvas({
       }}
       style={{ borderRadius: 12, overflow: "hidden" }}
     >
-      <Layer scaleX={scale} scaleY={scale}>
+      <Layer ref={layerRef} scaleX={scale} scaleY={scale}>
         {/* Fond */}
         {background.mode === "gradient" ? (
           <Rect

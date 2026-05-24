@@ -42,15 +42,32 @@ export function fitDisplay(
   return { displayWidth, displayHeight, scale: displayWidth / format.width };
 }
 
-/** Polices proposées (toutes garanties dispo navigateur + export canvas). */
+/**
+ * Polices proposées. La `value` est une STACK CSS complète (avec
+ * fallback générique) : c'est ce qu'on passe à Konva (ctx.font) ET au
+ * textarea, pour un rendu identique au DOM. Sans fallback générique, le
+ * canvas retombe sur du serif quand la police n'est pas chargée (bug
+ * "Inter affiché en serif", 24/05).
+ */
+export const INTER_STACK =
+  'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+
 export const FONT_OPTIONS = [
-  { label: "Inter", value: "Inter" },
-  { label: "Arial", value: "Arial" },
-  { label: "Georgia", value: "Georgia" },
-  { label: "Times", value: "Times New Roman" },
-  { label: "Courier", value: "Courier New" },
-  { label: "Trebuchet", value: "Trebuchet MS" },
+  { label: "Inter", value: INTER_STACK },
+  { label: "Arial", value: "Arial, Helvetica, sans-serif" },
+  { label: "Georgia", value: 'Georgia, "Times New Roman", serif' },
+  { label: "Times", value: '"Times New Roman", Times, serif' },
+  { label: "Courier", value: '"Courier New", Courier, monospace' },
+  { label: "Trebuchet", value: '"Trebuchet MS", Verdana, sans-serif' },
 ] as const;
+
+/** Mappe un nom de police de marque ("Inter") vers sa stack CSS. */
+export function fontStackFor(name?: string): string {
+  if (!name) return INTER_STACK;
+  if (name.includes(",")) return name; // déjà une stack
+  const hit = FONT_OPTIONS.find((f) => f.label.toLowerCase() === name.toLowerCase());
+  return hit ? hit.value : `${name}, ${INTER_STACK}`;
+}
 
 // Brand kits par défaut. Tiquiz & Tipote partagent la base de marque
 // (#2E386E texte / #5D6CDB CTA / Inter). On les expose nommés pour que
@@ -86,7 +103,7 @@ export function buildDefaultLayers(
   brand: BrandKit,
   initialText?: Partial<Record<TextLayerId, string>>,
 ): TextLayer[] {
-  const font = brand.font || "Inter";
+  const font = fontStackFor(brand.font);
   return [
     {
       id: "headline",
