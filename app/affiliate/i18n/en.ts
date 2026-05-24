@@ -207,6 +207,11 @@ export const EN: AffiliateDict = {
     conditions_tiers:
       "Progressive tiers: you start at 40% commission, move to 45% from 10 cumulative sales, and 50% from 25 sales.",
     see_full_terms: "See full T&Cs",
+    edit_button: "Edit",
+    edit_reset: "Reset to template",
+    edit_badge: "Customized",
+    edit_hint: "Adapt this text to your voice. Keep variables like {first_name} and the link — they're auto-replaced on copy.",
+    edit_saved: "Changes saved",
   },
   revenus: {
     page_title: "Earnings",

@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
-import { AffiliateNav } from "../components/AffiliateNav";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AffiliateLinkCopy from "../components/AffiliateLinkCopy";
 import { EmailCard } from "./components/EmailCard";
 import { PostDayCard } from "./components/PostDayCard";
@@ -71,10 +71,17 @@ export default async function PromouvoirPage() {
   const baseLink = `https://www.tipote.fr/tiquiz/affiliation?sa=${session.sa}`;
   const displayName = session.display_name ?? session.email.split("@")[0];
 
-  return (
-    <div className="min-h-screen bg-background">
-      <AffiliateNav displayName={displayName} />
+  // Versions perso des textes promo (emails/posts) sauvegardées par
+  // l'affilié. Vide = modèles d'origine. Cf. /affiliate/api/promo.
+  const { data: ov } = await supabaseAdmin
+    .from("affiliates")
+    .select("promo_overrides")
+    .eq("sa", session.sa)
+    .maybeSingle();
+  const overrides = ((ov as { promo_overrides?: Record<string, string> } | null)?.promo_overrides) ?? {};
 
+  return (
+    <>
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.promouvoir.page_title}</h1>
@@ -156,6 +163,7 @@ export default async function PromouvoirPage() {
                   email={email}
                   affiliateLink={baseLink}
                   displayName={displayName}
+                  overrides={overrides}
                 />
               ))}
             </div>
@@ -172,7 +180,7 @@ export default async function PromouvoirPage() {
             </Card>
             <div className="space-y-3">
               {POSTS_FR.map((day) => (
-                <PostDayCard key={day.id} day={day} affiliateLink={baseLink} />
+                <PostDayCard key={day.id} day={day} affiliateLink={baseLink} overrides={overrides} />
               ))}
             </div>
           </TabsContent>
@@ -217,6 +225,6 @@ export default async function PromouvoirPage() {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </>
   );
 }

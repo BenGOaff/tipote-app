@@ -14,7 +14,6 @@ import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, Ar
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AffiliateNav } from "./components/AffiliateNav";
 import { AffiliateTour } from "./components/AffiliateTour";
 import AffiliateLinkCopy from "./components/AffiliateLinkCopy";
 import { LaunchGuideCard } from "./components/LaunchGuideCard";
@@ -144,8 +143,7 @@ export default async function AffiliateOverviewPage() {
       : "—";
 
   return (
-    <div className="min-h-screen bg-background">
-      <AffiliateNav displayName={displayName} />
+    <>
       {/* Tutoriel guidé : s'auto-déclenche si onboardedAt = null (premier
           login) ; sinon dormant. Peut être relancé via l'événement
           "affiliate-tour-start" depuis Support. */}
@@ -251,7 +249,7 @@ export default async function AffiliateOverviewPage() {
 
         <LeaderboardCard sa={session.sa} locale={session.locale} />
       </main>
-    </div>
+    </>
   );
 }
 

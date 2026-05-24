@@ -207,6 +207,11 @@ export const PT: AffiliateDict = {
     conditions_tiers:
       "Níveis progressivos: começas com 40% de comissão, passas a 45% a partir de 10 vendas acumuladas e a 50% a partir de 25 vendas.",
     see_full_terms: "Ver as condições completas",
+    edit_button: "Editar",
+    edit_reset: "Repor o modelo",
+    edit_badge: "Personalizado",
+    edit_hint: "Adapta este texto à tua voz. Mantém as variáveis como {first_name} e o link — são substituídos automaticamente ao copiar.",
+    edit_saved: "Alterações guardadas",
   },
   revenus: {
     page_title: "Ganhos",

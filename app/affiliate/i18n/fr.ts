@@ -208,6 +208,11 @@ export const FR: AffiliateDict = {
     conditions_tiers:
       "Paliers progressifs : tu commences à 40% de commission, tu passes à 45% à partir de 10 ventes cumulées, et 50% à partir de 25 ventes.",
     see_full_terms: "Voir les CGV complètes",
+    edit_button: "Éditer",
+    edit_reset: "Réinitialiser le modèle",
+    edit_badge: "Personnalisé",
+    edit_hint: "Adapte ce texte à ta voix. Garde les variables comme {first_name} et le lien — ils sont remplacés automatiquement à la copie.",
+    edit_saved: "Modifications enregistrées",
   },
   revenus: {
     page_title: "Revenus",

@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { AffiliateNav } from "../components/AffiliateNav";
 import { TrialActivateButton } from "./TrialActivateButton";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
 import type { AffiliateDict } from "../i18n/types";
@@ -71,12 +70,9 @@ export default async function TrialTipotePage() {
   const isActive = isActivated && expiresAt && expiresAt > now;
   const isExpired = isActivated && expiresAt && expiresAt <= now;
 
-  const displayName = session.display_name ?? session.email.split("@")[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      <AffiliateNav displayName={displayName} />
-
+    <>
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -92,7 +88,7 @@ export default async function TrialTipotePage() {
         {isActive && expiresAt && <TrialActive expiresAt={expiresAt} now={now} t={t} locale={locale} />}
         {isExpired && expiresAt && <TrialExpired expiresAt={expiresAt} t={t} locale={locale} />}
       </main>
-    </div>
+    </>
   );
 }
 

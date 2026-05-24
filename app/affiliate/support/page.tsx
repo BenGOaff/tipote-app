@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/accordion";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
-import { AffiliateNav } from "../components/AffiliateNav";
 import { getDict, normaliseLocale } from "../i18n";
 
 export const dynamic = "force-dynamic";
@@ -79,9 +78,7 @@ export default async function SupportPage() {
   const t = getDict(normaliseLocale(session.locale));
 
   return (
-    <div className="min-h-screen bg-background">
-      <AffiliateNav displayName={session.display_name ?? session.email.split("@")[0]} />
-
+    <>
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.support.page_title}</h1>
@@ -150,6 +147,6 @@ export default async function SupportPage() {
           </CardContent>
         </Card>
       </main>
-    </div>
+    </>
   );
 }
