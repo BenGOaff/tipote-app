@@ -673,6 +673,29 @@ visual.<ext>` → servi signé via Caddy forward_auth (`videos.tipote.com`).
   `infra/popquiz-tus/README.md` (vérifier le `diff` avant de copier).
 - Le module reste agnostique : l'hôte injecte `upload(blob) => url`.
 
+### W bis) Serveur tus partagé — 2 bugs de prod corrigés (24/05)
+
+Le serveur tus (`/opt/popquiz-tus/server.mjs`, canonique dans Tiquiz
+`infra/tus-server/server.mjs`, copie Tipote `infra/popquiz-tus/`) est
+PARTAGÉ par les vidéos popquiz ET les visuels. Deux régressions vues le
+24/05 (déclenchées par un restart qui a chargé une version disque qui
+avait dérivé) :
+1. **`generateUrl` dépendait de `baseUrl`** qui est `undefined` selon la
+   version de `@tus/server` → URLs `https://<host>undefined/files/...`
+   → upload cassé (ERR_NAME_NOT_RESOLVED). Fix : `${proto}://${host}${p}/
+   ${encodeURIComponent(id)}` (sans baseUrl).
+2. **Lecture 404 via Caddy `forward_auth`** : Caddy garde la query string
+   en réécrivant le chemin de la sous-requête d'auth → le serveur tus
+   reçoit `/_validate-secure-link?md5=...` et l'égalité STRICTE
+   `req.url === "/_validate-secure-link"` échoue → `tus.handle()` → 404
+   « The file for this url was not found ». Fix : comparer le PATH seul
+   (`req.url.split("?")[0]`).
+
+⚠️ **Le `/opt` peut diverger du repo** (édité à la main sans restart, donc
+le process tournait une version, le disque une autre). Toujours vérifier
+par un test bout-en-bout (upload PUIS lecture) après tout restart de
+`popquiz-tus`, et garder `/opt` synchro avec `infra/tus-server/`.
+
 **Portage Tiquiz/Tipote** : nourrir `brandKit` via `resolveQuizBranding()`
 (business_profiles), brancher `upload` sur le pipeline TUS, ouvrir la
 modale depuis chaque "Ajouter/Modifier une image" (éditeur quiz,

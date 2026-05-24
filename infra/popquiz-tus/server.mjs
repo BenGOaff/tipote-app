@@ -262,7 +262,11 @@ const server = http.createServer((req, res) => {
   // Caddy `forward_auth` for the videos.* vhosts. Routed first so the
   // tus router never sees this path (it would 404 since /files is its
   // only mounted prefix anyway, but explicit > implicit).
-  if (req.method === "GET" && req.url === "/_validate-secure-link") {
+  // NB: Caddy preserves the original query string when it rewrites the
+  // auth subrequest path, so req.url is "/_validate-secure-link?md5=...".
+  // We must compare the PATH only — a strict `=== "/_validate-secure-link"`
+  // misses it and the request falls through to tus.handle() → 404.
+  if (req.method === "GET" && req.url.split("?")[0] === "/_validate-secure-link") {
     return handleValidateSecureLink(req, res);
   }
 
