@@ -28,6 +28,25 @@ export type QuizPixelConfig = {
   google_ads_conversion_label?: string | null;
 };
 
+// Paramètres d'événement optionnels (enrichissement). content_name =
+// titre du quiz → aide l'algo Meta à regrouper/optimiser les events.
+export type QuizPixelParams = {
+  contentName?: string | null;
+};
+
+// ID de déduplication par event. Évite le double-comptage (ex: un event
+// re-fired) et permet un dédoublonnage si on branche un jour la
+// Conversions API serveur (même eventID des deux côtés = 1 seul event).
+function makeEventId(): string {
+  try {
+    const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+    if (c?.randomUUID) return c.randomUUID();
+  } catch {
+    // pas de crypto → fallback ci-dessous
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 // Mapping de nos événements internes vers les standards Meta + GA4.
 // On utilise les "Standard Events" Meta quand pertinent (Lead, etc.)
 // et un trackCustom pour QuizStart. GA4 accepte n'importe quel nom
@@ -61,14 +80,18 @@ const GA4_EVENT_MAP: Record<QuizPixelEvent, string> = {
 export function fireQuizPixel(
   event: QuizPixelEvent,
   config: QuizPixelConfig,
+  params: QuizPixelParams = {},
 ): void {
   if (typeof window === "undefined") return;
 
   // ── Meta Pixel ────────────────────────────────────────────────
   if (config.meta_pixel_id && typeof window.fbq === "function") {
     const { method, name } = META_EVENT_MAP[event];
+    const eventParams: Record<string, unknown> = {};
+    if (params.contentName) eventParams.content_name = params.contentName;
     try {
-      window.fbq(method, name);
+      // 4e arg = options Meta ({ eventID }) pour la déduplication.
+      window.fbq(method, name, eventParams, { eventID: makeEventId() });
     } catch {
       // fbq peut throw si pas init — silent fail.
     }
