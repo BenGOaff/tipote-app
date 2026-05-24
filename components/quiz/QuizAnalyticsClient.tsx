@@ -106,13 +106,17 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (period === initial.period && data === initial) return;
+    // On NE court-circuite plus le premier fetch même si period ===
+    // initial.period : la donnée SSR `initial` est bucketisée en UTC
+    // (le serveur ne connaît pas le fuseau du navigateur au SSR). On
+    // refait donc un fetch client avec le tz pour que le graphe
+    // affiche les jours LOCAUX du créateur (bug Adeline 24/05).
     let cancelled = false;
     setLoading(true);
     void (async () => {
       try {
         const res = await fetch(
-          `/api/quiz/${encodeURIComponent(quizId)}/analytics?period=${period}`,
+          `/api/quiz/${encodeURIComponent(quizId)}/analytics?period=${period}&tz=${new Date().getTimezoneOffset()}`,
           { credentials: "include" },
         );
         const json = (await res.json()) as AnalyticsResponse;
