@@ -159,7 +159,8 @@ export function ImageStudio({
       onOpenChange(false);
     } catch (e) {
       console.error("[ImageStudio] export/upload failed", e);
-      toast.error("Impossible de générer le visuel. Réessaie.");
+      const msg = e instanceof Error ? e.message : "Réessaie.";
+      toast.error(`Échec du visuel : ${msg}`);
     } finally {
       setBusy(false);
     }

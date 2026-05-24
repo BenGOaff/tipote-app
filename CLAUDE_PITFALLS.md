@@ -642,17 +642,23 @@ avec édition de texte NATIVE dans le canvas (caret + sélection). Konva a
    Fabric, sinon rendu serif quand la webfont n'est pas chargée (bug
    Inter→serif 24/05). Redraw sur `document.fonts.ready`.
 
-**STOCKAGE (décision Béné, 24/05)** : NE PAS utiliser Supabase Storage
-(limites). Réutiliser le pipeline self-host des vidéos popquiz : TUS
+**STOCKAGE (décision Béné, 24/05) — IMPLÉMENTÉ** : PAS de Supabase Storage.
+On réutilise le pipeline self-host des vidéos popquiz : TUS
 (`tus.tipote.com/files/`) → `/srv/popquiz-videos/<app>/raw/<uid>/<id>/
-<kind>.<ext>` → servi signé via nginx `videos.tipote.com` (secure_link).
-Helpers dans `lib/popquiz/playback.ts` (`signUploadToken`,
-`signedPlaybackUrl`). nginx sert déjà n'importe quel PNG signé.
-⚠️ Le serveur TUS (`/opt/popquiz-tus`, **hors repo**) valide `kind` :
-ajouter `kind:"visual"` y nécessite une modif serveur. Sinon réutiliser
-un `kind` image déjà autorisé (`thumbnail`/`thumbnail-custom`, voir
-`ALLOWED_THUMB_EXT`) = zéro modif serveur. Le module reste agnostique :
-l'hôte injecte `upload(blob) => url`.
+visual.<ext>` → servi signé via Caddy forward_auth (`videos.tipote.com`).
+- `lib/popquiz/playback.ts` : `UploadClaims.kind` inclut désormais
+  `"visual"` (`signUploadToken` / `signedPlaybackUrl` réutilisés tels quels).
+- Routes Next génériques (réutilisables Tiquiz/Tipote) :
+  `app/api/visuals/upload-token` + `app/api/visuals/playback-url`
+  (auth = user Supabase ; l'affilié EST un user Supabase, mêmes cookies).
+- Client : `lib/visualStudio/uploadVisual.ts` (tus-js-client) → branché
+  sur la prop `upload` de `<ImageStudio>`.
+- ⚠️ DÉPENDANCE SERVEUR : le serveur tus (`/opt/popquiz-tus/server.mjs`,
+  désormais versionné dans `infra/popquiz-tus/`) doit avoir `visual` dans
+  `KIND_RE` + `filenameByKind`. Tant que Béné n'a pas `cp` + `pm2 restart
+  popquiz-tus`, l'upload renvoie 401 "Bad kind claim". Voir
+  `infra/popquiz-tus/README.md` (vérifier le `diff` avant de copier).
+- Le module reste agnostique : l'hôte injecte `upload(blob) => url`.
 
 **Portage Tiquiz/Tipote** : nourrir `brandKit` via `resolveQuizBranding()`
 (business_profiles), brancher `upload` sur le pipeline TUS, ouvrir la

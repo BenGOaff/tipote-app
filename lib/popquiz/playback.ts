@@ -40,7 +40,9 @@ export interface UploadClaims {
   // - thumbnail-custom : a user-uploaded poster that overrides the auto
   //   one. Stored at thumbnail-custom.<ext> so the auto poster is kept
   //   on disk and the user can revert to it without re-uploading.
-  kind: "source" | "thumbnail" | "thumbnail-custom";
+  // - visual : a Studio image (PNG/JPG/WebP) — same self-hosted pipeline,
+  //   reused for marketing visuals. Stored at visual.<ext>.
+  kind: "source" | "thumbnail" | "thumbnail-custom" | "visual";
 }
 
 const SAFE_EXT = /^[a-z0-9]{1,8}$/;
