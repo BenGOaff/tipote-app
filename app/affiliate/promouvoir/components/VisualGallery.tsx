@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { Download } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Download, Wand2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ImageStudio } from "@/components/visual-studio/ImageStudio";
+import { BRAND_PRESETS } from "@/lib/visualStudio/presets";
+import type { StudioResult } from "@/lib/visualStudio/types";
 import type { VisualAsset } from "../content/visuels-fr";
 
 export function VisualGallery({
@@ -13,8 +17,47 @@ export function VisualGallery({
   singles: VisualAsset[];
   carrousel: VisualAsset[];
 }) {
+  const [studioOpen, setStudioOpen] = useState(false);
+
+  function handleApply(result: StudioResult) {
+    // V1 affilié : téléchargement direct du PNG produit. Le stockage
+    // serveur (pipeline TUS) sera branché via la prop `upload` ensuite.
+    const a = document.createElement("a");
+    a.href = result.url;
+    a.download = `visuel-tiquiz-${result.format.replace(":", "x")}-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   return (
     <div className="space-y-8">
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="font-medium flex items-center gap-2">
+              <Wand2 className="h-4 w-4 text-primary" />
+              Crée ton propre visuel
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Compose un visuel à la marque Tiquiz (post, story) avec ton accroche et ton CTA.
+            </p>
+          </div>
+          <Button onClick={() => setStudioOpen(true)}>
+            <Wand2 className="h-4 w-4 mr-1.5" />
+            Créer un visuel
+          </Button>
+        </CardContent>
+      </Card>
+
+      <ImageStudio
+        open={studioOpen}
+        onOpenChange={setStudioOpen}
+        brandKit={BRAND_PRESETS.tiquiz}
+        title="Studio visuel Tiquiz"
+        applyLabel="Télécharger le visuel"
+        onApply={handleApply}
+      />
       <section>
         <div className="mb-4">
           <h3 className="text-lg font-semibold">Visuels singles (8)</h3>
