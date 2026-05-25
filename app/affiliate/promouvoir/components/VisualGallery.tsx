@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Download, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,7 @@ export function VisualGallery({
   singles: VisualAsset[];
   carrousel: VisualAsset[];
 }) {
+  const tStudio = useTranslations("visualStudio");
   const [studioOpen, setStudioOpen] = useState(false);
 
   function handleApply(result: StudioResult) {
@@ -58,8 +60,7 @@ export function VisualGallery({
         open={studioOpen}
         onOpenChange={setStudioOpen}
         brandKit={BRAND_PRESETS.tiquiz}
-        title="Studio visuel Tiquiz"
-        applyLabel="Enregistrer & télécharger"
+        applyLabel={tStudio("download")}
         upload={uploadVisual}
         onApply={handleApply}
       />
