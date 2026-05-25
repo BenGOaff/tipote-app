@@ -5778,7 +5778,19 @@
     "tbDelete": "Delete",
     "tbFont": "Font",
     "tbTextColor": "Text color",
-    "paletteOf": "{name} palette"
+    "paletteOf": "{name} palette",
+    "aiTitle": "AI background",
+    "aiPromptPlaceholder": "E.g. a smiling person in a bright office",
+    "aiStyleLabel": "Style",
+    "aiStylePhotoPerson": "Person",
+    "aiStyleLandscape": "Landscape",
+    "aiStyleAbstract": "Abstract",
+    "aiStyleSpace": "Space",
+    "aiStyleMinimal": "Minimal",
+    "aiGenerate": "Generate background",
+    "aiVariant": "Another variant",
+    "aiGenerating": "Generating…",
+    "aiError": "Generation failed, try again."
   },
   "colorPicker": {
     "pick": "Pick a color",

@@ -49,6 +49,7 @@ import { Separator } from "@/components/ui/separator";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 
 import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
+import { AI_STYLES, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
 import type {
   BackgroundMode,
   BackgroundSpec,
@@ -116,6 +117,10 @@ export function ImageStudio({
   // le focus). C'est le pattern d'un éditeur canvas en modale.
   const stageRef = useRef<HTMLDivElement>(null);
   const [stageSize, setStageSize] = useState<{ w: number; h: number }>({ w: PREVIEW_MAX_W, h: PREVIEW_MAX_H });
+  // Génération de fond IA (le texte reste un calque éditeur, jamais l'IA).
+  const [aiIntent, setAiIntent] = useState("");
+  const [aiStyle, setAiStyle] = useState<AiStyleId>("photoPerson");
+  const [aiBusy, setAiBusy] = useState(false);
 
   const handleRef = useRef<StudioCanvasHandle | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -215,6 +220,33 @@ export function ImageStudio({
     const url = URL.createObjectURL(file);
     objectUrlsRef.current.push(url);
     setBackground((b) => ({ ...b, mode: "image", imageUrl: url }));
+  }
+
+  // Génère un fond via l'IA (route serveur, clé owner) et le pose en image
+  // de fond. Le contraste / la zone propre pour le texte sont gérés par le
+  // prompt ; le texte lui-même reste un calque éditable.
+  async function generateBg() {
+    setAiBusy(true);
+    try {
+      const res = await fetch("/api/visual-studio/generate-background", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          intent: aiIntent.trim() || undefined,
+          style: aiStyle,
+          ratio: format.width / format.height,
+          brandColors: [brandKit.primaryColor, brandKit.accentColor, brandKit.backgroundColor].filter(Boolean),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok || !json?.dataUrl) throw new Error(json?.error || "fail");
+      setBackground((b) => ({ ...b, mode: "image", imageUrl: json.dataUrl as string }));
+    } catch (e) {
+      console.error("[ImageStudio] AI background failed", e);
+      toast.error(t("aiError"));
+    } finally {
+      setAiBusy(false);
+    }
   }
 
   async function apply() {
@@ -354,10 +386,43 @@ export function ImageStudio({
                         onChange={(e) => handleBgFile(e.target.files?.[0])}
                       />
                     </label>
-                    <Button type="button" variant="outline" className="w-full" disabled title="Bientôt disponible">
-                      <Sparkles className="h-4 w-4 mr-1.5" />
-                      {t("aiBackgroundSoon")}
-                    </Button>
+                    <div className="space-y-2 rounded-lg border border-border/60 p-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                        {t("aiTitle")}
+                      </div>
+                      <textarea
+                        value={aiIntent}
+                        onChange={(e) => setAiIntent(e.target.value)}
+                        placeholder={t("aiPromptPlaceholder")}
+                        rows={2}
+                        className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <div className="flex flex-wrap gap-1.5">
+                        {AI_STYLES.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setAiStyle(s.id)}
+                            className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                              aiStyle === s.id
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border text-muted-foreground hover:bg-muted"
+                            }`}
+                          >
+                            {t(s.labelKey)}
+                          </button>
+                        ))}
+                      </div>
+                      <Button type="button" variant="outline" className="w-full" onClick={generateBg} disabled={aiBusy}>
+                        {aiBusy ? (
+                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-1.5" />
+                        )}
+                        {aiBusy ? t("aiGenerating") : background.imageUrl ? t("aiVariant") : t("aiGenerate")}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
