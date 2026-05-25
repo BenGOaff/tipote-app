@@ -125,6 +125,13 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
           ref={popRef}
           style={{ position: "fixed", top: pos.top, left: pos.left }}
           className="z-[60] w-60 rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
+          onMouseDown={(e) => {
+            // Garde le focus de l'éditeur parent (ex: texte Fabric dans le
+            // studio) : sans ça, mousedown ici blure le canvas → la sélection
+            // se perd → la barre flottante (donc ce picker) se démonte. On
+            // laisse les inputs (champ hex) recevoir le focus normalement.
+            if ((e.target as HTMLElement).tagName !== "INPUT") e.preventDefault();
+          }}
         >
           {/* HSV square + hue slider — composant react-colorful.
               On force la largeur full pour que le carré HSV remplisse
