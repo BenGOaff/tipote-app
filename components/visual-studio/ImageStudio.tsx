@@ -50,6 +50,7 @@ import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 
 import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
 import { AI_STYLES, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
+import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
 import type {
   BackgroundMode,
   BackgroundSpec,
@@ -263,8 +264,16 @@ export function ImageStudio({
         anyOk = true;
       }
       if (bg?.ok && bg.dataUrl) {
+        // Analyse l'image générée → place le texte dans la bande la plus
+        // propre + couleur + voile adaptés (au lieu de deviner à l'aveugle).
+        const placement = await analyzeForText(String(bg.dataUrl)).catch(() => null);
         setBackground((b) => ({ ...b, mode: "image", imageUrl: String(bg.dataUrl) }));
-        setScrim("dark"); // contraste auto pour garantir la lisibilité
+        if (placement) {
+          setScrim(placement.scrim);
+          handleRef.current?.setTextPlacement(placement.anchor, placement.textColor);
+        } else {
+          setScrim("dark");
+        }
         anyOk = true;
       }
       if (!anyOk) toast.error(t("aiError"));

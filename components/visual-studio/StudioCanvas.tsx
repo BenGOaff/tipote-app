@@ -76,6 +76,9 @@ export interface StudioCanvasHandle {
    *  génération de copy IA (titre/sous-titre/CTA). No-op si le calque
    *  n'existe pas. */
   setLayerText: (id: string, text: string) => void;
+  /** Place le bloc texte en haut ou en bas (selon l'analyse d'image) et
+   *  applique la couleur adaptée au titre/sous-titre. */
+  setTextPlacement: (anchor: "top" | "bottom", textColor: string) => void;
 }
 
 interface StudioCanvasProps {
@@ -373,6 +376,26 @@ export function StudioCanvas({
           .find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined;
         if (!obj) return;
         obj.set({ text });
+        c.requestRenderAll();
+      },
+      setTextPlacement(anchor, textColor) {
+        const c = fcRef.current;
+        if (!c) return;
+        const H = dimsRef.current.h;
+        // Bloc texte clusterisé dans la bande la plus propre (haut/bas).
+        const yF: Record<string, number> =
+          anchor === "top"
+            ? { kicker: 0.06, headline: 0.12, subline: 0.3, cta: 0.4 }
+            : { kicker: 0.5, headline: 0.56, subline: 0.74, cta: 0.84 };
+        c.getObjects().forEach((o) => {
+          const id = (o as { layerId?: string }).layerId;
+          if (!id || !(id in yF)) return;
+          o.set({ top: yF[id] * H });
+          // Titre + sous-titre suivent la couleur adaptée au fond ;
+          // kicker + CTA gardent la couleur d'accent de marque.
+          if (id === "headline" || id === "subline") o.set({ fill: textColor });
+          o.setCoords();
+        });
         c.requestRenderAll();
       },
     };
