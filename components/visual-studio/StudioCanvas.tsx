@@ -45,6 +45,10 @@ export interface SelectionInfo {
   /** Plage sélectionnée en édition (-1 si pas d'édition/plage). */
   selStart: number;
   selEnd: number;
+  /** Identifiant du calque texte actif — sert de clé STABLE à la barre
+   *  flottante (sinon elle se remonte à chaque changement de plage, ce
+   *  qui ferme le color picker en cours d'utilisation). */
+  layerId: string;
 }
 
 /** Patch de style appliqué à la sélection courante (ou tout l'objet). */
@@ -165,6 +169,7 @@ export function StudioCanvas({
         isEditing: !!obj.isEditing,
         selStart: editingRange ? obj.selectionStart : -1,
         selEnd: editingRange ? obj.selectionEnd : -1,
+        layerId: String((obj as { layerId?: string }).layerId ?? ""),
       });
     };
 
@@ -210,6 +215,11 @@ export function StudioCanvas({
         objectCaching: false,
       });
       (tb as { layerId?: string }).layerId = id;
+      // La textarea cachée de Fabric doit vivre DANS le wrapper du canvas
+      // (lui-même dans le Dialog Radix). Par défaut Fabric l'ajoute à
+      // document.body → hors du focus-trap du Dialog → le clavier ne
+      // l'atteint jamais (la sélection souris marche, mais pas la saisie).
+      (tb as unknown as { hiddenTextareaContainer: HTMLElement | null }).hiddenTextareaContainer = canvas.wrapperEl;
       // Texte : on garde seulement les poignées latérales (largeur),
       // pas le scaling par coin (qui déformerait), pas la rotation.
       tb.setControlsVisibility({
@@ -329,6 +339,7 @@ export function StudioCanvas({
           objectCaching: false,
         });
         (tb as { layerId?: string }).layerId = `extra-${Date.now()}`;
+        (tb as unknown as { hiddenTextareaContainer: HTMLElement | null }).hiddenTextareaContainer = c.wrapperEl;
         tb.setControlsVisibility({ tl: false, tr: false, bl: false, br: false, mt: false, mb: false, mtr: false });
         c.add(tb);
         c.setActiveObject(tb);
