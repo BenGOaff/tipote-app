@@ -29,6 +29,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // silencé sur cet élément précis (recommandation officielle
     // next-themes pour éviter le flash de thème incorrect).
     <html lang={locale} dir={dir} suppressHydrationWarning>
+      {/* Polices display pour le studio visuel (typo "2026" : titres lourds,
+          condensé, script d'accent). Chargées côté navigateur ; React 19
+          hoiste ces <link> dans le <head>. */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      {/* App Router : le layout racine est le bon endroit (chargé sur toutes
+          les pages) — la règle no-page-custom-font ne s'applique qu'au pages-router. */}
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Bebas+Neue&family=Caveat:wght@600;700&family=Montserrat:wght@600;700;800&display=swap"
+      />
       <body className="font-sans antialiased">
         <HotjarTracker />
         <NextIntlClientProvider locale={locale} messages={messages}>

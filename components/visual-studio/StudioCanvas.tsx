@@ -16,7 +16,7 @@
 import { useEffect, useRef } from "react";
 import { Canvas, Textbox, Rect, FabricImage, Gradient } from "fabric";
 import type { FabricObject } from "fabric";
-import { fontStackFor } from "@/lib/visualStudio/presets";
+import { fontStackFor, DISPLAY_HEADING_STACK } from "@/lib/visualStudio/presets";
 import type {
   BackgroundSpec,
   BrandKit,
@@ -236,7 +236,9 @@ export function StudioCanvas({
       return tb;
     };
 
-    const headline = mk("headline", initialText?.headline ?? "Ton accroche ici", 0.08, 0.1, 0.84, 0.082, true, brand.textColor, 1);
+    const headline = mk("headline", initialText?.headline ?? "Ton accroche ici", 0.08, 0.1, 0.84, 0.1, true, brand.textColor, 1);
+    // Titre = police display lourde + ombre douce (look "2026" out-of-the-box).
+    headline.set({ fontFamily: DISPLAY_HEADING_STACK, lineHeight: 1.02, shadow: "rgba(0,0,0,0.35) 0px 2px 12px" });
     const subline = mk("subline", initialText?.subline ?? "Un sous-titre court qui appuie le bénéfice.", 0.1, 0.34, 0.8, 0.04, false, brand.textColor, 0.82);
     const cta = mk("cta", initialText?.cta ?? "Découvre maintenant →", 0.1, 0.84, 0.8, 0.05, true, brand.primaryColor, 1);
     canvas.add(headline, subline, cta);

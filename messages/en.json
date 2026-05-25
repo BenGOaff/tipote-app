@@ -5797,7 +5797,8 @@
     "scrimLabel": "Overlay (legibility)",
     "scrimNone": "None",
     "scrimDark": "Dark",
-    "scrimLight": "Light"
+    "scrimLight": "Light",
+    "aiGenerateVisual": "Generate visual"
   },
   "colorPicker": {
     "pick": "Pick a color",
