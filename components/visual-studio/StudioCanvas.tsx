@@ -240,6 +240,9 @@ export function StudioCanvas({
     // Titre = police display lourde + ombre douce (look "2026" out-of-the-box).
     headline.set({ fontFamily: DISPLAY_HEADING_STACK, lineHeight: 1.02, shadow: "rgba(0,0,0,0.35) 0px 2px 12px" });
     const subline = mk("subline", initialText?.subline ?? "Un sous-titre court qui appuie le bénéfice.", 0.1, 0.34, 0.8, 0.04, false, brand.textColor, 0.82);
+    // Sous-titre = script (Caveat), plus grand : look "accroche manuscrite"
+    // (ex. "Comment le reconnaître ?") qui contraste avec le titre display.
+    subline.set({ fontFamily: '"Caveat", "Comic Sans MS", cursive', fontSize: 0.062 * W, opacity: 0.95, shadow: "rgba(0,0,0,0.3) 0px 1px 6px" });
     const cta = mk("cta", initialText?.cta ?? "Découvre maintenant →", 0.1, 0.84, 0.8, 0.05, true, brand.primaryColor, 1);
     canvas.add(headline, subline, cta);
     canvas.renderAll();
