@@ -21,8 +21,20 @@ Le code est poussé (Tipote + Tiquiz). Il reste des actions côté Meta/déploie
 ### 2. Vérifs visuelles post-déploiement
 - [ ] `/popquizzes` (Tipote) : largeur + espacement alignés sur les autres pages (Leads).
 - [ ] Quiz compact dans le popquiz (Tipote + Tiquiz) sur mobile : centré, lisible, aéré.
-- [ ] Studio visuels : italique + souligné par mot (pas pu tester en visuel côté dev).
+- [ ] Studio visuels (Tipote) : **édition du texte** (taper pour modifier le texte sur le
+      visuel), **color picker** (cliquer/glisser dans le picker + appliquer la couleur sans
+      qu'il se referme), et italique/souligné par mot. Corrigés le 25/05 mais **non testés en
+      visuel côté dev** → à valider (focus textarea Fabric dans le Dialog + key stable toolbar).
 - [ ] Sélecteur de clé API SIO par quiz (Tiquiz) : visible près du tag, choix persistant.
+
+## ✅ Livré le 25/05
+- Studio visuels : **fix édition du texte** (la textarea cachée Fabric vivait sur
+  `document.body`, hors du focus-trap du Dialog Radix → clavier KO ; pointée sur
+  `canvas.wrapperEl`) + **fix color picker** (la barre flottante se remontait à chaque
+  changement de plage → picker fermé ; keyée par `layerId` stable) — suite retours Béné
+- Pixel/CAPI : la migration `default_meta_capi_token` doit être lancée **dans les 2 bases
+  Supabase** (Tiquiz = `profiles`, Tipote = `business_profiles`) — sinon erreur
+  « column not found in schema cache » au save des réglages (en cours côté Gwenn)
 
 ## ✅ Livré le 24/05 (session soir)
 - Quiz compact dans l'overlay popquiz : centrage vertical (fix 100vh iframe), police `vmin`
