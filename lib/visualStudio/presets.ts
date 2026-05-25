@@ -46,14 +46,24 @@ export function fitDisplay(
 export const INTER_STACK =
   'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
 
+// Polices display (chargées via Google Fonts dans le layout racine) pour un
+// rendu "2026" : titres lourds (Anton/Archivo Black), condensé (Bebas Neue),
+// script d'accent (Caveat), texte (Montserrat). + les classiques système.
 export const FONT_OPTIONS = [
+  { label: "Anton", value: 'Anton, "Arial Narrow", Impact, sans-serif' },
+  { label: "Bebas Neue", value: '"Bebas Neue", "Arial Narrow", sans-serif' },
+  { label: "Archivo Black", value: '"Archivo Black", Arial, sans-serif' },
+  { label: "Montserrat", value: 'Montserrat, "Helvetica Neue", Arial, sans-serif' },
+  { label: "Caveat", value: 'Caveat, "Comic Sans MS", cursive' },
   { label: "Inter", value: INTER_STACK },
   { label: "Arial", value: "Arial, Helvetica, sans-serif" },
   { label: "Georgia", value: 'Georgia, "Times New Roman", serif' },
   { label: "Times", value: '"Times New Roman", Times, serif' },
-  { label: "Courier", value: '"Courier New", Courier, monospace' },
   { label: "Trebuchet", value: '"Trebuchet MS", Verdana, sans-serif' },
 ] as const;
+
+/** Police de titre par défaut (display lourd) pour les visuels. */
+export const DISPLAY_HEADING_STACK = 'Anton, "Arial Narrow", Impact, sans-serif';
 
 /** Mappe un nom de police de marque ("Inter") vers sa stack CSS. */
 export function fontStackFor(name?: string): string {
