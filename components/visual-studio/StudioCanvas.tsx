@@ -251,8 +251,14 @@ export function StudioCanvas({
     // (ex. "Comment le reconnaître ?") qui contraste avec le titre display.
     subline.set({ fontFamily: '"Caveat", "Comic Sans MS", cursive', fontSize: 0.062 * W, opacity: 0.95, shadow: "rgba(0,0,0,0.3) 0px 1px 6px" });
     const cta = mk("cta", initialText?.cta ?? "Découvre maintenant →", 0.1, 0.84, 0.8, 0.045, true, brand.primaryColor, 1);
-    // CTA = sans-serif gras (Montserrat) pour trancher avec le script.
-    cta.set({ fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fontWeight: "800", shadow: "rgba(0,0,0,0.3) 0px 1px 6px" });
+    // CTA = bandeau couleur de marque + texte blanc (lisible quel que soit le
+    // fond, look "bouton"), en sans-serif gras pour trancher avec le script.
+    cta.set({
+      fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
+      fontWeight: "800",
+      fill: "#ffffff",
+      textBackgroundColor: brand.primaryColor,
+    });
     canvas.add(kicker, headline, subline, cta);
     canvas.renderAll();
 
@@ -391,9 +397,9 @@ export function StudioCanvas({
           const id = (o as { layerId?: string }).layerId;
           if (!id || !(id in yF)) return;
           o.set({ top: yF[id] * H });
-          // Titre + sous-titre suivent la couleur adaptée au fond ;
-          // kicker + CTA gardent la couleur d'accent de marque.
-          if (id === "headline" || id === "subline") o.set({ fill: textColor });
+          // Kicker + titre + sous-titre suivent la couleur adaptée au fond ;
+          // le CTA garde son bandeau de marque (texte blanc).
+          if (id === "headline" || id === "subline" || id === "kicker") o.set({ fill: textColor });
           o.setCoords();
         });
         c.requestRenderAll();

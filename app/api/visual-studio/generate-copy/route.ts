@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const system =
       `You are an expert social-media copywriter. Write punchy, scroll-stopping copy for a single social visual. ` +
       `Write EVERYTHING in ${lang}. Return STRICT JSON with exactly the keys "kicker", "headline", "subtitle", "cta".\n` +
-      `- kicker: a tiny 1-3 word category/context label (e.g. a theme or rubric), UPPERCASE-friendly, no emojis.\n` +
+      `- kicker: a tiny 1-3 word topical rubric for the post's THEME (a catchy category like a magazine rubric) — NOT the image style, NOT generic words like "dark" or "abstract". UPPERCASE-friendly, no emojis.\n` +
       `- headline: a stop-scroll hook, max ~6 words, benefit or curiosity driven, no ending period, no hashtags, no emojis.\n` +
       `- subtitle: one short supporting line, max ~12 words — phrase it like a hand-written hook (a question or a teaser).\n` +
       `- cta: a 2-4 word action call suitable for a button.\n` +
