@@ -99,25 +99,6 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  // Les interactions DANS le popover ne doivent NI fermer le picker (via le
-  // listener click-out ci-dessus) NI blurer l'éditeur parent (texte Fabric).
-  // Le popover étant rendu en portal (hors de l'arbre DOM du parent), un
-  // handler React onMouseDown ne suffit pas de façon fiable → on attache un
-  // listener NATIF sur l'élément : il stoppe la propagation du mousedown
-  // (→ `onDoc` sur document ne se déclenche pas) et empêche le blur
-  // (preventDefault), sauf sur les inputs (le champ hex doit pouvoir focus).
-  useEffect(() => {
-    if (!open) return;
-    const el = popRef.current;
-    if (!el) return;
-    const onDown = (e: MouseEvent) => {
-      e.stopPropagation();
-      if ((e.target as HTMLElement).tagName !== "INPUT") e.preventDefault();
-    };
-    el.addEventListener("mousedown", onDown);
-    return () => el.removeEventListener("mousedown", onDown);
-  }, [open, pos]);
-
   function commitHex(raw: string) {
     const v = raw.trim();
     if (HEX_RE.test(v)) {
