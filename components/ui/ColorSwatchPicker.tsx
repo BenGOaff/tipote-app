@@ -90,6 +90,25 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  // Les interactions DANS le popover ne doivent NI fermer le picker (via le
+  // listener click-out ci-dessus) NI blurer l'éditeur parent (texte Fabric).
+  // Le popover étant rendu en portal (hors de l'arbre DOM du parent), un
+  // handler React onMouseDown ne suffit pas de façon fiable → on attache un
+  // listener NATIF sur l'élément : il stoppe la propagation du mousedown
+  // (→ `onDoc` sur document ne se déclenche pas) et empêche le blur
+  // (preventDefault), sauf sur les inputs (le champ hex doit pouvoir focus).
+  useEffect(() => {
+    if (!open) return;
+    const el = popRef.current;
+    if (!el) return;
+    const onDown = (e: MouseEvent) => {
+      e.stopPropagation();
+      if ((e.target as HTMLElement).tagName !== "INPUT") e.preventDefault();
+    };
+    el.addEventListener("mousedown", onDown);
+    return () => el.removeEventListener("mousedown", onDown);
+  }, [open, pos]);
+
   function commitHex(raw: string) {
     const v = raw.trim();
     if (HEX_RE.test(v)) {
@@ -125,13 +144,6 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
           ref={popRef}
           style={{ position: "fixed", top: pos.top, left: pos.left }}
           className="z-[60] w-60 rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
-          onMouseDown={(e) => {
-            // Garde le focus de l'éditeur parent (ex: texte Fabric dans le
-            // studio) : sans ça, mousedown ici blure le canvas → la sélection
-            // se perd → la barre flottante (donc ce picker) se démonte. On
-            // laisse les inputs (champ hex) recevoir le focus normalement.
-            if ((e.target as HTMLElement).tagName !== "INPUT") e.preventDefault();
-          }}
         >
           {/* HSV square + hue slider — composant react-colorful.
               On force la largeur full pour que le carré HSV remplisse
