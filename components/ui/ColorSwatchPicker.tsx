@@ -54,14 +54,21 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const POP_W = 240; // largeur w-60
+  const POP_H = 400; // hauteur approx (HSV + hex + palettes + swatches)
 
   function computePos() {
     const r = btnRef.current?.getBoundingClientRect();
     if (!r) return null;
-    return {
-      top: r.bottom + 4,
-      left: Math.max(8, Math.min(r.left, window.innerWidth - POP_W - 8)),
-    };
+    const m = 8;
+    // Vertical : sous le trigger si ça tient, sinon AU-DESSUS, sinon collé
+    // dans le viewport — jamais hors écran (cas d'un texte en bas de page).
+    let top = r.bottom + 4;
+    if (top + POP_H > window.innerHeight - m) {
+      const above = r.top - POP_H - 4;
+      top = above >= m ? above : Math.max(m, window.innerHeight - POP_H - m);
+    }
+    const left = Math.max(m, Math.min(r.left, window.innerWidth - POP_W - m));
+    return { top, left };
   }
 
   // Reposition sur scroll/resize tant que le popover est ouvert.
@@ -143,7 +150,7 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
         <div
           ref={popRef}
           style={{ position: "fixed", top: pos.top, left: pos.left, pointerEvents: "auto" }}
-          className="z-[100] w-60 rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
+          className="z-[100] w-60 max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
         >
           {/* HSV square + hue slider — composant react-colorful.
               On force la largeur full pour que le carré HSV remplisse
