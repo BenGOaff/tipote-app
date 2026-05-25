@@ -353,7 +353,7 @@ export function ImageStudio({
 
                 {selection && handleRef.current && (
                   <FloatingToolbar
-                    key={`${selection.selStart}:${selection.selEnd}:${Math.round(selection.rect.left)}:${Math.round(selection.rect.top)}`}
+                    key={selection.layerId}
                     info={selection}
                     handle={handleRef.current}
                     userPalettes={brandPalette}
