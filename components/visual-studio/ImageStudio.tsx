@@ -177,6 +177,25 @@ export function ImageStudio({
     return () => ro.disconnect();
   }, [open]);
 
+  // Garde-fou anti-décalage : quand Fabric met le focus sur sa textarea
+  // cachée, le navigateur tente un scrollIntoView qui PEUT scroller le
+  // stage (overflow:hidden ne bloque PAS le scroll programmatique) → le
+  // visuel se décale. On annule tout scroll dans le stage (capture =
+  // attrape aussi les scrolls des descendants, ex. wrapper Fabric).
+  useEffect(() => {
+    if (!open) return;
+    const el = stageRef.current;
+    if (!el) return;
+    const onScroll = (e: Event) => {
+      const t = e.target as HTMLElement | null;
+      if (!t || t === (document as unknown as HTMLElement)) return;
+      if (t.scrollLeft !== 0) t.scrollLeft = 0;
+      if (t.scrollTop !== 0) t.scrollTop = 0;
+    };
+    el.addEventListener("scroll", onScroll, true);
+    return () => el.removeEventListener("scroll", onScroll, true);
+  }, [open]);
+
   function handleBgFile(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -223,7 +242,7 @@ export function ImageStudio({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 overflow-hidden flex flex-col w-[min(1140px,96vw)] h-[min(840px,92vh)] max-w-none sm:max-w-none">
+      <DialogContent className="p-0 overflow-clip flex flex-col w-[min(1140px,96vw)] h-[min(840px,92vh)] max-w-none sm:max-w-none">
         <DialogHeader className="px-6 pt-6 pb-3">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <ImageIcon className="h-5 w-5 text-primary" />
@@ -234,7 +253,7 @@ export function ImageStudio({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden px-6 pb-4">
+        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-clip px-6 pb-4">
           <div className="flex flex-col lg:flex-row gap-5 lg:h-full lg:min-h-0">
             {/* ── Contrôles (PAS de contenu texte ici) ──── */}
             <div className="space-y-5 lg:w-[280px] lg:shrink-0 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
@@ -361,7 +380,7 @@ export function ImageStudio({
             {/* ── Aperçu + édition WYSIWYG (Fabric) ────── */}
             <div
               ref={stageRef}
-              className="relative flex items-center justify-center rounded-xl bg-[repeating-conic-gradient(#0000000a_0%_25%,transparent_0%_50%)] bg-[length:24px_24px] p-4 overflow-hidden min-w-0 h-[55vh] min-h-[320px] lg:h-full lg:min-h-0 lg:flex-1"
+              className="relative flex items-center justify-center rounded-xl bg-[repeating-conic-gradient(#0000000a_0%_25%,transparent_0%_50%)] bg-[length:24px_24px] p-4 overflow-clip min-w-0 h-[55vh] min-h-[320px] lg:h-full lg:min-h-0 lg:flex-1"
             >
               <div className="relative" style={{ width: displayWidth, height: displayHeight }}>
                 <StudioCanvas
