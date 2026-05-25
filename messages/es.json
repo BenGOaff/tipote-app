@@ -5783,7 +5783,14 @@
     "aiGenerate": "Generar fondo",
     "aiVariant": "Otra variante",
     "aiGenerating": "Generando…",
-    "aiError": "La generación falló, inténtalo de nuevo."
+    "aiError": "La generación falló, inténtalo de nuevo.",
+    "aiSubjectLabel": "Tema del visual (IA)",
+    "aiCopyGenerate": "Generar textos",
+    "aiCopyEmpty": "Describe primero el tema.",
+    "scrimLabel": "Velo (legibilidad)",
+    "scrimNone": "Ninguno",
+    "scrimDark": "Oscuro",
+    "scrimLight": "Claro"
   },
   "colorPicker": {
     "pick": "Elegir un color",

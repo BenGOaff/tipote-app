@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Image as ImageIcon,
@@ -102,6 +102,7 @@ export function ImageStudio({
   applyLabel,
 }: ImageStudioProps) {
   const t = useTranslations("visualStudio");
+  const locale = useLocale();
   const [formatId, setFormatId] = useState<StudioFormatId>(defaultFormat ?? formats[0]);
   const [background, setBackground] = useState<BackgroundSpec>({
     mode: "solid",
@@ -121,6 +122,8 @@ export function ImageStudio({
   const [aiIntent, setAiIntent] = useState("");
   const [aiStyle, setAiStyle] = useState<AiStyleId>("photoPerson");
   const [aiBusy, setAiBusy] = useState(false);
+  const [copyBusy, setCopyBusy] = useState(false);
+  const [scrim, setScrim] = useState<"none" | "dark" | "light">("none");
 
   const handleRef = useRef<StudioCanvasHandle | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -249,6 +252,36 @@ export function ImageStudio({
     }
   }
 
+  // Génère la copy (titre/sous-titre/CTA) à partir du sujet et l'injecte dans
+  // les calques texte éditables (l'IA ne pose jamais le texte sur l'image).
+  async function generateCopy() {
+    if (!aiIntent.trim()) {
+      toast.error(t("aiCopyEmpty"));
+      return;
+    }
+    setCopyBusy(true);
+    try {
+      const res = await fetch("/api/visual-studio/generate-copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent: aiIntent.trim(), locale, brandName: brandKit.name }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) throw new Error(json?.error || "fail");
+      const h = handleRef.current;
+      if (h) {
+        if (json.headline) h.setLayerText("headline", String(json.headline));
+        if (json.subtitle) h.setLayerText("subline", String(json.subtitle));
+        if (json.cta) h.setLayerText("cta", String(json.cta));
+      }
+    } catch (e) {
+      console.error("[ImageStudio] AI copy failed", e);
+      toast.error(t("aiError"));
+    } finally {
+      setCopyBusy(false);
+    }
+  }
+
   async function apply() {
     const handle = handleRef.current;
     if (!handle) {
@@ -299,6 +332,24 @@ export function ImageStudio({
           <div className="flex flex-col lg:flex-row gap-5 lg:h-full lg:min-h-0">
             {/* ── Contrôles (PAS de contenu texte ici) ──── */}
             <div className="space-y-5 lg:w-[280px] lg:shrink-0 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
+              {/* Sujet (IA) — pilote la génération du fond ET des textes */}
+              <div className="space-y-1.5">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t("aiSubjectLabel")}</Label>
+                <textarea
+                  value={aiIntent}
+                  onChange={(e) => setAiIntent(e.target.value)}
+                  placeholder={t("aiPromptPlaceholder")}
+                  rows={2}
+                  className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                />
+                <Button type="button" variant="outline" size="sm" className="w-full" onClick={generateCopy} disabled={copyBusy}>
+                  {copyBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+                  {t("aiCopyGenerate")}
+                </Button>
+              </div>
+
+              <Separator />
+
               {/* Format */}
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t("format")}</Label>
@@ -391,13 +442,6 @@ export function ImageStudio({
                         <Sparkles className="h-3.5 w-3.5 text-primary" />
                         {t("aiTitle")}
                       </div>
-                      <textarea
-                        value={aiIntent}
-                        onChange={(e) => setAiIntent(e.target.value)}
-                        placeholder={t("aiPromptPlaceholder")}
-                        rows={2}
-                        className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
-                      />
                       <div className="flex flex-wrap gap-1.5">
                         {AI_STYLES.map((s) => (
                           <button
@@ -435,6 +479,27 @@ export function ImageStudio({
                 <Switch id="studio-logo" checked={showLogo} onCheckedChange={setShowLogo} />
               </div>
 
+              {/* Voile de contraste — lisibilité du texte sur fond photo/IA */}
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-sm">{t("scrimLabel")}</Label>
+                <div className="flex gap-1">
+                  {(["none", "dark", "light"] as const).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setScrim(s)}
+                      className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+                        scrim === s
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {t(s === "none" ? "scrimNone" : s === "dark" ? "scrimDark" : "scrimLight")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <Separator />
 
               {/* Ajout de texte (gestion de calque, pas d'édition de contenu) */}
@@ -465,6 +530,7 @@ export function ImageStudio({
                   background={background}
                   brand={brandKit}
                   showLogo={showLogo}
+                  scrim={scrim}
                   initialText={initialText}
                   onSelectionChange={onSelectionChange}
                   onReady={onCanvasReady}

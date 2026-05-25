@@ -27,6 +27,34 @@ Le code est poussé (Tipote + Tiquiz). Il reste des actions côté Meta/déploie
       visuel côté dev** → à valider (focus textarea Fabric dans le Dialog + key stable toolbar).
 - [ ] Sélecteur de clé API SIO par quiz (Tiquiz) : visible près du tag, choix persistant.
 
+## 🎨 Générateur de visuels IA (dashboard affilié uniquement pour l'instant)
+Vision : IA (branding+logo) + édition perso, qualité pro, coût maîtrisé. OpenAI
+pour les images. Crédits = Tipote uniquement (pas affiliate/Tiquiz). Portage
+Tiquiz/Tipote PLUS TARD (quiz/sondages/blog/capture-vente).
+
+**Livré (Phase 1) :**
+- ✅ Génération de FOND IA (route serveur, clé owner, no-credits) + prompt
+  anti-"image IA moche" (photoréaliste, personne/paysage/abstrait/spatial) +
+  ambiance couleurs de marque + zone propre pour le texte + bouton variante.
+- ✅ Génération de TEXTE IA (titre stop-scroll + sous-titre + CTA) à partir du
+  sujet, dans la langue de l'user, injecté dans les calques éditables.
+- ✅ Voile de contraste (Aucun/Sombre/Clair) pour lisibilité texte sur fond IA.
+- ✅ Champ "Sujet" partagé (pilote fond IA + textes IA). i18n 6 langues.
+
+**À tester en priorité (gate tout le reste) :**
+- [ ] **Qualité des fonds IA** (pas "moche/vu partout") — c'est LE test.
+- [ ] Qualité de la copy générée (titre/CTA pertinents, bonne langue).
+- [ ] ⚠️ OpenAI exige une **org vérifiée** pour `gpt-image-1` (sinon erreur) —
+      vérifier dans le dashboard OpenAI si la génération échoue.
+
+**Reste à faire (roadmap) :**
+- [ ] Flèches / emojis / graphiques (décorations, calques au-dessus).
+- [ ] Variantes en lot (plusieurs fonds + textes d'un coup, l'user choisit).
+- [ ] IA inspirée du **logo** (aujourd'hui : couleurs de marque seulement ;
+      le logo est overlay mais n'inspire pas encore la scène — via image-edit).
+- [ ] Auto-contraste intelligent (voile activé/adapté automatiquement).
+- [ ] Format 1.91:1 (1200×630) pour blog/OG/hero (manquant).
+
 ## ✅ Livré le 25/05
 - Studio visuels : **refonte layout modale** (stage qui fit, plus de saut au focus),
   **color picker** réparé (pointer-events dans le Dialog Radix + anti-fermeture + flip
