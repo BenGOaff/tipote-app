@@ -5771,7 +5771,19 @@
     "tbDelete": "Eliminar",
     "tbFont": "Fuente",
     "tbTextColor": "Color del texto",
-    "paletteOf": "Paleta {name}"
+    "paletteOf": "Paleta {name}",
+    "aiTitle": "Fondo IA",
+    "aiPromptPlaceholder": "Ej.: una persona sonriente en una oficina luminosa",
+    "aiStyleLabel": "Estilo",
+    "aiStylePhotoPerson": "Persona",
+    "aiStyleLandscape": "Paisaje",
+    "aiStyleAbstract": "Abstracto",
+    "aiStyleSpace": "Espacial",
+    "aiStyleMinimal": "Minimal",
+    "aiGenerate": "Generar fondo",
+    "aiVariant": "Otra variante",
+    "aiGenerating": "Generando…",
+    "aiError": "La generación falló, inténtalo de nuevo."
   },
   "colorPicker": {
     "pick": "Elegir un color",

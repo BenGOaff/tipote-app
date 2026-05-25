@@ -5771,7 +5771,19 @@
     "tbDelete": "حذف",
     "tbFont": "الخط",
     "tbTextColor": "لون النص",
-    "paletteOf": "لوحة {name}"
+    "paletteOf": "لوحة {name}",
+    "aiTitle": "خلفية بالذكاء الاصطناعي",
+    "aiPromptPlaceholder": "مثال: شخص مبتسم في مكتب مضيء",
+    "aiStyleLabel": "النمط",
+    "aiStylePhotoPerson": "شخص",
+    "aiStyleLandscape": "منظر طبيعي",
+    "aiStyleAbstract": "تجريدي",
+    "aiStyleSpace": "فضائي",
+    "aiStyleMinimal": "بسيط",
+    "aiGenerate": "إنشاء الخلفية",
+    "aiVariant": "نسخة أخرى",
+    "aiGenerating": "جارٍ الإنشاء…",
+    "aiError": "فشل الإنشاء، حاول مرة أخرى."
   },
   "colorPicker": {
     "pick": "اختيار لون",
