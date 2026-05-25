@@ -142,8 +142,8 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
       {open && !disabled && pos ? createPortal(
         <div
           ref={popRef}
-          style={{ position: "fixed", top: pos.top, left: pos.left }}
-          className="z-[60] w-60 rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
+          style={{ position: "fixed", top: pos.top, left: pos.left, pointerEvents: "auto" }}
+          className="z-[100] w-60 rounded-lg border bg-background shadow-lg p-2.5 space-y-2.5"
         >
           {/* HSV square + hue slider — composant react-colorful.
               On force la largeur full pour que le carré HSV remplisse
