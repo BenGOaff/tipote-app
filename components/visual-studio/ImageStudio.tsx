@@ -121,8 +121,7 @@ export function ImageStudio({
   // Génération de fond IA (le texte reste un calque éditeur, jamais l'IA).
   const [aiIntent, setAiIntent] = useState("");
   const [aiStyle, setAiStyle] = useState<AiStyleId>("photoPerson");
-  const [aiBusy, setAiBusy] = useState(false);
-  const [copyBusy, setCopyBusy] = useState(false);
+  const [visualBusy, setVisualBusy] = useState(false);
   const [scrim, setScrim] = useState<"none" | "dark" | "light">("none");
 
   const handleRef = useRef<StudioCanvasHandle | null>(null);
@@ -225,60 +224,54 @@ export function ImageStudio({
     setBackground((b) => ({ ...b, mode: "image", imageUrl: url }));
   }
 
-  // Génère un fond via l'IA (route serveur, clé owner) et le pose en image
-  // de fond. Le contraste / la zone propre pour le texte sont gérés par le
-  // prompt ; le texte lui-même reste un calque éditable.
-  async function generateBg() {
-    setAiBusy(true);
-    try {
-      const res = await fetch("/api/visual-studio/generate-background", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          intent: aiIntent.trim() || undefined,
-          style: aiStyle,
-          ratio: format.width / format.height,
-          brandColors: [brandKit.primaryColor, brandKit.accentColor, brandKit.backgroundColor].filter(Boolean),
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json?.ok || !json?.dataUrl) throw new Error(json?.error || "fail");
-      setBackground((b) => ({ ...b, mode: "image", imageUrl: json.dataUrl as string }));
-    } catch (e) {
-      console.error("[ImageStudio] AI background failed", e);
-      toast.error(t("aiError"));
-    } finally {
-      setAiBusy(false);
-    }
-  }
-
-  // Génère la copy (titre/sous-titre/CTA) à partir du sujet et l'injecte dans
-  // les calques texte éditables (l'IA ne pose jamais le texte sur l'image).
-  async function generateCopy() {
+  // Génère le VISUEL d'un seul clic : la copy (titre/sous-titre/CTA → calques
+  // éditables) ET le fond IA, EN PARALLÈLE, + active le voile de contraste.
+  // L'user ne voit pas que ce sont 2 sources ; il pourra éditer le texte.
+  async function generateVisual() {
     if (!aiIntent.trim()) {
       toast.error(t("aiCopyEmpty"));
       return;
     }
-    setCopyBusy(true);
+    setVisualBusy(true);
+    const intent = aiIntent.trim();
+    const ratio = format.width / format.height;
+    const brandColors = [brandKit.primaryColor, brandKit.accentColor, brandKit.backgroundColor].filter(Boolean);
+    let anyOk = false;
     try {
-      const res = await fetch("/api/visual-studio/generate-copy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent: aiIntent.trim(), locale, brandName: brandKit.name }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json?.ok) throw new Error(json?.error || "fail");
+      const [copy, bg] = await Promise.all([
+        fetch("/api/visual-studio/generate-copy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent, locale, brandName: brandKit.name }),
+        })
+          .then((r) => r.json())
+          .catch(() => ({})),
+        fetch("/api/visual-studio/generate-background", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent, style: aiStyle, ratio, brandColors }),
+        })
+          .then((r) => r.json())
+          .catch(() => ({})),
+      ]);
       const h = handleRef.current;
-      if (h) {
-        if (json.headline) h.setLayerText("headline", String(json.headline));
-        if (json.subtitle) h.setLayerText("subline", String(json.subtitle));
-        if (json.cta) h.setLayerText("cta", String(json.cta));
+      if (copy?.ok && h) {
+        if (copy.headline) h.setLayerText("headline", String(copy.headline));
+        if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
+        if (copy.cta) h.setLayerText("cta", String(copy.cta));
+        anyOk = true;
       }
+      if (bg?.ok && bg.dataUrl) {
+        setBackground((b) => ({ ...b, mode: "image", imageUrl: String(bg.dataUrl) }));
+        setScrim("dark"); // contraste auto pour garantir la lisibilité
+        anyOk = true;
+      }
+      if (!anyOk) toast.error(t("aiError"));
     } catch (e) {
-      console.error("[ImageStudio] AI copy failed", e);
+      console.error("[ImageStudio] generateVisual failed", e);
       toast.error(t("aiError"));
     } finally {
-      setCopyBusy(false);
+      setVisualBusy(false);
     }
   }
 
@@ -317,7 +310,7 @@ export function ImageStudio({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 overflow-clip flex flex-col w-[min(1140px,96vw)] h-[min(840px,92vh)] max-w-none sm:max-w-none">
+      <DialogContent className="p-0 overflow-clip flex flex-col w-[96vw] h-[94vh] max-w-none sm:max-w-none">
         <DialogHeader className="px-6 pt-6 pb-3">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <ImageIcon className="h-5 w-5 text-primary" />
@@ -328,23 +321,39 @@ export function ImageStudio({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-clip px-6 pb-4">
+        <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-visible px-6 pb-4">
           <div className="flex flex-col lg:flex-row gap-5 lg:h-full lg:min-h-0">
             {/* ── Contrôles (PAS de contenu texte ici) ──── */}
             <div className="space-y-5 lg:w-[280px] lg:shrink-0 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
-              {/* Sujet (IA) — pilote la génération du fond ET des textes */}
-              <div className="space-y-1.5">
+              {/* Sujet (IA) — un seul "Générer le visuel" : texte + fond + voile */}
+              <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t("aiSubjectLabel")}</Label>
                 <textarea
                   value={aiIntent}
                   onChange={(e) => setAiIntent(e.target.value)}
                   placeholder={t("aiPromptPlaceholder")}
-                  rows={2}
-                  className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+                  rows={3}
+                  className="w-full resize-none rounded-md border bg-background px-2.5 py-2 text-xs outline-none focus:border-primary"
                 />
-                <Button type="button" variant="outline" size="sm" className="w-full" onClick={generateCopy} disabled={copyBusy}>
-                  {copyBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-                  {t("aiCopyGenerate")}
+                <div className="flex flex-wrap gap-1.5">
+                  {AI_STYLES.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setAiStyle(s.id)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                        aiStyle === s.id
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {t(s.labelKey)}
+                    </button>
+                  ))}
+                </div>
+                <Button type="button" className="w-full" onClick={generateVisual} disabled={visualBusy}>
+                  {visualBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+                  {visualBusy ? t("aiGenerating") : background.imageUrl ? t("aiVariant") : t("aiGenerateVisual")}
                 </Button>
               </div>
 
@@ -437,36 +446,6 @@ export function ImageStudio({
                         onChange={(e) => handleBgFile(e.target.files?.[0])}
                       />
                     </label>
-                    <div className="space-y-2 rounded-lg border border-border/60 p-2.5">
-                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <Sparkles className="h-3.5 w-3.5 text-primary" />
-                        {t("aiTitle")}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {AI_STYLES.map((s) => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => setAiStyle(s.id)}
-                            className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
-                              aiStyle === s.id
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border text-muted-foreground hover:bg-muted"
-                            }`}
-                          >
-                            {t(s.labelKey)}
-                          </button>
-                        ))}
-                      </div>
-                      <Button type="button" variant="outline" className="w-full" onClick={generateBg} disabled={aiBusy}>
-                        {aiBusy ? (
-                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4 mr-1.5" />
-                        )}
-                        {aiBusy ? t("aiGenerating") : background.imageUrl ? t("aiVariant") : t("aiGenerate")}
-                      </Button>
-                    </div>
                   </div>
                 )}
               </div>

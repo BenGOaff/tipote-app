@@ -5790,7 +5790,8 @@
     "scrimLabel": "Velo (legibilidad)",
     "scrimNone": "Ninguno",
     "scrimDark": "Oscuro",
-    "scrimLight": "Claro"
+    "scrimLight": "Claro",
+    "aiGenerateVisual": "Generar visual"
   },
   "colorPicker": {
     "pick": "Elegir un color",

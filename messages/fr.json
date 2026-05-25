@@ -5797,7 +5797,8 @@
     "scrimLabel": "Voile (lisibilité)",
     "scrimNone": "Aucun",
     "scrimDark": "Sombre",
-    "scrimLight": "Clair"
+    "scrimLight": "Clair",
+    "aiGenerateVisual": "Générer le visuel"
   },
   "colorPicker": {
     "pick": "Choisir une couleur",
