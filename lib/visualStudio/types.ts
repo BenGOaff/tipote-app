@@ -47,7 +47,7 @@ export interface BackgroundSpec {
 
 // Identifiants des 3 calques texte de base (l'IA peut les pré-remplir
 // via `initialText`). Le rendu/édition réel est géré par Fabric.js.
-export type TextLayerId = "headline" | "subline" | "cta";
+export type TextLayerId = "kicker" | "headline" | "subline" | "cta";
 
 export interface StudioResult {
   /** URL exploitable par l'hôte (renvoyée par `upload`, sinon object URL local). */
