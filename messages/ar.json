@@ -5783,7 +5783,10 @@
     "aiGenerate": "إنشاء الخلفية",
     "aiVariant": "نسخة أخرى",
     "aiGenerating": "جارٍ الإنشاء…",
-    "aiError": "فشل الإنشاء، حاول مرة أخرى."
+    "aiError": "فشل الإنشاء، حاول مرة أخرى.",
+    "aiSubjectLabel": "موضوع التصميم (الذكاء الاصطناعي)",
+    "aiCopyGenerate": "إنشاء النصوص",
+    "aiCopyEmpty": "صف الموضوع أولاً."
   },
   "colorPicker": {
     "pick": "اختيار لون",

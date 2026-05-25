@@ -5783,7 +5783,10 @@
     "aiGenerate": "Genera sfondo",
     "aiVariant": "Altra variante",
     "aiGenerating": "Generazione…",
-    "aiError": "Generazione fallita, riprova."
+    "aiError": "Generazione fallita, riprova.",
+    "aiSubjectLabel": "Tema del visual (IA)",
+    "aiCopyGenerate": "Genera testi",
+    "aiCopyEmpty": "Descrivi prima il tema."
   },
   "colorPicker": {
     "pick": "Scegli un colore",

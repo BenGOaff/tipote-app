@@ -72,6 +72,10 @@ export interface StudioCanvasHandle {
   enterEdit: () => void;
   deleteActive: () => void;
   addText: () => void;
+  /** Remplace le contenu d'un calque texte (par layerId) — utilisé par la
+   *  génération de copy IA (titre/sous-titre/CTA). No-op si le calque
+   *  n'existe pas. */
+  setLayerText: (id: string, text: string) => void;
 }
 
 interface StudioCanvasProps {
@@ -345,6 +349,16 @@ export function StudioCanvas({
         c.setActiveObject(tb);
         c.requestRenderAll();
         reportSelection();
+      },
+      setLayerText(id, text) {
+        const c = fcRef.current;
+        if (!c) return;
+        const obj = c
+          .getObjects()
+          .find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined;
+        if (!obj) return;
+        obj.set({ text });
+        c.requestRenderAll();
       },
     };
     onReady?.(handle);

@@ -5790,7 +5790,10 @@
     "aiGenerate": "Generate background",
     "aiVariant": "Another variant",
     "aiGenerating": "Generating…",
-    "aiError": "Generation failed, try again."
+    "aiError": "Generation failed, try again.",
+    "aiSubjectLabel": "Visual topic (AI)",
+    "aiCopyGenerate": "Generate copy",
+    "aiCopyEmpty": "Describe the topic first."
   },
   "colorPicker": {
     "pick": "Pick a color",

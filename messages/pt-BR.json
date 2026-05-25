@@ -6089,7 +6089,10 @@
     "aiGenerate": "Gerar fundo",
     "aiVariant": "Outra variante",
     "aiGenerating": "Gerando…",
-    "aiError": "A geração falhou, tente de novo."
+    "aiError": "A geração falhou, tente de novo.",
+    "aiSubjectLabel": "Tema do visual (IA)",
+    "aiCopyGenerate": "Gerar textos",
+    "aiCopyEmpty": "Descreva primeiro o tema."
   },
   "colorPicker": {
     "pick": "Escolher uma cor",

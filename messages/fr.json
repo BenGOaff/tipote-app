@@ -5790,7 +5790,10 @@
     "aiGenerate": "Générer le fond",
     "aiVariant": "Autre variante",
     "aiGenerating": "Génération…",
-    "aiError": "La génération a échoué, réessaie."
+    "aiError": "La génération a échoué, réessaie.",
+    "aiSubjectLabel": "Sujet du visuel (IA)",
+    "aiCopyGenerate": "Générer les textes",
+    "aiCopyEmpty": "Décris d'abord le sujet."
   },
   "colorPicker": {
     "pick": "Choisir une couleur",
