@@ -28,6 +28,21 @@ Le code est poussé (Tipote + Tiquiz). Il reste des actions côté Meta/déploie
 - [ ] Sélecteur de clé API SIO par quiz (Tiquiz) : visible près du tag, choix persistant.
 
 ## ✅ Livré le 25/05
+- Studio visuels : **refonte layout modale** (stage qui fit, plus de saut au focus),
+  **color picker** réparé (pointer-events dans le Dialog Radix + anti-fermeture + flip
+  vers le haut), et **i18n complète** : namespaces next-intl `visualStudio` + `colorPicker`
+  traduits dans les **6 langues** (fr/en/es/it/pt/pt-BR/ar), recâblage ImageStudio +
+  barre flottante + ColorSwatchPicker (Tipote ET Tiquiz) + props VisualGallery.
+- **Dette i18n/responsive restante** (à finir pour respecter la règle "tout multilangue") :
+  - `VisualGallery` (page affiliée Promouvoir) : titres/boutons encore en dur FR
+    ("Créer un visuel", "Visuels singles", etc.) → relève de l'i18n du contenu affilié
+    (déjà repérée : contenu Promouvoir FR-only).
+  - Champ "Token Conversions API Meta" dans les réglages (Tiquiz `SettingsClient` +
+    Tipote `SettingsTabsShell`) : libellé + aide en dur FR (ajoutés par moi) → à i18n.
+  - `ColorSwatchPicker` Tiquiz : i18n faite, mais il lui manque les fixes UX récents du
+    picker (flip/pointer-events/anti-fermeture) faits côté Tipote → à synchroniser SI le
+    picker Tiquiz est utilisé dans des modales.
+  - Studio : layout responsive en place (breakpoints lg) mais **non testé sur mobile réel**.
 - Studio visuels : **fix édition du texte** (la textarea cachée Fabric vivait sur
   `document.body`, hors du focus-trap du Dialog Radix → clavier KO ; pointée sur
   `canvas.wrapperEl`) + **fix color picker** (la barre flottante se remontait à chaque
