@@ -123,6 +123,7 @@ export function ImageStudio({
   const [aiStyle, setAiStyle] = useState<AiStyleId>("photoPerson");
   const [aiBusy, setAiBusy] = useState(false);
   const [copyBusy, setCopyBusy] = useState(false);
+  const [scrim, setScrim] = useState<"none" | "dark" | "light">("none");
 
   const handleRef = useRef<StudioCanvasHandle | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -478,6 +479,27 @@ export function ImageStudio({
                 <Switch id="studio-logo" checked={showLogo} onCheckedChange={setShowLogo} />
               </div>
 
+              {/* Voile de contraste — lisibilité du texte sur fond photo/IA */}
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-sm">{t("scrimLabel")}</Label>
+                <div className="flex gap-1">
+                  {(["none", "dark", "light"] as const).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setScrim(s)}
+                      className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+                        scrim === s
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {t(s === "none" ? "scrimNone" : s === "dark" ? "scrimDark" : "scrimLight")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <Separator />
 
               {/* Ajout de texte (gestion de calque, pas d'édition de contenu) */}
@@ -508,6 +530,7 @@ export function ImageStudio({
                   background={background}
                   brand={brandKit}
                   showLogo={showLogo}
+                  scrim={scrim}
                   initialText={initialText}
                   onSelectionChange={onSelectionChange}
                   onReady={onCanvasReady}

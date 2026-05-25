@@ -85,6 +85,8 @@ interface StudioCanvasProps {
   background: BackgroundSpec;
   brand: BrandKit;
   showLogo: boolean;
+  /** Voile de contraste derrière le texte (lisibilité sur fond IA/photo). */
+  scrim?: "none" | "dark" | "light";
   initialText?: Partial<Record<TextLayerId, string>>;
   onSelectionChange: (info: SelectionInfo | null) => void;
   onReady?: (handle: StudioCanvasHandle) => void;
@@ -99,6 +101,7 @@ export function StudioCanvas({
   background,
   brand,
   showLogo,
+  scrim = "none",
   initialText,
   onSelectionChange,
   onReady,
@@ -107,6 +110,7 @@ export function StudioCanvas({
   const fcRef = useRef<Canvas | null>(null);
   const bgRef = useRef<FabricObject | null>(null);
   const logoRef = useRef<FabricObject | null>(null);
+  const scrimRef = useRef<FabricObject | null>(null);
 
   // Valeurs courantes lues par les méthodes du handle (créé une fois).
   const dimsRef = useRef({ w: displayWidth, h: displayHeight });
@@ -473,6 +477,48 @@ export function StudioCanvas({
       cancelled = true;
     };
   }, [background, displayWidth, displayHeight]);
+
+  // ── Voile de contraste (lisibilité du texte sur fond photo/IA) ──
+  // Dégradé vertical : plus dense en haut (titre) et en bas (CTA),
+  // transparent au milieu. Placé JUSTE au-dessus du fond, sous le texte.
+  // Dépend de `background` pour se re-stacker après tout changement de fond.
+  useEffect(() => {
+    const c = fcRef.current;
+    if (!c) return;
+    if (scrimRef.current) {
+      c.remove(scrimRef.current);
+      scrimRef.current = null;
+    }
+    if (scrim !== "none") {
+      const base = scrim === "dark" ? "0,0,0" : "255,255,255";
+      const grad = new Gradient({
+        type: "linear",
+        coords: { x1: 0, y1: 0, x2: 0, y2: displayHeight },
+        colorStops: [
+          { offset: 0, color: `rgba(${base},0.5)` },
+          { offset: 0.3, color: `rgba(${base},0)` },
+          { offset: 0.7, color: `rgba(${base},0)` },
+          { offset: 1, color: `rgba(${base},0.55)` },
+        ],
+      });
+      const rect = new Rect({
+        left: 0,
+        top: 0,
+        width: displayWidth,
+        height: displayHeight,
+        selectable: false,
+        evented: false,
+      });
+      rect.set("fill", grad);
+      (rect as { layerId?: string }).layerId = undefined;
+      scrimRef.current = rect;
+      c.add(rect);
+      // Ordre : fond (0) → voile (1) → texte/logo au-dessus.
+      c.sendObjectToBack(rect);
+      if (bgRef.current) c.sendObjectToBack(bgRef.current);
+    }
+    c.requestRenderAll();
+  }, [scrim, background, displayWidth, displayHeight]);
 
   // ── Logo ──────────────────────────────────────────────────────
   useEffect(() => {

@@ -6092,7 +6092,11 @@
     "aiError": "A geração falhou, tente de novo.",
     "aiSubjectLabel": "Tema do visual (IA)",
     "aiCopyGenerate": "Gerar textos",
-    "aiCopyEmpty": "Descreva primeiro o tema."
+    "aiCopyEmpty": "Descreva primeiro o tema.",
+    "scrimLabel": "Véu (legibilidade)",
+    "scrimNone": "Nenhum",
+    "scrimDark": "Escuro",
+    "scrimLight": "Claro"
   },
   "colorPicker": {
     "pick": "Escolher uma cor",

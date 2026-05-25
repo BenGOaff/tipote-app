@@ -5786,7 +5786,11 @@
     "aiError": "Generazione fallita, riprova.",
     "aiSubjectLabel": "Tema del visual (IA)",
     "aiCopyGenerate": "Genera testi",
-    "aiCopyEmpty": "Descrivi prima il tema."
+    "aiCopyEmpty": "Descrivi prima il tema.",
+    "scrimLabel": "Velo (leggibilità)",
+    "scrimNone": "Nessuno",
+    "scrimDark": "Scuro",
+    "scrimLight": "Chiaro"
   },
   "colorPicker": {
     "pick": "Scegli un colore",

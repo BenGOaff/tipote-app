@@ -5793,7 +5793,11 @@
     "aiError": "Generation failed, try again.",
     "aiSubjectLabel": "Visual topic (AI)",
     "aiCopyGenerate": "Generate copy",
-    "aiCopyEmpty": "Describe the topic first."
+    "aiCopyEmpty": "Describe the topic first.",
+    "scrimLabel": "Overlay (legibility)",
+    "scrimNone": "None",
+    "scrimDark": "Dark",
+    "scrimLight": "Light"
   },
   "colorPicker": {
     "pick": "Pick a color",

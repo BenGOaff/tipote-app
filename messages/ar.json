@@ -5786,7 +5786,11 @@
     "aiError": "فشل الإنشاء، حاول مرة أخرى.",
     "aiSubjectLabel": "موضوع التصميم (الذكاء الاصطناعي)",
     "aiCopyGenerate": "إنشاء النصوص",
-    "aiCopyEmpty": "صف الموضوع أولاً."
+    "aiCopyEmpty": "صف الموضوع أولاً.",
+    "scrimLabel": "تظليل (الوضوح)",
+    "scrimNone": "بدون",
+    "scrimDark": "داكن",
+    "scrimLight": "فاتح"
   },
   "colorPicker": {
     "pick": "اختيار لون",
