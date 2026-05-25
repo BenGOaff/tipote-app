@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Image as ImageIcon,
@@ -68,6 +69,14 @@ const StudioCanvas = dynamic(
   },
 );
 
+// Clés i18n des libellés de format (le label en dur dans presets n'est pas
+// traduit → on passe par le namespace visualStudio).
+const FORMAT_LABEL_KEY: Record<StudioFormatId, string> = {
+  "1:1": "formatSquare",
+  "4:5": "formatPortrait",
+  "9:16": "formatStory",
+};
+
 const FORMAT_ICON: Record<StudioFormatId, React.ComponentType<{ className?: string }>> = {
   "1:1": Square,
   "4:5": RectangleVertical,
@@ -91,6 +100,7 @@ export function ImageStudio({
   title,
   applyLabel,
 }: ImageStudioProps) {
+  const t = useTranslations("visualStudio");
   const [formatId, setFormatId] = useState<StudioFormatId>(defaultFormat ?? formats[0]);
   const [background, setBackground] = useState<BackgroundSpec>({
     mode: "solid",
@@ -199,7 +209,7 @@ export function ImageStudio({
   function handleBgFile(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Fichier image attendu (PNG, JPG, WebP).");
+      toast.error(t("imageExpected"));
       return;
     }
     const url = URL.createObjectURL(file);
@@ -210,7 +220,7 @@ export function ImageStudio({
   async function apply() {
     const handle = handleRef.current;
     if (!handle) {
-      toast.error("Le canvas n'est pas prêt, réessaie dans un instant.");
+      toast.error(t("canvasNotReady"));
       return;
     }
     setBusy(true);
@@ -225,7 +235,7 @@ export function ImageStudio({
     } catch (e) {
       console.error("[ImageStudio] export/upload failed", e);
       const msg = e instanceof Error ? e.message : "Réessaie.";
-      toast.error(`Échec du visuel : ${msg}`);
+      toast.error(t("exportFailed", { msg }));
     } finally {
       setBusy(false);
     }
@@ -246,10 +256,10 @@ export function ImageStudio({
         <DialogHeader className="px-6 pt-6 pb-3">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <ImageIcon className="h-5 w-5 text-primary" />
-            {title ?? "Studio visuel"}
+            {title ?? t("title")}
           </DialogTitle>
           <DialogDescription>
-            Double-clique un texte pour le réécrire, sélectionne un mot pour le styliser, glisse pour repositionner.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -259,7 +269,7 @@ export function ImageStudio({
             <div className="space-y-5 lg:w-[280px] lg:shrink-0 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
               {/* Format */}
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Format</Label>
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t("format")}</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {formats.map((id) => {
                     const Icon = FORMAT_ICON[id];
@@ -276,7 +286,7 @@ export function ImageStudio({
                         }`}
                       >
                         <Icon className="h-4 w-4" />
-                        {FORMATS[id].label}
+                        {t(FORMAT_LABEL_KEY[id])}
                       </button>
                     );
                   })}
@@ -287,7 +297,7 @@ export function ImageStudio({
 
               {/* Fond */}
               <div className="space-y-3">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Fond</Label>
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t("background")}</Label>
                 <div className="flex gap-2">
                   {(["solid", "gradient", "image"] as BackgroundMode[]).map((m) => (
                     <button
@@ -300,7 +310,7 @@ export function ImageStudio({
                           : "border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
-                      {m === "solid" ? "Uni" : m === "gradient" ? "Dégradé" : "Image"}
+                      {m === "solid" ? t("bgSolid") : m === "gradient" ? t("bgGradient") : t("bgImage")}
                     </button>
                   ))}
                 </div>
@@ -315,7 +325,7 @@ export function ImageStudio({
                         userPalettes={brandPalette}
                         userPalettesLabel={`Palette ${brandKit.name}`}
                       />
-                      {background.mode === "gradient" ? "Début" : "Couleur"}
+                      {background.mode === "gradient" ? t("gradientStart") : t("color")}
                     </div>
                     {background.mode === "gradient" && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -326,7 +336,7 @@ export function ImageStudio({
                           userPalettes={brandPalette}
                           userPalettesLabel={`Palette ${brandKit.name}`}
                         />
-                        Fin
+                        {t("gradientEnd")}
                       </div>
                     )}
                   </div>
@@ -336,7 +346,7 @@ export function ImageStudio({
                   <div className="space-y-2">
                     <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted cursor-pointer">
                       <Upload className="h-4 w-4" />
-                      Importer une image
+                      {t("importImage")}
                       <input
                         type="file"
                         accept="image/*"
@@ -346,7 +356,7 @@ export function ImageStudio({
                     </label>
                     <Button type="button" variant="outline" className="w-full" disabled title="Bientôt disponible">
                       <Sparkles className="h-4 w-4 mr-1.5" />
-                      Générer un fond IA (bientôt)
+                      {t("aiBackgroundSoon")}
                     </Button>
                   </div>
                 )}
@@ -356,7 +366,7 @@ export function ImageStudio({
 
               {/* Logo */}
               <div className="flex items-center justify-between">
-                <Label htmlFor="studio-logo" className="text-sm">Afficher le logo</Label>
+                <Label htmlFor="studio-logo" className="text-sm">{t("showLogo")}</Label>
                 <Switch id="studio-logo" checked={showLogo} onCheckedChange={setShowLogo} />
               </div>
 
@@ -370,10 +380,10 @@ export function ImageStudio({
                 onClick={() => handleRef.current?.addText()}
               >
                 <Type className="h-4 w-4 mr-1.5" />
-                Ajouter un texte
+                {t("addText")}
               </Button>
               <p className="text-xs text-muted-foreground">
-                Astuce : clique un texte pour le déplacer, double-clique pour le réécrire, sélectionne un mot pour le styliser.
+                {t("tip")}
               </p>
             </div>
 
@@ -414,11 +424,11 @@ export function ImageStudio({
         <DialogFooter className="px-6 py-4 border-t bg-muted/20">
           <div className="flex w-full items-center justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
-              Fermer
+              {t("close")}
             </Button>
             <Button type="button" onClick={apply} disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
-              {applyLabel ?? "Utiliser ce visuel"}
+              {applyLabel ?? t("use")}
             </Button>
           </div>
         </DialogFooter>
@@ -442,6 +452,7 @@ function FloatingToolbar({
   top: number;
   left: number;
 }) {
+  const t = useTranslations("visualStudio");
   // Plage capturée au mousedown (avant que Fabric ne quitte l'édition au
   // clic sur un contrôle hors-canvas comme le picker couleur/police). On
   // ne stocke QUE les plages valides : les interactions internes du picker
@@ -464,27 +475,27 @@ function FloatingToolbar({
         onMouseDown={captureRange}
         onChange={(e) => handle.applyStyle({ fontFamily: e.target.value }, savedRange.current)}
         className="h-7 rounded bg-transparent px-1 text-xs outline-none hover:bg-muted cursor-pointer"
-        title="Police"
+        title={t("tbFont")}
       >
         {FONT_OPTIONS.map((f) => (
           <option key={f.value} value={f.value}>{f.label}</option>
         ))}
       </select>
 
-      <ToolbarBtn active={info.bold} title="Gras" onClick={() => handle.applyStyle({ toggleBold: true })}>
+      <ToolbarBtn active={info.bold} title={t("tbBold")} onClick={() => handle.applyStyle({ toggleBold: true })}>
         <Bold className="h-3.5 w-3.5" />
       </ToolbarBtn>
-      <ToolbarBtn active={info.italic} title="Italique" onClick={() => handle.applyStyle({ toggleItalic: true })}>
+      <ToolbarBtn active={info.italic} title={t("tbItalic")} onClick={() => handle.applyStyle({ toggleItalic: true })}>
         <Italic className="h-3.5 w-3.5" />
       </ToolbarBtn>
-      <ToolbarBtn active={info.underline} title="Souligné" onClick={() => handle.applyStyle({ toggleUnderline: true })}>
+      <ToolbarBtn active={info.underline} title={t("tbUnderline")} onClick={() => handle.applyStyle({ toggleUnderline: true })}>
         <Underline className="h-3.5 w-3.5" />
       </ToolbarBtn>
 
-      <ToolbarBtn title="Réduire" onClick={() => handle.applyStyle({ fontDelta: -2 })}>
+      <ToolbarBtn title={t("tbShrink")} onClick={() => handle.applyStyle({ fontDelta: -2 })}>
         <Minus className="h-3.5 w-3.5" />
       </ToolbarBtn>
-      <ToolbarBtn title="Agrandir" onClick={() => handle.applyStyle({ fontDelta: 2 })}>
+      <ToolbarBtn title={t("tbGrow")} onClick={() => handle.applyStyle({ fontDelta: 2 })}>
         <Plus className="h-3.5 w-3.5" />
       </ToolbarBtn>
 
@@ -493,7 +504,7 @@ function FloatingToolbar({
       {(["left", "center", "right"] as const).map((a) => {
         const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
         return (
-          <ToolbarBtn key={a} active={info.align === a} title={a} onClick={() => handle.applyStyle({ align: a })}>
+          <ToolbarBtn key={a} active={info.align === a} title={t(a === "left" ? "tbAlignLeft" : a === "center" ? "tbAlignCenter" : "tbAlignRight")} onClick={() => handle.applyStyle({ align: a })}>
             <Icon className="h-3.5 w-3.5" />
           </ToolbarBtn>
         );
@@ -505,14 +516,14 @@ function FloatingToolbar({
         <ColorSwatchPicker
           value={/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(info.fill) ? info.fill : "#000000"}
           onChange={(c) => handle.applyStyle({ fill: c }, savedRange.current)}
-          label="Couleur du texte"
+          label={t("tbTextColor")}
           userPalettes={userPalettes}
-          userPalettesLabel={`Palette ${brandName}`}
+          userPalettesLabel={t("paletteOf", { name: brandName })}
         />
       </span>
 
-      <ToolbarBtn title="Éditer le texte" onClick={() => handle.enterEdit()}>Aa</ToolbarBtn>
-      <ToolbarBtn title="Supprimer" onClick={() => handle.deleteActive()}>
+      <ToolbarBtn title={t("tbEditText")} onClick={() => handle.enterEdit()}>Aa</ToolbarBtn>
+      <ToolbarBtn title={t("tbDelete")} onClick={() => handle.deleteActive()}>
         <Trash2 className="h-3.5 w-3.5" />
       </ToolbarBtn>
     </div>

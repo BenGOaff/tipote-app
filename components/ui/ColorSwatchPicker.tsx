@@ -12,19 +12,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { HexColorPicker } from "react-colorful";
 
-const SWATCHES: Array<{ hex: string; label: string }> = [
-  { hex: "#000000", label: "Noir" },
-  { hex: "#ffffff", label: "Blanc" },
-  { hex: "#6b7280", label: "Gris" },
-  { hex: "#ef4444", label: "Rouge" },
-  { hex: "#f59e0b", label: "Orange" },
-  { hex: "#10b981", label: "Vert" },
-  { hex: "#3b82f6", label: "Bleu" },
-  { hex: "#8b5cf6", label: "Violet" },
-  { hex: "#ec4899", label: "Rose" },
-  { hex: "#0ea5e9", label: "Cyan" },
+const SWATCHES: Array<{ hex: string; key: string }> = [
+  { hex: "#000000", key: "black" },
+  { hex: "#ffffff", key: "white" },
+  { hex: "#6b7280", key: "gray" },
+  { hex: "#ef4444", key: "red" },
+  { hex: "#f59e0b", key: "orange" },
+  { hex: "#10b981", key: "green" },
+  { hex: "#3b82f6", key: "blue" },
+  { hex: "#8b5cf6", key: "purple" },
+  { hex: "#ec4899", key: "pink" },
+  { hex: "#0ea5e9", key: "cyan" },
 ];
 
 const HEX_RE = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
@@ -45,6 +46,7 @@ interface Props {
 }
 
 export function ColorSwatchPicker({ value, onChange, label, disabled, userPalettes, userPalettesLabel }: Props) {
+  const t = useTranslations("colorPicker");
   const [open, setOpen] = useState(false);
   const [hexInput, setHexInput] = useState(value);
   // Position du popover, rendu en portal (position: fixed) pour ne JAMAIS
@@ -143,7 +145,7 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
         }}
         className="size-9 rounded-md border border-border/60 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow transition"
         style={{ backgroundColor: value || "#ffffff" }}
-        aria-label={label ?? "Choisir une couleur"}
+        aria-label={label ?? t("pick")}
         title={value}
       />
       {open && !disabled && pos ? createPortal(
@@ -185,7 +187,7 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
           {userPalettes && userPalettes.length > 0 ? (
             <div>
               <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                {userPalettesLabel ?? "Mes palettes"}
+                {userPalettesLabel ?? t("myPalettes")}
               </div>
               <div className="space-y-1.5">
                 {userPalettes.map((p) => (
@@ -220,7 +222,7 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
 
           <div>
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-              Couleurs enregistrées
+              {t("savedColors")}
             </div>
             <div className="grid grid-cols-5 gap-1">
               {SWATCHES.map((s) => (
@@ -230,14 +232,14 @@ export function ColorSwatchPicker({ value, onChange, label, disabled, userPalett
                   onClick={() => {
                     onChange(s.hex);
                   }}
-                  title={s.label}
+                  title={t(s.key)}
                   className={`w-8 h-8 rounded-md border transition-transform hover:scale-110 ${
                     value.toLowerCase() === s.hex
                       ? "border-primary ring-2 ring-primary/30"
                       : "border-border/60"
                   }`}
                   style={{ backgroundColor: s.hex }}
-                  aria-label={s.label}
+                  aria-label={t(s.key)}
                 />
               ))}
             </div>
