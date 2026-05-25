@@ -53,9 +53,10 @@ export async function POST(req: NextRequest) {
 
     const system =
       `You are an expert social-media copywriter. Write punchy, scroll-stopping copy for a single social visual. ` +
-      `Write EVERYTHING in ${lang}. Return STRICT JSON with exactly the keys "headline", "subtitle", "cta".\n` +
+      `Write EVERYTHING in ${lang}. Return STRICT JSON with exactly the keys "kicker", "headline", "subtitle", "cta".\n` +
+      `- kicker: a tiny 1-3 word category/context label (e.g. a theme or rubric), UPPERCASE-friendly, no emojis.\n` +
       `- headline: a stop-scroll hook, max ~6 words, benefit or curiosity driven, no ending period, no hashtags, no emojis.\n` +
-      `- subtitle: one short supporting line, max ~14 words.\n` +
+      `- subtitle: one short supporting line, max ~12 words — phrase it like a hand-written hook (a question or a teaser).\n` +
       `- cta: a 2-4 word action call suitable for a button.\n` +
       `No extra keys, no commentary.`;
     const userMsg = `Topic / context of the visual: ${intent}${brand ? `\nBrand: ${brand}` : ""}`;
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
       parsed = {};
     }
 
+    const kicker = String(parsed.kicker ?? "").trim().slice(0, 40);
     const headline = String(parsed.headline ?? "").trim().slice(0, 80);
     const subtitle = String(parsed.subtitle ?? "").trim().slice(0, 160);
     const cta = String(parsed.cta ?? "").trim().slice(0, 40);
@@ -87,7 +89,7 @@ export async function POST(req: NextRequest) {
     if (!headline && !subtitle && !cta) {
       return NextResponse.json({ ok: false, error: "Aucun texte généré" }, { status: 502 });
     }
-    return NextResponse.json({ ok: true, headline, subtitle, cta });
+    return NextResponse.json({ ok: true, kicker, headline, subtitle, cta });
   } catch (e) {
     console.error("[visual-studio/generate-copy] error:", e);
     const msg = e instanceof Error ? e.message : "Erreur inconnue";
