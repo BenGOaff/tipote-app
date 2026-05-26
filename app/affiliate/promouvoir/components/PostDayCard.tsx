@@ -120,11 +120,12 @@ export function PostDayCard({
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-2">Visuel à publier avec le post :</p>
               <div className="flex flex-wrap gap-2">
-                {/* Génère un visuel ADAPTÉ à ce post (l'IA lit le hook + la
-                    légende → texte sur-mesure). */}
+                {/* Génère un visuel ADAPTÉ à ce post : l'IA lit LE POST (la
+                    légende) → texte sur-mesure. Pas besoin d'y ajouter le hook,
+                    il est déjà en tête de la légende (sinon doublon). */}
                 <StudioLauncher
                   label="Générer un visuel"
-                  intent={`${day.hook}\n\n${day.posts[0]?.caption ?? ""}`}
+                  intent={(day.posts[0]?.caption ?? day.hook).replaceAll("{AFFILIATE_LINK}", "").trim()}
                 />
                 <Button size="sm" variant="outline" asChild>
                   <a href={day.visualPath} download>

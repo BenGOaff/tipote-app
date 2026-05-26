@@ -294,12 +294,18 @@ export function StudioCanvas({
 
     // Largeur de la ligne la plus large APRÈS retour à la ligne, mesurée par
     // Fabric (métriques réelles de la police chargée, charSpacing inclus).
+    // Filet : si getLineWidth renvoie 0, on re-mesure la ligne via le ctx.
     const longestLineWidth = (o: Textbox): number => {
       const lines = (o as unknown as { textLines?: string[] }).textLines;
-      const n = Array.isArray(lines) ? lines.length : 0;
+      if (!Array.isArray(lines) || !lines.length) return 0;
       let max = 0;
-      for (let i = 0; i < n; i++) {
-        const w = (o as unknown as { getLineWidth?: (i: number) => number }).getLineWidth?.(i) ?? 0;
+      for (let i = 0; i < lines.length; i++) {
+        let w = (o as unknown as { getLineWidth?: (i: number) => number }).getLineWidth?.(i) ?? 0;
+        if (!w && measureCtx) {
+          const weight = o.fontWeight ? String(o.fontWeight) : "normal";
+          measureCtx.font = `${weight} ${o.fontSize ?? 20}px ${o.fontFamily}`;
+          w = measureCtx.measureText(lines[i]).width;
+        }
         if (w > max) max = w;
       }
       return max;
@@ -702,14 +708,18 @@ export function StudioCanvas({
     }
     if (scrim !== "none") {
       const base = scrim === "dark" ? "0,0,0" : "255,255,255";
+      // Dense aux extrémités (titre/CTA) MAIS garde un voile de base sur tout
+      // le centre : sinon un fond en dégradé horizontal (moitié sombre / moitié
+      // claire) laisse le texte illisible là où le voile s'annule. Le voile de
+      // base normalise le contraste partout sans noyer l'image.
       const grad = new Gradient({
         type: "linear",
         coords: { x1: 0, y1: 0, x2: 0, y2: displayHeight },
         colorStops: [
-          { offset: 0, color: `rgba(${base},0.5)` },
-          { offset: 0.3, color: `rgba(${base},0)` },
-          { offset: 0.7, color: `rgba(${base},0)` },
-          { offset: 1, color: `rgba(${base},0.55)` },
+          { offset: 0, color: `rgba(${base},0.62)` },
+          { offset: 0.4, color: `rgba(${base},0.14)` },
+          { offset: 0.6, color: `rgba(${base},0.14)` },
+          { offset: 1, color: `rgba(${base},0.64)` },
         ],
       });
       const rect = new Rect({
