@@ -54,6 +54,7 @@ export const FONT_OPTIONS = [
   { label: "Bebas Neue", value: '"Bebas Neue", "Arial Narrow", sans-serif' },
   { label: "Archivo Black", value: '"Archivo Black", Arial, sans-serif' },
   { label: "Montserrat", value: 'Montserrat, "Helvetica Neue", Arial, sans-serif' },
+  { label: "Roboto", value: 'Roboto, "Helvetica Neue", Arial, sans-serif' },
   { label: "Caveat", value: 'Caveat, "Comic Sans MS", cursive' },
   { label: "Inter", value: INTER_STACK },
   { label: "Arial", value: "Arial, Helvetica, sans-serif" },

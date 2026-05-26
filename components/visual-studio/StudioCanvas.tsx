@@ -79,6 +79,8 @@ export interface StudioCanvasHandle {
   /** Place le bloc texte en haut ou en bas (selon l'analyse d'image) et
    *  applique la couleur adaptée au titre/sous-titre. */
   setTextPlacement: (anchor: "top" | "bottom", textColor: string) => void;
+  /** Change la police du titre + de l'accent (adaptée au thème/style). */
+  setHeadingFont: (stack: string) => void;
 }
 
 interface StudioCanvasProps {
@@ -114,6 +116,9 @@ export function StudioCanvas({
   const bgRef = useRef<FabricObject | null>(null);
   const logoRef = useRef<FabricObject | null>(null);
   const scrimRef = useRef<FabricObject | null>(null);
+  // Re-applique la mise en page (safe-zone + empilement) après un changement
+  // de format — ne fait rien tant qu'aucune génération n'a placé le texte.
+  const layoutRef = useRef<(() => void) | null>(null);
 
   // Valeurs courantes lues par les méthodes du handle (créé une fois).
   const dimsRef = useRef({ w: displayWidth, h: displayHeight });
@@ -267,6 +272,129 @@ export function StudioCanvas({
     canvas.add(kicker, headline, accent, subline, cta);
     canvas.renderAll();
 
+    // ── Moteur de mise en page (safe-zone + auto-fit + empilement) ──
+    // L'ordre vertical des blocs. La taille de police de base est exprimée
+    // en FRACTION de la largeur → recalculée à chaque format.
+    const LAYOUT_ORDER: string[] = ["kicker", "headline", "accent", "subline", "cta"];
+    const BASE_FONT_FRAC: Record<string, number> = {
+      kicker: 0.026, headline: 0.1, accent: 0.15, subline: 0.062, cta: 0.045,
+    };
+    // Canvas détaché pour mesurer la largeur du texte (ctx.measureText).
+    const measureCtx = (typeof document !== "undefined"
+      ? document.createElement("canvas").getContext("2d")
+      : null);
+
+    // État de placement courant (mis à jour par setTextPlacement). Sert à
+    // re-stacker à l'identique quand la police ou le format changent.
+    let curAnchor: "top" | "bottom" = "top";
+    let placed = false;
+
+    const widestWord = (text: string) =>
+      text.split(/\s+/).reduce((a, w) => (w.length > a.length ? w : a), "");
+
+    // Réduit la fontSize d'un bloc pour qu'il ne déborde JAMAIS de la boîte :
+    // l'accent/kicker (1 ligne) doit tenir en entier ; les autres au moins
+    // sur leur mot le plus large (Fabric gère le retour à la ligne du reste).
+    const fitToWidth = (o: Textbox, boxW: number, singleLine: boolean) => {
+      if (!measureCtx) return;
+      const text = String(o.text ?? "");
+      const target = singleLine ? text : widestWord(text);
+      if (!target.trim()) return;
+      const weight = o.fontWeight ? String(o.fontWeight) : "normal";
+      const size = o.fontSize ?? 20;
+      measureCtx.font = `${weight} ${size}px ${o.fontFamily}`;
+      const w = measureCtx.measureText(target).width;
+      const max = boxW * 0.98;
+      if (w > max) o.set({ fontSize: Math.max(8, size * (max / w)) });
+    };
+
+    // Couleur + ombre adaptées au fond : ombre FORTE sous un texte clair
+    // (fond sombre), DISCRÈTE sous un texte foncé (fond clair).
+    const applyColorsAndShadows = (textColor: string) => {
+      const cc = fcRef.current;
+      if (!cc) return;
+      const isLight = textColor.toLowerCase() === "#ffffff";
+      const soft = isLight ? "rgba(0,0,0,0.55) 0px 2px 14px" : "rgba(0,0,0,0.18) 0px 1px 5px";
+      const kick = isLight ? "rgba(0,0,0,0.5) 0px 1px 6px" : "rgba(0,0,0,0.15) 0px 1px 4px";
+      cc.getObjects().forEach((o) => {
+        const id = (o as { layerId?: string }).layerId;
+        if (id === "headline" || id === "subline") o.set({ fill: textColor, shadow: soft });
+        else if (id === "kicker") o.set({ fill: textColor, shadow: kick });
+        else if (id === "accent") o.set({ stroke: textColor, shadow: soft });
+        // cta : garde son bandeau de marque + texte blanc (lisible partout).
+      });
+    };
+
+    // Mise en page complète : padding général adapté au format, largeur de
+    // boîte commune (force le retour à la ligne), auto-fit anti-débordement,
+    // puis empilement vertical sans chevauchement avec espacement constant.
+    const layout = () => {
+      const cc = fcRef.current;
+      if (!cc) return;
+      const W = dimsRef.current.w;
+      const H = dimsRef.current.h;
+      const ratio = W / H;
+      const padX = 0.07 * W;
+      const boxW = W - 2 * padX;
+      // Marges verticales adaptées au format (plus aérées en portrait/story).
+      const padTop = (ratio >= 1 ? 0.08 : 0.06) * H;
+      const padBottom = (ratio >= 1 ? 0.08 : 0.07) * H;
+      const gap = 0.025 * H;
+
+      const objs = LAYOUT_ORDER.map(
+        (id) => cc.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined,
+      );
+      // (1) Safe-zone : même largeur + marge gauche pour tous (padding général).
+      objs.forEach((o) => o?.set({ left: padX, width: boxW }));
+
+      const blocks = LAYOUT_ORDER
+        .map((id, i) => ({ id, o: objs[i] }))
+        .filter((b): b is { id: string; o: Textbox } => !!b.o && String(b.o.text ?? "").trim().length > 0);
+      if (!blocks.length) return;
+
+      // (2) Auto-fit : taille de base puis réduction si un mot/accent déborde.
+      blocks.forEach(({ id, o }) => {
+        const frac = BASE_FONT_FRAC[id];
+        if (frac) o.set({ fontSize: frac * W });
+        fitToWidth(o, boxW, id === "accent" || id === "kicker");
+      });
+
+      // (3) Mesure les hauteurs réelles.
+      blocks.forEach(({ o }) => o.initDimensions());
+      let heights = blocks.map(({ o }) => o.getScaledHeight());
+      let total = heights.reduce((a, b) => a + b, 0) + gap * Math.max(0, blocks.length - 1);
+      const availH = H - padTop - padBottom;
+      // (3b) Débordement vertical → réduit tout proportionnellement.
+      if (total > availH) {
+        const k = availH / total;
+        blocks.forEach(({ o }) => o.set({ fontSize: (o.fontSize ?? 20) * k }));
+        blocks.forEach(({ o }) => o.initDimensions());
+        heights = blocks.map(({ o }) => o.getScaledHeight());
+        total = heights.reduce((a, b) => a + b, 0) + gap * Math.max(0, blocks.length - 1);
+      }
+
+      // (4) Empilement, ancré en haut ou en bas.
+      let y = curAnchor === "top" ? padTop : Math.max(padTop, H - padBottom - total);
+      blocks.forEach(({ o }, i) => {
+        o.set({ top: y });
+        o.setCoords();
+        y += heights[i] + gap;
+      });
+      cc.requestRenderAll();
+    };
+
+    // Re-stacke quand les webfonts sont prêtes (métriques fiables) puis expose
+    // un re-layout au changement de format (seulement après une génération).
+    const layoutNow = () => {
+      layout();
+      if (typeof document !== "undefined" && document.fonts?.ready) {
+        document.fonts.ready.then(layout).catch(() => {});
+      }
+    };
+    layoutRef.current = () => {
+      if (placed) layoutNow();
+    };
+
     const handle: StudioCanvasHandle = {
       async toBlob() {
         const c = fcRef.current;
@@ -390,45 +518,20 @@ export function StudioCanvas({
         c.requestRenderAll();
       },
       setTextPlacement(anchor, textColor) {
+        if (!fcRef.current) return;
+        curAnchor = anchor;
+        placed = true;
+        applyColorsAndShadows(textColor);
+        layoutNow();
+      },
+      setHeadingFont(stack) {
         const c = fcRef.current;
         if (!c) return;
-        const order = ["kicker", "headline", "accent", "subline", "cta"];
-        // Couleurs : kicker/titre/sous-titre suivent la couleur adaptée ;
-        // l'accent garde sa couleur de marque mais son CONTOUR s'adapte ;
-        // le CTA garde son bandeau de marque (texte blanc).
         c.getObjects().forEach((o) => {
           const id = (o as { layerId?: string }).layerId;
-          if (id === "headline" || id === "subline" || id === "kicker") o.set({ fill: textColor });
-          if (id === "accent") o.set({ stroke: textColor });
+          if (id === "headline" || id === "accent") o.set({ fontFamily: stack });
         });
-        // EMPILEMENT DYNAMIQUE : on mesure la hauteur RÉELLE de chaque bloc
-        // (le titre peut faire 1, 2 ou 3 lignes) et on les empile sans
-        // chevauchement, ancrés en haut ou en bas. On re-empile quand les
-        // webfonts sont prêtes (sinon hauteurs mesurées sur la police fallback).
-        const restack = () => {
-          const cc = fcRef.current;
-          if (!cc) return;
-          const H = dimsRef.current.h;
-          const blocks = order
-            .map((id) => cc.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined)
-            .filter((o): o is Textbox => !!o && String(o.text ?? "").trim().length > 0);
-          if (!blocks.length) return;
-          blocks.forEach((o) => o.initDimensions());
-          const heights = blocks.map((o) => o.getScaledHeight());
-          const gap = 0.022 * H;
-          const total = heights.reduce((a, b) => a + b, 0) + gap * Math.max(0, blocks.length - 1);
-          let y = anchor === "top" ? 0.07 * H : Math.max(0.06 * H, H - 0.08 * H - total);
-          blocks.forEach((o, i) => {
-            o.set({ top: y });
-            o.setCoords();
-            y += heights[i] + gap;
-          });
-          cc.requestRenderAll();
-        };
-        restack();
-        if (typeof document !== "undefined" && document.fonts?.ready) {
-          document.fonts.ready.then(restack).catch(() => {});
-        }
+        layoutNow();
       },
     };
     onReady?.(handle);
@@ -482,6 +585,8 @@ export function StudioCanvas({
     prevDimsRef.current = { w: displayWidth, h: displayHeight };
     c.calcOffset();
     c.requestRenderAll();
+    // Replace le texte selon le NOUVEAU format (no-op avant une génération).
+    layoutRef.current?.();
   }, [displayWidth, displayHeight]);
 
   // ── Fond (uni / dégradé / image) ──────────────────────────────
