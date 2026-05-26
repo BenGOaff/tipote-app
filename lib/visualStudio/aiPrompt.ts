@@ -49,6 +49,17 @@ export const AI_STYLES: Array<{ id: AiStyleId; labelKey: string; fragment: strin
 const STYLE_BY_ID: Record<AiStyleId, (typeof AI_STYLES)[number]> =
   Object.fromEntries(AI_STYLES.map((s) => [s.id, s])) as Record<AiStyleId, (typeof AI_STYLES)[number]>;
 
+/** Police de TITRE (+ accent) adaptée au thème/style choisi. Demande Béné :
+ *  personne→Montserrat, minimaliste→Roboto, spatial→Anton, etc. Stacks CSS
+ *  complètes (cf. FONT_OPTIONS / layout Google Fonts). */
+export const STYLE_HEADING_FONT: Record<AiStyleId, string> = {
+  photoPerson: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
+  landscape: 'Anton, "Arial Narrow", Impact, sans-serif',
+  abstract: '"Archivo Black", Arial, sans-serif',
+  space: 'Anton, "Arial Narrow", Impact, sans-serif',
+  minimal: 'Roboto, "Helvetica Neue", Arial, sans-serif',
+};
+
 export function isAiStyleId(v: unknown): v is AiStyleId {
   return typeof v === "string" && v in STYLE_BY_ID;
 }

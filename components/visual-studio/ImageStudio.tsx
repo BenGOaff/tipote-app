@@ -49,7 +49,7 @@ import { Separator } from "@/components/ui/separator";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 
 import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
-import { AI_STYLES, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
+import { AI_STYLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
 import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
 import type {
   BackgroundMode,
@@ -264,6 +264,9 @@ export function ImageStudio({
         h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
+        // Police de titre adaptée au thème (personne→Montserrat, spatial→Anton…)
+        // + re-fit/empilement de la nouvelle copy dans la safe-zone.
+        h.setHeadingFont(STYLE_HEADING_FONT[aiStyle]);
         anyOk = true;
       }
       if (bg?.ok && bg.dataUrl) {
