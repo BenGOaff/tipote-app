@@ -168,11 +168,16 @@ export async function GET(
   }[] = [];
   let totalSessions = 0;
   try {
+    // Ordre par created_at DESC (et NON par question_index) : si on plafonne
+    // à 50000 lignes en triant par question_index croissant, ce sont les
+    // questions de FIN qui sont tronquées en premier → le funnel s'arrête aux
+    // 1res questions. En triant par récence, la troncature éventuelle retire
+    // les events les plus vieux, uniformément sur toutes les questions.
     let qEventsQuery = supabaseAdmin
       .from("quiz_question_events")
       .select("question_index, session_id, event")
       .eq("quiz_id", quizId)
-      .order("question_index", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(50000);
     if (period.sinceISO) qEventsQuery = qEventsQuery.gte("created_at", period.sinceISO);
 

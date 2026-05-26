@@ -880,15 +880,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     if (quiz) {
-      // Refonte tracking (19 mai 2026) : via log_quiz_event RPC →
-      // trigger bumpe shares_count. Pas d'UPDATE direct, pour garder
-      // la source de vérité unique (quiz_events). Pas de session_id
-      // ici (event server-side, déclenché par submission de partage —
-      // le visiteur a déjà été suivi via cookie sur view/start/complete).
-      await admin.rpc("log_quiz_event", {
-        quiz_id_input: quizId,
-        event_type_input: "share",
-      });
+      // Refonte tracking (19 mai 2026) : INSERT direct dans quiz_events →
+      // trigger bumpe shares_count. Source de vérité unique (quiz_events),
+      // sans dépendre de la RPC log_quiz_event (insert direct = erreur lue,
+      // pas de risque de surcharge). Pas de session_id ici (event server-side).
+      const { error: shareErr } = await admin
+        .from("quiz_events")
+        .insert({ quiz_id: quizId, event_type: "share", meta: null, session_id: null });
+      if (shareErr) console.error("[public/share] quiz_events insert failed", shareErr);
 
       // ── Auto-apply share tag in Systeme.io (non-blocking) ──
       const shareTagName = String(quiz.sio_share_tag_name ?? "").trim();
