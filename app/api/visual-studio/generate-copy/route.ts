@@ -53,9 +53,10 @@ export async function POST(req: NextRequest) {
 
     const system =
       `You are an expert social-media copywriter. Write punchy, scroll-stopping copy for a single social visual. ` +
-      `Write EVERYTHING in ${lang}. Return STRICT JSON with exactly the keys "kicker", "headline", "subtitle", "cta".\n` +
+      `Write EVERYTHING in ${lang}. Return STRICT JSON with exactly the keys "kicker", "headline", "accent", "subtitle", "cta".\n` +
       `- kicker: a tiny 1-3 word topical rubric for the post's THEME (a catchy category like a magazine rubric) — NOT the image style, NOT generic words like "dark" or "abstract". UPPERCASE-friendly, no emojis.\n` +
       `- headline: a stop-scroll hook, max ~6 words, benefit or curiosity driven, no ending period, no hashtags, no emojis.\n` +
+      `- accent: OPTIONAL. A single very short standalone element to display OVERSIZED for impact — ideally a number/stat/price (e.g. "16 365€", "3X", "+200%"), or a 1-2 word power-word that is NOT already in the headline. If nothing punchy fits, return an empty string.\n` +
       `- subtitle: one short supporting line, max ~12 words — phrase it like a hand-written hook (a question or a teaser).\n` +
       `- cta: a 2-4 word action call suitable for a button.\n` +
       `No extra keys, no commentary.`;
@@ -83,13 +84,14 @@ export async function POST(req: NextRequest) {
 
     const kicker = String(parsed.kicker ?? "").trim().slice(0, 40);
     const headline = String(parsed.headline ?? "").trim().slice(0, 80);
+    const accent = String(parsed.accent ?? "").trim().slice(0, 24);
     const subtitle = String(parsed.subtitle ?? "").trim().slice(0, 160);
     const cta = String(parsed.cta ?? "").trim().slice(0, 40);
 
     if (!headline && !subtitle && !cta) {
       return NextResponse.json({ ok: false, error: "Aucun texte généré" }, { status: 502 });
     }
-    return NextResponse.json({ ok: true, kicker, headline, subtitle, cta });
+    return NextResponse.json({ ok: true, kicker, headline, accent, subtitle, cta });
   } catch (e) {
     console.error("[visual-studio/generate-copy] error:", e);
     const msg = e instanceof Error ? e.message : "Erreur inconnue";

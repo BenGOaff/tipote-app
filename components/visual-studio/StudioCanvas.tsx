@@ -246,6 +246,11 @@ export function StudioCanvas({
     const headline = mk("headline", initialText?.headline ?? "Ton accroche ici", 0.08, 0.11, 0.84, 0.1, true, brand.textColor, 1);
     // Titre = police display lourde + ombre douce (look "2026" out-of-the-box).
     headline.set({ fontFamily: DISPLAY_HEADING_STACK, lineHeight: 1.02, shadow: "rgba(0,0,0,0.35) 0px 2px 12px" });
+    // Accent géant = mot/chiffre clé (ex. "16 365€", "STUDIO") en couleur de
+    // marque + CONTOUR de contraste (paintFirst stroke) → claque sur n'importe
+    // quel fond. Vide par défaut (n'apparaît que si l'IA renvoie un accent).
+    const accent = mk("accent", initialText?.accent ?? "", 0.06, 0.5, 0.88, 0.15, true, brand.primaryColor, 1);
+    accent.set({ fontFamily: DISPLAY_HEADING_STACK, lineHeight: 0.95, paintFirst: "stroke", stroke: brand.backgroundColor, strokeWidth: 0.006 * W, shadow: "rgba(0,0,0,0.35) 0px 2px 14px" });
     const subline = mk("subline", initialText?.subline ?? "Un sous-titre court qui appuie le bénéfice.", 0.1, 0.34, 0.8, 0.04, false, brand.textColor, 0.82);
     // Sous-titre = script (Caveat), plus grand : look "accroche manuscrite"
     // (ex. "Comment le reconnaître ?") qui contraste avec le titre display.
@@ -259,7 +264,7 @@ export function StudioCanvas({
       fill: "#ffffff",
       textBackgroundColor: brand.primaryColor,
     });
-    canvas.add(kicker, headline, subline, cta);
+    canvas.add(kicker, headline, accent, subline, cta);
     canvas.renderAll();
 
     const handle: StudioCanvasHandle = {
@@ -391,15 +396,17 @@ export function StudioCanvas({
         // Bloc texte clusterisé dans la bande la plus propre (haut/bas).
         const yF: Record<string, number> =
           anchor === "top"
-            ? { kicker: 0.06, headline: 0.12, subline: 0.3, cta: 0.4 }
-            : { kicker: 0.5, headline: 0.56, subline: 0.74, cta: 0.84 };
+            ? { kicker: 0.05, headline: 0.1, accent: 0.22, subline: 0.4, cta: 0.5 }
+            : { kicker: 0.4, headline: 0.45, accent: 0.57, subline: 0.75, cta: 0.86 };
         c.getObjects().forEach((o) => {
           const id = (o as { layerId?: string }).layerId;
           if (!id || !(id in yF)) return;
           o.set({ top: yF[id] * H });
           // Kicker + titre + sous-titre suivent la couleur adaptée au fond ;
-          // le CTA garde son bandeau de marque (texte blanc).
+          // l'accent garde sa couleur de marque mais son CONTOUR s'adapte
+          // (lisible) ; le CTA garde son bandeau de marque (texte blanc).
           if (id === "headline" || id === "subline" || id === "kicker") o.set({ fill: textColor });
+          if (id === "accent") o.set({ stroke: textColor });
           o.setCoords();
         });
         c.requestRenderAll();

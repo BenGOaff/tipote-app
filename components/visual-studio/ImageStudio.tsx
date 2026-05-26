@@ -259,6 +259,7 @@ export function ImageStudio({
       if (copy?.ok && h) {
         if (copy.kicker) h.setLayerText("kicker", String(copy.kicker).toUpperCase());
         if (copy.headline) h.setLayerText("headline", String(copy.headline));
+        h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
         anyOk = true;
