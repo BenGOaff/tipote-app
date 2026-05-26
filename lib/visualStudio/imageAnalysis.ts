@@ -57,13 +57,20 @@ export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
         // Bande la plus "propre" (variance faible) → on y met le texte.
         const anchor: "top" | "bottom" = top.variance <= bottom.variance ? "top" : "bottom";
         const chosen = anchor === "top" ? top : bottom;
-        const isDark = chosen.mean < 130;
+        const std = Math.sqrt(chosen.variance);
 
-        resolve({
-          anchor,
-          textColor: isDark ? "#ffffff" : "#0f172a",
-          scrim: isDark ? "dark" : "light",
-        });
+        // Texte FONCÉ uniquement si le fond est VRAIMENT clair ET uniforme
+        // (vrai fond minimal blanc/pastel). Sinon — fond sombre OU ambigu /
+        // dégradé (une moitié sombre, une moitié claire) — on prend texte
+        // BLANC + voile sombre : combo lisible quasi partout (évite le texte
+        // foncé qui disparaît sur la zone sombre d'un dégradé).
+        const trulyLight = chosen.mean > 175 && std < 55;
+
+        resolve(
+          trulyLight
+            ? { anchor, textColor: "#0f172a", scrim: "light" }
+            : { anchor, textColor: "#ffffff", scrim: "dark" },
+        );
       } catch {
         resolve(FALLBACK);
       }
