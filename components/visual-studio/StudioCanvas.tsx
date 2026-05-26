@@ -76,9 +76,9 @@ export interface StudioCanvasHandle {
    *  génération de copy IA (titre/sous-titre/CTA). No-op si le calque
    *  n'existe pas. */
   setLayerText: (id: string, text: string) => void;
-  /** Place le bloc texte en haut ou en bas (selon l'analyse d'image) et
-   *  applique la couleur adaptée au titre/sous-titre. */
-  setTextPlacement: (anchor: "top" | "bottom", textColor: string) => void;
+  /** Place le bloc texte en haut, centré ou en bas (selon l'analyse d'image)
+   *  et applique la couleur adaptée au titre/sous-titre. */
+  setTextPlacement: (anchor: "top" | "center" | "bottom", textColor: string) => void;
   /** Change la police du titre + de l'accent (adaptée au thème/style). */
   setHeadingFont: (stack: string) => void;
   /** Choisit le gabarit : centré (hero), aligné à gauche (éditorial, barre
@@ -297,7 +297,7 @@ export function StudioCanvas({
 
     // État de placement courant (mis à jour par setTextPlacement). Sert à
     // re-stacker à l'identique quand la police ou le format changent.
-    let curAnchor: "top" | "bottom" = "top";
+    let curAnchor: "top" | "center" | "bottom" = "top";
     // Gabarit courant : centré (hero), aligné à gauche (éditorial), ou carte
     // (panneau semi-opaque derrière le texte → contraste parfait).
     let curAlign: "center" | "left" | "card" = "center";
@@ -465,8 +465,13 @@ export function StudioCanvas({
         total = heights.reduce((a, b) => a + b, 0) + sumGaps;
       }
 
-      // (4) Empilement, ancré en haut ou en bas (avec espacements groupés).
-      let y = curAnchor === "top" ? padTop : Math.max(padTop, H - padBottom - total);
+      // (4) Empilement : ancré en haut, centré, ou en bas (espacements groupés).
+      let y =
+        curAnchor === "top"
+          ? padTop
+          : curAnchor === "center"
+            ? Math.max(padTop, (H - total) / 2)
+            : Math.max(padTop, H - padBottom - total);
       blocks.forEach(({ o }, i) => {
         y += gaps[i];
         o.set({ top: y });

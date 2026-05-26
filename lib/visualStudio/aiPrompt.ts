@@ -11,6 +11,12 @@
 
 export type AiStyleId = "photoPerson" | "landscape" | "abstract" | "space" | "minimal";
 
+/** Angles de copywriting tournants (1 par génération) → des posts successifs
+ *  ne se ressemblent pas. L'IA les applique SI ça colle à l'esprit du post,
+ *  sinon elle choisit le plus pertinent. */
+export const COPY_ANGLES = ["contrarian", "number", "social_proof", "question", "how", "why"] as const;
+export type CopyAngle = (typeof COPY_ANGLES)[number];
+
 /** Style → (clé i18n du label, fragment de prompt). Le label est traduit
  *  côté UI via le namespace visualStudio (clés aiStyle*). */
 export const AI_STYLES: Array<{ id: AiStyleId; labelKey: string; fragment: string }> = [
@@ -18,7 +24,7 @@ export const AI_STYLES: Array<{ id: AiStyleId; labelKey: string; fragment: strin
     id: "photoPerson",
     labelKey: "aiStylePhotoPerson",
     fragment:
-      "authentic candid editorial photograph of a real person, composed OFF-CENTER (subject to one side or in the lower third) leaving a large clean uncluttered area for text, genuine natural expression, natural skin texture, soft natural lighting, shallow depth of field, shot on a 50mm lens, documentary feel",
+      "authentic candid editorial photograph of a real person, composed OFF-CENTER (subject to one side or in the lower third) leaving a large clean uncluttered area for text; a natural REALISTIC face with correct human proportions, symmetric eyes, in sharp focus, glancing slightly away (not staring straight at the camera), genuine relaxed expression, natural skin texture and pores, soft flattering natural light, shallow depth of field, 50mm lens, documentary feel",
   },
   {
     id: "landscape",
@@ -36,7 +42,7 @@ export const AI_STYLES: Array<{ id: AiStyleId; labelKey: string; fragment: strin
     id: "space",
     labelKey: "aiStyleSpace",
     fragment:
-      "deep-space cosmic scene, nebula and distant stars, cinematic and ethereal, rich but tasteful, high detail",
+      "deep-space cosmic scene, nebula and distant stars, cinematic and ethereal, rich but tasteful; keep the composition BALANCED with a calm, even, low-detail region (not all the glow in one corner) where text can sit comfortably",
   },
   {
     id: "minimal",

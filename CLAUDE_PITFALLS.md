@@ -64,7 +64,8 @@ Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silenci
 
 ## F) Compteurs et événements (post-Phase A tracking)
 
-- **Source de vérité = `quiz_events`** (table log time-series). Les compteurs sur `quizzes` (views_count, etc.) sont **auto-bumpés par trigger** `trg_quiz_events_bump_counter`. **Ne JAMAIS UPDATE les compteurs directement** — utiliser `log_quiz_event` RPC ou INSERT direct dans `quiz_events`.
+- **Source de vérité = `quiz_events`** (table log time-series). Les compteurs sur `quizzes` (views_count, etc.) sont **auto-bumpés par trigger** `trg_quiz_events_bump_counter`. **Ne JAMAIS UPDATE les compteurs directement** — faire un **INSERT direct dans `quiz_events`** (le trigger bumpe). **NE PAS** passer par la RPC `log_quiz_event` : un `await rpc(...)` qui ne lit pas `{ error }` masque les échecs (sur Tiquiz, des surcharges coexistantes faisaient échouer l'appel en silence → starts/completes=0). On insère direct (track route + share) et on lit l'erreur.
+- **Funnel par question** : la requête `analytics` trie par `created_at` DESC (PAS `question_index` ASC) avant `.limit(50000)`, sinon une troncature couperait les questions de FIN → funnel limité aux 1res questions.
 - **Dedup via cookie session** : cookie `tquiz_visit` HttpOnly 30j (même nom sur Tipote pour simplicité), généré server-side au premier load. Le tracking serveur check `(quiz_id, event_type, session_id, created_at > NOW() - 24h)` avant INSERT.
 - **Client `trackedRef`** : Set en mémoire pour éviter les doublons IN-tab. Combiné avec le cookie côté serveur, on dédupe correctement même si l'utilisateur ouvre 5 onglets.
 
