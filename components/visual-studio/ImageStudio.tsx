@@ -125,6 +125,7 @@ export function ImageStudio({
   const [aiStyle, setAiStyle] = useState<AiStyleId>("photoPerson");
   const [visualBusy, setVisualBusy] = useState(false);
   const [scrim, setScrim] = useState<"none" | "dark" | "light">("none");
+  const [scrimSide, setScrimSide] = useState<"left" | "right" | "none">("none");
 
   const handleRef = useRef<StudioCanvasHandle | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -169,6 +170,8 @@ export function ImageStudio({
     });
     setShowLogo(true);
     setSelection(null);
+    setScrim("none");
+    setScrimSide("none");
     setAiIntent(initialIntent ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -276,9 +279,11 @@ export function ImageStudio({
         setBackground((b) => ({ ...b, mode: "image", imageUrl: String(bg.dataUrl) }));
         if (placement) {
           setScrim(placement.scrim);
+          setScrimSide(placement.brighterSide);
           handleRef.current?.setTextPlacement(placement.anchor, placement.textColor);
         } else {
           setScrim("dark");
+          setScrimSide("none");
         }
         anyOk = true;
       }
@@ -526,6 +531,7 @@ export function ImageStudio({
                   brand={brandKit}
                   showLogo={showLogo}
                   scrim={scrim}
+                  scrimSide={scrimSide}
                   initialText={initialText}
                   onSelectionChange={onSelectionChange}
                   onReady={onCanvasReady}

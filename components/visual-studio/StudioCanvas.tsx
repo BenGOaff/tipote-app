@@ -92,6 +92,9 @@ interface StudioCanvasProps {
   showLogo: boolean;
   /** Voile de contraste derrière le texte (lisibilité sur fond IA/photo). */
   scrim?: "none" | "dark" | "light";
+  /** Côté à assombrir EN PLUS (voile horizontal adaptatif) quand le fond a une
+   *  moitié nettement plus claire que l'autre. "none" = pas de voile latéral. */
+  scrimSide?: "left" | "right" | "none";
   initialText?: Partial<Record<TextLayerId, string>>;
   onSelectionChange: (info: SelectionInfo | null) => void;
   onReady?: (handle: StudioCanvasHandle) => void;
@@ -107,6 +110,7 @@ export function StudioCanvas({
   brand,
   showLogo,
   scrim = "none",
+  scrimSide = "none",
   initialText,
   onSelectionChange,
   onReady,
@@ -116,6 +120,7 @@ export function StudioCanvas({
   const bgRef = useRef<FabricObject | null>(null);
   const logoRef = useRef<FabricObject | null>(null);
   const scrimRef = useRef<FabricObject | null>(null);
+  const scrimSideRef = useRef<FabricObject | null>(null);
   // Re-applique la mise en page (safe-zone + empilement) après un changement
   // de format — ne fait rien tant qu'aucune génération n'a placé le texte.
   const layoutRef = useRef<(() => void) | null>(null);
@@ -353,8 +358,12 @@ export function StudioCanvas({
       const W = dimsRef.current.w;
       const H = dimsRef.current.h;
       const ratio = W / H;
-      const padX = 0.07 * W;
+      // Marge horizontale GÉNÉREUSE (look pro, jamais collé au bord) + on
+      // vise une largeur de ligne < FIT*boxW pour garder de l'air à droite.
+      const padX = 0.09 * W;
       const boxW = W - 2 * padX;
+      const FIT = 0.96;
+      const maxLine = boxW * FIT;
       // Marges verticales adaptées au format (plus aérées en portrait/story).
       const padTop = (ratio >= 1 ? 0.08 : 0.06) * H;
       const padBottom = (ratio >= 1 ? 0.08 : 0.07) * H;
@@ -373,18 +382,18 @@ export function StudioCanvas({
 
       // (2) Auto-fit largeur. On repart de la taille de base, on pré-réduit
       // l'accent/kicker (1 ligne), puis — FILET DE SÉCURITÉ toutes polices —
-      // on mesure la ligne réellement la plus large après wrap et on réduit
-      // si elle dépasse encore (mot trop long, ou métriques de webfont qui
-      // diffèrent du fallback → c'est ce qui causait le texte qui débordait).
+      // on mesure ITÉRATIVEMENT la ligne réellement la plus large après wrap
+      // et on réduit tant qu'elle dépasse (le wrap change à chaque passe). Ça
+      // garantit qu'aucune ligne ne touche le bord, quelle que soit la police.
       blocks.forEach(({ id, o }) => {
         const frac = BASE_FONT_FRAC[id];
         if (frac) o.set({ fontSize: frac * W });
-        fitToWidth(o, boxW, id === "accent" || id === "kicker");
-        o.initDimensions();
-        const lw = longestLineWidth(o);
-        if (lw > boxW) {
-          o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * (boxW / lw)) });
+        fitToWidth(o, maxLine, id === "accent" || id === "kicker");
+        for (let pass = 0; pass < 4; pass++) {
           o.initDimensions();
+          const lw = longestLineWidth(o);
+          if (lw <= maxLine) break;
+          o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * (maxLine / lw)) });
         }
       });
 
@@ -446,6 +455,10 @@ export function StudioCanvas({
         const c = fcRef.current;
         if (!c) throw new Error("Canvas non prêt");
         if (c.getActiveObject()) c.discardActiveObject();
+        // Re-mise en page juste avant l'export : les polices sont chargées à ce
+        // stade → garantit que le PNG final respecte la safe-zone (jamais de
+        // texte coupé dans le fichier, même si l'aperçu a flashé avant).
+        if (placed) layout();
         c.renderAll();
         const multiplier = formatRef.current.width / dimsRef.current.w;
         const dataUrl = c.toDataURL({ format: "png", multiplier });
@@ -696,23 +709,29 @@ export function StudioCanvas({
   }, [background, displayWidth, displayHeight]);
 
   // ── Voile de contraste (lisibilité du texte sur fond photo/IA) ──
-  // Dégradé vertical : plus dense en haut (titre) et en bas (CTA),
-  // transparent au milieu. Placé JUSTE au-dessus du fond, sous le texte.
+  // Deux couches possibles, JUSTE au-dessus du fond, sous le texte :
+  //  1. VERTICALE : dense en haut (titre) et en bas (CTA) + un voile de base
+  //     au centre (sinon un dégradé s'annule là où le texte se trouve).
+  //  2. HORIZONTALE (adaptative) : assombrit le côté NETTEMENT plus clair de
+  //     l'image → contraste homogène sur tout le texte, sans bicoloration.
   // Dépend de `background` pour se re-stacker après tout changement de fond.
   useEffect(() => {
     const c = fcRef.current;
     if (!c) return;
-    if (scrimRef.current) {
-      c.remove(scrimRef.current);
-      scrimRef.current = null;
-    }
+    if (scrimRef.current) { c.remove(scrimRef.current); scrimRef.current = null; }
+    if (scrimSideRef.current) { c.remove(scrimSideRef.current); scrimSideRef.current = null; }
+
+    const mkRect = (grad: Gradient<"linear">) => {
+      const rect = new Rect({ left: 0, top: 0, width: displayWidth, height: displayHeight, selectable: false, evented: false });
+      rect.set("fill", grad);
+      (rect as { layerId?: string }).layerId = undefined;
+      c.add(rect);
+      return rect;
+    };
+
     if (scrim !== "none") {
       const base = scrim === "dark" ? "0,0,0" : "255,255,255";
-      // Dense aux extrémités (titre/CTA) MAIS garde un voile de base sur tout
-      // le centre : sinon un fond en dégradé horizontal (moitié sombre / moitié
-      // claire) laisse le texte illisible là où le voile s'annule. Le voile de
-      // base normalise le contraste partout sans noyer l'image.
-      const grad = new Gradient({
+      scrimRef.current = mkRect(new Gradient({
         type: "linear",
         coords: { x1: 0, y1: 0, x2: 0, y2: displayHeight },
         colorStops: [
@@ -721,25 +740,28 @@ export function StudioCanvas({
           { offset: 0.6, color: `rgba(${base},0.14)` },
           { offset: 1, color: `rgba(${base},0.64)` },
         ],
-      });
-      const rect = new Rect({
-        left: 0,
-        top: 0,
-        width: displayWidth,
-        height: displayHeight,
-        selectable: false,
-        evented: false,
-      });
-      rect.set("fill", grad);
-      (rect as { layerId?: string }).layerId = undefined;
-      scrimRef.current = rect;
-      c.add(rect);
-      // Ordre : fond (0) → voile (1) → texte/logo au-dessus.
-      c.sendObjectToBack(rect);
-      if (bgRef.current) c.sendObjectToBack(bgRef.current);
+      }));
     }
+
+    // Voile latéral : seulement en mode sombre (texte blanc) et si un côté est
+    // marqué comme plus clair. On assombrit ce côté pour égaliser le contraste.
+    if (scrim === "dark" && scrimSide !== "none") {
+      const darkenRight = scrimSide === "right";
+      scrimSideRef.current = mkRect(new Gradient({
+        type: "linear",
+        coords: { x1: 0, y1: 0, x2: displayWidth, y2: 0 },
+        colorStops: darkenRight
+          ? [ { offset: 0, color: "rgba(0,0,0,0)" }, { offset: 0.55, color: "rgba(0,0,0,0.1)" }, { offset: 1, color: "rgba(0,0,0,0.5)" } ]
+          : [ { offset: 0, color: "rgba(0,0,0,0.5)" }, { offset: 0.45, color: "rgba(0,0,0,0.1)" }, { offset: 1, color: "rgba(0,0,0,0)" } ],
+      }));
+    }
+
+    // Ordre arrière→avant : fond → voile vertical → voile latéral → texte.
+    if (scrimSideRef.current) c.sendObjectToBack(scrimSideRef.current);
+    if (scrimRef.current) c.sendObjectToBack(scrimRef.current);
+    if (bgRef.current) c.sendObjectToBack(bgRef.current);
     c.requestRenderAll();
-  }, [scrim, background, displayWidth, displayHeight]);
+  }, [scrim, scrimSide, background, displayWidth, displayHeight]);
 
   // ── Logo ──────────────────────────────────────────────────────
   useEffect(() => {
