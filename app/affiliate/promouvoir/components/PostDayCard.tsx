@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "./CopyButton";
+import { StudioLauncher } from "./StudioLauncher";
 import { useDict } from "../../i18n/context";
 import type { PostDay } from "../content/posts-fr";
 
@@ -118,12 +119,20 @@ export function PostDayCard({
             </div>
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-2">Visuel à publier avec le post :</p>
-              <Button size="sm" variant="outline" asChild>
-                <a href={day.visualPath} download>
-                  <Download className="h-4 w-4 mr-1.5" />
-                  Télécharger
-                </a>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {/* Génère un visuel ADAPTÉ à ce post (l'IA lit le hook + la
+                    légende → texte sur-mesure). */}
+                <StudioLauncher
+                  label="Générer un visuel"
+                  intent={`${day.hook}\n\n${day.posts[0]?.caption ?? ""}`}
+                />
+                <Button size="sm" variant="outline" asChild>
+                  <a href={day.visualPath} download>
+                    <Download className="h-4 w-4 mr-1.5" />
+                    Télécharger
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
 

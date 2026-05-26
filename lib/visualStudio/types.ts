@@ -73,6 +73,9 @@ export interface ImageStudioProps {
   initialImageUrl?: string | null;
   /** Pré-remplissage des textes (ex: copy proposé par l'IA). */
   initialText?: Partial<Record<TextLayerId, string>>;
+  /** Sujet/contexte pré-rempli pour l'IA (ex: le texte du post ciblé) → la
+   *  copy générée s'adapte à CE post, pas à un sujet tapé au hasard. */
+  initialIntent?: string;
 
   /**
    * Persiste le PNG produit et renvoie son URL. C'est l'hôte qui décide

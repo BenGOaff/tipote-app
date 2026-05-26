@@ -97,6 +97,7 @@ export function ImageStudio({
   defaultFormat,
   initialImageUrl,
   initialText,
+  initialIntent,
   upload,
   onApply,
   title,
@@ -168,6 +169,7 @@ export function ImageStudio({
     });
     setShowLogo(true);
     setSelection(null);
+    setAiIntent(initialIntent ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
