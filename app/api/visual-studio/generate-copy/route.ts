@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       `Write EVERYTHING in ${lang}. Return STRICT JSON with exactly the keys "kicker", "headline", "accent", "subtitle", "cta".\n` +
       `- kicker: a tiny 1-3 word topical rubric for the post's THEME (a catchy category like a magazine rubric) — NOT the image style, NOT generic words like "dark" or "abstract". UPPERCASE-friendly, no emojis.\n` +
       `- headline: a stop-scroll hook, max ~6 words, benefit or curiosity driven, no ending period, no hashtags, no emojis.\n` +
-      `- accent: OPTIONAL. A single very short standalone element to display OVERSIZED for impact — ideally a number/stat/price (e.g. "16 365€", "3X", "+200%"), or a 1-2 word power-word that is NOT already in the headline. If nothing punchy fits, return an empty string.\n` +
+      `- accent: OPTIONAL. ONLY a real number/stat/price that is genuinely present in or directly implied by the topic (e.g. "16 365€", "3X", "+200%") — NEVER invent a statistic. If no real figure exists, you MAY use a single 1-2 word power-word from the topic, or (preferably) return an empty string. When in doubt, return "".\n` +
       `- subtitle: one short supporting line, max ~12 words — phrase it like a hand-written hook (a question or a teaser).\n` +
       `- cta: a 2-4 word action call suitable for a button.\n` +
       `No extra keys, no commentary.`;
