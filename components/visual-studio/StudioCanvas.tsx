@@ -81,6 +81,9 @@ export interface StudioCanvasHandle {
   setTextPlacement: (anchor: "top" | "bottom", textColor: string) => void;
   /** Change la police du titre + de l'accent (adaptée au thème/style). */
   setHeadingFont: (stack: string) => void;
+  /** Choisit le gabarit de mise en page : centré (hero) ou aligné à gauche
+   *  (éditorial, avec barre d'accent). */
+  setAlign: (align: "center" | "left") => void;
   /** Surligne un extrait du titre dans la couleur de marque (mot d'accent).
    *  `word` doit être un sous-texte exact du titre ; "" enlève le surlignage. */
   highlightHeadline: (word: string) => void;
@@ -295,6 +298,8 @@ export function StudioCanvas({
     // État de placement courant (mis à jour par setTextPlacement). Sert à
     // re-stacker à l'identique quand la police ou le format changent.
     let curAnchor: "top" | "bottom" = "top";
+    // Template courant : centré (hero) ou aligné à gauche (éditorial).
+    let curAlign: "center" | "left" = "center";
     let placed = false;
     // Mot d'accent du titre (surligné couleur de marque) + objets décoratifs
     // (color-blocks : pilule de rubrique, badge d'accent) reconstruits à chaque
@@ -387,16 +392,20 @@ export function StudioCanvas({
       const W = dimsRef.current.w;
       const H = dimsRef.current.h;
       const ratio = W / H;
-      // Marge horizontale GÉNÉREUSE (look pro, jamais collé au bord) + on
-      // vise une largeur de ligne < FIT*boxW pour garder de l'air à droite.
+      const isLeft = curAlign === "left";
+      const align: "left" | "center" = isLeft ? "left" : "center";
+      // Marge horizontale GÉNÉREUSE (jamais collé au bord). En mode éditorial
+      // (gauche) : une barre d'accent verticale + une colonne de texte décalée.
       const padX = 0.09 * W;
-      const boxW = W - 2 * padX;
+      const barW = isLeft ? 0.014 * W : 0;
+      const colGap = isLeft ? 0.04 * W : 0;
+      const textLeft = padX + barW + colGap;
+      const textW = W - textLeft - padX;
       const FIT = 0.96;
-      const maxLine = boxW * FIT;
+      const maxLine = textW * FIT;
       // Marges verticales adaptées au format (plus aérées en portrait/story).
       const padTop = (ratio >= 1 ? 0.08 : 0.06) * H;
       const padBottom = (ratio >= 1 ? 0.08 : 0.07) * H;
-      const gap = 0.025 * H;
 
       // Repart d'une ardoise propre côté décorations (reconstruites en fin).
       if (decorObjs.length) {
@@ -407,8 +416,8 @@ export function StudioCanvas({
       const objs = LAYOUT_ORDER.map(
         (id) => cc.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined,
       );
-      // (1) Safe-zone : même largeur + marge gauche pour tous (padding général).
-      objs.forEach((o) => o?.set({ left: padX, width: boxW }));
+      // (1) Safe-zone : colonne de texte commune + alignement du template.
+      objs.forEach((o) => o?.set({ left: textLeft, width: textW, textAlign: align }));
 
       const blocks = LAYOUT_ORDER
         .map((id, i) => ({ id, o: objs[i] }))
@@ -432,10 +441,18 @@ export function StudioCanvas({
         }
       });
 
-      // (3) Mesure les hauteurs réelles.
+      // (3) Hauteurs + espacements GROUPÉS : le kicker colle au titre, et on
+      // aère entre les groupes (rythme vertical "pro", pas un bloc uniforme).
+      const gapFor = (prevId: string, id: string) => {
+        if (id === "headline" && prevId === "kicker") return 0.012 * H;
+        if (id === "cta") return 0.05 * H;
+        return 0.032 * H;
+      };
+      const gaps = blocks.map((b, i) => (i === 0 ? 0 : gapFor(blocks[i - 1].id, b.id)));
+      const sumGaps = gaps.reduce((a, b) => a + b, 0);
       blocks.forEach(({ o }) => o.initDimensions());
       let heights = blocks.map(({ o }) => o.getScaledHeight());
-      let total = heights.reduce((a, b) => a + b, 0) + gap * Math.max(0, blocks.length - 1);
+      let total = heights.reduce((a, b) => a + b, 0) + sumGaps;
       const availH = H - padTop - padBottom;
       // (3b) Débordement vertical → réduit tout proportionnellement.
       if (total > availH) {
@@ -443,36 +460,45 @@ export function StudioCanvas({
         blocks.forEach(({ o }) => o.set({ fontSize: (o.fontSize ?? 20) * k }));
         blocks.forEach(({ o }) => o.initDimensions());
         heights = blocks.map(({ o }) => o.getScaledHeight());
-        total = heights.reduce((a, b) => a + b, 0) + gap * Math.max(0, blocks.length - 1);
+        total = heights.reduce((a, b) => a + b, 0) + sumGaps;
       }
 
-      // (4) Empilement, ancré en haut ou en bas.
+      // (4) Empilement, ancré en haut ou en bas (avec espacements groupés).
       let y = curAnchor === "top" ? padTop : Math.max(padTop, H - padBottom - total);
       blocks.forEach(({ o }, i) => {
+        y += gaps[i];
         o.set({ top: y });
         o.setCoords();
-        y += heights[i] + gap;
+        y += heights[i];
       });
 
-      // (5) DÉCORATIONS (color-blocks). Pilule de rubrique derrière le kicker
-      // + badge couleur de marque derrière l'accent (look "prix" / réf design).
+      // (5) DÉCORATIONS (color-blocks), adaptées à l'alignement : pilule de
+      // rubrique, badge "prix", bouton CTA plein, barre d'accent (mode gauche).
       const findBlock = (id: string) => blocks.find((b) => b.id === id)?.o;
-      const mkBlock = (o: Textbox, padHk: number, padVk: number, radius: number) => {
+      const placeBehind = (o: Textbox, padHk: number, padVk: number, radius: number, fill: string) => {
         o.initDimensions();
         const tw = longestLineWidth(o);
         const hh = o.getScaledHeight();
         const padH = padHk * hh;
         const padV = padVk * hh;
-        const bw = Math.min(boxW, tw + 2 * padH);
+        let bw = tw + 2 * padH;
+        let left: number;
+        if (isLeft) {
+          left = textLeft - padH;
+          bw = Math.min(bw, W - padX - left);
+        } else {
+          bw = Math.min(bw, W - 2 * padX);
+          left = W / 2 - bw / 2;
+        }
         const bh = hh + 2 * padV;
         const rect = new Rect({
-          left: W / 2 - bw / 2,
+          left,
           top: (o.top ?? 0) - padV,
           width: bw,
           height: bh,
           rx: radius * bh,
           ry: radius * bh,
-          fill: brand.primaryColor,
+          fill,
           selectable: false,
           evented: false,
           objectCaching: false,
@@ -481,18 +507,53 @@ export function StudioCanvas({
         cc.add(rect);
         decorObjs.push(rect);
       };
+
       const kk = findBlock("kicker");
-      if (kk) {
-        mkBlock(kk, 0.7, 0.34, 0.5); // pilule arrondie
+      if (kk && !isLeft) {
+        // Centré : pilule de rubrique (texte blanc sur bloc marque).
+        placeBehind(kk, 0.7, 0.34, 0.5, brand.primaryColor);
         kk.set({ fill: "#ffffff", shadow: "" });
       }
+      // Éditorial (gauche) : pas de pilule, le kicker garde sa couleur adaptée
+      // (lisible) et la barre d'accent verticale porte le brand.
       const ac = findBlock("accent");
       if (ac) {
-        mkBlock(ac, 0.34, 0.16, 0.16); // badge coins arrondis
+        placeBehind(ac, 0.34, 0.18, 0.16, brand.primaryColor); // badge prix
         ac.set({ fill: "#ffffff", stroke: "", shadow: "rgba(0,0,0,0.28) 0px 3px 10px" });
       }
+      const ct = findBlock("cta");
+      if (ct) {
+        // Vrai BOUTON plein arrondi (au lieu du bandeau "texte surligné").
+        ct.set({ textBackgroundColor: "" });
+        placeBehind(ct, 0.85, 0.5, 0.5, brand.primaryColor);
+        ct.set({ fill: "#ffffff", shadow: "" });
+      }
+      // Barre d'accent verticale (mode éditorial), le long du bloc de texte.
+      if (isLeft) {
+        const core = blocks.filter((b) => b.id !== "cta");
+        if (core.length) {
+          const t0 = core[0].o.top ?? 0;
+          const last = core[core.length - 1].o;
+          const bBottom = (last.top ?? 0) + last.getScaledHeight();
+          const bar = new Rect({
+            left: padX,
+            top: t0,
+            width: barW,
+            height: Math.max(1, bBottom - t0),
+            rx: barW / 2,
+            ry: barW / 2,
+            fill: brand.primaryColor,
+            selectable: false,
+            evented: false,
+            objectCaching: false,
+          });
+          (bar as { layerId?: string }).layerId = undefined;
+          cc.add(bar);
+          decorObjs.push(bar);
+        }
+      }
 
-      // Surlignage du mot d'accent dans le titre (couleur de marque).
+      // Surlignage du mot d'accent dans le titre (bloc marque + texte blanc).
       applyHeadlineAccent();
 
       // (6) Z-order : fond → voiles → décorations → textes (+ logo au-dessus).
@@ -689,6 +750,10 @@ export function StudioCanvas({
         headlineAccentWord = (word ?? "").trim();
         applyHeadlineAccent();
         fcRef.current?.requestRenderAll();
+      },
+      setAlign(align) {
+        curAlign = align === "left" ? "left" : "center";
+        layoutNow();
       },
     };
     onReady?.(handle);

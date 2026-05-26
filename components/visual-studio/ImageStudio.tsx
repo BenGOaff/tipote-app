@@ -129,6 +129,9 @@ export function ImageStudio({
 
   const handleRef = useRef<StudioCanvasHandle | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
+  // Compteur de générations → alterne le gabarit (centré / éditorial gauche)
+  // pour que des posts successifs ne se ressemblent pas tous.
+  const genCountRef = useRef(0);
 
   const onCanvasReady = useCallback((h: StudioCanvasHandle) => {
     handleRef.current = h;
@@ -172,6 +175,7 @@ export function ImageStudio({
     setSelection(null);
     setScrim("none");
     setScrimSide("none");
+    genCountRef.current = 0;
     setAiIntent(initialIntent ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -267,6 +271,9 @@ export function ImageStudio({
         h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
+        // Gabarit alterné à chaque génération (centré ↔ éditorial gauche).
+        genCountRef.current += 1;
+        h.setAlign(genCountRef.current % 2 === 0 ? "left" : "center");
         // Police de titre adaptée au thème (personne→Montserrat, spatial→Anton…)
         // + re-fit/empilement de la nouvelle copy dans la safe-zone.
         h.setHeadingFont(STYLE_HEADING_FONT[aiStyle]);
