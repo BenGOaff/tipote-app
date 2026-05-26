@@ -392,24 +392,43 @@ export function StudioCanvas({
       setTextPlacement(anchor, textColor) {
         const c = fcRef.current;
         if (!c) return;
-        const H = dimsRef.current.h;
-        // Bloc texte clusterisé dans la bande la plus propre (haut/bas).
-        const yF: Record<string, number> =
-          anchor === "top"
-            ? { kicker: 0.05, headline: 0.1, accent: 0.22, subline: 0.4, cta: 0.5 }
-            : { kicker: 0.4, headline: 0.45, accent: 0.57, subline: 0.75, cta: 0.86 };
+        const order = ["kicker", "headline", "accent", "subline", "cta"];
+        // Couleurs : kicker/titre/sous-titre suivent la couleur adaptée ;
+        // l'accent garde sa couleur de marque mais son CONTOUR s'adapte ;
+        // le CTA garde son bandeau de marque (texte blanc).
         c.getObjects().forEach((o) => {
           const id = (o as { layerId?: string }).layerId;
-          if (!id || !(id in yF)) return;
-          o.set({ top: yF[id] * H });
-          // Kicker + titre + sous-titre suivent la couleur adaptée au fond ;
-          // l'accent garde sa couleur de marque mais son CONTOUR s'adapte
-          // (lisible) ; le CTA garde son bandeau de marque (texte blanc).
           if (id === "headline" || id === "subline" || id === "kicker") o.set({ fill: textColor });
           if (id === "accent") o.set({ stroke: textColor });
-          o.setCoords();
         });
-        c.requestRenderAll();
+        // EMPILEMENT DYNAMIQUE : on mesure la hauteur RÉELLE de chaque bloc
+        // (le titre peut faire 1, 2 ou 3 lignes) et on les empile sans
+        // chevauchement, ancrés en haut ou en bas. On re-empile quand les
+        // webfonts sont prêtes (sinon hauteurs mesurées sur la police fallback).
+        const restack = () => {
+          const cc = fcRef.current;
+          if (!cc) return;
+          const H = dimsRef.current.h;
+          const blocks = order
+            .map((id) => cc.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined)
+            .filter((o): o is Textbox => !!o && String(o.text ?? "").trim().length > 0);
+          if (!blocks.length) return;
+          blocks.forEach((o) => o.initDimensions());
+          const heights = blocks.map((o) => o.getScaledHeight());
+          const gap = 0.022 * H;
+          const total = heights.reduce((a, b) => a + b, 0) + gap * Math.max(0, blocks.length - 1);
+          let y = anchor === "top" ? 0.07 * H : Math.max(0.06 * H, H - 0.08 * H - total);
+          blocks.forEach((o, i) => {
+            o.set({ top: y });
+            o.setCoords();
+            y += heights[i] + gap;
+          });
+          cc.requestRenderAll();
+        };
+        restack();
+        if (typeof document !== "undefined" && document.fonts?.ready) {
+          document.fonts.ready.then(restack).catch(() => {});
+        }
       },
     };
     onReady?.(handle);
