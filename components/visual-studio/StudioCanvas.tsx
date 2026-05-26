@@ -14,7 +14,7 @@
 // un PNG pleine résolution.
 
 import { useEffect, useRef } from "react";
-import { Canvas, Textbox, Rect, FabricImage, Gradient } from "fabric";
+import { Canvas, Textbox, Rect, FabricImage, Gradient, cache } from "fabric";
 import type { FabricObject } from "fabric";
 import { fontStackFor, DISPLAY_HEADING_STACK } from "@/lib/visualStudio/presets";
 import type {
@@ -265,9 +265,9 @@ export function StudioCanvas({
     const accent = mk("accent", initialText?.accent ?? "", 0.06, 0.5, 0.88, 0.15, true, brand.primaryColor, 1);
     accent.set({ fontFamily: DISPLAY_HEADING_STACK, lineHeight: 0.95, paintFirst: "stroke", stroke: brand.backgroundColor, strokeWidth: 0.006 * W, shadow: "rgba(0,0,0,0.35) 0px 2px 14px" });
     const subline = mk("subline", initialText?.subline ?? "Un sous-titre court qui appuie le bénéfice.", 0.1, 0.34, 0.8, 0.04, false, brand.textColor, 0.82);
-    // Sous-titre = script (Caveat), plus grand : look "accroche manuscrite"
-    // (ex. "Comment le reconnaître ?") qui contraste avec le titre display.
-    subline.set({ fontFamily: '"Caveat", "Comic Sans MS", cursive', fontSize: 0.062 * W, opacity: 0.95, shadow: "rgba(0,0,0,0.3) 0px 1px 6px" });
+    // Sous-titre = sans-serif propre (Montserrat 500) : look SaaS pro, lisible
+    // (le script manuscrit faisait "amateur" sur un visuel B2B).
+    subline.set({ fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fontWeight: "500", fontSize: 0.04 * W, opacity: 0.95, shadow: "rgba(0,0,0,0.3) 0px 1px 6px" });
     const cta = mk("cta", initialText?.cta ?? "Découvre maintenant →", 0.1, 0.84, 0.8, 0.045, true, brand.primaryColor, 1);
     // CTA = bandeau couleur de marque + texte blanc (lisible quel que soit le
     // fond, look "bouton"), en sans-serif gras pour trancher avec le script.
@@ -285,7 +285,7 @@ export function StudioCanvas({
     // en FRACTION de la largeur → recalculée à chaque format.
     const LAYOUT_ORDER: string[] = ["kicker", "headline", "accent", "subline", "cta"];
     const BASE_FONT_FRAC: Record<string, number> = {
-      kicker: 0.026, headline: 0.1, accent: 0.15, subline: 0.062, cta: 0.045,
+      kicker: 0.026, headline: 0.1, accent: 0.105, subline: 0.04, cta: 0.045,
     };
     // Canvas détaché pour mesurer la largeur du texte (ctx.measureText).
     const measureCtx = (typeof document !== "undefined"
@@ -302,8 +302,11 @@ export function StudioCanvas({
     let headlineAccentWord = "";
     let decorObjs: FabricObject[] = [];
 
-    // Surligne le mot d'accent DANS le titre (couleur de marque), via styles
-    // par caractère (persistent au wrap). Réappliqué à chaque layout.
+    // Surligne le mot d'accent DANS le titre via un BLOC couleur de marque +
+    // texte blanc (style "marqueur"). On utilise un bloc plutôt qu'une simple
+    // couleur de texte car une couleur de marque sur un fond de marque (bleu
+    // sur bleu) disparaît → le bloc garantit le contraste sur N'IMPORTE quel
+    // fond. Styles par caractère (persistent au wrap). Réappliqué à chaque layout.
     const applyHeadlineAccent = () => {
       const cc = fcRef.current;
       if (!cc) return;
@@ -314,7 +317,9 @@ export function StudioCanvas({
       const text = String(o.text ?? "");
       if (w) {
         const idx = text.toLowerCase().indexOf(w.toLowerCase());
-        if (idx >= 0) o.setSelectionStyles({ fill: brand.primaryColor }, idx, idx + w.length);
+        if (idx >= 0) {
+          o.setSelectionStyles({ textBackgroundColor: brand.primaryColor, fill: "#ffffff" }, idx, idx + w.length);
+        }
       }
     };
 
@@ -501,10 +506,13 @@ export function StudioCanvas({
 
     // Re-stacke quand les webfonts sont prêtes (métriques fiables) puis expose
     // un re-layout au changement de format (seulement après une génération).
-    // CRUCIAL : on CHARGE explicitement les polices utilisées avant de
-    // re-mesurer. Sans ça, Fabric calcule le retour à la ligne sur la police
-    // de secours (plus étroite), croit que tout tient sur une ligne, puis la
-    // webfont (plus large) s'affiche → le texte déborde sans jamais re-wrapper.
+    // CAUSE RACINE du texte qui débordait : Fabric garde un cache GLOBAL des
+    // largeurs de glyphes par police. Si la webfont n'est pas encore chargée au
+    // 1er rendu, il mémorise les largeurs de la police de SECOURS (plus
+    // étroites) sous la clé de la vraie police → tous les calculs suivants (même
+    // initDimensions) réutilisent ces largeurs fausses → retour à la ligne et
+    // mesures erronées. La parade documentée : VIDER ce cache global une fois
+    // les polices chargées, puis re-mesurer (initDimensions) et re-empiler.
     const familyToken = (stack: string) => stack.split(",")[0].trim().replace(/^["']|["']$/g, "");
     const layoutNow = () => {
       layout();
@@ -515,13 +523,20 @@ export function StudioCanvas({
         if (typeof ff === "string") fams.add(familyToken(ff));
       });
       const loads = [...fams].flatMap((fam) =>
-        ["400", "600", "700", "800", "900"].map((w) =>
+        ["400", "500", "600", "700", "800", "900"].map((w) =>
           document.fonts.load(`${w} 48px "${fam}"`).catch(() => []),
         ),
       );
       Promise.all(loads)
         .then(() => document.fonts.ready)
-        .then(() => layout())
+        .then(() => {
+          cache.clearFontCache();
+          fcRef.current?.getObjects().forEach((o) => {
+            const t = o as Textbox;
+            if (typeof t.initDimensions === "function") t.initDimensions();
+          });
+          layout();
+        })
         .catch(() => {});
     };
     layoutRef.current = () => {
