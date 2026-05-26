@@ -52,18 +52,19 @@ export async function POST(req: NextRequest) {
     const brand = typeof body.brandName === "string" ? body.brandName.slice(0, 60) : "";
 
     const system =
-      `You are an expert social-media copywriter. Write punchy, scroll-stopping copy for a single social visual. ` +
-      `Write EVERYTHING in ${lang}. Return STRICT JSON with exactly the keys "kicker", "headline", "accent", "subtitle", "cta".\n` +
-      `- kicker: a tiny 1-3 word topical rubric for the post's THEME (a catchy category like a magazine rubric) — NOT the image style, NOT generic words like "dark" or "abstract". UPPERCASE-friendly, no emojis.\n` +
-      `- headline: a stop-scroll hook, max ~6 words, benefit or curiosity driven, no ending period, no hashtags, no emojis.\n` +
-      `- accent: OPTIONAL. ONLY a real number/stat/price that is genuinely present in or directly implied by the topic (e.g. "16 365€", "3X", "+200%") — NEVER invent a statistic. If no real figure exists, you MAY use a single 1-2 word power-word from the topic, or (preferably) return an empty string. When in doubt, return "".\n` +
-      `- subtitle: one short supporting line, max ~12 words — phrase it like a hand-written hook (a question or a teaser).\n` +
-      `- cta: a 2-4 word action call suitable for a button.\n` +
+      `You are a senior ${lang} social-media copywriter for a SaaS product. Write clear, punchy copy for ONE social visual, based STRICTLY on the user's post — never add facts that aren't there. ` +
+      `Write EVERYTHING in ${lang}, natural and idiomatic, in normal sentence case (do NOT Capitalize Every Word). No franglais, no invented jargon, no buzzwords like "funneling". ` +
+      `Return STRICT JSON with exactly the keys "kicker", "headline", "accent", "subtitle", "cta".\n` +
+      `- kicker: a SHORT real category label (1-3 words) in ${lang}, like a magazine rubric. Real, common words only — no invented terms, and not in English unless the language is English.\n` +
+      `- headline: the main hook, max ~6 words, clear and SELF-CONTAINED (a stranger understands it with no other context). Base it ONLY on the post. NEVER invent numbers, percentages, multipliers (like "7x"), statistics or prices. No ending period, no hashtags, no emojis.\n` +
+      `- accent: MUST be an empty string "" UNLESS the post text literally contains a real figure (a price, number or stat). If it does, output EXACTLY that figure (e.g. "9 €/mois", "16 365 €"). Never fabricate, guess, round or imply a figure. A lone number with no meaning (like "4,2 %") is forbidden. When unsure, return "".\n` +
+      `- subtitle: ONE short sentence (max ~12 words) that is instantly understandable on its own — a concrete benefit or a clear question. No jargon, no vague teaser.\n` +
+      `- cta: a 2-4 word button action in ${lang}.\n` +
       `No extra keys, no commentary.`;
-    const userMsg = `Topic / context of the visual: ${intent}${brand ? `\nBrand: ${brand}` : ""}`;
+    const userMsg = `The post to adapt into a visual:\n${intent}${brand ? `\nBrand name: ${brand}` : ""}`;
 
     const completion = (await openai.chat.completions.create({
-      ...cachingParams("visual-copy", { temperature: 0.9 }),
+      ...cachingParams("visual-copy", { temperature: 0.5 }),
       model: OPENAI_MODEL,
       messages: [
         { role: "system", content: system },
@@ -84,9 +85,17 @@ export async function POST(req: NextRequest) {
 
     const kicker = String(parsed.kicker ?? "").trim().slice(0, 40);
     const headline = String(parsed.headline ?? "").trim().slice(0, 80);
-    const accent = String(parsed.accent ?? "").trim().slice(0, 24);
+    let accent = String(parsed.accent ?? "").trim().slice(0, 24);
     const subtitle = String(parsed.subtitle ?? "").trim().slice(0, 160);
     const cta = String(parsed.cta ?? "").trim().slice(0, 40);
+
+    // Garde-fou anti-statistique inventée : si l'accent contient un nombre qui
+    // n'apparaît PAS tel quel dans le post, c'est une invention → on le jette
+    // (ex. "4,2 %" sorti de nulle part). Les accents sans chiffre passent.
+    const accentDigitGroups = accent.match(/\d+/g) ?? [];
+    if (accentDigitGroups.some((d) => !intent.includes(d))) {
+      accent = "";
+    }
 
     if (!headline && !subtitle && !cta) {
       return NextResponse.json({ ok: false, error: "Aucun texte généré" }, { status: 502 });

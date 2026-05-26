@@ -13,9 +13,13 @@ export type TextPlacement = {
   textColor: string;
   /** Voile de contraste à appliquer sur la bande choisie. */
   scrim: "none" | "dark" | "light";
+  /** Côté NETTEMENT plus clair de la bande texte → on y renforce le voile
+   *  (voile horizontal adaptatif) pour un contraste homogène sur tout le
+   *  texte, sans devoir bicolorer le texte. "none" = fond équilibré. */
+  brighterSide: "left" | "right" | "none";
 };
 
-const FALLBACK: TextPlacement = { anchor: "bottom", textColor: "#ffffff", scrim: "dark" };
+const FALLBACK: TextPlacement = { anchor: "bottom", textColor: "#ffffff", scrim: "dark", brighterSide: "none" };
 
 export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
   if (typeof document === "undefined") return FALLBACK;
@@ -33,11 +37,16 @@ export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
         ctx.drawImage(img, 0, 0, W, H);
         const { data } = ctx.getImageData(0, 0, W, H);
 
-        // Stats de luminance (0-255) sur une bande de lignes [y0, y1).
+        // Stats de luminance (0-255) sur une bande de lignes [y0, y1), avec
+        // moyennes gauche/droite pour détecter un déséquilibre horizontal.
         const band = (y0: number, y1: number) => {
           let sum = 0;
           let sumSq = 0;
           let n = 0;
+          let lSum = 0;
+          let lN = 0;
+          let rSum = 0;
+          let rN = 0;
           for (let y = Math.floor(y0); y < Math.floor(y1); y++) {
             for (let x = 0; x < W; x++) {
               const i = (y * W + x) * 4;
@@ -45,11 +54,12 @@ export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
               sum += lum;
               sumSq += lum * lum;
               n++;
+              if (x < W / 2) { lSum += lum; lN++; } else { rSum += lum; rN++; }
             }
           }
           const mean = n ? sum / n : 128;
           const variance = n ? Math.max(0, sumSq / n - mean * mean) : 0;
-          return { mean, variance };
+          return { mean, variance, leftMean: lN ? lSum / lN : mean, rightMean: rN ? rSum / rN : mean };
         };
 
         const top = band(0, H * 0.42);
@@ -66,10 +76,16 @@ export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
         // foncé qui disparaît sur la zone sombre d'un dégradé).
         const trulyLight = chosen.mean > 175 && std < 55;
 
+        // Déséquilibre gauche/droite marqué → voile horizontal du côté clair.
+        let brighterSide: "left" | "right" | "none" = "none";
+        if (!trulyLight && Math.abs(chosen.rightMean - chosen.leftMean) >= 38) {
+          brighterSide = chosen.rightMean > chosen.leftMean ? "right" : "left";
+        }
+
         resolve(
           trulyLight
-            ? { anchor, textColor: "#0f172a", scrim: "light" }
-            : { anchor, textColor: "#ffffff", scrim: "dark" },
+            ? { anchor, textColor: "#0f172a", scrim: "light", brighterSide: "none" }
+            : { anchor, textColor: "#ffffff", scrim: "dark", brighterSide },
         );
       } catch {
         resolve(FALLBACK);
