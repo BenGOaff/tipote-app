@@ -292,6 +292,19 @@ export function StudioCanvas({
     const widestWord = (text: string) =>
       text.split(/\s+/).reduce((a, w) => (w.length > a.length ? w : a), "");
 
+    // Largeur de la ligne la plus large APRÈS retour à la ligne, mesurée par
+    // Fabric (métriques réelles de la police chargée, charSpacing inclus).
+    const longestLineWidth = (o: Textbox): number => {
+      const lines = (o as unknown as { textLines?: string[] }).textLines;
+      const n = Array.isArray(lines) ? lines.length : 0;
+      let max = 0;
+      for (let i = 0; i < n; i++) {
+        const w = (o as unknown as { getLineWidth?: (i: number) => number }).getLineWidth?.(i) ?? 0;
+        if (w > max) max = w;
+      }
+      return max;
+    };
+
     // Réduit la fontSize d'un bloc pour qu'il ne déborde JAMAIS de la boîte :
     // l'accent/kicker (1 ligne) doit tenir en entier ; les autres au moins
     // sur leur mot le plus large (Fabric gère le retour à la ligne du reste).
@@ -352,11 +365,21 @@ export function StudioCanvas({
         .filter((b): b is { id: string; o: Textbox } => !!b.o && String(b.o.text ?? "").trim().length > 0);
       if (!blocks.length) return;
 
-      // (2) Auto-fit : taille de base puis réduction si un mot/accent déborde.
+      // (2) Auto-fit largeur. On repart de la taille de base, on pré-réduit
+      // l'accent/kicker (1 ligne), puis — FILET DE SÉCURITÉ toutes polices —
+      // on mesure la ligne réellement la plus large après wrap et on réduit
+      // si elle dépasse encore (mot trop long, ou métriques de webfont qui
+      // diffèrent du fallback → c'est ce qui causait le texte qui débordait).
       blocks.forEach(({ id, o }) => {
         const frac = BASE_FONT_FRAC[id];
         if (frac) o.set({ fontSize: frac * W });
         fitToWidth(o, boxW, id === "accent" || id === "kicker");
+        o.initDimensions();
+        const lw = longestLineWidth(o);
+        if (lw > boxW) {
+          o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * (boxW / lw)) });
+          o.initDimensions();
+        }
       });
 
       // (3) Mesure les hauteurs réelles.
@@ -385,11 +408,28 @@ export function StudioCanvas({
 
     // Re-stacke quand les webfonts sont prêtes (métriques fiables) puis expose
     // un re-layout au changement de format (seulement après une génération).
+    // CRUCIAL : on CHARGE explicitement les polices utilisées avant de
+    // re-mesurer. Sans ça, Fabric calcule le retour à la ligne sur la police
+    // de secours (plus étroite), croit que tout tient sur une ligne, puis la
+    // webfont (plus large) s'affiche → le texte déborde sans jamais re-wrapper.
+    const familyToken = (stack: string) => stack.split(",")[0].trim().replace(/^["']|["']$/g, "");
     const layoutNow = () => {
       layout();
-      if (typeof document !== "undefined" && document.fonts?.ready) {
-        document.fonts.ready.then(layout).catch(() => {});
-      }
+      if (typeof document === "undefined" || !document.fonts) return;
+      const fams = new Set<string>();
+      fcRef.current?.getObjects().forEach((o) => {
+        const ff = (o as Textbox).fontFamily;
+        if (typeof ff === "string") fams.add(familyToken(ff));
+      });
+      const loads = [...fams].flatMap((fam) =>
+        ["400", "600", "700", "800", "900"].map((w) =>
+          document.fonts.load(`${w} 48px "${fam}"`).catch(() => []),
+        ),
+      );
+      Promise.all(loads)
+        .then(() => document.fonts.ready)
+        .then(() => layout())
+        .catch(() => {});
     };
     layoutRef.current = () => {
       if (placed) layoutNow();

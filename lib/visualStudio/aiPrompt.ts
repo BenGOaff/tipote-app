@@ -42,7 +42,7 @@ export const AI_STYLES: Array<{ id: AiStyleId; labelKey: string; fragment: strin
     id: "minimal",
     labelKey: "aiStyleMinimal",
     fragment:
-      "minimal studio background, soft gradient with gentle depth and subtle texture, premium, very clean and uncluttered",
+      "premium modern minimalist background: a smooth mesh gradient blending two or three rich brand-adjacent colors with soft glowing light, gentle depth and a faint film grain to avoid any banding; generous negative space, high-end SaaS / Apple-keynote aesthetic, calm and confident — deliberately designed, NOT a flat washed-out beige and not muddy",
   },
 ];
 
@@ -92,7 +92,7 @@ export function buildBackgroundPrompt({ intent, styleId, brandColors }: BuildArg
     .filter((c) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c))
     .slice(0, 4);
   const colorHint = colors.length
-    ? `Color mood inspired by this brand palette: ${colors.join(", ")} (use as ambient/accent tones, do not paint solid swatches).`
+    ? `Color mood driven by this brand palette: ${colors.join(", ")} — make these tones clearly present as the dominant ambient/lighting colors (rich and saturated, not washed-out), but blended naturally rather than as flat solid swatches.`
     : "";
 
   return [
