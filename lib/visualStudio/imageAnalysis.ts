@@ -8,7 +8,7 @@
 // type de voile pour garantir le contraste.
 
 export type TextPlacement = {
-  anchor: "top" | "bottom";
+  anchor: "top" | "center" | "bottom";
   /** Couleur du corps de texte (titre/sous-titre), adaptée au fond. */
   textColor: string;
   /** Voile de contraste à appliquer sur la bande choisie. */
@@ -64,22 +64,30 @@ export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
 
         const top = band(0, H * 0.42);
         const bottom = band(H * 0.58, H);
-        // Bande la plus "propre" (variance faible) → on y met le texte.
-        const anchor: "top" | "bottom" = top.variance <= bottom.variance ? "top" : "bottom";
-        const chosen = anchor === "top" ? top : bottom;
-        const std = Math.sqrt(chosen.variance);
+        const mid = band(H * 0.30, H * 0.70);
+        const cleanerAnchor: "top" | "bottom" = top.variance <= bottom.variance ? "top" : "bottom";
+        // Sujet marqué d'un côté (photo de personne, horizon…) → une bande est
+        // bien plus "chargée" que l'autre : on place le texte dans la bande
+        // PROPRE. Fond UNIFORME (spatial, abstrait, dégradé) → pas de sujet à
+        // éviter : on CENTRE verticalement, sinon le texte se tasse en haut et
+        // le bas reste vide (déséquilibre du spatial signalé par Béné).
+        const vDiff = Math.abs(top.variance - bottom.variance);
+        const vMax = Math.max(top.variance, bottom.variance, 1);
+        const anchor: "top" | "center" | "bottom" = vDiff / vMax > 0.4 ? cleanerAnchor : "center";
+        // Bande réellement occupée par le texte → sert au choix couleur/voile.
+        const region = anchor === "center" ? mid : anchor === "top" ? top : bottom;
+        const std = Math.sqrt(region.variance);
 
         // Texte FONCÉ uniquement si le fond est VRAIMENT clair ET uniforme
         // (vrai fond minimal blanc/pastel). Sinon — fond sombre OU ambigu /
         // dégradé (une moitié sombre, une moitié claire) — on prend texte
-        // BLANC + voile sombre : combo lisible quasi partout (évite le texte
-        // foncé qui disparaît sur la zone sombre d'un dégradé).
-        const trulyLight = chosen.mean > 175 && std < 55;
+        // BLANC + voile sombre : combo lisible quasi partout.
+        const trulyLight = region.mean > 175 && std < 55;
 
         // Déséquilibre gauche/droite marqué → voile horizontal du côté clair.
         let brighterSide: "left" | "right" | "none" = "none";
-        if (!trulyLight && Math.abs(chosen.rightMean - chosen.leftMean) >= 38) {
-          brighterSide = chosen.rightMean > chosen.leftMean ? "right" : "left";
+        if (!trulyLight && Math.abs(region.rightMean - region.leftMean) >= 38) {
+          brighterSide = region.rightMean > region.leftMean ? "right" : "left";
         }
 
         resolve(

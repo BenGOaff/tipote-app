@@ -49,7 +49,7 @@ import { Separator } from "@/components/ui/separator";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 
 import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
-import { AI_STYLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
+import { AI_STYLES, COPY_ANGLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
 import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
 import type {
   BackgroundMode,
@@ -246,13 +246,19 @@ export function ImageStudio({
     const intent = aiIntent.trim();
     const ratio = format.width / format.height;
     const brandColors = [brandKit.primaryColor, brandKit.accentColor, brandKit.backgroundColor].filter(Boolean);
+    // Compteur de génération : pilote À LA FOIS le gabarit (centré/éditorial/
+    // carte) ET l'angle de copywriting → des posts successifs varient de
+    // structure ET d'accroche.
+    genCountRef.current += 1;
+    const gen = genCountRef.current;
+    const angle = COPY_ANGLES[(gen - 1) % COPY_ANGLES.length];
     let anyOk = false;
     try {
       const [copy, bg] = await Promise.all([
         fetch("/api/visual-studio/generate-copy", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ intent, locale, brandName: brandKit.name }),
+          body: JSON.stringify({ intent, locale, brandName: brandKit.name, angle }),
         })
           .then((r) => r.json())
           .catch(() => ({})),
@@ -266,15 +272,16 @@ export function ImageStudio({
       ]);
       const h = handleRef.current;
       if (copy?.ok && h) {
-        if (copy.kicker) h.setLayerText("kicker", String(copy.kicker).toUpperCase());
+        // kicker souvent vide (rubrique plate filtrée) → on VIDE le calque,
+        // sinon il garderait le texte de la génération précédente.
+        h.setLayerText("kicker", copy.kicker ? String(copy.kicker).toUpperCase() : "");
         if (copy.headline) h.setLayerText("headline", String(copy.headline));
         h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
         // Gabarit alterné à chaque génération (centré → éditorial → carte) pour
         // que des posts successifs ne se ressemblent pas.
-        genCountRef.current += 1;
-        h.setAlign((["center", "left", "card"] as const)[(genCountRef.current - 1) % 3]);
+        h.setAlign((["center", "left", "card"] as const)[(gen - 1) % 3]);
         // Police de titre adaptée au thème (personne→Montserrat, spatial→Anton…)
         // + re-fit/empilement de la nouvelle copy dans la safe-zone.
         h.setHeadingFont(STYLE_HEADING_FONT[aiStyle]);

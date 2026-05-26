@@ -51,15 +51,29 @@ export async function POST(req: NextRequest) {
     const lang = LANG[locale] ?? "French";
     const brand = typeof body.brandName === "string" ? body.brandName.slice(0, 60) : "";
 
+    // Angle de copywriting suggéré (tournant côté client) — l'IA l'applique
+    // s'il colle à l'esprit du post, sinon elle prend le plus pertinent.
+    const ANGLE_HINT: Record<string, string> = {
+      contrarian: "a counter-intuitive claim / myth-buster that challenges what the reader assumes",
+      number: "lead with the strongest concrete number or stat from the post",
+      social_proof: "social proof (results achieved, adoption, a credible outcome)",
+      question: "an intriguing question that opens a curiosity gap",
+      how: 'a concrete "how" promise (how to get the result)',
+      why: 'a "why" that reframes the reader\'s belief',
+    };
+    const angleId = typeof body.angle === "string" ? body.angle : "";
+    const angleHint = ANGLE_HINT[angleId] ?? "the angle that best fits the post";
+
     const system =
-      `You are a senior ${lang} social-media copywriter for a SaaS product. Write clear, punchy copy for ONE social visual, based STRICTLY on the user's post — never add facts that aren't there. ` +
-      `Write EVERYTHING in ${lang}, natural and idiomatic, in normal sentence case (do NOT Capitalize Every Word). No franglais, no invented jargon, no buzzwords like "funneling". ` +
+      `You are a senior ${lang} direct-response copywriter for a SaaS. From the post, FIRST find its single MAIN argument and the strongest concrete DATA POINT actually present (a price, number, %, duration). Then write copy for ONE social visual whose only job is to STOP the scroll and make the reader want to open the post. ` +
+      `Write EVERYTHING in ${lang}, natural and idiomatic, normal sentence case (NOT Title Case). No franglais, no invented jargon.\n` +
+      `HEADLINE ANGLE: favour ${angleHint}. Other angle families you may pick from if it suits the post better: counter-truth, impactful number, social proof, question, "how", "why". Always match the SPIRIT of THIS post.\n` +
       `Return STRICT JSON with exactly the keys "kicker", "headline", "accentWord", "accent", "subtitle", "cta".\n` +
-      `- kicker: a SHORT real category label (1-3 words) in ${lang}, like a magazine rubric. Real, common words only — no invented terms, and not in English unless the language is English.\n` +
-      `- headline: the main hook, max ~6 words, clear and SELF-CONTAINED (a stranger understands it with no other context). Base it ONLY on the post. NEVER invent numbers, percentages, multipliers (like "7x"), statistics or prices. No ending period, no hashtags, no emojis.\n` +
-      `- accentWord: the 1-3 MOST important consecutive words copied VERBATIM from "headline" (must be an exact substring of headline), to be highlighted in the brand color. Pick the words carrying the core idea. Do NOT return the whole headline; if headline is very short, return its strongest single word.\n` +
-      `- accent: MUST be an empty string "" UNLESS the post text literally contains a real figure (a price, number or stat). If it does, output EXACTLY that figure (e.g. "9 €/mois", "16 365 €"). Never fabricate, guess, round or imply a figure. A lone number with no meaning (like "4,2 %") is forbidden. When unsure, return "".\n` +
-      `- subtitle: ONE short sentence (max ~12 words) that is instantly understandable on its own — a concrete benefit or a clear question. No jargon, no vague teaser.\n` +
+      `- headline: the scroll-stopping hook in the chosen angle, max ~7 words, clear and SELF-CONTAINED. Base it ONLY on the post. NEVER invent numbers, %, multipliers or stats not in the post. No ending period, no hashtags, no emojis.\n` +
+      `- accentWord: the 1-3 MOST charged consecutive words copied VERBATIM from "headline" (exact substring, NOT the whole headline) to highlight. "" if headline is very short.\n` +
+      `- accent: the single strongest real DATA POINT from the post (e.g. "450 €", "3 min", "92 %") EXACTLY as written in the post. Never fabricate, round, guess or imply a figure. "" if the post contains no real figure.\n` +
+      `- kicker: OPTIONAL 1-3 word micro-hook that ADDS curiosity or stakes (a proof, a tension, a promise — e.g. "SANS CB", "TESTÉ", "AVANT/APRÈS"). It must EARN its place. NEVER a bland topical label like "Prix", "Comparatif", "SaaS", "Tarification", "Marketing" — those are useless, nobody reads them. Return "" if you have nothing genuinely punchy.\n` +
+      `- subtitle: ONE short sentence (max ~12 words) understood instantly on its own — the benefit or proof behind the hook. No jargon, no vague teaser.\n` +
       `- cta: a 2-4 word button action in ${lang}.\n` +
       `No extra keys, no commentary.`;
     const userMsg = `The post to adapt into a visual:\n${intent}${brand ? `\nBrand name: ${brand}` : ""}`;
@@ -84,7 +98,16 @@ export async function POST(req: NextRequest) {
       parsed = {};
     }
 
-    const kicker = String(parsed.kicker ?? "").trim().slice(0, 40);
+    let kicker = String(parsed.kicker ?? "").trim().slice(0, 40);
+    // Garde-fou : on jette les rubriques plates et sans valeur (Béné : "prix
+    // saas n'a rien à faire sur un visuel"). Mieux vaut PAS de pilule qu'une
+    // étiquette que personne ne lit.
+    const BLAND_KICKERS = new Set([
+      "prix", "tarif", "tarifs", "tarification", "comparatif", "comparaison",
+      "saas", "marketing", "produit", "offre", "promo", "pricing", "price",
+      "comparison", "product", "offer", "faq", "info", "actu", "news",
+    ]);
+    if (BLAND_KICKERS.has(kicker.toLowerCase().replace(/[.!?]+$/, "").trim())) kicker = "";
     const headline = String(parsed.headline ?? "").trim().slice(0, 80);
     let accentWord = String(parsed.accentWord ?? "").trim().slice(0, 40);
     let accent = String(parsed.accent ?? "").trim().slice(0, 24);
