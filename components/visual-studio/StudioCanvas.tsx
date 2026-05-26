@@ -81,6 +81,9 @@ export interface StudioCanvasHandle {
   setTextPlacement: (anchor: "top" | "bottom", textColor: string) => void;
   /** Change la police du titre + de l'accent (adaptée au thème/style). */
   setHeadingFont: (stack: string) => void;
+  /** Surligne un extrait du titre dans la couleur de marque (mot d'accent).
+   *  `word` doit être un sous-texte exact du titre ; "" enlève le surlignage. */
+  highlightHeadline: (word: string) => void;
 }
 
 interface StudioCanvasProps {
@@ -293,6 +296,27 @@ export function StudioCanvas({
     // re-stacker à l'identique quand la police ou le format changent.
     let curAnchor: "top" | "bottom" = "top";
     let placed = false;
+    // Mot d'accent du titre (surligné couleur de marque) + objets décoratifs
+    // (color-blocks : pilule de rubrique, badge d'accent) reconstruits à chaque
+    // mise en page.
+    let headlineAccentWord = "";
+    let decorObjs: FabricObject[] = [];
+
+    // Surligne le mot d'accent DANS le titre (couleur de marque), via styles
+    // par caractère (persistent au wrap). Réappliqué à chaque layout.
+    const applyHeadlineAccent = () => {
+      const cc = fcRef.current;
+      if (!cc) return;
+      const o = cc.getObjects().find((x) => (x as { layerId?: string }).layerId === "headline") as Textbox | undefined;
+      if (!o) return;
+      (o as unknown as { styles: object }).styles = {};
+      const w = headlineAccentWord.trim();
+      const text = String(o.text ?? "");
+      if (w) {
+        const idx = text.toLowerCase().indexOf(w.toLowerCase());
+        if (idx >= 0) o.setSelectionStyles({ fill: brand.primaryColor }, idx, idx + w.length);
+      }
+    };
 
     const widestWord = (text: string) =>
       text.split(/\s+/).reduce((a, w) => (w.length > a.length ? w : a), "");
@@ -369,6 +393,12 @@ export function StudioCanvas({
       const padBottom = (ratio >= 1 ? 0.08 : 0.07) * H;
       const gap = 0.025 * H;
 
+      // Repart d'une ardoise propre côté décorations (reconstruites en fin).
+      if (decorObjs.length) {
+        decorObjs.forEach((d) => cc.remove(d));
+        decorObjs = [];
+      }
+
       const objs = LAYOUT_ORDER.map(
         (id) => cc.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined,
       );
@@ -418,6 +448,54 @@ export function StudioCanvas({
         o.setCoords();
         y += heights[i] + gap;
       });
+
+      // (5) DÉCORATIONS (color-blocks). Pilule de rubrique derrière le kicker
+      // + badge couleur de marque derrière l'accent (look "prix" / réf design).
+      const findBlock = (id: string) => blocks.find((b) => b.id === id)?.o;
+      const mkBlock = (o: Textbox, padHk: number, padVk: number, radius: number) => {
+        o.initDimensions();
+        const tw = longestLineWidth(o);
+        const hh = o.getScaledHeight();
+        const padH = padHk * hh;
+        const padV = padVk * hh;
+        const bw = Math.min(boxW, tw + 2 * padH);
+        const bh = hh + 2 * padV;
+        const rect = new Rect({
+          left: W / 2 - bw / 2,
+          top: (o.top ?? 0) - padV,
+          width: bw,
+          height: bh,
+          rx: radius * bh,
+          ry: radius * bh,
+          fill: brand.primaryColor,
+          selectable: false,
+          evented: false,
+          objectCaching: false,
+        });
+        (rect as { layerId?: string }).layerId = undefined;
+        cc.add(rect);
+        decorObjs.push(rect);
+      };
+      const kk = findBlock("kicker");
+      if (kk) {
+        mkBlock(kk, 0.7, 0.34, 0.5); // pilule arrondie
+        kk.set({ fill: "#ffffff", shadow: "" });
+      }
+      const ac = findBlock("accent");
+      if (ac) {
+        mkBlock(ac, 0.34, 0.16, 0.16); // badge coins arrondis
+        ac.set({ fill: "#ffffff", stroke: "", shadow: "rgba(0,0,0,0.28) 0px 3px 10px" });
+      }
+
+      // Surlignage du mot d'accent dans le titre (couleur de marque).
+      applyHeadlineAccent();
+
+      // (6) Z-order : fond → voiles → décorations → textes (+ logo au-dessus).
+      decorObjs.forEach((d) => cc.sendObjectToBack(d));
+      if (scrimSideRef.current) cc.sendObjectToBack(scrimSideRef.current);
+      if (scrimRef.current) cc.sendObjectToBack(scrimRef.current);
+      if (bgRef.current) cc.sendObjectToBack(bgRef.current);
+
       cc.requestRenderAll();
     };
 
@@ -455,10 +533,10 @@ export function StudioCanvas({
         const c = fcRef.current;
         if (!c) throw new Error("Canvas non prêt");
         if (c.getActiveObject()) c.discardActiveObject();
-        // Re-mise en page juste avant l'export : les polices sont chargées à ce
-        // stade → garantit que le PNG final respecte la safe-zone (jamais de
-        // texte coupé dans le fichier, même si l'aperçu a flashé avant).
-        if (placed) layout();
+        // NB : on NE relance PAS la mise en page ici — l'utilisateur a pu
+        // déplacer le texte à la main après génération, on respecte ses
+        // positions. L'anti-débordement a déjà eu lieu à la génération
+        // (layout + chargement des polices).
         c.renderAll();
         const multiplier = formatRef.current.width / dimsRef.current.w;
         const dataUrl = c.toDataURL({ format: "png", multiplier });
@@ -591,6 +669,11 @@ export function StudioCanvas({
           if (id === "headline" || id === "accent") o.set({ fontFamily: stack });
         });
         layoutNow();
+      },
+      highlightHeadline(word) {
+        headlineAccentWord = (word ?? "").trim();
+        applyHeadlineAccent();
+        fcRef.current?.requestRenderAll();
       },
     };
     onReady?.(handle);
