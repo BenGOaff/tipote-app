@@ -270,8 +270,9 @@ export function ImageStudio({
         // Police de titre adaptée au thème (personne→Montserrat, spatial→Anton…)
         // + re-fit/empilement de la nouvelle copy dans la safe-zone.
         h.setHeadingFont(STYLE_HEADING_FONT[aiStyle]);
-        // Mot d'accent coloré (marque) dans le titre.
-        h.highlightHeadline(copy.accentWord ? String(copy.accentWord) : "");
+        // Mot d'accent surligné dans le titre — MAIS seulement s'il n'y a pas
+        // de badge prix (sinon trop de blocs de marque qui se concurrencent).
+        h.highlightHeadline(copy.accent ? "" : copy.accentWord ? String(copy.accentWord) : "");
         anyOk = true;
       }
       if (bg?.ok && bg.dataUrl) {
