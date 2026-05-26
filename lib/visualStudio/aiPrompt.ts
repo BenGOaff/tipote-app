@@ -18,7 +18,7 @@ export const AI_STYLES: Array<{ id: AiStyleId; labelKey: string; fragment: strin
     id: "photoPerson",
     labelKey: "aiStylePhotoPerson",
     fragment:
-      "authentic candid editorial photograph of a real person, genuine natural expression, natural skin texture, soft natural lighting, shallow depth of field, shot on a 50mm lens, documentary feel",
+      "authentic candid editorial photograph of a real person, composed OFF-CENTER (subject to one side or in the lower third) leaving a large clean uncluttered area for text, genuine natural expression, natural skin texture, soft natural lighting, shallow depth of field, shot on a 50mm lens, documentary feel",
   },
   {
     id: "landscape",

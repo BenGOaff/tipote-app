@@ -271,9 +271,10 @@ export function ImageStudio({
         h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
-        // Gabarit alterné à chaque génération (centré ↔ éditorial gauche).
+        // Gabarit alterné à chaque génération (centré → éditorial → carte) pour
+        // que des posts successifs ne se ressemblent pas.
         genCountRef.current += 1;
-        h.setAlign(genCountRef.current % 2 === 0 ? "left" : "center");
+        h.setAlign((["center", "left", "card"] as const)[(genCountRef.current - 1) % 3]);
         // Police de titre adaptée au thème (personne→Montserrat, spatial→Anton…)
         // + re-fit/empilement de la nouvelle copy dans la safe-zone.
         h.setHeadingFont(STYLE_HEADING_FONT[aiStyle]);

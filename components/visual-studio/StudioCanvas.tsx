@@ -81,9 +81,9 @@ export interface StudioCanvasHandle {
   setTextPlacement: (anchor: "top" | "bottom", textColor: string) => void;
   /** Change la police du titre + de l'accent (adaptée au thème/style). */
   setHeadingFont: (stack: string) => void;
-  /** Choisit le gabarit de mise en page : centré (hero) ou aligné à gauche
-   *  (éditorial, avec barre d'accent). */
-  setAlign: (align: "center" | "left") => void;
+  /** Choisit le gabarit : centré (hero), aligné à gauche (éditorial, barre
+   *  d'accent), ou carte (panneau derrière le texte). */
+  setAlign: (align: "center" | "left" | "card") => void;
   /** Surligne un extrait du titre dans la couleur de marque (mot d'accent).
    *  `word` doit être un sous-texte exact du titre ; "" enlève le surlignage. */
   highlightHeadline: (word: string) => void;
@@ -298,8 +298,9 @@ export function StudioCanvas({
     // État de placement courant (mis à jour par setTextPlacement). Sert à
     // re-stacker à l'identique quand la police ou le format changent.
     let curAnchor: "top" | "bottom" = "top";
-    // Template courant : centré (hero) ou aligné à gauche (éditorial).
-    let curAlign: "center" | "left" = "center";
+    // Gabarit courant : centré (hero), aligné à gauche (éditorial), ou carte
+    // (panneau semi-opaque derrière le texte → contraste parfait).
+    let curAlign: "center" | "left" | "card" = "center";
     let placed = false;
     // Mot d'accent du titre (surligné couleur de marque) + objets décoratifs
     // (color-blocks : pilule de rubrique, badge d'accent) reconstruits à chaque
@@ -393,6 +394,7 @@ export function StudioCanvas({
       const H = dimsRef.current.h;
       const ratio = W / H;
       const isLeft = curAlign === "left";
+      const isCard = curAlign === "card";
       const align: "left" | "center" = isLeft ? "left" : "center";
       // Marge horizontale GÉNÉREUSE (jamais collé au bord). En mode éditorial
       // (gauche) : une barre d'accent verticale + une colonne de texte décalée.
@@ -551,6 +553,46 @@ export function StudioCanvas({
           cc.add(bar);
           decorObjs.push(bar);
         }
+      }
+
+      // Gabarit CARTE : texte blanc (le panneau garantit le contraste), filet
+      // d'accent discret sous le titre, et panneau semi-opaque derrière tout.
+      if (isCard) {
+        blocks.forEach(({ id, o }) => {
+          if (id === "headline" || id === "subline") o.set({ fill: "#ffffff", shadow: "rgba(0,0,0,0.4) 0px 2px 8px" });
+        });
+        const hIdx = blocks.findIndex((b) => b.id === "headline");
+        if (hIdx >= 0 && blocks[hIdx + 1]) {
+          const hb = blocks[hIdx].o;
+          const ruleY = ((hb.top ?? 0) + hb.getScaledHeight() + (blocks[hIdx + 1].o.top ?? 0)) / 2;
+          const ruleW = 0.12 * W;
+          const ruleH = 0.008 * W;
+          const rule = new Rect({
+            left: W / 2 - ruleW / 2, top: ruleY - ruleH / 2, width: ruleW, height: ruleH,
+            rx: ruleH / 2, ry: ruleH / 2, fill: brand.primaryColor,
+            selectable: false, evented: false, objectCaching: false,
+          });
+          (rule as { layerId?: string }).layerId = undefined;
+          cc.add(rule);
+          decorObjs.push(rule);
+        }
+        // Panneau poussé EN DERNIER → reste au fond des décos (sous pilule/badge/
+        // bouton/filet), au-dessus du fond + voile.
+        const maxLineW = Math.max(...blocks.map(({ o }) => longestLineWidth(o)));
+        const cardPadH = 0.06 * W;
+        const cardPadV = 0.05 * H;
+        const cardW = Math.min(W - 2 * padX, maxLineW + 2 * cardPadH);
+        const t0 = blocks[0].o.top ?? 0;
+        const lastO = blocks[blocks.length - 1].o;
+        const b0 = (lastO.top ?? 0) + lastO.getScaledHeight();
+        const panel = new Rect({
+          left: W / 2 - cardW / 2, top: t0 - cardPadV, width: cardW, height: (b0 - t0) + 2 * cardPadV,
+          rx: 0.045 * W, ry: 0.045 * W, fill: "rgba(13,18,38,0.55)",
+          selectable: false, evented: false, objectCaching: false,
+        });
+        (panel as { layerId?: string }).layerId = undefined;
+        cc.add(panel);
+        decorObjs.push(panel);
       }
 
       // Surlignage du mot d'accent dans le titre (bloc marque + texte blanc).
@@ -752,7 +794,7 @@ export function StudioCanvas({
         fcRef.current?.requestRenderAll();
       },
       setAlign(align) {
-        curAlign = align === "left" ? "left" : "center";
+        curAlign = align === "left" || align === "card" ? align : "center";
         layoutNow();
       },
     };
