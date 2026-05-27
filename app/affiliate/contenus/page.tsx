@@ -22,7 +22,7 @@ import { PostDayCard } from "../promouvoir/components/PostDayCard";
 import { VisualGallery } from "../promouvoir/components/VisualGallery";
 import { ArticleCard } from "../promouvoir/components/ArticleCard";
 
-import { EMAILS_FR } from "../promouvoir/content/emails-fr";
+import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
 import { POSTS_FR } from "../promouvoir/content/posts-fr";
 import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, normaliseLocale } from "../i18n";
@@ -53,6 +53,27 @@ export default async function ContenusPage() {
     .eq("published", true)
     .order("sort_order", { ascending: true });
   const articles = (articleRows ?? []) as { id: string; title: string | null; body: string | null }[];
+
+  // Emails : gérés en base par l'admin. Tant que rien n'est importé, on
+  // retombe sur les 8 modèles par défaut (aucune régression).
+  const { data: emailRows } = await supabaseAdmin
+    .from("affiliate_contents")
+    .select("id, title, body, meta")
+    .eq("kind", "email")
+    .eq("locale", "fr")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  const dbEmails: EmailTemplate[] = (emailRows ?? []).map((r) => {
+    const row = r as { id: string; title: string | null; body: string | null; meta: Record<string, unknown> | null };
+    return {
+      id: row.id,
+      subject: row.title ?? "",
+      preheader: (row.meta?.preheader as string) ?? "",
+      body: row.body ?? "",
+      notes: (row.meta?.notes as string) ?? undefined,
+    };
+  });
+  const emailsToShow: EmailTemplate[] = dbEmails.length ? dbEmails : EMAILS_FR;
 
   // Visuels accrochés à un post : on a persisté les CHEMINS de stockage (TUS,
   // long terme) ; on re-signe une URL de lecture fraîche à chaque affichage
@@ -115,7 +136,7 @@ export default async function ContenusPage() {
             </CardContent>
           </Card>
           <div className="space-y-3">
-            {EMAILS_FR.map((email) => (
+            {emailsToShow.map((email) => (
               <EmailCard
                 key={email.id}
                 email={email}
