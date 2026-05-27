@@ -458,7 +458,7 @@ export function StudioCanvas({
       // Nombre de lignes MAX par bloc : un titre ne doit pas se déployer sur 5
       // lignes et bouffer tout le visuel (ex. couvrir un visage). Réduire la
       // police fait tenir plus de mots par ligne → moins de lignes.
-      const MAX_LINES: Record<string, number> = { kicker: 1, headline: 3, accent: 1, subline: 2, cta: 2 };
+      const MAX_LINES: Record<string, number> = { kicker: 1, headline: 3, accent: 1, subline: 2, cta: 1 };
       blocks.forEach(({ id, o }) => {
         const frac = BASE_FONT_FRAC[id];
         if (frac) o.set({ fontSize: frac * W });
@@ -491,9 +491,21 @@ export function StudioCanvas({
       };
       const gaps = blocks.map((b, i) => (i === 0 ? 0 : gapFor(blocks[i - 1].id, b.id)));
       const sumGaps = gaps.reduce((a, b) => a + b, 0);
+      // Rembourrage vertical des color-blocks (pilule/badge/bouton) — DOIT
+      // matcher les padVk passés à placeBehind. On l'intègre à l'empreinte de
+      // chaque bloc pour que l'empilement réserve la place du bloc coloré
+      // (sinon le bouton CTA empiète sur le sous-titre).
+      const decorPadVk = (id: string) => {
+        if (id === "accent") return 0.18;
+        if (id === "cta") return 0.32;
+        if (id === "kicker" && !leftAligned) return 0.34;
+        return 0;
+      };
       blocks.forEach(({ o }) => o.initDimensions());
       let heights = blocks.map(({ o }) => o.getScaledHeight());
-      let total = heights.reduce((a, b) => a + b, 0) + sumGaps;
+      let padVs = blocks.map(({ id, o }) => decorPadVk(id) * o.getScaledHeight());
+      const footprint = () => heights.reduce((s, h, i) => s + h + 2 * padVs[i], 0) + sumGaps;
+      let total = footprint();
       const availH = H - padTop - padBottom;
       // (3b) Débordement vertical → réduit tout proportionnellement.
       if (total > availH) {
@@ -501,10 +513,12 @@ export function StudioCanvas({
         blocks.forEach(({ o }) => o.set({ fontSize: (o.fontSize ?? 20) * k }));
         blocks.forEach(({ o }) => o.initDimensions());
         heights = blocks.map(({ o }) => o.getScaledHeight());
-        total = heights.reduce((a, b) => a + b, 0) + sumGaps;
+        padVs = blocks.map(({ id, o }) => decorPadVk(id) * o.getScaledHeight());
+        total = footprint();
       }
 
       // (4) Empilement : ancré en haut, centré, ou en bas (espacements groupés).
+      // Le texte est décalé de son padV pour que le color-block démarre au bon Y.
       let y =
         curAnchor === "top"
           ? padTop
@@ -513,9 +527,9 @@ export function StudioCanvas({
             : Math.max(padTop, H - padBottom - total);
       blocks.forEach(({ o }, i) => {
         y += gaps[i];
-        o.set({ top: y });
+        o.set({ top: y + padVs[i] });
         o.setCoords();
-        y += heights[i];
+        y += heights[i] + 2 * padVs[i];
       });
 
       // (5) DÉCORATIONS (color-blocks), adaptées à l'alignement : pilule de
@@ -570,8 +584,10 @@ export function StudioCanvas({
       const ct = findBlock("cta");
       if (ct) {
         // Vrai BOUTON plein arrondi (au lieu du bandeau "texte surligné").
+        // Rembourrage modéré : sur 2 lignes + padV 0.5 il devenait un pavé
+        // géant qui empiétait sur le sous-titre (cta plafonné à 1 ligne désormais).
         ct.set({ textBackgroundColor: "" });
-        placeBehind(ct, 0.85, 0.5, 0.5, brand.primaryColor);
+        placeBehind(ct, 0.6, 0.32, 0.5, brand.primaryColor);
         ct.set({ fill: "#ffffff", shadow: "" });
       }
       // Barre d'accent verticale (mode éditorial), le long du bloc de texte.
