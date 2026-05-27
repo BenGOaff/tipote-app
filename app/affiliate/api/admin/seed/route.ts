@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getAffiliateAdmin } from "@/lib/affiliate/admin";
 import { EMAILS_FR } from "@/app/affiliate/promouvoir/content/emails-fr";
+import { POSTS_FR } from "@/app/affiliate/promouvoir/content/posts-fr";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,16 @@ export async function POST(req: NextRequest) {
       title: e.subject,
       body: e.body,
       meta: { preheader: e.preheader, notes: e.notes ?? "" },
+      sort_order: i,
+      published: true,
+    }));
+  } else if (kind === "post") {
+    rows = POSTS_FR.map((p, i) => ({
+      kind: "post",
+      locale,
+      title: p.dayLabel,
+      body: "",
+      meta: { theme: p.theme, hook: p.hook, visualPath: p.visualPath, posts: p.posts },
       sort_order: i,
       published: true,
     }));

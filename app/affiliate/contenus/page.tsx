@@ -23,7 +23,7 @@ import { VisualGallery } from "../promouvoir/components/VisualGallery";
 import { ArticleCard } from "../promouvoir/components/ArticleCard";
 
 import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
-import { POSTS_FR } from "../promouvoir/content/posts-fr";
+import { POSTS_FR, type PostDay, type SocialPost } from "../promouvoir/content/posts-fr";
 import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, normaliseLocale } from "../i18n";
 
@@ -74,6 +74,28 @@ export default async function ContenusPage() {
     };
   });
   const emailsToShow: EmailTemplate[] = dbEmails.length ? dbEmails : EMAILS_FR;
+
+  // Posts : idem — gérés en base, repli sur la séquence par défaut si vide.
+  const { data: postRows } = await supabaseAdmin
+    .from("affiliate_contents")
+    .select("id, title, meta")
+    .eq("kind", "post")
+    .eq("locale", "fr")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  const dbPosts: PostDay[] = (postRows ?? []).map((r) => {
+    const row = r as { id: string; title: string | null; meta: Record<string, unknown> | null };
+    const m = row.meta ?? {};
+    return {
+      id: row.id,
+      dayLabel: row.title ?? "",
+      theme: String(m.theme ?? ""),
+      hook: String(m.hook ?? ""),
+      visualPath: String(m.visualPath ?? ""),
+      posts: (Array.isArray(m.posts) ? m.posts : []) as SocialPost[],
+    };
+  });
+  const postsToShow: PostDay[] = dbPosts.length ? dbPosts : POSTS_FR;
 
   // Visuels accrochés à un post : on a persisté les CHEMINS de stockage (TUS,
   // long terme) ; on re-signe une URL de lecture fraîche à chaque affichage
@@ -156,7 +178,7 @@ export default async function ContenusPage() {
             </CardContent>
           </Card>
           <div className="space-y-3">
-            {POSTS_FR.map((day) => (
+            {postsToShow.map((day) => (
               <PostDayCard
                 key={day.id}
                 day={day}

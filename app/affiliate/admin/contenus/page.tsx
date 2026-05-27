@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAffiliateAdmin } from "@/lib/affiliate/admin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ContentAdmin, type ContentItem } from "./ContentAdmin";
+import { PostAdmin, type PostItem } from "./PostAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function AdminContenusPage() {
   const admin = await getAffiliateAdmin();
   if (!admin) redirect("/");
 
-  const [articles, emails] = await Promise.all([load("article"), load("email")]);
+  const [articles, emails, posts] = await Promise.all([load("article"), load("email"), load("post")]);
 
   return (
     <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
@@ -41,15 +42,19 @@ export default async function AdminContenusPage() {
       </div>
 
       <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="articles">Articles</TabsTrigger>
           <TabsTrigger value="emails">Emails</TabsTrigger>
+          <TabsTrigger value="posts">Posts</TabsTrigger>
         </TabsList>
         <TabsContent value="articles" className="mt-5">
           <ContentAdmin initial={articles} kind="article" />
         </TabsContent>
         <TabsContent value="emails" className="mt-5">
           <ContentAdmin initial={emails} kind="email" seedable />
+        </TabsContent>
+        <TabsContent value="posts" className="mt-5">
+          <PostAdmin initial={posts as PostItem[]} seedable />
         </TabsContent>
       </Tabs>
     </main>
