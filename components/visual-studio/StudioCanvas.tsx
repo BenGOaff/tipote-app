@@ -92,6 +92,19 @@ export interface StudioCanvasHandle {
   /** Surligne un extrait du titre dans la couleur de marque (mot d'accent).
    *  `word` doit être un sous-texte exact du titre ; "" enlève le surlignage. */
   highlightHeadline: (word: string) => void;
+  /** Gabarit de rendu : "auto" = texte (centré/éditorial/carte), "data" =
+   *  visualisation de données (barres comparatives). */
+  setTemplate: (template: "auto" | "data") => void;
+  /** Jeu de données pour le gabarit "data" (barres). */
+  setStats: (stats: ChartStat[]) => void;
+}
+
+/** Donnée chiffrée pour le gabarit data-viz : libellé + valeur affichée
+ *  (exacte, ex. "9 €") + magnitude numérique (hauteur de barre). */
+export interface ChartStat {
+  label: string;
+  display: string;
+  value: number;
 }
 
 interface StudioCanvasProps {
@@ -306,6 +319,11 @@ export function StudioCanvas({
     // Colonne de texte imposée par l'analyse d'image (sujet d'un côté → texte
     // de l'autre). "full" = pleine largeur (gabarit centré/éditorial/carte).
     let curSide: "left" | "right" | "full" = "full";
+    // Gabarit + données (data-viz) + couleur de texte courante (pour les
+    // libellés du graphe).
+    let curTemplate: "auto" | "data" = "auto";
+    let curStats: ChartStat[] = [];
+    let curTextColor = brand.textColor;
     // Gabarit courant : centré (hero), aligné à gauche (éditorial), ou carte
     // (panneau semi-opaque derrière le texte → contraste parfait).
     let curAlign: "center" | "left" | "card" = "center";
@@ -667,6 +685,139 @@ export function StudioCanvas({
       cc.requestRenderAll();
     };
 
+    // ── Gabarit DATA-VIZ : titre en haut, BARRES comparatives au centre,
+    // sous-titre/source + CTA bouton en bas. Données = curStats (chiffres réels
+    // du post). La barre de la marque est en couleur de marque, les autres en
+    // gris → la comparaison raconte l'histoire (réf Attac).
+    const layoutData = () => {
+      const cc = fcRef.current;
+      if (!cc) return;
+      const W = dimsRef.current.w;
+      const H = dimsRef.current.h;
+      const padX = 0.08 * W;
+      const boxW = W - 2 * padX;
+      const maxLine = boxW * 0.96;
+      if (decorObjs.length) { decorObjs.forEach((d) => cc.remove(d)); decorObjs = []; }
+
+      const get = (id: string) => cc.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined;
+      get("accent")?.set({ text: "" }); // pas de badge en data-viz
+
+      const MAXL: Record<string, number> = { kicker: 1, headline: 3, subline: 2, cta: 1 };
+      const prep = (id: string): Textbox | undefined => {
+        const o = get(id);
+        if (!o || !String(o.text ?? "").trim()) return undefined;
+        o.set({ left: padX, width: boxW, textAlign: "center" });
+        const frac = BASE_FONT_FRAC[id];
+        if (frac) o.set({ fontSize: frac * W });
+        fitToWidth(o, maxLine, id === "kicker");
+        for (let p = 0; p < 4; p++) { o.initDimensions(); const lw = longestLineWidth(o); if (lw <= maxLine) break; o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * (maxLine / lw)) }); }
+        const maxl = MAXL[id];
+        if (maxl) for (let p = 0; p < 6; p++) { o.initDimensions(); const lines = (o as unknown as { textLines?: string[] }).textLines?.length ?? 1; if (lines <= maxl) break; o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * 0.92) }); }
+        o.initDimensions();
+        return o;
+      };
+      const kicker = prep("kicker");
+      const headline = prep("headline");
+      const subline = prep("subline");
+      const cta = prep("cta");
+
+      const chip = (o: Textbox, padHk: number, padVk: number, radius: number, fill: string) => {
+        o.initDimensions();
+        const tw = longestLineWidth(o);
+        const hh = o.getScaledHeight();
+        const padH = padHk * hh, padV = padVk * hh;
+        const bw = Math.min(tw + 2 * padH, W - 2 * padX);
+        const bh = hh + 2 * padV;
+        const r = new Rect({ left: W / 2 - bw / 2, top: (o.top ?? 0) - padV, width: bw, height: bh, rx: radius * bh, ry: radius * bh, fill, selectable: false, evented: false, objectCaching: false });
+        (r as { layerId?: string }).layerId = undefined;
+        cc.add(r); decorObjs.push(r);
+      };
+      const mkLabel = (text: string, left: number, top: number, width: number, size: number, weight: string, fill: string, family?: string) => {
+        const t = new Textbox(text, { left, top, width, fontSize: size, textAlign: "center", fill, fontWeight: weight, fontFamily: family ?? 'Montserrat, "Helvetica Neue", Arial, sans-serif', selectable: false, evented: false, objectCaching: false, lineHeight: 1.05 });
+        (t as { layerId?: string }).layerId = undefined;
+        cc.add(t); decorObjs.push(t);
+        return t;
+      };
+
+      // Groupe HAUT : kicker (pilule) + titre, ancrés en haut.
+      let yT = 0.07 * H;
+      if (kicker) {
+        const kpadV = 0.34 * kicker.getScaledHeight();
+        kicker.set({ top: yT + kpadV });
+        kicker.setCoords();
+        chip(kicker, 0.7, 0.34, 0.5, brand.primaryColor);
+        kicker.set({ fill: "#ffffff", shadow: "" });
+        yT = (kicker.top ?? 0) + kicker.getScaledHeight() + kpadV + 0.02 * H;
+      }
+      if (headline) {
+        headline.set({ top: yT });
+        headline.setCoords();
+        yT += headline.getScaledHeight();
+      }
+      const topBottom = yT;
+
+      // Groupe BAS : CTA bouton tout en bas, sous-titre/source au-dessus.
+      let yB = H - 0.07 * H;
+      if (cta) {
+        const cpadV = 0.32 * cta.getScaledHeight();
+        cta.set({ top: yB - cta.getScaledHeight() - cpadV });
+        cta.setCoords();
+        cta.set({ textBackgroundColor: "" });
+        chip(cta, 0.6, 0.32, 0.5, brand.primaryColor);
+        cta.set({ fill: "#ffffff", shadow: "" });
+        yB = (cta.top ?? 0) - cpadV - 0.03 * H;
+      }
+      if (subline) {
+        subline.set({ top: yB - subline.getScaledHeight() });
+        subline.setCoords();
+        yB = (subline.top ?? 0) - 0.02 * H;
+      }
+      const bottomTop = yB;
+
+      // RÉGION GRAPHE entre les 2 groupes.
+      const chartTop = topBottom + 0.05 * H;
+      const chartBottom = bottomTop - 0.03 * H;
+      const chartH = Math.max(0.12 * H, chartBottom - chartTop);
+      const n = curStats.length;
+      const slotW = boxW / n;
+      const barW = Math.min(slotW * 0.5, 0.18 * W);
+      const valH = 0.06 * H;
+      const catH = 0.05 * H;
+      const baseline = chartTop + chartH - catH;
+      const usableH = Math.max(0.05 * H, chartH - valH - catH);
+      const maxVal = Math.max(...curStats.map((s) => s.value), 1);
+      const anyBrand = !!brand.name && curStats.some((s) => s.label.toLowerCase().includes(brand.name.toLowerCase()));
+      const headingFam = headline ? String(headline.fontFamily) : 'Montserrat, sans-serif';
+      curStats.forEach((s, i) => {
+        const cx = padX + slotW * (i + 0.5);
+        const barH = Math.max(0.02 * H, (s.value / maxVal) * usableH);
+        const isBrandBar = anyBrand ? s.label.toLowerCase().includes(brand.name.toLowerCase()) : true;
+        const fill = isBrandBar ? brand.primaryColor : "#94a3b8";
+        const bar = new Rect({ left: cx - barW / 2, top: baseline - barH, width: barW, height: barH, rx: 0.012 * W, ry: 0.012 * W, fill, selectable: false, evented: false, objectCaching: false });
+        (bar as { layerId?: string }).layerId = undefined;
+        cc.add(bar); decorObjs.push(bar);
+        // valeur (display) au-dessus de la barre, en gros (police titre).
+        mkLabel(s.display, cx - slotW / 2, baseline - barH - valH, slotW, 0.052 * W, "800", curTextColor, headingFam);
+        // libellé de catégorie sous la ligne de base.
+        mkLabel(s.label, cx - slotW / 2, baseline + 0.01 * H, slotW, 0.026 * W, "600", curTextColor);
+      });
+
+      applyHeadlineAccent();
+
+      // Z-order : fond → voiles → graphe/déco → textes restants.
+      decorObjs.forEach((d) => cc.sendObjectToBack(d));
+      if (scrimSideRef.current) cc.sendObjectToBack(scrimSideRef.current);
+      if (scrimRef.current) cc.sendObjectToBack(scrimRef.current);
+      if (bgRef.current) cc.sendObjectToBack(bgRef.current);
+      cc.requestRenderAll();
+    };
+
+    // Dispatcher : choisit le gabarit data-viz si des données sont présentes.
+    const render = () => {
+      if (curTemplate === "data" && curStats.length >= 2) layoutData();
+      else layout();
+    };
+
     // Re-stacke quand les webfonts sont prêtes (métriques fiables) puis expose
     // un re-layout au changement de format (seulement après une génération).
     // CAUSE RACINE du texte qui débordait : Fabric garde un cache GLOBAL des
@@ -678,7 +829,7 @@ export function StudioCanvas({
     // les polices chargées, puis re-mesurer (initDimensions) et re-empiler.
     const familyToken = (stack: string) => stack.split(",")[0].trim().replace(/^["']|["']$/g, "");
     const layoutNow = () => {
-      layout();
+      render();
       if (typeof document === "undefined" || !document.fonts) return;
       const fams = new Set<string>();
       fcRef.current?.getObjects().forEach((o) => {
@@ -698,7 +849,7 @@ export function StudioCanvas({
             const t = o as Textbox;
             if (typeof t.initDimensions === "function") t.initDimensions();
           });
-          layout();
+          render();
         })
         .catch(() => {});
     };
@@ -836,8 +987,17 @@ export function StudioCanvas({
         if (!fcRef.current) return;
         curAnchor = anchor;
         curSide = textSide === "left" || textSide === "right" ? textSide : "full";
+        curTextColor = textColor;
         placed = true;
         applyColorsAndShadows(textColor);
+        layoutNow();
+      },
+      setTemplate(template) {
+        curTemplate = template === "data" ? "data" : "auto";
+        layoutNow();
+      },
+      setStats(stats) {
+        curStats = Array.isArray(stats) ? stats.slice(0, 4) : [];
         layoutNow();
       },
       setHeadingFont(stack) {
