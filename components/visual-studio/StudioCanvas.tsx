@@ -324,7 +324,11 @@ export function StudioCanvas({
       if (w) {
         const idx = text.toLowerCase().indexOf(w.toLowerCase());
         if (idx >= 0) {
-          o.setSelectionStyles({ textBackgroundColor: brand.primaryColor, fill: "#ffffff" }, idx, idx + w.length);
+          // Marqueur VIF (couleur d'accent de marque) + texte FONCÉ, comme un
+          // surligneur jaune/fluo sur les réfs (Claude/Insta). Plus fort que le
+          // bloc bleu+blanc d'avant.
+          const marker = brand.accentColor || brand.primaryColor;
+          o.setSelectionStyles({ textBackgroundColor: marker, fill: "#0f172a" }, idx, idx + w.length);
         }
       }
     };

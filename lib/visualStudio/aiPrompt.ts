@@ -61,9 +61,10 @@ const STYLE_BY_ID: Record<AiStyleId, (typeof AI_STYLES)[number]> =
 export const STYLE_HEADING_FONT: Record<AiStyleId, string> = {
   photoPerson: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
   landscape: 'Anton, "Arial Narrow", Impact, sans-serif',
-  abstract: '"Archivo Black", Arial, sans-serif',
+  // minimal & abstract → serif display éditorial (look "magazine", réf Claude).
+  abstract: '"Playfair Display", Georgia, serif',
   space: 'Anton, "Arial Narrow", Impact, sans-serif',
-  minimal: 'Roboto, "Helvetica Neue", Arial, sans-serif',
+  minimal: '"Playfair Display", Georgia, serif',
 };
 
 export function isAiStyleId(v: unknown): v is AiStyleId {
