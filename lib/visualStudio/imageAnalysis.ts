@@ -17,9 +17,13 @@ export type TextPlacement = {
    *  (voile horizontal adaptatif) pour un contraste homogène sur tout le
    *  texte, sans devoir bicolorer le texte. "none" = fond équilibré. */
   brighterSide: "left" | "right" | "none";
+  /** Côté où POSER le texte quand un sujet occupe nettement une moitié (photo
+   *  de personne) : on met le texte sur la moitié PROPRE, à l'opposé du sujet
+   *  (réf éditoriale). "full" = pas de sujet latéral marqué → pleine largeur. */
+  textSide: "left" | "right" | "full";
 };
 
-const FALLBACK: TextPlacement = { anchor: "bottom", textColor: "#ffffff", scrim: "dark", brighterSide: "none" };
+const FALLBACK: TextPlacement = { anchor: "bottom", textColor: "#ffffff", scrim: "dark", brighterSide: "none", textSide: "full" };
 
 export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
   if (typeof document === "undefined") return FALLBACK;
@@ -62,6 +66,29 @@ export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
           return { mean, variance, leftMean: lN ? lSum / lN : mean, rightMean: rN ? rSum / rN : mean };
         };
 
+        // Variance d'une COLONNE [x0,x1) sur toute la hauteur → sert à repérer
+        // de quel côté se trouve le sujet (moitié la plus "chargée").
+        const col = (x0: number, x1: number) => {
+          let sum = 0, sumSq = 0, n = 0;
+          for (let y = 0; y < H; y++) {
+            for (let x = Math.floor(x0); x < Math.floor(x1); x++) {
+              const i = (y * W + x) * 4;
+              const lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+              sum += lum; sumSq += lum * lum; n++;
+            }
+          }
+          const mean = n ? sum / n : 128;
+          return n ? Math.max(0, sumSq / n - mean * mean) : 0;
+        };
+        const leftVar = col(0, W / 2);
+        const rightVar = col(W / 2, W);
+        const hMax = Math.max(leftVar, rightVar, 1);
+        // Sujet net d'un côté → texte sur la moitié OPPOSÉE (la plus propre).
+        let textSide: "left" | "right" | "full" = "full";
+        if ((hMax - Math.min(leftVar, rightVar)) / hMax > 0.35) {
+          textSide = leftVar > rightVar ? "right" : "left";
+        }
+
         const top = band(0, H * 0.42);
         const bottom = band(H * 0.58, H);
         const mid = band(H * 0.30, H * 0.70);
@@ -92,8 +119,8 @@ export async function analyzeForText(dataUrl: string): Promise<TextPlacement> {
 
         resolve(
           trulyLight
-            ? { anchor, textColor: "#0f172a", scrim: "light", brighterSide: "none" }
-            : { anchor, textColor: "#ffffff", scrim: "dark", brighterSide },
+            ? { anchor, textColor: "#0f172a", scrim: "light", brighterSide: "none", textSide }
+            : { anchor, textColor: "#ffffff", scrim: "dark", brighterSide, textSide },
         );
       } catch {
         resolve(FALLBACK);

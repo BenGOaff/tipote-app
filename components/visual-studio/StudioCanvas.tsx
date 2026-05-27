@@ -76,9 +76,14 @@ export interface StudioCanvasHandle {
    *  génération de copy IA (titre/sous-titre/CTA). No-op si le calque
    *  n'existe pas. */
   setLayerText: (id: string, text: string) => void;
-  /** Place le bloc texte en haut, centré ou en bas (selon l'analyse d'image)
-   *  et applique la couleur adaptée au titre/sous-titre. */
-  setTextPlacement: (anchor: "top" | "center" | "bottom", textColor: string) => void;
+  /** Place le bloc texte en haut, centré ou en bas (selon l'analyse d'image),
+   *  éventuellement dans une colonne latérale (sujet d'un côté → texte de
+   *  l'autre), et applique la couleur adaptée au titre/sous-titre. */
+  setTextPlacement: (
+    anchor: "top" | "center" | "bottom",
+    textColor: string,
+    textSide?: "left" | "right" | "full",
+  ) => void;
   /** Change la police du titre + de l'accent (adaptée au thème/style). */
   setHeadingFont: (stack: string) => void;
   /** Choisit le gabarit : centré (hero), aligné à gauche (éditorial, barre
@@ -298,6 +303,9 @@ export function StudioCanvas({
     // État de placement courant (mis à jour par setTextPlacement). Sert à
     // re-stacker à l'identique quand la police ou le format changent.
     let curAnchor: "top" | "center" | "bottom" = "top";
+    // Colonne de texte imposée par l'analyse d'image (sujet d'un côté → texte
+    // de l'autre). "full" = pleine largeur (gabarit centré/éditorial/carte).
+    let curSide: "left" | "right" | "full" = "full";
     // Gabarit courant : centré (hero), aligné à gauche (éditorial), ou carte
     // (panneau semi-opaque derrière le texte → contraste parfait).
     let curAlign: "center" | "left" | "card" = "center";
@@ -324,7 +332,11 @@ export function StudioCanvas({
       if (w) {
         const idx = text.toLowerCase().indexOf(w.toLowerCase());
         if (idx >= 0) {
-          o.setSelectionStyles({ textBackgroundColor: brand.primaryColor, fill: "#ffffff" }, idx, idx + w.length);
+          // Marqueur VIF (couleur d'accent de marque) + texte FONCÉ, comme un
+          // surligneur jaune/fluo sur les réfs (Claude/Insta). Plus fort que le
+          // bloc bleu+blanc d'avant.
+          const marker = brand.accentColor || brand.primaryColor;
+          o.setSelectionStyles({ textBackgroundColor: marker, fill: "#0f172a" }, idx, idx + w.length);
         }
       }
     };
@@ -393,16 +405,28 @@ export function StudioCanvas({
       const W = dimsRef.current.w;
       const H = dimsRef.current.h;
       const ratio = W / H;
-      const isLeft = curAlign === "left";
-      const isCard = curAlign === "card";
-      const align: "left" | "center" = isLeft ? "left" : "center";
-      // Marge horizontale GÉNÉREUSE (jamais collé au bord). En mode éditorial
-      // (gauche) : une barre d'accent verticale + une colonne de texte décalée.
       const padX = 0.09 * W;
+      // PLACEMENT SUJET (photo) : si un sujet occupe une moitié, le texte va sur
+      // la moitié OPPOSÉE (colonne ~56 %). Ça PRIME sur le gabarit centré/
+      // éditorial/carte (réf photo TDAH : sujet à droite, texte à gauche).
+      const sideMode = curSide === "left" || curSide === "right";
+      const isLeft = !sideMode && curAlign === "left";
+      const isCard = !sideMode && curAlign === "card";
+      const leftAligned = isLeft || sideMode;
+      let textLeft: number;
+      let textW: number;
+      if (sideMode) {
+        const colW = (W - 2 * padX) * 0.56;
+        textLeft = curSide === "left" ? padX : W - padX - colW;
+        textW = colW;
+      } else {
+        const barW = isLeft ? 0.014 * W : 0;
+        const colGap = isLeft ? 0.04 * W : 0;
+        textLeft = padX + barW + colGap;
+        textW = W - textLeft - padX;
+      }
       const barW = isLeft ? 0.014 * W : 0;
-      const colGap = isLeft ? 0.04 * W : 0;
-      const textLeft = padX + barW + colGap;
-      const textW = W - textLeft - padX;
+      const align: "left" | "center" = leftAligned ? "left" : "center";
       const FIT = 0.96;
       const maxLine = textW * FIT;
       // Marges verticales adaptées au format (plus aérées en portrait/story).
@@ -505,7 +529,7 @@ export function StudioCanvas({
         const padV = padVk * hh;
         let bw = tw + 2 * padH;
         let left: number;
-        if (isLeft) {
+        if (leftAligned) {
           left = textLeft - padH;
           bw = Math.min(bw, W - padX - left);
         } else {
@@ -531,7 +555,7 @@ export function StudioCanvas({
       };
 
       const kk = findBlock("kicker");
-      if (kk && !isLeft) {
+      if (kk && !leftAligned) {
         // Centré : pilule de rubrique (texte blanc sur bloc marque).
         placeBehind(kk, 0.7, 0.34, 0.5, brand.primaryColor);
         kk.set({ fill: "#ffffff", shadow: "" });
@@ -792,9 +816,10 @@ export function StudioCanvas({
         obj.set({ text });
         c.requestRenderAll();
       },
-      setTextPlacement(anchor, textColor) {
+      setTextPlacement(anchor, textColor, textSide) {
         if (!fcRef.current) return;
         curAnchor = anchor;
+        curSide = textSide === "left" || textSide === "right" ? textSide : "full";
         placed = true;
         applyColorsAndShadows(textColor);
         layoutNow();

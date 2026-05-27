@@ -53,6 +53,8 @@ export const FONT_OPTIONS = [
   { label: "Anton", value: 'Anton, "Arial Narrow", Impact, sans-serif' },
   { label: "Bebas Neue", value: '"Bebas Neue", "Arial Narrow", sans-serif' },
   { label: "Archivo Black", value: '"Archivo Black", Arial, sans-serif' },
+  { label: "Playfair Display", value: '"Playfair Display", Georgia, "Times New Roman", serif' },
+  { label: "Fraunces", value: 'Fraunces, Georgia, "Times New Roman", serif' },
   { label: "Montserrat", value: 'Montserrat, "Helvetica Neue", Arial, sans-serif' },
   { label: "Roboto", value: 'Roboto, "Helvetica Neue", Arial, sans-serif' },
   { label: "Caveat", value: 'Caveat, "Comic Sans MS", cursive' },
@@ -65,6 +67,8 @@ export const FONT_OPTIONS = [
 
 /** Police de titre par défaut (display lourd) pour les visuels. */
 export const DISPLAY_HEADING_STACK = 'Anton, "Arial Narrow", Impact, sans-serif';
+/** Serif display éditorial (look "magazine" — réf Claude/Instagram). */
+export const SERIF_HEADING_STACK = '"Playfair Display", Georgia, "Times New Roman", serif';
 
 /** Mappe un nom de police de marque ("Inter") vers sa stack CSS. */
 export function fontStackFor(name?: string): string {

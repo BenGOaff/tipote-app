@@ -39,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Bebas+Neue&family=Caveat:wght@600;700&family=Montserrat:wght@400;500;600;700;800&family=Roboto:wght@700;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Bebas+Neue&family=Caveat:wght@600;700&family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&family=Roboto:wght@700;900&display=swap"
       />
       <body className="font-sans antialiased">
         <HotjarTracker />
