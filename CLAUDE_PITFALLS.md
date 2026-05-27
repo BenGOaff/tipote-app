@@ -714,3 +714,29 @@ par un test bout-en-bout (upload PUIS lecture) après tout restart de
 (business_profiles), brancher `upload` sur le pipeline TUS, ouvrir la
 modale depuis chaque "Ajouter/Modifier une image" (éditeur quiz,
 PageBuilder hero, articles blog).
+
+## AB) DASHBOARD AFFILIÉ — contenus, liens, visuels accrochés, CMS admin (27 mai 2026)
+
+App `/affiliate` (affiliate.tipote.com). Nav = Vue d'ensemble · Promouvoir ·
+Contenus · Essai gratuit · Support (`AffiliateSidebar` ; `AffiliateNav` supprimé).
+
+- **Promouvoir = liens éditables** (`LinksManager`) : persistés par affilié dans
+  `affiliates.promo_overrides` clé `links:custom:items` (JSON). L'API promo
+  (`/affiliate/api/promo`, `KEY_RE`) accepte les kinds `email|post|links`.
+- **Visuel généré ↔ post** : le studio (`StudioLauncher.onSaved`) remonte le
+  CHEMIN de stockage (pas l'URL signée — elle expire en 2 h). On persiste
+  `post:<id>:visuals` (JSON de chemins) ; on **re-signe** chaque chemin avec
+  `signedPlaybackUrl()` à l'affichage (server). `uploadVisual` renvoie
+  `{ url, path }` ; `ImageStudio` remonte `storagePath` via `onApply`.
+- **CMS admin (Béné autonome)** : table générique `affiliate_contents`
+  (`kind` article|email|post|visual, `meta` jsonb). Admin GATÉ par
+  `getAffiliateAdmin()` = user Supabase + `isAdminEmail` (⚠️ PAS
+  `getAffiliateSession` qui exige le statut affilié actif). Page
+  `/affiliate/admin/contenus` (lien sidebar `isAdmin` only). CRUD
+  `/affiliate/api/admin/contents` ; seed des modèles code→base
+  `/affiliate/api/admin/seed?kind=` (idempotent : ne seed que si vide).
+  Lecture côté affilié = contenus `published` en base, **repli sur les
+  modèles par défaut (TS) tant que la base est vide** (zéro régression).
+  Visuels = upload TUS (kind=visual, `meta.storagePath`), re-signés. Migration
+  `20260601_affiliate_contents` (à appliquer en prod).
+
