@@ -49,7 +49,7 @@ import { Separator } from "@/components/ui/separator";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 
 import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
-import { AI_STYLES, COPY_ANGLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
+import { AI_STYLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
 import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
 import type {
   BackgroundMode,
@@ -122,9 +122,10 @@ export function ImageStudio({
   const [stageSize, setStageSize] = useState<{ w: number; h: number }>({ w: PREVIEW_MAX_W, h: PREVIEW_MAX_H });
   // Génération de fond IA (le texte reste un calque éditeur, jamais l'IA).
   const [aiIntent, setAiIntent] = useState("");
-  const [aiStyle, setAiStyle] = useState<AiStyleId>("photoPerson");
-  // Gabarit : "auto" = texte, "data" = data-viz (barres), "beforeAfter" = 2 panneaux.
-  const [template, setTemplate] = useState<"auto" | "data" | "beforeAfter">("auto");
+  // Style d'image : "auto" = l'IA choisit selon le post (par défaut) ; sinon
+  // l'user force un style. Le FORMAT (texte/data/avant-après) est TOUJOURS
+  // décidé par l'IA depuis le post (plus de sélecteur manuel).
+  const [aiStyle, setAiStyle] = useState<AiStyleId | "auto">("auto");
   const [visualBusy, setVisualBusy] = useState(false);
   const [scrim, setScrim] = useState<"none" | "dark" | "light">("none");
   const [scrimSide, setScrimSide] = useState<"left" | "right" | "none">("none");
@@ -179,7 +180,7 @@ export function ImageStudio({
     setSelection(null);
     setScrim("none");
     setScrimSide("none");
-    setTemplate("auto");
+    setAiStyle("auto");
     setBgTreatment("none");
     genCountRef.current = 0;
     setAiIntent(initialIntent ?? "");
@@ -241,9 +242,11 @@ export function ImageStudio({
     setBackground((b) => ({ ...b, mode: "image", imageUrl: url }));
   }
 
-  // Génère le VISUEL d'un seul clic : la copy (titre/sous-titre/CTA → calques
-  // éditables) ET le fond IA, EN PARALLÈLE, + active le voile de contraste.
-  // L'user ne voit pas que ce sont 2 sources ; il pourra éditer le texte.
+  // Génère le VISUEL d'un seul clic. L'IA pilote TOUT depuis le post :
+  //   1. elle ANALYSE le post → choisit le FORMAT (texte / comparatif chiffré /
+  //      avant-après) ET le style d'image qui collent au contenu ;
+  //   2. on génère ensuite l'image dans CE style + on rend le bon gabarit.
+  // (Séquentiel : la copy décide le format/style avant de lancer l'image.)
   async function generateVisual() {
     if (!aiIntent.trim()) {
       toast.error(t("aiCopyEmpty"));
@@ -253,72 +256,65 @@ export function ImageStudio({
     const intent = aiIntent.trim();
     const ratio = format.width / format.height;
     const brandColors = [brandKit.primaryColor, brandKit.accentColor, brandKit.backgroundColor].filter(Boolean);
-    // Compteur de génération : pilote À LA FOIS le gabarit (centré/éditorial/
-    // carte) ET l'angle de copywriting → des posts successifs varient de
-    // structure ET d'accroche.
     genCountRef.current += 1;
     const gen = genCountRef.current;
-    const angle = COPY_ANGLES[(gen - 1) % COPY_ANGLES.length];
-    // Data-viz & avant/après : fond SOBRE (abstrait) pour ne pas brouiller les
-    // barres / panneaux. Mode texte : le style choisi par l'user.
-    const bgStyle: AiStyleId = template === "auto" ? aiStyle : "abstract";
     let anyOk = false;
     try {
-      const [copy, bg] = await Promise.all([
-        fetch("/api/visual-studio/generate-copy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ intent, locale, brandName: brandKit.name, angle, template }),
-        })
-          .then((r) => r.json())
-          .catch(() => ({})),
-        fetch("/api/visual-studio/generate-background", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ intent, style: bgStyle, ratio, brandColors }),
-        })
-          .then((r) => r.json())
-          .catch(() => ({})),
-      ]);
+      // 1) Analyse + copy (l'IA décide format + style d'image en rapport au post)
+      const copy = await fetch("/api/visual-studio/generate-copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent, locale, brandName: brandKit.name }),
+      })
+        .then((r) => r.json())
+        .catch(() => ({}));
+
+      const aiFormat: "text" | "data" | "beforeAfter" =
+        copy?.format === "data" || copy?.format === "beforeAfter" ? copy.format : "text";
+      // Style d'image : recommandé par l'IA (selon le post), sauf si l'user a
+      // forcé un style. Pour data/avant-après → fond SOBRE (abstrait).
+      const reco = (typeof copy?.imageStyle === "string" ? copy.imageStyle : "minimal") as AiStyleId;
+      const chosenStyle: AiStyleId = aiStyle === "auto" ? reco : aiStyle;
+      const bgStyle: AiStyleId = aiFormat === "text" ? chosenStyle : "abstract";
+
+      // 2) Image dans le style choisi (en parallèle de l'application de la copy).
+      const bgPromise = fetch("/api/visual-studio/generate-background", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent, style: bgStyle, ratio, brandColors }),
+      })
+        .then((r) => r.json())
+        .catch(() => ({}));
+
       const h = handleRef.current;
       if (copy?.ok && h) {
-        // kicker souvent vide (rubrique plate filtrée) → on VIDE le calque,
-        // sinon il garderait le texte de la génération précédente.
         h.setLayerText("kicker", copy.kicker ? String(copy.kicker).toUpperCase() : "");
         if (copy.headline) h.setLayerText("headline", String(copy.headline));
         h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
-        // Gabarit spécialisé si l'user l'a choisi ET que le post fournit la
-        // matière ; sinon repli propre sur le mode texte (avec un mot d'info).
-        const stats = Array.isArray(copy.stats) ? copy.stats : [];
-        const before = String(copy.before ?? "").trim();
-        const after = String(copy.after ?? "").trim();
-        if (template === "data" && stats.length >= 2) {
-          h.setStats(stats);
+        // Gabarit DÉCIDÉ PAR L'IA selon le post (la route a déjà vérifié que la
+        // matière existe : ≥2 chiffres pour data, 2 phrases pour avant/après).
+        if (aiFormat === "data") {
+          h.setStats(Array.isArray(copy.stats) ? copy.stats : []);
           h.setTemplate("data");
-        } else if (template === "beforeAfter" && before && after) {
-          h.setBeforeAfter(before, after);
+        } else if (aiFormat === "beforeAfter") {
+          h.setBeforeAfter(String(copy.before ?? ""), String(copy.after ?? ""));
           h.setTemplate("beforeAfter");
         } else {
           h.setTemplate("auto");
-          if (template === "data") toast("Pas de chiffres comparables dans ce post — rendu en mode texte.");
-          if (template === "beforeAfter") toast("Pas d'avant/après clair dans ce post — rendu en mode texte.");
         }
-        // Gabarit alterné à chaque génération (centré → éditorial → carte) pour
-        // que des posts successifs ne se ressemblent pas (mode texte uniquement).
+        // Variété de mise en page (mode texte) : centré → éditorial → carte.
         h.setAlign((["center", "left", "card"] as const)[(gen - 1) % 3]);
-        // Police de titre adaptée au thème (personne→Montserrat, spatial→Anton…)
-        // + re-fit/empilement de la nouvelle copy dans la safe-zone.
-        h.setHeadingFont(STYLE_HEADING_FONT[aiStyle]);
-        // Mot d'accent surligné dans le titre — MAIS seulement s'il n'y a pas
-        // de badge prix (sinon trop de blocs de marque qui se concurrencent).
+        h.setHeadingFont(STYLE_HEADING_FONT[chosenStyle]);
         h.highlightHeadline(copy.accent ? "" : copy.accentWord ? String(copy.accentWord) : "");
         anyOk = true;
+      } else if (!copy?.ok) {
+        toast.error(t("aiError"));
       }
+
+      const bg = await bgPromise;
       if (bg?.ok && bg.dataUrl) {
-        // Analyse l'image générée → place le texte dans la bande la plus
-        // propre + couleur + voile adaptés (au lieu de deviner à l'aveugle).
         const placement = await analyzeForText(String(bg.dataUrl)).catch(() => null);
         // Photos de personne → N&B éditorial (réf TDAH). Autres styles : couleur.
         setBgTreatment(bgStyle === "photoPerson" ? "mono" : "none");
@@ -402,51 +398,37 @@ export function ImageStudio({
                   rows={3}
                   className="w-full resize-none rounded-md border bg-background px-2.5 py-2 text-xs outline-none focus:border-primary"
                 />
-                {template === "auto" && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {AI_STYLES.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => setAiStyle(s.id)}
-                        className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
-                          aiStyle === s.id
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border text-muted-foreground hover:bg-muted"
-                        }`}
-                      >
-                        {t(s.labelKey)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {/* Gabarit : texte / data-viz (barres) / avant-après (2 panneaux). */}
+                <p className="text-[11px] text-muted-foreground">
+                  L&apos;IA lit le post, choisit le format (texte, comparatif chiffré, avant/après) et l&apos;image qui collent au contenu.
+                </p>
+                {/* Style d'image : "Auto" (l'IA décide selon le post) + override. */}
                 <div className="flex flex-wrap gap-1.5">
-                  {([["auto", "Visuel texte"], ["data", "Comparatif chiffré"], ["beforeAfter", "Avant / après"]] as const).map(([id, label]) => (
+                  <button
+                    type="button"
+                    onClick={() => setAiStyle("auto")}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      aiStyle === "auto"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    ✨ Auto
+                  </button>
+                  {AI_STYLES.map((s) => (
                     <button
-                      key={id}
+                      key={s.id}
                       type="button"
-                      onClick={() => setTemplate(id)}
-                      className={`flex-1 rounded-md border px-2 py-1.5 text-[11px] transition-colors ${
-                        template === id
+                      onClick={() => setAiStyle(s.id)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                        aiStyle === s.id
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
-                      {label}
+                      {t(s.labelKey)}
                     </button>
                   ))}
                 </div>
-                {template === "data" && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Compare 2 à 4 chiffres réels du post (ex. 9 € vs 50 €). Sans chiffres comparables, on repasse en visuel texte.
-                  </p>
-                )}
-                {template === "beforeAfter" && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Deux panneaux : l&apos;avant (la galère) vs l&apos;après (avec {brandKit.name}). Sans contraste clair, on repasse en visuel texte.
-                  </p>
-                )}
                 <Button type="button" className="w-full" onClick={generateVisual} disabled={visualBusy}>
                   {visualBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
                   {visualBusy ? t("aiGenerating") : background.imageUrl ? t("aiVariant") : t("aiGenerateVisual")}
