@@ -431,15 +431,30 @@ export function StudioCanvas({
       // on mesure ITÉRATIVEMENT la ligne réellement la plus large après wrap
       // et on réduit tant qu'elle dépasse (le wrap change à chaque passe). Ça
       // garantit qu'aucune ligne ne touche le bord, quelle que soit la police.
+      // Nombre de lignes MAX par bloc : un titre ne doit pas se déployer sur 5
+      // lignes et bouffer tout le visuel (ex. couvrir un visage). Réduire la
+      // police fait tenir plus de mots par ligne → moins de lignes.
+      const MAX_LINES: Record<string, number> = { kicker: 1, headline: 3, accent: 1, subline: 2, cta: 2 };
       blocks.forEach(({ id, o }) => {
         const frac = BASE_FONT_FRAC[id];
         if (frac) o.set({ fontSize: frac * W });
         fitToWidth(o, maxLine, id === "accent" || id === "kicker");
+        // (a) largeur : aucune ligne ne dépasse la colonne.
         for (let pass = 0; pass < 4; pass++) {
           o.initDimensions();
           const lw = longestLineWidth(o);
           if (lw <= maxLine) break;
           o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * (maxLine / lw)) });
+        }
+        // (b) hauteur : on plafonne le nombre de lignes.
+        const maxL = MAX_LINES[id];
+        if (maxL) {
+          for (let pass = 0; pass < 6; pass++) {
+            o.initDimensions();
+            const lines = (o as unknown as { textLines?: string[] }).textLines?.length ?? 1;
+            if (lines <= maxL) break;
+            o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * 0.92) });
+          }
         }
       });
 

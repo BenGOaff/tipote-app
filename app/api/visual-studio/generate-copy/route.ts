@@ -65,17 +65,19 @@ export async function POST(req: NextRequest) {
     const angleHint = ANGLE_HINT[angleId] ?? "the angle that best fits the post";
 
     const system =
-      `You are a senior ${lang} direct-response copywriter for a SaaS. From the post, FIRST find its single MAIN argument and the strongest concrete DATA POINT actually present (a price, number, %, duration). Then write copy for ONE social visual whose only job is to STOP the scroll and make the reader want to open the post. ` +
-      `Write EVERYTHING in ${lang}, natural and idiomatic, normal sentence case (NOT Title Case). No franglais, no invented jargon.\n` +
-      `HEADLINE ANGLE: favour ${angleHint}. Other angle families you may pick from if it suits the post better: counter-truth, impactful number, social proof, question, "how", "why". Always match the SPIRIT of THIS post.\n` +
-      `Return STRICT JSON with exactly the keys "kicker", "headline", "accentWord", "accent", "subtitle", "cta".\n` +
-      `- headline: the scroll-stopping hook in the chosen angle, max ~7 words, clear and SELF-CONTAINED. Base it ONLY on the post. NEVER invent numbers, %, multipliers or stats not in the post. No ending period, no hashtags, no emojis.\n` +
-      `- accentWord: the 1-3 MOST charged consecutive words copied VERBATIM from "headline" (exact substring, NOT the whole headline) to highlight. "" if headline is very short.\n` +
-      `- accent: the single strongest real DATA POINT from the post (e.g. "450 €", "3 min", "92 %") EXACTLY as written in the post. Never fabricate, round, guess or imply a figure. "" if the post contains no real figure.\n` +
-      `- kicker: OPTIONAL 1-3 word micro-hook that ADDS curiosity or stakes (a proof, a tension, a promise — e.g. "SANS CB", "TESTÉ", "AVANT/APRÈS"). It must EARN its place. NEVER a bland topical label like "Prix", "Comparatif", "SaaS", "Tarification", "Marketing" — those are useless, nobody reads them. Return "" if you have nothing genuinely punchy.\n` +
-      `- subtitle: ONE short sentence (max ~12 words) understood instantly on its own — the benefit or proof behind the hook. No jargon, no vague teaser.\n` +
-      `- cta: a 2-4 word button action in ${lang}.\n` +
-      `No extra keys, no commentary.`;
+      `You write ONE French social-ad visual in the voice of a no-bullshit SaaS founder. From the post, find its ONE main argument and the single strongest REAL figure it contains (price, %, duration…). Goal: stop the scroll, make people want to read the post.\n` +
+      `Write in ${lang}, like a human talking to a human. Sentence case, never Title Case.\n` +
+      `ANTI-AI — these make copy sound fake, BANNED: empty/abstract filler ("la différence est réelle", "une alternative plus abordable", "découvrez", "boostez", "optimisez", "passez au niveau supérieur"); the "ce n'est pas seulement X, c'est Y" pattern; brochure verbs ("s'impose comme", "met en lumière", "au cœur de", "révèle"); long dashes; jargon used to sound pro; bro-marketing. Be specific and concrete — every word earns its place, or cut it.\n` +
+      `NEVER invent a number/%/price/stat that is not in the post. Never write "n'importe qui".\n` +
+      `NO REPETITION between slots — each says something DIFFERENT:\n` +
+      `- accent: the ONE strongest real figure or tight comparison from the post (e.g. "9 € vs 50 €", "3 min", "92 %"), exactly as written. This is the ONLY place a number may appear. "" if the post has no real figure.\n` +
+      `- headline: the scroll-stopping HOOK, MAX 6 words, using the angle below. It must contain NO number/price (the accent already shows it). Self-contained, no ending period, no emojis.\n` +
+      `- subtitle: ONE line (max ~11 words) adding NEW concrete info — a real benefit or proof. It must NOT restate the headline's idea NOR repeat the accent figure.\n` +
+      `- kicker: OPTIONAL 1-3 word tag with real tension or proof (e.g. "TESTÉ", "SANS CB"). NEVER a flat category ("Prix", "Comparatif", "SaaS", "Tarification"). "" if nothing punchy.\n` +
+      `- accentWord: 1-3 words copied VERBATIM from headline to highlight (exact substring, not the whole headline). "" if headline is short.\n` +
+      `- cta: natural 2-4 word action in ${lang}, grammatically correct (e.g. "Tester gratuitement", "Commencer maintenant").\n` +
+      `HEADLINE ANGLE: favour ${angleHint} — but always match the spirit of THIS post.\n` +
+      `Return STRICT JSON with exactly these keys: kicker, headline, accentWord, accent, subtitle, cta. No commentary.`;
     const userMsg = `The post to adapt into a visual:\n${intent}${brand ? `\nBrand name: ${brand}` : ""}`;
 
     const completion = (await openai.chat.completions.create({
@@ -119,6 +121,12 @@ export async function POST(req: NextRequest) {
     // (ex. "4,2 %" sorti de nulle part). Les accents sans chiffre passent.
     const accentDigitGroups = accent.match(/\d+/g) ?? [];
     if (accentDigitGroups.some((d) => !intent.includes(d))) {
+      accent = "";
+    }
+    // Anti-DOUBLON de chiffre : si le titre contient déjà un nombre, on NE
+    // montre PAS le badge accent (sinon le même chiffre apparaît 2× — défaut
+    // signalé par Béné). Le chiffre reste là où l'IA l'a mis (le titre).
+    if (accent && /\d/.test(headline)) {
       accent = "";
     }
     // L'accentWord doit être un VRAI extrait du titre (sinon impossible de le
