@@ -15,7 +15,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Megaphone, Wallet, CreditCard, HelpCircle,
+  LayoutDashboard, Megaphone, Library, HelpCircle,
   LogOut, Gift, Menu, X,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -25,16 +25,15 @@ import { LocaleSwitcher } from "./LocaleSwitcher";
 
 type NavItem = {
   href: string;
-  key: "overview" | "promouvoir" | "trial" | "revenus" | "paiement" | "support";
+  key: "overview" | "promouvoir" | "contenus" | "trial" | "support";
   icon: React.ComponentType<{ className?: string }>;
 };
 
 const NAV: NavItem[] = [
   { href: "/", key: "overview", icon: LayoutDashboard },
   { href: "/promouvoir", key: "promouvoir", icon: Megaphone },
+  { href: "/contenus", key: "contenus", icon: Library },
   { href: "/trial-tipote", key: "trial", icon: Gift },
-  { href: "/revenus", key: "revenus", icon: Wallet },
-  { href: "/paiement", key: "paiement", icon: CreditCard },
   { href: "/support", key: "support", icon: HelpCircle },
 ];
 

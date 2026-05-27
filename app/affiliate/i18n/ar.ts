@@ -32,7 +32,8 @@ export const AR: AffiliateDict = {
   nav: {
     overview: "نظرة عامة",
     promouvoir: "الترويج",
-    trial: "تجربة Tipote",
+    contenus: "المحتوى",
+    trial: "تجربة مجانية",
     revenus: "الأرباح",
     paiement: "الدفع",
     support: "الدعم",

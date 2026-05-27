@@ -32,7 +32,8 @@ export const FR: AffiliateDict = {
   nav: {
     overview: "Vue d'ensemble",
     promouvoir: "Promouvoir",
-    trial: "Trial Tipote",
+    contenus: "Contenus",
+    trial: "Essai gratuit",
     revenus: "Revenus",
     paiement: "Paiement",
     support: "Support",

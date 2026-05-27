@@ -31,7 +31,8 @@ export const PT: AffiliateDict = {
   nav: {
     overview: "Visão geral",
     promouvoir: "Promover",
-    trial: "Teste Tipote",
+    contenus: "Conteúdos",
+    trial: "Teste grátis",
     revenus: "Ganhos",
     paiement: "Pagamento",
     support: "Suporte",

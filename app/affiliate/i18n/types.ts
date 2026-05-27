@@ -41,6 +41,7 @@ export type AffiliateDict = {
   nav: {
     overview: string;
     promouvoir: string;
+    contenus: string;
     trial: string;
     revenus: string;
     paiement: string;
