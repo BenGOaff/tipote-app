@@ -14,7 +14,7 @@
 // un PNG pleine résolution.
 
 import { useEffect, useRef } from "react";
-import { Canvas, Textbox, Rect, FabricImage, Gradient, cache } from "fabric";
+import { Canvas, Textbox, Rect, FabricImage, Gradient, cache, filters } from "fabric";
 import type { FabricObject } from "fabric";
 import { fontStackFor, DISPLAY_HEADING_STACK } from "@/lib/visualStudio/presets";
 import type {
@@ -92,11 +92,13 @@ export interface StudioCanvasHandle {
   /** Surligne un extrait du titre dans la couleur de marque (mot d'accent).
    *  `word` doit être un sous-texte exact du titre ; "" enlève le surlignage. */
   highlightHeadline: (word: string) => void;
-  /** Gabarit de rendu : "auto" = texte (centré/éditorial/carte), "data" =
-   *  visualisation de données (barres comparatives). */
-  setTemplate: (template: "auto" | "data") => void;
+  /** Gabarit de rendu : "auto" = texte, "data" = barres comparatives,
+   *  "beforeAfter" = deux panneaux avant/après. */
+  setTemplate: (template: "auto" | "data" | "beforeAfter") => void;
   /** Jeu de données pour le gabarit "data" (barres). */
   setStats: (stats: ChartStat[]) => void;
+  /** Phrases avant/après pour le gabarit "beforeAfter". */
+  setBeforeAfter: (before: string, after: string) => void;
 }
 
 /** Donnée chiffrée pour le gabarit data-viz : libellé + valeur affichée
@@ -119,6 +121,9 @@ interface StudioCanvasProps {
   /** Côté à assombrir EN PLUS (voile horizontal adaptatif) quand le fond a une
    *  moitié nettement plus claire que l'autre. "none" = pas de voile latéral. */
   scrimSide?: "left" | "right" | "none";
+  /** Traitement du fond image : "mono" = noir & blanc éditorial (réf TDAH),
+   *  appliqué aux photos de personne générées. "none" = couleur d'origine. */
+  bgTreatment?: "none" | "mono";
   initialText?: Partial<Record<TextLayerId, string>>;
   onSelectionChange: (info: SelectionInfo | null) => void;
   onReady?: (handle: StudioCanvasHandle) => void;
@@ -135,6 +140,7 @@ export function StudioCanvas({
   showLogo,
   scrim = "none",
   scrimSide = "none",
+  bgTreatment = "none",
   initialText,
   onSelectionChange,
   onReady,
@@ -321,8 +327,10 @@ export function StudioCanvas({
     let curSide: "left" | "right" | "full" = "full";
     // Gabarit + données (data-viz) + couleur de texte courante (pour les
     // libellés du graphe).
-    let curTemplate: "auto" | "data" = "auto";
+    let curTemplate: "auto" | "data" | "beforeAfter" = "auto";
     let curStats: ChartStat[] = [];
+    let curBefore = "";
+    let curAfter = "";
     let curTextColor = brand.textColor;
     // Gabarit courant : centré (hero), aligné à gauche (éditorial), ou carte
     // (panneau semi-opaque derrière le texte → contraste parfait).
@@ -812,9 +820,119 @@ export function StudioCanvas({
       cc.requestRenderAll();
     };
 
-    // Dispatcher : choisit le gabarit data-viz si des données sont présentes.
+    // ── Gabarit AVANT/APRÈS : titre en haut, DEUX panneaux contrastés (Avant
+    // sombre ✕ / marque ✓), bouton CTA en bas. Le contraste raconte la
+    // transformation (réf avant/après). Reproductible sur tous les formats.
+    const layoutBeforeAfter = () => {
+      const cc = fcRef.current;
+      if (!cc) return;
+      const W = dimsRef.current.w;
+      const H = dimsRef.current.h;
+      const padX = 0.08 * W;
+      const boxW = W - 2 * padX;
+      const maxLine = boxW * 0.96;
+      if (decorObjs.length) { decorObjs.forEach((d) => cc.remove(d)); decorObjs = []; }
+
+      const get = (id: string) => cc.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined;
+      get("accent")?.set({ text: "" });
+      get("subline")?.set({ text: "" }); // les panneaux portent le message
+
+      const MAXL: Record<string, number> = { kicker: 1, headline: 3, cta: 1 };
+      const prep = (id: string): Textbox | undefined => {
+        const o = get(id);
+        if (!o || !String(o.text ?? "").trim()) return undefined;
+        o.set({ left: padX, width: boxW, textAlign: "center" });
+        const frac = BASE_FONT_FRAC[id];
+        if (frac) o.set({ fontSize: frac * W });
+        fitToWidth(o, maxLine, id === "kicker");
+        for (let p = 0; p < 4; p++) { o.initDimensions(); const lw = longestLineWidth(o); if (lw <= maxLine) break; o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * (maxLine / lw)) }); }
+        const maxl = MAXL[id];
+        if (maxl) for (let p = 0; p < 6; p++) { o.initDimensions(); const lines = (o as unknown as { textLines?: string[] }).textLines?.length ?? 1; if (lines <= maxl) break; o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * 0.92) }); }
+        o.initDimensions();
+        return o;
+      };
+      const kicker = prep("kicker");
+      const headline = prep("headline");
+      const cta = prep("cta");
+
+      const chip = (o: Textbox, padHk: number, padVk: number, radius: number, fill: string) => {
+        o.initDimensions();
+        const tw = longestLineWidth(o), hh = o.getScaledHeight();
+        const padH = padHk * hh, padV = padVk * hh;
+        const bw = Math.min(tw + 2 * padH, W - 2 * padX), bh = hh + 2 * padV;
+        const r = new Rect({ left: W / 2 - bw / 2, top: (o.top ?? 0) - padV, width: bw, height: bh, rx: radius * bh, ry: radius * bh, fill, selectable: false, evented: false, objectCaching: false });
+        (r as { layerId?: string }).layerId = undefined; cc.add(r); decorObjs.push(r);
+      };
+      const mkText = (text: string, width: number, size: number, weight: string, fill: string, family?: string, spacing?: number) => {
+        const t = new Textbox(text, { left: 0, top: 0, width, fontSize: size, textAlign: "left", fill, fontWeight: weight, fontFamily: family ?? 'Montserrat, "Helvetica Neue", Arial, sans-serif', charSpacing: spacing ?? 0, selectable: false, evented: false, objectCaching: false, lineHeight: 1.12 });
+        (t as { layerId?: string }).layerId = undefined; cc.add(t); decorObjs.push(t);
+        t.initDimensions();
+        return t;
+      };
+
+      // Groupe haut : kicker (pilule) + titre.
+      let yT = 0.07 * H;
+      if (kicker) {
+        const kpadV = 0.34 * kicker.getScaledHeight();
+        kicker.set({ top: yT + kpadV }); kicker.setCoords();
+        chip(kicker, 0.7, 0.34, 0.5, brand.primaryColor);
+        kicker.set({ fill: "#ffffff", shadow: "" });
+        yT = (kicker.top ?? 0) + kicker.getScaledHeight() + kpadV + 0.02 * H;
+      }
+      if (headline) { headline.set({ top: yT }); headline.setCoords(); yT += headline.getScaledHeight(); }
+      const topBottom = yT;
+
+      // CTA bouton en bas.
+      let ctaTop = H - 0.07 * H;
+      if (cta) {
+        const cpadV = 0.32 * cta.getScaledHeight();
+        cta.set({ top: H - 0.07 * H - cta.getScaledHeight() - cpadV }); cta.setCoords();
+        cta.set({ textBackgroundColor: "" });
+        chip(cta, 0.6, 0.32, 0.5, brand.primaryColor);
+        cta.set({ fill: "#ffffff", shadow: "" });
+        ctaTop = (cta.top ?? 0) - cpadV;
+      }
+
+      // Deux panneaux entre les deux groupes.
+      const innerPadX = 0.045 * W, innerPadY = 0.028 * W, tagGap = 0.012 * H;
+      const sides = [
+        { tag: "✕  AVANT", text: curBefore, fill: "rgba(2,6,23,0.55)", tagFill: "#fca5a5" },
+        { tag: "✓  " + (brand.name ? brand.name.toUpperCase() : "APRÈS"), text: curAfter, fill: brand.primaryColor, tagFill: "#ffffff" },
+      ];
+      const built = sides.map((s) => {
+        const tag = mkText(s.tag, boxW - 2 * innerPadX, 0.024 * W, "800", s.tagFill, undefined, 60);
+        const body = mkText(s.text, boxW - 2 * innerPadX, 0.044 * W, "700", "#ffffff");
+        for (let p = 0; p < 5; p++) { body.initDimensions(); const lines = (body as unknown as { textLines?: string[] }).textLines?.length ?? 1; if (lines <= 3) break; body.set({ fontSize: Math.max(8, (body.fontSize ?? 20) * 0.92) }); }
+        body.initDimensions();
+        const h = innerPadY * 2 + tag.getScaledHeight() + tagGap + body.getScaledHeight();
+        return { s, tag, body, h };
+      });
+      const gapP = 0.025 * H;
+      const totalP = built.reduce((a, b) => a + b.h, 0) + gapP;
+      let py = Math.max(topBottom + 0.04 * H, (topBottom + 0.04 * H + ctaTop - 0.03 * H) / 2 - totalP / 2);
+      built.forEach(({ s, tag, body, h }) => {
+        const rect = new Rect({ left: padX, top: py, width: boxW, height: h, rx: 0.03 * W, ry: 0.03 * W, fill: s.fill, selectable: false, evented: false, objectCaching: false });
+        (rect as { layerId?: string }).layerId = undefined; cc.add(rect); decorObjs.push(rect);
+        tag.set({ left: padX + innerPadX, top: py + innerPadY }); tag.setCoords();
+        body.set({ left: padX + innerPadX, top: py + innerPadY + tag.getScaledHeight() + tagGap }); body.setCoords();
+        py += h + gapP;
+      });
+
+      applyHeadlineAccent();
+      // Z-order : panneaux/textes au-dessus du fond+voiles. Les rects de
+      // panneau sont créés AVANT leurs textes → restent derrière eux après
+      // sendToBack (et les panneaux ne se chevauchent pas spatialement).
+      decorObjs.forEach((d) => cc.sendObjectToBack(d));
+      if (scrimSideRef.current) cc.sendObjectToBack(scrimSideRef.current);
+      if (scrimRef.current) cc.sendObjectToBack(scrimRef.current);
+      if (bgRef.current) cc.sendObjectToBack(bgRef.current);
+      cc.requestRenderAll();
+    };
+
+    // Dispatcher : choisit le gabarit selon le template + données disponibles.
     const render = () => {
       if (curTemplate === "data" && curStats.length >= 2) layoutData();
+      else if (curTemplate === "beforeAfter" && curBefore && curAfter) layoutBeforeAfter();
       else layout();
     };
 
@@ -993,11 +1111,16 @@ export function StudioCanvas({
         layoutNow();
       },
       setTemplate(template) {
-        curTemplate = template === "data" ? "data" : "auto";
+        curTemplate = template === "data" || template === "beforeAfter" ? template : "auto";
         layoutNow();
       },
       setStats(stats) {
         curStats = Array.isArray(stats) ? stats.slice(0, 4) : [];
+        layoutNow();
+      },
+      setBeforeAfter(before, after) {
+        curBefore = (before ?? "").trim();
+        curAfter = (after ?? "").trim();
         layoutNow();
       },
       setHeadingFont(stack) {
@@ -1111,6 +1234,12 @@ export function StudioCanvas({
             left: (displayWidth - img.width * scale) / 2,
             top: (displayHeight - img.height * scale) / 2,
           });
+          // N&B éditorial (réf TDAH) : grayscale + léger contraste sur les
+          // photos de personne → look premium et cohérent, texte plus lisible.
+          if (bgTreatment === "mono") {
+            img.filters = [new filters.Grayscale(), new filters.Contrast({ contrast: 0.12 })];
+            img.applyFilters();
+          }
           place(img);
         })
         .catch(() => {});
@@ -1137,7 +1266,7 @@ export function StudioCanvas({
     return () => {
       cancelled = true;
     };
-  }, [background, displayWidth, displayHeight]);
+  }, [background, displayWidth, displayHeight, bgTreatment]);
 
   // ── Voile de contraste (lisibilité du texte sur fond photo/IA) ──
   // Deux couches possibles, JUSTE au-dessus du fond, sous le texte :
