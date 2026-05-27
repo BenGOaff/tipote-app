@@ -306,7 +306,7 @@ export function StudioCanvas({
     // en FRACTION de la largeur → recalculée à chaque format.
     const LAYOUT_ORDER: string[] = ["kicker", "headline", "accent", "subline", "cta"];
     const BASE_FONT_FRAC: Record<string, number> = {
-      kicker: 0.026, headline: 0.1, accent: 0.105, subline: 0.04, cta: 0.045,
+      kicker: 0.026, headline: 0.092, accent: 0.105, subline: 0.04, cta: 0.045,
     };
     // Canvas détaché pour mesurer la largeur du texte (ctx.measureText).
     const measureCtx = (typeof document !== "undefined"
@@ -1003,9 +1003,14 @@ export function StudioCanvas({
       setHeadingFont(stack) {
         const c = fcRef.current;
         if (!c) return;
+        // Graisse par police : les fontes déjà "black"/condensées (Archivo
+        // Black, Anton, Bebas) NE doivent PAS recevoir de gras (fabric génère
+        // un faux-gras illisible). Les autres prennent un vrai 800.
+        const fam = stack.toLowerCase();
+        const weight = /archivo black|anton|bebas|impact/.test(fam) ? "normal" : "800";
         c.getObjects().forEach((o) => {
           const id = (o as { layerId?: string }).layerId;
-          if (id === "headline" || id === "accent") o.set({ fontFamily: stack });
+          if (id === "headline" || id === "accent") o.set({ fontFamily: stack, fontWeight: weight });
         });
         layoutNow();
       },
