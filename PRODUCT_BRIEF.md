@@ -189,6 +189,15 @@ Variations à utiliser selon le canal :
 - **Auto-tracking de la commission** via le paramètre `?sa=<id>` quand l'user a posé son ID affilié Systeme.io dans Settings → Connexions
 - **Embed iframe** des popquiz inclut aussi le footer (visible chez les hôtes externes — vraie portée Tiquiz)
 
+### 7.8 bis. Dashboard du programme d'affiliation (`affiliate.tipote.com`)
+Espace dédié aux affiliés qui promeuvent Tiquiz / Tipote. Pensé pour qu'un affilié soit **autonome et opérationnel en quelques minutes**, sans rien rédiger lui-même.
+- **Vue d'ensemble** : lien d'affiliation, gains, progression.
+- **Promouvoir** : liens trackés **éditables** (l'affilié ajoute / modifie / supprime ses propres destinations ; le `?sa=` est ajouté automatiquement).
+- **Contenus** prêts à copier-coller : **emails**, **posts réseaux** (Instagram / LinkedIn / X), **articles**, **visuels** — tout est éditable et personnalisable par l'affilié (son lien et son prénom sont injectés automatiquement).
+- **Studio visuels IA intégré** : depuis chaque post, l'affilié génère en 1 clic un visuel pro. L'IA **lit le post**, choisit le bon angle, le bon format (texte, comparatif chiffré, avant/après) et l'image qui collent au contenu. Le visuel **s'accroche automatiquement au post** — l'affilié voit son contenu et ses visuels associés au même endroit.
+- **Essai gratuit** : 1 mois Tipote Elite offert pour tester l'outil et créer du contenu de promo authentique.
+- **Gestion 100 % autonome côté éditeur (Béné)** : un espace admin permet d'ajouter / éditer / publier articles, emails, posts et visuels à tout moment, sans dépendre du code. Les affiliés voient le contenu mis à jour automatiquement.
+
 ### 7.9. Sécurité & alertes connexions sociales
 - **Email immédiat** quand un compte social (LinkedIn / Facebook / IG / X / TikTok / Pinterest / Threads) se déconnecte (token révoqué, expiré, mot de passe changé)
 - **Email** quand un post programmé bascule en échec après 5 tentatives — avec aperçu du post et lien direct vers l'éditeur pour le reprogrammer
