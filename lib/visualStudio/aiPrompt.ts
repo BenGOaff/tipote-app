@@ -58,12 +58,15 @@ const STYLE_BY_ID: Record<AiStyleId, (typeof AI_STYLES)[number]> =
 /** Police de TITRE (+ accent) adaptée au thème/style choisi. Demande Béné :
  *  personne→Montserrat, minimaliste→Roboto, spatial→Anton, etc. Stacks CSS
  *  complètes (cf. FONT_OPTIONS / layout Google Fonts). */
+// Police de TITRE par style. PLUS d'Anton (mono-graisse condensée → "fausse"
+// graisse illisible). On varie entre serif éditorial (Playfair) et sans heavy
+// lisible (Archivo Black / Montserrat). La GRAISSE est gérée par police côté
+// canvas (setHeadingFont) pour éviter tout gras synthétique.
 export const STYLE_HEADING_FONT: Record<AiStyleId, string> = {
   photoPerson: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
-  landscape: 'Anton, "Arial Narrow", Impact, sans-serif',
-  // minimal & abstract → serif display éditorial (look "magazine", réf Claude).
-  abstract: '"Playfair Display", Georgia, serif',
-  space: 'Anton, "Arial Narrow", Impact, sans-serif',
+  landscape: '"Playfair Display", Georgia, serif',
+  abstract: '"Archivo Black", Arial, sans-serif',
+  space: '"Archivo Black", Arial, sans-serif',
   minimal: '"Playfair Display", Georgia, serif',
 };
 

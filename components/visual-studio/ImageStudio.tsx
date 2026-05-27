@@ -123,11 +123,13 @@ export function ImageStudio({
   // Génération de fond IA (le texte reste un calque éditeur, jamais l'IA).
   const [aiIntent, setAiIntent] = useState("");
   const [aiStyle, setAiStyle] = useState<AiStyleId>("photoPerson");
-  // Gabarit : "auto" = texte (centré/éditorial/carte), "data" = data-viz (barres).
-  const [template, setTemplate] = useState<"auto" | "data">("auto");
+  // Gabarit : "auto" = texte, "data" = data-viz (barres), "beforeAfter" = 2 panneaux.
+  const [template, setTemplate] = useState<"auto" | "data" | "beforeAfter">("auto");
   const [visualBusy, setVisualBusy] = useState(false);
   const [scrim, setScrim] = useState<"none" | "dark" | "light">("none");
   const [scrimSide, setScrimSide] = useState<"left" | "right" | "none">("none");
+  // N&B éditorial sur les photos de personne générées (réf TDAH).
+  const [bgTreatment, setBgTreatment] = useState<"none" | "mono">("none");
 
   const handleRef = useRef<StudioCanvasHandle | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -178,6 +180,7 @@ export function ImageStudio({
     setScrim("none");
     setScrimSide("none");
     setTemplate("auto");
+    setBgTreatment("none");
     genCountRef.current = 0;
     setAiIntent(initialIntent ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -234,6 +237,7 @@ export function ImageStudio({
     }
     const url = URL.createObjectURL(file);
     objectUrlsRef.current.push(url);
+    setBgTreatment("none"); // upload utilisateur → on garde la couleur d'origine
     setBackground((b) => ({ ...b, mode: "image", imageUrl: url }));
   }
 
@@ -255,9 +259,9 @@ export function ImageStudio({
     genCountRef.current += 1;
     const gen = genCountRef.current;
     const angle = COPY_ANGLES[(gen - 1) % COPY_ANGLES.length];
-    // En data-viz, le fond reste SOBRE (abstrait/dégradé) pour ne pas brouiller
-    // les barres — une photo de personne derrière un graphe = illisible.
-    const bgStyle: AiStyleId = template === "data" ? "abstract" : aiStyle;
+    // Data-viz & avant/après : fond SOBRE (abstrait) pour ne pas brouiller les
+    // barres / panneaux. Mode texte : le style choisi par l'user.
+    const bgStyle: AiStyleId = template === "auto" ? aiStyle : "abstract";
     let anyOk = false;
     try {
       const [copy, bg] = await Promise.all([
@@ -285,16 +289,21 @@ export function ImageStudio({
         h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
-        // Gabarit data-viz si l'user l'a choisi ET que le post a ≥2 chiffres
-        // comparables réels ; sinon repli sur le texte (avec un mot d'info).
+        // Gabarit spécialisé si l'user l'a choisi ET que le post fournit la
+        // matière ; sinon repli propre sur le mode texte (avec un mot d'info).
         const stats = Array.isArray(copy.stats) ? copy.stats : [];
-        const useData = template === "data" && stats.length >= 2;
-        if (useData) {
+        const before = String(copy.before ?? "").trim();
+        const after = String(copy.after ?? "").trim();
+        if (template === "data" && stats.length >= 2) {
           h.setStats(stats);
           h.setTemplate("data");
+        } else if (template === "beforeAfter" && before && after) {
+          h.setBeforeAfter(before, after);
+          h.setTemplate("beforeAfter");
         } else {
           h.setTemplate("auto");
           if (template === "data") toast("Pas de chiffres comparables dans ce post — rendu en mode texte.");
+          if (template === "beforeAfter") toast("Pas d'avant/après clair dans ce post — rendu en mode texte.");
         }
         // Gabarit alterné à chaque génération (centré → éditorial → carte) pour
         // que des posts successifs ne se ressemblent pas (mode texte uniquement).
@@ -311,6 +320,8 @@ export function ImageStudio({
         // Analyse l'image générée → place le texte dans la bande la plus
         // propre + couleur + voile adaptés (au lieu de deviner à l'aveugle).
         const placement = await analyzeForText(String(bg.dataUrl)).catch(() => null);
+        // Photos de personne → N&B éditorial (réf TDAH). Autres styles : couleur.
+        setBgTreatment(bgStyle === "photoPerson" ? "mono" : "none");
         setBackground((b) => ({ ...b, mode: "image", imageUrl: String(bg.dataUrl) }));
         if (placement) {
           setScrim(placement.scrim);
@@ -409,9 +420,9 @@ export function ImageStudio({
                     ))}
                   </div>
                 )}
-                {/* Gabarit : texte (auto) ou data-viz (barres comparatives). */}
-                <div className="flex gap-1.5">
-                  {([["auto", "Visuel texte"], ["data", "Comparatif chiffré"]] as const).map(([id, label]) => (
+                {/* Gabarit : texte / data-viz (barres) / avant-après (2 panneaux). */}
+                <div className="flex flex-wrap gap-1.5">
+                  {([["auto", "Visuel texte"], ["data", "Comparatif chiffré"], ["beforeAfter", "Avant / après"]] as const).map(([id, label]) => (
                     <button
                       key={id}
                       type="button"
@@ -429,6 +440,11 @@ export function ImageStudio({
                 {template === "data" && (
                   <p className="text-[11px] text-muted-foreground">
                     Compare 2 à 4 chiffres réels du post (ex. 9 € vs 50 €). Sans chiffres comparables, on repasse en visuel texte.
+                  </p>
+                )}
+                {template === "beforeAfter" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Deux panneaux : l&apos;avant (la galère) vs l&apos;après (avec {brandKit.name}). Sans contraste clair, on repasse en visuel texte.
                   </p>
                 )}
                 <Button type="button" className="w-full" onClick={generateVisual} disabled={visualBusy}>
@@ -591,6 +607,7 @@ export function ImageStudio({
                   showLogo={showLogo}
                   scrim={scrim}
                   scrimSide={scrimSide}
+                  bgTreatment={bgTreatment}
                   initialText={initialText}
                   onSelectionChange={onSelectionChange}
                   onReady={onCanvasReady}

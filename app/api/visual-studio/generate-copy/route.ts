@@ -68,6 +68,10 @@ export async function POST(req: NextRequest) {
     const statsClause = wantStats
       ? `\nDATA: also return "stats" — an array of 2 to 4 comparable items to chart, taken ONLY from REAL figures in the post. Each item: {"label": 1-2 word category (e.g. "Tiquiz", "Typeform"), "display": the figure EXACTLY as in the post (e.g. "9 €", "50 €"), "value": its numeric magnitude as a number (e.g. 9, 50) for the bar height}. If the post has no 2+ comparable real figures, return "stats": []. In data mode set "accent" to "" (the chart shows the figures).`
       : "";
+    const wantBA = body.template === "beforeAfter";
+    const baClause = wantBA
+      ? `\nBEFORE/AFTER: also return "before" and "after" — two short HONEST phrases (max ~7 words each). "before" = the painful old way / status quo (no brand name, concrete pain). "after" = how it is with the product (concrete gain). No hype, no invented numbers. They must contrast clearly. In before/after mode set "accent" to "".`
+      : "";
 
     const system =
       `You write ONE French social-ad visual in the voice of a no-bullshit SaaS founder. From the post, find its ONE main argument and the single strongest REAL figure it contains (price, %, duration…). Goal: stop the scroll, make people want to read the post.\n` +
@@ -81,8 +85,8 @@ export async function POST(req: NextRequest) {
       `- kicker: OPTIONAL 1-3 word tag with real tension or proof (e.g. "TESTÉ", "SANS CB"). NEVER a flat category ("Prix", "Comparatif", "SaaS", "Tarification"). "" if nothing punchy.\n` +
       `- accentWord: 1-3 words copied VERBATIM from headline to highlight (exact substring, not the whole headline). "" if headline is short.\n` +
       `- cta: natural 2-4 word action in ${lang}, grammatically correct (e.g. "Tester gratuitement", "Commencer maintenant").\n` +
-      `HEADLINE ANGLE: favour ${angleHint} — but always match the spirit of THIS post.${statsClause}\n` +
-      `Return STRICT JSON with exactly these keys: kicker, headline, accentWord, accent, subtitle, cta${wantStats ? ", stats" : ""}. No commentary.`;
+      `HEADLINE ANGLE: favour ${angleHint} — but always match the spirit of THIS post.${statsClause}${baClause}\n` +
+      `Return STRICT JSON with exactly these keys: kicker, headline, accentWord, accent, subtitle, cta${wantStats ? ", stats" : ""}${wantBA ? ", before, after" : ""}. No commentary.`;
     const userMsg = `The post to adapt into a visual:\n${intent}${brand ? `\nBrand name: ${brand}` : ""}`;
 
     const completion = (await openai.chat.completions.create({
@@ -162,10 +166,15 @@ export async function POST(req: NextRequest) {
     }
     if (stats.length) accent = ""; // le graphe porte les chiffres, pas le badge
 
+    // Avant/après : deux phrases honnêtes contrastées.
+    const before = wantBA ? String(parsed.before ?? "").trim().slice(0, 90) : "";
+    const after = wantBA ? String(parsed.after ?? "").trim().slice(0, 90) : "";
+    if (before && after) accent = "";
+
     if (!headline && !subtitle && !cta) {
       return NextResponse.json({ ok: false, error: "Aucun texte généré" }, { status: 502 });
     }
-    return NextResponse.json({ ok: true, kicker, headline, accentWord, accent, subtitle, cta, stats });
+    return NextResponse.json({ ok: true, kicker, headline, accentWord, accent, subtitle, cta, stats, before, after });
   } catch (e) {
     console.error("[visual-studio/generate-copy] error:", e);
     const msg = e instanceof Error ? e.message : "Erreur inconnue";
