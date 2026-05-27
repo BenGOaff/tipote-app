@@ -15,6 +15,8 @@
 // n'importe quel sa avec un email random.
 
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { getAffiliateSession } from "@/lib/affiliate/session";
 import SignupClient from "./SignupClient";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +29,13 @@ function LoadingUI() {
   );
 }
 
-export default function AffiliateSignupPage() {
+export default async function AffiliateSignupPage() {
+  // Déjà connecté → déjà affilié : pas d'écran d'inscription, et pas de
+  // sidebar (le layout l'ajoute dès qu'une session existe). On renvoie
+  // vers le dashboard.
+  const session = await getAffiliateSession();
+  if (session) redirect("/");
+
   return (
     <Suspense fallback={<LoadingUI />}>
       <SignupClient />
