@@ -298,7 +298,7 @@ export function ImageStudio({
         if (placement) {
           setScrim(placement.scrim);
           setScrimSide(placement.brighterSide);
-          handleRef.current?.setTextPlacement(placement.anchor, placement.textColor);
+          handleRef.current?.setTextPlacement(placement.anchor, placement.textColor, placement.textSide);
         } else {
           setScrim("dark");
           setScrimSide("none");
