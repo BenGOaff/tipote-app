@@ -123,6 +123,8 @@ export function ImageStudio({
   // Génération de fond IA (le texte reste un calque éditeur, jamais l'IA).
   const [aiIntent, setAiIntent] = useState("");
   const [aiStyle, setAiStyle] = useState<AiStyleId>("photoPerson");
+  // Gabarit : "auto" = texte (centré/éditorial/carte), "data" = data-viz (barres).
+  const [template, setTemplate] = useState<"auto" | "data">("auto");
   const [visualBusy, setVisualBusy] = useState(false);
   const [scrim, setScrim] = useState<"none" | "dark" | "light">("none");
   const [scrimSide, setScrimSide] = useState<"left" | "right" | "none">("none");
@@ -175,6 +177,7 @@ export function ImageStudio({
     setSelection(null);
     setScrim("none");
     setScrimSide("none");
+    setTemplate("auto");
     genCountRef.current = 0;
     setAiIntent(initialIntent ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -252,20 +255,23 @@ export function ImageStudio({
     genCountRef.current += 1;
     const gen = genCountRef.current;
     const angle = COPY_ANGLES[(gen - 1) % COPY_ANGLES.length];
+    // En data-viz, le fond reste SOBRE (abstrait/dégradé) pour ne pas brouiller
+    // les barres — une photo de personne derrière un graphe = illisible.
+    const bgStyle: AiStyleId = template === "data" ? "abstract" : aiStyle;
     let anyOk = false;
     try {
       const [copy, bg] = await Promise.all([
         fetch("/api/visual-studio/generate-copy", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ intent, locale, brandName: brandKit.name, angle }),
+          body: JSON.stringify({ intent, locale, brandName: brandKit.name, angle, template }),
         })
           .then((r) => r.json())
           .catch(() => ({})),
         fetch("/api/visual-studio/generate-background", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ intent, style: aiStyle, ratio, brandColors }),
+          body: JSON.stringify({ intent, style: bgStyle, ratio, brandColors }),
         })
           .then((r) => r.json())
           .catch(() => ({})),
@@ -279,8 +285,19 @@ export function ImageStudio({
         h.setLayerText("accent", copy.accent ? String(copy.accent) : "");
         if (copy.subtitle) h.setLayerText("subline", String(copy.subtitle));
         if (copy.cta) h.setLayerText("cta", String(copy.cta));
+        // Gabarit data-viz si l'user l'a choisi ET que le post a ≥2 chiffres
+        // comparables réels ; sinon repli sur le texte (avec un mot d'info).
+        const stats = Array.isArray(copy.stats) ? copy.stats : [];
+        const useData = template === "data" && stats.length >= 2;
+        if (useData) {
+          h.setStats(stats);
+          h.setTemplate("data");
+        } else {
+          h.setTemplate("auto");
+          if (template === "data") toast("Pas de chiffres comparables dans ce post — rendu en mode texte.");
+        }
         // Gabarit alterné à chaque génération (centré → éditorial → carte) pour
-        // que des posts successifs ne se ressemblent pas.
+        // que des posts successifs ne se ressemblent pas (mode texte uniquement).
         h.setAlign((["center", "left", "card"] as const)[(gen - 1) % 3]);
         // Police de titre adaptée au thème (personne→Montserrat, spatial→Anton…)
         // + re-fit/empilement de la nouvelle copy dans la safe-zone.
@@ -374,22 +391,46 @@ export function ImageStudio({
                   rows={3}
                   className="w-full resize-none rounded-md border bg-background px-2.5 py-2 text-xs outline-none focus:border-primary"
                 />
-                <div className="flex flex-wrap gap-1.5">
-                  {AI_STYLES.map((s) => (
+                {template === "auto" && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {AI_STYLES.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setAiStyle(s.id)}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                          aiStyle === s.id
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {t(s.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {/* Gabarit : texte (auto) ou data-viz (barres comparatives). */}
+                <div className="flex gap-1.5">
+                  {([["auto", "Visuel texte"], ["data", "Comparatif chiffré"]] as const).map(([id, label]) => (
                     <button
-                      key={s.id}
+                      key={id}
                       type="button"
-                      onClick={() => setAiStyle(s.id)}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
-                        aiStyle === s.id
+                      onClick={() => setTemplate(id)}
+                      className={`flex-1 rounded-md border px-2 py-1.5 text-[11px] transition-colors ${
+                        template === id
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
-                      {t(s.labelKey)}
+                      {label}
                     </button>
                   ))}
                 </div>
+                {template === "data" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Compare 2 à 4 chiffres réels du post (ex. 9 € vs 50 €). Sans chiffres comparables, on repasse en visuel texte.
+                  </p>
+                )}
                 <Button type="button" className="w-full" onClick={generateVisual} disabled={visualBusy}>
                   {visualBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
                   {visualBusy ? t("aiGenerating") : background.imageUrl ? t("aiVariant") : t("aiGenerateVisual")}
