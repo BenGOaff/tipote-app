@@ -6,12 +6,21 @@
 // défaut quand la liste est vide.
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Check, X, Eye, EyeOff, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Eye, EyeOff, Download, Type } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ArticleEditorModal } from "@/components/create/forms/ArticleEditorModal";
+import { sanitizeRichText, stripHtml } from "@/lib/richText";
+
+// Un corps d'article est stocké en HTML (mis en forme via l'éditeur). On
+// détecte la présence d'une balise de bloc/inline pour savoir s'il faut le
+// rendre comme HTML ou retomber sur du texte brut (rétro-compat).
+function looksLikeHtml(s: string | null | undefined): boolean {
+  return !!s && /<(p|h[1-4]|strong|b|em|u|ul|ol|li|a|br|div|span)\b[^>]*>/i.test(s);
+}
 
 export type ContentItem = {
   id: string;
@@ -37,10 +46,12 @@ export function ContentAdmin({
   seedable?: boolean;
 }) {
   const isEmail = kind === "email";
+  const isArticle = kind === "article";
   const [items, setItems] = useState<ContentItem[]>(initial);
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(BLANK);
   const [busy, setBusy] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   function startAdd() {
     setDraft({ ...BLANK, sort_order: items.length });
@@ -132,16 +143,36 @@ export function ContentAdmin({
           <Input value={draft.preheader} onChange={(e) => setDraft((d) => ({ ...d, preheader: e.target.value }))} placeholder="Petit texte d'aperçu" />
         </div>
       )}
-      <div className="space-y-1">
-        <Label className="text-xs">Contenu</Label>
-        <Textarea
-          value={draft.body}
-          onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
-          rows={12}
-          className="text-sm leading-relaxed"
-          placeholder={isEmail ? "Corps de l'email. {AFFILIATE_LINK} et {NAME} sont remplacés automatiquement." : "Le corps de l'article (l'affilié pourra le copier-coller)."}
-        />
-      </div>
+      {isArticle ? (
+        <div className="space-y-1">
+          <Label className="text-xs">Contenu</Label>
+          {draft.body.trim() ? (
+            <div
+              className="tipote-quiz-rich rounded-md border bg-muted/20 px-3 py-2 text-sm leading-relaxed max-h-56 overflow-y-auto"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(draft.body) }}
+            />
+          ) : (
+            <div className="rounded-md border border-dashed bg-muted/10 px-3 py-6 text-sm text-muted-foreground text-center">
+              Aucun contenu — clique sur « Éditer le contenu » pour rédiger l&apos;article.
+            </div>
+          )}
+          <Button type="button" size="sm" variant="outline" onClick={() => setEditorOpen(true)} className="mt-1">
+            <Type className="h-3.5 w-3.5 mr-1.5" />
+            Éditer le contenu (mise en forme)
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <Label className="text-xs">Contenu</Label>
+          <Textarea
+            value={draft.body}
+            onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
+            rows={12}
+            className="text-sm leading-relaxed"
+            placeholder={isEmail ? "Corps de l'email. {AFFILIATE_LINK} et {NAME} sont remplacés automatiquement." : "Le corps du contenu (l'affilié pourra le copier-coller)."}
+          />
+        </div>
+      )}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Label className="text-xs">Ordre</Label>
@@ -203,7 +234,9 @@ export function ContentAdmin({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium truncate">{it.title || "(sans titre)"}</p>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5 whitespace-pre-wrap">{it.body}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5 whitespace-pre-wrap">
+                    {isArticle ? stripHtml(it.body) : it.body}
+                  </p>
                   {!it.published && <span className="text-[11px] text-amber-600">Brouillon</span>}
                 </div>
                 <div className="flex shrink-0 gap-1">
@@ -222,6 +255,18 @@ export function ContentAdmin({
           </CardContent>
         </Card>
       ))}
+
+      {isArticle && (
+        <ArticleEditorModal
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          initialValue={draft.body}
+          initialHtml={looksLikeHtml(draft.body) ? draft.body : undefined}
+          title="Éditer l'article"
+          applyLabel="Valider la mise en forme"
+          onApply={({ html }) => setDraft((d) => ({ ...d, body: sanitizeRichText(html) }))}
+        />
+      )}
     </div>
   );
 }

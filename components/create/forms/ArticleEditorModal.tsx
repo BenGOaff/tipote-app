@@ -40,6 +40,12 @@ export type ArticleEditorModalProps = {
   /** Contenu source (souvent ton texte généré actuel). Peut être plain/markdown light (ex: **mot**). */
   initialValue: string;
 
+  /** Si fourni (et non vide), utilisé tel quel comme contenu initial de
+   *  l'éditeur — du HTML déjà mis en forme (H1/H2/gras/liens). Sinon on
+   *  convertit `initialValue` (texte / markdown light). Permet de ré-éditer
+   *  un article déjà enregistré en HTML sans que les balises soient échappées. */
+  initialHtml?: string;
+
   /** Si tu veux récupérer le résultat pour remplacer le contenu dans le formulaire (optionnel). */
   onApply?: (payload: ApplyPayload) => void;
 
@@ -145,6 +151,7 @@ export function ArticleEditorModal({
   open,
   onOpenChange,
   initialValue,
+  initialHtml: initialHtmlProp,
   onApply,
   title,
   applyLabel,
@@ -156,28 +163,31 @@ export function ArticleEditorModal({
   // On garde un state qui se met à jour dès que le div contentEditable est monté.
   const [editorEl, setEditorEl] = useState<HTMLDivElement | null>(null);
 
-  const initialHtml = useMemo(
-    () => markdownLightToHtml(initialValue),
-    [initialValue]
+  const computedHtml = useMemo(
+    () =>
+      initialHtmlProp && initialHtmlProp.trim()
+        ? initialHtmlProp
+        : markdownLightToHtml(initialValue),
+    [initialHtmlProp, initialValue]
   );
 
   const [docTitle, setDocTitle] = useState("");
   const [copied, setCopied] = useState(false);
 
   // on stocke HTML courant
-  const [html, setHtml] = useState<string>(initialHtml);
+  const [html, setHtml] = useState<string>(computedHtml);
 
   useEffect(() => {
     if (!open) return;
 
     setCopied(false);
-    setHtml(initialHtml);
+    setHtml(computedHtml);
 
     // auto-titre (optionnel) basé sur 1ère ligne
     const firstLine =
       (initialValue ?? "").split("\n").find((x) => x.trim()) ?? "";
     setDocTitle(firstLine.replace(/^#+\s+/, "").trim().slice(0, 120));
-  }, [open, initialHtml, initialValue]);
+  }, [open, computedHtml, initialValue]);
 
   // ✅ Hydrate editor content quand open + html change ET quand editorEl existe
   useEffect(() => {
@@ -470,7 +480,7 @@ export function ArticleEditorModal({
                   contentEditable
                   suppressContentEditableWarning
                   onInput={syncFromEditor}
-                  className="outline-none prose prose-sm max-w-none overflow-y-auto min-h-[200px] sm:min-h-[420px] max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-360px)]"
+                  className="tipote-quiz-rich outline-none prose prose-sm max-w-none overflow-y-auto min-h-[200px] sm:min-h-[420px] max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-360px)]"
                   style={{
                     lineHeight: "1.6",
                     fontSize: "14px",
