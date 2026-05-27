@@ -10,12 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AffiliateLinkCopy from "../components/AffiliateLinkCopy";
+import { LinksManager, type LinkItem } from "../components/LinksManager";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
 
 export const dynamic = "force-dynamic";
 
-const LINK_DESTINATIONS = [
+const LINK_DESTINATIONS: LinkItem[] = [
   {
     label: "Page Tiquiz principale",
     description: "La page d'accueil affiliation Tiquiz, recommandée par défaut.",
@@ -55,6 +57,28 @@ export default async function PromouvoirPage() {
   const t = getDict(normaliseLocale(session.locale));
   const baseLink = `https://www.tipote.fr/tiquiz/affiliation?sa=${session.sa}`;
 
+  // Liste de liens personnalisée par l'affilié (sinon les liens par défaut).
+  const { data: ov } = await supabaseAdmin
+    .from("affiliates")
+    .select("promo_overrides")
+    .eq("sa", session.sa)
+    .maybeSingle();
+  const overrides = ((ov as { promo_overrides?: Record<string, string> } | null)?.promo_overrides) ?? {};
+  let savedLinks: LinkItem[] | null = null;
+  const rawLinks = overrides["links:custom:items"];
+  if (typeof rawLinks === "string") {
+    try {
+      const parsed = JSON.parse(rawLinks);
+      if (Array.isArray(parsed)) {
+        savedLinks = parsed
+          .map((l) => ({ label: String(l?.label ?? ""), description: String(l?.description ?? ""), path: String(l?.path ?? "") }))
+          .filter((l) => l.label && l.path);
+      }
+    } catch {
+      savedLinks = null;
+    }
+  }
+
   return (
     <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
       <div>
@@ -75,30 +99,18 @@ export default async function PromouvoirPage() {
         </CardContent>
       </Card>
 
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          {t.promouvoir.tab_links}
-        </h2>
-        {LINK_DESTINATIONS.map((dest) => {
-          const url = `https://www.tipote.fr${dest.path}?sa=${session.sa}`;
-          return (
-            <Card key={dest.path}>
-              <CardContent className="pt-5 space-y-3">
-                <div>
-                  <p className="font-medium">{dest.label}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">{dest.description}</p>
-                </div>
-                <AffiliateLinkCopy url={url} />
-              </CardContent>
-            </Card>
-          );
-        })}
-        <Card className="border-dashed bg-muted/30">
-          <CardContent className="pt-5 text-sm text-muted-foreground">
-            {interpolate(t.promouvoir.links_info, { sa: session.sa })}
-          </CardContent>
-        </Card>
-      </div>
+      <LinksManager
+        sa={session.sa}
+        defaults={LINK_DESTINATIONS}
+        saved={savedLinks}
+        sectionTitle={t.promouvoir.tab_links}
+      />
+
+      <Card className="border-dashed bg-muted/30">
+        <CardContent className="pt-5 text-sm text-muted-foreground">
+          {interpolate(t.promouvoir.links_info, { sa: session.sa })}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
