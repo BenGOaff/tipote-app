@@ -16,7 +16,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Megaphone, Library, HelpCircle,
-  LogOut, Gift, Menu, X,
+  LogOut, Gift, Menu, X, ShieldCheck,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ const NAV: NavItem[] = [
   { href: "/support", key: "support", icon: HelpCircle },
 ];
 
-export function AffiliateSidebar({ displayName }: { displayName: string }) {
+export function AffiliateSidebar({ displayName, isAdmin = false }: { displayName: string; isAdmin?: boolean }) {
   const t = useDict();
   const pathname = usePathname();
   const router = useRouter();
@@ -75,6 +75,20 @@ export function AffiliateSidebar({ displayName }: { displayName: string }) {
           </Link>
         );
       })}
+      {isAdmin && (
+        <Link
+          href="/admin/contenus"
+          onClick={() => setOpen(false)}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            isActive("/admin")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <ShieldCheck className="w-5 h-5 shrink-0" />
+          <span>Admin — Contenus</span>
+        </Link>
+      )}
     </nav>
   );
 

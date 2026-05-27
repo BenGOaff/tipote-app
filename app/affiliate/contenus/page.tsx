@@ -20,6 +20,7 @@ import { signedPlaybackUrl } from "@/lib/popquiz/playback";
 import { EmailCard } from "../promouvoir/components/EmailCard";
 import { PostDayCard } from "../promouvoir/components/PostDayCard";
 import { VisualGallery } from "../promouvoir/components/VisualGallery";
+import { ArticleCard } from "../promouvoir/components/ArticleCard";
 
 import { EMAILS_FR } from "../promouvoir/content/emails-fr";
 import { POSTS_FR } from "../promouvoir/content/posts-fr";
@@ -42,6 +43,16 @@ export default async function ContenusPage() {
     .eq("sa", session.sa)
     .maybeSingle();
   const overrides = ((ov as { promo_overrides?: Record<string, string> } | null)?.promo_overrides) ?? {};
+
+  // Articles publiés par l'admin (gérés depuis /affiliate/admin/contenus).
+  const { data: articleRows } = await supabaseAdmin
+    .from("affiliate_contents")
+    .select("id, title, body")
+    .eq("kind", "article")
+    .eq("locale", "fr")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  const articles = (articleRows ?? []) as { id: string; title: string | null; body: string | null }[];
 
   // Visuels accrochés à un post : on a persisté les CHEMINS de stockage (TUS,
   // long terme) ; on re-signe une URL de lecture fraîche à chaque affichage
@@ -137,16 +148,23 @@ export default async function ContenusPage() {
         </TabsContent>
 
         <TabsContent value="articles" className="space-y-4 mt-6">
-          <Card className="border-dashed">
-            <CardContent className="pt-6 pb-6 text-center space-y-2">
-              <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
-              <p className="font-medium">Articles — bientôt</p>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Des articles prêts à publier (blog, newsletter) arrivent ici. Ils seront gérables et
-                ajoutables depuis l&apos;espace admin.
-              </p>
-            </CardContent>
-          </Card>
+          {articles.length > 0 ? (
+            <div className="space-y-3">
+              {articles.map((a) => (
+                <ArticleCard key={a.id} article={a} />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="pt-6 pb-6 text-center space-y-2">
+                <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
+                <p className="font-medium">Aucun article pour l&apos;instant</p>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Des articles prêts à publier arriveront ici dès qu&apos;ils seront ajoutés.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="visuels" className="space-y-4 mt-6">

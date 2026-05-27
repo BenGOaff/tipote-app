@@ -11,6 +11,7 @@
 
 import type { Metadata } from "next";
 import { getAffiliateSession } from "@/lib/affiliate/session";
+import { isAdminEmail } from "@/lib/adminEmails";
 import { normaliseLocale, getDict } from "./i18n";
 import { AffiliateI18nProvider } from "./i18n/context";
 import { AffiliateSidebar } from "./components/AffiliateSidebar";
@@ -56,7 +57,7 @@ export default async function AffiliateLayout({ children }: { children: React.Re
       <div dir={dir}>
         {session ? (
           <div className="min-h-screen lg:flex bg-background">
-            <AffiliateSidebar displayName={displayName} />
+            <AffiliateSidebar displayName={displayName} isAdmin={isAdminEmail(session.email)} />
             <div className="flex-1 min-w-0">{children}</div>
           </div>
         ) : (
