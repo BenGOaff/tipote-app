@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { signedPlaybackUrl } from "@/lib/popquiz/playback";
 import { EmailCard } from "../promouvoir/components/EmailCard";
 import { PostDayCard } from "../promouvoir/components/PostDayCard";
 import { VisualGallery } from "../promouvoir/components/VisualGallery";
@@ -41,6 +42,30 @@ export default async function ContenusPage() {
     .eq("sa", session.sa)
     .maybeSingle();
   const overrides = ((ov as { promo_overrides?: Record<string, string> } | null)?.promo_overrides) ?? {};
+
+  // Visuels accrochés à un post : on a persisté les CHEMINS de stockage (TUS,
+  // long terme) ; on re-signe une URL de lecture fraîche à chaque affichage
+  // (les URLs signées expirent en 2 h, pas le fichier).
+  const attachedFor = (dayId: string): { path: string; url: string }[] => {
+    const raw = overrides[`post:${dayId}:visuals`];
+    if (typeof raw !== "string") return [];
+    try {
+      const paths = JSON.parse(raw);
+      if (!Array.isArray(paths)) return [];
+      return paths
+        .filter((p): p is string => typeof p === "string" && p.length > 0)
+        .map((p) => {
+          try {
+            return { path: p, url: signedPlaybackUrl(p) };
+          } catch {
+            return null;
+          }
+        })
+        .filter((v): v is { path: string; url: string } => v !== null);
+    } catch {
+      return [];
+    }
+  };
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
@@ -100,7 +125,13 @@ export default async function ContenusPage() {
           </Card>
           <div className="space-y-3">
             {POSTS_FR.map((day) => (
-              <PostDayCard key={day.id} day={day} affiliateLink={baseLink} overrides={overrides} />
+              <PostDayCard
+                key={day.id}
+                day={day}
+                affiliateLink={baseLink}
+                overrides={overrides}
+                attachedVisuals={attachedFor(day.id)}
+              />
             ))}
           </div>
         </TabsContent>

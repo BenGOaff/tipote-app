@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Instagram, Linkedin, Download, ChevronDown, ChevronUp, Pencil, RotateCcw } from "lucide-react";
+import { Instagram, Linkedin, Download, ChevronDown, ChevronUp, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,13 +40,30 @@ export function PostDayCard({
   day,
   affiliateLink,
   overrides,
+  attachedVisuals = [],
 }: {
   day: PostDay;
   affiliateLink: string;
   overrides: Record<string, string>;
+  /** Visuels générés déjà accrochés à ce post (chemin long terme + URL signée
+   *  fraîche, re-signée côté serveur à chaque chargement). */
+  attachedVisuals?: { path: string; url: string }[];
 }) {
   const t = useDict();
   const [open, setOpen] = useState(false);
+  // Visuels accrochés au post (s'ajoutent automatiquement à la génération).
+  const [visuals, setVisuals] = useState<{ path: string; url: string }[]>(attachedVisuals);
+
+  async function handleVisualSaved(path: string, url: string) {
+    const next = [...visuals, { path, url }];
+    setVisuals(next);
+    await patchPromo(`post:${day.id}:visuals`, JSON.stringify(next.map((v) => v.path)));
+  }
+  async function removeVisual(path: string) {
+    const next = visuals.filter((v) => v.path !== path);
+    setVisuals(next);
+    await patchPromo(`post:${day.id}:visuals`, next.length ? JSON.stringify(next.map((v) => v.path)) : null);
+  }
 
   // État local des captions par réseau (override ?? modèle).
   const [captions, setCaptions] = useState<Record<string, string>>(() => {
@@ -126,6 +143,7 @@ export function PostDayCard({
                 <StudioLauncher
                   label="Générer un visuel"
                   intent={(day.posts[0]?.caption ?? day.hook).replaceAll("{AFFILIATE_LINK}", "").trim()}
+                  onSaved={handleVisualSaved}
                 />
                 <Button size="sm" variant="outline" asChild>
                   <a href={day.visualPath} download>
@@ -136,6 +154,41 @@ export function PostDayCard({
               </div>
             </div>
           </div>
+
+          {/* Visuels générés accrochés à ce post (auto, sans sauvegarde). */}
+          {visuals.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Tes visuels pour ce post ({visuals.length})
+              </p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {visuals.map((v) => (
+                  <div key={v.path} className="group relative rounded-md border border-border overflow-hidden bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={v.url} alt="Visuel généré" className="w-full h-auto block" />
+                    <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1.5 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a
+                        href={v.url}
+                        download
+                        className="rounded bg-white/90 px-1.5 py-1 text-[11px] font-medium text-foreground hover:bg-white"
+                        title="Télécharger"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeVisual(v.path)}
+                        className="rounded bg-white/90 px-1.5 py-1 text-[11px] font-medium text-destructive hover:bg-white"
+                        title="Retirer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Posts par réseau */}
           <Tabs defaultValue={day.posts[0]?.network ?? "instagram"} className="w-full">

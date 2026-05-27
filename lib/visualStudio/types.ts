@@ -52,6 +52,9 @@ export type TextLayerId = "kicker" | "headline" | "accent" | "subline" | "cta";
 export interface StudioResult {
   /** URL exploitable par l'hôte (renvoyée par `upload`, sinon object URL local). */
   url: string;
+  /** Chemin de stockage long terme (TUS) si `upload` le fournit — à PERSISTER
+   *  (l'`url` signée, elle, expire). L'hôte re-signe le chemin à l'affichage. */
+  storagePath?: string;
   width: number;
   height: number;
   blob: Blob;
@@ -78,14 +81,15 @@ export interface ImageStudioProps {
   initialIntent?: string;
 
   /**
-   * Persiste le PNG produit et renvoie son URL. C'est l'hôte qui décide
-   * du backend (pipeline TUS self-host, etc.). Si absent, le module
-   * fabrique une object URL locale (preview/téléchargement uniquement).
+   * Persiste le PNG produit et renvoie son URL (et, si possible, son chemin
+   * de stockage long terme à persister). C'est l'hôte qui décide du backend
+   * (pipeline TUS self-host, etc.). Si absent, le module fabrique une object
+   * URL locale (preview/téléchargement uniquement).
    */
   upload?: (
     blob: Blob,
     meta: { format: StudioFormatId; width: number; height: number },
-  ) => Promise<string>;
+  ) => Promise<{ url: string; path?: string } | string>;
 
   /** Renvoie le résultat à l'appelant (pour l'insérer là où il faut). */
   onApply?: (result: StudioResult) => void;
