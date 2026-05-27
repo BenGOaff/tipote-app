@@ -51,42 +51,26 @@ export async function POST(req: NextRequest) {
     const lang = LANG[locale] ?? "French";
     const brand = typeof body.brandName === "string" ? body.brandName.slice(0, 60) : "";
 
-    // Angle de copywriting suggéré (tournant côté client) — l'IA l'applique
-    // s'il colle à l'esprit du post, sinon elle prend le plus pertinent.
-    const ANGLE_HINT: Record<string, string> = {
-      contrarian: "a counter-intuitive claim / myth-buster that challenges what the reader assumes",
-      number: "lead with the strongest concrete number or stat from the post",
-      social_proof: "social proof (results achieved, adoption, a credible outcome)",
-      question: "an intriguing question that opens a curiosity gap",
-      how: 'a concrete "how" promise (how to get the result)',
-      why: 'a "why" that reframes the reader\'s belief',
-    };
-    const angleId = typeof body.angle === "string" ? body.angle : "";
-    const angleHint = ANGLE_HINT[angleId] ?? "the angle that best fits the post";
-    // Gabarit "data-viz" : on demande EN PLUS un jeu de données comparables.
-    const wantStats = body.template === "data";
-    const statsClause = wantStats
-      ? `\nDATA: also return "stats" — an array of 2 to 4 comparable items to chart, taken ONLY from REAL figures in the post. Each item: {"label": 1-2 word category (e.g. "Tiquiz", "Typeform"), "display": the figure EXACTLY as in the post (e.g. "9 €", "50 €"), "value": its numeric magnitude as a number (e.g. 9, 50) for the bar height}. If the post has no 2+ comparable real figures, return "stats": []. In data mode set "accent" to "" (the chart shows the figures).`
-      : "";
-    const wantBA = body.template === "beforeAfter";
-    const baClause = wantBA
-      ? `\nBEFORE/AFTER: also return "before" and "after" — two short HONEST phrases (max ~7 words each). "before" = the painful old way / status quo (no brand name, concrete pain). "after" = how it is with the product (concrete gain). No hype, no invented numbers. They must contrast clearly. In before/after mode set "accent" to "".`
-      : "";
-
     const system =
-      `You write ONE French social-ad visual in the voice of a no-bullshit SaaS founder. From the post, find its ONE main argument and the single strongest REAL figure it contains (price, %, duration…). Goal: stop the scroll, make people want to read the post.\n` +
-      `Write in ${lang}, like a human talking to a human. Sentence case, never Title Case.\n` +
-      `ANTI-AI — these make copy sound fake, BANNED: empty/abstract filler ("la différence est réelle", "une alternative plus abordable", "découvrez", "boostez", "optimisez", "passez au niveau supérieur"); the "ce n'est pas seulement X, c'est Y" pattern; brochure verbs ("s'impose comme", "met en lumière", "au cœur de", "révèle"); long dashes; jargon used to sound pro; bro-marketing. Be specific and concrete — every word earns its place, or cut it.\n` +
-      `NEVER invent a number/%/price/stat that is not in the post. Never write "n'importe qui".\n` +
-      `NO REPETITION between slots — each says something DIFFERENT:\n` +
-      `- accent: the ONE strongest real figure or tight comparison from the post (e.g. "9 € vs 50 €", "3 min", "92 %"), exactly as written. This is the ONLY place a number may appear. "" if the post has no real figure.\n` +
-      `- headline: the scroll-stopping HOOK, MAX 6 words, using the angle below. It must contain NO number/price (the accent already shows it). Self-contained, no ending period, no emojis.\n` +
-      `- subtitle: ONE line (max ~11 words) adding NEW concrete info — a real benefit or proof. It must NOT restate the headline's idea NOR repeat the accent figure.\n` +
-      `- kicker: OPTIONAL 1-3 word tag with real tension or proof (e.g. "TESTÉ", "SANS CB"). NEVER a flat category ("Prix", "Comparatif", "SaaS", "Tarification"). "" if nothing punchy.\n` +
-      `- accentWord: 1-3 words copied VERBATIM from headline to highlight (exact substring, not the whole headline). "" if headline is short.\n` +
-      `- cta: natural 2-4 word action in ${lang}, grammatically correct (e.g. "Tester gratuitement", "Commencer maintenant").\n` +
-      `HEADLINE ANGLE: favour ${angleHint} — but always match the spirit of THIS post.${statsClause}${baClause}\n` +
-      `Return STRICT JSON with exactly these keys: kicker, headline, accentWord, accent, subtitle, cta${wantStats ? ", stats" : ""}${wantBA ? ", before, after" : ""}. No commentary.`;
+      `You analyse a social post and design ONE French social-ad visual that MATCHES the post. Voice: no-bullshit SaaS founder.\n` +
+      `STEP 1 — classify the post's best visual treatment, return "format":\n` +
+      `  • "data" — ONLY if the post's core is a COMPARISON of 2+ real figures present in it (prices, %, durations, counts).\n` +
+      `  • "beforeAfter" — ONLY if the post tells a transformation / testimonial / clear "before → after" story.\n` +
+      `  • "text" — everything else (a hook, a tip, a question, a benefit). DEFAULT to "text" if unsure.\n` +
+      `STEP 2 — recommend "imageStyle" fitting the post's vibe: "photoPerson" (human, personal, emotion, story), "landscape" (aspiration, freedom), "space" (bold, futuristic, dramatic), "abstract" (clean modern, product/tech), "minimal" (calm, editorial, premium). For "data"/"beforeAfter" prefer "abstract" or "minimal".\n` +
+      `STEP 3 — write the copy in ${lang}, like a human talking to a human, sentence case (never Title Case).\n` +
+      `ANTI-AI — BANNED: empty/abstract filler ("la différence est réelle", "une alternative plus abordable", "découvrez", "boostez", "optimisez"); the "ce n'est pas seulement X, c'est Y" pattern; brochure verbs ("s'impose comme", "met en lumière", "au cœur de"); long dashes; jargon to sound pro; bro-marketing. Be specific and concrete.\n` +
+      `NEVER invent a number/%/price/stat absent from the post. Never write "n'importe qui".\n` +
+      `Slots (no repetition — each says something DIFFERENT):\n` +
+      `- headline: scroll-stopping HOOK, MAX 6 words, matching the post's spirit. NO number/price inside (the accent shows it). No ending period, no emojis.\n` +
+      `- accent: the ONE strongest real figure/comparison from the post (e.g. "9 € vs 50 €", "3 min"), exactly as written. "" if no real figure, or if format is "data"/"beforeAfter".\n` +
+      `- accentWord: 1-3 words copied VERBATIM from headline to highlight. "" if headline short.\n` +
+      `- subtitle: ONE line (max ~11 words) adding NEW concrete info. Must NOT restate headline nor repeat the figure.\n` +
+      `- kicker: OPTIONAL 1-3 word tag with real tension/proof ("TESTÉ", "SANS CB"). NEVER a flat category ("Prix", "Comparatif", "SaaS"). "" if nothing punchy.\n` +
+      `- cta: natural 2-4 word action in ${lang}, grammatically correct.\n` +
+      `- stats: if format="data", an array of 2-4 items {"label": 1-2 words, "display": figure EXACTLY as in post, "value": numeric magnitude} from REAL figures; else [].\n` +
+      `- before / after: if format="beforeAfter", two short HONEST contrasted phrases (max ~7 words): before = the painful old way (no brand), after = how it is with the product; else "".\n` +
+      `Return STRICT JSON with exactly: format, imageStyle, kicker, headline, accentWord, accent, subtitle, cta, stats, before, after. No commentary.`;
     const userMsg = `The post to adapt into a visual:\n${intent}${brand ? `\nBrand name: ${brand}` : ""}`;
 
     const completion = (await openai.chat.completions.create({
@@ -146,10 +130,10 @@ export async function POST(req: NextRequest) {
       if (!inHeadline || isWhole) accentWord = "";
     }
 
-    // Données du graphe (mode data-viz) : on ne garde que des chiffres RÉELS
-    // du post (anti-invention) et au moins 2 items pour comparer.
+    // Données du graphe : on ne garde que des chiffres RÉELS du post
+    // (anti-invention) et au moins 2 items pour comparer.
     let stats: { label: string; display: string; value: number }[] = [];
-    if (wantStats && Array.isArray(parsed.stats)) {
+    if (Array.isArray(parsed.stats)) {
       stats = (parsed.stats as unknown[])
         .slice(0, 4)
         .map((raw) => {
@@ -164,17 +148,32 @@ export async function POST(req: NextRequest) {
         .filter((s) => (s.display.match(/\d+/g) ?? []).every((d) => intent.includes(d)));
       if (stats.length < 2) stats = [];
     }
-    if (stats.length) accent = ""; // le graphe porte les chiffres, pas le badge
 
     // Avant/après : deux phrases honnêtes contrastées.
-    const before = wantBA ? String(parsed.before ?? "").trim().slice(0, 90) : "";
-    const after = wantBA ? String(parsed.after ?? "").trim().slice(0, 90) : "";
-    if (before && after) accent = "";
+    const before = String(parsed.before ?? "").trim().slice(0, 90);
+    const after = String(parsed.after ?? "").trim().slice(0, 90);
+
+    // FORMAT décidé par l'IA, réconcilié avec la matière réellement dispo :
+    // pas de data sans ≥2 chiffres, pas d'avant/après sans les 2 phrases.
+    const STYLES = ["photoPerson", "landscape", "abstract", "space", "minimal"];
+    let format = String(parsed.format ?? "text");
+    if (format === "data" && stats.length < 2) format = "text";
+    else if (format === "beforeAfter" && !(before && after)) format = "text";
+    if (format !== "data" && format !== "beforeAfter") format = "text";
+    const imageStyle = STYLES.includes(String(parsed.imageStyle)) ? String(parsed.imageStyle) : "minimal";
+
+    if (format === "data" || format === "beforeAfter") accent = ""; // le graphe/les panneaux portent les chiffres
 
     if (!headline && !subtitle && !cta) {
       return NextResponse.json({ ok: false, error: "Aucun texte généré" }, { status: 502 });
     }
-    return NextResponse.json({ ok: true, kicker, headline, accentWord, accent, subtitle, cta, stats, before, after });
+    return NextResponse.json({
+      ok: true, format, imageStyle,
+      kicker, headline, accentWord, accent, subtitle, cta,
+      stats: format === "data" ? stats : [],
+      before: format === "beforeAfter" ? before : "",
+      after: format === "beforeAfter" ? after : "",
+    });
   } catch (e) {
     console.error("[visual-studio/generate-copy] error:", e);
     const msg = e instanceof Error ? e.message : "Erreur inconnue";
