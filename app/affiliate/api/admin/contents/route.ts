@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getAffiliateAdmin } from "@/lib/affiliate/admin";
+import { signedPlaybackUrl } from "@/lib/popquiz/playback";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,7 +35,21 @@ export async function GET(req: NextRequest) {
     .order("sort_order", { ascending: true })
     .order("updated_at", { ascending: false });
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, items: data ?? [] });
+  // Pour les visuels (images stockées TUS) : on re-signe une URL de lecture
+  // fraîche par ligne (le chemin est persisté, l'URL signée expire).
+  const items = (data ?? []).map((row) => {
+    const r = row as { meta?: Record<string, unknown> | null } & Record<string, unknown>;
+    const path = r.meta?.storagePath;
+    if (kind === "visual" && typeof path === "string" && path) {
+      try {
+        return { ...r, signedUrl: signedPlaybackUrl(path) };
+      } catch {
+        return r;
+      }
+    }
+    return r;
+  });
+  return NextResponse.json({ ok: true, items });
 }
 
 export async function POST(req: NextRequest) {

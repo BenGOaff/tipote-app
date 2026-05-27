@@ -22,8 +22,8 @@ import { PostDayCard } from "../promouvoir/components/PostDayCard";
 import { VisualGallery } from "../promouvoir/components/VisualGallery";
 import { ArticleCard } from "../promouvoir/components/ArticleCard";
 
-import { EMAILS_FR } from "../promouvoir/content/emails-fr";
-import { POSTS_FR } from "../promouvoir/content/posts-fr";
+import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
+import { POSTS_FR, type PostDay, type SocialPost } from "../promouvoir/content/posts-fr";
 import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, normaliseLocale } from "../i18n";
 
@@ -53,6 +53,69 @@ export default async function ContenusPage() {
     .eq("published", true)
     .order("sort_order", { ascending: true });
   const articles = (articleRows ?? []) as { id: string; title: string | null; body: string | null }[];
+
+  // Emails : gérés en base par l'admin. Tant que rien n'est importé, on
+  // retombe sur les 8 modèles par défaut (aucune régression).
+  const { data: emailRows } = await supabaseAdmin
+    .from("affiliate_contents")
+    .select("id, title, body, meta")
+    .eq("kind", "email")
+    .eq("locale", "fr")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  const dbEmails: EmailTemplate[] = (emailRows ?? []).map((r) => {
+    const row = r as { id: string; title: string | null; body: string | null; meta: Record<string, unknown> | null };
+    return {
+      id: row.id,
+      subject: row.title ?? "",
+      preheader: (row.meta?.preheader as string) ?? "",
+      body: row.body ?? "",
+      notes: (row.meta?.notes as string) ?? undefined,
+    };
+  });
+  const emailsToShow: EmailTemplate[] = dbEmails.length ? dbEmails : EMAILS_FR;
+
+  // Posts : idem — gérés en base, repli sur la séquence par défaut si vide.
+  const { data: postRows } = await supabaseAdmin
+    .from("affiliate_contents")
+    .select("id, title, meta")
+    .eq("kind", "post")
+    .eq("locale", "fr")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  const dbPosts: PostDay[] = (postRows ?? []).map((r) => {
+    const row = r as { id: string; title: string | null; meta: Record<string, unknown> | null };
+    const m = row.meta ?? {};
+    return {
+      id: row.id,
+      dayLabel: row.title ?? "",
+      theme: String(m.theme ?? ""),
+      hook: String(m.hook ?? ""),
+      visualPath: String(m.visualPath ?? ""),
+      posts: (Array.isArray(m.posts) ? m.posts : []) as SocialPost[],
+    };
+  });
+  const postsToShow: PostDay[] = dbPosts.length ? dbPosts : POSTS_FR;
+
+  // Visuels ajoutés par l'admin (uploadés, stockés TUS) — re-signés à l'affichage.
+  const { data: visualRows } = await supabaseAdmin
+    .from("affiliate_contents")
+    .select("id, meta")
+    .eq("kind", "visual")
+    .eq("locale", "fr")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  const adminVisuals: { id: string; url: string }[] = (visualRows ?? [])
+    .map((r) => {
+      const path = (r as { meta: Record<string, unknown> | null }).meta?.storagePath;
+      if (typeof path !== "string" || !path) return null;
+      try {
+        return { id: (r as { id: string }).id, url: signedPlaybackUrl(path) };
+      } catch {
+        return null;
+      }
+    })
+    .filter((v): v is { id: string; url: string } => v !== null);
 
   // Visuels accrochés à un post : on a persisté les CHEMINS de stockage (TUS,
   // long terme) ; on re-signe une URL de lecture fraîche à chaque affichage
@@ -115,7 +178,7 @@ export default async function ContenusPage() {
             </CardContent>
           </Card>
           <div className="space-y-3">
-            {EMAILS_FR.map((email) => (
+            {emailsToShow.map((email) => (
               <EmailCard
                 key={email.id}
                 email={email}
@@ -135,7 +198,7 @@ export default async function ContenusPage() {
             </CardContent>
           </Card>
           <div className="space-y-3">
-            {POSTS_FR.map((day) => (
+            {postsToShow.map((day) => (
               <PostDayCard
                 key={day.id}
                 day={day}
@@ -174,6 +237,19 @@ export default async function ContenusPage() {
               <p className="text-muted-foreground leading-relaxed">{t.promouvoir.visuels_info_body}</p>
             </CardContent>
           </Card>
+          {adminVisuals.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visuels ajoutés</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {adminVisuals.map((v) => (
+                  <a key={v.id} href={v.url} download className="group relative rounded-md border border-border overflow-hidden bg-muted block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={v.url} alt="Visuel" className="w-full h-auto block" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
           <VisualGallery singles={VISUELS_FR.singles} carrousel={VISUELS_FR.carrousel} />
         </TabsContent>
       </Tabs>

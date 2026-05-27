@@ -131,9 +131,11 @@ export function PostDayCard({
         <CardContent className="space-y-4">
           {/* Visuel */}
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-32 h-40 rounded-md border border-border overflow-hidden bg-muted relative">
-              <Image src={day.visualPath} alt={day.dayLabel} fill sizes="128px" className="object-cover" />
-            </div>
+            {day.visualPath && (
+              <div className="flex-shrink-0 w-32 h-40 rounded-md border border-border overflow-hidden bg-muted relative">
+                <Image src={day.visualPath} alt={day.dayLabel} fill sizes="128px" className="object-cover" />
+              </div>
+            )}
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-2">Visuel à publier avec le post :</p>
               <div className="flex flex-wrap gap-2">
@@ -145,12 +147,14 @@ export function PostDayCard({
                   intent={(day.posts[0]?.caption ?? day.hook).replaceAll("{AFFILIATE_LINK}", "").trim()}
                   onSaved={handleVisualSaved}
                 />
-                <Button size="sm" variant="outline" asChild>
-                  <a href={day.visualPath} download>
-                    <Download className="h-4 w-4 mr-1.5" />
-                    Télécharger
-                  </a>
-                </Button>
+                {day.visualPath && (
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={day.visualPath} download>
+                      <Download className="h-4 w-4 mr-1.5" />
+                      Télécharger
+                    </a>
+                  </Button>
+                )}
               </div>
             </div>
           </div>

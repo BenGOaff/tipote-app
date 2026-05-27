@@ -1,10 +1,12 @@
 "use client";
 
-// CRUD admin des contenus (articles pour la V1). Liste + ajout / édition /
-// suppression, en autonomie. Appelle /affiliate/api/admin/contents.
+// CRUD admin des contenus, par type (article / email…). Liste + ajout /
+// édition / suppression / publication, en autonomie. Pour les emails on gère
+// aussi le pré-en-tête (stocké dans meta). Bouton d'import des modèles par
+// défaut quand la liste est vide.
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Check, X, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Eye, EyeOff, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,14 +18,25 @@ export type ContentItem = {
   kind: string;
   title: string | null;
   body: string | null;
+  meta?: Record<string, unknown> | null;
   sort_order: number;
   published: boolean;
 };
 
-type Draft = { title: string; body: string; sort_order: number; published: boolean };
-const BLANK: Draft = { title: "", body: "", sort_order: 0, published: true };
+type Draft = { title: string; preheader: string; body: string; sort_order: number; published: boolean };
+const BLANK: Draft = { title: "", preheader: "", body: "", sort_order: 0, published: true };
 
-export function ContentAdmin({ initial, kind = "article" }: { initial: ContentItem[]; kind?: string }) {
+export function ContentAdmin({
+  initial,
+  kind = "article",
+  seedable = false,
+}: {
+  initial: ContentItem[];
+  kind?: string;
+  /** Affiche un bouton "Importer les modèles par défaut" quand la liste est vide. */
+  seedable?: boolean;
+}) {
+  const isEmail = kind === "email";
   const [items, setItems] = useState<ContentItem[]>(initial);
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(BLANK);
@@ -34,13 +47,30 @@ export function ContentAdmin({ initial, kind = "article" }: { initial: ContentIt
     setEditing("new");
   }
   function startEdit(it: ContentItem) {
-    setDraft({ title: it.title ?? "", body: it.body ?? "", sort_order: it.sort_order, published: it.published });
+    setDraft({
+      title: it.title ?? "",
+      preheader: (it.meta?.preheader as string) ?? "",
+      body: it.body ?? "",
+      sort_order: it.sort_order,
+      published: it.published,
+    });
     setEditing(it.id);
   }
 
   async function refresh() {
     const r = await fetch(`/affiliate/api/admin/contents?kind=${kind}`).then((x) => x.json()).catch(() => null);
     if (r?.ok) setItems(r.items as ContentItem[]);
+  }
+
+  function payload() {
+    return {
+      kind,
+      title: draft.title,
+      body: draft.body,
+      sort_order: draft.sort_order,
+      published: draft.published,
+      ...(isEmail ? { meta: { preheader: draft.preheader } } : {}),
+    };
   }
 
   async function save() {
@@ -50,13 +80,13 @@ export function ContentAdmin({ initial, kind = "article" }: { initial: ContentIt
       await fetch("/affiliate/api/admin/contents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, ...draft }),
+        body: JSON.stringify(payload()),
       });
     } else if (editing) {
       await fetch("/affiliate/api/admin/contents", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editing, ...draft }),
+        body: JSON.stringify({ id: editing, ...payload() }),
       });
     }
     await refresh();
@@ -83,12 +113,25 @@ export function ContentAdmin({ initial, kind = "article" }: { initial: ContentIt
     setBusy(false);
   }
 
+  async function seed() {
+    setBusy(true);
+    await fetch(`/affiliate/api/admin/seed?kind=${kind}`, { method: "POST" });
+    await refresh();
+    setBusy(false);
+  }
+
   const form = (
     <div className="space-y-3">
       <div className="space-y-1">
-        <Label className="text-xs">Titre</Label>
-        <Input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder="Titre de l'article" />
+        <Label className="text-xs">{isEmail ? "Objet" : "Titre"}</Label>
+        <Input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder={isEmail ? "Objet de l'email" : "Titre de l'article"} />
       </div>
+      {isEmail && (
+        <div className="space-y-1">
+          <Label className="text-xs">Pré-en-tête (aperçu boîte mail)</Label>
+          <Input value={draft.preheader} onChange={(e) => setDraft((d) => ({ ...d, preheader: e.target.value }))} placeholder="Petit texte d'aperçu" />
+        </div>
+      )}
       <div className="space-y-1">
         <Label className="text-xs">Contenu</Label>
         <Textarea
@@ -96,7 +139,7 @@ export function ContentAdmin({ initial, kind = "article" }: { initial: ContentIt
           onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
           rows={12}
           className="text-sm leading-relaxed"
-          placeholder="Le corps de l'article (l'affilié pourra le copier-coller)."
+          placeholder={isEmail ? "Corps de l'email. {AFFILIATE_LINK} et {NAME} sont remplacés automatiquement." : "Le corps de l'article (l'affilié pourra le copier-coller)."}
         />
       </div>
       <div className="flex items-center gap-4">
@@ -129,12 +172,20 @@ export function ContentAdmin({ initial, kind = "article" }: { initial: ContentIt
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">{items.length} contenu{items.length > 1 ? "s" : ""}</p>
-        <Button size="sm" onClick={startAdd} disabled={editing === "new"}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Ajouter
-        </Button>
+        <div className="flex gap-2">
+          {seedable && items.length === 0 && (
+            <Button size="sm" variant="outline" onClick={seed} disabled={busy}>
+              <Download className="h-4 w-4 mr-1.5" />
+              Importer les modèles par défaut
+            </Button>
+          )}
+          <Button size="sm" onClick={startAdd} disabled={editing === "new"}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Ajouter
+          </Button>
+        </div>
       </div>
 
       {editing === "new" && (
