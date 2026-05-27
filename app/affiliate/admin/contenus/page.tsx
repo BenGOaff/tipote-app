@@ -8,8 +8,10 @@ import { ShieldCheck } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAffiliateAdmin } from "@/lib/affiliate/admin";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { signedPlaybackUrl } from "@/lib/popquiz/playback";
 import { ContentAdmin, type ContentItem } from "./ContentAdmin";
 import { PostAdmin, type PostItem } from "./PostAdmin";
+import { VisualAdmin, type VisualItem } from "./VisualAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +29,17 @@ export default async function AdminContenusPage() {
   const admin = await getAffiliateAdmin();
   if (!admin) redirect("/");
 
-  const [articles, emails, posts] = await Promise.all([load("article"), load("email"), load("post")]);
+  const [articles, emails, posts, visualRows] = await Promise.all([
+    load("article"), load("email"), load("post"), load("visual"),
+  ]);
+  const visuals: VisualItem[] = visualRows.map((r) => {
+    const path = (r.meta as Record<string, unknown> | null)?.storagePath;
+    let signedUrl: string | undefined;
+    if (typeof path === "string" && path) {
+      try { signedUrl = signedPlaybackUrl(path); } catch { signedUrl = undefined; }
+    }
+    return { id: r.id, signedUrl, published: r.published };
+  });
 
   return (
     <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
@@ -42,10 +54,11 @@ export default async function AdminContenusPage() {
       </div>
 
       <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="articles">Articles</TabsTrigger>
           <TabsTrigger value="emails">Emails</TabsTrigger>
           <TabsTrigger value="posts">Posts</TabsTrigger>
+          <TabsTrigger value="visuels">Visuels</TabsTrigger>
         </TabsList>
         <TabsContent value="articles" className="mt-5">
           <ContentAdmin initial={articles} kind="article" />
@@ -55,6 +68,9 @@ export default async function AdminContenusPage() {
         </TabsContent>
         <TabsContent value="posts" className="mt-5">
           <PostAdmin initial={posts as PostItem[]} seedable />
+        </TabsContent>
+        <TabsContent value="visuels" className="mt-5">
+          <VisualAdmin initial={visuals} />
         </TabsContent>
       </Tabs>
     </main>

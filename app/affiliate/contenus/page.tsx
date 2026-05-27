@@ -97,6 +97,26 @@ export default async function ContenusPage() {
   });
   const postsToShow: PostDay[] = dbPosts.length ? dbPosts : POSTS_FR;
 
+  // Visuels ajoutés par l'admin (uploadés, stockés TUS) — re-signés à l'affichage.
+  const { data: visualRows } = await supabaseAdmin
+    .from("affiliate_contents")
+    .select("id, meta")
+    .eq("kind", "visual")
+    .eq("locale", "fr")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  const adminVisuals: { id: string; url: string }[] = (visualRows ?? [])
+    .map((r) => {
+      const path = (r as { meta: Record<string, unknown> | null }).meta?.storagePath;
+      if (typeof path !== "string" || !path) return null;
+      try {
+        return { id: (r as { id: string }).id, url: signedPlaybackUrl(path) };
+      } catch {
+        return null;
+      }
+    })
+    .filter((v): v is { id: string; url: string } => v !== null);
+
   // Visuels accrochés à un post : on a persisté les CHEMINS de stockage (TUS,
   // long terme) ; on re-signe une URL de lecture fraîche à chaque affichage
   // (les URLs signées expirent en 2 h, pas le fichier).
@@ -217,6 +237,19 @@ export default async function ContenusPage() {
               <p className="text-muted-foreground leading-relaxed">{t.promouvoir.visuels_info_body}</p>
             </CardContent>
           </Card>
+          {adminVisuals.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visuels ajoutés</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {adminVisuals.map((v) => (
+                  <a key={v.id} href={v.url} download className="group relative rounded-md border border-border overflow-hidden bg-muted block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={v.url} alt="Visuel" className="w-full h-auto block" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
           <VisualGallery singles={VISUELS_FR.singles} carrousel={VISUELS_FR.carrousel} />
         </TabsContent>
       </Tabs>
