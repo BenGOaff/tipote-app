@@ -15,8 +15,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Megaphone, Wallet, CreditCard, HelpCircle,
-  LogOut, Gift, Menu, X,
+  LayoutDashboard, Megaphone, Library, HelpCircle,
+  LogOut, Gift, Menu, X, ShieldCheck,
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Button } from "@/components/ui/button";
@@ -25,20 +25,19 @@ import { LocaleSwitcher } from "./LocaleSwitcher";
 
 type NavItem = {
   href: string;
-  key: "overview" | "promouvoir" | "trial" | "revenus" | "paiement" | "support";
+  key: "overview" | "promouvoir" | "contenus" | "trial" | "support";
   icon: React.ComponentType<{ className?: string }>;
 };
 
 const NAV: NavItem[] = [
   { href: "/", key: "overview", icon: LayoutDashboard },
   { href: "/promouvoir", key: "promouvoir", icon: Megaphone },
+  { href: "/contenus", key: "contenus", icon: Library },
   { href: "/trial-tipote", key: "trial", icon: Gift },
-  { href: "/revenus", key: "revenus", icon: Wallet },
-  { href: "/paiement", key: "paiement", icon: CreditCard },
   { href: "/support", key: "support", icon: HelpCircle },
 ];
 
-export function AffiliateSidebar({ displayName }: { displayName: string }) {
+export function AffiliateSidebar({ displayName, isAdmin = false }: { displayName: string; isAdmin?: boolean }) {
   const t = useDict();
   const pathname = usePathname();
   const router = useRouter();
@@ -76,6 +75,20 @@ export function AffiliateSidebar({ displayName }: { displayName: string }) {
           </Link>
         );
       })}
+      {isAdmin && (
+        <Link
+          href="/admin/contenus"
+          onClick={() => setOpen(false)}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            isActive("/admin")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <ShieldCheck className="w-5 h-5 shrink-0" />
+          <span>Admin — Contenus</span>
+        </Link>
+      )}
     </nav>
   );
 

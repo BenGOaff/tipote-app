@@ -15,7 +15,7 @@ interface UploadTokenResponse {
   storagePath: string;
 }
 
-export async function uploadVisual(blob: Blob): Promise<string> {
+export async function uploadVisual(blob: Blob): Promise<{ url: string; path: string }> {
   const contentType = blob.type || "image/png";
 
   const tokenRes = await fetch("/api/visuals/upload-token", {
@@ -53,5 +53,6 @@ export async function uploadVisual(blob: Blob): Promise<string> {
   if (!playbackRes.ok || !playbackJson.ok || !playbackJson.signedUrl) {
     throw new Error(playbackJson.error || "Visuel stocké mais URL de lecture indisponible.");
   }
-  return playbackJson.signedUrl;
+  // url : signée 2 h (affichage immédiat) ; path : à PERSISTER (re-signé plus tard).
+  return { url: playbackJson.signedUrl, path: tokenJson.storagePath };
 }

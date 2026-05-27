@@ -347,11 +347,21 @@ export function ImageStudio({
     setBusy(true);
     try {
       const blob = await handle.toBlob();
-      const url = upload
-        ? await upload(blob, { format: formatId, width: format.width, height: format.height })
-        : URL.createObjectURL(blob);
-      if (!upload) objectUrlsRef.current.push(url);
-      onApply?.({ url, width: format.width, height: format.height, blob, format: formatId });
+      let url: string;
+      let storagePath: string | undefined;
+      if (upload) {
+        const res = await upload(blob, { format: formatId, width: format.width, height: format.height });
+        if (typeof res === "string") {
+          url = res;
+        } else {
+          url = res.url;
+          storagePath = res.path;
+        }
+      } else {
+        url = URL.createObjectURL(blob);
+        objectUrlsRef.current.push(url);
+      }
+      onApply?.({ url, storagePath, width: format.width, height: format.height, blob, format: formatId });
       onOpenChange(false);
     } catch (e) {
       console.error("[ImageStudio] export/upload failed", e);

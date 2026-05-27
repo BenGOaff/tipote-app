@@ -16,8 +16,9 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// kind:id:field — kind ∈ email|post, id et field alphanum + tirets.
-const KEY_RE = /^(email|post):[a-z0-9-]{1,60}:[a-z0-9_]{1,30}$/;
+// kind:id:field — email|post (textes perso) OU links:custom:items (liste de
+// liens personnalisée de l'affilié, valeur = JSON).
+const KEY_RE = /^(email|post|links):[a-z0-9-]{1,60}:[a-z0-9_]{1,30}$/;
 const MAX_LEN = 20000;
 
 export async function PATCH(req: NextRequest): Promise<NextResponse> {
