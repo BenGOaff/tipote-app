@@ -356,6 +356,7 @@ export default function PepitesPageClient() {
           <div>
             <h2 className="text-xl font-semibold">{t("title")}</h2>
             <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+            <p className="text-xs text-muted-foreground/80 mt-1">{t("inspiredBy")}</p>
           </div>
         </div>
 
