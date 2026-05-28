@@ -201,15 +201,8 @@ export function PepiteRevealModal({
               {/* Corps — ÉLARGI, ALIGNÉ À GAUCHE, text-base pour la
                   lisibilité (l'ancienne version était trop étroite et
                   trop petite). scroll si dépasse. */}
-              <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-4 text-[15px] leading-relaxed text-foreground space-y-2 text-left">
+              <div className="flex-1 overflow-y-auto px-6 sm:px-7 pb-6 text-[15px] leading-relaxed text-foreground space-y-2 text-left">
                 {enhanceForDisplay(body)}
-              </div>
-
-              {/* Crédit — discret, en bas, séparé par un fin liseré */}
-              <div className="px-6 sm:px-7 pb-5 pt-3 border-t border-border/40">
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Pépites inspirées par <strong className="font-semibold text-foreground">Jean Rivière</strong> — merci pour l&apos;inspiration 🙏
-                </p>
               </div>
             </div>
           </div>
