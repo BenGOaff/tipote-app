@@ -11,12 +11,23 @@ import { uploadVisual } from "@/lib/visualStudio/uploadVisual";
 
 export type VisualItem = { id: string; signedUrl?: string; published: boolean };
 
-export function VisualAdmin({ initial }: { initial: VisualItem[] }) {
+export function VisualAdmin({
+  initial,
+  locale = "fr",
+}: {
+  initial: VisualItem[];
+  /** Langue du CONTENU géré. Les visuels textés ne sont pas universels — un
+   *  visuel avec du texte FR n'a pas sa place dans la banque PT, d'où la
+   *  séparation par locale comme pour les autres kinds. */
+  locale?: string;
+}) {
   const [items, setItems] = useState<VisualItem[]>(initial);
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    const r = await fetch(`/affiliate/api/admin/contents?kind=visual`).then((x) => x.json()).catch(() => null);
+    const r = await fetch(`/affiliate/api/admin/contents?kind=visual&locale=${encodeURIComponent(locale)}`)
+      .then((x) => x.json())
+      .catch(() => null);
     if (r?.ok) setItems(r.items as VisualItem[]);
   }
 
@@ -30,7 +41,7 @@ export function VisualAdmin({ initial }: { initial: VisualItem[] }) {
         await fetch("/affiliate/api/admin/contents", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ kind: "visual", title: file.name, meta: { storagePath: path }, published: true }),
+          body: JSON.stringify({ kind: "visual", locale, title: file.name, meta: { storagePath: path }, published: true }),
         });
       }
       await refresh();
