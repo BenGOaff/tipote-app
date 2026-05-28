@@ -26,16 +26,32 @@ import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
 import { POSTS_FR, type PostDay, type SocialPost } from "../promouvoir/content/posts-fr";
 import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, normaliseLocale } from "../i18n";
+import { normaliseContentLocale, localeLabel } from "@/lib/affiliate/contentLocales";
+import { ContentLocalePicker } from "../components/ContentLocalePicker";
 
 export const dynamic = "force-dynamic";
 
-export default async function ContenusPage() {
+export default async function ContenusPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ locale?: string }>;
+}) {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
 
   const t = getDict(normaliseLocale(session.locale));
   const baseLink = `https://www.tipote.fr/tiquiz/affiliation?sa=${session.sa}`;
   const displayName = session.display_name ?? session.email.split("@")[0];
+
+  // Langue du CONTENU (≠ langue d'interface). Priorité : query param explicite
+  // > langue de l'affilié > "fr". Un affilié français qui veut shooter en
+  // portugais peut activer le picker et lire son matériel en PT sans changer
+  // l'UI. La fallback aux modèles FR codés en dur (EMAILS_FR / POSTS_FR /
+  // VISUELS_FR) n'est activée que pour la locale "fr" — pas envie de servir
+  // du FR par défaut à quelqu'un qui demande du PT.
+  const sp = await searchParams;
+  const contentLocale = normaliseContentLocale(sp.locale ?? session.locale);
+  const isFrLocale = contentLocale === "fr";
 
   const { data: ov } = await supabaseAdmin
     .from("affiliates")
@@ -49,18 +65,20 @@ export default async function ContenusPage() {
     .from("affiliate_contents")
     .select("id, title, body")
     .eq("kind", "article")
-    .eq("locale", "fr")
+    .eq("locale", contentLocale)
     .eq("published", true)
     .order("sort_order", { ascending: true });
   const articles = (articleRows ?? []) as { id: string; title: string | null; body: string | null }[];
 
   // Emails : gérés en base par l'admin. Tant que rien n'est importé, on
-  // retombe sur les 8 modèles par défaut (aucune régression).
+  // retombe sur les 8 modèles par défaut FR (aucune régression). Les autres
+  // langues n'ont pas de fallback : si la banque est vide en PT, on affiche
+  // un état vide plutôt que servir du FR.
   const { data: emailRows } = await supabaseAdmin
     .from("affiliate_contents")
     .select("id, title, body, meta")
     .eq("kind", "email")
-    .eq("locale", "fr")
+    .eq("locale", contentLocale)
     .eq("published", true)
     .order("sort_order", { ascending: true });
   const dbEmails: EmailTemplate[] = (emailRows ?? []).map((r) => {
@@ -73,14 +91,15 @@ export default async function ContenusPage() {
       notes: (row.meta?.notes as string) ?? undefined,
     };
   });
-  const emailsToShow: EmailTemplate[] = dbEmails.length ? dbEmails : EMAILS_FR;
+  const emailsToShow: EmailTemplate[] = dbEmails.length ? dbEmails : isFrLocale ? EMAILS_FR : [];
 
-  // Posts : idem — gérés en base, repli sur la séquence par défaut si vide.
+  // Posts : idem — gérés en base, repli sur la séquence par défaut si vide
+  // (FR uniquement).
   const { data: postRows } = await supabaseAdmin
     .from("affiliate_contents")
     .select("id, title, meta")
     .eq("kind", "post")
-    .eq("locale", "fr")
+    .eq("locale", contentLocale)
     .eq("published", true)
     .order("sort_order", { ascending: true });
   const dbPosts: PostDay[] = (postRows ?? []).map((r) => {
@@ -95,14 +114,14 @@ export default async function ContenusPage() {
       posts: (Array.isArray(m.posts) ? m.posts : []) as SocialPost[],
     };
   });
-  const postsToShow: PostDay[] = dbPosts.length ? dbPosts : POSTS_FR;
+  const postsToShow: PostDay[] = dbPosts.length ? dbPosts : isFrLocale ? POSTS_FR : [];
 
   // Visuels ajoutés par l'admin (uploadés, stockés TUS) — re-signés à l'affichage.
   const { data: visualRows } = await supabaseAdmin
     .from("affiliate_contents")
     .select("id, meta")
     .eq("kind", "visual")
-    .eq("locale", "fr")
+    .eq("locale", contentLocale)
     .eq("published", true)
     .order("sort_order", { ascending: true });
   const adminVisuals: { id: string; url: string }[] = (visualRows ?? [])
@@ -143,11 +162,16 @@ export default async function ContenusPage() {
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Contenus</h1>
-        <p className="text-muted-foreground mt-1">
-          Tes emails, posts, articles et visuels prêts à copier-coller. Édite, copie, publie.
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Contenus</h1>
+          <p className="text-muted-foreground mt-1">
+            Tes emails, posts, articles et visuels prêts à copier-coller.{" "}
+            <span className="text-foreground">{localeLabel(contentLocale)}</span> —
+            change la langue si tu vises une autre audience.
+          </p>
+        </div>
+        <ContentLocalePicker current={contentLocale} label="Langue du contenu" />
       </div>
 
       <Tabs defaultValue="posts" className="w-full">
@@ -177,17 +201,31 @@ export default async function ContenusPage() {
               <p className="text-muted-foreground leading-relaxed">{t.promouvoir.emails_info_body}</p>
             </CardContent>
           </Card>
-          <div className="space-y-3">
-            {emailsToShow.map((email) => (
-              <EmailCard
-                key={email.id}
-                email={email}
-                affiliateLink={baseLink}
-                displayName={displayName}
-                overrides={overrides}
-              />
-            ))}
-          </div>
+          {emailsToShow.length > 0 ? (
+            <div className="space-y-3">
+              {emailsToShow.map((email) => (
+                <EmailCard
+                  key={email.id}
+                  email={email}
+                  affiliateLink={baseLink}
+                  displayName={displayName}
+                  overrides={overrides}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="pt-6 pb-6 text-center space-y-2">
+                <Mail className="h-8 w-8 text-muted-foreground mx-auto" />
+                <p className="font-medium">
+                  Aucun email en <strong>{localeLabel(contentLocale)}</strong>
+                </p>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Cette langue n&apos;a pas encore d&apos;emails publiés. Repasse en français ou choisis une autre langue.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="posts" className="space-y-4 mt-6">
@@ -197,17 +235,31 @@ export default async function ContenusPage() {
               <p className="text-muted-foreground leading-relaxed">{t.promouvoir.posts_info_body}</p>
             </CardContent>
           </Card>
-          <div className="space-y-3">
-            {postsToShow.map((day) => (
-              <PostDayCard
-                key={day.id}
-                day={day}
-                affiliateLink={baseLink}
-                overrides={overrides}
-                attachedVisuals={attachedFor(day.id)}
-              />
-            ))}
-          </div>
+          {postsToShow.length > 0 ? (
+            <div className="space-y-3">
+              {postsToShow.map((day) => (
+                <PostDayCard
+                  key={day.id}
+                  day={day}
+                  affiliateLink={baseLink}
+                  overrides={overrides}
+                  attachedVisuals={attachedFor(day.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="pt-6 pb-6 text-center space-y-2">
+                <Share2 className="h-8 w-8 text-muted-foreground mx-auto" />
+                <p className="font-medium">
+                  Aucun post en <strong>{localeLabel(contentLocale)}</strong>
+                </p>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Cette langue n&apos;a pas encore de posts publiés. Repasse en français ou choisis une autre langue.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="articles" className="space-y-4 mt-6">
@@ -221,9 +273,11 @@ export default async function ContenusPage() {
             <Card className="border-dashed">
               <CardContent className="pt-6 pb-6 text-center space-y-2">
                 <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="font-medium">Aucun article pour l&apos;instant</p>
+                <p className="font-medium">
+                  Aucun article en <strong>{localeLabel(contentLocale)}</strong>
+                </p>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Des articles prêts à publier arriveront ici dès qu&apos;ils seront ajoutés.
+                  Cette langue n&apos;a pas encore d&apos;articles publiés. Repasse en français ou choisis une autre langue.
                 </p>
               </CardContent>
             </Card>
@@ -250,7 +304,20 @@ export default async function ContenusPage() {
               </div>
             </div>
           )}
-          <VisualGallery singles={VISUELS_FR.singles} carrousel={VISUELS_FR.carrousel} />
+          {isFrLocale ? (
+            <VisualGallery singles={VISUELS_FR.singles} carrousel={VISUELS_FR.carrousel} />
+          ) : adminVisuals.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="pt-6 pb-6 text-center space-y-2">
+                <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto" />
+                <p className="font-medium">Aucun visuel disponible dans cette langue</p>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Ajoute des visuels depuis l&apos;admin pour la langue{" "}
+                  <strong>{localeLabel(contentLocale)}</strong>, ou repasse en français.
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
       </Tabs>
     </main>

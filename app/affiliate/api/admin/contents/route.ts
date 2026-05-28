@@ -90,6 +90,7 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.title === "string") patch.title = body.title.slice(0, 300);
   if (typeof body.body === "string") patch.body = body.body.slice(0, 40000);
   if (typeof body.meta === "object" && body.meta) patch.meta = body.meta;
+  if (typeof body.locale === "string" && body.locale.length <= 10) patch.locale = body.locale;
   if (Number.isFinite(Number(body.sort_order))) patch.sort_order = Number(body.sort_order);
   if (typeof body.published === "boolean") patch.published = body.published;
   const { error } = await supabaseAdmin.from("affiliate_contents").update(patch).eq("id", id);

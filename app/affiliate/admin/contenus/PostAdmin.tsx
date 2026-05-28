@@ -55,7 +55,16 @@ function toDraft(it: PostItem): Draft {
   };
 }
 
-export function PostAdmin({ initial, seedable = false }: { initial: PostItem[]; seedable?: boolean }) {
+export function PostAdmin({
+  initial,
+  locale = "fr",
+  seedable = false,
+}: {
+  initial: PostItem[];
+  /** Langue du CONTENU géré, transmise pour fetch + création. */
+  locale?: string;
+  seedable?: boolean;
+}) {
   const [items, setItems] = useState<PostItem[]>(initial);
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(BLANK);
@@ -71,17 +80,21 @@ export function PostAdmin({ initial, seedable = false }: { initial: PostItem[]; 
   }
 
   async function refresh() {
-    const r = await fetch(`/affiliate/api/admin/contents?kind=post`).then((x) => x.json()).catch(() => null);
+    const r = await fetch(`/affiliate/api/admin/contents?kind=post&locale=${encodeURIComponent(locale)}`)
+      .then((x) => x.json())
+      .catch(() => null);
     if (r?.ok) setItems(r.items as PostItem[]);
   }
 
-  function payload() {
+  // Locale uniquement à la CRÉATION (POST). PATCH ne touche pas au champ.
+  function payload(includeLocale: boolean) {
     return {
       kind: "post",
       title: draft.dayLabel,
       body: "",
       sort_order: draft.sort_order,
       published: draft.published,
+      ...(includeLocale ? { locale } : {}),
       meta: {
         theme: draft.theme,
         hook: draft.hook,
@@ -98,9 +111,9 @@ export function PostAdmin({ initial, seedable = false }: { initial: PostItem[]; 
     if (!draft.dayLabel.trim()) return;
     setBusy(true);
     if (editing === "new") {
-      await fetch("/affiliate/api/admin/contents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload()) });
+      await fetch("/affiliate/api/admin/contents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload(true)) });
     } else if (editing) {
-      await fetch("/affiliate/api/admin/contents", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editing, ...payload() }) });
+      await fetch("/affiliate/api/admin/contents", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editing, ...payload(false) }) });
     }
     await refresh();
     setEditing(null);
@@ -121,7 +134,7 @@ export function PostAdmin({ initial, seedable = false }: { initial: PostItem[]; 
   }
   async function seed() {
     setBusy(true);
-    await fetch(`/affiliate/api/admin/seed?kind=post`, { method: "POST" });
+    await fetch(`/affiliate/api/admin/seed?kind=post&locale=${encodeURIComponent(locale)}`, { method: "POST" });
     await refresh();
     setBusy(false);
   }
@@ -186,7 +199,7 @@ export function PostAdmin({ initial, seedable = false }: { initial: PostItem[]; 
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">{items.length} post{items.length > 1 ? "s" : ""}</p>
         <div className="flex gap-2">
-          {seedable && items.length === 0 && (
+          {seedable && items.length === 0 && locale === "fr" && (
             <Button size="sm" variant="outline" onClick={seed} disabled={busy}>
               <Download className="h-4 w-4 mr-1.5" />
               Importer les modèles par défaut

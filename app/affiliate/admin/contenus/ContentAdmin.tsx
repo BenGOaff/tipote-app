@@ -38,10 +38,14 @@ const BLANK: Draft = { title: "", preheader: "", body: "", sort_order: 0, publis
 export function ContentAdmin({
   initial,
   kind = "article",
+  locale = "fr",
   seedable = false,
 }: {
   initial: ContentItem[];
   kind?: string;
+  /** Langue du CONTENU géré (pas l'UI). Filtre les fetches et est utilisée
+   *  comme locale de tout nouveau contenu créé depuis cet onglet. */
+  locale?: string;
   /** Affiche un bouton "Importer les modèles par défaut" quand la liste est vide. */
   seedable?: boolean;
 }) {
@@ -69,17 +73,24 @@ export function ContentAdmin({
   }
 
   async function refresh() {
-    const r = await fetch(`/affiliate/api/admin/contents?kind=${kind}`).then((x) => x.json()).catch(() => null);
+    const r = await fetch(`/affiliate/api/admin/contents?kind=${kind}&locale=${encodeURIComponent(locale)}`)
+      .then((x) => x.json())
+      .catch(() => null);
     if (r?.ok) setItems(r.items as ContentItem[]);
   }
 
-  function payload() {
+  // Locale n'est inclus qu'à la CRÉATION (POST). Sur PATCH on ne touche
+  // pas à la locale du row — l'édition se fait toujours dans la langue
+  // de l'onglet courant, et changer la locale d'un row existant doit
+  // rester une action volontaire (pas un effet de bord d'un switch UI).
+  function payload(includeLocale: boolean) {
     return {
       kind,
       title: draft.title,
       body: draft.body,
       sort_order: draft.sort_order,
       published: draft.published,
+      ...(includeLocale ? { locale } : {}),
       ...(isEmail ? { meta: { preheader: draft.preheader } } : {}),
     };
   }
@@ -91,13 +102,13 @@ export function ContentAdmin({
       await fetch("/affiliate/api/admin/contents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload()),
+        body: JSON.stringify(payload(true)),
       });
     } else if (editing) {
       await fetch("/affiliate/api/admin/contents", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editing, ...payload() }),
+        body: JSON.stringify({ id: editing, ...payload(false) }),
       });
     }
     await refresh();
@@ -126,7 +137,7 @@ export function ContentAdmin({
 
   async function seed() {
     setBusy(true);
-    await fetch(`/affiliate/api/admin/seed?kind=${kind}`, { method: "POST" });
+    await fetch(`/affiliate/api/admin/seed?kind=${kind}&locale=${encodeURIComponent(locale)}`, { method: "POST" });
     await refresh();
     setBusy(false);
   }
@@ -206,7 +217,7 @@ export function ContentAdmin({
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">{items.length} contenu{items.length > 1 ? "s" : ""}</p>
         <div className="flex gap-2">
-          {seedable && items.length === 0 && (
+          {seedable && items.length === 0 && locale === "fr" && (
             <Button size="sm" variant="outline" onClick={seed} disabled={busy}>
               <Download className="h-4 w-4 mr-1.5" />
               Importer les modèles par défaut

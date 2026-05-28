@@ -16,8 +16,16 @@ export async function POST(req: NextRequest) {
   if (!(await getAffiliateAdmin())) {
     return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
   }
-  const kind = new URL(req.url).searchParams.get("kind") ?? "";
-  const locale = "fr";
+  const url = new URL(req.url);
+  const kind = url.searchParams.get("kind") ?? "";
+  const locale = url.searchParams.get("locale") ?? "fr";
+
+  // Les modèles par défaut n'existent qu'en FR pour l'instant. Pour les
+  // autres langues, on ne propose pas le seed (l'admin doit créer ses
+  // propres entrées). Empêche d'injecter des emails FR dans la banque PT.
+  if (locale !== "fr") {
+    return NextResponse.json({ ok: false, reason: "no_template_for_locale" }, { status: 400 });
+  }
 
   // Ne seed que si vide (évite les doublons).
   const { count } = await supabaseAdmin
