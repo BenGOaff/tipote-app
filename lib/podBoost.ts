@@ -52,10 +52,14 @@ export const SEED_POD_FR_SLUG = "fr-global";
  *  heures sont décisives). */
 export const POST_ELIGIBILITY_HOURS = 6;
 
-/** ID Chrome de l'extension Tipote (unpacked local pour la beta privée).
- *  Quand on publiera sur Chrome Web Store, on aura un ID stable
- *  différent — surcharge possible via NEXT_PUBLIC_TIPOTE_EXT_ID. Sert
- *  côté frontend pour appeler chrome.runtime.sendMessage(EXT_ID, …)
- *  depuis la page /boost (cf. externally_connectable du manifest). */
+/** ID Chrome de l'extension Tipote publiée sur le Chrome Web Store
+ *  (fiche « Tipote Boost », ID stable assigné par Google à la première
+ *  publication v1.0.0 en mai 2026). Sert côté frontend pour appeler
+ *  chrome.runtime.sendMessage(EXT_ID, …) depuis la page /boost
+ *  (cf. externally_connectable du manifest).
+ *
+ *  Surcharge possible via NEXT_PUBLIC_TIPOTE_EXT_ID — utile en dev pour
+ *  pointer vers une version unpacked locale, dont l'ID est différent à
+ *  chaque chargement. */
 export const TIPOTE_EXTENSION_ID =
-  process.env.NEXT_PUBLIC_TIPOTE_EXT_ID ?? "obinohichepembcmpfkgjfjohifejfon";
+  process.env.NEXT_PUBLIC_TIPOTE_EXT_ID ?? "gligkkmphgcpfghplnmknmkkgonolchg";
