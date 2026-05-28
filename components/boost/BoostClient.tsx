@@ -1,8 +1,17 @@
 "use client";
 
-// Dashboard /boost — état pod LinkedIn pour le user courant.
-// Fetch /api/pod/me au mount + à chaque "Synchroniser l'extension".
-// Détection extension via chrome.runtime.sendMessage(EXT_ID, {type:'ping'}).
+// Dashboard /boost — deux features distinctes assumées en 2 sections :
+//
+//   A) Pod LinkedIn  → boost mutuel (membres se likent/commentent), karma,
+//                       LinkedIn uniquement (la détection auto des nouveaux
+//                       posts via Voyager est propre à LinkedIn).
+//   B) Commentateur IA → 4 tons de commentaires proposés sur tout post visité,
+//                         disponible sur 7 réseaux, pas de pod, pas de karma.
+//
+// L'état "Extension installée ?" est gating commun, donc rendu une fois en
+// haut. Le reste descend dans les 2 sections, chacune avec son badge de scope.
+//
+// Détection extension : chrome.runtime.sendMessage(EXT_ID, {type:'ping'}).
 // Si chrome.runtime n'existe pas (page non vue par une extension declarant
 // externally_connectable sur ce domaine), on considère extension absente.
 
@@ -10,7 +19,15 @@ import { useEffect, useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, AlertCircle, ExternalLink, RefreshCw } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  RefreshCw,
+  Rocket,
+  Sparkles,
+} from "lucide-react";
 import { TIPOTE_EXTENSION_ID } from "@/lib/podBoost";
 
 type PodMeResponse = {
@@ -56,6 +73,20 @@ function getChromeRuntime(): ChromeRuntime | null {
   const w = window as unknown as { chrome?: { runtime?: ChromeRuntime } };
   return w.chrome?.runtime ?? null;
 }
+
+// Liste des réseaux supportés par le commentateur IA. La couleur sert juste
+// au badge visuel — la classe Tailwind est figée pour éviter les soucis de
+// purge JIT (les classes dynamiques comme `bg-${color}-100` ne sont pas
+// détectées par Tailwind à la compilation).
+const AI_NETWORKS = [
+  { name: "LinkedIn", className: "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200" },
+  { name: "Facebook", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200" },
+  { name: "Threads", className: "bg-zinc-200 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100" },
+  { name: "Instagram", className: "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-200" },
+  { name: "X", className: "bg-zinc-200 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100" },
+  { name: "TikTok", className: "bg-zinc-200 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100" },
+  { name: "Reddit", className: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200" },
+];
 
 export default function BoostClient() {
   const [me, setMe] = useState<PodMeResponse | null>(null);
@@ -150,8 +181,8 @@ export default function BoostClient() {
   const karma = me?.karma;
 
   return (
-    <div className="space-y-5">
-      {/* État extension Chrome */}
+    <div className="space-y-8">
+      {/* ────────── État extension Chrome (gating commun) ────────── */}
       <Card className="p-5">
         <div className="flex items-start gap-3">
           {extStatus === "checking" ? (
@@ -171,10 +202,10 @@ export default function BoostClient() {
             </h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               {extStatus === "installed"
-                ? "L'extension communique avec Tipote. Ouvre LinkedIn pour qu'elle détecte ton compte automatiquement."
+                ? "L'extension communique avec Tipote. Les deux modes ci-dessous sont actifs dès que tu ouvres un de tes réseaux."
                 : extStatus === "checking"
                   ? " "
-                  : "Installe l'extension Tipote dans Chrome (Chrome Web Store) ou recharge cette page si tu viens de l'installer."}
+                  : "Installe l'extension Tipote depuis le Chrome Web Store (ou recharge cette page si tu viens de l'installer) pour activer le pod et le commentateur IA."}
             </p>
           </div>
           <Button
@@ -191,105 +222,184 @@ export default function BoostClient() {
         </div>
       </Card>
 
-      {/* État matching LinkedIn */}
-      <Card className="p-5">
-        <div className="flex items-start gap-3">
-          {linkedin ? (
-            <CheckCircle2 className="h-5 w-5 mt-0.5 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertCircle className="h-5 w-5 mt-0.5 text-amber-600 shrink-0" />
-          )}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm">
-              {linkedin ? "Compte LinkedIn lié" : "Compte LinkedIn pas encore lié"}
-            </h3>
-            {linkedin ? (
-              <div className="mt-2 space-y-1">
-                {linkedin.full_name && (
-                  <div className="text-sm font-medium">{linkedin.full_name}</div>
-                )}
-                {linkedin.headline && (
-                  <div className="text-xs text-muted-foreground">{linkedin.headline}</div>
-                )}
-                {!linkedin.full_name && !linkedin.headline && (
-                  <div className="text-xs text-muted-foreground">Connexion réussie.</div>
-                )}
-                {linkedin.profile_url && (
-                  <a
-                    href={linkedin.profile_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                  >
-                    Voir le profil <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Ouvre LinkedIn (linkedin.com) avec l'extension installée. On récupère
-                automatiquement ton URN et on te rattache au pod adapté.
-              </p>
-            )}
+      {/* ════════════════════════════════════════════════════════════
+          SECTION A — Pod d'engagement LinkedIn
+          ════════════════════════════════════════════════════════════ */}
+      <section className="space-y-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Rocket className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-semibold">Pod d&apos;engagement</h2>
+            <Badge variant="outline" className="text-[10px] font-normal">
+              LinkedIn uniquement
+            </Badge>
           </div>
         </div>
-      </Card>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Quand tu publies sur LinkedIn, les autres membres de ton pod reçoivent
+          un like et un commentaire IA à valider — ton post gagne de la portée
+          dans les premières minutes, exactement quand l&apos;algo décide. Tu rends
+          la pareille sur leurs posts. Système de karma : pas de free-riders.
+        </p>
 
-      {/* Pods */}
-      <Card className="p-5">
-        <h3 className="font-semibold text-sm mb-3">Pods rejoints</h3>
-        {memberships.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Aucun pod pour le moment. Tu seras auto-joiné au pod FR dès que ton
-            compte LinkedIn sera détecté.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {memberships.map((m) => (
-              <li key={m.pod_id} className="flex items-center justify-between gap-3 text-sm">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Badge variant="outline" className="shrink-0 uppercase text-[10px]">
-                    {m.pods.language}
-                  </Badge>
-                  <span className="truncate">{m.pods.name}</span>
+        {/* État matching LinkedIn */}
+        <Card className="p-5">
+          <div className="flex items-start gap-3">
+            {linkedin ? (
+              <CheckCircle2 className="h-5 w-5 mt-0.5 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="h-5 w-5 mt-0.5 text-amber-600 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm">
+                {linkedin ? "Compte LinkedIn lié" : "Compte LinkedIn pas encore lié"}
+              </h3>
+              {linkedin ? (
+                <div className="mt-2 space-y-1">
+                  {linkedin.full_name && (
+                    <div className="text-sm font-medium">{linkedin.full_name}</div>
+                  )}
+                  {linkedin.headline && (
+                    <div className="text-xs text-muted-foreground">{linkedin.headline}</div>
+                  )}
+                  {!linkedin.full_name && !linkedin.headline && (
+                    <div className="text-xs text-muted-foreground">Connexion réussie.</div>
+                  )}
+                  {linkedin.profile_url && (
+                    <a
+                      href={linkedin.profile_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      Voir le profil <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {m.pods.member_count} membres
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      {/* Karma */}
-      <Card className="p-5">
-        <h3 className="font-semibold text-sm mb-3">Karma</h3>
-        {!karma ? (
-          <p className="text-xs text-muted-foreground">
-            Tes statistiques d'engagement apparaîtront ici dès que tu auras donné
-            ou reçu ton premier boost.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-2xl font-bold">{karma.boosts_given}</div>
-              <div className="text-xs text-muted-foreground">Boosts donnés (total)</div>
-              <div className="text-[11px] text-muted-foreground mt-1">
-                {karma.current_week_given} cette semaine
-                {karma.weekly_quota ? ` · quota ${karma.weekly_quota}` : ""}
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{karma.boosts_received}</div>
-              <div className="text-xs text-muted-foreground">Boosts reçus (total)</div>
-              <div className="text-[11px] text-muted-foreground mt-1">
-                {karma.current_week_received} cette semaine
-              </div>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Ouvre LinkedIn (linkedin.com) avec l&apos;extension installée. On récupère
+                  automatiquement ton URN et on te rattache au pod adapté.
+                </p>
+              )}
             </div>
           </div>
-        )}
-      </Card>
+        </Card>
+
+        {/* Pods */}
+        <Card className="p-5">
+          <h3 className="font-semibold text-sm mb-3">Pods rejoints</h3>
+          {memberships.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Aucun pod pour le moment. Tu seras auto-joiné au pod FR dès que ton
+              compte LinkedIn sera détecté.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {memberships.map((m) => (
+                <li key={m.pod_id} className="flex items-center justify-between gap-3 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Badge variant="outline" className="shrink-0 uppercase text-[10px]">
+                      {m.pods.language}
+                    </Badge>
+                    <span className="truncate">{m.pods.name}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {m.pods.member_count} membres
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        {/* Karma */}
+        <Card className="p-5">
+          <h3 className="font-semibold text-sm mb-3">Karma</h3>
+          {!karma ? (
+            <p className="text-xs text-muted-foreground">
+              Tes statistiques d&apos;engagement apparaîtront ici dès que tu auras donné
+              ou reçu ton premier boost.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-2xl font-bold">{karma.boosts_given}</div>
+                <div className="text-xs text-muted-foreground">Boosts donnés (total)</div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  {karma.current_week_given} cette semaine
+                  {karma.weekly_quota ? ` · quota ${karma.weekly_quota}` : ""}
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{karma.boosts_received}</div>
+                <div className="text-xs text-muted-foreground">Boosts reçus (total)</div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  {karma.current_week_received} cette semaine
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+          SECTION B — Commentateur IA (7 réseaux, outil solo)
+          ════════════════════════════════════════════════════════════ */}
+      <section className="space-y-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-semibold">Commentateur IA</h2>
+            <Badge variant="outline" className="text-[10px] font-normal">
+              7 réseaux
+            </Badge>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Sur n&apos;importe quel post que tu visites, un badge Tipote apparaît à
+          côté de la zone commentaire avec 4 tons proposés (« je suis
+          d&apos;accord », « pas d&apos;accord », « ajouter de la valeur », « poser une
+          question »). Tu choisis, tu édites au besoin, tu publies en 1 clic.
+          Pas de pod, pas de karma — c&apos;est ton outil de productivité solo.
+        </p>
+
+        <Card className="p-5 space-y-4">
+          <div>
+            <h3 className="font-semibold text-sm mb-2">Disponible sur</h3>
+            <div className="flex flex-wrap gap-2">
+              {AI_NETWORKS.map((n) => (
+                <span
+                  key={n.name}
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${n.className}`}
+                >
+                  {n.name}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">Comment ça marche</p>
+              <ol className="list-decimal list-inside text-muted-foreground space-y-0.5 leading-relaxed">
+                <li>Ouvre un fil et visite un post</li>
+                <li>Clique le badge Tipote à côté du commentaire</li>
+                <li>Choisis un ton parmi les 4</li>
+                <li>Édite si besoin, valide en 1 clic</li>
+              </ol>
+            </div>
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">À savoir</p>
+              <ul className="list-disc list-inside text-muted-foreground space-y-0.5 leading-relaxed">
+                <li>Aucun commentaire posté sans ton clic explicite</li>
+                <li>Max 12 actions / heure pour rester naturel</li>
+                <li>Pas besoin d&apos;être dans un pod pour t&apos;en servir</li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+      </section>
     </div>
   );
 }

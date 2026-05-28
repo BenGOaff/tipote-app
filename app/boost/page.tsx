@@ -36,15 +36,15 @@ export default async function BoostPage() {
         <AppSidebar />
         <main className="flex-1 overflow-auto bg-background flex flex-col">
           <PageHeader
-            left={<h1 className="text-lg font-display font-bold truncate">Boost LinkedIn</h1>}
+            left={<h1 className="text-lg font-display font-bold truncate">Tipote Boost</h1>}
             userEmail={user.email ?? ""}
           />
           <div className="flex-1 p-4 sm:p-5 lg:p-6">
             <div className="max-w-[1200px] mx-auto w-full space-y-5">
               <PageBanner
                 icon={<Rocket className="w-5 h-5" />}
-                title="Tipote Boost — LinkedIn"
-                subtitle="Gagne de la portée organique grâce aux autres membres du pod. Auto-like + commentaire IA validé en 1-click, depuis l'extension Chrome."
+                title="Tipote Boost — Pod LinkedIn + Commentateur IA"
+                subtitle="Deux outils dans une extension. Pod d'engagement mutuel sur LinkedIn (boost + karma) et commentateur IA sur 7 réseaux (LinkedIn, Facebook, Threads, Instagram, X, TikTok, Reddit)."
               />
               <BoostClient />
             </div>
