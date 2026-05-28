@@ -16,11 +16,13 @@ Document de référence pour la submission CWS. Copies prêtes à coller, screen
 Tipote Boost
 ```
 
-### Description courte (132 caractères max)
+### Description courte (132 caractères max — limite **stricte** côté CWS, l'upload est rejeté au-delà)
 
 ```
-Boost tes posts grâce à un pod d'engagement entre créateurs. Suggestions de commentaires IA validés en 1 clic.
+Boost tes posts sur 7 réseaux grâce à un pod d'engagement collaboratif. Commentaires IA validés en 1 clic.
 ```
+
+> Identique au champ `description` du `manifest.json` — Chrome utilise les deux. Si tu modifies l'un, modifie l'autre.
 
 ### Description longue (16 000 caractères max)
 
