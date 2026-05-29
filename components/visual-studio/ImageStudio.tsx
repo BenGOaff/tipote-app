@@ -464,7 +464,8 @@ export function ImageStudio({
     // IA : le calque titre garde le texte fourni par l'hôte (titre du résultat)
     // en police de marque (sobre). Le reste des calques est vide.
     if (illustrationMode) {
-      const chosen: AiStyleId = aiStyle === "auto" ? "abstract" : aiStyle;
+      // Style appris des 👍/👎 (recommendedStyle) appliqué d'office en "auto".
+      const chosen: AiStyleId = aiStyle === "auto" ? (recommendedStyle ?? "abstract") : aiStyle;
       lastBgStyleRef.current = chosen;
       try {
         const bg = await fetch("/api/visual-studio/generate-background", {
