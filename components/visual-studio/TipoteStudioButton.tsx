@@ -173,7 +173,6 @@ export function TipoteStudioButton({
         formats={formats ?? (illustrationMode ? (["16:9", "1:1"] as StudioFormatId[]) : undefined)}
         defaultFormat={defaultFormat ?? (illustrationMode ? ("16:9" as StudioFormatId) : undefined)}
         enableCarousel={illustrationMode ? false : enableCarousel}
-        enableStylePrefs={illustrationMode ? false : undefined}
         upload={makeContentImageUploader(contentId)}
         onChargeCredit={chargeCredit}
         applyLabel="Insérer"
