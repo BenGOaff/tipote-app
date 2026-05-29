@@ -1,19 +1,23 @@
-// Proxy de recherche GIF — KLIPY (https://klipy.com/developers).
+// Proxy de recherche GIF — KLIPY (https://docs.klipy.com/gifs-api).
 // Tenor ferme son API (plus de nouveaux clients depuis janv. 2026) et Giphy est
 // passé payant : KLIPY est l'alternative gratuite à vie retenue.
 //
 // On NE met JAMAIS la clé côté client :
 //   - clé lue uniquement ici (server) via process.env.KLIPY_API_KEY ;
-//   - auth requise pour éviter qu'un anonyme crame le quota ;
+//   - auth requise pour éviter qu'un anonyme crame le quota (clé test = 100 req/h) ;
 //   - si la clé n'est pas configurée → 503 { ok:false, reason:"not_configured" }
 //     pour que l'UI affiche un message propre au lieu de planter.
 //
-// KLIPY : GET https://api.klipy.com/api/v1/{API_KEY}/gifs/search?q=&per_page=&page=
-//         GET https://api.klipy.com/api/v1/{API_KEY}/gifs/trending
-// Réponse : { result:true, data:{ data:[ item… ], has_next, current_page } }
-// Chaque item expose un objet `file` avec des variantes de taille (hd/md/sm/xs),
-// chacune contenant des formats (gif/webp/mp4) → { url, width, height }. La doc
-// publique ne fige pas les clés, donc on parse DÉFENSIVEMENT.
+// Endpoints (clé dans le PATH) :
+//   GET https://api.klipy.com/api/v1/{KEY}/gifs/search?q=&page=&per_page=&locale=&content_filter=&format_filter=
+//   GET https://api.klipy.com/api/v1/{KEY}/gifs/trending?page=&per_page=&locale=&...
+// Wrapper réponse : { result:true, data:{ data:[ item… ], current_page, per_page, has_next } }
+//
+// La structure exacte d'un item n'est pas figée par la doc publique (objet `file`
+// avec variantes hd/md/sm/xs × formats gif/webp/mp4…). On parse donc en
+// PROFONDEUR : on scanne l'item pour la 1re URL `.gif`, en s'aidant des noms de
+// clés ancêtres (hd/md/sm/xs) pour distinguer image finale vs vignette. Robuste
+// quelle que soit la forme réelle (file/files, leaf objet {url} ou string, item plat).
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -21,29 +25,34 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
-type SizeVariant = Record<string, { url?: string; width?: number; height?: number } | undefined>;
-type KlipyItem = {
-  id?: string | number;
-  slug?: string;
-  title?: string;
-  file?: Record<string, SizeVariant | undefined>;
-};
+const SIZE_RANK: Record<string, number> = { hd: 4, md: 3, sm: 2, xs: 1 };
 
-// Ordre de préférence des tailles : grande pour l'usage final, petite pour la
-// vignette. On retombe sur n'importe quelle taille présente.
-const FULL_ORDER = ["hd", "md", "sm", "xs"];
-const PREVIEW_ORDER = ["sm", "xs", "md", "hd"];
+type GifHit = { url: string; sizeRank: number };
 
-/** Renvoie la 1re { url,width,height } de format gif trouvée selon l'ordre donné. */
-function pickGif(file: KlipyItem["file"], order: string[]) {
-  if (!file) return null;
-  const sizes = [...order, ...Object.keys(file)]; // ordre voulu puis le reste
-  for (const size of sizes) {
-    const variant = file[size];
-    const gif = variant?.gif;
-    if (gif?.url) return { url: gif.url, width: gif.width ?? null, height: gif.height ?? null };
+// Une URL est un GIF si elle pointe un .gif (avec query éventuelle) — on évite
+// ainsi de capter par erreur un .mp4/.webp/.jpg du même item.
+function isGifUrl(s: string): boolean {
+  return /^https?:\/\/\S+\.gif(\?|#|$)/i.test(s);
+}
+
+/** Scan récursif : collecte toutes les URLs .gif de l'item avec un indice de
+ *  taille (déduit du nom de clé ancêtre le plus proche : hd/md/sm/xs). */
+function collectGifs(node: unknown, inheritedRank: number, out: GifHit[]): void {
+  if (!node) return;
+  if (typeof node === "string") {
+    if (isGifUrl(node)) out.push({ url: node, sizeRank: inheritedRank });
+    return;
   }
-  return null;
+  if (Array.isArray(node)) {
+    for (const v of node) collectGifs(v, inheritedRank, out);
+    return;
+  }
+  if (typeof node === "object") {
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      const rank = SIZE_RANK[k.toLowerCase()] ?? inheritedRank;
+      collectGifs(v, rank, out);
+    }
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -74,8 +83,12 @@ export async function GET(req: NextRequest) {
     url.searchParams.set("per_page", String(perPage));
     url.searchParams.set("page", String(page));
     url.searchParams.set("locale", locale);
-    url.searchParams.set("rating", "g"); // safe-for-work
     if (q) url.searchParams.set("q", q);
+    // Filtre de contenu optionnel : valeurs non documentées publiquement, donc
+    // surchargeable via env (ex. "high"/"medium"). Absent → défaut KLIPY.
+    if (process.env.KLIPY_CONTENT_FILTER) {
+      url.searchParams.set("content_filter", process.env.KLIPY_CONTENT_FILTER);
+    }
 
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) {
@@ -84,28 +97,36 @@ export async function GET(req: NextRequest) {
         { status: 502 },
       );
     }
-    const body = (await res.json()) as { data?: { data?: KlipyItem[]; has_next?: boolean } };
-    const items = body?.data?.data ?? [];
+    const body = (await res.json()) as {
+      data?: { data?: unknown[]; has_next?: boolean } | unknown[];
+    };
+    // Tolère data.data[] (forme officielle) ou data[] direct.
+    const inner = body?.data;
+    const items: unknown[] = Array.isArray(inner)
+      ? inner
+      : Array.isArray(inner?.data)
+        ? (inner!.data as unknown[])
+        : [];
 
-    const gifs = items.flatMap((it) => {
-      const full = pickGif(it.file, FULL_ORDER);
-      if (!full) return [];
-      const preview = pickGif(it.file, PREVIEW_ORDER) ?? full;
-      return [{
-        id: String(it.id ?? it.slug ?? full.url),
-        url: full.url,
-        preview: preview.url,
-        width: full.width,
-        height: full.height,
-        description: it.title ?? "",
-      }];
+    const gifs = items.flatMap((it, i) => {
+      const hits: GifHit[] = [];
+      collectGifs(it, 0, hits);
+      if (hits.length === 0) return []; // item sans gif (ex. encart pub) → ignoré
+      // Image finale = plus grande taille ; vignette = plus petite.
+      const full = hits.reduce((a, b) => (b.sizeRank > a.sizeRank ? b : a));
+      const preview = hits.reduce((a, b) => (b.sizeRank < a.sizeRank ? b : a));
+      const obj = (it && typeof it === "object" ? (it as Record<string, unknown>) : {});
+      const id = obj.id ?? obj.slug ?? `${page}-${i}`;
+      const description = typeof obj.title === "string" ? obj.title : "";
+      return [{ id: String(id), url: full.url, preview: preview.url, description }];
     });
 
+    const hasNext = Array.isArray(inner) ? gifs.length >= perPage : Boolean(inner?.has_next);
     return NextResponse.json({
       ok: true,
       gifs,
-      hasNext: Boolean(body?.data?.has_next),
-      nextPage: body?.data?.has_next ? page + 1 : null,
+      hasNext,
+      nextPage: hasNext ? page + 1 : null,
     });
   } catch {
     return NextResponse.json({ ok: false, reason: "error" }, { status: 500 });
