@@ -4,6 +4,28 @@
 
 import { buildLanguageDirective } from "@/lib/quizLanguages";
 
+// Bloc d'écriture NATURELLE 2026 — l'arme anti « ça fait IA ». Réutilisé par la
+// génération de quiz ET de sondage. Cible précisément les tics qui trahissent un
+// texte généré (tournures clichées, parallélismes lisses, faux-profond) et exige
+// des tournures variées, incarnées, spécifiques. (FR par défaut ; les consignes
+// valent pour toutes les langues — l'IA les transpose.)
+export const NATURAL_WRITING_BLOCK = `EXIGENCE D'ÉCRITURE — NATUREL, PAS "IA" (CRITIQUE) :
+On doit lire un humain expert, pas un assistant. Écris comme on parle, avec du rythme et des aspérités.
+À BANNIR absolument (marqueurs typiques d'un texte IA) :
+- Le patron "Ce n'est pas X, c'est Y" / "Il ne s'agit pas de X, mais de Y".
+- Les tirets cadratins (—) en incise et la sur-ponctuation décorative.
+- Les verbes/mots brochure : "optimiser", "booster", "libérer ton potentiel", "passer au niveau supérieur", "révolutionner", "plonger dans", "à l'ère de", "dans un monde où", "découvrez".
+- Les triades lisses et parallélismes mécaniques ("plus simple, plus rapide, plus efficace").
+- Le faux-profond qui sonne bien mais ne dit rien ("la vraie différence se joue ailleurs").
+- Les emojis décoratifs en début de phrase, les "✨", les exclamations en rafale.
+- Les formules creuses de coach ("c'est parti !", "prêt à tout déchirer ?").
+À FAIRE :
+- Phrases de longueurs VARIÉES (certaines très courtes). Une idée concrète par phrase.
+- Du spécifique et du sensoriel : un détail réel, un chiffre, une situation vécue valent mieux qu'un adjectif.
+- Le vocabulaire RÉEL de la cible et du créateur, pas un registre marketing passe-partout.
+- Une voix qui assume un point de vue : on peut être direct, un peu cash, jamais tiède.
+- Relis chaque phrase : si elle pourrait figurer dans n'importe quel quiz de n'importe quelle marque, réécris-la.`;
+
 type QuizPromptParams = {
   objective: string;
   target: string;
@@ -15,6 +37,12 @@ type QuizPromptParams = {
   resultCount?: number;
   niche?: string;
   mission?: string;
+  /** Voix de marque condensée (tonalité écrite + offres + puces promesses +
+   *  persona douleurs/désirs), assemblée par brandLoader. Fait écrire l'IA DANS
+   *  la voix de l'user plutôt qu'en voix neutre. */
+  brandVoice?: string;
+  /** Exemples de structures d'accroches/promesses (ressources copywriting). */
+  copyHint?: string;
   locale?: string;
   addressForm?: "tu" | "vous";
   format?: "short" | "long";
@@ -59,6 +87,8 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     resultCount = 3,
     niche = "",
     mission = "",
+    brandVoice = "",
+    copyHint = "",
     locale = "fr",
     addressForm = "tu",
     format = "short",
@@ -117,6 +147,8 @@ PRINCIPES CRÉATIFS :
 - Tonalité empathique mais directive : même dans un quiz fun, on doit suggérer une suite logique.
 - Le ton doit être ${tone}, jamais condescendant, jamais scolaire.
 
+${NATURAL_WRITING_BLOCK}
+${brandVoice ? `\nVOIX DE LA MARQUE — écris DANS cette voix (ne recopie jamais ces éléments tels quels, inspire-t'en pour le ton et les angles) :\n${brandVoice}\n` : ""}${copyHint ? `\n${copyHint}\n` : ""}
 FORME D'ADRESSE : ${formality === "vous" ? "VOUVOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « vous » et ses formes associées." : "TUTOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « tu » et ses formes associées."}
 
 STRATÉGIE SELON LE FORMAT :
@@ -309,6 +341,7 @@ type SurveyPromptParams = {
   questionCount?: number;
   locale?: string;
   addressForm?: "tu" | "vous";
+  brandVoice?: string;
 };
 
 export function buildSurveyGenerationPrompt(params: SurveyPromptParams): {
@@ -324,6 +357,7 @@ export function buildSurveyGenerationPrompt(params: SurveyPromptParams): {
     questionCount = 6,
     locale = "fr",
     addressForm = "tu",
+    brandVoice = "",
   } = params;
 
   const formality = addressForm === "vous" ? "vous" : "tu";
@@ -367,6 +401,9 @@ PRINCIPES :
 - RYTHMÉ : alterner les types pour éviter la monotonie. Ne pas enchaîner 5 free_text d'affilée.
 - CONCRET : chaque question doit produire de la donnée actionnable, pas du remplissage.
 - TONALITÉ : ${tone}. ${formality === "vous" ? "Vouvoyer." : "Tutoyer."}
+
+${NATURAL_WRITING_BLOCK}
+${brandVoice ? `\nVOIX DE LA MARQUE — écris DANS cette voix (inspire-t'en, ne recopie pas) :\n${brandVoice}\n` : ""}
 
 CONFIG PAR TYPE — Quand tu utilises un type non-classique, fournis une "config" minimale :
   • rating_scale : { "min": 0, "max": 10, "minLabel": "Pas du tout probable", "maxLabel": "Extrêmement probable" }
