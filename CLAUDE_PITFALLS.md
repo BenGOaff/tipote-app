@@ -766,3 +766,38 @@ Doc de réf complète : `apps/extension/CWS-LISTING.md`. Pièges qui font rejete
 - **Re-soumission après rejet = scrutin accru** : rester conservateur, ne pas
   réintroduire d'autres motifs (pods d'engagement = sujet sensible LinkedIn/X,
   cf. CWS-LISTING.md « Délais et processus »).
+
+## AD) STUDIO VISUELS — mode CARROUSEL (génération multi-slides, juin 2026)
+
+Module `components/visual-studio/` (ImageStudio + StudioCanvas) + `lib/visualStudio/`.
+Réutilisé sur affiliate (et plus tard Tipote). Points à respecter :
+
+- **Carrousel = FLAT, couleurs de MARQUE** (choix Béné) : pas d'image IA par
+  slide. La copy des 10 slides vient d'UN appel `/api/visual-studio/generate-carousel`
+  (structure hook → rehook → problème → 4×valeur → aha → takeaway → CTA, cf.
+  `lib/visualStudio/carousel.ts` `CAROUSEL_ROLES`). Les fonds alternent la
+  palette du `brandKit` (`slideStyle()` calcule fond/texte/accent/bouton avec
+  contraste WCAG). Sur affiliate : brandKit = Tipote ou Tiquiz selon l'outil
+  promu ; sur Tipote (à venir) : couleurs + logo des réglages de l'user.
+- **Le brand kit est INJECTÉ par l'hôte** (prop `brandKit`) → ne jamais hardcoder
+  une couleur de slide. Toute couleur de slide passe par `slideStyle(brand, i, role)`.
+- **Gabarit `carousel` du canvas** : géré par `layoutCarousel()` + `handle.setCarousel()`
+  dans `StudioCanvas.tsx`. C'est un 4e template à côté de auto/data/beforeAfter —
+  additif, gated par `curTemplate === "carousel"`. Flat = `shadow:""`, pas de
+  scrim, pas de pilule. Le fond est posé via `ensureSolidBg()` DIRECTEMENT sur le
+  canvas (pas l'état React `background`) → indispensable pour l'export en boucle.
+- **Export multi-slides** : `ImageStudio.applyCarousel()` boucle slide par slide
+  (setLayers + setCarousel + toBlob + upload) et remonte un tableau via
+  `onApplyMany`. Persistance hôte = `post:<id>:visuals` (déjà un tableau de
+  chemins) → PostDayCard.`handleVisualsSaved` patch UNE fois (sinon races sur
+  l'état avec des patchs concurrents).
+- **Éditions WYSIWYG par slide** : capturées dans `slidesRef` via
+  `handle.getLayerText()` AVANT chaque navigation / export (les éditions vivent
+  dans Fabric, pas dans le state React).
+- **i18n** : clés `visualStudio.*` (next-intl, `messages/*.json`) — ajouter dans
+  les 7 langues (fr/en/es/it/pt/pt-BR/ar). Les textes des slides, eux, sont
+  générés par l'IA dans la locale de l'user.
+
+⚠️ Env note (pas un bug code) : un Edit sur un gros fichier peut échouer en
+silence ("File has not been read yet") si la lecture a été paginée/tronquée —
+re-grep le marqueur après coup pour confirmer que l'édition a bien pris.

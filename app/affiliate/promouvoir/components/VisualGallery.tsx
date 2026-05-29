@@ -22,18 +22,27 @@ export function VisualGallery({
   const tStudio = useTranslations("visualStudio");
   const [studioOpen, setStudioOpen] = useState(false);
 
-  function handleApply(result: StudioResult) {
+  function downloadResult(result: StudioResult, index?: number) {
     // Le visuel est déjà stocké côté serveur (prop `upload`). Ici on
     // déclenche en plus le téléchargement local — via le blob, fiable
     // même si result.url est une URL distante signée (cross-origin).
     const href = URL.createObjectURL(result.blob);
     const a = document.createElement("a");
+    const suffix = index != null ? `-${String(index + 1).padStart(2, "0")}` : "";
     a.href = href;
-    a.download = `visuel-tiquiz-${result.format.replace(":", "x")}-${Date.now()}.png`;
+    a.download = `visuel-tiquiz-${result.format.replace(":", "x")}${suffix}-${Date.now()}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(href);
+  }
+
+  function handleApply(result: StudioResult) {
+    downloadResult(result);
+  }
+
+  function handleApplyMany(results: StudioResult[]) {
+    results.forEach((r, i) => downloadResult(r, i));
   }
 
   return (
@@ -63,6 +72,7 @@ export function VisualGallery({
         applyLabel={tStudio("download")}
         upload={uploadVisual}
         onApply={handleApply}
+        onApplyMany={handleApplyMany}
       />
       <section>
         <div className="mb-4">

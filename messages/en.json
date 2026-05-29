@@ -5799,7 +5799,19 @@
     "scrimNone": "None",
     "scrimDark": "Dark",
     "scrimLight": "Light",
-    "aiGenerateVisual": "Generate visual"
+    "aiGenerateVisual": "Generate visual",
+    "modeSingle": "Single image",
+    "modeCarousel": "Carousel",
+    "carouselSubjectLabel": "Carousel topic",
+    "carouselHint": "AI turns your topic into 10 ready-to-post slides (hook → value → CTA).",
+    "carouselGenerate": "Generate carousel",
+    "carouselGenerating": "Generating…",
+    "carouselRegenerate": "Regenerate carousel",
+    "carouselSlideOf": "Slide {n}/{total}",
+    "carouselEditTip": "Click any text on the slide to edit it.",
+    "carouselApply": "Attach the {n} slides",
+    "carouselExporting": "Exporting…",
+    "carouselEmpty": "Generate the carousel first."
   },
   "colorPicker": {
     "pick": "Pick a color",

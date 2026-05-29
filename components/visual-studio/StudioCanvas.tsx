@@ -93,12 +93,33 @@ export interface StudioCanvasHandle {
    *  `word` doit être un sous-texte exact du titre ; "" enlève le surlignage. */
   highlightHeadline: (word: string) => void;
   /** Gabarit de rendu : "auto" = texte, "data" = barres comparatives,
-   *  "beforeAfter" = deux panneaux avant/après. */
-  setTemplate: (template: "auto" | "data" | "beforeAfter") => void;
+   *  "beforeAfter" = deux panneaux avant/après, "carousel" = slide flat de marque. */
+  setTemplate: (template: "auto" | "data" | "beforeAfter" | "carousel") => void;
   /** Jeu de données pour le gabarit "data" (barres). */
   setStats: (stats: ChartStat[]) => void;
   /** Phrases avant/après pour le gabarit "beforeAfter". */
   setBeforeAfter: (before: string, after: string) => void;
+  /** Active/configure une slide de CARROUSEL (rendu flat : fond de marque uni,
+   *  zéro ombre/gradient, footer marque + numéro). Bascule sur le gabarit
+   *  "carousel". */
+  setCarousel: (params: CarouselRenderParams) => void;
+  /** Lit le texte courant d'un calque (pour persister les éditions WYSIWYG
+   *  d'une slide avant de naviguer / d'exporter). "" si le calque n'existe pas. */
+  getLayerText: (id: string) => string;
+}
+
+/** Paramètres de rendu d'une slide de carrousel (flat, couleurs de marque). */
+export interface CarouselRenderParams {
+  index: number;
+  total: number;
+  bg: string;
+  textColor: string;
+  accentColor: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  brandName: string;
+  /** true sur la slide finale → on affiche le bouton CTA. */
+  isCTA: boolean;
 }
 
 /** Donnée chiffrée pour le gabarit data-viz : libellé + valeur affichée
@@ -327,8 +348,10 @@ export function StudioCanvas({
     let curSide: "left" | "right" | "full" = "full";
     // Gabarit + données (data-viz) + couleur de texte courante (pour les
     // libellés du graphe).
-    let curTemplate: "auto" | "data" | "beforeAfter" = "auto";
+    let curTemplate: "auto" | "data" | "beforeAfter" | "carousel" = "auto";
     let curStats: ChartStat[] = [];
+    // Paramètres de la slide de carrousel courante (null hors mode carrousel).
+    let curCarousel: CarouselRenderParams | null = null;
     let curBefore = "";
     let curAfter = "";
     let curTextColor = brand.textColor;
@@ -929,9 +952,139 @@ export function StudioCanvas({
       cc.requestRenderAll();
     };
 
+    // Fond UNI plein (flat) posé directement sur le canvas, sans passer par
+    // l'état React `background` — indispensable pour l'export séquentiel du
+    // carrousel (changer 10 fonds en boucle sans attendre un re-render).
+    const ensureSolidBg = (color: string) => {
+      const cc = fcRef.current;
+      if (!cc) return;
+      const existing = bgRef.current;
+      if (existing && (existing as FabricObject).type === "rect") {
+        (existing as Rect).set({ fill: color, width: dimsRef.current.w, height: dimsRef.current.h });
+        cc.sendObjectToBack(existing);
+        return;
+      }
+      if (existing) cc.remove(existing);
+      const rect = new Rect({ left: 0, top: 0, width: dimsRef.current.w, height: dimsRef.current.h, selectable: false, evented: false });
+      rect.set("fill", color);
+      (rect as { layerId?: string }).layerId = undefined;
+      bgRef.current = rect;
+      cc.add(rect);
+      cc.sendObjectToBack(rect);
+    };
+
+    // ── Gabarit CARROUSEL : slide FLAT (réf prompt Béné). Fond de marque uni,
+    // AUCUNE ombre, AUCUN gradient, AUCUNE pilule. Tag (kicker) + titre + ligne
+    // de soutien empilés au centre, footer "marque · 0X/NN", bouton CTA plein
+    // sur la dernière slide. Les couleurs (fond/texte/accent/bouton) sont
+    // calculées par l'hôte depuis le brand kit et passées via setCarousel.
+    const layoutCarousel = () => {
+      const cc = fcRef.current;
+      if (!cc || !curCarousel) return;
+      const p = curCarousel;
+      const W = dimsRef.current.w;
+      const H = dimsRef.current.h;
+      const padX = 0.1 * W;
+      const boxW = W - 2 * padX;
+      const maxLine = boxW * 0.98;
+      ensureSolidBg(p.bg);
+      if (decorObjs.length) { decorObjs.forEach((d) => cc.remove(d)); decorObjs = []; }
+
+      const get = (id: string) => cc.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined;
+      get("accent")?.set({ text: "" }); // pas de badge chiffre en carrousel
+
+      // Calques cœur : kicker (tag), headline, subline. CTA géré en bouton.
+      const FRAC: Record<string, number> = { kicker: 0.03, headline: 0.085, subline: 0.04 };
+      const MAXL: Record<string, number> = { kicker: 1, headline: 4, subline: 4 };
+      const isList = String(get("subline")?.text ?? "").includes("\n"); // slide takeaway
+      const prep = (id: string, align: "left" | "center"): Textbox | undefined => {
+        const o = get(id);
+        if (!o || !String(o.text ?? "").trim()) return undefined;
+        o.set({ left: padX, width: boxW, textAlign: align, shadow: "", textBackgroundColor: "", lineHeight: id === "headline" ? 1.05 : 1.3 });
+        const frac = FRAC[id];
+        if (frac) o.set({ fontSize: frac * W });
+        if (id === "kicker") o.set({ charSpacing: 160, fontWeight: "700", fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif' });
+        if (id === "subline") o.set({ fontWeight: "500", fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif' });
+        fitToWidth(o, maxLine, id === "kicker");
+        for (let pass = 0; pass < 4; pass++) { o.initDimensions(); const lw = longestLineWidth(o); if (lw <= maxLine) break; o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * (maxLine / lw)) }); }
+        const maxl = MAXL[id];
+        if (maxl) for (let pass = 0; pass < 6; pass++) { o.initDimensions(); const lines = (o as unknown as { textLines?: string[] }).textLines?.length ?? 1; if (lines <= maxl) break; o.set({ fontSize: Math.max(8, (o.fontSize ?? 20) * 0.92) }); }
+        o.initDimensions();
+        return o;
+      };
+
+      const align: "left" | "center" = isList ? "left" : "center";
+      const kicker = prep("kicker", align);
+      const headline = prep("headline", align);
+      const subline = prep("subline", align);
+      kicker?.set({ fill: p.accentColor });
+      headline?.set({ fill: p.textColor });
+      subline?.set({ fill: p.textColor, opacity: 0.9 });
+
+      // CTA = vrai bouton plein (flat) sur la dernière slide.
+      const ctaLayer = get("cta");
+      const hasCta = !!(p.isCTA && ctaLayer && String(ctaLayer.text ?? "").trim());
+      if (hasCta && ctaLayer) {
+        ctaLayer.set({ left: padX, width: boxW, textAlign: "center", shadow: "", textBackgroundColor: "", fontWeight: "800", fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fill: p.buttonTextColor, fontSize: 0.045 * W });
+        for (let pass = 0; pass < 4; pass++) { ctaLayer.initDimensions(); const lw = longestLineWidth(ctaLayer); if (lw <= maxLine * 0.9) break; ctaLayer.set({ fontSize: Math.max(8, (ctaLayer.fontSize ?? 20) * 0.92) }); }
+        ctaLayer.initDimensions();
+      } else {
+        ctaLayer?.set({ text: "" });
+      }
+
+      // Empilement vertical centré (entre header de footer haut et bas).
+      const core = [kicker, headline, subline].filter((o): o is Textbox => !!o);
+      const gap = 0.03 * H;
+      const ctaH = hasCta && ctaLayer ? ctaLayer.getScaledHeight() + 0.68 * ctaLayer.getScaledHeight() + 0.09 * H : 0;
+      const totalCore = core.reduce((s, o) => s + o.getScaledHeight(), 0) + gap * Math.max(0, core.length - 1);
+      const blockH = totalCore + ctaH;
+      let y = Math.max(0.12 * H, (H - blockH) / 2);
+      core.forEach((o, i) => {
+        if (i > 0) y += gap;
+        o.set({ top: y });
+        o.setCoords();
+        y += o.getScaledHeight();
+      });
+
+      // Bouton CTA juste sous le bloc.
+      if (hasCta && ctaLayer) {
+        y += 0.05 * H;
+        const padV = 0.34 * ctaLayer.getScaledHeight();
+        const padH = 0.7 * ctaLayer.getScaledHeight();
+        const tw = longestLineWidth(ctaLayer);
+        const bw = Math.min(tw + 2 * padH, W - 2 * padX);
+        const bh = ctaLayer.getScaledHeight() + 2 * padV;
+        ctaLayer.set({ left: W / 2 - boxW / 2, width: boxW, top: y + padV });
+        ctaLayer.setCoords();
+        const rect = new Rect({ left: W / 2 - bw / 2, top: y, width: bw, height: bh, rx: bh / 2, ry: bh / 2, fill: p.buttonColor, selectable: false, evented: false, objectCaching: false });
+        (rect as { layerId?: string }).layerId = undefined;
+        cc.add(rect);
+        decorObjs.push(rect);
+      }
+
+      // Footer : marque (gauche) + "0X/NN" (droite), discret.
+      const footY = H - 0.07 * H;
+      const footSize = 0.026 * W;
+      const mkFoot = (text: string, left: number, width: number, textAlign: "left" | "right") => {
+        const tb = new Textbox(text, { left, top: footY, width, fontSize: footSize, textAlign, fill: p.textColor, opacity: 0.6, fontWeight: "700", charSpacing: 60, fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', selectable: false, evented: false, objectCaching: false });
+        (tb as { layerId?: string }).layerId = undefined;
+        cc.add(tb);
+        decorObjs.push(tb);
+      };
+      if (p.brandName) mkFoot(p.brandName.toUpperCase(), padX, boxW * 0.6, "left");
+      const num = `${String(p.index + 1).padStart(2, "0")}/${String(p.total).padStart(2, "0")}`;
+      mkFoot(num, W - padX - boxW * 0.4, boxW * 0.4, "right");
+
+      // Z-order : fond → décorations (bouton/footer) → textes cœur.
+      decorObjs.forEach((d) => cc.sendObjectToBack(d));
+      if (bgRef.current) cc.sendObjectToBack(bgRef.current);
+      cc.requestRenderAll();
+    };
+
     // Dispatcher : choisit le gabarit selon le template + données disponibles.
     const render = () => {
-      if (curTemplate === "data" && curStats.length >= 2) layoutData();
+      if (curTemplate === "carousel" && curCarousel) layoutCarousel();
+      else if (curTemplate === "data" && curStats.length >= 2) layoutData();
       else if (curTemplate === "beforeAfter" && curBefore && curAfter) layoutBeforeAfter();
       else layout();
     };
@@ -1111,8 +1264,23 @@ export function StudioCanvas({
         layoutNow();
       },
       setTemplate(template) {
-        curTemplate = template === "data" || template === "beforeAfter" ? template : "auto";
+        curTemplate =
+          template === "data" || template === "beforeAfter" || template === "carousel"
+            ? template
+            : "auto";
         layoutNow();
+      },
+      setCarousel(params) {
+        curCarousel = params;
+        curTemplate = "carousel";
+        placed = true; // permet les re-layout au changement de format
+        layoutNow();
+      },
+      getLayerText(id) {
+        const c = fcRef.current;
+        if (!c) return "";
+        const obj = c.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined;
+        return String(obj?.text ?? "");
       },
       setStats(stats) {
         curStats = Array.isArray(stats) ? stats.slice(0, 4) : [];

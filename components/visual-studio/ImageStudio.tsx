@@ -33,6 +33,9 @@ import {
   Minus,
   Plus,
   Type,
+  GalleryHorizontalEnd,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Dialog,
@@ -51,11 +54,13 @@ import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
 import { AI_STYLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
 import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
+import { slideStyle, type CarouselSlide } from "@/lib/visualStudio/carousel";
 import type {
   BackgroundMode,
   BackgroundSpec,
   ImageStudioProps,
   StudioFormatId,
+  StudioResult,
 } from "@/lib/visualStudio/types";
 import type { SelectionInfo, StudioCanvasHandle } from "./StudioCanvas";
 
@@ -89,6 +94,11 @@ const PREVIEW_MAX_W = 420;
 const PREVIEW_MAX_H = 560;
 const TOOLBAR_H = 44;
 
+// Police de titre des slides de carrousel : sans heavy lisible (flat, punchy).
+const CAROUSEL_HEADING_STACK = '"Archivo Black", Arial, sans-serif';
+
+type StudioMode = "single" | "carousel";
+
 export function ImageStudio({
   open,
   onOpenChange,
@@ -100,6 +110,8 @@ export function ImageStudio({
   initialIntent,
   upload,
   onApply,
+  enableCarousel = true,
+  onApplyMany,
   title,
   applyLabel,
 }: ImageStudioProps) {
@@ -137,6 +149,17 @@ export function ImageStudio({
   // Compteur de générations → alterne le gabarit (centré / éditorial gauche)
   // pour que des posts successifs ne se ressemblent pas tous.
   const genCountRef = useRef(0);
+
+  // ── Mode CARROUSEL (image seule par défaut) ────────────────────
+  const [mode, setMode] = useState<StudioMode>("single");
+  const [slides, setSlides] = useState<CarouselSlide[]>([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [carouselBusy, setCarouselBusy] = useState(false);
+  // Source de vérité IMPÉRATIVE du contenu des slides (les éditions WYSIWYG
+  // vivent dans Fabric ; on les capture ici avant de naviguer / d'exporter,
+  // sans dépendre du cycle de re-render React).
+  const slidesRef = useRef<CarouselSlide[]>([]);
+  const currentRef = useRef(0);
 
   const onCanvasReady = useCallback((h: StudioCanvasHandle) => {
     handleRef.current = h;
@@ -184,6 +207,12 @@ export function ImageStudio({
     setBgTreatment("none");
     genCountRef.current = 0;
     setAiIntent(initialIntent ?? "");
+    setMode("single");
+    setSlides([]);
+    setCurrentSlide(0);
+    slidesRef.current = [];
+    currentRef.current = 0;
+    setCarouselBusy(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -338,7 +367,172 @@ export function ImageStudio({
     }
   }
 
+  // ── Carrousel ──────────────────────────────────────────────────
+  // Pousse le contenu d'une slide sur le canvas (textes + style flat de marque).
+  const applySlideToCanvas = useCallback(
+    (slide: CarouselSlide, index: number, total: number) => {
+      const h = handleRef.current;
+      if (!h) return;
+      const isCTA = slide.role === "cta";
+      const st = slideStyle(brandKit, index, slide.role);
+      h.setLayerText("kicker", slide.kicker ? slide.kicker.toUpperCase() : "");
+      h.setLayerText("headline", slide.headline ?? "");
+      h.setLayerText("subline", slide.subline ?? "");
+      h.setLayerText("cta", isCTA ? slide.cta ?? "" : "");
+      h.setLayerText("accent", "");
+      h.highlightHeadline(""); // pas de surligneur en carrousel (flat)
+      h.setHeadingFont(CAROUSEL_HEADING_STACK);
+      h.setCarousel({
+        index,
+        total,
+        bg: st.bg,
+        textColor: st.textColor,
+        accentColor: st.accentColor,
+        buttonColor: st.buttonColor,
+        buttonTextColor: st.buttonTextColor,
+        brandName: brandKit.name,
+        isCTA,
+      });
+    },
+    [brandKit],
+  );
+
+  // Capture les éditions WYSIWYG de la slide affichée dans slidesRef.
+  const captureCurrentSlide = useCallback(() => {
+    const h = handleRef.current;
+    const list = slidesRef.current;
+    const i = currentRef.current;
+    if (!h || !list[i]) return;
+    list[i] = {
+      ...list[i],
+      kicker: h.getLayerText("kicker"),
+      headline: h.getLayerText("headline"),
+      subline: h.getLayerText("subline"),
+      cta: list[i].role === "cta" ? h.getLayerText("cta") : list[i].cta,
+    };
+  }, []);
+
+  const goToSlide = useCallback(
+    (index: number) => {
+      const list = slidesRef.current;
+      if (index < 0 || index >= list.length) return;
+      captureCurrentSlide();
+      currentRef.current = index;
+      setCurrentSlide(index);
+      applySlideToCanvas(list[index], index, list.length);
+      setSlides([...list]);
+    },
+    [applySlideToCanvas, captureCurrentSlide],
+  );
+
+  async function generateCarousel() {
+    if (!aiIntent.trim()) {
+      toast.error(t("aiCopyEmpty"));
+      return;
+    }
+    setCarouselBusy(true);
+    try {
+      const res = await fetch("/api/visual-studio/generate-carousel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent: aiIntent.trim(), locale, brandName: brandKit.name }),
+      })
+        .then((r) => r.json())
+        .catch(() => ({}));
+      if (!res?.ok || !Array.isArray(res.slides) || !res.slides.length) {
+        toast.error(t("aiError"));
+        return;
+      }
+      const list = res.slides as CarouselSlide[];
+      slidesRef.current = list;
+      currentRef.current = 0;
+      setSlides(list);
+      setCurrentSlide(0);
+      // Fond flat → on neutralise voile/traitement hérités du mode image.
+      setScrim("none");
+      setScrimSide("none");
+      setBgTreatment("none");
+      applySlideToCanvas(list[0], 0, list.length);
+    } catch (e) {
+      console.error("[ImageStudio] generateCarousel failed", e);
+      toast.error(t("aiError"));
+    } finally {
+      setCarouselBusy(false);
+    }
+  }
+
+  // Bascule de mode : le carrousel force le format portrait 4:5 (si dispo) et
+  // un fond uni neutre (le rendu flat est piloté par setCarousel).
+  function switchMode(next: StudioMode) {
+    if (next === mode) return;
+    setMode(next);
+    if (next === "carousel") {
+      if (formats.includes("4:5")) setFormatId("4:5");
+      setBackground({ mode: "solid", color: brandKit.backgroundColor, color2: brandKit.primaryColor, imageUrl: null });
+      setScrim("none");
+      setScrimSide("none");
+      setBgTreatment("none");
+      const list = slidesRef.current;
+      if (list.length) applySlideToCanvas(list[currentRef.current] ?? list[0], currentRef.current, list.length);
+    }
+  }
+
+  const nextFrame = () =>
+    new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+  async function applyCarousel() {
+    const handle = handleRef.current;
+    if (!handle) {
+      toast.error(t("canvasNotReady"));
+      return;
+    }
+    captureCurrentSlide();
+    const list = slidesRef.current;
+    if (!list.length) {
+      toast.error(t("carouselEmpty"));
+      return;
+    }
+    setBusy(true);
+    try {
+      const results: StudioResult[] = [];
+      for (let i = 0; i < list.length; i++) {
+        applySlideToCanvas(list[i], i, list.length);
+        await nextFrame();
+        const blob = await handle.toBlob();
+        let url: string;
+        let storagePath: string | undefined;
+        if (upload) {
+          const res = await upload(blob, { format: formatId, width: format.width, height: format.height });
+          if (typeof res === "string") url = res;
+          else {
+            url = res.url;
+            storagePath = res.path;
+          }
+        } else {
+          url = URL.createObjectURL(blob);
+          objectUrlsRef.current.push(url);
+        }
+        results.push({ url, storagePath, width: format.width, height: format.height, blob, format: formatId });
+      }
+      if (onApplyMany) onApplyMany(results);
+      else if (onApply) results.forEach((r) => onApply(r));
+      // Restaure l'aperçu sur la slide courante.
+      applySlideToCanvas(list[currentRef.current] ?? list[0], currentRef.current, list.length);
+      onOpenChange(false);
+    } catch (e) {
+      console.error("[ImageStudio] carousel export/upload failed", e);
+      const msg = e instanceof Error ? e.message : "Réessaie.";
+      toast.error(t("exportFailed", { msg }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function apply() {
+    if (mode === "carousel") {
+      await applyCarousel();
+      return;
+    }
     const handle = handleRef.current;
     if (!handle) {
       toast.error(t("canvasNotReady"));
@@ -398,9 +592,39 @@ export function ImageStudio({
           <div className="flex flex-col lg:flex-row gap-5 lg:h-full lg:min-h-0">
             {/* ── Contrôles (PAS de contenu texte ici) ──── */}
             <div className="space-y-5 lg:w-[280px] lg:shrink-0 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
+              {/* Mode : image seule ou carrousel (10 slides) */}
+              {enableCarousel && (
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { id: "single" as StudioMode, icon: ImageIcon, label: t("modeSingle") },
+                    { id: "carousel" as StudioMode, icon: GalleryHorizontalEnd, label: t("modeCarousel") },
+                  ]).map((m) => {
+                    const Icon = m.icon;
+                    const active = mode === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => switchMode(m.id)}
+                        className={`flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors ${
+                          active
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Sujet (IA) — un seul "Générer le visuel" : texte + fond + voile */}
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t("aiSubjectLabel")}</Label>
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {mode === "carousel" ? t("carouselSubjectLabel") : t("aiSubjectLabel")}
+                </Label>
                 <textarea
                   value={aiIntent}
                   onChange={(e) => setAiIntent(e.target.value)}
@@ -408,41 +632,83 @@ export function ImageStudio({
                   rows={3}
                   className="w-full resize-none rounded-md border bg-background px-2.5 py-2 text-xs outline-none focus:border-primary"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  L&apos;IA lit le post, choisit le format (texte, comparatif chiffré, avant/après) et l&apos;image qui collent au contenu.
-                </p>
-                {/* Style d'image : "Auto" (l'IA décide selon le post) + override. */}
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setAiStyle("auto")}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
-                      aiStyle === "auto"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    ✨ Auto
-                  </button>
-                  {AI_STYLES.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setAiStyle(s.id)}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
-                        aiStyle === s.id
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      {t(s.labelKey)}
-                    </button>
-                  ))}
-                </div>
-                <Button type="button" className="w-full" onClick={generateVisual} disabled={visualBusy}>
-                  {visualBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
-                  {visualBusy ? t("aiGenerating") : background.imageUrl ? t("aiVariant") : t("aiGenerateVisual")}
-                </Button>
+                {mode === "single" ? (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">
+                      L&apos;IA lit le post, choisit le format (texte, comparatif chiffré, avant/après) et l&apos;image qui collent au contenu.
+                    </p>
+                    {/* Style d'image : "Auto" (l'IA décide selon le post) + override. */}
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setAiStyle("auto")}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                          aiStyle === "auto"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        ✨ Auto
+                      </button>
+                      {AI_STYLES.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setAiStyle(s.id)}
+                          className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                            aiStyle === s.id
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {t(s.labelKey)}
+                        </button>
+                      ))}
+                    </div>
+                    <Button type="button" className="w-full" onClick={generateVisual} disabled={visualBusy}>
+                      {visualBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+                      {visualBusy ? t("aiGenerating") : background.imageUrl ? t("aiVariant") : t("aiGenerateVisual")}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">{t("carouselHint")}</p>
+                    <Button type="button" className="w-full" onClick={generateCarousel} disabled={carouselBusy}>
+                      {carouselBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+                      {carouselBusy ? t("carouselGenerating") : slides.length ? t("carouselRegenerate") : t("carouselGenerate")}
+                    </Button>
+
+                    {slides.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <Button type="button" size="icon" variant="outline" className="h-8 w-8" onClick={() => goToSlide(currentSlide - 1)} disabled={currentSlide <= 0}>
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                            {t("carouselSlideOf", { n: currentSlide + 1, total: slides.length })}
+                          </span>
+                          <Button type="button" size="icon" variant="outline" className="h-8 w-8" onClick={() => goToSlide(currentSlide + 1)} disabled={currentSlide >= slides.length - 1}>
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-1.5">
+                          {slides.map((s, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              aria-label={`${i + 1}`}
+                              onClick={() => goToSlide(i)}
+                              className={`h-2 w-2 rounded-full transition-colors ${
+                                i === currentSlide ? "bg-primary" : "bg-muted-foreground/30 hover:bg-muted-foreground/60"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">{t("carouselEditTip")}</p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <Separator />
@@ -473,6 +739,8 @@ export function ImageStudio({
                 </div>
               </div>
 
+              {mode === "single" && (
+                <>
               <Separator />
 
               {/* Fond */}
@@ -582,6 +850,8 @@ export function ImageStudio({
               <p className="text-xs text-muted-foreground">
                 {t("tip")}
               </p>
+                </>
+              )}
             </div>
 
             {/* ── Aperçu + édition WYSIWYG (Fabric) ────── */}
@@ -626,9 +896,13 @@ export function ImageStudio({
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
               {t("close")}
             </Button>
-            <Button type="button" onClick={apply} disabled={busy}>
+            <Button type="button" onClick={apply} disabled={busy || (mode === "carousel" && slides.length === 0)}>
               {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
-              {applyLabel ?? t("use")}
+              {mode === "carousel"
+                ? busy
+                  ? t("carouselExporting")
+                  : t("carouselApply", { n: slides.length })
+                : applyLabel ?? t("use")}
             </Button>
           </div>
         </DialogFooter>
