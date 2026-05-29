@@ -7,6 +7,12 @@
 export const AFFILIATE_CONTENT_LOCALES = ["fr", "en", "es", "it", "pt", "pt-BR", "ar"] as const;
 export type AffiliateContentLocale = (typeof AFFILIATE_CONTENT_LOCALES)[number];
 
+// Marchés réellement OUVERTS aux affiliés (interface + contenu promo dispo).
+// L'admin (Béné) garde accès à TOUTES les locales pour PRÉPARER le contenu ;
+// les affiliés ne voient que ceux-ci. Élargir au fur et à mesure que le
+// contenu d'un marché est prêt.
+export const AFFILIATE_LIVE_LOCALES = ["fr", "en"] as const satisfies readonly AffiliateContentLocale[];
+
 const LABELS: Record<AffiliateContentLocale, string> = {
   fr: "Français",
   en: "English",

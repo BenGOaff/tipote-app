@@ -14,6 +14,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AffiliateLinkCopy from "../components/AffiliateLinkCopy";
 import { LinksManager, type LinkItem } from "../components/LinksManager";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
+import { buildAffiliateLink } from "@/lib/affiliate/links";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,8 @@ export default async function PromouvoirPage() {
   if (!session) redirect("/login");
 
   const t = getDict(normaliseLocale(session.locale));
-  const baseLink = `https://www.tipote.fr/tiquiz/affiliation?sa=${session.sa}`;
+  // Lien du marché de l'affilié : FR → tipote.fr, EN → tipote.blog.
+  const baseLink = buildAffiliateLink(session.locale, "/tiquiz/affiliation", session.sa);
 
   // Liste de liens personnalisée par l'affilié (sinon les liens par défaut).
   const { data: ov } = await supabaseAdmin
@@ -101,6 +103,7 @@ export default async function PromouvoirPage() {
 
       <LinksManager
         sa={session.sa}
+        locale={session.locale}
         defaults={LINK_DESTINATIONS}
         saved={savedLinks}
         sectionTitle={t.promouvoir.tab_links}

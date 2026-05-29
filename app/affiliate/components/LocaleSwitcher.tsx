@@ -2,79 +2,78 @@
 
 // app/affiliate/components/LocaleSwitcher.tsx
 //
-// Bouton dropdown pour changer la langue d'affichage du dashboard
-// affilié. PATCH /affiliate/api/profile pour persister, puis reload.
+// Sélecteur de langue d'INTERFACE du dashboard affilié. Même look & feel que
+// le LanguageSwitcher de Tipote/Tiquiz (Select + globe + endonymes), mais
+// câblé sur l'i18n affilié (PATCH /affiliate/api/profile puis refresh).
+//
+// On n'expose que les langues dont l'interface ET le contenu promo existent.
+// Pour l'instant : FR + EN. On rouvrira les autres quand le contenu sera prêt
+// (ajouter la locale ici + son dict + le contenu).
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Languages, Check } from "lucide-react";
+import { Globe } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDict, useLocale } from "../i18n/context";
 import type { AffiliateLocale } from "../i18n";
 
-const LOCALES: { value: AffiliateLocale; flag: string }[] = [
-  { value: "fr", flag: "🇫🇷" },
-  { value: "en", flag: "🇬🇧" },
-  { value: "es", flag: "🇪🇸" },
-  { value: "it", flag: "🇮🇹" },
-  { value: "pt", flag: "🇵🇹" },
-  { value: "ar", flag: "🇸🇦" },
+// Langues actuellement proposées à l'affilié (endonymes). Restreint à FR/EN
+// tant que le contenu des autres marchés n'est pas prêt.
+const ENABLED_LOCALES: { value: AffiliateLocale; label: string }[] = [
+  { value: "fr", label: "Français" },
+  { value: "en", label: "English" },
 ];
 
 export function LocaleSwitcher() {
   const t = useDict();
   const currentLocale = useLocale();
   const router = useRouter();
-  const [loading, setLoading] = useState<AffiliateLocale | null>(null);
+  const [pending, setPending] = useState(false);
 
-  async function handleSelect(locale: AffiliateLocale) {
-    if (locale === currentLocale || loading) return;
-    setLoading(locale);
+  // Si la locale courante n'est pas proposée (ex. vieux compte en "es"), on
+  // l'affiche quand même dans le trigger pour ne pas mentir sur l'état réel.
+  const value: AffiliateLocale = ENABLED_LOCALES.some((l) => l.value === currentLocale)
+    ? currentLocale
+    : "en";
+
+  async function handleChange(next: string) {
+    if (next === currentLocale || pending) return;
+    setPending(true);
     try {
       await fetch("/affiliate/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale }),
+        body: JSON.stringify({ locale: next }),
       });
     } catch {
-      // Best effort. On reload quand même au cas où le user re-tente.
+      // Best effort : on refresh quand même au cas où le user re-tente.
     }
     router.refresh();
-    setLoading(null);
+    setPending(false);
   }
 
-  const current = LOCALES.find((l) => l.value === currentLocale) ?? LOCALES[1];
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-1" title={t.locale_switcher.label}>
-          <span className="text-base leading-none">{current.flag}</span>
-          <Languages className="h-3.5 w-3.5 text-muted-foreground" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {LOCALES.map((l) => (
-          <DropdownMenuItem
-            key={l.value}
-            onClick={() => handleSelect(l.value)}
-            disabled={loading !== null}
-            className="cursor-pointer gap-2"
-          >
-            <span className="text-base">{l.flag}</span>
-            <span className="flex-1">{t.locale_switcher[l.value]}</span>
-            {l.value === currentLocale && (
-              <Check className="h-3.5 w-3.5 text-primary" />
-            )}
-          </DropdownMenuItem>
+    <Select value={value} onValueChange={handleChange} disabled={pending}>
+      <SelectTrigger
+        className="h-8 w-full gap-1.5 border-0 bg-transparent px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus:ring-0"
+        aria-label={t.locale_switcher.label}
+      >
+        <Globe className="h-3.5 w-3.5 shrink-0" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent align="end">
+        {ENABLED_LOCALES.map((l) => (
+          <SelectItem key={l.value} value={l.value} className="text-xs">
+            {l.label}
+          </SelectItem>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </SelectContent>
+    </Select>
   );
 }
