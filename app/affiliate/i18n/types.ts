@@ -194,6 +194,8 @@ export type AffiliateDict = {
   promouvoir: {
     page_title: string;
     page_subtitle: string;
+    market_label: string; // "Marché" (sélecteur de marché de diffusion)
+    market_hint: string; // "Liens et contenus adaptés au marché {market}."
     main_link_title: string;
     main_link_description: string;
     tab_links: string;

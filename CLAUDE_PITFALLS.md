@@ -818,3 +818,48 @@ re-grep le marqueur après coup pour confirmer que l'édition a bien pris.
 - **Tous les boutons d'export** (Enregistrer / Télécharger / PDF) partagent un
   garde `anyExport = busy||downloading||pdfBusy` pour éviter les exports
   concurrents qui se marchent dessus sur le canvas.
+
+## AE) AFFILIATE — switch de langue + liens par marché (juin 2026)
+
+- **Deux i18n distincts** : l'app principale (Tipote/Tiquiz) utilise next-intl
+  (`useTranslations`, cookie `ui_locale`, `components/LanguageSwitcher.tsx`).
+  Le dashboard **affilié** a son PROPRE système (`app/affiliate/i18n/*`,
+  `useDict()/useLocale()`, persistance via `PATCH /affiliate/api/profile`,
+  colonne `affiliates.locale`). NE PAS mélanger : le LanguageSwitcher principal
+  ne marche pas dans /affiliate (pas de provider next-intl là-bas).
+- **Switch affilié** = `app/affiliate/components/LocaleSwitcher.tsx`, refait au
+  look du switcher principal (Select shadcn + globe + endonymes), mais câblé
+  sur l'i18n affilié. Restreint à `ENABLED_LOCALES` (FR/EN) tant que le contenu
+  des autres marchés n'existe pas. Pour rouvrir un marché : ajouter la locale
+  ici + son dict + le contenu promo.
+- **Contenu promo** : seul le FR existe en dur (`content/*-fr.ts`) ; le reste
+  vient du CMS DB (`affiliate_contents`, géré par Béné). Le picker de langue de
+  CONTENU (`ContentLocalePicker`) prend une prop `locales` : côté affilié on
+  passe `AFFILIATE_LIVE_LOCALES` (FR/EN), côté **admin Béné** on garde TOUTES
+  les locales (elle doit pouvoir préparer le contenu). `AFFILIATE_LIVE_LOCALES`
+  vit dans `lib/affiliate/contentLocales.ts` — c'est le seul endroit à éditer
+  pour ouvrir un marché.
+- **Liens par marché** : Tipote a un site par marché — FR sur **tipote.fr**, EN
+  sur **tipote.blog** (même arborescence). `lib/affiliate/links.ts` centralise :
+  `buildAffiliateLink(locale, path, sa)` → bon domaine + `?sa=`. TOUJOURS passer
+  par ce helper, ne plus hardcoder `tipote.fr`. La source de vérité du marché
+  est la **langue d'interface** de l'affilié (`session.locale`), pas un champ
+  pays séparé. Les templates promo utilisent `{AFFILIATE_LINK}` (remplacé par
+  `baseLink` construit via le helper) → tout le chain suit le marché.
+
+### AE bis — affilié : MARCHÉ de diffusion choisissable (juin 2026)
+
+Évolution de AE : la langue d'interface n'est QUE le défaut. L'affilié choisit
+son **marché de diffusion** (le pays/audience qu'il vise), qui pilote À LA FOIS
+le contenu affiché ET le domaine des liens. Ex : un Français qui bosse le marché
+US bascule sur EN → contenu EN + liens tipote.blog, sans changer son interface.
+
+- Source de vérité = query `?locale=` (via `ContentLocalePicker`), pas
+  `session.locale`. Résolu par `resolveAffiliateMarket(requested, sessionLocale)`
+  dans `lib/affiliate/contentLocales.ts` (borné à `AFFILIATE_LIVE_LOCALES`,
+  défaut = langue d'interface).
+- **Promouvoir** ET **Contenus** ont le picker de marché ; `buildAffiliateLink`
+  + le contenu prennent ce marché (PAS `session.locale`). Le piège que j'avais
+  introduit : liens sur `session.locale` alors que le contenu suivait le picker
+  → incohérent. Désormais les deux suivent le picker.
+- Ouvrir un marché = ajouter sa locale à `AFFILIATE_LIVE_LOCALES` (+ contenu).

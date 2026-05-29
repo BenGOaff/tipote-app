@@ -12,17 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import AffiliateLinkCopy from "./AffiliateLinkCopy";
+import { buildAffiliateLink, affiliateOrigin } from "@/lib/affiliate/links";
 
 export type LinkItem = { label: string; description: string; path: string };
 
 const STORE_KEY = "links:custom:items";
-
-function buildUrl(path: string, sa: string): string {
-  const p = path.trim();
-  if (!p) return "";
-  const abs = /^https?:\/\//i.test(p) ? p : `https://www.tipote.fr${p.startsWith("/") ? "" : "/"}${p}`;
-  return `${abs}${abs.includes("?") ? "&" : "?"}sa=${sa}`;
-}
 
 async function persist(items: LinkItem[]) {
   try {
@@ -38,15 +32,21 @@ async function persist(items: LinkItem[]) {
 
 export function LinksManager({
   sa,
+  locale,
   defaults,
   saved,
   sectionTitle,
 }: {
   sa: string;
+  /** Langue d'interface de l'affilié → choisit le domaine (FR=.fr, EN=.blog). */
+  locale: string;
   defaults: LinkItem[];
   saved: LinkItem[] | null;
   sectionTitle: string;
 }) {
+  // Domaine du marché de l'affilié (pour le placeholder + la construction d'URL).
+  const marketOrigin = affiliateOrigin(locale);
+  const marketHost = marketOrigin.replace(/^https?:\/\//, "");
   // Si l'affilié a déjà personnalisé sa liste, on la prend ; sinon les défauts.
   const [items, setItems] = useState<LinkItem[]>(saved ?? defaults);
   const [editing, setEditing] = useState<number | null>(null);
@@ -97,8 +97,8 @@ export function LinksManager({
       </div>
       <div className="space-y-1">
         <Label className="text-xs">Destination</Label>
-        <Input value={draft.path} onChange={(e) => setDraft((d) => ({ ...d, path: e.target.value }))} placeholder="/part-tiquiz-gratuit ou https://www.tipote.blog/article" />
-        <p className="text-[11px] text-muted-foreground">Un chemin tipote.fr (ex. /commande) ou une URL complète. Ton {`?sa=${sa}`} est ajouté automatiquement.</p>
+        <Input value={draft.path} onChange={(e) => setDraft((d) => ({ ...d, path: e.target.value }))} placeholder={`/part-tiquiz-gratuit ou https://${marketHost}/article`} />
+        <p className="text-[11px] text-muted-foreground">Un chemin {marketHost} (ex. /commande) ou une URL complète. Ton {`?sa=${sa}`} est ajouté automatiquement.</p>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={save} disabled={!draft.label.trim() || !draft.path.trim()}>
@@ -144,7 +144,7 @@ export function LinksManager({
                     </Button>
                   </div>
                 </div>
-                <AffiliateLinkCopy url={buildUrl(item.path, sa)} />
+                <AffiliateLinkCopy url={buildAffiliateLink(locale, item.path, sa)} />
               </>
             )}
           </CardContent>

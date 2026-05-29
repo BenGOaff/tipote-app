@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDict, interpolate, normaliseLocale } from "./i18n";
+import { buildAffiliateLink } from "@/lib/affiliate/links";
 import type { AffiliateDict } from "./i18n/types";
 import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, ArrowRight, Gift } from "lucide-react";
 
@@ -136,7 +137,8 @@ export default async function AffiliateOverviewPage() {
   const onboardedAt = (meta as { onboarded_at: string | null } | null)?.onboarded_at ?? null;
 
   const tier = currentTier(stats.total_sales);
-  const linkUrl = `https://www.tipote.fr/?sa=${session.sa}`;
+  // Lien principal du marché de l'affilié (FR → tipote.fr, EN → tipote.blog).
+  const linkUrl = buildAffiliateLink(session.locale, "/", session.sa);
   const conversionRate =
     stats.total_clicks > 0
       ? `${((stats.total_sales / stats.total_clicks) * 100).toFixed(1)}%`

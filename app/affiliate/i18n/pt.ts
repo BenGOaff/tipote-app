@@ -183,6 +183,8 @@ export const PT: AffiliateDict = {
     page_title: "Promover",
     page_subtitle:
       "Tudo pronto para copiar e colar e trazer leads. O teu link rastreado é inserido automaticamente em todo o lado.",
+    market_label: "Mercado",
+    market_hint: "Os teus links apontam para o site do mercado {market}. Muda de mercado se visas outra audiência.",
     main_link_title: "Link de afiliado principal",
     main_link_description: "O teu link rastreado universal. Mais abaixo encontras variantes por destino.",
     tab_links: "Links",

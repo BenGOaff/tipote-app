@@ -26,7 +26,8 @@ import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
 import { POSTS_FR, type PostDay, type SocialPost } from "../promouvoir/content/posts-fr";
 import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, normaliseLocale } from "../i18n";
-import { normaliseContentLocale, localeLabel } from "@/lib/affiliate/contentLocales";
+import { localeLabel, AFFILIATE_LIVE_LOCALES, resolveAffiliateMarket } from "@/lib/affiliate/contentLocales";
+import { buildAffiliateLink } from "@/lib/affiliate/links";
 import { ContentLocalePicker } from "../components/ContentLocalePicker";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,6 @@ export default async function ContenusPage({
   if (!session) redirect("/login");
 
   const t = getDict(normaliseLocale(session.locale));
-  const baseLink = `https://www.tipote.fr/tiquiz/affiliation?sa=${session.sa}`;
   const displayName = session.display_name ?? session.email.split("@")[0];
 
   // Langue du CONTENU (≠ langue d'interface). Priorité : query param explicite
@@ -50,8 +50,12 @@ export default async function ContenusPage({
   // VISUELS_FR) n'est activée que pour la locale "fr" — pas envie de servir
   // du FR par défaut à quelqu'un qui demande du PT.
   const sp = await searchParams;
-  const contentLocale = normaliseContentLocale(sp.locale ?? session.locale);
+  // MARCHÉ de diffusion choisi (FR/EN) : pilote le contenu affiché ET le
+  // domaine des liens. Défaut = langue de l'affilié, mais librement changeable.
+  const contentLocale = resolveAffiliateMarket(sp.locale, session.locale);
   const isFrLocale = contentLocale === "fr";
+  // Les liens injectés dans le matériel suivent le marché choisi (domaine).
+  const baseLink = buildAffiliateLink(contentLocale, "/tiquiz/affiliation", session.sa);
 
   const { data: ov } = await supabaseAdmin
     .from("affiliates")
@@ -171,7 +175,7 @@ export default async function ContenusPage({
             change la langue si tu vises une autre audience.
           </p>
         </div>
-        <ContentLocalePicker current={contentLocale} label="Langue du contenu" />
+        <ContentLocalePicker current={contentLocale} label="Langue du contenu" locales={AFFILIATE_LIVE_LOCALES} />
       </div>
 
       <Tabs defaultValue="posts" className="w-full">

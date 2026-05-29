@@ -16,12 +16,16 @@ export function ContentLocalePicker({
   current,
   label,
   paramName = "locale",
+  locales = AFFILIATE_CONTENT_LOCALES,
 }: {
   current: AffiliateContentLocale;
   /** Libellé court à gauche du select. Ex: "Langue du contenu". */
   label?: string;
   /** Query param utilisé pour transmettre la langue choisie (défaut `locale`). */
   paramName?: string;
+  /** Langues proposées. Défaut = toutes (admin Béné). Côté affilié on restreint
+   *  aux marchés dont le contenu existe (FR/EN pour l'instant). */
+  locales?: readonly AffiliateContentLocale[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -42,7 +46,7 @@ export function ContentLocalePicker({
         onChange={(e) => onChange(e.target.value)}
         className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
       >
-        {AFFILIATE_CONTENT_LOCALES.map((loc) => (
+        {locales.map((loc) => (
           <option key={loc} value={loc}>
             {localeLabel(loc)}
           </option>

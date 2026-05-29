@@ -183,6 +183,8 @@ export const EN: AffiliateDict = {
     page_title: "Promote",
     page_subtitle:
       "Everything ready to copy-paste to bring in leads. Your tracked link is auto-injected everywhere.",
+    market_label: "Market",
+    market_hint: "Your links point to the site for the {market} market. Switch market if you target another audience.",
     main_link_title: "Main affiliate link",
     main_link_description: "Your universal tracked link. Below you'll find variants by destination.",
     tab_links: "Links",

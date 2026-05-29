@@ -14,6 +14,9 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AffiliateLinkCopy from "../components/AffiliateLinkCopy";
 import { LinksManager, type LinkItem } from "../components/LinksManager";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
+import { buildAffiliateLink } from "@/lib/affiliate/links";
+import { resolveAffiliateMarket, localeLabel, AFFILIATE_LIVE_LOCALES } from "@/lib/affiliate/contentLocales";
+import { ContentLocalePicker } from "../components/ContentLocalePicker";
 
 export const dynamic = "force-dynamic";
 
@@ -50,12 +53,20 @@ const LINK_DESTINATIONS: LinkItem[] = [
   },
 ];
 
-export default async function PromouvoirPage() {
+export default async function PromouvoirPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ locale?: string }>;
+}) {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
 
   const t = getDict(normaliseLocale(session.locale));
-  const baseLink = `https://www.tipote.fr/tiquiz/affiliation?sa=${session.sa}`;
+  // MARCHÉ de diffusion choisi (≠ langue d'interface) : pilote le domaine des
+  // liens (FR → tipote.fr, EN → tipote.blog). Défaut = langue de l'affilié.
+  const sp = await searchParams;
+  const market = resolveAffiliateMarket(sp.locale, session.locale);
+  const baseLink = buildAffiliateLink(market, "/tiquiz/affiliation", session.sa);
 
   // Liste de liens personnalisée par l'affilié (sinon les liens par défaut).
   const { data: ov } = await supabaseAdmin
@@ -81,10 +92,19 @@ export default async function PromouvoirPage() {
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t.promouvoir.page_title}</h1>
-        <p className="text-muted-foreground mt-1">{t.promouvoir.page_subtitle}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t.promouvoir.page_title}</h1>
+          <p className="text-muted-foreground mt-1">{t.promouvoir.page_subtitle}</p>
+        </div>
+        {/* Marché de diffusion : choisit le pays/audience visé → adapte le
+            domaine des liens (tipote.fr / tipote.blog). Indépendant de la
+            langue d'interface. */}
+        <ContentLocalePicker current={market} label={t.promouvoir.market_label} locales={AFFILIATE_LIVE_LOCALES} />
       </div>
+      <p className="-mt-4 text-xs text-muted-foreground">
+        {interpolate(t.promouvoir.market_hint, { market: localeLabel(market) })}
+      </p>
 
       <Card>
         <CardHeader>
@@ -101,6 +121,7 @@ export default async function PromouvoirPage() {
 
       <LinksManager
         sa={session.sa}
+        locale={market}
         defaults={LINK_DESTINATIONS}
         saved={savedLinks}
         sectionTitle={t.promouvoir.tab_links}

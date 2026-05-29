@@ -7,6 +7,27 @@
 export const AFFILIATE_CONTENT_LOCALES = ["fr", "en", "es", "it", "pt", "pt-BR", "ar"] as const;
 export type AffiliateContentLocale = (typeof AFFILIATE_CONTENT_LOCALES)[number];
 
+// Marchés réellement OUVERTS aux affiliés (interface + contenu promo dispo).
+// L'admin (Béné) garde accès à TOUTES les locales pour PRÉPARER le contenu ;
+// les affiliés ne voient que ceux-ci. Élargir au fur et à mesure que le
+// contenu d'un marché est prêt.
+export const AFFILIATE_LIVE_LOCALES = ["fr", "en"] as const satisfies readonly AffiliateContentLocale[];
+
+/** Résout le MARCHÉ de diffusion actif (langue de contenu + domaine des liens).
+ *  Priorité : choix explicite (query `?locale=`) > langue d'interface de
+ *  l'affilié > "fr". Toujours borné aux marchés ouverts (AFFILIATE_LIVE_LOCALES)
+ *  → un Français peut shooter le marché US, un autre le marché FR, etc., sans
+ *  changer la langue de son interface. */
+export function resolveAffiliateMarket(
+  requested: string | null | undefined,
+  sessionLocale: string | null | undefined,
+): AffiliateContentLocale {
+  const live = AFFILIATE_LIVE_LOCALES as readonly string[];
+  if (requested && live.includes(requested)) return requested as AffiliateContentLocale;
+  const session = normaliseContentLocale(sessionLocale, "fr");
+  return live.includes(session) ? session : "fr";
+}
+
 const LABELS: Record<AffiliateContentLocale, string> = {
   fr: "Français",
   en: "English",
