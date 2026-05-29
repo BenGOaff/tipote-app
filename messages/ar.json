@@ -4109,7 +4109,11 @@
     "trackingAdsIdLabel": "Google Ads — معرّف التحويل",
     "trackingAdsLabelLabel": "Google Ads — تسمية التحويل",
     "trackingAdsHelp": "العثور على معرّفات Google Ads ←",
-    "trackingInvalidFormat": "تنسيق غير صالح"
+    "trackingInvalidFormat": "تنسيق غير صالح",
+    "introImageAi": "إنشاء (ذكاء اصطناعي)",
+    "introImageGif": "GIF",
+    "resultImageAi": "إنشاء (ذكاء اصطناعي)",
+    "resultImageGif": "GIF"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",

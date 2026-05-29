@@ -4116,7 +4116,11 @@
     "trackingAdsIdLabel": "Google Ads — Conversion ID",
     "trackingAdsLabelLabel": "Google Ads — Conversion Label",
     "trackingAdsHelp": "Find my Google Ads IDs →",
-    "trackingInvalidFormat": "Invalid format"
+    "trackingInvalidFormat": "Invalid format",
+    "introImageAi": "Generate (AI)",
+    "introImageGif": "GIF",
+    "resultImageAi": "Generate (AI)",
+    "resultImageGif": "GIF"
   },
   "contentStrategy": {
     "title": "Content strategy",
