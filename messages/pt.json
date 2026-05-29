@@ -6119,7 +6119,18 @@
     "pdfExporting": "A criar PDF…",
     "pdfDone": "PDF descarregado",
     "navKeysTip": "Dica: setas ← → ou desliza para navegar.",
-    "brandLabel": "Marca"
+    "brandLabel": "Marca",
+    "logoPosition": "Posição do logótipo",
+    "logoSize": "Tamanho do logótipo",
+    "aiNewBackground": "Novo fundo",
+    "voteQuestion": "Gostas deste visual?",
+    "voteUp": "Gosto",
+    "voteDown": "Não gosto",
+    "styleSave": "Guardar este estilo",
+    "styleSaved": "Estilo guardado",
+    "styleApply": "Aplicar este estilo",
+    "styleDelete": "Eliminar",
+    "styleNamePrompt": "Nome deste estilo:"
   },
   "colorPicker": {
     "pick": "Escolher uma cor",

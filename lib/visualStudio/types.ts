@@ -119,6 +119,11 @@ export interface ImageStudioProps {
    *  à false quand il n'y a rien où l'attacher (galerie standalone) → seul
    *  "Télécharger" reste. Défaut : true. */
   enableSave?: boolean;
+
+  /** Active la MÉMOIRE DE STYLE (styles enregistrés + vote/apprentissage via
+   *  /api/visual-studio/styles & /vote). Nécessite un user authentifié. Défaut
+   *  true ; mettre false dans un contexte sans persistance. */
+  enableStylePrefs?: boolean;
   /** Renvoie TOUTES les slides d'un carrousel exporté (dans l'ordre). Si absent,
    *  on retombe sur `onApply` slide par slide. */
   onApplyMany?: (results: StudioResult[]) => void;

@@ -5813,7 +5813,18 @@
     "pdfExporting": "Creando PDF…",
     "pdfDone": "PDF descargado",
     "navKeysTip": "Consejo: flechas ← → o desliza para navegar.",
-    "brandLabel": "Marca"
+    "brandLabel": "Marca",
+    "logoPosition": "Posición del logo",
+    "logoSize": "Tamaño del logo",
+    "aiNewBackground": "Nuevo fondo",
+    "voteQuestion": "¿Te gusta este visual?",
+    "voteUp": "Me gusta",
+    "voteDown": "No me gusta",
+    "styleSave": "Guardar este estilo",
+    "styleSaved": "Estilo guardado",
+    "styleApply": "Aplicar este estilo",
+    "styleDelete": "Eliminar",
+    "styleNamePrompt": "Nombre de este estilo:"
   },
   "colorPicker": {
     "pick": "Elegir un color",

@@ -5820,7 +5820,18 @@
     "pdfExporting": "Building PDF…",
     "pdfDone": "PDF downloaded",
     "navKeysTip": "Tip: arrows ← → or swipe to navigate.",
-    "brandLabel": "Brand"
+    "brandLabel": "Brand",
+    "logoPosition": "Logo position",
+    "logoSize": "Logo size",
+    "aiNewBackground": "New background",
+    "voteQuestion": "Like this visual?",
+    "voteUp": "Like",
+    "voteDown": "Dislike",
+    "styleSave": "Save this style",
+    "styleSaved": "Style saved",
+    "styleApply": "Apply this style",
+    "styleDelete": "Delete",
+    "styleNamePrompt": "Name this style:"
   },
   "colorPicker": {
     "pick": "Pick a color",

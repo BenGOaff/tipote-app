@@ -140,6 +140,10 @@ interface StudioCanvasProps {
   background: BackgroundSpec;
   brand: BrandKit;
   showLogo: boolean;
+  /** Taille du logo en fraction de la largeur (défaut 0.22). */
+  logoScale?: number;
+  /** Position du logo (coin/centre haut, ou bas). Défaut "top-center". */
+  logoPosition?: "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-right";
   /** Voile de contraste derrière le texte (lisibilité sur fond IA/photo). */
   scrim?: "none" | "dark" | "light";
   /** Côté à assombrir EN PLUS (voile horizontal adaptatif) quand le fond a une
@@ -162,6 +166,8 @@ export function StudioCanvas({
   background,
   brand,
   showLogo,
+  logoScale = 0.22,
+  logoPosition = "top-center",
   scrim = "none",
   scrimSide = "none",
   bgTreatment = "none",
@@ -788,7 +794,7 @@ export function StudioCanvas({
       };
 
       // Groupe HAUT : kicker (pilule) + titre, ancrés en haut.
-      let yT = 0.07 * H;
+      let yT = Math.max(0.07 * H, logoBandRef.current * H);
       if (kicker) {
         const kpadV = 0.34 * kicker.getScaledHeight();
         kicker.set({ top: yT + kpadV });
@@ -911,7 +917,7 @@ export function StudioCanvas({
       };
 
       // Groupe haut : kicker (pilule) + titre.
-      let yT = 0.07 * H;
+      let yT = Math.max(0.07 * H, logoBandRef.current * H);
       if (kicker) {
         const kpadV = 0.34 * kicker.getScaledHeight();
         kicker.set({ top: yT + kpadV }); kicker.setCoords();
@@ -1560,24 +1566,31 @@ export function StudioCanvas({
     FabricImage.fromURL(brand.logoUrl, { crossOrigin: "anonymous" })
       .then((img) => {
         if (cancelled || !img.width || !img.height) return;
-        const topMargin = displayHeight * 0.05;
-        const targetW = displayWidth * 0.22;
+        const margin = displayHeight * 0.05;
+        const marginX = displayWidth * 0.06;
+        const targetW = displayWidth * Math.min(0.6, Math.max(0.08, logoScale));
         const scale = targetW / img.width;
         const logoH = img.height * scale;
-        img.set({
-          scaleX: scale,
-          scaleY: scale,
-          left: (displayWidth - targetW) / 2,
-          top: topMargin,
-          selectable: false,
-          evented: false,
-        });
+        const atTop = logoPosition.startsWith("top");
+        // X : gauche / centre / droite.
+        const left = logoPosition.endsWith("left")
+          ? marginX
+          : logoPosition.endsWith("right")
+            ? displayWidth - marginX - targetW
+            : (displayWidth - targetW) / 2;
+        // Y : haut ou bas.
+        const top = atTop ? margin : displayHeight - margin - logoH;
+        img.set({ scaleX: scale, scaleY: scale, left, top, selectable: false, evented: false });
         (img as { layerId?: string }).layerId = undefined;
         logoRef.current = img;
         c.add(img);
-        // Réserve la bande occupée par le logo (logo + marges) pour que le
-        // texte démarre EN DESSOUS et ne soit jamais chevauché.
-        logoBandRef.current = (topMargin + logoH + displayHeight * 0.03) / displayHeight;
+        // On ne réserve une bande de texte QUE si le logo est CENTRÉ EN HAUT
+        // (là où il croise le titre). En coin (gauche/droite) ou en bas, le
+        // texte n'a pas besoin d'être poussé → pas de bande.
+        logoBandRef.current =
+          logoPosition === "top-center"
+            ? (margin + logoH + displayHeight * 0.03) / displayHeight
+            : 0;
         layoutRef.current?.();
         c.requestRenderAll();
       })
@@ -1586,7 +1599,7 @@ export function StudioCanvas({
     return () => {
       cancelled = true;
     };
-  }, [showLogo, brand.logoUrl, displayWidth, displayHeight]);
+  }, [showLogo, brand.logoUrl, logoScale, logoPosition, displayWidth, displayHeight]);
 
   // Redraw quand les webfonts sont prêtes (sinon métriques sur fallback).
   useEffect(() => {
