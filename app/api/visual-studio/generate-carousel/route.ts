@@ -81,10 +81,9 @@ export async function POST(req: NextRequest) {
       `MEANING IS NON-NEGOTIABLE: every line must be a grammatically correct, complete, MEANINGFUL sentence a native ${lang} speaker would actually say. NO word salad, NO half-sentences, NO words bolted on that do not fit (e.g. never end on a stray "censé", "vraiment", "carrément"). NO truncation: a headline must be a finished thought, not a phrase cut to fit. If you cannot say it clearly in few words, say it in slightly more — clarity beats cleverness. Re-read each line: if it does not clearly mean something useful, rewrite it.\n` +
       `ANTI-AI — BANNED: empty filler ("la différence est réelle", "découvrez", "boostez", "optimisez"), the "ce n'est pas seulement X, c'est Y" pattern, brochure verbs ("s'impose comme", "au cœur de"), long em-dashes, jargon to sound smart, bro-marketing, fake-deep one-liners that sound clever but mean nothing.\n` +
       `NEVER invent a number/%/price/stat that is not in the SOURCE. Stay concretely tied to what the SOURCE actually says.\n` +
-      `For EACH slide return an object {role, kicker, headline, subline, cta}:\n` +
-      `- role: the role string given above (in order).\n` +
-      `- kicker: OPTIONAL 1-3 word tag with real tension ("" if nothing punchy). NEVER a flat category.\n` +
-      `- headline: the punch line, MAX ~8 words, no ending period, no emojis.\n` +
+      `For EACH slide return an object {role, headline, subline, cta}:\n` +
+      `- role: GUIDES you only — it is NEVER shown to the reader. Never put the role name (problem, insight, aha, identification…) anywhere in headline/subline/cta.\n` +
+      `- headline: the punch line, MAX ~8 words, no ending period, no emojis, no category label.\n` +
       `- subline: ONE short supporting line (max ~16 words) OR "" if the headline stands alone. For role "takeaway": 3 short actions separated by \\n.\n` +
       `- cta: "" for every slide EXCEPT the last "cta" slide, where it is a 2-5 word action in ${lang}.\n` +
       `Return STRICT JSON: {"slides":[ ${CAROUSEL_SLIDE_COUNT} objects in order ]}. No commentary.\n\n` +
@@ -122,7 +121,10 @@ export async function POST(req: NextRequest) {
       const isCta = role === "cta";
       return {
         role,
-        kicker: String(s.kicker ?? "").trim().slice(0, 40),
+        // PAS de kicker sur les slides de carrousel : le rôle (problème, insight,
+        // aha…) sert à GUIDER l'IA, il ne doit JAMAIS s'afficher pour le lecteur
+        // (cf. "IDENTIFICATION"/"INSIGHT" parasites). Design = titre + sous-titre.
+        kicker: "",
         headline: String(s.headline ?? "").trim().slice(0, 90),
         // Garde les retours à la ligne (slide takeaway), borne la longueur.
         subline: String(s.subline ?? "").replace(/\r/g, "").trim().slice(0, 220),
