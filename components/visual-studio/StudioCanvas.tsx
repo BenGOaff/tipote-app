@@ -175,6 +175,9 @@ export function StudioCanvas({
   const logoRef = useRef<FabricObject | null>(null);
   const scrimRef = useRef<FabricObject | null>(null);
   const scrimSideRef = useRef<FabricObject | null>(null);
+  // Hauteur (fraction de H) réservée EN HAUT par le logo, lue par les layouts
+  // pour ne jamais empiler le texte sous le logo (sinon chevauchement).
+  const logoBandRef = useRef(0);
   // Re-applique la mise en page (safe-zone + empilement) après un changement
   // de format — ne fait rien tant qu'aucune génération n'a placé le texte.
   const layoutRef = useRef<(() => void) | null>(null);
@@ -482,7 +485,8 @@ export function StudioCanvas({
       const FIT = 0.96;
       const maxLine = textW * FIT;
       // Marges verticales adaptées au format (plus aérées en portrait/story).
-      const padTop = (ratio >= 1 ? 0.08 : 0.06) * H;
+      // Le padTop ne descend JAMAIS sous la bande réservée au logo (anti-chevauchement).
+      const padTop = Math.max((ratio >= 1 ? 0.08 : 0.06) * H, logoBandRef.current * H);
       const padBottom = (ratio >= 1 ? 0.08 : 0.07) * H;
 
       // Repart d'une ardoise propre côté décorations (reconstruites en fin).
@@ -500,6 +504,16 @@ export function StudioCanvas({
       const blocks = LAYOUT_ORDER
         .map((id, i) => ({ id, o: objs[i] }))
         .filter((b): b is { id: string; o: Textbox } => !!b.o && String(b.o.text ?? "").trim().length > 0);
+      // ANTI-DEAD-ZONE : un calque VIDE garde sinon sa position/largeur et
+      // intercepte les clics → on désactive + parque hors champ les vides, et on
+      // (ré)active ceux qui ont du texte (cf. même garde côté carrousel).
+      const shownIds = new Set(blocks.map((b) => b.id));
+      objs.forEach((o) => {
+        if (!o) return;
+        const has = shownIds.has(String((o as { layerId?: string }).layerId ?? ""));
+        o.set({ selectable: has, evented: has });
+        if (!has) o.set({ left: -9999, top: -9999, width: 1 });
+      });
       if (!blocks.length) return;
 
       // (2) Auto-fit largeur. On repart de la taille de base, on pré-réduit
@@ -1027,6 +1041,25 @@ export function StudioCanvas({
       // CTA = vrai bouton plein (flat) sur la dernière slide.
       const ctaLayer = get("cta");
       const hasCta = !!(p.isCTA && ctaLayer && String(ctaLayer.text ?? "").trim());
+
+      // ANTI-DEAD-ZONE : un calque éditable NON AFFICHÉ sur cette slide (accent
+      // toujours, + kicker/subline vides, + cta hors slide finale) garde sinon
+      // sa position pleine largeur d'un rendu précédent et intercepte les clics
+      // sur le titre → "impossible de sélectionner le texte". On désactive +
+      // parque hors champ tout calque non affiché, on (ré)active les visibles.
+      const setInteractive = (o: Textbox | undefined | null, on: boolean) => {
+        if (!o) return;
+        o.set({ selectable: on, evented: on });
+        if (!on) o.set({ width: 1, left: -9999, top: -9999 });
+      };
+      const shown = new Set<Textbox>(
+        [kicker, headline, subline, hasCta ? ctaLayer : null].filter((o): o is Textbox => !!o),
+      );
+      (["kicker", "headline", "accent", "subline", "cta"] as const).forEach((id) => {
+        const o = get(id);
+        if (o && !shown.has(o)) setInteractive(o, false);
+      });
+      shown.forEach((o) => setInteractive(o, true));
       if (hasCta && ctaLayer) {
         ctaLayer.set({ left: padX, width: boxW, textAlign: "center", shadow: "", textBackgroundColor: "", fontWeight: "800", fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fill: p.buttonTextColor, fontSize: 0.045 * W });
         for (let pass = 0; pass < 4; pass++) { ctaLayer.initDimensions(); const lw = longestLineWidth(ctaLayer); if (lw <= maxLine * 0.9) break; ctaLayer.set({ fontSize: Math.max(8, (ctaLayer.fontSize ?? 20) * 0.92) }); }
@@ -1041,7 +1074,9 @@ export function StudioCanvas({
       const ctaH = hasCta && ctaLayer ? ctaLayer.getScaledHeight() + 0.68 * ctaLayer.getScaledHeight() + 0.09 * H : 0;
       const totalCore = core.reduce((s, o) => s + o.getScaledHeight(), 0) + gap * Math.max(0, core.length - 1);
       const blockH = totalCore + ctaH;
-      let y = Math.max(0.12 * H, (H - blockH) / 2);
+      // Le bloc démarre sous la bande logo ; sinon centré verticalement.
+      const topGuard = Math.max(0.12 * H, logoBandRef.current * H);
+      let y = Math.max(topGuard, (H - blockH) / 2);
       core.forEach((o, i) => {
         if (i > 0) y += gap;
         o.set({ top: y });
@@ -1127,9 +1162,15 @@ export function StudioCanvas({
         })
         .catch(() => {});
     };
+    // Re-layout (format/logo/marque) : toujours actif, car on pose désormais
+    // une mise en page dès le placeholder (cf. layout() initial juste après).
     layoutRef.current = () => {
-      if (placed) layoutNow();
+      layoutNow();
     };
+
+    // Mise en page initiale du PLACEHOLDER (avant toute génération) : le texte
+    // par défaut respecte déjà les safe-zones (et n'est pas chevauché par le logo).
+    layout();
 
     const handle: StudioCanvasHandle = {
       async toBlob() {
@@ -1509,26 +1550,35 @@ export function StudioCanvas({
       logoRef.current = null;
     }
     if (!showLogo || !brand.logoUrl) {
+      // Plus de logo → libère la bande haute + re-stacke le texte vers le haut.
+      logoBandRef.current = 0;
+      layoutRef.current?.();
       c.requestRenderAll();
       return;
     }
 
     FabricImage.fromURL(brand.logoUrl, { crossOrigin: "anonymous" })
       .then((img) => {
-        if (cancelled || !img.width) return;
-        const targetW = displayWidth * 0.26;
+        if (cancelled || !img.width || !img.height) return;
+        const topMargin = displayHeight * 0.05;
+        const targetW = displayWidth * 0.22;
         const scale = targetW / img.width;
+        const logoH = img.height * scale;
         img.set({
           scaleX: scale,
           scaleY: scale,
           left: (displayWidth - targetW) / 2,
-          top: displayHeight * 0.04,
+          top: topMargin,
           selectable: false,
           evented: false,
         });
         (img as { layerId?: string }).layerId = undefined;
         logoRef.current = img;
         c.add(img);
+        // Réserve la bande occupée par le logo (logo + marges) pour que le
+        // texte démarre EN DESSOUS et ne soit jamais chevauché.
+        logoBandRef.current = (topMargin + logoH + displayHeight * 0.03) / displayHeight;
+        layoutRef.current?.();
         c.requestRenderAll();
       })
       .catch(() => {});

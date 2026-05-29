@@ -68,6 +68,11 @@ export interface ImageStudioProps {
   /** Identité de marque (Tiquiz / Tipote / affiliate). */
   brandKit: BrandKit;
 
+  /** Plusieurs marques sélectionnables dans le studio (ex. l'user gère Tipote
+   *  ET Tiquiz). Quand fourni, un sélecteur apparaît et la marque active
+   *  (logo + couleurs + nom) suit le choix. Absent = marque unique `brandKit`. */
+  brandOptions?: { label: string; kit: BrandKit }[];
+
   /** Formats proposés (défaut : les 3). */
   formats?: StudioFormatId[];
   defaultFormat?: StudioFormatId;

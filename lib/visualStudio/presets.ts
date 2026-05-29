@@ -93,9 +93,7 @@ export const BRAND_PRESETS = {
   },
   tiquiz: {
     name: "Tiquiz",
-    // TODO: déposer un vrai logo Tiquiz dans public/affiliate-assets/
-    // et pointer ici. En attendant on réutilise le logo Tipote.
-    logoUrl: "/logo-fonce.png",
+    logoUrl: "/tiquiz-logo.png",
     primaryColor: "#5D6CDB",
     textColor: "#2E386E",
     accentColor: "#20BBE6",

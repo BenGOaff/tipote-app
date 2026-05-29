@@ -5812,7 +5812,8 @@
     "downloadPdf": "PDF (LinkedIn)",
     "pdfExporting": "Creazione PDF…",
     "pdfDone": "PDF scaricato",
-    "navKeysTip": "Suggerimento: frecce ← → o scorri per navigare."
+    "navKeysTip": "Suggerimento: frecce ← → o scorri per navigare.",
+    "brandLabel": "Marchio"
   },
   "colorPicker": {
     "pick": "Scegli un colore",

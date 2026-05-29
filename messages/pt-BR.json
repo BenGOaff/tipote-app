@@ -6118,7 +6118,8 @@
     "downloadPdf": "PDF (LinkedIn)",
     "pdfExporting": "Criando PDF…",
     "pdfDone": "PDF baixado",
-    "navKeysTip": "Dica: setas ← → ou deslize para navegar."
+    "navKeysTip": "Dica: setas ← → ou deslize para navegar.",
+    "brandLabel": "Marca"
   },
   "colorPicker": {
     "pick": "Escolher uma cor",

@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { loadBrandBundle, brandVoiceToPromptHint } from "@/lib/visualStudio/brandLoader";
+import { BRAND_PRESETS } from "@/lib/visualStudio/presets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,23 @@ export async function GET() {
     const projectId = await getActiveProjectId(supabase, user.id);
     const { brand, voice } = await loadBrandBundle(user.id, projectId);
 
-    return NextResponse.json({ ok: true, brand, voiceHint: brandVoiceToPromptHint(voice) });
+    // Marques sélectionnables dans le studio. On expose la marque PERSO de
+    // l'user (son branding) + les produits Tipote & Tiquiz : il choisit lequel
+    // il promeut (logo + couleurs suivent). Si son branding perso est vide, il
+    // reste les 2 produits. Le 1er = défaut.
+    const hasCustom = !!brand.logoUrl || brand.name !== "Tipote";
+    const options = [
+      ...(hasCustom ? [{ label: brand.name, kit: brand }] : []),
+      { label: "Tipote", kit: BRAND_PRESETS.tipote },
+      { label: "Tiquiz", kit: BRAND_PRESETS.tiquiz },
+    ];
+
+    return NextResponse.json({
+      ok: true,
+      brand,
+      options,
+      voiceHint: brandVoiceToPromptHint(voice),
+    });
   } catch (e) {
     console.error("[visual-studio/brand-kit] error:", e);
     const msg = e instanceof Error ? e.message : "Erreur inconnue";

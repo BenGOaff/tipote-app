@@ -77,8 +77,9 @@ export async function POST(req: NextRequest) {
       `PSYCHOLOGICAL TRIGGERS to weave in: curiosity gap, pattern interrupt, social proof, FOMO, contrarian ideas, quick wins.\n` +
       `WRITING STYLE: very short, punchy lines. Write like you talk. Sentence case (never Title Case). Zero fluff. Slightly dramatic, conversational tone. EACH line must create momentum toward the next — the reader should NEED to swipe.\n` +
       `VARIETY: no two slides may open the same way; each slide must say something the others don't (no restating). Build the insight step by step across slides 4-7.\n` +
-      `ANTI-AI — BANNED: empty filler ("la différence est réelle", "découvrez", "boostez", "optimisez"), the "ce n'est pas seulement X, c'est Y" pattern, brochure verbs ("s'impose comme", "au cœur de"), long em-dashes, jargon to sound smart, bro-marketing.\n` +
-      `NEVER invent a number/%/price/stat that is not in the SOURCE.\n` +
+      `MEANING IS NON-NEGOTIABLE: every line must be a grammatically correct, complete, MEANINGFUL sentence a native ${lang} speaker would actually say. NO word salad, NO half-sentences, NO words bolted on that do not fit (e.g. never end on a stray "censé", "vraiment", "carrément"). NO truncation: a headline must be a finished thought, not a phrase cut to fit. If you cannot say it clearly in few words, say it in slightly more — clarity beats cleverness. Re-read each line: if it does not clearly mean something useful, rewrite it.\n` +
+      `ANTI-AI — BANNED: empty filler ("la différence est réelle", "découvrez", "boostez", "optimisez"), the "ce n'est pas seulement X, c'est Y" pattern, brochure verbs ("s'impose comme", "au cœur de"), long em-dashes, jargon to sound smart, bro-marketing, fake-deep one-liners that sound clever but mean nothing.\n` +
+      `NEVER invent a number/%/price/stat that is not in the SOURCE. Stay concretely tied to what the SOURCE actually says.\n` +
       `For EACH slide return an object {role, kicker, headline, subline, cta}:\n` +
       `- role: the role string given above (in order).\n` +
       `- kicker: OPTIONAL 1-3 word tag with real tension ("" if nothing punchy). NEVER a flat category.\n` +
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
       (brandVoice ? `\n\nBRAND VOICE — match this tone and lean on these angles (never copy verbatim):\n${brandVoice}` : "");
 
     const completion = (await openai.chat.completions.create({
-      ...cachingParams("visual-carousel", { temperature: 0.6 }),
+      ...cachingParams("visual-carousel", { temperature: 0.45 }),
       model: OPENAI_MODEL,
       messages: [
         { role: "system", content: system },
