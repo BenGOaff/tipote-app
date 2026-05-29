@@ -24,8 +24,6 @@ type Gif = {
   id: string;
   url: string;
   preview: string;
-  width: number | null;
-  height: number | null;
   description: string;
 };
 
