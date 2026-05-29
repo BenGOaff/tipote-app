@@ -6119,7 +6119,10 @@
     "pdfExporting": "A criar PDF…",
     "pdfDone": "PDF descarregado",
     "navKeysTip": "Dica: setas ← → ou desliza para navegar.",
-    "brandLabel": "Marca"
+    "brandLabel": "Marca",
+    "logoPosition": "Posição do logótipo",
+    "logoSize": "Tamanho do logótipo",
+    "aiNewBackground": "Novo fundo"
   },
   "colorPicker": {
     "pick": "Escolher uma cor",

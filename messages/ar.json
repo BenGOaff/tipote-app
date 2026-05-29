@@ -5813,7 +5813,10 @@
     "pdfExporting": "جارٍ إنشاء PDF…",
     "pdfDone": "تم تنزيل PDF",
     "navKeysTip": "نصيحة: استخدم ← → أو اسحب للتنقل.",
-    "brandLabel": "العلامة"
+    "brandLabel": "العلامة",
+    "logoPosition": "موضع الشعار",
+    "logoSize": "حجم الشعار",
+    "aiNewBackground": "خلفية جديدة"
   },
   "colorPicker": {
     "pick": "اختيار لون",

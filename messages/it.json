@@ -5813,7 +5813,10 @@
     "pdfExporting": "Creazione PDF…",
     "pdfDone": "PDF scaricato",
     "navKeysTip": "Suggerimento: frecce ← → o scorri per navigare.",
-    "brandLabel": "Marchio"
+    "brandLabel": "Marchio",
+    "logoPosition": "Posizione del logo",
+    "logoSize": "Dimensione del logo",
+    "aiNewBackground": "Nuovo sfondo"
   },
   "colorPicker": {
     "pick": "Scegli un colore",

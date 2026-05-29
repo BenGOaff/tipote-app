@@ -140,6 +140,10 @@ export function ImageStudio({
     imageUrl: null,
   });
   const [showLogo, setShowLogo] = useState(true);
+  const [logoScale, setLogoScale] = useState(0.22);
+  const [logoPosition, setLogoPosition] = useState<
+    "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-right"
+  >("top-center");
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -156,6 +160,10 @@ export function ImageStudio({
   // décidé par l'IA depuis le post (plus de sélecteur manuel).
   const [aiStyle, setAiStyle] = useState<AiStyleId | "auto">("auto");
   const [visualBusy, setVisualBusy] = useState(false);
+  const [bgBusy, setBgBusy] = useState(false);
+  // Dernier style de fond utilisé → la régénération "Nouveau fond" rejoue le
+  // MÊME style (l'user voulait juste une autre image, pas un autre style).
+  const lastBgStyleRef = useRef<AiStyleId>("minimal");
   const [scrim, setScrim] = useState<"none" | "dark" | "light">("none");
   const [scrimSide, setScrimSide] = useState<"left" | "right" | "none">("none");
   // N&B éditorial sur les photos de personne générées (réf TDAH).
@@ -217,6 +225,8 @@ export function ImageStudio({
       imageUrl: initialImageUrl ?? null,
     });
     setShowLogo(true);
+    setLogoScale(0.22);
+    setLogoPosition("top-center");
     setSelection(null);
     setScrim("none");
     setScrimSide("none");
@@ -325,6 +335,7 @@ export function ImageStudio({
       const reco = (typeof copy?.imageStyle === "string" ? copy.imageStyle : "minimal") as AiStyleId;
       const chosenStyle: AiStyleId = aiStyle === "auto" ? reco : aiStyle;
       const bgStyle: AiStyleId = aiFormat === "text" ? chosenStyle : "abstract";
+      lastBgStyleRef.current = bgStyle;
 
       // 2) Image dans le style choisi (en parallèle de l'application de la copy).
       const bgPromise = fetch("/api/visual-studio/generate-background", {
@@ -384,6 +395,45 @@ export function ImageStudio({
       toast.error(t("aiError"));
     } finally {
       setVisualBusy(false);
+    }
+  }
+
+  // Régénère UNIQUEMENT le fond image : on garde texte, format, mise en page.
+  // C'est une génération d'image → 1 crédit (comme une génération normale).
+  async function regenerateBackground() {
+    if (onChargeCredit && !(await onChargeCredit("image"))) return;
+    setBgBusy(true);
+    const ratio = format.width / format.height;
+    const brandColors = [brandKit.primaryColor, brandKit.accentColor, brandKit.backgroundColor].filter(Boolean);
+    const style = lastBgStyleRef.current;
+    try {
+      const bg = await fetch("/api/visual-studio/generate-background", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent: aiIntent.trim(), style, ratio, brandColors }),
+      })
+        .then((r) => r.json())
+        .catch(() => ({}));
+      if (bg?.ok && bg.dataUrl) {
+        const placement = await analyzeForText(String(bg.dataUrl)).catch(() => null);
+        setBgTreatment(style === "photoPerson" ? "mono" : "none");
+        setBackground((b) => ({ ...b, mode: "image", imageUrl: String(bg.dataUrl) }));
+        if (placement) {
+          setScrim(placement.scrim);
+          setScrimSide(placement.brighterSide);
+          handleRef.current?.setTextPlacement(placement.anchor, placement.textColor, placement.textSide);
+        } else {
+          setScrim("dark");
+          setScrimSide("none");
+        }
+      } else {
+        toast.error(t("aiError"));
+      }
+    } catch (e) {
+      console.error("[ImageStudio] regenerateBackground failed", e);
+      toast.error(t("aiError"));
+    } finally {
+      setBgBusy(false);
     }
   }
 
@@ -818,10 +868,18 @@ export function ImageStudio({
                         </button>
                       ))}
                     </div>
-                    <Button type="button" className="w-full" onClick={generateVisual} disabled={visualBusy}>
+                    <Button type="button" className="w-full" onClick={generateVisual} disabled={visualBusy || bgBusy}>
                       {visualBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
                       {visualBusy ? t("aiGenerating") : background.imageUrl ? t("aiVariant") : t("aiGenerateVisual")}
                     </Button>
+                    {/* Régénère UNIQUEMENT le fond (garde le texte + la mise en
+                        page) — quand seul le visuel ne convient pas. */}
+                    {background.imageUrl && (
+                      <Button type="button" variant="outline" className="w-full" onClick={regenerateBackground} disabled={visualBusy || bgBusy}>
+                        {bgBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ImageIcon className="h-4 w-4 mr-1.5" />}
+                        {bgBusy ? t("aiGenerating") : t("aiNewBackground")}
+                      </Button>
+                    )}
                   </>
                 ) : (
                   <>
@@ -967,6 +1025,52 @@ export function ImageStudio({
                 <Label htmlFor="studio-logo" className="text-sm">{t("showLogo")}</Label>
                 <Switch id="studio-logo" checked={showLogo} onCheckedChange={setShowLogo} />
               </div>
+              {showLogo && (
+                <div className="space-y-2.5 rounded-lg border border-border/60 p-2.5">
+                  {/* Position du logo */}
+                  <div className="space-y-1">
+                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("logoPosition")}</Label>
+                    <div className="grid grid-cols-3 gap-1">
+                      {([
+                        ["top-left", "↖"], ["top-center", "↑"], ["top-right", "↗"],
+                        ["bottom-left", "↙"], ["bottom-center-spacer", ""], ["bottom-right", "↘"],
+                      ] as const).map(([pos, icon]) =>
+                        pos === "bottom-center-spacer" ? (
+                          <span key={pos} />
+                        ) : (
+                          <button
+                            key={pos}
+                            type="button"
+                            onClick={() => setLogoPosition(pos as typeof logoPosition)}
+                            className={`rounded-md border py-1 text-sm transition-colors ${
+                              logoPosition === pos
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border text-muted-foreground hover:bg-muted"
+                            }`}
+                          >
+                            {icon}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                  {/* Taille du logo */}
+                  <div className="space-y-1">
+                    <Label htmlFor="logo-size" className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      {t("logoSize")}
+                    </Label>
+                    <input
+                      id="logo-size"
+                      type="range"
+                      min={8}
+                      max={45}
+                      value={Math.round(logoScale * 100)}
+                      onChange={(e) => setLogoScale(Number(e.target.value) / 100)}
+                      className="w-full accent-primary"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Voile de contraste — lisibilité du texte sur fond photo/IA */}
               <div className="flex items-center justify-between gap-2">
@@ -1023,6 +1127,8 @@ export function ImageStudio({
                   background={background}
                   brand={brandKit}
                   showLogo={showLogo}
+                  logoScale={logoScale}
+                  logoPosition={logoPosition}
                   scrim={scrim}
                   scrimSide={scrimSide}
                   bgTreatment={bgTreatment}

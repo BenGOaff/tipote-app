@@ -5820,7 +5820,10 @@
     "pdfExporting": "Création du PDF…",
     "pdfDone": "PDF téléchargé",
     "navKeysTip": "Astuce : flèches ← → ou swipe pour naviguer.",
-    "brandLabel": "Marque"
+    "brandLabel": "Marque",
+    "logoPosition": "Position du logo",
+    "logoSize": "Taille du logo",
+    "aiNewBackground": "Nouveau fond"
   },
   "colorPicker": {
     "pick": "Choisir une couleur",

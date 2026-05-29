@@ -5820,7 +5820,10 @@
     "pdfExporting": "Building PDF…",
     "pdfDone": "PDF downloaded",
     "navKeysTip": "Tip: arrows ← → or swipe to navigate.",
-    "brandLabel": "Brand"
+    "brandLabel": "Brand",
+    "logoPosition": "Logo position",
+    "logoSize": "Logo size",
+    "aiNewBackground": "New background"
   },
   "colorPicker": {
     "pick": "Pick a color",
