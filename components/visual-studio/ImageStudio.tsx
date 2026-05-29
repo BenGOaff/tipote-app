@@ -376,9 +376,12 @@ export function ImageStudio({
   function applyStyleSettings(s: StudioStyleSettings) {
     setAiStyle(s.aiStyle);
     if (formats.includes(s.format)) setFormatId(s.format);
-    setShowLogo(s.showLogo);
-    setLogoScale(s.logoScale);
-    setLogoPosition(s.logoPosition);
+    // En illustration (quiz) : pas de logo auto → on ignore le logo du style.
+    if (!illustrationMode) {
+      setShowLogo(s.showLogo);
+      setLogoScale(s.logoScale);
+      setLogoPosition(s.logoPosition);
+    }
     if (s.scrim) setScrim(s.scrim);
     // Couleurs de fond seulement si pas d'image en cours (sinon on garde le visuel).
     if (!background.imageUrl && (s.bgColor || s.bgMode)) {
