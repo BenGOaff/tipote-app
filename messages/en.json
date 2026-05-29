@@ -5819,7 +5819,8 @@
     "downloadPdf": "PDF (LinkedIn)",
     "pdfExporting": "Building PDF…",
     "pdfDone": "PDF downloaded",
-    "navKeysTip": "Tip: arrows ← → or swipe to navigate."
+    "navKeysTip": "Tip: arrows ← → or swipe to navigate.",
+    "brandLabel": "Brand"
   },
   "colorPicker": {
     "pick": "Pick a color",

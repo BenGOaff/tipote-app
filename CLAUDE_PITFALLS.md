@@ -901,3 +901,36 @@ branché dans le composer de posts ET l'éditeur d'articles Tipote. Règles :
 - **Articles** : insertion `<img style="max-width:100%;height:auto">` au caret
   (execCommand insertHTML), carrousel désactivé (images inline). Posts :
   `onApplyImages` pousse le carrousel dans `meta.images[]`.
+
+### AF bis — studio : bugs remontés par Béné (juin 2026)
+
+4 bugs corrigés, à NE PAS réintroduire :
+
+1. **Sélection de texte impossible sur certaines slides** : un calque éditable
+   VIDE (accent toujours, kicker/subline vides, cta hors slide finale) gardait
+   sa position pleine largeur + `evented:true` d'un rendu précédent → zone morte
+   invisible qui mangeait les clics sur le titre. FIX (layout ET layoutCarousel) :
+   pour tout calque non affiché → `selectable:false, evented:false` + parqué
+   hors champ (`left/top:-9999, width:1`) ; on ré-active uniquement les visibles.
+   Règle : à CHAQUE layout, gérer l'interactivité de TOUS les calques, pas que
+   ceux qu'on place.
+2. **Logo qui chevauche le titre** : le layout ne réservait pas de bande haute.
+   FIX : `logoBandRef` (fraction de H occupée par logo+marges), set dans l'effet
+   logo (et remis à 0 si logo masqué) qui relance `layoutRef.current()`. `layout()`
+   borne `padTop` ≥ bande logo ; `layoutCarousel` borne le top du bloc. + on pose
+   une mise en page DÈS le placeholder (avant génération) — `layoutRef` n'est plus
+   gaté par `placed`.
+3. **Mauvais logo (Tipote au lieu de Tiquiz)** : le preset `tiquiz` pointait sur
+   `/logo-fonce.png` (Tipote). FIX : vrai logo copié (`public/tiquiz-logo.png`,
+   source `/home/user/tiquiz/public/tiquiz-logo.png`) + `BRAND_PRESETS.tiquiz`.
+   SÉLECTEUR DE MARQUE : `ImageStudio` accepte `brandOptions[{label,kit}]` → un
+   switch Tipote/Tiquiz/marque-perso ; l'endpoint `/brand-kit` renvoie ces
+   options. Changer de marque ré-habille fond + slide courante.
+4. **Copy carrousel incohérente** ("Et si le quiz faisait le tri sans te lire",
+   "sans effort censé") : prompt durci (sens obligatoire, phrases complètes
+   grammaticalement correctes, pas de mot orphelin collé, pas de troncature,
+   clarté > malin) + température 0.6 → 0.45.
+
+⚠️ `brandKit` est renommé `brandKitProp` en interne dans ImageStudio ; la marque
+active dérive de `brandOptions[activeBrandKey]` sinon `brandKitProp`. Ne pas
+re-câbler les 20 usages de `brandKit` (ils lisent la marque active).

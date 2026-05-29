@@ -5819,7 +5819,8 @@
     "downloadPdf": "PDF (LinkedIn)",
     "pdfExporting": "Création du PDF…",
     "pdfDone": "PDF téléchargé",
-    "navKeysTip": "Astuce : flèches ← → ou swipe pour naviguer."
+    "navKeysTip": "Astuce : flèches ← → ou swipe pour naviguer.",
+    "brandLabel": "Marque"
   },
   "colorPicker": {
     "pick": "Choisir une couleur",

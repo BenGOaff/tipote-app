@@ -105,7 +105,8 @@ type StudioMode = "single" | "carousel";
 export function ImageStudio({
   open,
   onOpenChange,
-  brandKit,
+  brandKit: brandKitProp,
+  brandOptions,
   formats = ALL_FORMATS,
   defaultFormat,
   initialImageUrl,
@@ -123,6 +124,14 @@ export function ImageStudio({
 }: ImageStudioProps) {
   const t = useTranslations("visualStudio");
   const locale = useLocale();
+  // Marque ACTIVE : si l'hôte fournit plusieurs marques (ex. Tipote + Tiquiz),
+  // l'user choisit laquelle promouvoir → logo + couleurs + nom suivent. Sinon
+  // on garde la marque unique passée en prop.
+  const [activeBrandKey, setActiveBrandKey] = useState(0);
+  const brandKit =
+    brandOptions && brandOptions.length
+      ? brandOptions[Math.min(activeBrandKey, brandOptions.length - 1)].kit
+      : brandKitProp;
   const [formatId, setFormatId] = useState<StudioFormatId>(defaultFormat ?? formats[0]);
   const [background, setBackground] = useState<BackgroundSpec>({
     mode: "solid",
@@ -221,6 +230,7 @@ export function ImageStudio({
     slidesRef.current = [];
     currentRef.current = 0;
     setCarouselBusy(false);
+    setActiveBrandKey(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -406,6 +416,22 @@ export function ImageStudio({
     },
     [brandKit],
   );
+
+  // Changement de marque (sélecteur Tipote/Tiquiz) : ré-habille le fond uni et,
+  // en carrousel, re-rend la slide courante aux nouvelles couleurs.
+  useEffect(() => {
+    if (!open) return;
+    if (mode === "carousel" && slidesRef.current.length) {
+      applySlideToCanvas(
+        slidesRef.current[currentRef.current] ?? slidesRef.current[0],
+        currentRef.current,
+        slidesRef.current.length,
+      );
+    } else if (!background.imageUrl) {
+      setBackground((b) => ({ ...b, color: brandKit.backgroundColor, color2: brandKit.primaryColor }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBrandKey]);
 
   // Capture les éditions WYSIWYG de la slide affichée dans slidesRef.
   const captureCurrentSlide = useCallback(() => {
@@ -696,6 +722,29 @@ export function ImageStudio({
           <div className="flex flex-col lg:flex-row gap-5 lg:h-full lg:min-h-0">
             {/* ── Contrôles (PAS de contenu texte ici) ──── */}
             <div className="space-y-5 lg:w-[280px] lg:shrink-0 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
+              {/* Marque : quand l'user gère plusieurs marques (Tipote/Tiquiz),
+                  il choisit laquelle promouvoir → logo + couleurs suivent. */}
+              {brandOptions && brandOptions.length > 1 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t("brandLabel")}</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {brandOptions.map((b, i) => (
+                      <button
+                        key={b.label}
+                        type="button"
+                        onClick={() => setActiveBrandKey(i)}
+                        className={`rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors ${
+                          activeBrandKey === i
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* Mode : image seule ou carrousel (10 slides) */}
               {enableCarousel && (
                 <div className="grid grid-cols-2 gap-2">

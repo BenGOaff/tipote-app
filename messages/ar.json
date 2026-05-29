@@ -5812,7 +5812,8 @@
     "downloadPdf": "PDF (لينكدإن)",
     "pdfExporting": "جارٍ إنشاء PDF…",
     "pdfDone": "تم تنزيل PDF",
-    "navKeysTip": "نصيحة: استخدم ← → أو اسحب للتنقل."
+    "navKeysTip": "نصيحة: استخدم ← → أو اسحب للتنقل.",
+    "brandLabel": "العلامة"
   },
   "colorPicker": {
     "pick": "اختيار لون",

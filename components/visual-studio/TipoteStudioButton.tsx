@@ -76,6 +76,7 @@ export function TipoteStudioButton({
   // mémorisés). Fallback = preset Tipote tant que le fetch n'a pas répondu, pour
   // que le studio soit utilisable même si le profil n'a pas de branding.
   const [brandKit, setBrandKit] = useState<BrandKit>(BRAND_PRESETS.tipote);
+  const [brandOptions, setBrandOptions] = useState<{ label: string; kit: BrandKit }[] | undefined>(undefined);
   const [brandVoice, setBrandVoice] = useState<string>("");
   const [brandLoaded, setBrandLoaded] = useState(false);
   const [loadingBrand, setLoadingBrand] = useState(false);
@@ -88,6 +89,9 @@ export function TipoteStudioButton({
       .then((j) => {
         if (j?.ok && j.brand) {
           setBrandKit(j.brand as BrandKit);
+          if (Array.isArray(j.options) && j.options.length) {
+            setBrandOptions(j.options as { label: string; kit: BrandKit }[]);
+          }
           if (typeof j.voiceHint === "string") setBrandVoice(j.voiceHint);
         }
       })
@@ -151,6 +155,7 @@ export function TipoteStudioButton({
         open={open}
         onOpenChange={setOpen}
         brandKit={brandKit}
+        brandOptions={brandOptions}
         brandVoice={brandVoice}
         initialIntent={intent}
         formats={formats}
