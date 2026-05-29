@@ -5835,7 +5835,12 @@
     "styleSaved": "Style enregistré",
     "styleApply": "Appliquer ce style",
     "styleDelete": "Supprimer",
-    "styleNamePrompt": "Nom de ce style :"
+    "styleNamePrompt": "Nom de ce style :",
+    "overlayLabel": "Image / logo",
+    "overlayAddImage": "Ajouter une image",
+    "overlayAddLogo": "Ajouter le logo",
+    "overlayHint": "Glisse pour déplacer, tire les coins pour redimensionner. Sélectionne puis 🗑 pour retirer.",
+    "formatLandscape": "Paysage 16:9"
   },
   "colorPicker": {
     "pick": "Choisir une couleur",

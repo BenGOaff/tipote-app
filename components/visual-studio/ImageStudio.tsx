@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   Square,
   RectangleVertical,
+  RectangleHorizontal,
   Smartphone,
   Sparkles,
   Loader2,
@@ -56,7 +57,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 
-import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
+import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay, fontStackFor } from "@/lib/visualStudio/presets";
 import { AI_STYLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
 import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
 import { slideStyle, type CarouselSlide } from "@/lib/visualStudio/carousel";
@@ -89,12 +90,14 @@ const FORMAT_LABEL_KEY: Record<StudioFormatId, string> = {
   "1:1": "formatSquare",
   "4:5": "formatPortrait",
   "9:16": "formatStory",
+  "16:9": "formatLandscape",
 };
 
 const FORMAT_ICON: Record<StudioFormatId, React.ComponentType<{ className?: string }>> = {
   "1:1": Square,
   "4:5": RectangleVertical,
   "9:16": Smartphone,
+  "16:9": RectangleHorizontal,
 };
 
 const PREVIEW_MAX_W = 420;
@@ -122,6 +125,7 @@ export function ImageStudio({
   enableCarousel = true,
   enableSave = true,
   enableStylePrefs = true,
+  illustrationMode = false,
   onChargeCredit,
   onApplyMany,
   title,
@@ -235,7 +239,9 @@ export function ImageStudio({
       color2: brandKit.primaryColor,
       imageUrl: initialImageUrl ?? null,
     });
-    setShowLogo(true);
+    // En illustration (quiz) : pas de logo auto, l'user ajoute un overlay libre.
+    // En pub/affilié : logo de marque auto comme avant.
+    setShowLogo(!illustrationMode);
     setLogoScale(0.22);
     setLogoPosition("top-center");
     setSelection(null);
@@ -334,6 +340,21 @@ export function ImageStudio({
     objectUrlsRef.current.push(url);
     setBgTreatment("none"); // upload utilisateur → on garde la couleur d'origine
     setBackground((b) => ({ ...b, mode: "image", imageUrl: url }));
+  }
+
+  // Ajoute une image/logo en OVERLAY libre (déplaçable + redimensionnable). On
+  // passe par un dataURL (FileReader) → pas de canvas "tainted" à l'export PNG.
+  function handleOverlayFile(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error(t("imageExpected"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") handleRef.current?.addImage(reader.result);
+    };
+    reader.readAsDataURL(file);
   }
 
   // ── Mémoire de style ───────────────────────────────────────────
@@ -438,6 +459,49 @@ export function ImageStudio({
     genCountRef.current += 1;
     const gen = genCountRef.current;
     let anyOk = false;
+
+    // MODE ILLUSTRATION (quiz) : on génère UNIQUEMENT le fond image. Pas de copy
+    // IA : le calque titre garde le texte fourni par l'hôte (titre du résultat)
+    // en police de marque (sobre). Le reste des calques est vide.
+    if (illustrationMode) {
+      const chosen: AiStyleId = aiStyle === "auto" ? "abstract" : aiStyle;
+      lastBgStyleRef.current = chosen;
+      try {
+        const bg = await fetch("/api/visual-studio/generate-background", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent, style: chosen, ratio, brandColors }),
+        })
+          .then((r) => r.json())
+          .catch(() => ({}));
+        if (bg?.ok && bg.dataUrl) {
+          const placement = await analyzeForText(String(bg.dataUrl)).catch(() => null);
+          setBgTreatment(chosen === "photoPerson" ? "mono" : "none");
+          setBackground((b) => ({ ...b, mode: "image", imageUrl: String(bg.dataUrl) }));
+          const h = handleRef.current;
+          if (placement) {
+            setScrim(placement.scrim);
+            setScrimSide(placement.brighterSide);
+            h?.setTextPlacement(placement.anchor, placement.textColor, placement.textSide);
+          } else {
+            setScrim("dark");
+            setScrimSide("none");
+          }
+          h?.setTemplate("auto");
+          // Titre sobre = police de marque (pas le display lourd "accroche").
+          h?.setHeadingFont(fontStackFor(brandKit.font));
+        } else {
+          toast.error(t("aiError"));
+        }
+      } catch (e) {
+        console.error("[ImageStudio] illustration generate failed", e);
+        toast.error(t("aiError"));
+      } finally {
+        setVisualBusy(false);
+      }
+      return;
+    }
+
     try {
       // 1) Analyse + copy (l'IA décide format + style d'image en rapport au post)
       const copy = await fetch("/api/visual-studio/generate-copy", {
@@ -1194,7 +1258,9 @@ export function ImageStudio({
 
               <Separator />
 
-              {/* Logo */}
+              {/* Logo AUTOMATIQUE : pub/affilié uniquement. En illustration (quiz)
+                  on le masque au profit de l'overlay libre ci-dessous. */}
+              {!illustrationMode && (<>
               <div className="flex items-center justify-between">
                 <Label htmlFor="studio-logo" className="text-sm">{t("showLogo")}</Label>
                 <Switch id="studio-logo" checked={showLogo} onCheckedChange={setShowLogo} />
@@ -1245,6 +1311,37 @@ export function ImageStudio({
                   </div>
                 </div>
               )}
+              </>)}
+
+              {/* Image / logo en OVERLAY libre : l'user ajoute ce qu'il veut, puis
+                  déplace au drag et redimensionne en tirant les coins/bords. */}
+              <div className="space-y-2">
+                <Label className="text-sm">{t("overlayLabel")}</Label>
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted cursor-pointer">
+                    <Upload className="h-4 w-4" />
+                    {t("overlayAddImage")}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { handleOverlayFile(e.target.files?.[0]); e.target.value = ""; }}
+                    />
+                  </label>
+                  {brandKit.logoUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { if (brandKit.logoUrl) handleRef.current?.addImage(brandKit.logoUrl); }}
+                    >
+                      <ImageIcon className="h-4 w-4 mr-1.5" />
+                      {t("overlayAddLogo")}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">{t("overlayHint")}</p>
+              </div>
 
               {/* Voile de contraste — lisibilité du texte sur fond photo/IA */}
               <div className="flex items-center justify-between gap-2">
@@ -1393,11 +1490,17 @@ function FloatingToolbar({
     if (r) savedRange.current = r;
   };
 
+  // Sélection = image/logo en overlay → les contrôles de TEXTE n'ont aucun sens
+  // (on déplace/redimensionne au canvas) : on ne montre que la suppression.
+  const isImage = info.layerId.startsWith("overlay-");
+
   return (
     <div
       className="absolute z-10 flex items-center gap-0.5 rounded-lg border border-border bg-popover px-1 py-1 shadow-lg"
       style={{ top, left }}
     >
+      {!isImage && (
+       <>
       <select
         value={FONT_OPTIONS.find((f) => f.value === info.fontFamily)?.value ?? info.fontFamily}
         onMouseDown={captureRange}
@@ -1451,6 +1554,8 @@ function FloatingToolbar({
       </span>
 
       <ToolbarBtn title={t("tbEditText")} onClick={() => handle.enterEdit()}>Aa</ToolbarBtn>
+       </>
+      )}
       <ToolbarBtn title={t("tbDelete")} onClick={() => handle.deleteActive()}>
         <Trash2 className="h-3.5 w-3.5" />
       </ToolbarBtn>

@@ -52,6 +52,13 @@ const PREVIEW_DEMO_NAME = "Alex";
 function cleanPlaceholdersForLabel(text: string | null | undefined): string {
   return interpolateText(text, { name: "", gender: "x" });
 }
+// Titre pour un VISUEL généré (image statique) : pas de placeholder gravé en
+// dur ({name}…), ni ponctuation orpheline ; on capitalise. Cf. QuizDetailClient.
+function titleForVisual(text: string | null | undefined): string {
+  let t = stripHtml(cleanPlaceholdersForLabel(text)).replace(/\s+/g, " ").trim();
+  t = t.replace(/^[\s,;:.!?–—-]+/, "").trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+}
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
@@ -1690,11 +1697,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   {!introImageUrl && (
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <TipoteStudioButton
-                        intent={[stripHtml(title), stripHtml(introduction)].filter(Boolean).join(" — ")}
+                        intent={[titleForVisual(title), stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" — ")}
+                        titleText={titleForVisual(title)}
+                        illustrationMode
                         contentId={quizId}
-                        formats={["4:5", "1:1", "9:16"]}
-                        defaultFormat="4:5"
-                        enableCarousel={false}
                         label={t("introImageAi")}
                         onApplyImage={(img) => { setIntroImageUrl(img.url); setIntroImagePosition("top"); }}
                       />
