@@ -29,13 +29,13 @@ const LANG: Record<string, string> = {
 
 // Intention de CHAQUE slide (donnée à l'IA pour cadrer le contenu, dans l'ordre).
 const ROLE_BRIEF: Record<CarouselRole, string> = {
-  hook: "HOOK — a strong, curiosity-piquing or contrarian one-liner (5-10 words) that makes the reader stop. Tension, surprise or bold claim.",
-  rehook: "REHOOK — open a loop: tease the result/payoff WITHOUT revealing it yet. Maximum curiosity gap.",
-  problem: "PROBLEM — a relatable situation the reader recognises instantly (\"most people think…\", \"the mistake everyone makes…\").",
-  value: "VALUE — exactly ONE key idea, building on the previous slide. Break an expectation or reveal an insight. Concrete and actionable.",
-  aha: "AHA MOMENT — the key insight / perspective shift. Save-worthy. The line they screenshot.",
-  takeaway: "TAKEAWAY — 3 concrete actions the reader can apply right now. Put them in `subline` as 3 short lines separated by \\n (no numbering, keep each under ~8 words).",
-  cta: "CTA — one strong call to action (\"comment X\", \"follow for more\", \"save this\"). Put the action verb in `cta`.",
+  hook: "HOOK — a strong, controversial or curiosity-piquing one-liner, 5-10 words MAX, that makes the reader think \"wait… what?\". Use tension, surprise or a bold claim. NOT a summary of the post.",
+  rehook: "REHOOK — open a loop: tease the result/payoff WITHOUT revealing it. Maximum curiosity gap, make it IMPOSSIBLE not to swipe.",
+  problem: "PROBLEM — a relatable situation, instant identification (\"most people think…\", \"I used to believe…\", \"everyone makes this mistake…\").",
+  value: "VALUE — exactly ONE key idea, flowing from the previous slide. Break an expectation or reveal an insight step by step. Mix a touch of story with one actionable point.",
+  aha: "AHA MOMENT — the key insight / perspective shift that triggers realization. The save-worthy, screenshot line.",
+  takeaway: "TAKEAWAY — 3 concrete actions the reader can apply right now, dead easy to start. Put them in `subline` as 3 short lines separated by \\n (no numbering, each under ~8 words).",
+  cta: "CTA — one strong call to action (\"comment X and I'll send it\", \"follow for more\", \"save before it's gone\"). Put the action in `cta`.",
 };
 
 export async function POST(req: NextRequest) {
@@ -70,10 +70,12 @@ export async function POST(req: NextRequest) {
       .join("\n");
 
     const system =
-      `You are an expert short-form carousel copywriter & designer. From the SOURCE you write a ${CAROUSEL_SLIDE_COUNT}-slide carousel, ready to post, in ${lang}.\n` +
+      `You are an expert copywriter and carousel designer. From the SOURCE you craft a ${CAROUSEL_SLIDE_COUNT}-slide carousel, ready to post, in ${lang}.\n` +
+      `First read the source and extract its CENTRAL message + the key insights, then write the slides.\n` +
       `Return EXACTLY ${CAROUSEL_SLIDE_COUNT} slides, in this order and intent:\n${slidePlan}\n` +
       `PSYCHOLOGICAL TRIGGERS to weave in: curiosity gap, pattern interrupt, social proof, FOMO, contrarian ideas, quick wins.\n` +
-      `WRITING STYLE: very short, punchy lines. Talk like a human to a human. Sentence case (never Title Case). No fluff. Each line builds momentum toward the next.\n` +
+      `WRITING STYLE: very short, punchy lines. Write like you talk. Sentence case (never Title Case). Zero fluff. Slightly dramatic, conversational tone. EACH line must create momentum toward the next — the reader should NEED to swipe.\n` +
+      `VARIETY: no two slides may open the same way; each slide must say something the others don't (no restating). Build the insight step by step across slides 4-7.\n` +
       `ANTI-AI — BANNED: empty filler ("la différence est réelle", "découvrez", "boostez", "optimisez"), the "ce n'est pas seulement X, c'est Y" pattern, brochure verbs ("s'impose comme", "au cœur de"), long em-dashes, jargon to sound smart, bro-marketing.\n` +
       `NEVER invent a number/%/price/stat that is not in the SOURCE.\n` +
       `For EACH slide return an object {role, kicker, headline, subline, cta}:\n` +

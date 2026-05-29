@@ -106,6 +106,9 @@ export interface StudioCanvasHandle {
   /** Lit le texte courant d'un calque (pour persister les éditions WYSIWYG
    *  d'une slide avant de naviguer / d'exporter). "" si le calque n'existe pas. */
   getLayerText: (id: string) => string;
+  /** true si un texte est en cours d'édition (caret actif) → l'hôte n'attrape
+   *  pas les flèches/swipe de navigation pour ne pas voler la frappe. */
+  isEditingText: () => boolean;
 }
 
 /** Paramètres de rendu d'une slide de carrousel (flat, couleurs de marque). */
@@ -1281,6 +1284,10 @@ export function StudioCanvas({
         if (!c) return "";
         const obj = c.getObjects().find((o) => (o as { layerId?: string }).layerId === id) as Textbox | undefined;
         return String(obj?.text ?? "");
+      },
+      isEditingText() {
+        const obj = fcRef.current?.getActiveObject() as Textbox | null;
+        return !!obj?.isEditing;
       },
       setStats(stats) {
         curStats = Array.isArray(stats) ? stats.slice(0, 4) : [];

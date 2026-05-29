@@ -6108,9 +6108,15 @@
     "carouselRegenerate": "Voltar a gerar",
     "carouselSlideOf": "Slide {n}/{total}",
     "carouselEditTip": "Clica num texto do slide para o editar.",
-    "carouselApply": "Anexar os {n} slides",
+    "carouselApply": "Guardar os {n} slides",
     "carouselExporting": "A exportar…",
-    "carouselEmpty": "Gera primeiro o carrossel."
+    "carouselEmpty": "Gera primeiro o carrossel.",
+    "save": "Guardar",
+    "downloaded": "Descarregado",
+    "downloadPdf": "PDF (LinkedIn)",
+    "pdfExporting": "A criar PDF…",
+    "pdfDone": "PDF descarregado",
+    "navKeysTip": "Dica: setas ← → ou desliza para navegar."
   },
   "colorPicker": {
     "pick": "Escolher uma cor",

@@ -97,6 +97,10 @@ export interface ImageStudioProps {
   /** Active le mode CARROUSEL (10 slides flat de marque) en plus de l'image
    *  seule. Défaut : true. */
   enableCarousel?: boolean;
+  /** Affiche le bouton "Enregistrer" (rattache le visuel via onApply). Mettre
+   *  à false quand il n'y a rien où l'attacher (galerie standalone) → seul
+   *  "Télécharger" reste. Défaut : true. */
+  enableSave?: boolean;
   /** Renvoie TOUTES les slides d'un carrousel exporté (dans l'ordre). Si absent,
    *  on retombe sur `onApply` slide par slide. */
   onApplyMany?: (results: StudioResult[]) => void;

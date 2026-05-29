@@ -801,3 +801,20 @@ Réutilisé sur affiliate (et plus tard Tipote). Points à respecter :
 ⚠️ Env note (pas un bug code) : un Edit sur un gros fichier peut échouer en
 silence ("File has not been read yet") si la lecture a été paginée/tronquée —
 re-grep le marqueur après coup pour confirmer que l'édition a bien pris.
+
+### AD bis — carrousel : PDF LinkedIn + nav clavier/swipe (juin 2026)
+
+- **Export PDF** (`lib/visualStudio/exportPdf.ts`, `carouselToPdf`) : posts
+  "document" LinkedIn = 1 slide / page. Construit à partir des MÊMES PNG que le
+  téléchargement (pas de re-rendu divergent). `jspdf` (déjà en dep) importé en
+  DYNAMIQUE (`await import`) pour ne pas alourdir le bundle studio. Unité `px` +
+  `format:[w,h]` par page → la page colle au pixel du visuel. Bouton visible en
+  mode carrousel uniquement.
+- **Nav clavier ← →** : gardée par `handle.isEditingText()` (ne pas voler la
+  frappe quand un texte Fabric est en édition) ET par le tag de
+  `document.activeElement` (INPUT/TEXTAREA/contentEditable = on laisse passer).
+- **Swipe tactile** : seuil 50px + horizontal franc (|dx|>|dy|), ignoré en
+  édition de texte. Posé sur le `stageRef` (onTouchStart/End).
+- **Tous les boutons d'export** (Enregistrer / Télécharger / PDF) partagent un
+  garde `anyExport = busy||downloading||pdfBusy` pour éviter les exports
+  concurrents qui se marchent dessus sur le canvas.

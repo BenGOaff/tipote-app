@@ -1,15 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Download, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ImageStudio } from "@/components/visual-studio/ImageStudio";
 import { BRAND_PRESETS } from "@/lib/visualStudio/presets";
-import { uploadVisual } from "@/lib/visualStudio/uploadVisual";
-import type { StudioResult } from "@/lib/visualStudio/types";
 import type { VisualAsset } from "../content/visuels-fr";
 
 export function VisualGallery({
@@ -19,31 +16,7 @@ export function VisualGallery({
   singles: VisualAsset[];
   carrousel: VisualAsset[];
 }) {
-  const tStudio = useTranslations("visualStudio");
   const [studioOpen, setStudioOpen] = useState(false);
-
-  function downloadResult(result: StudioResult, index?: number) {
-    // Le visuel est déjà stocké côté serveur (prop `upload`). Ici on
-    // déclenche en plus le téléchargement local — via le blob, fiable
-    // même si result.url est une URL distante signée (cross-origin).
-    const href = URL.createObjectURL(result.blob);
-    const a = document.createElement("a");
-    const suffix = index != null ? `-${String(index + 1).padStart(2, "0")}` : "";
-    a.href = href;
-    a.download = `visuel-tiquiz-${result.format.replace(":", "x")}${suffix}-${Date.now()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(href);
-  }
-
-  function handleApply(result: StudioResult) {
-    downloadResult(result);
-  }
-
-  function handleApplyMany(results: StudioResult[]) {
-    results.forEach((r, i) => downloadResult(r, i));
-  }
 
   return (
     <div className="space-y-8">
@@ -65,14 +38,13 @@ export function VisualGallery({
         </CardContent>
       </Card>
 
+      {/* Galerie standalone : pas de post où rattacher → seul "Télécharger".
+          (Le studio gère le téléchargement single + carrousel en interne.) */}
       <ImageStudio
         open={studioOpen}
         onOpenChange={setStudioOpen}
         brandKit={BRAND_PRESETS.tiquiz}
-        applyLabel={tStudio("download")}
-        upload={uploadVisual}
-        onApply={handleApply}
-        onApplyMany={handleApplyMany}
+        enableSave={false}
       />
       <section>
         <div className="mb-4">
