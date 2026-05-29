@@ -974,3 +974,25 @@ Partagé Tipote + affilié (tous deux authentifiés Supabase). Migration
 - Vote sur carrousel → `ai_style:null` (ignoré par l'apprentissage, sans effet).
 - `applyStyleSettings` ne touche PAS au fond image en cours (garde le visuel),
   seulement couleurs si pas d'image.
+
+## AH) PROMPT QUIZ/SONDAGE — écriture naturelle 2026 + voix de marque (juin 2026)
+
+Prompt PARTAGÉ par les quiz Tipote ET Tiquiz (chacun sa copie de
+`lib/prompts/quiz/system.ts`, quasi identiques). Toute évolution du style =
+reporter DES DEUX CÔTÉS.
+
+- **NATURAL_WRITING_BLOCK** : constante exportée injectée dans quiz + sondage
+  (génération). Bannit les tics IA ("ce n'est pas X c'est Y", tirets cadratins,
+  mots brochure, triades lisses, faux-profond, emojis déco, formules de coach) ;
+  exige phrases variées, spécifique/sensoriel, vocabulaire réel, point de vue
+  assumé. Synchronisé Tipote ↔ Tiquiz.
+- **Voix de marque (Tipote uniquement)** : la route `quiz/generate` charge
+  `loadBrandBundle` → `brandVoiceToPromptHint` (tonalité écrite + offres + puces
+  promesses + persona) passé en `brandVoice`, + `copyStyleHint()` (patterns
+  copywriting) en `copyHint`. Tiquiz n'a PAS `business_profiles` (archi `profiles`
+  avec `brand_tone`/`target_audience`) → seulement le bloc anti-IA pour l'instant.
+- **Modèle = Opus** pour la génération quiz/sondage (Tipote ET Tiquiz) : rédaction
+  fine. Override env `TIPOTE_QUIZ_MODEL` / `TIQUIZ_QUIZ_MODEL`. L'embed Tiquiz
+  reste sur haiku (rapide) mais hérite quand même du bloc anti-IA via le prompt.
+- brandVoice/copyHint sont OPTIONNELS dans le builder → profil vide = prompt
+  pleinement fonctionnel, juste sans la couche marque.

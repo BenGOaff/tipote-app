@@ -14,6 +14,8 @@ import {
 } from "@/lib/prompts/quiz/system";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { loadBrandBundle, brandVoiceToPromptHint } from "@/lib/visualStudio/brandLoader";
+import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,12 +33,14 @@ function getClaudeApiKey(): string {
 }
 
 function getClaudeModel(): string {
-  // Sonnet 4.6 + safety net via lib.
+  // Génération de quiz/sondage = rédaction fine → Opus par défaut (qualité
+  // d'écriture max). Override possible via env dédiée puis fallback "opus".
   return resolveAnthropicModel(
-    process.env.TIPOTE_CLAUDE_MODEL ||
+    process.env.TIPOTE_QUIZ_MODEL ||
+      process.env.TIPOTE_CLAUDE_MODEL ||
       process.env.CLAUDE_MODEL ||
       process.env.ANTHROPIC_MODEL,
-    "sonnet",
+    "opus",
   );
 }
 
@@ -104,6 +108,17 @@ export async function POST(req: NextRequest) {
     if (projectId) bpQuery = bpQuery.eq("project_id", projectId);
     const { data: profile } = await bpQuery.maybeSingle();
 
+    // Voix de marque complète (tonalité écrite + offres + puces promesses +
+    // persona) → l'IA rédige DANS la voix de l'user. Best-effort : si le profil
+    // est vide, voiceHint = "" et le prompt reste pleinement fonctionnel.
+    let brandVoice = "";
+    try {
+      const { voice } = await loadBrandBundle(userId, projectId);
+      brandVoice = brandVoiceToPromptHint(voice);
+    } catch {
+      brandVoice = "";
+    }
+
     const profileAddressForm = (profile as any)?.address_form;
     const resolvedAddressForm: "tu" | "vous" =
       body.addressForm === "vous" || body.addressForm === "tu"
@@ -161,6 +176,7 @@ export async function POST(req: NextRequest) {
         questionCount: Math.min(12, Math.max(3, Number(body.questionCount) || 6)),
         locale: String(body.locale ?? "fr"),
         addressForm: resolvedAddressForm,
+        brandVoice,
       });
       system = prompts.system;
       userPrompt = prompts.user;
@@ -190,6 +206,8 @@ export async function POST(req: NextRequest) {
         resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
         niche: (profile as any)?.niche ?? "",
         mission: (profile as any)?.mission ?? "",
+        brandVoice,
+        copyHint: copyStyleHint(),
         locale: String(body.locale ?? "fr"),
         addressForm: resolvedAddressForm,
         format,
