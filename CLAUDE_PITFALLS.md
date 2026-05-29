@@ -1036,3 +1036,22 @@ Tipote uniquement (le Studio — ImageStudio, lib/visualStudio, clé OpenAI, cr�
 - Boutons IA+GIF visibles uniquement quand le slot est VIDE (même logique que la
   dropzone d'upload) ; pour remplacer, on retire d'abord l'image.
 - Attribution Tenor "Powered by Tenor" affichée dans le picker (exigence Tenor).
+
+## AJ) Recadrage + réduction d'image (couverture & résultats) (juin 2026)
+
+- UI : `components/quiz/ImageCropDialog.tsx` (cadre libre déplaçable/redimensionnable
+  en fractions 0..1 + curseur largeur). Greffé via un bouton "Recadrer" (icône Crop)
+  dans `ResultDraggableImage` (QuizDetailClient) et `IntroImageDraggable`
+  (SurveyDetailClient), au survol de l'image posée. État `cropTarget {url, apply}`
+  + 1 seul `<ImageCropDialog>` par éditeur.
+- Traitement : `app/api/images/crop/route.ts` (sharp). **GIF animé OK** : `extract`
+  ET `resize` sont PAGE-AWARE en sharp 0.34 (vérifié) → on passe `{animated:true}`,
+  coords du crop dans le repère d'UNE frame (top/height ≤ pageHeight), l'animation
+  est conservée. On stocke le FICHIER FINAL (bucket `content-images`, via
+  `supabaseAdmin`) → AUCUNE colonne DB, AUCUN changement du rendu visiteur (l'URL
+  pointe déjà la bonne image). S'applique à toute image : GIF, upload, image IA.
+- Anti-SSRF : la route ne fetch que des hôtes allowlistés (`*.klipy.com`,
+  `cdn.tipote.app`, hôte `NEXT_PUBLIC_SUPABASE_URL`) + https only + cap 25 Mo.
+- Format de sortie = format d'entrée (gif→gif animé, jpg/png/webp conservés).
+- ⚠️ NE PAS repasser ces images en `object-cover` côté visiteur : le recadrage est
+  déjà "gravé" dans le fichier → on garde `w-full h-auto`.
