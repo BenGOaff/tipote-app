@@ -12,6 +12,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { CAROUSEL_ROLES, CAROUSEL_SLIDE_COUNT, type CarouselRole } from "@/lib/visualStudio/carousel";
+import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,7 +87,8 @@ export async function POST(req: NextRequest) {
       `- headline: the punch line, MAX ~8 words, no ending period, no emojis.\n` +
       `- subline: ONE short supporting line (max ~16 words) OR "" if the headline stands alone. For role "takeaway": 3 short actions separated by \\n.\n` +
       `- cta: "" for every slide EXCEPT the last "cta" slide, where it is a 2-5 word action in ${lang}.\n` +
-      `Return STRICT JSON: {"slides":[ ${CAROUSEL_SLIDE_COUNT} objects in order ]}. No commentary.`;
+      `Return STRICT JSON: {"slides":[ ${CAROUSEL_SLIDE_COUNT} objects in order ]}. No commentary.\n\n` +
+      copyStyleHint();
     const userMsg =
       `SOURCE to turn into a carousel:\n${intent}` +
       (brand ? `\nBrand name: ${brand}` : "") +

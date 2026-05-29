@@ -934,3 +934,20 @@ branché dans le composer de posts ET l'éditeur d'articles Tipote. Règles :
 ⚠️ `brandKit` est renommé `brandKitProp` en interne dans ImageStudio ; la marque
 active dérive de `brandOptions[activeBrandKey]` sinon `brandKitProp`. Ne pas
 re-câbler les 20 usages de `brandKit` (ils lisent la marque active).
+
+### AF ter — studio : 3 sources nourrissent la copy IA (juin 2026)
+
+La copy générée par le studio (image + carrousel) s'appuie sur TROIS sources —
+vérifier que les 3 restent branchées :
+
+1. **Le contenu ciblé** (`intent`) : texte du post (`generatedContent`) / de
+   l'article (`getPlainTextFromHtml(html)`) → l'IA s'adapte à CE contenu.
+2. **La voix de marque de l'user** (`brandVoice`/`voiceHint`) : tonalité +
+   offres + puces promesses + persona, via `brandLoader.ts` → injectée sous
+   `BRAND VOICE` dans les 2 routes.
+3. **Les ressources copywriting Tipote** : extraites une fois de
+   `tipote-knowledge/` (145 accroches, puces_promesses, guide LinkedIn) vers
+   `lib/visualStudio/copyPatterns.ts` (presets figés). `copyStyleHint()` injecte
+   un échantillon tournant comme EXEMPLES DE STYLE (structures à `[crochets]`,
+   jamais recopiées). Pour enrichir : éditer `copyPatterns.ts` (NE PAS parser
+   les .docx à la volée — lourd/lent/coûteux).
