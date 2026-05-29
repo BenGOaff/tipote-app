@@ -45,10 +45,12 @@ function toSaved(r: StudioResult, i?: number): StudioSavedImage {
 
 export function TipoteStudioButton({
   intent,
+  titleText,
   contentId,
   formats,
   defaultFormat,
   enableCarousel = true,
+  illustrationMode = false,
   label = "Générer un visuel",
   size = "sm",
   variant = "outline",
@@ -57,12 +59,18 @@ export function TipoteStudioButton({
 }: {
   /** Texte source (post/section) → la copy IA s'adapte à CE contenu. */
   intent?: string;
+  /** Titre posé SUR l'image en mode illustration (ex: titre du résultat de quiz).
+   *  Pas de hook IA inventé : c'est ce texte exact qui sert de calque titre. */
+  titleText?: string;
   /** Id du contenu courant (post/article) → range les visuels sous son dossier. */
   contentId?: string;
   /** Formats proposés (défaut : les 3). Permet d'adapter au réseau. */
   formats?: StudioFormatId[];
   defaultFormat?: StudioFormatId;
   enableCarousel?: boolean;
+  /** Mode ILLUSTRATION (quiz) : fond seul + titre du résultat, pas de hook IA,
+   *  pas de carrousel, logo non auto (overlay libre). Défaut: false (pub). */
+  illustrationMode?: boolean;
   label?: string;
   size?: "sm" | "default" | "lg";
   variant?: "default" | "outline" | "secondary" | "ghost";
@@ -158,9 +166,14 @@ export function TipoteStudioButton({
         brandOptions={brandOptions}
         brandVoice={brandVoice}
         initialIntent={intent}
-        formats={formats}
-        defaultFormat={defaultFormat}
-        enableCarousel={enableCarousel}
+        // Illustration (quiz) : titre du résultat = seul calque texte ; paysage
+        // par défaut ; pas de carrousel ni de presets de styles.
+        initialText={illustrationMode ? { kicker: "", headline: titleText ?? "", accent: "", subline: "", cta: "" } : undefined}
+        illustrationMode={illustrationMode}
+        formats={formats ?? (illustrationMode ? (["16:9", "1:1"] as StudioFormatId[]) : undefined)}
+        defaultFormat={defaultFormat ?? (illustrationMode ? ("16:9" as StudioFormatId) : undefined)}
+        enableCarousel={illustrationMode ? false : enableCarousel}
+        enableStylePrefs={illustrationMode ? false : undefined}
         upload={makeContentImageUploader(contentId)}
         onChargeCredit={chargeCredit}
         applyLabel="Insérer"

@@ -11,8 +11,11 @@ export const FORMATS: Record<StudioFormatId, StudioFormat> = {
   "1:1": { id: "1:1", label: "Carré 1:1", width: 1080, height: 1080 },
   "4:5": { id: "4:5", label: "Portrait 4:5", width: 1080, height: 1350 },
   "9:16": { id: "9:16", label: "Story 9:16", width: 1080, height: 1920 },
+  "16:9": { id: "16:9", label: "Paysage 16:9", width: 1920, height: 1080 },
 };
 
+// Défaut (pub/affilié) inchangé = les 3 formats sociaux. Le paysage 16:9 est
+// proposé explicitement par le mode illustration (quiz), pas dans le défaut.
 export const ALL_FORMATS: StudioFormatId[] = ["1:1", "4:5", "9:16"];
 
 /**

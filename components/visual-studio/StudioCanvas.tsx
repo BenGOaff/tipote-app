@@ -72,6 +72,10 @@ export interface StudioCanvasHandle {
   enterEdit: () => void;
   deleteActive: () => void;
   addText: () => void;
+  /** Ajoute une IMAGE/LOGO en overlay LIBRE : objet Fabric sélectionnable,
+   *  déplaçable au drag et redimensionnable en tirant les coins/bords.
+   *  Inclus tel quel dans l'export PNG. Supprimable via deleteActive(). */
+  addImage: (url: string) => void;
   /** Remplace le contenu d'un calque texte (par layerId) — utilisé par la
    *  génération de copy IA (titre/sous-titre/CTA). No-op si le calque
    *  n'existe pas. */
@@ -1293,6 +1297,41 @@ export function StudioCanvas({
         c.setActiveObject(tb);
         c.requestRenderAll();
         reportSelection();
+      },
+      addImage(url) {
+        const c = fcRef.current;
+        if (!c || !url) return;
+        FabricImage.fromURL(url, { crossOrigin: "anonymous" })
+          .then((img) => {
+            if (!img.width || !img.height) return;
+            const W2 = dimsRef.current.w;
+            const H2 = dimsRef.current.h;
+            // ~1/3 de la largeur au départ ; l'user ajuste ensuite au drag.
+            const targetW = W2 * 0.32;
+            const scale = targetW / img.width;
+            img.set({
+              left: (W2 - targetW) / 2,
+              top: (H2 - img.height * scale) / 2,
+              scaleX: scale,
+              scaleY: scale,
+              selectable: true,
+              evented: true,
+              objectCaching: false,
+              // Poignées visibles : coins = redimensionnement, bords = étirement.
+              cornerColor: "#5D6CDB",
+              cornerStrokeColor: "#ffffff",
+              borderColor: "#5D6CDB",
+              cornerStyle: "circle",
+              transparentCorners: false,
+              cornerSize: 12,
+            });
+            (img as { layerId?: string }).layerId = `overlay-${Date.now()}`;
+            c.add(img);
+            c.setActiveObject(img);
+            c.requestRenderAll();
+            reportSelection();
+          })
+          .catch(() => {});
       },
       setLayerText(id, text) {
         const c = fcRef.current;

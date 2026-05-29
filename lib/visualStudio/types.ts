@@ -6,7 +6,7 @@
 // bucket, etc.) et récupère l'URL finale via `onApply`. Même composant
 // pour affiliate / Tiquiz / Tipote — seuls les props changent.
 
-export type StudioFormatId = "1:1" | "4:5" | "9:16";
+export type StudioFormatId = "1:1" | "4:5" | "9:16" | "16:9";
 
 export interface StudioFormat {
   id: StudioFormatId;
@@ -106,6 +106,11 @@ export interface ImageStudioProps {
   /** Active le mode CARROUSEL (10 slides flat de marque) en plus de l'image
    *  seule. Défaut : true. */
   enableCarousel?: boolean;
+
+  /** Mode ILLUSTRATION (quiz) : on ne génère QUE le fond image, sans copy IA
+   *  (pas de hook/sous-titre/CTA inventés). Le calque titre garde le texte
+   *  fourni via `initialText.headline` (ex: le titre du résultat). Défaut: false. */
+  illustrationMode?: boolean;
 
   /**
    * Hook de FACTURATION appelé UNE fois par génération IA (image ou carrousel),

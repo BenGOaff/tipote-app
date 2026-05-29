@@ -5828,7 +5828,12 @@
     "styleSaved": "تم حفظ النمط",
     "styleApply": "تطبيق هذا النمط",
     "styleDelete": "حذف",
-    "styleNamePrompt": "اسم هذا النمط:"
+    "styleNamePrompt": "اسم هذا النمط:",
+    "overlayLabel": "صورة / شعار",
+    "overlayAddImage": "إضافة صورة",
+    "overlayAddLogo": "إضافة الشعار",
+    "overlayHint": "اسحب للتحريك، واسحب الزوايا لتغيير الحجم. حدّد ثم 🗑 للحذف.",
+    "formatLandscape": "أفقي 16:9"
   },
   "colorPicker": {
     "pick": "اختيار لون",
