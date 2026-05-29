@@ -863,3 +863,41 @@ US bascule sur EN → contenu EN + liens tipote.blog, sans changer son interface
   introduit : liens sur `session.locale` alors que le contenu suivait le picker
   → incohérent. Désormais les deux suivent le picker.
 - Ouvrir un marché = ajouter sa locale à `AFFILIATE_LIVE_LOCALES` (+ contenu).
+
+## AF) STUDIO VISUEL PORTÉ SUR TIPOTE — posts + articles, crédits, branding (juin 2026)
+
+Le module `components/visual-studio/` (partagé avec l'affilié) est maintenant
+branché dans le composer de posts ET l'éditeur d'articles Tipote. Règles :
+
+- **NE PAS casser l'affilié** : les routes `generate-copy`/`generate-carousel`
+  restent GRATUITES côté affilié. La facturation passe par une prop OPTIONNELLE
+  `onChargeCredit` du studio (fournie uniquement par l'hôte Tipote via
+  `TipoteStudioButton`). L'affilié ne la passe pas → 0 appel, comportement
+  inchangé. De même `brandVoice` est optionnel (affilié = copy générique).
+- **Crédits** : 1 crédit / génération (image OU carrousel), 0 pour les
+  retouches/export. Route `POST /api/visual-studio/charge` →
+  `consumeCredits(userId, 1, {feature:"visual_studio"})` → 402 `NO_CREDITS`.
+  ⚠️ Le RPC `consume_ai_credits` n'est PAS dans les migrations mais existe en
+  base (le quiz/generate l'utilise en prod) → NE PAS créer de migration qui le
+  redéfinirait. Réutiliser `lib/credits.ts` (`ensureUserCredits`+`consumeCredits`).
+- **Upload = bucket PUBLIC `content-images`** (via `/api/upload/image`), PAS le
+  TUS signé de l'affilié (URL signée 2 h → casserait la publication différée
+  n8n). Helper : `makeContentImageUploader(contentId)`.
+- **Publication / programmation** : pour qu'un visuel parte en auto + soit
+  programmable, il doit être dans `content_item.meta.images[]` au format
+  `{url, path, filename, size, type}` avec une URL PUBLIQUE durable. Le pipeline
+  n8n (`/api/social/publish`, `/api/n8n/scheduled-posts`) lit `meta.images[]`
+  tel quel → AUCUNE modif du pipeline nécessaire si on respecte cette forme.
+- **Contraintes par réseau** (composer) : max images déjà géré par PostForm
+  (Pinterest 1, TikTok 35, sinon 4). Le studio respecte ça (clamp à l'insertion)
+  + adapte le FORMAT au réseau via `lib/visualStudio/networkFormats.ts`
+  (LinkedIn 1:1, TikTok 9:16, Pinterest 4:5, etc.). Carrousel activé seulement
+  si le réseau accepte le multi-images.
+- **Branding/voix** : `lib/visualStudio/brandLoader.ts` lit `business_profiles`
+  (brand_color_base/accent/logo/font + tone_of_voice + offers.sales_arguments)
+  + persona client_ideal → `BrandKit` (canvas aux couleurs de l'user) +
+  `voiceHint` (injecté dans la copy IA). Exposé via `GET /api/visual-studio/brand-kit`.
+  Fallback = preset Tipote si profil vide → studio toujours utilisable.
+- **Articles** : insertion `<img style="max-width:100%;height:auto">` au caret
+  (execCommand insertHTML), carrousel désactivé (images inline). Posts :
+  `onApplyImages` pousse le carrousel dans `meta.images[]`.

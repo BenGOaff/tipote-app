@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { TipoteStudioButton, type StudioSavedImage } from "@/components/visual-studio/TipoteStudioButton";
 import {
   Bold,
   Underline,
@@ -139,11 +140,11 @@ function getPlainTextFromHtml(html: string) {
  * ExecCommand: deprecated mais toujours supporté dans la plupart des navigateurs
  * et parfait ici (zéro dépendance).
  */
-function exec(cmd: string, value?: string) {
+function exec(cmd: string, value?: string): boolean {
   try {
-    document.execCommand(cmd, false, value);
+    return document.execCommand(cmd, false, value);
   } catch {
-    // no-op
+    return false;
   }
 }
 
@@ -226,6 +227,20 @@ export function ArticleEditorModal({
 
   const clearFormatting = () => {
     exec("removeFormat");
+    syncFromEditor();
+  };
+
+  // Insère une image (visuel IA) dans le corps de l'article, au niveau du
+  // curseur. `w-full h-auto` : jamais de crop côté lecteur (cf. pitfalls B).
+  const insertImageAtCaret = (img: StudioSavedImage) => {
+    const el = editorEl || editorRef.current;
+    if (!el) return;
+    el.focus();
+    const html = `<img src="${img.url}" alt="" style="max-width:100%;height:auto;border-radius:8px;" /><p></p>`;
+    // execCommand insertHTML place au caret si le focus est dans l'éditeur ;
+    // sinon on append en fin de contenu (filet de sécurité).
+    const ok = document.queryCommandSupported?.("insertHTML") && exec("insertHTML", html);
+    if (!ok) el.innerHTML += html;
     syncFromEditor();
   };
 
@@ -442,6 +457,19 @@ export function ArticleEditorModal({
                 <ListOrdered className="w-4 h-4 mr-2" />
                 Numérotée
               </Button>
+
+              <Separator orientation="vertical" className="h-9" />
+
+              {/* Visuel IA inséré dans l'article. Pas de carrousel ici (article
+                  = images inline). Format portrait/carré au choix. 1 crédit. */}
+              <TipoteStudioButton
+                intent={getPlainTextFromHtml(html).slice(0, 1200)}
+                enableCarousel={false}
+                label={t("aiImage")}
+                variant="outline"
+                size="default"
+                onApplyImage={insertImageAtCaret}
+              />
 
               <Separator orientation="vertical" className="h-9" />
 

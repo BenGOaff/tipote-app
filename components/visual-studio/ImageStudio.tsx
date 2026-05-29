@@ -111,10 +111,12 @@ export function ImageStudio({
   initialImageUrl,
   initialText,
   initialIntent,
+  brandVoice,
   upload,
   onApply,
   enableCarousel = true,
   enableSave = true,
+  onChargeCredit,
   onApplyMany,
   title,
   applyLabel,
@@ -287,6 +289,8 @@ export function ImageStudio({
       toast.error(t("aiCopyEmpty"));
       return;
     }
+    // Facturation (hôte) AVANT toute génération. Refus = on annule proprement.
+    if (onChargeCredit && !(await onChargeCredit("image"))) return;
     setVisualBusy(true);
     const intent = aiIntent.trim();
     const ratio = format.width / format.height;
@@ -299,7 +303,7 @@ export function ImageStudio({
       const copy = await fetch("/api/visual-studio/generate-copy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent, locale, brandName: brandKit.name }),
+        body: JSON.stringify({ intent, locale, brandName: brandKit.name, brandVoice }),
       })
         .then((r) => r.json())
         .catch(() => ({}));
@@ -481,12 +485,14 @@ export function ImageStudio({
       toast.error(t("aiCopyEmpty"));
       return;
     }
+    // Facturation (hôte) AVANT toute génération. Refus = on annule proprement.
+    if (onChargeCredit && !(await onChargeCredit("carousel"))) return;
     setCarouselBusy(true);
     try {
       const res = await fetch("/api/visual-studio/generate-carousel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent: aiIntent.trim(), locale, brandName: brandKit.name }),
+        body: JSON.stringify({ intent: aiIntent.trim(), locale, brandName: brandKit.name, brandVoice }),
       })
         .then((r) => r.json())
         .catch(() => ({}));

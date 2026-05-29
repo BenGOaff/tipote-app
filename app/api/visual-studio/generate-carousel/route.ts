@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     const locale = typeof body.locale === "string" ? body.locale : "fr";
     const lang = LANG[locale] ?? "French";
     const brand = typeof body.brandName === "string" ? body.brandName.slice(0, 60) : "";
+    const brandVoice = typeof body.brandVoice === "string" ? body.brandVoice.slice(0, 1200) : "";
 
     // Brief slide-par-slide, dans l'ordre contractuel.
     const slidePlan = CAROUSEL_ROLES
@@ -85,7 +86,10 @@ export async function POST(req: NextRequest) {
       `- subline: ONE short supporting line (max ~16 words) OR "" if the headline stands alone. For role "takeaway": 3 short actions separated by \\n.\n` +
       `- cta: "" for every slide EXCEPT the last "cta" slide, where it is a 2-5 word action in ${lang}.\n` +
       `Return STRICT JSON: {"slides":[ ${CAROUSEL_SLIDE_COUNT} objects in order ]}. No commentary.`;
-    const userMsg = `SOURCE to turn into a carousel:\n${intent}${brand ? `\nBrand name: ${brand}` : ""}`;
+    const userMsg =
+      `SOURCE to turn into a carousel:\n${intent}` +
+      (brand ? `\nBrand name: ${brand}` : "") +
+      (brandVoice ? `\n\nBRAND VOICE — match this tone and lean on these angles (never copy verbatim):\n${brandVoice}` : "");
 
     const completion = (await openai.chat.completions.create({
       ...cachingParams("visual-carousel", { temperature: 0.6 }),

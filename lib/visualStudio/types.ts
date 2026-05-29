@@ -79,6 +79,10 @@ export interface ImageStudioProps {
   /** Sujet/contexte pré-rempli pour l'IA (ex: le texte du post ciblé) → la
    *  copy générée s'adapte à CE post, pas à un sujet tapé au hasard. */
   initialIntent?: string;
+  /** Indices de VOIX DE MARQUE (tonalité, offres, puces promesses, persona)
+   *  injectés dans la copy IA pour qu'elle colle à la marque de l'user. Côté
+   *  affilié on ne le fournit pas → comportement inchangé. */
+  brandVoice?: string;
 
   /**
    * Persiste le PNG produit et renvoie son URL (et, si possible, son chemin
@@ -97,6 +101,15 @@ export interface ImageStudioProps {
   /** Active le mode CARROUSEL (10 slides flat de marque) en plus de l'image
    *  seule. Défaut : true. */
   enableCarousel?: boolean;
+
+  /**
+   * Hook de FACTURATION appelé UNE fois par génération IA (image ou carrousel),
+   * juste avant de générer. L'hôte débite ici (ex. 1 crédit côté Tipote) et
+   * renvoie `true` si OK, `false` si refusé (crédits insuffisants → le studio
+   * annule la génération proprement). Les retouches n'appellent JAMAIS ce hook
+   * → 0 coût. Absent (ex. affilié) = génération gratuite, aucun appel.
+   */
+  onChargeCredit?: (kind: "image" | "carousel") => Promise<boolean>;
   /** Affiche le bouton "Enregistrer" (rattache le visuel via onApply). Mettre
    *  à false quand il n'y a rien où l'attacher (galerie standalone) → seul
    *  "Télécharger" reste. Défaut : true. */
