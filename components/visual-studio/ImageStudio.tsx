@@ -36,6 +36,7 @@ import {
   GalleryHorizontalEnd,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from "lucide-react";
 import {
   Dialog,
@@ -111,6 +112,7 @@ export function ImageStudio({
   upload,
   onApply,
   enableCarousel = true,
+  enableSave = true,
   onApplyMany,
   title,
   applyLabel,
@@ -126,6 +128,7 @@ export function ImageStudio({
   });
   const [showLogo, setShowLogo] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   // Stage mesuré → le canvas est mis à l'échelle pour TENIR dedans (jamais
   // de scroll, donc pas de saut quand la textarea cachée de Fabric prend
@@ -480,74 +483,28 @@ export function ImageStudio({
   const nextFrame = () =>
     new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-  async function applyCarousel() {
+  // Rend chaque visuel (1 en mode image, N en carrousel) en blob, en bouclant
+  // sur les slides côté canvas. `withUpload` = on stocke en plus côté serveur
+  // (pour Enregistrer) ; sinon on ne fait que produire les blobs (Télécharger).
+  async function renderAll(withUpload: boolean): Promise<StudioResult[]> {
     const handle = handleRef.current;
-    if (!handle) {
-      toast.error(t("canvasNotReady"));
-      return;
-    }
-    captureCurrentSlide();
+    if (!handle) throw new Error(t("canvasNotReady"));
+    const results: StudioResult[] = [];
+    const isCarousel = mode === "carousel";
     const list = slidesRef.current;
-    if (!list.length) {
-      toast.error(t("carouselEmpty"));
-      return;
-    }
-    setBusy(true);
-    try {
-      const results: StudioResult[] = [];
-      for (let i = 0; i < list.length; i++) {
+    const count = isCarousel ? list.length : 1;
+    for (let i = 0; i < count; i++) {
+      if (isCarousel) {
         applySlideToCanvas(list[i], i, list.length);
         await nextFrame();
-        const blob = await handle.toBlob();
-        let url: string;
-        let storagePath: string | undefined;
-        if (upload) {
-          const res = await upload(blob, { format: formatId, width: format.width, height: format.height });
-          if (typeof res === "string") url = res;
-          else {
-            url = res.url;
-            storagePath = res.path;
-          }
-        } else {
-          url = URL.createObjectURL(blob);
-          objectUrlsRef.current.push(url);
-        }
-        results.push({ url, storagePath, width: format.width, height: format.height, blob, format: formatId });
       }
-      if (onApplyMany) onApplyMany(results);
-      else if (onApply) results.forEach((r) => onApply(r));
-      // Restaure l'aperçu sur la slide courante.
-      applySlideToCanvas(list[currentRef.current] ?? list[0], currentRef.current, list.length);
-      onOpenChange(false);
-    } catch (e) {
-      console.error("[ImageStudio] carousel export/upload failed", e);
-      const msg = e instanceof Error ? e.message : "Réessaie.";
-      toast.error(t("exportFailed", { msg }));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function apply() {
-    if (mode === "carousel") {
-      await applyCarousel();
-      return;
-    }
-    const handle = handleRef.current;
-    if (!handle) {
-      toast.error(t("canvasNotReady"));
-      return;
-    }
-    setBusy(true);
-    try {
       const blob = await handle.toBlob();
       let url: string;
       let storagePath: string | undefined;
-      if (upload) {
+      if (withUpload && upload) {
         const res = await upload(blob, { format: formatId, width: format.width, height: format.height });
-        if (typeof res === "string") {
-          url = res;
-        } else {
+        if (typeof res === "string") url = res;
+        else {
           url = res.url;
           storagePath = res.path;
         }
@@ -555,14 +512,77 @@ export function ImageStudio({
         url = URL.createObjectURL(blob);
         objectUrlsRef.current.push(url);
       }
-      onApply?.({ url, storagePath, width: format.width, height: format.height, blob, format: formatId });
+      results.push({ url, storagePath, width: format.width, height: format.height, blob, format: formatId });
+    }
+    // Restaure l'aperçu sur la slide en cours d'édition.
+    if (isCarousel && list.length) {
+      applySlideToCanvas(list[currentRef.current] ?? list[0], currentRef.current, list.length);
+    }
+    return results;
+  }
+
+  // Télécharge un blob localement (fiable même si l'URL est signée distante).
+  function triggerDownload(result: StudioResult, index?: number) {
+    const href = URL.createObjectURL(result.blob);
+    const a = document.createElement("a");
+    const suffix = index != null ? `-${String(index + 1).padStart(2, "0")}` : "";
+    a.href = href;
+    a.download = `${brandKit.name.toLowerCase().replace(/\s+/g, "-")}-${result.format.replace(":", "x")}${suffix}-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+  }
+
+  // ENREGISTRER : stocke le(s) visuel(s) et les rattache (post, etc.) via onApply.
+  async function save() {
+    if (mode === "carousel") {
+      captureCurrentSlide();
+      if (!slidesRef.current.length) {
+        toast.error(t("carouselEmpty"));
+        return;
+      }
+    }
+    setBusy(true);
+    try {
+      const results = await renderAll(true);
+      if (mode === "carousel") {
+        if (onApplyMany) onApplyMany(results);
+        else if (onApply) results.forEach((r) => onApply(r));
+      } else {
+        onApply?.(results[0]);
+      }
       onOpenChange(false);
     } catch (e) {
-      console.error("[ImageStudio] export/upload failed", e);
+      console.error("[ImageStudio] save failed", e);
       const msg = e instanceof Error ? e.message : "Réessaie.";
       toast.error(t("exportFailed", { msg }));
     } finally {
       setBusy(false);
+    }
+  }
+
+  // TÉLÉCHARGER : produit le(s) PNG et déclenche le téléchargement local. Ne
+  // ferme PAS la modale (l'user peut Enregistrer ensuite). Pas d'upload.
+  async function download() {
+    if (mode === "carousel") {
+      captureCurrentSlide();
+      if (!slidesRef.current.length) {
+        toast.error(t("carouselEmpty"));
+        return;
+      }
+    }
+    setDownloading(true);
+    try {
+      const results = await renderAll(false);
+      results.forEach((r, i) => triggerDownload(r, mode === "carousel" ? i : undefined));
+      toast.success(t("downloaded"));
+    } catch (e) {
+      console.error("[ImageStudio] download failed", e);
+      const msg = e instanceof Error ? e.message : "Réessaie.";
+      toast.error(t("exportFailed", { msg }));
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -893,17 +913,28 @@ export function ImageStudio({
 
         <DialogFooter className="px-6 py-4 border-t bg-muted/20">
           <div className="flex w-full items-center justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
+            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={busy || downloading}>
               {t("close")}
             </Button>
-            <Button type="button" onClick={apply} disabled={busy || (mode === "carousel" && slides.length === 0)}>
-              {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
-              {mode === "carousel"
-                ? busy
-                  ? t("carouselExporting")
-                  : t("carouselApply", { n: slides.length })
-                : applyLabel ?? t("use")}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={download}
+              disabled={busy || downloading || (mode === "carousel" && slides.length === 0)}
+            >
+              {downloading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
+              {t("download")}
             </Button>
+            {enableSave && (
+              <Button type="button" onClick={save} disabled={busy || downloading || (mode === "carousel" && slides.length === 0)}>
+                {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                {mode === "carousel"
+                  ? busy
+                    ? t("carouselExporting")
+                    : t("carouselApply", { n: slides.length })
+                  : applyLabel ?? t("save")}
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

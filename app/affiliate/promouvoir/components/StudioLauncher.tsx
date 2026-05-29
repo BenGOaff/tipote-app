@@ -77,7 +77,6 @@ export function StudioLauncher({
         onOpenChange={setOpen}
         brandKit={BRAND_PRESETS.tiquiz}
         initialIntent={intent}
-        applyLabel="Attacher au post"
         upload={uploadVisual}
         onApply={handleApply}
         onApplyMany={handleApplyMany}

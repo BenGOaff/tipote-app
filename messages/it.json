@@ -5802,9 +5802,11 @@
     "carouselRegenerate": "Rigenera carosello",
     "carouselSlideOf": "Slide {n}/{total}",
     "carouselEditTip": "Tocca un testo della slide per modificarlo.",
-    "carouselApply": "Allega le {n} slide",
+    "carouselApply": "Salva le {n} slide",
     "carouselExporting": "Esportazione…",
-    "carouselEmpty": "Genera prima il carosello."
+    "carouselEmpty": "Genera prima il carosello.",
+    "save": "Salva",
+    "downloaded": "Scaricato"
   },
   "colorPicker": {
     "pick": "Scegli un colore",

@@ -5802,9 +5802,11 @@
     "carouselRegenerate": "إعادة الإنشاء",
     "carouselSlideOf": "شريحة {n}/{total}",
     "carouselEditTip": "انقر على أي نص في الشريحة لتعديله.",
-    "carouselApply": "إرفاق الشرائح ({n})",
+    "carouselApply": "حفظ الشرائح ({n})",
     "carouselExporting": "جارٍ التصدير…",
-    "carouselEmpty": "أنشئ الكاروسيل أولًا."
+    "carouselEmpty": "أنشئ الكاروسيل أولًا.",
+    "save": "حفظ",
+    "downloaded": "تم التنزيل"
   },
   "colorPicker": {
     "pick": "اختيار لون",
