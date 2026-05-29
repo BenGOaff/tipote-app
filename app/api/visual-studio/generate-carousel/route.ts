@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
       `Return EXACTLY ${CAROUSEL_SLIDE_COUNT} slides, in this order and intent:\n${slidePlan}\n` +
       `PSYCHOLOGICAL TRIGGERS to weave in: curiosity gap, pattern interrupt, social proof, FOMO, contrarian ideas, quick wins.\n` +
       `WRITING STYLE: very short, punchy lines. Write like you talk. Sentence case (never Title Case). Zero fluff. Slightly dramatic, conversational tone. EACH line must create momentum toward the next — the reader should NEED to swipe.\n` +
+      `VARIETY: no two slides may open the same way; each slide must say something the others don't (no restating). Build the insight step by step across slides 4-7.\n` +
       `ANTI-AI — BANNED: empty filler ("la différence est réelle", "découvrez", "boostez", "optimisez"), the "ce n'est pas seulement X, c'est Y" pattern, brochure verbs ("s'impose comme", "au cœur de"), long em-dashes, jargon to sound smart, bro-marketing.\n` +
       `NEVER invent a number/%/price/stat that is not in the SOURCE.\n` +
       `For EACH slide return an object {role, kicker, headline, subline, cta}:\n` +

@@ -6112,7 +6112,11 @@
     "carouselExporting": "Exportando…",
     "carouselEmpty": "Gere o carrossel primeiro.",
     "save": "Salvar",
-    "downloaded": "Baixado"
+    "downloaded": "Baixado",
+    "downloadPdf": "PDF (LinkedIn)",
+    "pdfExporting": "Criando PDF…",
+    "pdfDone": "PDF baixado",
+    "navKeysTip": "Dica: setas ← → ou deslize para navegar."
   },
   "colorPicker": {
     "pick": "Escolher uma cor",

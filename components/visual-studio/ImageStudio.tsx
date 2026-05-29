@@ -37,6 +37,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileText,
 } from "lucide-react";
 import {
   Dialog,
@@ -56,6 +57,7 @@ import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStud
 import { AI_STYLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
 import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
 import { slideStyle, type CarouselSlide } from "@/lib/visualStudio/carousel";
+import { carouselToPdf } from "@/lib/visualStudio/exportPdf";
 import type {
   BackgroundMode,
   BackgroundSpec,
@@ -129,6 +131,7 @@ export function ImageStudio({
   const [showLogo, setShowLogo] = useState(true);
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   // Stage mesuré → le canvas est mis à l'échelle pour TENIR dedans (jamais
   // de scroll, donc pas de saut quand la textarea cachée de Fabric prend
@@ -428,6 +431,51 @@ export function ImageStudio({
     [applySlideToCanvas, captureCurrentSlide],
   );
 
+  // Navigation clavier ← → entre slides (réf prompt). Ignorée pendant l'édition
+  // d'un texte (Fabric a le focus sur sa textarea cachée → ne pas voler la
+  // frappe) ou si on tape dans un champ du panneau (textarea sujet IA).
+  useEffect(() => {
+    if (!open || mode !== "carousel" || slides.length === 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
+      if (handleRef.current?.isEditingText?.()) return;
+      e.preventDefault();
+      goToSlide(currentRef.current + (e.key === "ArrowRight" ? 1 : -1));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, mode, slides.length, goToSlide]);
+
+  // Swipe tactile entre slides (réf prompt) — seuil horizontal franc, on ignore
+  // les gestes plutôt verticaux (scroll) et l'édition de texte en cours.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const onStageTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (mode !== "carousel" || slides.length === 0) return;
+      const t0 = e.touches[0];
+      touchStartRef.current = t0 ? { x: t0.clientX, y: t0.clientY } : null;
+    },
+    [mode, slides.length],
+  );
+  const onStageTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      if (!start || mode !== "carousel" || slides.length === 0) return;
+      if (handleRef.current?.isEditingText?.()) return;
+      const t1 = e.changedTouches[0];
+      if (!t1) return;
+      const dx = t1.clientX - start.x;
+      const dy = t1.clientY - start.y;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return; // pas un swipe horizontal franc
+      goToSlide(currentRef.current + (dx < 0 ? 1 : -1));
+    },
+    [mode, slides.length, goToSlide],
+  );
+
   async function generateCarousel() {
     if (!aiIntent.trim()) {
       toast.error(t("aiCopyEmpty"));
@@ -586,6 +634,36 @@ export function ImageStudio({
     }
   }
 
+  // EXPORT PDF (carrousel "document" LinkedIn) : 1 slide = 1 page, dimensions
+  // pixel exactes. Construit à partir des PNG rendus → même rendu que le PNG.
+  async function downloadPdf() {
+    captureCurrentSlide();
+    if (!slidesRef.current.length) {
+      toast.error(t("carouselEmpty"));
+      return;
+    }
+    setPdfBusy(true);
+    try {
+      const results = await renderAll(false);
+      const pdf = await carouselToPdf(results);
+      const href = URL.createObjectURL(pdf);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = `${brandKit.name.toLowerCase().replace(/\s+/g, "-")}-carrousel-${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+      toast.success(t("pdfDone"));
+    } catch (e) {
+      console.error("[ImageStudio] pdf export failed", e);
+      const msg = e instanceof Error ? e.message : "Réessaie.";
+      toast.error(t("exportFailed", { msg }));
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   // Position de la barre flottante : au-dessus de l'élément, sinon dessous.
   let toolbarTop = 0;
   let toolbarLeft = 0;
@@ -725,6 +803,7 @@ export function ImageStudio({
                           ))}
                         </div>
                         <p className="text-[11px] text-muted-foreground">{t("carouselEditTip")}</p>
+                        <p className="text-[11px] text-muted-foreground">{t("navKeysTip")}</p>
                       </div>
                     )}
                   </>
@@ -877,6 +956,8 @@ export function ImageStudio({
             {/* ── Aperçu + édition WYSIWYG (Fabric) ────── */}
             <div
               ref={stageRef}
+              onTouchStart={onStageTouchStart}
+              onTouchEnd={onStageTouchEnd}
               className="relative flex items-center justify-center rounded-xl bg-[repeating-conic-gradient(#0000000a_0%_25%,transparent_0%_50%)] bg-[length:24px_24px] p-4 overflow-clip min-w-0 h-[55vh] min-h-[320px] lg:h-full lg:min-h-0 lg:flex-1"
             >
               <div className="relative" style={{ width: displayWidth, height: displayHeight }}>
@@ -912,30 +993,37 @@ export function ImageStudio({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-muted/20">
-          <div className="flex w-full items-center justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={busy || downloading}>
-              {t("close")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={download}
-              disabled={busy || downloading || (mode === "carousel" && slides.length === 0)}
-            >
-              {downloading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
-              {t("download")}
-            </Button>
-            {enableSave && (
-              <Button type="button" onClick={save} disabled={busy || downloading || (mode === "carousel" && slides.length === 0)}>
-                {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
-                {mode === "carousel"
-                  ? busy
-                    ? t("carouselExporting")
-                    : t("carouselApply", { n: slides.length })
-                  : applyLabel ?? t("save")}
-              </Button>
-            )}
-          </div>
+          {(() => {
+            const anyExport = busy || downloading || pdfBusy;
+            const noSlides = mode === "carousel" && slides.length === 0;
+            return (
+              <div className="flex w-full items-center justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={anyExport}>
+                  {t("close")}
+                </Button>
+                {mode === "carousel" && (
+                  <Button type="button" variant="outline" onClick={downloadPdf} disabled={anyExport || noSlides}>
+                    {pdfBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileText className="h-4 w-4 mr-1.5" />}
+                    {pdfBusy ? t("pdfExporting") : t("downloadPdf")}
+                  </Button>
+                )}
+                <Button type="button" variant="outline" onClick={download} disabled={anyExport || noSlides}>
+                  {downloading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
+                  {t("download")}
+                </Button>
+                {enableSave && (
+                  <Button type="button" onClick={save} disabled={anyExport || noSlides}>
+                    {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                    {mode === "carousel"
+                      ? busy
+                        ? t("carouselExporting")
+                        : t("carouselApply", { n: slides.length })
+                      : applyLabel ?? t("save")}
+                  </Button>
+                )}
+              </div>
+            );
+          })()}
         </DialogFooter>
       </DialogContent>
     </Dialog>
