@@ -846,3 +846,20 @@ re-grep le marqueur après coup pour confirmer que l'édition a bien pris.
   est la **langue d'interface** de l'affilié (`session.locale`), pas un champ
   pays séparé. Les templates promo utilisent `{AFFILIATE_LINK}` (remplacé par
   `baseLink` construit via le helper) → tout le chain suit le marché.
+
+### AE bis — affilié : MARCHÉ de diffusion choisissable (juin 2026)
+
+Évolution de AE : la langue d'interface n'est QUE le défaut. L'affilié choisit
+son **marché de diffusion** (le pays/audience qu'il vise), qui pilote À LA FOIS
+le contenu affiché ET le domaine des liens. Ex : un Français qui bosse le marché
+US bascule sur EN → contenu EN + liens tipote.blog, sans changer son interface.
+
+- Source de vérité = query `?locale=` (via `ContentLocalePicker`), pas
+  `session.locale`. Résolu par `resolveAffiliateMarket(requested, sessionLocale)`
+  dans `lib/affiliate/contentLocales.ts` (borné à `AFFILIATE_LIVE_LOCALES`,
+  défaut = langue d'interface).
+- **Promouvoir** ET **Contenus** ont le picker de marché ; `buildAffiliateLink`
+  + le contenu prennent ce marché (PAS `session.locale`). Le piège que j'avais
+  introduit : liens sur `session.locale` alors que le contenu suivait le picker
+  → incohérent. Désormais les deux suivent le picker.
+- Ouvrir un marché = ajouter sa locale à `AFFILIATE_LIVE_LOCALES` (+ contenu).

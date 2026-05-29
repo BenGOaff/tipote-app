@@ -26,7 +26,7 @@ import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
 import { POSTS_FR, type PostDay, type SocialPost } from "../promouvoir/content/posts-fr";
 import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, normaliseLocale } from "../i18n";
-import { normaliseContentLocale, localeLabel, AFFILIATE_LIVE_LOCALES } from "@/lib/affiliate/contentLocales";
+import { localeLabel, AFFILIATE_LIVE_LOCALES, resolveAffiliateMarket } from "@/lib/affiliate/contentLocales";
 import { buildAffiliateLink } from "@/lib/affiliate/links";
 import { ContentLocalePicker } from "../components/ContentLocalePicker";
 
@@ -41,7 +41,6 @@ export default async function ContenusPage({
   if (!session) redirect("/login");
 
   const t = getDict(normaliseLocale(session.locale));
-  const baseLink = buildAffiliateLink(session.locale, "/tiquiz/affiliation", session.sa);
   const displayName = session.display_name ?? session.email.split("@")[0];
 
   // Langue du CONTENU (≠ langue d'interface). Priorité : query param explicite
@@ -51,13 +50,12 @@ export default async function ContenusPage({
   // VISUELS_FR) n'est activée que pour la locale "fr" — pas envie de servir
   // du FR par défaut à quelqu'un qui demande du PT.
   const sp = await searchParams;
-  // On ne propose que les marchés ouverts (FR/EN). Une locale hors-liste
-  // (vieux lien, query forgée) retombe sur le marché de l'affilié.
-  const requested = normaliseContentLocale(sp.locale ?? session.locale);
-  const contentLocale = (AFFILIATE_LIVE_LOCALES as readonly string[]).includes(requested)
-    ? requested
-    : normaliseContentLocale(session.locale, "fr");
+  // MARCHÉ de diffusion choisi (FR/EN) : pilote le contenu affiché ET le
+  // domaine des liens. Défaut = langue de l'affilié, mais librement changeable.
+  const contentLocale = resolveAffiliateMarket(sp.locale, session.locale);
   const isFrLocale = contentLocale === "fr";
+  // Les liens injectés dans le matériel suivent le marché choisi (domaine).
+  const baseLink = buildAffiliateLink(contentLocale, "/tiquiz/affiliation", session.sa);
 
   const { data: ov } = await supabaseAdmin
     .from("affiliates")

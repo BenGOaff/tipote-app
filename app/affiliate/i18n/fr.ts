@@ -184,6 +184,8 @@ export const FR: AffiliateDict = {
     page_title: "Promouvoir",
     page_subtitle:
       "Tout le matériel prêt à copier-coller pour ramener des leads. Ton lien tracké est injecté automatiquement partout.",
+    market_label: "Marché",
+    market_hint: "Tes liens pointent vers le site adapté au marché {market}. Change de marché si tu vises une autre audience.",
     main_link_title: "Lien principal d'affiliation",
     main_link_description: "Ton lien tracké universel. Plus loin tu trouveras des variantes par destination.",
     tab_links: "Liens",

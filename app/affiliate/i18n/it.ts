@@ -183,6 +183,8 @@ export const IT: AffiliateDict = {
     page_title: "Promuovere",
     page_subtitle:
       "Tutto pronto da copiare e incollare per portare lead. Il tuo link tracciato è inserito automaticamente ovunque.",
+    market_label: "Mercato",
+    market_hint: "I tuoi link puntano al sito del mercato {market}. Cambia mercato se ti rivolgi a un altro pubblico.",
     main_link_title: "Link affiliato principale",
     main_link_description: "Il tuo link tracciato universale. Più sotto trovi le varianti per destinazione.",
     tab_links: "Link",
