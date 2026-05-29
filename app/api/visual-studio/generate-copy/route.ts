@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,7 +74,8 @@ export async function POST(req: NextRequest) {
       `- cta: natural 2-4 word action in ${lang}, grammatically correct.\n` +
       `- stats: if format="data", an array of 2-4 items {"label": 1-2 words, "display": figure EXACTLY as in post, "value": numeric magnitude} from REAL figures; else [].\n` +
       `- before / after: if format="beforeAfter", two short HONEST contrasted phrases (max ~7 words): before = the painful old way (no brand), after = how it is with the product; else "".\n` +
-      `Return STRICT JSON with exactly: format, imageStyle, kicker, headline, accentWord, accent, subtitle, cta, stats, before, after. No commentary.`;
+      `Return STRICT JSON with exactly: format, imageStyle, kicker, headline, accentWord, accent, subtitle, cta, stats, before, after. No commentary.\n\n` +
+      copyStyleHint();
     const userMsg =
       `The post to adapt into a visual:\n${intent}` +
       (brand ? `\nBrand name: ${brand}` : "") +
