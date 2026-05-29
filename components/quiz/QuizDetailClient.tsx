@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { Button } from "@/components/ui/button";
+import { TipoteStudioButton } from "@/components/visual-studio/TipoteStudioButton";
+import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -2229,6 +2231,26 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <span className="text-[10px] text-muted-foreground/70">{t("introImageHint")}</span>
                     </button>
                   )}
+                  {/* Génération IA (couverture designée stop-scroll + branding via
+                      le Studio) + bibliothèque GIFs. Mêmes slots que l'upload :
+                      visibles uniquement tant qu'aucune image n'est posée. */}
+                  {!introImageUrl && (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <TipoteStudioButton
+                        intent={[stripHtml(title), stripHtml(introduction)].filter(Boolean).join(" — ")}
+                        contentId={quizId}
+                        formats={["4:5", "1:1", "9:16"]}
+                        defaultFormat="4:5"
+                        enableCarousel={false}
+                        label={t("introImageAi")}
+                        onApplyImage={(img) => { setIntroImageUrl(img.url); setIntroImagePosition("top"); }}
+                      />
+                      <GifPickerButton
+                        label={t("introImageGif")}
+                        onPick={(url) => { setIntroImageUrl(url); setIntroImagePosition("top"); }}
+                      />
+                    </div>
+                  )}
 
                   {brandLogoUrl && (
                     <div className="flex justify-center">
@@ -2667,6 +2689,26 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         <span className="text-xs">{t("resultImageDropzone")}</span>
                         <span className="text-[10px] text-muted-foreground/70">{t("resultImageHint")}</span>
                       </button>
+                    )}
+                    {/* Image de résultat : génération IA (inspirée du thème +
+                        branding + texte du résultat) + GIF. Visible tant que le
+                        résultat n'a pas d'image. */}
+                    {!r.image_url && (
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <TipoteStudioButton
+                          intent={[stripHtml(title), stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))), stripHtml(r.description ?? ""), stripHtml(r.insight ?? "")].filter(Boolean).join(" — ")}
+                          contentId={quizId}
+                          formats={["4:5", "1:1", "9:16"]}
+                          defaultFormat="4:5"
+                          enableCarousel={false}
+                          label={t("resultImageAi")}
+                          onApplyImage={(img) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: img.url, image_position: rr.image_position ?? "top" }))}
+                        />
+                        <GifPickerButton
+                          label={t("resultImageGif")}
+                          onPick={(url) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: url, image_position: rr.image_position ?? "top" }))}
+                        />
+                      </div>
                     )}
                     {showCoverage && (
                       <div

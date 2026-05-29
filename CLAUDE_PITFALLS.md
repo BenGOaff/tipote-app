@@ -996,3 +996,31 @@ reporter DES DEUX CÔTÉS.
   reste sur haiku (rapide) mais hérite quand même du bloc anti-IA via le prompt.
 - brandVoice/copyHint sont OPTIONNELS dans le builder → profil vide = prompt
   pleinement fonctionnel, juste sans la couche marque.
+
+## AI) STUDIO sur quiz/sondages : couverture IA + images de résultats + GIFs (juin 2026)
+
+Tipote uniquement (le Studio — ImageStudio, lib/visualStudio, clé OpenAI, crédits
+— n'existe pas côté Tiquiz).
+
+- **Aucune colonne DB ajoutée** : on réutilise l'existant —
+  `quizzes.intro_image_url` (couverture) + `quiz_results.image_url` (par résultat).
+  Donc PAS le parcours "7 endroits" : juste poser des boutons qui SETtent l'état
+  existant (`setIntroImageUrl` / `editResults[].image_url`).
+- **Couverture + résultats IA** = greffe de `TipoteStudioButton` (composants
+  `QuizDetailClient` + `SurveyDetailClient`). On lui passe `intent` (titre + intro,
+  ou titre + texte du résultat) ; il gère copy stop-scroll, branding, canvas,
+  upload (bucket content-images, URL publique durable) ET la facturation crédits.
+  `enableCarousel={false}`, formats `4:5/1:1/9:16` (défaut 4:5). Le texte est gravé
+  par le CANVAS (fiable), pas par le modèle image.
+- **GIFs (KLIPY)** : `components/quiz/GifPicker.tsx` (`GifPickerButton onPick`) +
+  proxy `app/api/gifs/search/route.ts`. La clé reste serveur via `KLIPY_API_KEY`
+  (à ajouter en env — sans elle, 503 `not_configured` + message UI propre, pas de
+  crash). KLIPY = alternative gratuite à vie (Tenor a fermé son API en 2026, Giphy
+  est payant). Endpoints `api.klipy.com/api/v1/{KEY}/gifs/{search|trending}` ;
+  l'item expose `file.{hd|md|sm|xs}.gif.url` → on parse DÉFENSIVEMENT (clés non
+  figées par la doc). On stocke l'URL KLIPY directement dans le slot image (les
+  `<img w-full h-auto>` l'affichent ; formats GIF déjà autorisés). Amélioration
+  future : re-héberger le GIF dans `public-assets` au lieu de hotlinker.
+- Boutons IA+GIF visibles uniquement quand le slot est VIDE (même logique que la
+  dropzone d'upload) ; pour remplacer, on retire d'abord l'image.
+- Attribution Tenor "Powered by Tenor" affichée dans le picker (exigence Tenor).

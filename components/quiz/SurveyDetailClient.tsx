@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { Button } from "@/components/ui/button";
+import { TipoteStudioButton } from "@/components/visual-studio/TipoteStudioButton";
+import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1667,6 +1669,25 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <span className="text-xs">{t("introImageDropzone")}</span>
                       <span className="text-[10px] text-muted-foreground/70">{t("introImageHint")}</span>
                     </button>
+                  )}
+                  {/* Couverture IA designée (stop-scroll + branding via le Studio)
+                      + bibliothèque GIFs. Visibles tant qu'aucune image posée. */}
+                  {!introImageUrl && (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <TipoteStudioButton
+                        intent={[stripHtml(title), stripHtml(introduction)].filter(Boolean).join(" — ")}
+                        contentId={quizId}
+                        formats={["4:5", "1:1", "9:16"]}
+                        defaultFormat="4:5"
+                        enableCarousel={false}
+                        label={t("introImageAi")}
+                        onApplyImage={(img) => { setIntroImageUrl(img.url); setIntroImagePosition("top"); }}
+                      />
+                      <GifPickerButton
+                        label={t("introImageGif")}
+                        onPick={(url) => { setIntroImageUrl(url); setIntroImagePosition("top"); }}
+                      />
+                    </div>
                   )}
 
                   {brandLogoUrl && (
