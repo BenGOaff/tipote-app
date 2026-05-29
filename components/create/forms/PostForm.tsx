@@ -15,6 +15,8 @@ import type { OfferOption } from "@/lib/offers";
 import { PublishModal } from "@/components/content/PublishModal";
 import { ScheduleModal } from "@/components/content/ScheduleModal";
 import { ImageUploader, type UploadedImage } from "@/components/content/ImageUploader";
+import { TipoteStudioButton } from "@/components/visual-studio/TipoteStudioButton";
+import { networkVisualSpec } from "@/lib/visualStudio/networkFormats";
 import { VideoUploader, type UploadedVideo } from "@/components/content/VideoUploader";
 import { PinterestBoardSelector } from "@/components/content/PinterestBoardSelector";
 import { useSocialConnections } from "@/hooks/useSocialConnections";
@@ -652,6 +654,29 @@ export function PostForm({ onGenerate, onSave, onClose, isGenerating, isSaving, 
                 contentId={savedContentId ?? undefined}
                 maxImages={isPinterest ? 1 : isTikTok ? 35 : 4}
               />
+              {/* Génération IA d'un visuel à la marque de l'user, adapté au
+                  réseau ciblé. 1 crédit / génération, 0 pour les retouches.
+                  Le carrousel n'a de sens que sur les réseaux multi-images. */}
+              {(() => {
+                const maxImages = isPinterest ? 1 : isTikTok ? 35 : 4;
+                const spec = networkVisualSpec(platform);
+                const room = maxImages - images.length;
+                if (room <= 0) return null;
+                const clamp = (imgs: UploadedImage[]) =>
+                  setImages([...images, ...imgs.slice(0, maxImages - images.length)]);
+                return (
+                  <TipoteStudioButton
+                    intent={generatedContent}
+                    contentId={savedContentId ?? undefined}
+                    formats={spec.formats}
+                    defaultFormat={spec.defaultFormat}
+                    enableCarousel={maxImages > 1}
+                    label={t("studioGenerateVisual")}
+                    onApplyImage={(img) => clamp([img])}
+                    onApplyImages={(imgs) => clamp(imgs)}
+                  />
+                );
+              })()}
               {isPinterest && (
                 <p className="text-xs text-muted-foreground -mt-1">
                   {t("pinterestImageHelp")}

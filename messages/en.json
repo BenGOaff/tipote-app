@@ -2868,7 +2868,8 @@
     "dmDefault": "Here's your link 👉 [to be completed]\n\nTalk soon! 🙌",
     "notAuth": "Not authenticated",
     "automationCreated": "Automation created!",
-    "cannotCreateAutomation": "Unable to create the automation"
+    "cannotCreateAutomation": "Unable to create the automation",
+    "studioGenerateVisual": "Generate a visual"
   },
   "articleForm": {
     "generating": "Generating...",
@@ -4694,7 +4695,8 @@
     "copied": "Copied",
     "copy": "Copy",
     "dialogTitle": "Edit & copy",
-    "apply": "Apply"
+    "apply": "Apply",
+    "aiImage": "AI image"
   },
   "pyramidSelection": {
     "urgentProblem": "Urgent problem:",

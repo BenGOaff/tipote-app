@@ -50,6 +50,9 @@ export async function POST(req: NextRequest) {
     const locale = typeof body.locale === "string" ? body.locale : "fr";
     const lang = LANG[locale] ?? "French";
     const brand = typeof body.brandName === "string" ? body.brandName.slice(0, 60) : "";
+    // Voix de marque (Tipote) : tonalité + offres + puces promesses + persona.
+    // Optionnel (l'affilié ne l'envoie pas) → la copy reste générique sinon.
+    const brandVoice = typeof body.brandVoice === "string" ? body.brandVoice.slice(0, 1200) : "";
 
     const system =
       `You analyse a social post and design ONE French social-ad visual that MATCHES the post. Voice: no-bullshit SaaS founder.\n` +
@@ -71,7 +74,10 @@ export async function POST(req: NextRequest) {
       `- stats: if format="data", an array of 2-4 items {"label": 1-2 words, "display": figure EXACTLY as in post, "value": numeric magnitude} from REAL figures; else [].\n` +
       `- before / after: if format="beforeAfter", two short HONEST contrasted phrases (max ~7 words): before = the painful old way (no brand), after = how it is with the product; else "".\n` +
       `Return STRICT JSON with exactly: format, imageStyle, kicker, headline, accentWord, accent, subtitle, cta, stats, before, after. No commentary.`;
-    const userMsg = `The post to adapt into a visual:\n${intent}${brand ? `\nBrand name: ${brand}` : ""}`;
+    const userMsg =
+      `The post to adapt into a visual:\n${intent}` +
+      (brand ? `\nBrand name: ${brand}` : "") +
+      (brandVoice ? `\n\nBRAND VOICE — match this tone and lean on these angles (never copy verbatim):\n${brandVoice}` : "");
 
     const completion = (await openai.chat.completions.create({
       ...cachingParams("visual-copy", { temperature: 0.5 }),

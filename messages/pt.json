@@ -3167,7 +3167,8 @@
     "dmDefault": "Aqui está o teu link 👉 [link a completar]\n\nAté já! 🙌",
     "notAuth": "Não autenticado",
     "automationCreated": "Automatização criada!",
-    "cannotCreateAutomation": "Não foi possível criar a automatização"
+    "cannotCreateAutomation": "Não foi possível criar a automatização",
+    "studioGenerateVisual": "Gerar um visual"
   },
   "articleForm": {
     "generating": "A gerar...",
@@ -4993,7 +4994,8 @@
     "copied": "Copiado",
     "copy": "Copiar",
     "dialogTitle": "Editar & copiar",
-    "apply": "Aplicar"
+    "apply": "Aplicar",
+    "aiImage": "Imagem IA"
   },
   "pyramidSelection": {
     "urgentProblem": "Problema urgente:",

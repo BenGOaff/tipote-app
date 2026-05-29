@@ -2861,7 +2861,8 @@
     "dmDefault": "إليك رابطك 👉 [رابط قيد الإكمال]\n\nإلى قريب! 🙌",
     "notAuth": "غير مُوثَّق",
     "automationCreated": "تم إنشاء الأتمتة!",
-    "cannotCreateAutomation": "تعذّر إنشاء الأتمتة"
+    "cannotCreateAutomation": "تعذّر إنشاء الأتمتة",
+    "studioGenerateVisual": "إنشاء تصميم"
   },
   "articleForm": {
     "generating": "جاري التوليد...",
@@ -4687,7 +4688,8 @@
     "copied": "تم النسخ",
     "copy": "نسخ",
     "dialogTitle": "تعديل ونسخ",
-    "apply": "تطبيق"
+    "apply": "تطبيق",
+    "aiImage": "صورة بالذكاء الاصطناعي"
   },
   "pyramidSelection": {
     "urgentProblem": "مشكلة عاجلة:",
