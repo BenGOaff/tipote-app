@@ -5792,7 +5792,19 @@
     "scrimNone": "Nessuno",
     "scrimDark": "Scuro",
     "scrimLight": "Chiaro",
-    "aiGenerateVisual": "Genera visual"
+    "aiGenerateVisual": "Genera visual",
+    "modeSingle": "Solo immagine",
+    "modeCarousel": "Carosello",
+    "carouselSubjectLabel": "Argomento del carosello",
+    "carouselHint": "L'IA trasforma il tuo argomento in 10 slide pronte da pubblicare (hook → valore → CTA).",
+    "carouselGenerate": "Genera carosello",
+    "carouselGenerating": "Generazione…",
+    "carouselRegenerate": "Rigenera carosello",
+    "carouselSlideOf": "Slide {n}/{total}",
+    "carouselEditTip": "Tocca un testo della slide per modificarlo.",
+    "carouselApply": "Allega le {n} slide",
+    "carouselExporting": "Esportazione…",
+    "carouselEmpty": "Genera prima il carosello."
   },
   "colorPicker": {
     "pick": "Scegli un colore",

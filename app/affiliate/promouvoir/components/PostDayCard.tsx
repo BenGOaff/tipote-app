@@ -59,6 +59,14 @@ export function PostDayCard({
     setVisuals(next);
     await patchPromo(`post:${day.id}:visuals`, JSON.stringify(next.map((v) => v.path)));
   }
+  // Carrousel : on accroche toutes les slides en UNE fois (sinon des patchs
+  // concurrents liraient un état périmé et n'en garderaient qu'une).
+  async function handleVisualsSaved(items: { path: string; url: string }[]) {
+    if (!items.length) return;
+    const next = [...visuals, ...items];
+    setVisuals(next);
+    await patchPromo(`post:${day.id}:visuals`, JSON.stringify(next.map((v) => v.path)));
+  }
   async function removeVisual(path: string) {
     const next = visuals.filter((v) => v.path !== path);
     setVisuals(next);
@@ -146,6 +154,7 @@ export function PostDayCard({
                   label="Générer un visuel"
                   intent={(day.posts[0]?.caption ?? day.hook).replaceAll("{AFFILIATE_LINK}", "").trim()}
                   onSaved={handleVisualSaved}
+                  onSavedMany={handleVisualsSaved}
                 />
                 {day.visualPath && (
                   <Button size="sm" variant="outline" asChild>

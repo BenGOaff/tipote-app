@@ -94,6 +94,13 @@ export interface ImageStudioProps {
   /** Renvoie le résultat à l'appelant (pour l'insérer là où il faut). */
   onApply?: (result: StudioResult) => void;
 
+  /** Active le mode CARROUSEL (10 slides flat de marque) en plus de l'image
+   *  seule. Défaut : true. */
+  enableCarousel?: boolean;
+  /** Renvoie TOUTES les slides d'un carrousel exporté (dans l'ordre). Si absent,
+   *  on retombe sur `onApply` slide par slide. */
+  onApplyMany?: (results: StudioResult[]) => void;
+
   title?: string;
   applyLabel?: string;
 }

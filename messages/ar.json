@@ -5792,7 +5792,19 @@
     "scrimNone": "بدون",
     "scrimDark": "داكن",
     "scrimLight": "فاتح",
-    "aiGenerateVisual": "إنشاء التصميم"
+    "aiGenerateVisual": "إنشاء التصميم",
+    "modeSingle": "صورة واحدة",
+    "modeCarousel": "كاروسيل",
+    "carouselSubjectLabel": "موضوع الكاروسيل",
+    "carouselHint": "يحوّل الذكاء الاصطناعي موضوعك إلى 10 شرائح جاهزة للنشر (الجذب ← القيمة ← الحث على الإجراء).",
+    "carouselGenerate": "إنشاء الكاروسيل",
+    "carouselGenerating": "جارٍ الإنشاء…",
+    "carouselRegenerate": "إعادة الإنشاء",
+    "carouselSlideOf": "شريحة {n}/{total}",
+    "carouselEditTip": "انقر على أي نص في الشريحة لتعديله.",
+    "carouselApply": "إرفاق الشرائح ({n})",
+    "carouselExporting": "جارٍ التصدير…",
+    "carouselEmpty": "أنشئ الكاروسيل أولًا."
   },
   "colorPicker": {
     "pick": "اختيار لون",

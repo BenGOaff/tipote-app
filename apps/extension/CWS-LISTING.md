@@ -2,7 +2,13 @@
 
 Document de référence pour la submission CWS. Copies prêtes à coller, screenshots à produire, justifications des permissions.
 
-**Statut** : v1.0.0 (LinkedIn-only) déjà validée. Cette mise à jour passe la v1.3.0 (multi-plateformes : LinkedIn + Facebook + Threads + Instagram + X + TikTok + Reddit).
+**Statut** : v1.0.0 (LinkedIn-only) déjà validée. v1.3.0 (multi-plateformes) refusée le 2026-05-28 pour **keyword spam** (réf. « Yellow Argon »). Cette révision corrige les textes et repart en review.
+
+> 🚫 **Cause exacte du rejet (à NE PAS reproduire)** : la description longue contenait la ligne brute `LinkedIn, Facebook, Threads, Instagram, X (Twitter), TikTok et Reddit. Le même flow sur les 7 plateformes`. Google l'a lue comme un empilement de mots-clés de marques (« trop de mots-clés / mots-clés non pertinents »). Les noms de réseaux énumérés en liste dans les **métadonnées CWS** (nom, description courte, description longue) sont un motif de rejet quasi-systématique en re-review.
+>
+> ✅ **Règle pour cette fiche** : on ne liste JAMAIS les noms de plateformes en énumération dans les champs CWS. On décrit la fonction (« sur les réseaux sociaux que tu utilises déjà »). La couverture par plateforme se montre dans les **captures d'écran** (un screenshot par réseau, voir plus bas) et sur **tipote.fr** (notre site, hors-périmètre de la policy CWS) — pas dans le texte de la fiche.
+>
+> ⚠️ **Tout le texte de la fiche est rédigé en anglais** : l'extension est internationale (default locale = EN, cf. `src/i18n.ts`). Pas de français dans les champs CWS.
 
 > ⚠️ **Important** : on **met à jour la fiche existante**, on ne crée pas une nouvelle extension. Sinon on perd les utilisateurs déjà installés, les notes, et l'extension ID (qui apparaît dans `externally_connectable`). Dans le Developer Dashboard, ouvrir la fiche existante → **Package** → uploader le nouveau zip.
 
@@ -19,49 +25,51 @@ Tipote Boost
 ### Description courte (132 caractères max — limite **stricte** côté CWS, l'upload est rejeté au-delà)
 
 ```
-Boost tes posts sur 7 réseaux grâce à un pod d'engagement collaboratif. Commentaires IA validés en 1 clic.
+Grow your reach with a collaborative engagement pod, plus AI comment suggestions you validate in one click on any post.
 ```
 
-> Identique au champ `description` du `manifest.json` — Chrome utilise les deux. Si tu modifies l'un, modifie l'autre.
+> Identique au champ `description` du `manifest.json` — Chrome utilise les deux. Si tu modifies l'un, modifie l'autre. (119 caractères, OK.)
 
 ### Description longue (16 000 caractères max)
 
+> ⚠️ Aucune énumération de noms de plateformes ici (cf. cause du rejet en haut du doc). On parle de « the social networks you already use ». Les captures d'écran montrent chaque réseau.
+
 ```
-Tipote Boost transforme la portée de tes publications sur les réseaux sociaux grâce à un pod d'engagement entre membres Tipote, ET t'aide à commenter rapidement n'importe quel post avec l'assistance d'une IA.
+Tipote Boost amplifies your reach through a collaborative engagement pod between Tipote members, and helps you comment on any post quickly with AI assistance.
 
-🌐 Multi-réseaux
-LinkedIn, Facebook, Threads, Instagram, X (Twitter), TikTok et Reddit. Le même flow sur les 7 plateformes — pas besoin de jongler entre des outils différents.
+🌐 One workflow, everywhere you post
+No more juggling a different tool for every site. Tipote Boost brings the exact same workflow to the social networks where you already build your audience.
 
-🚀 Mode pod — boost mutuel
-Quand tu publies sur l'un des réseaux supportés, les autres membres du pod reçoivent automatiquement une suggestion d'engagement : un soutien et 4 propositions de commentaires générées par IA. Ils valident en un clic le commentaire qu'ils veulent poster (ou l'éditent avant). Tes posts gagnent des likes et des commentaires de qualité dans les premières minutes — exactement quand les algorithmes décident de la portée.
+🚀 Pod mode — mutual boost
+When you publish on a supported network, other pod members receive an engagement suggestion: a like and 4 AI-generated comment ideas. They validate the comment they want to post in one click (or edit it first). Your posts earn quality engagement in the first minutes, when reach matters most.
 
-💬 Mode quick comment — n'importe quel post
-Sur n'importe quel post visité, l'extension propose 4 angles de commentaires générés par IA. Tu choisis le ton, tu édites au besoin, tu publies. Productivité maximale, validation toujours manuelle.
+💬 Quick comment mode — any post
+On any post you visit, the extension suggests 4 AI-generated comment angles. You pick the tone, edit if needed, and publish. Maximum productivity, with manual validation every time.
 
-✨ Les 4 tons de commentaires
-- "Je suis d'accord" — pour appuyer un propos
-- "Je ne suis pas d'accord" — pour ouvrir un débat constructif
-- "Ajouter de la valeur" — pour enrichir la discussion
-- "Poser une question" — pour relancer la conversation
+✨ The 4 comment tones
+- "I agree" — to back up a point
+- "I disagree" — to open a constructive debate
+- "Add value" — to enrich the discussion
+- "Ask a question" — to keep the conversation going
 
-🛡️ Anti-spam intégré
-- Maximum 12 actions par heure et par membre (mode pod)
-- Délais aléatoires entre actions
-- Pause automatique si la plateforme détecte une activité suspecte
-- Jamais 100% du pod sur un même post (pattern naturel préservé)
-- Validation manuelle systématique : aucun commentaire n'est posté sans clic explicite de l'utilisateur
+🛡️ Built-in anti-spam
+- Up to 12 actions per hour per member (pod mode)
+- Randomized delays between actions
+- Automatic pause if the platform detects suspicious activity
+- Never the whole pod on the same post (a natural pattern is preserved)
+- Always manual validation: no comment is ever posted without an explicit click from you
 
-🤝 Pod équitable
-Un système de karma équilibre les boosts donnés et reçus. Pas de free-riders : si tu ne rends pas tes boosts, tu en reçois moins.
+🤝 Fair pod
+A karma system balances the boosts you give and receive. No free-riders: give fewer boosts, get fewer back.
 
-🔒 Confidentialité
-Aucune donnée partagée avec un tiers. Stockage chez Supabase (UE). Le commentaire n'est jamais posté sans ton clic explicite. Tu peux désactiver l'extension ou supprimer ton compte à tout moment.
+🔒 Privacy
+No data is shared with third parties. Storage on Supabase (EU). Comments are never posted without your explicit click. You can disable the extension or delete your account at any time.
 
-⚠️ Pré-requis
-- Compte Tipote actif (https://www.tipote.fr/)
-- Au moins un compte sur l'un des réseaux supportés
+⚠️ Requirements
+- An active Tipote account (https://www.tipote.fr/)
+- At least one account on a supported social network
 
-Politique de confidentialité : https://app.tipote.com/legal/extension
+Privacy policy: https://app.tipote.com/legal/extension
 ```
 
 ### Catégorie
@@ -70,7 +78,7 @@ Politique de confidentialité : https://app.tipote.com/legal/extension
 
 ### Langue principale
 
-`Français (France)`. On peut ajouter `English` dans une v2.
+`English (United States)`. L'extension est internationale (default locale EN, cf. `src/i18n.ts`) → on rédige tous les champs CWS en anglais.
 
 ### URL du site web (manifest `homepage_url`)
 
@@ -97,7 +105,7 @@ support@tipote.fr
 Formulé large pour couvrir les 7 plateformes dès maintenant, sans repasser en review à chaque ajout de réseau dans la liste.
 
 ```
-Tipote Boost a une fonction unique et claire : faciliter le boost mutuel d'engagement sur les réseaux sociaux entre les membres d'un pod collaboratif Tipote, via suggestion de likes et de commentaires générés par IA puis validés manuellement par l'utilisateur. Toutes les actions write (like, commentaire) nécessitent une validation explicite — il n'y a pas d'automatisation invisible.
+Tipote Boost has one clear purpose: to make it easy for members of a collaborative Tipote pod to boost each other's engagement on the social networks they already use, through AI-suggested likes and comments that the user validates manually. Every write action (like, comment) requires an explicit click — there is no hidden automation.
 ```
 
 ---
@@ -234,6 +242,10 @@ C'est l'écran qui fait le plus rejeter. Cocher / remplir :
 - [x] Version 1.0.0 → 1.3.0 (LinkedIn-only → multi-plateformes) — fait
 - [x] manifest.json à jour avec les 7 plateformes en content_scripts + host_permissions — fait
 - [x] CWS-LISTING.md à jour (multi-plateformes) — fait
+- [x] **Fix rejet « keyword spam » (2026-05-28)** : description longue + courte + `manifest.json` réécrites en anglais, sans aucune énumération de noms de plateformes — fait
+- [ ] **Re-zip** après le fix manifest : le `description` du manifest a changé → rebuild + re-upload du package (sinon le « Résumé issu du package » reste l'ancien texte FR)
+- [ ] Coller la NOUVELLE description longue (bloc anglais ci-dessus) dans Store listing → Description, à la place de l'ancienne qui contenait la liste des 7 réseaux
+- [ ] Soumettre + (option) faire appel via Version → État si on veut contester, mais le plus rapide est de re-soumettre la révision corrigée
 - [ ] Build du package : `cd apps/extension && npm install && npm run build`
 - [ ] Zip du contenu de `dist/` (pas du dossier lui-même) :
       `cd apps/extension/dist && zip -r ../tipote-boost-v1.3.0.zip .`

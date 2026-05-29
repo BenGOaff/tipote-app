@@ -740,3 +740,64 @@ Contenus · Essai gratuit · Support (`AffiliateSidebar` ; `AffiliateNav` suppri
   Visuels = upload TUS (kind=visual, `meta.storagePath`), re-signés. Migration
   `20260601_affiliate_contents` (à appliquer en prod).
 
+
+## AC) CHROME WEB STORE — fiche extension Tipote Boost (rejet keyword spam, 29 mai 2026)
+
+Doc de réf complète : `apps/extension/CWS-LISTING.md`. Pièges qui font rejeter :
+
+- **Keyword spam (réf. Google « Yellow Argon »)** : NE JAMAIS énumérer les noms
+  de plateformes en liste dans les champs CWS (nom, description courte,
+  description longue). La v1.3.0 a été refusée pour la ligne brute
+  `LinkedIn, Facebook, Threads, Instagram, X (Twitter), TikTok et Reddit`.
+  → On décrit la fonction (« the social networks you already use »), la
+  couverture par réseau se montre dans les **captures** (1 screenshot/réseau)
+  et sur **tipote.fr** (notre site, hors policy CWS). Les `host_permissions`
+  du manifest suffisent à Google pour vérifier les plateformes réellement
+  supportées — pas besoin de les lister dans le texte.
+- **Tous les champs CWS en anglais** : extension internationale (default
+  locale EN, `src/i18n.ts`). Pas de FR dans la fiche.
+- **Description courte = 132 caractères STRICT** : upload rejeté au-delà. Doit
+  être identique au champ `description` du `manifest.json` (Chrome lit les deux).
+- **Changer `manifest.json` (description, version, permissions) → re-zip
+  obligatoire** : `npm install && npm run build` puis
+  `cd dist && zip -rq ../tipote-boost-vX.Y.Z.zip .`. Le « Résumé issu du
+  package » vient du manifest DANS LE ZIP, pas du repo. La description longue,
+  elle, s'édite directement dans le dashboard (pas besoin de re-zip pour elle).
+- **Re-soumission après rejet = scrutin accru** : rester conservateur, ne pas
+  réintroduire d'autres motifs (pods d'engagement = sujet sensible LinkedIn/X,
+  cf. CWS-LISTING.md « Délais et processus »).
+
+## AD) STUDIO VISUELS — mode CARROUSEL (génération multi-slides, juin 2026)
+
+Module `components/visual-studio/` (ImageStudio + StudioCanvas) + `lib/visualStudio/`.
+Réutilisé sur affiliate (et plus tard Tipote). Points à respecter :
+
+- **Carrousel = FLAT, couleurs de MARQUE** (choix Béné) : pas d'image IA par
+  slide. La copy des 10 slides vient d'UN appel `/api/visual-studio/generate-carousel`
+  (structure hook → rehook → problème → 4×valeur → aha → takeaway → CTA, cf.
+  `lib/visualStudio/carousel.ts` `CAROUSEL_ROLES`). Les fonds alternent la
+  palette du `brandKit` (`slideStyle()` calcule fond/texte/accent/bouton avec
+  contraste WCAG). Sur affiliate : brandKit = Tipote ou Tiquiz selon l'outil
+  promu ; sur Tipote (à venir) : couleurs + logo des réglages de l'user.
+- **Le brand kit est INJECTÉ par l'hôte** (prop `brandKit`) → ne jamais hardcoder
+  une couleur de slide. Toute couleur de slide passe par `slideStyle(brand, i, role)`.
+- **Gabarit `carousel` du canvas** : géré par `layoutCarousel()` + `handle.setCarousel()`
+  dans `StudioCanvas.tsx`. C'est un 4e template à côté de auto/data/beforeAfter —
+  additif, gated par `curTemplate === "carousel"`. Flat = `shadow:""`, pas de
+  scrim, pas de pilule. Le fond est posé via `ensureSolidBg()` DIRECTEMENT sur le
+  canvas (pas l'état React `background`) → indispensable pour l'export en boucle.
+- **Export multi-slides** : `ImageStudio.applyCarousel()` boucle slide par slide
+  (setLayers + setCarousel + toBlob + upload) et remonte un tableau via
+  `onApplyMany`. Persistance hôte = `post:<id>:visuals` (déjà un tableau de
+  chemins) → PostDayCard.`handleVisualsSaved` patch UNE fois (sinon races sur
+  l'état avec des patchs concurrents).
+- **Éditions WYSIWYG par slide** : capturées dans `slidesRef` via
+  `handle.getLayerText()` AVANT chaque navigation / export (les éditions vivent
+  dans Fabric, pas dans le state React).
+- **i18n** : clés `visualStudio.*` (next-intl, `messages/*.json`) — ajouter dans
+  les 7 langues (fr/en/es/it/pt/pt-BR/ar). Les textes des slides, eux, sont
+  générés par l'IA dans la locale de l'user.
+
+⚠️ Env note (pas un bug code) : un Edit sur un gros fichier peut échouer en
+silence ("File has not been read yet") si la lecture a été paginée/tronquée —
+re-grep le marqueur après coup pour confirmer que l'édition a bien pris.
