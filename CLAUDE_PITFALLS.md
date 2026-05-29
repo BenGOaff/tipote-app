@@ -740,3 +740,29 @@ Contenus · Essai gratuit · Support (`AffiliateSidebar` ; `AffiliateNav` suppri
   Visuels = upload TUS (kind=visual, `meta.storagePath`), re-signés. Migration
   `20260601_affiliate_contents` (à appliquer en prod).
 
+
+## AC) CHROME WEB STORE — fiche extension Tipote Boost (rejet keyword spam, 29 mai 2026)
+
+Doc de réf complète : `apps/extension/CWS-LISTING.md`. Pièges qui font rejeter :
+
+- **Keyword spam (réf. Google « Yellow Argon »)** : NE JAMAIS énumérer les noms
+  de plateformes en liste dans les champs CWS (nom, description courte,
+  description longue). La v1.3.0 a été refusée pour la ligne brute
+  `LinkedIn, Facebook, Threads, Instagram, X (Twitter), TikTok et Reddit`.
+  → On décrit la fonction (« the social networks you already use »), la
+  couverture par réseau se montre dans les **captures** (1 screenshot/réseau)
+  et sur **tipote.fr** (notre site, hors policy CWS). Les `host_permissions`
+  du manifest suffisent à Google pour vérifier les plateformes réellement
+  supportées — pas besoin de les lister dans le texte.
+- **Tous les champs CWS en anglais** : extension internationale (default
+  locale EN, `src/i18n.ts`). Pas de FR dans la fiche.
+- **Description courte = 132 caractères STRICT** : upload rejeté au-delà. Doit
+  être identique au champ `description` du `manifest.json` (Chrome lit les deux).
+- **Changer `manifest.json` (description, version, permissions) → re-zip
+  obligatoire** : `npm install && npm run build` puis
+  `cd dist && zip -rq ../tipote-boost-vX.Y.Z.zip .`. Le « Résumé issu du
+  package » vient du manifest DANS LE ZIP, pas du repo. La description longue,
+  elle, s'édite directement dans le dashboard (pas besoin de re-zip pour elle).
+- **Re-soumission après rejet = scrutin accru** : rester conservateur, ne pas
+  réintroduire d'autres motifs (pods d'engagement = sujet sensible LinkedIn/X,
+  cf. CWS-LISTING.md « Délais et processus »).
