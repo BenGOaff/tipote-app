@@ -137,35 +137,35 @@ export function GifPickerButton({
             <div className="py-10 text-center text-sm text-muted-foreground">
               Recherche indisponible pour le moment. Réessaie dans un instant.
             </div>
+          ) : loading && gifs.length === 0 ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : gifs.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              Aucun GIF trouvé. Essaie un autre mot-clé.
+            </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto p-0.5">
-              {loading && gifs.length === 0 ? (
-                <div className="col-span-3 flex justify-center py-10">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : gifs.length === 0 ? (
-                <div className="col-span-3 py-10 text-center text-sm text-muted-foreground">
-                  Aucun GIF trouvé. Essaie un autre mot-clé.
-                </div>
-              ) : (
-                gifs.map((g) => (
-                  <button
-                    key={g.id}
-                    type="button"
-                    onClick={() => pick(g.url)}
-                    className="group relative aspect-square overflow-hidden rounded-lg border border-border hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                    title={g.description}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={g.preview}
-                      alt={g.description}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                    />
-                  </button>
-                ))
-              )}
+            // Masonry en colonnes CSS : chaque GIF garde son ratio (w-full h-auto),
+            // pas de superposition, lecture facile (cf. pickers Giphy/Tenor).
+            <div className="columns-2 sm:columns-3 gap-2 max-h-[55vh] overflow-y-auto p-0.5 [column-fill:_balance]">
+              {gifs.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => pick(g.url)}
+                  className="group mb-2 block w-full break-inside-avoid overflow-hidden rounded-lg border border-border bg-muted/40 hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  title={g.description}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={g.preview}
+                    alt={g.description}
+                    loading="lazy"
+                    className="block w-full h-auto transition-transform group-hover:scale-[1.03]"
+                  />
+                </button>
+              ))}
             </div>
           )}
 
