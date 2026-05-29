@@ -1012,12 +1012,15 @@ Tipote uniquement (le Studio — ImageStudio, lib/visualStudio, clé OpenAI, cr�
   upload (bucket content-images, URL publique durable) ET la facturation crédits.
   `enableCarousel={false}`, formats `4:5/1:1/9:16` (défaut 4:5). Le texte est gravé
   par le CANVAS (fiable), pas par le modèle image.
-- **GIFs (Tenor)** : `components/quiz/GifPicker.tsx` (`GifPickerButton onPick`) +
-  proxy `app/api/gifs/search/route.ts`. La clé reste serveur via `TENOR_API_KEY`
+- **GIFs (KLIPY)** : `components/quiz/GifPicker.tsx` (`GifPickerButton onPick`) +
+  proxy `app/api/gifs/search/route.ts`. La clé reste serveur via `KLIPY_API_KEY`
   (à ajouter en env — sans elle, 503 `not_configured` + message UI propre, pas de
-  crash). On stocke l'URL Tenor directement dans le slot image (les `<img w-full
-  h-auto>` l'affichent ; formats GIF déjà autorisés). Amélioration future possible :
-  re-héberger le GIF dans `public-assets` au lieu de hotlinker Tenor.
+  crash). KLIPY = alternative gratuite à vie (Tenor a fermé son API en 2026, Giphy
+  est payant). Endpoints `api.klipy.com/api/v1/{KEY}/gifs/{search|trending}` ;
+  l'item expose `file.{hd|md|sm|xs}.gif.url` → on parse DÉFENSIVEMENT (clés non
+  figées par la doc). On stocke l'URL KLIPY directement dans le slot image (les
+  `<img w-full h-auto>` l'affichent ; formats GIF déjà autorisés). Amélioration
+  future : re-héberger le GIF dans `public-assets` au lieu de hotlinker.
 - Boutons IA+GIF visibles uniquement quand le slot est VIDE (même logique que la
   dropzone d'upload) ; pour remplacer, on retire d'abord l'image.
 - Attribution Tenor "Powered by Tenor" affichée dans le picker (exigence Tenor).

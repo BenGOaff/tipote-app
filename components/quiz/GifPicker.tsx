@@ -1,12 +1,12 @@
 "use client";
 
-// Bouton "GIF" + sélecteur Tenor, réutilisable pour la couverture du quiz/sondage
-// ET pour l'image d'un résultat. La clé Tenor reste serveur (proxy /api/gifs/search) ;
+// Bouton "GIF" + sélecteur KLIPY, réutilisable pour la couverture du quiz/sondage
+// ET pour l'image d'un résultat. La clé KLIPY reste serveur (proxy /api/gifs/search) ;
 // ici on ne fait que chercher + afficher + renvoyer l'URL du GIF choisi via onPick.
+// (KLIPY = alternative gratuite à Tenor, qui ferme son API en 2026.)
 //
-// Attribution : Tenor impose d'afficher "Powered by Tenor" (cf. règles d'usage).
 // Si la clé n'est pas configurée (503 not_configured), on affiche un message
-// clair invitant à ajouter TENOR_API_KEY plutôt que de planter.
+// clair invitant à ajouter KLIPY_API_KEY plutôt que de planter.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Film, Loader2, Search } from "lucide-react";
@@ -132,7 +132,7 @@ export function GifPickerButton({
               La bibliothèque de GIFs n&apos;est pas encore activée.
               <br />
               <span className="text-xs">
-                Ajoute la variable d&apos;environnement <code>TENOR_API_KEY</code> pour l&apos;activer.
+                Ajoute la variable d&apos;environnement <code>KLIPY_API_KEY</code> pour l&apos;activer.
               </span>
             </div>
           ) : error === "generic" ? (
@@ -171,7 +171,7 @@ export function GifPickerButton({
             </div>
           )}
 
-          <p className="text-[10px] text-muted-foreground/70 text-right">Powered by Tenor</p>
+          <p className="text-[10px] text-muted-foreground/70 text-right">Powered by KLIPY</p>
         </DialogContent>
       </Dialog>
     </>
