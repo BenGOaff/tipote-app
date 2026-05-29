@@ -6122,7 +6122,15 @@
     "brandLabel": "Marca",
     "logoPosition": "Posição do logo",
     "logoSize": "Tamanho do logo",
-    "aiNewBackground": "Novo fundo"
+    "aiNewBackground": "Novo fundo",
+    "voteQuestion": "Gostou deste visual?",
+    "voteUp": "Curtir",
+    "voteDown": "Não curtir",
+    "styleSave": "Salvar este estilo",
+    "styleSaved": "Estilo salvo",
+    "styleApply": "Aplicar este estilo",
+    "styleDelete": "Excluir",
+    "styleNamePrompt": "Nome deste estilo:"
   },
   "colorPicker": {
     "pick": "Escolher uma cor",

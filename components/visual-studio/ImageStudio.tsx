@@ -38,6 +38,9 @@ import {
   ChevronRight,
   Download,
   FileText,
+  ThumbsUp,
+  ThumbsDown,
+  Bookmark,
 } from "lucide-react";
 import {
   Dialog,
@@ -58,6 +61,7 @@ import { AI_STYLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudi
 import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
 import { slideStyle, type CarouselSlide } from "@/lib/visualStudio/carousel";
 import { carouselToPdf } from "@/lib/visualStudio/exportPdf";
+import type { SavedStyle, StudioStyleSettings } from "@/lib/visualStudio/stylePrefs";
 import type {
   BackgroundMode,
   BackgroundSpec,
@@ -117,6 +121,7 @@ export function ImageStudio({
   onApply,
   enableCarousel = true,
   enableSave = true,
+  enableStylePrefs = true,
   onChargeCredit,
   onApplyMany,
   title,
@@ -161,6 +166,12 @@ export function ImageStudio({
   const [aiStyle, setAiStyle] = useState<AiStyleId | "auto">("auto");
   const [visualBusy, setVisualBusy] = useState(false);
   const [bgBusy, setBgBusy] = useState(false);
+  // Mémoire de style : combinaisons enregistrées + reco apprise des votes.
+  const [savedStyles, setSavedStyles] = useState<SavedStyle[]>([]);
+  const [recommendedStyle, setRecommendedStyle] = useState<AiStyleId | null>(null);
+  // Vote sur la dernière génération (null tant qu'on n'a rien généré/voté).
+  const [lastVote, setLastVote] = useState<1 | -1 | null>(null);
+  const [savingStyle, setSavingStyle] = useState(false);
   // Dernier style de fond utilisé → la régénération "Nouveau fond" rejoue le
   // MÊME style (l'user voulait juste une autre image, pas un autre style).
   const lastBgStyleRef = useRef<AiStyleId>("minimal");
@@ -241,6 +252,32 @@ export function ImageStudio({
     currentRef.current = 0;
     setCarouselBusy(false);
     setActiveBrandKey(0);
+    setLastVote(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Charge à l'ouverture les styles enregistrés + la reco apprise des votes.
+  // Si un style est marqué "par défaut", on l'applique d'emblée ; sinon on
+  // pré-sélectionne le style de fond le plus plébiscité (sans tout forcer).
+  useEffect(() => {
+    if (!open || !enableStylePrefs) return;
+    let alive = true;
+    fetch("/api/visual-studio/styles", { credentials: "include" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive || !j?.ok) return;
+        const list = (j.styles ?? []) as SavedStyle[];
+        setSavedStyles(list);
+        const reco = j.recommended?.preferred ?? null;
+        setRecommendedStyle(reco);
+        const def = list.find((s) => s.isDefault);
+        if (def) applyStyleSettings(def.settings);
+        else if (reco) setAiStyle(reco);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -299,6 +336,88 @@ export function ImageStudio({
     setBackground((b) => ({ ...b, mode: "image", imageUrl: url }));
   }
 
+  // ── Mémoire de style ───────────────────────────────────────────
+  // Réglages courants qui définissent "le look" (hors contenu) → snapshot pour
+  // enregistrer un style ou attacher aux votes.
+  const currentStyleSettings = useCallback((): StudioStyleSettings => ({
+    aiStyle,
+    format: formatId,
+    bgColor: background.color,
+    bgColor2: background.color2,
+    bgMode: background.mode,
+    showLogo,
+    logoScale,
+    logoPosition,
+    scrim,
+  }), [aiStyle, formatId, background, showLogo, logoScale, logoPosition, scrim]);
+
+  // Applique un style enregistré aux réglages (sans toucher au contenu/texte).
+  function applyStyleSettings(s: StudioStyleSettings) {
+    setAiStyle(s.aiStyle);
+    if (formats.includes(s.format)) setFormatId(s.format);
+    setShowLogo(s.showLogo);
+    setLogoScale(s.logoScale);
+    setLogoPosition(s.logoPosition);
+    if (s.scrim) setScrim(s.scrim);
+    // Couleurs de fond seulement si pas d'image en cours (sinon on garde le visuel).
+    if (!background.imageUrl && (s.bgColor || s.bgMode)) {
+      setBackground((b) => ({
+        ...b,
+        mode: s.bgMode ?? b.mode,
+        color: s.bgColor ?? b.color,
+        color2: s.bgColor2 ?? b.color2,
+      }));
+    }
+  }
+
+  async function saveCurrentStyle() {
+    const name = window.prompt(t("styleNamePrompt"));
+    if (!name || !name.trim()) return;
+    setSavingStyle(true);
+    try {
+      const res = await fetch("/api/visual-studio/styles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim(), settings: currentStyleSettings() }),
+      }).then((r) => r.json());
+      if (res?.ok) {
+        setSavedStyles((prev) => [
+          { id: res.id ?? String(Date.now()), name: name.trim(), settings: currentStyleSettings(), isDefault: false },
+          ...prev,
+        ]);
+        toast.success(t("styleSaved"));
+      } else {
+        toast.error(t("aiError"));
+      }
+    } catch {
+      toast.error(t("aiError"));
+    } finally {
+      setSavingStyle(false);
+    }
+  }
+
+  async function deleteStyle(id: string) {
+    setSavedStyles((prev) => prev.filter((s) => s.id !== id));
+    await fetch("/api/visual-studio/styles", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+  }
+
+  // Vote 👍/👎 sur la dernière génération → apprentissage du style préféré.
+  async function sendVote(vote: 1 | -1) {
+    setLastVote(vote);
+    await fetch("/api/visual-studio/vote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ vote, aiStyle: lastBgStyleRef.current, settings: currentStyleSettings() }),
+    }).catch(() => {});
+  }
+
   // Génère le VISUEL d'un seul clic. L'IA pilote TOUT depuis le post :
   //   1. elle ANALYSE le post → choisit le FORMAT (texte / comparatif chiffré /
   //      avant-après) ET le style d'image qui collent au contenu ;
@@ -312,6 +431,7 @@ export function ImageStudio({
     // Facturation (hôte) AVANT toute génération. Refus = on annule proprement.
     if (onChargeCredit && !(await onChargeCredit("image"))) return;
     setVisualBusy(true);
+    setLastVote(null); // nouveau visuel → vote remis à zéro
     const intent = aiIntent.trim();
     const ratio = format.width / format.height;
     const brandColors = [brandKit.primaryColor, brandKit.accentColor, brandKit.backgroundColor].filter(Boolean);
@@ -333,7 +453,9 @@ export function ImageStudio({
       // Style d'image : recommandé par l'IA (selon le post), sauf si l'user a
       // forcé un style. Pour data/avant-après → fond SOBRE (abstrait).
       const reco = (typeof copy?.imageStyle === "string" ? copy.imageStyle : "minimal") as AiStyleId;
-      const chosenStyle: AiStyleId = aiStyle === "auto" ? reco : aiStyle;
+      // En "auto" : on respecte le STYLE APPRIS de l'user (le plus plébiscité)
+      // s'il existe, sinon la reco IA selon le post.
+      const chosenStyle: AiStyleId = aiStyle === "auto" ? (recommendedStyle ?? reco) : aiStyle;
       const bgStyle: AiStyleId = aiFormat === "text" ? chosenStyle : "abstract";
       lastBgStyleRef.current = bgStyle;
 
@@ -879,6 +1001,58 @@ export function ImageStudio({
                         {bgBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ImageIcon className="h-4 w-4 mr-1.5" />}
                         {bgBusy ? t("aiGenerating") : t("aiNewBackground")}
                       </Button>
+                    )}
+
+                    {/* Vote 👍/👎 sur le visuel généré → affine les défauts. */}
+                    {enableStylePrefs && background.imageUrl && (
+                      <div className="flex items-center justify-center gap-2 pt-0.5">
+                        <span className="text-[11px] text-muted-foreground">{t("voteQuestion")}</span>
+                        <button
+                          type="button"
+                          aria-label={t("voteUp")}
+                          onClick={() => sendVote(1)}
+                          className={`rounded-md border px-2 py-1 transition-colors ${
+                            lastVote === 1 ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <ThumbsUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={t("voteDown")}
+                          onClick={() => sendVote(-1)}
+                          className={`rounded-md border px-2 py-1 transition-colors ${
+                            lastVote === -1 ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <ThumbsDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Styles enregistrés : recharge une combinaison en 1 clic,
+                        ou enregistre les réglages courants comme nouveau style. */}
+                    {enableStylePrefs && (
+                      <div className="space-y-1.5 pt-1">
+                        {savedStyles.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {savedStyles.map((s) => (
+                              <span key={s.id} className="group inline-flex items-center gap-1 rounded-full border border-border pl-2.5 pr-1 py-0.5 text-[11px] text-muted-foreground hover:bg-muted">
+                                <button type="button" onClick={() => applyStyleSettings(s.settings)} title={t("styleApply")}>
+                                  {s.name}
+                                </button>
+                                <button type="button" onClick={() => deleteStyle(s.id)} aria-label={t("styleDelete")} className="opacity-50 hover:opacity-100 hover:text-destructive">
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <Button type="button" variant="ghost" size="sm" className="h-7 w-full text-[11px]" onClick={saveCurrentStyle} disabled={savingStyle}>
+                          {savingStyle ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Bookmark className="h-3.5 w-3.5 mr-1.5" />}
+                          {t("styleSave")}
+                        </Button>
+                      </div>
                     )}
                   </>
                 ) : (

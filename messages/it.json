@@ -5816,7 +5816,15 @@
     "brandLabel": "Marchio",
     "logoPosition": "Posizione del logo",
     "logoSize": "Dimensione del logo",
-    "aiNewBackground": "Nuovo sfondo"
+    "aiNewBackground": "Nuovo sfondo",
+    "voteQuestion": "Ti piace questo visual?",
+    "voteUp": "Mi piace",
+    "voteDown": "Non mi piace",
+    "styleSave": "Salva questo stile",
+    "styleSaved": "Stile salvato",
+    "styleApply": "Applica questo stile",
+    "styleDelete": "Elimina",
+    "styleNamePrompt": "Nome di questo stile:"
   },
   "colorPicker": {
     "pick": "Scegli un colore",

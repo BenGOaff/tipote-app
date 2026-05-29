@@ -951,3 +951,26 @@ vérifier que les 3 restent branchées :
    un échantillon tournant comme EXEMPLES DE STYLE (structures à `[crochets]`,
    jamais recopiées). Pour enrichir : éditer `copyPatterns.ts` (NE PAS parser
    les .docx à la volée — lourd/lent/coûteux).
+
+## AG) STUDIO — mémoire de style : styles enregistrés + vote/apprentissage (juin 2026)
+
+Partagé Tipote + affilié (tous deux authentifiés Supabase). Migration
+`20260602_visual_studio_prefs.sql` (à appliquer en prod) : 2 tables RLS par
+`auth.uid()` — `visual_studio_styles` (combinaisons nommées) + `visual_studio_votes`
+(👍/👎 + snapshot réglages).
+
+- **Réglages = "un look"** (hors contenu) : `StudioStyleSettings` dans
+  `lib/visualStudio/stylePrefs.ts` (aiStyle, format, couleurs/mode fond, logo
+  show/scale/position, scrim). On NE stocke PAS l'image de fond (régénérée).
+- **API** : `GET/POST/DELETE /api/visual-studio/styles` (CRUD + `recommended`
+  appris des votes via `learnPreferredStyle`), `POST /api/visual-studio/vote`.
+  Client SUPABASE AUTHENTIFIÉ (pas admin) → RLS s'applique, marche pour les 2 apps.
+- **Apprentissage** : en mode "auto", `generateVisual` choisit le style le plus
+  upvoté (`recommendedStyle`) avant la reco IA du post. Seuil : solde ≥2 pour
+  recommander, ≤-2 pour éviter (pas de sur-réaction sur 1 vote).
+- **UI** (mode image) : pastilles de styles enregistrés (clic = appliquer, × =
+  supprimer), bouton "Enregistrer ce style" (prompt nom), vote 👍/👎 sous un
+  visuel généré. Gated par `enableStylePrefs` (défaut true).
+- Vote sur carrousel → `ai_style:null` (ignoré par l'apprentissage, sans effet).
+- `applyStyleSettings` ne touche PAS au fond image en cours (garde le visuel),
+  seulement couleurs si pas d'image.
