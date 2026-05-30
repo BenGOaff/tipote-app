@@ -295,7 +295,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_unlocked_message,share_message,share_networks,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,result_insight_heading,result_projection_heading,brand_font,brand_color_primary,brand_color_background,toast_widget_id,share_widget_id,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,mode,intro_image_url,intro_image_position").eq("id", quizId).maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,status,title,slug,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_unlocked_message,share_message,share_networks,locale,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,start_button_text,og_description,og_image_url,custom_footer_text,custom_footer_url,result_insight_heading,result_projection_heading,brand_font,brand_color_primary,brand_color_background,toast_widget_id,share_widget_id,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,mode,intro_image_url,intro_image_position").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order,image_url,image_position").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -491,6 +491,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
           start_button_text: fr(quizPublic.start_button_text),
           capture_heading: fr(quizPublic.capture_heading),
           capture_subtitle: fr(quizPublic.capture_subtitle),
+          capture_submit_text: fr(quizPublic.capture_submit_text),
           result_insight_heading: fr(quizPublic.result_insight_heading),
           result_projection_heading: fr(quizPublic.result_projection_heading),
           custom_footer_text: fr(quizPublic.custom_footer_text),

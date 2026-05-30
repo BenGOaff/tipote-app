@@ -16,6 +16,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { loadBrandBundle, brandVoiceToPromptHint } from "@/lib/visualStudio/brandLoader";
 import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
+import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -350,7 +351,13 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        sendSSE("result", { ok: true, quiz });
+        // Strip residual AI tics (em dashes used in incise, decorative
+        // emojis, double-spaces) before handing the payload to the editor.
+        // Belt-and-suspenders on top of NATURAL_WRITING_BLOCK in the prompt.
+        const cleanedQuiz = quiz && typeof quiz === "object"
+          ? sanitizeAiQuizPayload(quiz as Record<string, unknown>)
+          : quiz;
+        sendSSE("result", { ok: true, quiz: cleanedQuiz });
       } catch (e: any) {
         const msg = String(e?.message ?? "").toUpperCase();
         if (msg.includes("NO_CREDITS")) {
