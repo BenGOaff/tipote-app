@@ -1076,3 +1076,59 @@ INCHANGÉ. Ne jamais rendre ces comportements globaux.
 - `titleForVisual()` (QuizDetailClient + SurveyDetailClient) : retire {name} +
   ponctuation orpheline + capitalise. JAMAIS de placeholder gravé dans une image.
 - i18n: visualStudio.formatLandscape + overlay* (7 locales).
+
+## AL) Anti-IA : NATURAL_WRITING_BLOCK + sanitizer post-process (30 mai 2026)
+
+Toute génération / réécriture IA doit respecter les règles anti-IA (pas de
+tiret cadratin, pas de "ce n'est pas X c'est Y", pas de verbes brochure,
+pas d'emojis déco). Deux niveaux :
+
+1. **Prompt** : injecter `NATURAL_WRITING_BLOCK` (`lib/prompts/quiz/system.ts`)
+   dans chaque `system` prompt qui produit du texte final visible (génération
+   quiz, génération sondage, import quiz, import sondage, rewrite ✨).
+2. **Post-process** : `sanitizeAiText(s)` / `sanitizeAiQuizPayload(payload)`
+   (`lib/aiTextSanitizer.ts`) — strip em dashes en incise, emojis déco
+   leaders, collapse double-spaces. **Belt-and-suspenders** : les prompts
+   leakent encore parfois.
+
+Routes actuellement câblées (Tipote — synchroniser avec Tiquiz) :
+- `/api/quiz/generate` (génération + sondage) → `sanitizeAiQuizPayload`
+- `/api/quiz/[id]/rewrite` → `sanitizeAiText` sur chaque proposal
+- `/api/quiz/import` → `sanitizeAiQuizPayload`
+
+Si je crée une **nouvelle route IA qui produit du texte visible** :
+1. Importer `NATURAL_WRITING_BLOCK` + l'injecter dans le system prompt.
+2. Importer `sanitizeAiText` ou `sanitizeAiQuizPayload` + l'appliquer
+   AVANT de renvoyer au client.
+
+Le format CTA est aussi cappé à 3-6 mots dans le system prompt de
+génération quiz (le modèle générait sinon des phrases longues qui
+débordaient du bouton).
+
+## AM) Bouton submit du formulaire email = WYSIWYG (30 mai 2026)
+
+Colonne `quizzes.capture_submit_text` (rich-text HTML, NULL = fallback
+i18n). Visible / éditable dans le preview du quiz à la place du `<button>`
+hardcodé "Accéder aux résultats".
+
+Migration : `supabase/migrations/20260603_quizzes_capture_submit_text.sql`.
+
+7 endroits touchés (cf. section A) : migration, PATCH whitelist (+
+`RICH_TEXT_FIELDS` pour le sanitizer côté serveur), public SELECT chain,
+FR interpolation block, editor state (load + save + autosave snapshot deps),
+visitor render dans `PublicQuizClient.tsx`.
+
+Côté visiteur : si `capture_submit_text` est null/vide → string i18n par
+défaut (comportement strict des quiz existants préservé). Sinon → `<span
+className="tipote-quiz-rich tipote-quiz-rich-inline block w-full">` avec
+sanitizeRichText + interp.
+
+## AN) Color picker dans le design du quiz = ColorSwatchPicker (30 mai 2026)
+
+`<input type="color">` (picker natif blanc) remplacé par `ColorSwatchPicker`
+de `components/ui/ColorSwatchPicker.tsx` dans le tab Design de l'éditeur
+quiz. Avantages : carré HSV + slider hue + hex input + palette curée
+**et** surface les `savedPalettes` (palettes branding du user). Même
+composant que PopquizAppearanceForm / ImageStudio — cohérence design
+system. UserPalettePicker reste en dessous pour le gestionnaire (créer
+/ renommer / supprimer palettes).

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -274,7 +275,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ ok: true, quiz });
+    // Strip residual AI tics from imported drafts too (em dashes,
+    // decorative emojis). Same belt-and-suspenders as /generate.
+    const cleanedQuiz = quiz && typeof quiz === "object"
+      ? sanitizeAiQuizPayload(quiz as Record<string, unknown>)
+      : quiz;
+    return NextResponse.json({ ok: true, quiz: cleanedQuiz });
   } catch (err: any) {
     console.error("[quiz/import] Error:", err);
     return NextResponse.json(

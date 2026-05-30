@@ -14,6 +14,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkRateLimit } from "@/lib/aiRateLimit";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
+import { NATURAL_WRITING_BLOCK } from "@/lib/prompts/quiz/system";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -146,8 +148,12 @@ export async function POST(
   const kindHint = (isFr ? kindHintsFr : kindHintsEn)[fieldKind] ?? kindHintsFr.generic;
 
   const systemPrompt = isFr
-    ? `Tu es l'autrice du quiz « ${quizTitle} »${quizIntro ? `, dont l'intro est : « ${quizIntro} »` : ""}. Tu réécris un de ses champs en gardant SON ton (${addressForm === "vous" ? "vouvoiement" : "tutoiement"}, ${isSurvey ? "ton sondage neutre" : "ton chaleureux et personnel"}). ${kindHint} Tu ne changes pas la signification, tu reformules. Réponds STRICTEMENT en JSON valide sans texte autour, dans ce format : {"proposals":["v1","v2","v3"]}. Trois variantes différentes (longueur ou angle), pas de duplicat.`
-    : `You are the author of the quiz "${quizTitle}"${quizIntro ? `, whose intro reads: "${quizIntro}"` : ""}. You're rewriting one of its fields while keeping THE author's tone (${addressForm === "vous" ? "formal/polite address" : "informal address"}, ${isSurvey ? "neutral survey tone" : "warm, personal tone"}). ${kindHint} Don't change the meaning, just reformulate. Respond STRICTLY with valid JSON, no surrounding text, in this exact shape: {"proposals":["v1","v2","v3"]}. Three different variants (length or angle), no duplicates.`;
+    ? `Tu es l'autrice du quiz « ${quizTitle} »${quizIntro ? `, dont l'intro est : « ${quizIntro} »` : ""}. Tu réécris un de ses champs en gardant SON ton (${addressForm === "vous" ? "vouvoiement" : "tutoiement"}, ${isSurvey ? "ton sondage neutre" : "ton chaleureux et personnel"}). ${kindHint} Tu ne changes pas la signification, tu reformules. Réponds STRICTEMENT en JSON valide sans texte autour, dans ce format : {"proposals":["v1","v2","v3"]}. Trois variantes différentes (longueur ou angle), pas de duplicat.
+
+${NATURAL_WRITING_BLOCK}`
+    : `You are the author of the quiz "${quizTitle}"${quizIntro ? `, whose intro reads: "${quizIntro}"` : ""}. You're rewriting one of its fields while keeping THE author's tone (${addressForm === "vous" ? "formal/polite address" : "informal address"}, ${isSurvey ? "neutral survey tone" : "warm, personal tone"}). ${kindHint} Don't change the meaning, just reformulate. Respond STRICTLY with valid JSON, no surrounding text, in this exact shape: {"proposals":["v1","v2","v3"]}. Three different variants (length or angle), no duplicates.
+
+NATURAL WRITING — banned AI tics: em dashes (—) for incise, brochure verbs ("optimize", "unlock", "level up", "revolutionize"), parallel triads ("simpler, faster, better"), decorative emojis, "it's not X, it's Y" pattern. Vary sentence length, use specific/sensory details, real vocabulary, assume a point of view.`;
 
   const userPrompt = isFr
     ? `Texte à reformuler :\n"""${text}"""\n${instruction ? `\nDirection de l'autrice : ${instruction}\n` : ""}\nRends 3 reformulations distinctes au format JSON demandé.`
@@ -212,7 +218,7 @@ export async function POST(
 
   const proposals = Array.isArray(parsed.proposals)
     ? parsed.proposals
-        .map((p) => String(p ?? "").trim())
+        .map((p) => sanitizeAiText(String(p ?? "")))
         .filter((p) => p.length > 0 && p.length <= MAX_TEXT_CHARS * 1.5)
         .slice(0, 5)
     : [];

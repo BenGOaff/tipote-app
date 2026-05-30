@@ -174,6 +174,7 @@ RÉSULTATS — RÈGLES :
 - Mettre en valeur l'expertise de l'auteur du quiz.
 - Le CTA de chaque résultat doit s'intégrer naturellement après le résultat, jamais plaqué artificiellement.
 - Chaque cta_text est UNIQUE au profil : il doit refléter la promesse adaptée à CE résultat (et servir l'intention business du créateur si elle est fournie). Jamais un CTA générique type "En savoir plus".
+- Format du cta_text : **3 à 6 mots maximum**, formulation verbe + bénéfice. Ex: "Réserver mon audit gratuit", "Découvrir la méthode". JAMAIS de phrase longue ou explicative — le CTA tient sur UNE ligne dans un bouton.
 ${segmentation === "level"
     ? "- Scoring par majorité de réponses (le résultat correspondant au result_index le plus fréquent l'emporte)."
     : "- Scoring par profil dominant (le result_index majoritaire détermine le profil révélé)."}
@@ -290,7 +291,9 @@ FORMAT DE SORTIE : JSON strict uniquement, sans markdown, sans commentaires.
   ],
   "cta_text": "Texte du CTA principal",
   "share_message": "Message d'incitation au partage"
-}`;
+}
+
+${NATURAL_WRITING_BLOCK}`;
 
   const user = `CONTENU BRUT À STRUCTURER (langue cible de sortie : ${langLabel}) :
 
@@ -498,7 +501,9 @@ FORMAT DE SORTIE : JSON strict, identique au schéma de génération sondage Tiq
     { "question_text": "...", "question_type": "rating_scale", "config": { "min": 0, "max": 10 }, "options": [] }
   ],
   "cta_text": ""
-}`;
+}
+
+${NATURAL_WRITING_BLOCK}`;
 
   const user = `CONTENU BRUT À STRUCTURER (langue cible : ${langLabel}) :
 
