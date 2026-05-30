@@ -67,6 +67,7 @@ function titleForVisual(text: string | null | undefined): string {
 }
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
+import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
@@ -1889,8 +1890,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <p className="text-[10px] text-muted-foreground">Aperçu live dans le panneau de droite.</p>
                 </div>
                 <div className="space-y-3"><Label className="text-xs">Couleurs</Label>
-                  <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur principale</span></div>
-                  <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur de fond</span></div>
+                  <div className="flex items-center gap-2"><ColorSwatchPicker value={primaryColor} onChange={setPrimaryColor} label="Couleur principale" userPalettes={savedPalettes} userPalettesLabel="Mes couleurs" /><span className="text-xs text-muted-foreground">Couleur principale</span></div>
+                  <div className="flex items-center gap-2"><ColorSwatchPicker value={bgColor} onChange={setBgColor} label="Couleur de fond" userPalettes={savedPalettes} userPalettesLabel="Mes couleurs" /><span className="text-xs text-muted-foreground">Couleur de fond</span></div>
                   <UserPalettePicker
                     currentColor={primaryColor}
                     onPick={setPrimaryColor}
