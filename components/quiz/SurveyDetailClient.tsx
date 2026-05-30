@@ -1359,7 +1359,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             </button>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Pre-publish gauge only — once a survey is live the ring
               becomes confusing. Hide on active. */}
           {status !== "active" && (() => {
@@ -1389,9 +1389,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             variant="outline"
             onClick={() => window.open(previewUrl, "_blank", "noopener")}
             title="Ouvrir en mode aperçu (aucune réponse enregistrée)"
+            className="shrink-0 px-2 sm:px-3"
           >
-            <Eye className="w-4 h-4 mr-1" />
-            Aperçu
+            <Eye className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Aperçu</span>
           </Button>
           {savingDraft && (
             <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
@@ -1399,12 +1400,24 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               Brouillon enregistré
             </span>
           )}
-          <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : tc("save")}
+          {/* Mobile : Save en icône seule (l'autosave couvre déjà la sauvegarde)
+              pour garder le bouton Publier visible. Desktop inchangé. */}
+          <Button size="sm" variant="outline" onClick={handleSave} disabled={saving} className="shrink-0 px-2 sm:px-3">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 sm:mr-1" />}<span className="hidden sm:inline">{saving ? "" : tc("save")}</span>
           </Button>
-          <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
+          <Button size="sm" onClick={handleToggleStatus} className="shrink-0">{status === "active" ? t("deactivate") : t("publish")}</Button>
         </div>
       </header>
+      {/* Onglets en 2e ligne sur MOBILE : la nav d'en-tête est `hidden sm:flex`
+          (absente sur téléphone) → on la réaffiche pleine largeur sous l'en-tête
+          pour atteindre Partager (le lien) + Tendances. < sm seulement. */}
+      <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
+        {(["create","share","trends"] as const).map(tab => (
+          <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrends")}</>}
+          </button>
+        ))}
+      </nav>
 
       {/* MAIN: CRÉER TAB */}
       {mainTab === "create" && (
