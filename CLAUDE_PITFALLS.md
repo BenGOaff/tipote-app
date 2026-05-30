@@ -1132,3 +1132,34 @@ quiz. Avantages : carré HSV + slider hue + hex input + palette curée
 composant que PopquizAppearanceForm / ImageStudio — cohérence design
 system. UserPalettePicker reste en dessous pour le gestionnaire (créer
 / renommer / supprimer palettes).
+
+## AO) Logo : override par quiz via quizzes.brand_logo_url + hide_brand_logo (30 mai 2026)
+
+Avant : le logo vivait UNIQUEMENT sur `business_profiles.brand_logo_url`
+— un seul logo pour tous les quiz du user. Le bouton "Retirer" du design
+tab effaçait le logo du business profile → tous les quiz perdaient leur
+logo en même temps.
+
+Maintenant deux colonnes sur `quizzes` :
+- `brand_logo_url` (TEXT, NULL = fallback business profile)
+- `hide_brand_logo` (BOOLEAN, default FALSE = compat)
+
+Migration : `supabase/migrations/20260603_quizzes_brand_logo_override.sql`.
+
+Resolver `lib/quizBranding.ts → resolveQuizBranding` :
+```ts
+logoUrl = quiz.hide_brand_logo ? null : (quiz.brand_logo_url ?? profile.brand_logo_url)
+```
+
+Trois états UI dans le design tab :
+1. `hideBrandLogo` true → encart "Logo masqué" + bouton réactiver.
+2. `quizBrandLogoUrl` set → override visible + boutons "Changer / Revenir
+   au logo du profil / Masquer".
+3. Logo business profile utilisé → boutons "Utiliser un autre logo / Masquer".
+
+Upload : `handleLogoUpload(file, scope: "quiz" | "profile")`. Default
+`"quiz"` dans l'éditeur — l'upload vise `logos/<uid>/quiz-<quizId>.<ext>`
+et alimente `quizBrandLogoUrl`, sans toucher au profil.
+
+**À ne JAMAIS faire** : remettre un bouton "Retirer" qui appelle
+`/api/profile` avec `brand_logo_url: null` depuis l'éditeur quiz.
