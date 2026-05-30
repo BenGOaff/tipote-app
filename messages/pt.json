@@ -4228,7 +4228,22 @@
     "stepCapture": "Captura",
     "stepVirality": "Viralidade",
     "stepShare": "Partilha",
-    "reorder": "Reordenar"
+    "reorder": "Reordenar",
+    "createNewTagTitle": "Criar uma nova tag",
+    "toastPublished": "Quiz publicado!",
+    "toastSavedShort": "Quiz guardado!",
+    "toastImported": "Quiz importado!",
+    "toastImportedDesc": "{qCount} perguntas e {rCount} perfis detetados.",
+    "aiObjectiveExample": "Ex.: Ajudar os meus prospetos a identificar o seu perfil de empreendedor para lhes propor o meu acompanhamento",
+    "aiTargetExample": "Ex.: Empreendedores iniciantes que querem lançar o seu negócio online",
+    "aiCtaExample": "Ex.: Reserva a tua chamada de descoberta",
+    "aiBonusExample": "Ex.: Checklist dos 10 passos para lançar o teu negócio",
+    "resultCtaTextPlaceholder": "Texto do botão (ex.: Reserva a tua chamada)",
+    "resultCtaUrlPlaceholder": "URL do link (https://...)",
+    "ctaTextPlaceholder": "Ex.: Reserva a tua chamada",
+    "captureHeadingPlaceholder": "O teu resultado está pronto!",
+    "captureSubtitlePlaceholder": "Coloca o teu email para descobrir o teu perfil.\n\nPodes acrescentar várias linhas aqui para gerar expetativa.",
+    "bonusReceivedPlaceholder": "O que a pessoa recebe"
   },
   "quizDetail": {
     "previewStartBtnPh": "Começar o teste",
@@ -4435,7 +4450,23 @@
     "introImageAi": "Gerar (IA)",
     "introImageGif": "GIF",
     "resultImageAi": "Gerar (IA)",
-    "resultImageGif": "GIF"
+    "resultImageGif": "GIF",
+    "toastRebalanceApplied": "{count} opção(ões) reatribuída(s). Não te esqueças de guardar.",
+    "toastImageOnly": "Apenas ficheiros de imagem",
+    "toastImageTooHeavy": "Imagem demasiado pesada (máx. {max} MB)",
+    "toastOgImageSaved": "Miniatura guardada",
+    "toastImageUploadError": "Erro ao carregar a imagem: {msg}",
+    "toastLogoUploadError": "Erro ao carregar o logótipo: {msg}",
+    "toastSlugInvalid": "Slug inválido (a-z, 0-9, -)",
+    "toastTitleRequired": "Título obrigatório",
+    "ariaMoveOptionUp": "Subir a resposta",
+    "ariaMoveOptionDown": "Descer a resposta",
+    "captureSubmitDefault": "Ver os meus resultados",
+    "rebalanceIntentPlaceholder": "Ex.: este resultado deve orientar-se para as autoras que querem uma formação",
+    "analyticsViewsHint": "Número total de visitantes (acumulado desde o início)",
+    "analyticsEmptyLeads": "Nenhum lead capturado neste período.",
+    "analyticsEmptyResults": "Nenhum resultado para mostrar.",
+    "analyticsLeadsHint": "{count} exportados para o Systeme.io"
   },
   "contentStrategy": {
     "title": "Estratégia de conteúdo",
@@ -5388,7 +5419,9 @@
       "createError": "Erro ao criar",
       "cannotCreateUser": "Não foi possível criar o utilizador",
       "notifSent": "Notificação enviada",
-      "magicLinkSent": "(magic link enviado)"
+      "magicLinkSent": "Magic link enviado",
+      "userDeleted": "Utilizador eliminado",
+      "emailsSent": "✅ {sent}/{total} emails enviados"
     },
     "notifHeader": "Enviar uma notificação",
     "notifToSelected": "para {n} utilizador(es) selecionado(s)",
@@ -5443,7 +5476,10 @@
     "newPlanPh": "Novo plano",
     "invalidPlan": "Plano inválido",
     "cannotLoadUsers": "Não foi possível carregar os utilizadores",
-    "valueLabel": "Valor: {v}"
+    "valueLabel": "Valor: {v}",
+    "deletePermanently": "Eliminar definitivamente",
+    "addBonusCreditsTitle": "Adicionar créditos bónus",
+    "addBonusCreditsDesc": "Adicionar créditos bónus a {n} utilizador(es) selecionado(s). Estes créditos somam-se à quota mensal."
   },
   "adminTickets": {
     "statusOpen": "Aberto",
@@ -6023,6 +6059,16 @@
       "body1": "Se queres manter um quiz privado (apenas via link, sem risco de aparecer no Google), seleciona a caixa «Ocultar este quiz dos motores de busca» na aba SEO do editor do quiz.",
       "body2": "O quiz mantém-se ativo e partilhável via link direto, mas é excluído do teu sitemap e do ficheiro IA. Ideal para conteúdo interno ou drafts públicos partilhados a um círculo limitado."
     }
+  },
+  "popquiz": {
+    "toastPublished": "Popquiz publicado — partilha o link com o teu público",
+    "toastUnpublished": "Popquiz despublicado — já não está visível publicamente",
+    "toastSaved": "Alterações guardadas",
+    "toastLinkCopied": "Link copiado",
+    "toastCodeCopied": "Código copiado",
+    "toastCopyError": "Não foi possível copiar",
+    "backToPopquizzes": "Voltar aos meus popquiz",
+    "descriptionPlaceholder": "Explica numa frase o que o vídeo traz"
   },
   "popquizAppearance": {
     "sectionTitle": "Aspeto da página pública",

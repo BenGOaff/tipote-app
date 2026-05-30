@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,7 @@ interface QuizFormProps {
 export function QuizForm({ onClose }: QuizFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("quizForm");
 
   const [step, setStep] = useState<"choose" | "config" | "import" | "edit">("choose");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -184,7 +186,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           size="icon"
           className="h-9 w-9"
           onClick={() => { setNewTagFor(pickerId); setNewTagName(""); }}
-          title="Créer un nouveau tag"
+          title={t("createNewTagTitle")}
         >
           <Plus className="w-3 h-3" />
         </Button>
@@ -371,7 +373,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
       const json = await res.json();
       if (!json?.ok) throw new Error(json?.error || "Erreur");
 
-      toast({ title: status === "active" ? "Quiz publié !" : "Quiz sauvegardé !" });
+      toast({ title: status === "active" ? t("toastPublished") : t("toastSavedShort") });
       router.push(`/quiz/${json.quizId}`);
     } catch (err: any) {
       toast({
@@ -491,7 +493,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
         })),
       );
       setStep("edit");
-      toast({ title: "Quiz importé !", description: `${quiz.questions?.length ?? 0} questions et ${quiz.results?.length ?? 0} profils détectés.` });
+      toast({ title: t("toastImported"), description: t("toastImportedDesc", { qCount: quiz.questions?.length ?? 0, rCount: quiz.results?.length ?? 0 }) });
     } catch (err: any) {
       toast({
         title: "Erreur d'import",
@@ -672,7 +674,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           <div className="space-y-2">
             <Label>Objectif du quiz *</Label>
             <Textarea
-              placeholder="Ex: Aider mes prospects à identifier leur profil d'entrepreneur pour leur proposer mon accompagnement"
+              placeholder={t("aiObjectiveExample")}
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
               rows={2}
@@ -682,7 +684,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           <div className="space-y-2">
             <Label>Cible *</Label>
             <Input
-              placeholder="Ex: Entrepreneurs débutants qui veulent lancer leur business en ligne"
+              placeholder={t("aiTargetExample")}
               value={target}
               onChange={(e) => setTarget(e.target.value)}
             />
@@ -739,7 +741,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
             <div className="space-y-2">
               <Label>CTA final</Label>
               <Input
-                placeholder="Ex: Réserve ton appel découverte"
+                placeholder={t("aiCtaExample")}
                 value={cta}
                 onChange={(e) => setCta(e.target.value)}
               />
@@ -775,7 +777,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
             <div className="space-y-2">
               <Label>Bonus offert après partage</Label>
               <Input
-                placeholder="Ex: Checklist des 10 étapes pour lancer ton business"
+                placeholder={t("aiBonusExample")}
                 value={bonus}
                 onChange={(e) => setBonus(e.target.value)}
               />
@@ -1021,12 +1023,12 @@ export function QuizForm({ onClose }: QuizFormProps) {
                   <Input
                     value={r.cta_text || ""}
                     onChange={(e) => updateResult(ri, "cta_text", e.target.value)}
-                    placeholder="Texte du bouton (ex: Réserve ton appel)"
+                    placeholder={t("resultCtaTextPlaceholder")}
                   />
                   <Input
                     value={r.cta_url || ""}
                     onChange={(e) => updateResult(ri, "cta_url", e.target.value)}
-                    placeholder="URL du lien (https://...)"
+                    placeholder={t("resultCtaUrlPlaceholder")}
                   />
                 </div>
               )}
@@ -1135,7 +1137,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 <Input
                   value={ctaText}
                   onChange={(e) => setCtaText(e.target.value)}
-                  placeholder="Ex: Réserve ton appel"
+                  placeholder={t("ctaTextPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
@@ -1161,7 +1163,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
               <Input
                 value={captureHeading}
                 onChange={(e) => setCaptureHeading(e.target.value)}
-                placeholder="Ton résultat est prêt !"
+                placeholder={t("captureHeadingPlaceholder")}
               />
             </div>
             <div className="space-y-2">
@@ -1170,7 +1172,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 value={captureSubtitle}
                 onChange={(e) => setCaptureSubtitle(e.target.value)}
                 rows={3}
-                placeholder="Entre ton email pour découvrir ton profil.&#10;&#10;Tu peux ajouter plusieurs lignes ici pour donner envie."
+                placeholder={t("captureSubtitlePlaceholder")}
               />
               <p className="text-xs text-muted-foreground">Les sauts de ligne seront préservés.</p>
             </div>
@@ -1216,7 +1218,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                   value={bonusDescription}
                   onChange={(e) => setBonusDescription(e.target.value)}
                   rows={2}
-                  placeholder="Ce que la personne reçoit"
+                  placeholder={t("bonusReceivedPlaceholder")}
                 />
               </div>
               <div className="space-y-2">

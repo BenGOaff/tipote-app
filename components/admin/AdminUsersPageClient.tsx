@@ -345,7 +345,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
         throw new Error(json?.error || "Failed to resend magic link");
       }
       toast({
-        title: t("toast.magicLinkSent") || "Magic link envoyé",
+        title: t("toast.magicLinkSent"),
         description: user.email ?? user.id,
       });
     } catch (e) {
@@ -380,7 +380,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       if (!res.ok || !json?.ok) {
         throw new Error(json?.error || "Failed to delete user");
       }
-      toast({ title: "User supprimé", description: user.email ?? user.id });
+      toast({ title: t("toast.userDeleted"), description: user.email ?? user.id });
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
       setSelectedIds((prev) => {
         const next = new Set(prev);
@@ -770,7 +770,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                     const data = await res.json();
                     if (data.ok) {
                       setEmailResult({ sent: data.sent, failed: data.failed, total: data.total });
-                      toast({ title: `✅ ${data.sent}/${data.total} emails envoyés` });
+                      toast({ title: t("toast.emailsSent", { sent: data.sent, total: data.total }) });
                     } else {
                       toast({ title: tc("error"), description: data.error, variant: "destructive" });
                     }
@@ -1122,7 +1122,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                         <Button
                           size="sm"
                           variant="outline"
-                          title="Supprimer définitivement"
+                          title={t("deletePermanently")}
                           onClick={() => deleteUser(u)}
                           disabled={deletingId === u.id || resendingId === u.id}
                           className="border-destructive/40 text-destructive hover:bg-destructive/10"
@@ -1191,10 +1191,9 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       <Dialog open={bulkDialog === "credits"} onOpenChange={(open) => !open && setBulkDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter des crédits bonus</DialogTitle>
+            <DialogTitle>{t("addBonusCreditsTitle")}</DialogTitle>
             <DialogDescription>
-              Ajouter des crédits bonus à {selectedIds.size} utilisateur(s) sélectionné(s).
-              Ces crédits s&apos;ajoutent au quota mensuel.
+              {t("addBonusCreditsDesc", { n: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

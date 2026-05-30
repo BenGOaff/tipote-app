@@ -17,6 +17,7 @@
 // table — flagged as v2.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -101,6 +102,7 @@ interface Props {
 }
 
 export function QuizAnalyticsClient({ quizId, initial }: Props) {
+  const t = useTranslations("quizDetail");
   const [period, setPeriod] = useState<Period>(initial.period);
   const [data, setData] = useState<AnalyticsResponse>(initial);
   const [loading, setLoading] = useState(false);
@@ -182,13 +184,13 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
           icon={<Eye className="size-4" />}
           label="Vues"
           value={m.viewsCount.toLocaleString("fr-FR")}
-          hint="Nombre total de visiteurs (cumulé depuis le début)"
+          hint={t("analyticsViewsHint")}
         />
         <KpiCard
           icon={<Users className="size-4" />}
           label="Leads"
           value={m.leadsCount.toLocaleString("fr-FR")}
-          hint={`${m.exportedSioCount} exportés vers Systeme.io`}
+          hint={t("analyticsLeadsHint", { count: m.exportedSioCount })}
         />
         <KpiCard
           icon={<Activity className="size-4" />}
@@ -215,7 +217,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
             ) : null}
           </div>
           {data.leadsByDay.length === 0 ? (
-            <EmptyState message="Aucun lead capturé sur cette période." />
+            <EmptyState message={t("analyticsEmptyLeads")} />
           ) : (
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={data.leadsByDay} margin={{ top: 4, left: -12, right: 8 }}>
@@ -253,7 +255,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
         <Card className="p-4">
           <h2 className="text-sm font-semibold mb-3">Distribution par résultat</h2>
           {data.resultDistribution.length === 0 ? (
-            <EmptyState message="Aucun résultat à afficher." />
+            <EmptyState message={t("analyticsEmptyResults")} />
           ) : (
             <>
               <ResponsiveContainer width="100%" height={180}>

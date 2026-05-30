@@ -3929,7 +3929,22 @@
     "stepCapture": "Capture",
     "stepVirality": "Virality",
     "stepShare": "Share",
-    "reorder": "Reorder"
+    "reorder": "Reorder",
+    "createNewTagTitle": "Create a new tag",
+    "toastPublished": "Quiz published!",
+    "toastSavedShort": "Quiz saved!",
+    "toastImported": "Quiz imported!",
+    "toastImportedDesc": "{qCount} questions and {rCount} profiles detected.",
+    "aiObjectiveExample": "Ex: Help my prospects identify their entrepreneur profile so I can offer them my support",
+    "aiTargetExample": "Ex: Beginner entrepreneurs who want to launch their online business",
+    "aiCtaExample": "Ex: Book your discovery call",
+    "aiBonusExample": "Ex: Checklist of the 10 steps to launch your business",
+    "resultCtaTextPlaceholder": "Button text (ex: Book your call)",
+    "resultCtaUrlPlaceholder": "Link URL (https://...)",
+    "ctaTextPlaceholder": "Ex: Book your call",
+    "captureHeadingPlaceholder": "Your result is ready!",
+    "captureSubtitlePlaceholder": "Enter your email to discover your profile.\n\nYou can add several lines here to build anticipation.",
+    "bonusReceivedPlaceholder": "What the person receives"
   },
   "quizDetail": {
     "previewStartBtnPh": "Start the quiz",
@@ -4136,7 +4151,23 @@
     "introImageAi": "Generate (AI)",
     "introImageGif": "GIF",
     "resultImageAi": "Generate (AI)",
-    "resultImageGif": "GIF"
+    "resultImageGif": "GIF",
+    "toastRebalanceApplied": "{count} option(s) reassigned. Don't forget to save.",
+    "toastImageOnly": "Image files only",
+    "toastImageTooHeavy": "Image too large (max {max} MB)",
+    "toastOgImageSaved": "Thumbnail saved",
+    "toastImageUploadError": "Image upload error: {msg}",
+    "toastLogoUploadError": "Logo upload error: {msg}",
+    "toastSlugInvalid": "Invalid slug (a-z, 0-9, -)",
+    "toastTitleRequired": "Title required",
+    "ariaMoveOptionUp": "Move answer up",
+    "ariaMoveOptionDown": "Move answer down",
+    "captureSubmitDefault": "See my results",
+    "rebalanceIntentPlaceholder": "Ex: this result should attract authors looking for training",
+    "analyticsViewsHint": "Total number of visitors (cumulative since the start)",
+    "analyticsEmptyLeads": "No leads captured for this period.",
+    "analyticsEmptyResults": "No results to show.",
+    "analyticsLeadsHint": "{count} exported to Systeme.io"
   },
   "contentStrategy": {
     "title": "Content strategy",
@@ -5089,7 +5120,9 @@
       "createError": "Error during creation",
       "cannotCreateUser": "Unable to create the user",
       "notifSent": "Notification sent",
-      "magicLinkSent": "(magic link sent)"
+      "magicLinkSent": "Magic link sent",
+      "userDeleted": "User deleted",
+      "emailsSent": "✅ {sent}/{total} emails sent"
     },
     "notifHeader": "Send a notification",
     "notifToSelected": "to {n} selected user(s)",
@@ -5144,7 +5177,10 @@
     "newPlanPh": "New plan",
     "invalidPlan": "Invalid plan",
     "cannotLoadUsers": "Could not load users",
-    "valueLabel": "Value: {v}"
+    "valueLabel": "Value: {v}",
+    "deletePermanently": "Delete permanently",
+    "addBonusCreditsTitle": "Add bonus credits",
+    "addBonusCreditsDesc": "Add bonus credits to {n} selected user(s). These credits stack on top of the monthly quota."
   },
   "adminTickets": {
     "statusOpen": "Open",
@@ -5724,6 +5760,16 @@
       "body1": "If you want to keep a quiz private (link-only, no risk of it appearing in Google), check the box \"Hide this quiz from search engines\" in the SEO tab of the quiz editor.",
       "body2": "The quiz stays active and shareable via its direct link, but is excluded from your sitemap and AI manifest. Ideal for internal content or public drafts shared with a limited circle."
     }
+  },
+  "popquiz": {
+    "toastPublished": "Popquiz published — share the link with your audience",
+    "toastUnpublished": "Popquiz unpublished — it's no longer publicly visible",
+    "toastSaved": "Changes saved",
+    "toastLinkCopied": "Link copied",
+    "toastCodeCopied": "Code copied",
+    "toastCopyError": "Couldn't copy",
+    "backToPopquizzes": "Back to my popquizzes",
+    "descriptionPlaceholder": "Explain in one sentence what the video brings"
   },
   "popquizAppearance": {
     "sectionTitle": "Public page appearance",

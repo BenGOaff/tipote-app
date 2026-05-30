@@ -3922,7 +3922,22 @@
     "stepCapture": "الالتقاط",
     "stepVirality": "الانتشار الفيروسي",
     "stepShare": "المشاركة",
-    "reorder": "إعادة الترتيب"
+    "reorder": "إعادة الترتيب",
+    "createNewTagTitle": "إنشاء وسم جديد",
+    "toastPublished": "تم نشر الاختبار!",
+    "toastSavedShort": "تم حفظ الاختبار!",
+    "toastImported": "تم استيراد الاختبار!",
+    "toastImportedDesc": "تم اكتشاف {qCount} أسئلة و {rCount} ملفات.",
+    "aiObjectiveExample": "مثال: مساعدة العملاء المحتملين على تحديد ملف رائد الأعمال الخاص بهم لتقديم مرافقتي",
+    "aiTargetExample": "مثال: رواد الأعمال المبتدئون الذين يريدون إطلاق أعمالهم عبر الإنترنت",
+    "aiCtaExample": "مثال: احجز مكالمة استكشافية",
+    "aiBonusExample": "مثال: قائمة الـ10 خطوات لإطلاق نشاطك التجاري",
+    "resultCtaTextPlaceholder": "نص الزر (مثال: احجز مكالمتك)",
+    "resultCtaUrlPlaceholder": "رابط (https://...)",
+    "ctaTextPlaceholder": "مثال: احجز مكالمتك",
+    "captureHeadingPlaceholder": "نتيجتك جاهزة!",
+    "captureSubtitlePlaceholder": "أدخل بريدك الإلكتروني لاكتشاف ملفك.\n\nيمكنك إضافة عدة أسطر هنا لإثارة التوقع.",
+    "bonusReceivedPlaceholder": "ما الذي يحصل عليه الشخص"
   },
   "quizDetail": {
     "previewStartBtnPh": "ابدأ الاختبار",
@@ -4129,7 +4144,23 @@
     "introImageAi": "إنشاء (ذكاء اصطناعي)",
     "introImageGif": "GIF",
     "resultImageAi": "إنشاء (ذكاء اصطناعي)",
-    "resultImageGif": "GIF"
+    "resultImageGif": "GIF",
+    "toastRebalanceApplied": "تم إعادة تعيين {count} خيار(ات). لا تنسَ الحفظ.",
+    "toastImageOnly": "ملفات الصور فقط",
+    "toastImageTooHeavy": "الصورة كبيرة جدًا (الحد الأقصى {max} ميغابايت)",
+    "toastOgImageSaved": "تم حفظ الصورة المصغّرة",
+    "toastImageUploadError": "خطأ في رفع الصورة: {msg}",
+    "toastLogoUploadError": "خطأ في رفع الشعار: {msg}",
+    "toastSlugInvalid": "Slug غير صالح (a-z, 0-9, -)",
+    "toastTitleRequired": "العنوان مطلوب",
+    "ariaMoveOptionUp": "نقل الإجابة لأعلى",
+    "ariaMoveOptionDown": "نقل الإجابة لأسفل",
+    "captureSubmitDefault": "عرض نتائجي",
+    "rebalanceIntentPlaceholder": "مثال: يجب أن توجه هذه النتيجة المؤلفات اللواتي يردن تدريبًا",
+    "analyticsViewsHint": "إجمالي عدد الزوار (تراكمي منذ البداية)",
+    "analyticsEmptyLeads": "لا توجد عملاء محتملون مسجّلون في هذه الفترة.",
+    "analyticsEmptyResults": "لا توجد نتائج للعرض.",
+    "analyticsLeadsHint": "تم تصدير {count} إلى Systeme.io"
   },
   "contentStrategy": {
     "title": "استراتيجية المحتوى",
@@ -5082,7 +5113,9 @@
       "createError": "خطأ أثناء الإنشاء",
       "cannotCreateUser": "تعذّر إنشاء المستخدم",
       "notifSent": "تم إرسال الإشعار",
-      "magicLinkSent": "(تم إرسال magic link)"
+      "magicLinkSent": "تم إرسال magic link",
+      "userDeleted": "تم حذف المستخدم",
+      "emailsSent": "✅ تم إرسال {sent}/{total} بريد إلكتروني"
     },
     "notifHeader": "إرسال إشعار",
     "notifToSelected": "إلى {n} مستخدم محدد",
@@ -5137,7 +5170,10 @@
     "newPlanPh": "خطة جديدة",
     "invalidPlan": "خطة غير صالحة",
     "cannotLoadUsers": "تعذر تحميل المستخدمين",
-    "valueLabel": "القيمة: {v}"
+    "valueLabel": "القيمة: {v}",
+    "deletePermanently": "حذف نهائي",
+    "addBonusCreditsTitle": "إضافة أرصدة مكافأة",
+    "addBonusCreditsDesc": "إضافة أرصدة مكافأة إلى {n} مستخدم(ين) محدد(ين). تُضاف هذه الأرصدة إلى الحصة الشهرية."
   },
   "adminTickets": {
     "statusOpen": "مفتوح",
@@ -5717,6 +5753,16 @@
       "body1": "إذا كنت تريد الاحتفاظ باختبار خاص (عبر الرابط فقط، دون مخاطر ظهوره في Google)، حدد المربع «إخفاء هذا الاختبار عن محركات البحث» في علامة تبويب SEO في محرر الاختبار.",
       "body2": "يظل الاختبار نشطًا وقابلاً للمشاركة عبر رابطه المباشر، ولكنه مستبعد من خريطة الموقع وملف الذكاء الاصطناعي. مثالي للمحتوى الداخلي أو المسودات العامة المشاركة لدائرة محدودة."
     }
+  },
+  "popquiz": {
+    "toastPublished": "تم نشر Popquiz — شارك الرابط مع جمهورك",
+    "toastUnpublished": "تم إلغاء نشر Popquiz — لم يعد مرئيًا للعموم",
+    "toastSaved": "تم حفظ التغييرات",
+    "toastLinkCopied": "تم نسخ الرابط",
+    "toastCodeCopied": "تم نسخ الكود",
+    "toastCopyError": "تعذّر النسخ",
+    "backToPopquizzes": "العودة إلى popquiz الخاصة بي",
+    "descriptionPlaceholder": "اشرح في جملة ما يقدّمه الفيديو"
   },
   "popquizAppearance": {
     "sectionTitle": "مظهر الصفحة العامة",

@@ -953,7 +953,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         }),
       }));
     });
-    toast.success(`${rebalanceProposal.changes.length} option(s) réassignée(s). Pense à enregistrer.`);
+    toast.success(t("toastRebalanceApplied", { count: rebalanceProposal.changes.length }));
     closeRebalance();
   }, [rebalanceProposal, closeRebalance]);
 
@@ -1207,8 +1207,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   // Logo upload (reuses public-assets bucket, same layout as SettingsClient)
   async function handleLogoUpload(file: File, scope: "quiz" | "profile" = "quiz") {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error("Image trop lourde (max 2 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 2 })); return; }
     setUploadingLogo(true);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -1241,7 +1241,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err) {
       console.error("Logo upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload logo : ${msg}`);
+      toast.error(t("toastLogoUploadError", { msg }));
     } finally {
       setUploadingLogo(false);
     }
@@ -1251,8 +1251,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // le créateur (ou un visiteur) partage le lien. Sans upload, c'est le
   // logo Tipote par défaut.
   async function handleOgImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
     setUploadingOgImage(true);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -1264,11 +1264,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setOgImageUrl(urlData.publicUrl);
-      toast.success("Vignette enregistrée");
+      toast.success(t("toastOgImageSaved"));
     } catch (err) {
       console.error("OG image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      toast.error(t("toastImageUploadError", { msg }));
     } finally {
       setUploadingOgImage(false);
     }
@@ -1277,8 +1277,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // Bonus image upload: mockup / image / GIF shown on the share step so the
   // visitor understands what they unlock before sharing.
   async function handleBonusImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
     setUploadingBonusImage(true);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -1294,7 +1294,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err) {
       console.error("Bonus image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      toast.error(t("toastImageUploadError", { msg }));
     } finally {
       setUploadingBonusImage(false);
     }
@@ -1308,8 +1308,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // d'insérer le <img> au point de drop. Bucket dédié `rich-content/`
   // pour ne pas mélanger avec les autres images du quiz.
   async function handleRichTextImageUpload(file: File): Promise<string | null> {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return null; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return null; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return null; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return null; }
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -1323,7 +1323,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err) {
       console.error("Rich text image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      toast.error(t("toastImageUploadError", { msg }));
       return null;
     }
   }
@@ -1448,8 +1448,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // incluant GIF.
   const [uploadingOptionKey, setUploadingOptionKey] = useState<string | null>(null);
   async function handleOptionImageUpload(file: File, qi: number, oi: number) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
     const key = `${qi}-${oi}`;
     setUploadingOptionKey(key);
     try {
@@ -1468,7 +1468,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err) {
       console.error("Option image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      toast.error(t("toastImageUploadError", { msg }));
     } finally {
       setUploadingOptionKey(null);
     }
@@ -1482,9 +1482,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   // Save
   const handleSave = async () => {
-    if (!title.trim()) { toast.error("Titre requis"); return; }
+    if (!title.trim()) { toast.error(t("toastTitleRequired")); return; }
     const cleanedSlug = slug.trim() ? sanitizeSlug(slug) : null;
-    if (slug.trim() && !cleanedSlug) { toast.error("Slug invalide (a-z, 0-9, -)"); return; }
+    if (slug.trim() && !cleanedSlug) { toast.error(t("toastSlugInvalid")); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/quiz/${quizId}`, {
@@ -1593,7 +1593,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     const timer = setTimeout(async () => {
       const cleanedSlug = trimmed ? sanitizeSlug(trimmed) : null;
       if (trimmed && !cleanedSlug) {
-        toast.error("Slug invalide (a-z, 0-9, -)");
+        toast.error(t("toastSlugInvalid"));
         return;
       }
       try {
@@ -1604,7 +1604,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         });
         const json = await res.json().catch(() => null);
         if (res.status === 409 && json?.error === "SLUG_TAKEN") {
-          toast.error("Ce slug est déjà pris");
+          toast.error(t("toastSlugTaken"));
           return;
         }
         if (!json?.ok) {
@@ -2571,8 +2571,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   toucher au result_index porté par chaque option. */}
                               {q.options.length > 1 && (
                                 <div className="absolute top-2 left-2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button type="button" onClick={() => moveOpt(qi, oi, -1)} disabled={oi === 0} aria-label="Monter la réponse" className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronUp className="w-3.5 h-3.5" /></button>
-                                  <button type="button" onClick={() => moveOpt(qi, oi, +1)} disabled={oi === q.options.length - 1} aria-label="Descendre la réponse" className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronDown className="w-3.5 h-3.5" /></button>
+                                  <button type="button" onClick={() => moveOpt(qi, oi, -1)} disabled={oi === 0} aria-label={t("ariaMoveOptionUp")} className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronUp className="w-3.5 h-3.5" /></button>
+                                  <button type="button" onClick={() => moveOpt(qi, oi, +1)} disabled={oi === q.options.length - 1} aria-label={t("ariaMoveOptionDown")} className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronDown className="w-3.5 h-3.5" /></button>
                                 </div>
                               )}
                               {q.options.length > 2 && <button onClick={() => removeOpt(qi, oi)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 rounded p-0.5"><X className="w-3.5 h-3.5" /></button>}
@@ -2634,11 +2634,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       (capture pour les quiz existants strictement préservée). */}
                   <button className="w-full max-w-md mx-auto block min-h-[48px] h-auto px-8 py-3 rounded-full text-white font-semibold text-lg whitespace-normal leading-snug" style={{ backgroundColor: pc }}>
                     <RichTextEdit
-                      value={captureSubmitText || "Accéder aux résultats"}
+                      value={captureSubmitText || t("captureSubmitDefault")}
                       onChange={setCaptureSubmitText}
                       singleLine
                       className="text-white font-semibold text-center w-full"
-                      placeholder="Accéder aux résultats"
+                      placeholder={t("captureSubmitDefault")}
                     />
                   </button>
                 </div>
@@ -3168,7 +3168,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       id="rebalance-intent"
                       value={rebalanceIntent}
                       onChange={(e) => setRebalanceIntent(e.target.value.slice(0, 500))}
-                      placeholder="Ex : ce résultat doit s'orienter vers les autrices qui veulent une formation"
+                      placeholder={t("rebalanceIntentPlaceholder")}
                       rows={3}
                       className="w-full text-sm mt-1.5 rounded-md border bg-background px-3 py-2"
                       disabled={rebalanceLoading}

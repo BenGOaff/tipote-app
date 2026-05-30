@@ -274,6 +274,7 @@ export default function PopquizEditClient({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tc = useTranslations("common");
+  const t = useTranslations("popquiz");
   const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
@@ -590,11 +591,11 @@ export default function PopquizEditClient({
       // immédiatement le nouveau statut sans attendre router.refresh().
       setIsPublished(willPublish);
       if (willPublish && !popquiz.isPublished) {
-        toast.success("Popquiz publié — partage le lien à ton audience");
+        toast.success(t("toastPublished"));
       } else if (!willPublish && popquiz.isPublished) {
-        toast.success("Popquiz dépublié — il n'est plus visible publiquement");
+        toast.success(t("toastUnpublished"));
       } else {
-        toast.success("Modifications enregistrées");
+        toast.success(t("toastSaved"));
       }
       // Soft-refresh so the server-rendered shell picks up the new
       // slug / publish state without a full reload.
@@ -625,10 +626,10 @@ export default function PopquizEditClient({
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopiedUrl(true);
-      toast.success("Lien copié");
+      toast.success(t("toastLinkCopied"));
       setTimeout(() => setCopiedUrl(false), 2000);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("toastCopyError"));
     }
   }
 
@@ -636,10 +637,10 @@ export default function PopquizEditClient({
     try {
       await navigator.clipboard.writeText(embedSnippet);
       setCopiedEmbed(true);
-      toast.success("Code copié");
+      toast.success(t("toastCodeCopied"));
       setTimeout(() => setCopiedEmbed(false), 2000);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("toastCopyError"));
     }
   }
 
@@ -720,7 +721,7 @@ export default function PopquizEditClient({
             variant="ghost"
             size="icon"
             onClick={() => router.push("/popquizzes")}
-            title="Retour à mes popquiz"
+            title={t("backToPopquizzes")}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -805,7 +806,7 @@ export default function PopquizEditClient({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Explique en une phrase ce que la vidéo apporte"
+              placeholder={t("descriptionPlaceholder")}
             />
           </div>
 
