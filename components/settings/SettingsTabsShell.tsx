@@ -305,6 +305,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
   const tSettings = useTranslations("settings");
   const tSP = useTranslations("settingsPage");
   const tc = useTranslations("common");
+  const tT = useTranslations("settingsTabs");
   const router = useRouter();
   const sp = useSearchParams();
   const { toast } = useToast();
@@ -1227,7 +1228,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         if (!json?.ok) throw new Error(json?.error || tc("error"));
         const row = json.profile ?? null;
         setInitialProfile(row);
-        toast({ title: tc("savedShort") || "Sauvegardé" });
+        toast({ title: tc("savedShort") || tT("savedShort") });
       } catch (err) {
         toast({ title: err instanceof Error ? err.message : tc("error"), variant: "destructive" });
       }
@@ -1665,8 +1666,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   type="button"
                   onClick={() => setSioApiKeyVisible((v) => !v)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={sioApiKeyVisible ? "Masquer la clé" : "Afficher la clé"}
-                  title={sioApiKeyVisible ? "Masquer" : "Afficher"}
+                  aria-label={sioApiKeyVisible ? tT("hideKey") : tT("showKey")}
+                  title={sioApiKeyVisible ? tT("hide") : tT("show")}
                 >
                   {sioApiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -1858,15 +1859,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label>Token Conversions API Meta (optionnel)</Label>
+              <Label>{tT("metaCapiTokenLabel")}</Label>
               <Input
                 value={defaultMetaCapiToken}
                 onChange={(e) => setDefaultMetaCapiToken(e.target.value)}
-                placeholder="EAAG… (token d'accès Conversions API)"
+                placeholder={tT("metaCapiTokenPlaceholder")}
                 autoComplete="off"
               />
               <p className="text-xs text-muted-foreground">
-                {"Active l'envoi serveur des conversions (résiste aux bloqueurs de pub, améliore le matching, dédupliqué avec le pixel). Events Manager → ton dataset → Paramètres → Conversions API → « Générer un token d'accès ». À utiliser avec le pixel ci-dessus."}
+                {tT("metaCapiTokenHint")}
               </p>
             </div>
             <div className="space-y-1.5">
@@ -2317,7 +2318,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 <div className="space-y-1">
                   <Label className="text-xs flex items-center gap-1.5">
                     <Sparkles className="size-3 text-primary" />
-                    Lier à un produit Systeme.io (optionnel)
+                    {tT("linkSioProduct")}
                   </Label>
                   <SioProductPicker
                     value={offer.sio_product_id ?? null}
@@ -2327,10 +2328,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     disabled={profileLoading}
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Choisis ton produit dans la liste — Tipote attribuera
-                    chaque vente à la bonne offre dans tes analytics. Si
-                    tu ne le lies pas, on essaie de matcher
-                    automatiquement par nom ou par prix.
+                    {tT("linkSioProductHint")}
                   </p>
                 </div>
 
@@ -2599,20 +2597,20 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           </p>
 
           <div className="rounded-lg border bg-muted/30 px-4 py-3 mb-5 text-sm font-medium">
-            J&apos;aide les{" "}
-            <span className="font-semibold text-primary">{nicheTarget || "[cible]"}</span>{" "}
-            à{" "}
-            <span className="font-semibold text-primary">{nicheObjective || "[objectif]"}</span>
+            {tT("nicheJ1")}{" "}
+            <span className="font-semibold text-primary">{nicheTarget || tT("nicheTarget")}</span>{" "}
+            {tT("nicheTo")}{" "}
+            <span className="font-semibold text-primary">{nicheObjective || tT("nicheObjective")}</span>
             {(nicheMechanism || !nicheTarget) && (
               <>
-                {" "}grâce à{" "}
+                {" "}{tT("nicheBy")}{" "}
                 <span className="font-semibold text-primary">{nicheMechanism || tSP("placeholders.mechanism")}</span>
               </>
             )}
             {(nicheMarker || !nicheTarget) && (
               <>
-                {" "}en{" "}
-                <span className="font-semibold text-primary">{nicheMarker || "[marqueur temporel]"}</span>
+                {" "}{tT("nicheIn")}{" "}
+                <span className="font-semibold text-primary">{nicheMarker || tT("nicheMarker")}</span>
               </>
             )}
           </div>
@@ -2686,10 +2684,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-2">
             <BookOpen className="w-5 h-5 text-muted-foreground" />
-            <h3 className="text-lg font-bold">Ton storytelling</h3>
+            <h3 className="text-lg font-bold">{tT("storytellingTitle")}</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-5">
-            Raconte ton parcours en 6 étapes. Tipote utilisera ton histoire pour personnaliser tes contenus, pages de vente, emails et posts.
+            {tT("storytellingDesc")}
           </p>
 
           <div className="space-y-5">
@@ -2697,10 +2695,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
-                <Label className="text-sm font-semibold">La situation initiale</Label>
+                <Label className="text-sm font-semibold">{tT("story1Label")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Il était une fois… Décris ta vie / ton activité avant le déclic. Le monde &quot;normal&quot; dans lequel tu évoluais.
+                {tT("story1Desc")}
               </p>
               <Textarea
                 value={storySituationInitiale}
@@ -2715,10 +2713,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
-                <Label className="text-sm font-semibold">L&apos;élément déclencheur</Label>
+                <Label className="text-sm font-semibold">{tT("story2Label")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Mais un jour… Quel événement a tout changé ? Le moment où l&apos;ordre établi a été perturbé.
+                {tT("story2Desc")}
               </p>
               <Textarea
                 value={storyElementDeclencheur}
@@ -2733,10 +2731,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
-                <Label className="text-sm font-semibold">A cause de ça…</Label>
+                <Label className="text-sm font-semibold">{tT("story3Label")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Les galères, les doutes, les échecs. La situation se dégrade avant de s&apos;améliorer.
+                {tT("story3Desc")}
               </p>
               <Textarea
                 value={storyPeripeties}
@@ -2751,10 +2749,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-bold">4</span>
-                <Label className="text-sm font-semibold">Jusqu&apos;au jour où…</Label>
+                <Label className="text-sm font-semibold">{tT("story4Label")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Le pire moment. Tout semble perdu pour le héros. Mais une solution se dessine.
+                {tT("story4Desc")}
               </p>
               <Textarea
                 value={storyMomentCritique}
@@ -2769,10 +2767,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold">5</span>
-                <Label className="text-sm font-semibold">Tout s&apos;arrange…</Label>
+                <Label className="text-sm font-semibold">{tT("story5Label")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                La résolution. Ta situation s&apos;améliore progressivement grâce à ce que tu as découvert.
+                {tT("story5Desc")}
               </p>
               <Textarea
                 value={storyResolution}
@@ -2787,10 +2785,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold">6</span>
-                <Label className="text-sm font-semibold">Et depuis ce jour…</Label>
+                <Label className="text-sm font-semibold">{tT("story6Label")}</Label>
               </div>
               <p className="text-xs text-muted-foreground ml-8">
-                Le tableau final positif. Ta vie aujourd&apos;hui, meilleure qu&apos;avant. Et pourquoi tu aides les autres maintenant.
+                {tT("story6Desc")}
               </p>
               <Textarea
                 value={storySituationFinale}
@@ -2825,7 +2823,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              Résumé
+              {tT("personaSummary")}
             </button>
             <button
               onClick={() => setPersonaDetailTab("detailed")}
@@ -2835,7 +2833,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              Persona détaillé
+              {tT("personaDetailed")}
             </button>
             <button
               onClick={() => setPersonaDetailTab("synthesis")}
@@ -2845,7 +2843,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              Synthèse narrative
+              {tT("personaSynthesis")}
             </button>
           </div>
 
@@ -2865,7 +2863,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   <div className="flex justify-end">
                     <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setSummaryEditMode(false)}>
                       <Eye className="w-3.5 h-3.5" />
-                      Aperçu
+                      {tT("personaPreview")}
                     </Button>
                   </div>
                 </div>
@@ -2873,7 +2871,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 <div
                   className="rounded-lg border bg-background cursor-text hover:ring-2 hover:ring-primary/20 transition-all"
                   onClick={() => setSummaryEditMode(true)}
-                  title="Cliquer pour modifier"
+                  title={tT("clickToEdit")}
                 >
                   <AIContent
                     content={formatPersonaSummary(mission)}
@@ -2886,8 +2884,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               ) : (
                 <div className="p-8 text-center text-muted-foreground rounded-lg border bg-background">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium mb-1">Pas encore de résumé persona</p>
-                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer un résumé de ton client idéal.</p>
+                  <p className="text-sm font-medium mb-1">{tT("noPersonaSummary")}</p>
+                  <p className="text-xs">{tT("noPersonaSummaryHint")}</p>
                 </div>
               )}
             </div>
@@ -2900,15 +2898,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                      Le résumé persona a été modifié depuis le dernier enrichissement
+                      {tT("personaSummaryStaleTitle")}
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                      Clique sur &quot;Enrichir avec l&apos;IA&quot; pour mettre à jour le persona détaillé avec tes modifications.
+                      {tT("personaSummaryStaleHintDetailed")}
                     </p>
                   </div>
                   <Button variant="outline" size="sm" className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900" onClick={enrichPersona} disabled={enriching}>
                     <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                    Ré-enrichir
+                    {tT("reenrich")}
                   </Button>
                 </div>
               )}
@@ -2925,7 +2923,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setDetailedEditMode(false)}>
                         <Eye className="w-3.5 h-3.5" />
-                        Aperçu
+                        {tT("personaPreview")}
                       </Button>
                       <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
                         <Save className="w-4 h-4 mr-2" />
@@ -2938,7 +2936,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     <div
                       className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
                       onClick={() => setDetailedEditMode(true)}
-                      title="Cliquer pour modifier"
+                      title={tT("clickToEdit")}
                     >
                       <AIContent
                         content={personaDetailedMarkdown}
@@ -2961,8 +2959,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium mb-1">Pas encore de persona détaillé</p>
-                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer un profil persona ultra-détaillé de ton client idéal.</p>
+                  <p className="text-sm font-medium mb-1">{tT("noDetailedPersona")}</p>
+                  <p className="text-xs">{tT("noDetailedPersonaHint")}</p>
                 </div>
               )}
               {competitorInsightsMarkdown && (
@@ -2970,11 +2968,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   <hr className="border-border" />
                   <div className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-base font-bold">Mécanisme unique &amp; analyse concurrentielle</h4>
+                      <h4 className="text-base font-bold">{tT("uniqueMechanismTitle")}</h4>
                       {!insightsEditMode && (
                         <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setInsightsEditMode(true)}>
                           <Pencil className="w-3.5 h-3.5" />
-                          Modifier
+                          {tT("edit")}
                         </Button>
                       )}
                     </div>
@@ -2990,7 +2988,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setInsightsEditMode(false)}>
                             <Eye className="w-3.5 h-3.5" />
-                            Aperçu
+                            {tT("personaPreview")}
                           </Button>
                           <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
                             <Save className="w-4 h-4 mr-2" />
@@ -3002,7 +3000,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                       <div
                         className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
                         onClick={() => setInsightsEditMode(true)}
-                        title="Cliquer pour modifier"
+                        title={tT("clickToEdit")}
                       >
                         <AIContent
                           content={competitorInsightsMarkdown}
@@ -3023,10 +3021,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                      Le résumé persona a été modifié depuis le dernier enrichissement
+                      {tT("personaSummaryStaleTitle")}
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                      Clique sur &quot;Enrichir avec l&apos;IA&quot; pour mettre à jour la synthèse.
+                      {tT("personaSummaryStaleHintSynthesis")}
                     </p>
                   </div>
                 </div>
@@ -3044,7 +3042,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setSynthesisEditMode(false)}>
                         <Eye className="w-3.5 h-3.5" />
-                        Aperçu
+                        {tT("personaPreview")}
                       </Button>
                       <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
                         <Save className="w-4 h-4 mr-2" />
@@ -3057,7 +3055,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     <div
                       className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
                       onClick={() => setSynthesisEditMode(true)}
-                      title="Cliquer pour modifier"
+                      title={tT("clickToEdit")}
                     >
                       <AIContent
                         content={narrativeSynthesisMarkdown}
@@ -3080,8 +3078,8 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium mb-1">Pas encore de synthèse narrative</p>
-                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer une synthèse complète.</p>
+                  <p className="text-sm font-medium mb-1">{tT("noNarrativeSynthesis")}</p>
+                  <p className="text-xs">{tT("noNarrativeSynthesisHint")}</p>
                 </div>
               )}
             </div>

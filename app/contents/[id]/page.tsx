@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import AppShell from "@/components/AppShell";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -161,6 +162,7 @@ async function fetchContentItem(userId: string, id: string): Promise<{ item: Con
 export default async function ContentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await getSupabaseServerClient();
   const { id } = await params;
+  const t = await getTranslations("contentDetail");
 
   const {
     data: { user: authUser },
@@ -177,25 +179,25 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
 
   if (error) {
     return (
-      <AppShell userEmail={email} headerTitle="Contenu">
+      <AppShell userEmail={email} headerTitle={t("headerTitle")}>
         <div className="mx-auto w-full max-w-4xl space-y-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Impossible de charger ce contenu</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t("cannotLoadTitle")}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Une erreur est survenue. Réessaie ou reviens à la liste.
+                {t("errorTitle")}
               </p>
             </div>
             <Link
               href="/contents"
               className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-95"
             >
-              Mes contenus
+              {t("myContents")}
             </Link>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="text-sm font-semibold">Détail technique</div>
+            <div className="text-sm font-semibold">{t("technicalDetail")}</div>
             <div className="mt-2 text-sm text-muted-foreground">{error}</div>
           </div>
         </div>
@@ -205,20 +207,20 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
 
   if (!item) {
     return (
-      <AppShell userEmail={email} headerTitle="Contenu">
+      <AppShell userEmail={email} headerTitle={t("headerTitle")}>
         <div className="mx-auto w-full max-w-4xl space-y-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Contenu introuvable</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t("notFoundTitle")}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Ce contenu n’existe pas (ou tu n’y as pas accès).
+                {t("notFoundDesc")}
               </p>
             </div>
             <Link
               href="/contents"
               className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-95"
             >
-              Mes contenus
+              {t("myContents")}
             </Link>
           </div>
         </div>
@@ -227,18 +229,18 @@ export default async function ContentDetailPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <AppShell userEmail={email} headerTitle="Contenu">
+    <AppShell userEmail={email} headerTitle={t("headerTitle")}>
       <div className="mx-auto w-full max-w-4xl space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Contenu</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Modifie et organise ton contenu.</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t("headerTitle")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t("editAndOrganize")}</p>
           </div>
           <Link
             href="/contents"
             className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:opacity-95"
           >
-            Mes contenus
+            {t("myContents")}
           </Link>
         </div>
 

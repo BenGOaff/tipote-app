@@ -12,6 +12,7 @@
 // un journal des encaissements TTC, pas un livre comptable.
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,7 @@ function formatDateFR(iso: string): string {
 }
 
 export default function ComptaManualTransactions() {
+  const t = useTranslations("comptaManual");
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ManualTransaction[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -116,14 +118,14 @@ export default function ComptaManualTransactions() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!confirm("Supprimer cette saisie définitivement ?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/compta/manual-transactions/${id}`, {
         method: "DELETE",
       });
       const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
       if (json?.ok) {
-        toast({ title: "Saisie supprimée" });
+        toast({ title: t("entryDeleted") });
         await reload();
       } else {
         toast({ title: "Erreur", description: json?.error, variant: "destructive" });
@@ -147,10 +149,7 @@ export default function ComptaManualTransactions() {
           <div>
             <h3 className="font-semibold text-lg">Saisies manuelles</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Pour les paiements qui n&apos;arrivent <strong>pas</strong> via
-              Stripe / PayPal / Mollie : virements bancaires, espèces,
-              chèques. Saisis-les ici pour qu&apos;ils soient comptés
-              dans ton chiffre d&apos;affaires.
+              {t("introHint")}
             </p>
           </div>
         </div>
@@ -186,9 +185,7 @@ export default function ComptaManualTransactions() {
         </div>
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground italic py-2">
-          Tu n&apos;as encore aucune saisie manuelle. Si tu reçois des
-          paiements par virement, espèces ou chèque, ajoute-les ici
-          pour qu&apos;ils soient comptés dans ton CA.
+          {t("emptyState")}
         </p>
       ) : (
         <div className="border rounded-md divide-y">
@@ -283,6 +280,7 @@ interface FormProps {
 }
 
 function ManualTransactionForm({ initial, onCancel, onSaved }: FormProps) {
+  const t = useTranslations("comptaManual");
   const isEdit = !!initial;
   const [amount, setAmount] = useState(
     initial ? (initial.amount_cents / 100).toFixed(2).replace(".", ",") : "",
@@ -335,10 +333,10 @@ function ManualTransactionForm({ initial, onCancel, onSaved }: FormProps) {
           setError(json?.error ?? "Erreur");
           return;
         }
-        toast({ title: isEdit ? "Saisie modifiée" : "Saisie ajoutée" });
+        toast({ title: isEdit ? t("entryModified") : t("entryAdded") });
         await onSaved();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur réseau");
+        setError(e instanceof Error ? e.message : t("networkError"));
       }
     });
   }
@@ -387,7 +385,7 @@ function ManualTransactionForm({ initial, onCancel, onSaved }: FormProps) {
             </Select>
           </div>
           <p className="text-xs text-muted-foreground">
-            Pour un remboursement, saisis un montant négatif (ex : -50).
+            {t("refundHint")}
           </p>
         </div>
 
@@ -465,7 +463,7 @@ function ManualTransactionForm({ initial, onCancel, onSaved }: FormProps) {
         <Input
           id="mt-desc"
           type="text"
-          placeholder="Prestation, produit, référence facture…"
+          placeholder={t("noteLabel")}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           disabled={pending}

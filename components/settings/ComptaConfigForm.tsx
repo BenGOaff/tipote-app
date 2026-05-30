@@ -567,15 +567,15 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<User className="h-5 w-5" />}
-              title="Particulier"
-              desc="Revenus accessoires (en plus d'un emploi ou pas d'autre activité). Tout passe par ta déclaration d'impôt cantonale + fédérale annuelle."
+              title={t("particulierTitle")}
+              desc={t("particulierDescCH")}
               selected={value === "particulier"}
               onClick={() => onChange("particulier")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="Indépendant (raison individuelle)"
-              desc="Tu exerces sous ton propre nom (Einzelfirma). AVS trimestrielle, TVA si CA > 100'000 CHF, déclaration d'impôt personnelle."
+              title={t("indepCHTitle")}
+              desc={t("indepCHDesc")}
               selected={value === "independant_ch"}
               onClick={() => onChange("independant_ch")}
             />
@@ -589,15 +589,15 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="Sàrl"
-              desc="Société à responsabilité limitée. Comptes annuels, IBO (impôt sur le bénéfice), TVA si > 100'000 CHF."
+              title={t("sarlCHTitle")}
+              desc={t("sarlCHDesc")}
               selected={value === "sarl_ch"}
               onClick={() => onChange("sarl_ch")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="SA"
-              desc="Société anonyme. Capital min. CHF 100'000. Mêmes obligations comptables qu'une Sàrl, structure plus formelle."
+              title={t("saCHTitle")}
+              desc={t("saCHDesc")}
               selected={value === "sa_ch"}
               onClick={() => onChange("sa_ch")}
             />
@@ -605,11 +605,7 @@ function StatusPicker({
         </div>
 
         <p className="text-[11px] text-muted-foreground italic">
-          Les particularités cantonales (taux IBO, AVS, allocations
-          familiales) varient selon les 26 cantons. Tipote affiche
-          le calendrier fédéral + les dates butoir de déclaration
-          de TON canton (à indiquer plus bas). Pour les taux exacts
-          d&apos;imposition, ton fiduciaire reste la référence.
+          {t("chDisclaimer")}
         </p>
       </div>
     );
@@ -627,22 +623,22 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-3">
             <StatusCard
               icon={<User className="h-5 w-5" />}
-              title="Particulier"
-              desc="Revenus accessoires (en plus d'un emploi ou pas d'autre activité). Tout passe par ta Modelo 3 IRS annuelle."
+              title={t("particulierTitle")}
+              desc={t("particulierDescPT")}
               selected={value === "particulier"}
               onClick={() => onChange("particulier")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="Trabalhador independente"
-              desc="Indépendant inscrit à l'AT (Recibos Verdes). Régime simplificado par défaut, IVA si CA > 15k €, Segurança Social mensuelle."
+              title={t("trabalhadorIndepTitle")}
+              desc={t("trabalhadorIndepDesc")}
               selected={value === "trabalhador_independente_pt"}
               onClick={() => onChange("trabalhador_independente_pt")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="ENI"
-              desc="Empresário em Nome Individual. Activité commerciale sous ton nom, comptabilité organizada possible."
+              title={t("eniTitle")}
+              desc={t("eniDesc")}
               selected={value === "eni_pt"}
               onClick={() => onChange("eni_pt")}
             />
@@ -656,22 +652,22 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-3">
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="LDA Unipessoal"
-              desc="Sociedade Unipessoal por Quotas — un seul associé. IRC 21%, comptes annuels, Modelo 22, e-fatura."
+              title={t("ldaUniTitle")}
+              desc={t("ldaUniDesc")}
               selected={value === "lda_unipessoal_pt"}
               onClick={() => onChange("lda_unipessoal_pt")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="LDA"
-              desc="Sociedade por Quotas — 2 associés ou plus. Mêmes obligations qu'une LDA Unipessoal."
+              title={t("ldaTitle")}
+              desc={t("ldaDesc")}
               selected={value === "lda_pt"}
               onClick={() => onChange("lda_pt")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="SA"
-              desc="Sociedade Anónima. Capital min. 50 000 €, structure plus formelle. Mêmes obligations IRC qu'une LDA."
+              title={t("saPTTitle")}
+              desc={t("saPTDesc")}
               selected={value === "sa_pt"}
               onClick={() => onChange("sa_pt")}
             />
@@ -679,12 +675,7 @@ function StatusPicker({
         </div>
 
         <p className="text-[11px] text-muted-foreground italic">
-          Tipote couvre les obligations fédérales portugaises
-          (IVA, IRS, IRC, Modelo 22, Segurança Social, e-fatura).
-          Les particularités régionales (Madère / Açores ont des
-          taux IVA différents) sont gérées via le sélecteur région
-          plus bas. Pour les calculs exacts d&apos;impôt, ton
-          contabilista certificado reste la référence.
+          {t("ptDisclaimer")}
         </p>
       </div>
     );
@@ -702,22 +693,22 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-3">
             <StatusCard
               icon={<User className="h-5 w-5" />}
-              title="Particulier"
-              desc="Revenus accessoires (en plus d'un emploi salarié ou pas d'autre activité). Tout passe par ta déclaration IPP via Tax-on-web."
+              title={t("particulierTitle")}
+              desc={t("particulierDescBE")}
               selected={value === "particulier"}
               onClick={() => onChange("particulier")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="Indépendant principal"
-              desc="Activité indépendante à titre principal (cotisations INASTI/RSVZ pleines à 20,5%). Inscrit à la BCE."
+              title={t("indepPrincipalBETitle")}
+              desc={t("indepPrincipalBEDesc")}
               selected={value === "independant_principal_be"}
               onClick={() => onChange("independant_principal_be")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="Indépendant complémentaire"
-              desc="Activité indépendante à côté d'un emploi salarié principal. Cotisations sociales réduites."
+              title={t("indepComplBETitle")}
+              desc={t("indepComplBEDesc")}
               selected={value === "independant_complementaire_be"}
               onClick={() => onChange("independant_complementaire_be")}
             />
@@ -731,15 +722,15 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="SRL"
-              desc="Société à Responsabilité Limitée (ex-SPRL, réforme 2019). ISoc 25% (ou 20% PME 1re tranche), comptes annuels BNB, Biztax."
+              title={t("srlBETitle")}
+              desc={t("srlBEDesc")}
               selected={value === "srl_be"}
               onClick={() => onChange("srl_be")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="SA"
-              desc="Société Anonyme. Capital min. 61 500 €. Mêmes obligations ISoc/comptes annuels qu'une SRL, structure plus formelle."
+              title={t("saBETitle")}
+              desc={t("saBEDesc")}
               selected={value === "sa_be"}
               onClick={() => onChange("sa_be")}
             />
@@ -747,12 +738,7 @@ function StatusPicker({
         </div>
 
         <p className="text-[11px] text-muted-foreground italic">
-          Tipote couvre les obligations fédérales belges (TVA via
-          Intervat, IPP/ISoc, INASTI, comptes annuels BNB, listings
-          client + intra-UE). Les particularités régionales (primes
-          PME wallonnes/flamandes/bruxelloises, TVA véhicules) ne
-          sont pas détaillées — ton comptable / expert-comptable
-          reste la référence.
+          {t("beDisclaimer")}
         </p>
       </div>
     );
@@ -770,15 +756,15 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<User className="h-5 w-5" />}
-              title="Particulier"
-              desc="Revenus accessoires (en plus d'un emploi salarié ou pas d'autre activité). Tout passe par ta déclaration IRPF (Modelo 100) annuelle."
+              title={t("particulierTitle")}
+              desc={t("particulierDescES")}
               selected={value === "particulier"}
               onClick={() => onChange("particulier")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="Autónomo"
-              desc="Trabajador autónomo, inscrit au RETA. Cotisations sociales mensuelles via TGSS, IRPF Modelos 130/131 trimestriels, IVA Modelo 303 trimestriel."
+              title={t("autonomoESTitle")}
+              desc={t("autonomoESDesc")}
               selected={value === "autonomo_es"}
               onClick={() => onChange("autonomo_es")}
             />
@@ -792,22 +778,22 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-3">
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="SLU"
-              desc="Sociedad Limitada Unipessoal — un seul associé. IS 25% (ou 23% empresas reducidas), comptes annuels Registro Mercantil, Modelo 200."
+              title={t("sluESTitle")}
+              desc={t("sluESDesc")}
               selected={value === "slu_es"}
               onClick={() => onChange("slu_es")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="SL"
-              desc="Sociedad Limitada — 2 associés ou plus. Mêmes obligations IS/comptes annuels qu'une SLU."
+              title={t("slESTitle")}
+              desc={t("slESDesc")}
               selected={value === "sl_es"}
               onClick={() => onChange("sl_es")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="SA"
-              desc="Sociedad Anónima. Capital min. 60 000 €, structure plus formelle. Mêmes obligations IS qu'une SL."
+              title={t("saESTitle")}
+              desc={t("saESDesc")}
               selected={value === "sa_es"}
               onClick={() => onChange("sa_es")}
             />
@@ -815,14 +801,7 @@ function StatusPicker({
         </div>
 
         <p className="text-[11px] text-muted-foreground italic">
-          Tipote couvre les obligations fédérales espagnoles (IVA via
-          Modelo 303/390/349, IRPF Modelos 100/130, IS Modelo 200/202,
-          RETA mensuel via TGSS, comptes annuels Registro Mercantil).
-          Régimen Foral (País Vasco, Navarra) : Hacienda Foral remplace
-          AEAT. Canarias : IGIC au lieu d&apos;IVA. Ceuta/Melilla :
-          IPSI. Pour les calculs exacts d&apos;impôt et les particularités
-          régionales (déductions IRPF par CCAA), ton asesor fiscal reste
-          la référence.
+          {t("esDisclaimer")}
         </p>
       </div>
     );
@@ -840,22 +819,22 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<User className="h-5 w-5" />}
-              title="Particulier"
-              desc="Revenus accessoires sans activité d'entreprise structurée. Tout passe par ta T1 (et TP-1 au QC) annuelle."
+              title={t("particulierTitle")}
+              desc={t("particulierDescCA")}
               selected={value === "particulier"}
               onClick={() => onChange("particulier")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="Travailleur autonome"
-              desc="Sole proprietor non immatriculé (au QC : pas inscrit au REQ). Revenus déclarés sur ta T1 personnelle via T2125. Production 15 juin, paiement 30 avril."
+              title={t("travAutonomeCATitle")}
+              desc={t("travAutonomeCADesc")}
               selected={value === "travailleur_autonome_ca"}
               onClick={() => onChange("travailleur_autonome_ca")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="Entreprise individuelle"
-              desc="Sole proprietor immatriculé sous un nom commercial (au QC : inscrit au REQ avec NEQ). Mêmes obligations fiscales qu'un travailleur autonome + déclaration annuelle au registre."
+              title={t("entIndivCATitle")}
+              desc={t("entIndivCADesc")}
               selected={value === "entreprise_individuelle_ca"}
               onClick={() => onChange("entreprise_individuelle_ca")}
             />
@@ -869,15 +848,15 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="Société provinciale (Inc.)"
-              desc="Incorporée sous la loi de la province (Loi sur les sociétés par actions du Québec, OBCA en Ontario, etc.). T2 fédéral + déclaration provinciale (CO-17 au QC). Activité limitée à la province."
+              title={t("incProvCATitle")}
+              desc={t("incProvCADesc")}
               selected={value === "inc_provincial_ca"}
               onClick={() => onChange("inc_provincial_ca")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="Société fédérale (Inc.)"
-              desc="Incorporée sous la Loi canadienne sur les sociétés par actions (CBCA), via Corporations Canada. Permet d'opérer dans tout le Canada sous le même nom. T2 fédéral + déclarations provinciales selon présence."
+              title={t("incFedCATitle")}
+              desc={t("incFedCADesc")}
               selected={value === "inc_federal_ca"}
               onClick={() => onChange("inc_federal_ca")}
             />
@@ -885,14 +864,7 @@ function StatusPicker({
         </div>
 
         <p className="text-[11px] text-muted-foreground italic">
-          Tipote couvre la TPS (5 % fédérale, ARC) et ses déclinaisons
-          provinciales : TVQ 9,975 % au QC (Revenu Québec gère TPS+TVQ
-          via FPZ-500), TVH harmonisée 13 % (ON) ou 15 % (NB/NL/NS/PE),
-          PST/RST séparée en BC/SK/MB. AB et les territoires (YT, NT, NU)
-          ne perçoivent que la TPS. T1/TP-1 (particuliers, autonomes),
-          T2/CO-17 (sociétés), DAS/RRQ/RPC/RQAP, acomptes provisionnels.
-          Pour les calculs exacts d&apos;impôt et les particularités
-          provinciales, ton/ta comptable reste la référence.
+          {t("caDisclaimer")}
         </p>
       </div>
     );
@@ -910,15 +882,15 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<User className="h-5 w-5" />}
-              title="Particulier"
-              desc="Revenus accessoires, pas d'activité business structurée. Tout passe par ton 1040 annuel."
+              title={t("particulierTitle")}
+              desc={t("particulierDescUS")}
               selected={value === "particulier"}
               onClick={() => onChange("particulier")}
             />
             <StatusCard
               icon={<Briefcase className="h-5 w-5" />}
-              title="Sole proprietorship"
-              desc="Aucune entité juridique séparée. Revenus sur Schedule C du 1040 personnel + self-employment tax 15,3 %. EIN pas obligatoire (SSN suffit). Estimated taxes trimestriels."
+              title={t("solePropTitle")}
+              desc={t("solePropDesc")}
               selected={value === "sole_proprietorship_us"}
               onClick={() => onChange("sole_proprietorship_us")}
             />
@@ -932,15 +904,15 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="Single-member LLC"
-              desc="LLC à 1 membre. Par défaut « disregarded entity » (= Schedule C, identique à sole prop côté impôt). Peut élire S-Corp via Form 2553 (économies sur self-employment tax au-delà de ~50k$ de profit) ou C-Corp via Form 8832."
+              title={t("smllcTitle")}
+              desc={t("smllcDesc")}
               selected={value === "single_member_llc_us"}
               onClick={() => onChange("single_member_llc_us")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="Multi-member LLC"
-              desc="LLC à 2+ membres. Par défaut « partnership » (Form 1065 + K-1 distribués aux membres). Peut aussi élire S-Corp ou C-Corp."
+              title={t("mmllcTitle")}
+              desc={t("mmllcDesc")}
               selected={value === "multi_member_llc_us"}
               onClick={() => onChange("multi_member_llc_us")}
             />
@@ -954,15 +926,15 @@ function StatusPicker({
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="C-Corp"
-              desc="Form 1120 fédéral, taux flat 21 % depuis TCJA 2017. Double taxation : la corp paie l'impôt, puis les actionnaires repaient sur les dividendes. Choix par défaut pour les startups levant du venture capital."
+              title={t("cCorpTitle")}
+              desc={t("cCorpDesc")}
               selected={value === "c_corp_us"}
               onClick={() => onChange("c_corp_us")}
             />
             <StatusCard
               icon={<Building2 className="h-5 w-5" />}
-              title="S-Corp"
-              desc="Form 1120-S + K-1. Pass-through (pas d'impôt fédéral au niveau de la corp). Permet d'économiser sur la self-employment tax via le « reasonable salary + distributions ». Max 100 actionnaires, citoyens/résidents US uniquement."
+              title={t("sCorpTitle")}
+              desc={t("sCorpDesc")}
               selected={value === "s_corp_us"}
               onClick={() => onChange("s_corp_us")}
             />
@@ -970,15 +942,7 @@ function StatusPicker({
         </div>
 
         <p className="text-[11px] text-muted-foreground italic">
-          Tipote couvre le calendrier fiscal fédéral (Forms 1040, 1120,
-          1120-S, 1065, 1040-ES, 1099-NEC) + state income tax pour les
-          41 états qui en perçoivent un (9 sont sans : AK, FL, NV, NH,
-          SD, TN, TX, WA, WY). Sales tax modélisée par état d&apos;inscription
-          (rappel mensuel le 20). Pas de calcul automatique du sales tax
-          rate (45+ états × ~10 000 juridictions locales) — utilise Stripe
-          Tax / TaxJar / Avalara pour l&apos;exactitude. Ton CPA reste la
-          référence pour les calculs précis et les élections (Form 2553
-          S-election, Form 8832 entity classification).
+          {t("usDisclaimer")}
         </p>
       </div>
     );
@@ -996,22 +960,22 @@ function StatusPicker({
         <div className="grid gap-3 sm:grid-cols-3">
           <StatusCard
             icon={<User className="h-5 w-5" />}
-            title="Particulier"
-            desc="Revenus accessoires (en plus d'un job ou pas d'autre activité). Déclaration dans la 2042 annuelle."
+            title={t("particulierTitle")}
+            desc={t("particulierDescFR")}
             selected={value === "particulier"}
             onClick={() => onChange("particulier")}
           />
           <StatusCard
             icon={<Briefcase className="h-5 w-5" />}
-            title="Auto-entrepreneur"
-            desc="Micro-entreprise (régime simplifié). CA déclaré tous les mois/trimestres sur urssaf.fr."
+            title={t("aeTitle")}
+            desc={t("aeDesc")}
             selected={value === "auto_entrepreneur"}
             onClick={() => onChange("auto_entrepreneur")}
           />
           <StatusCard
             icon={<Briefcase className="h-5 w-5" />}
-            title="EURL"
-            desc="Société unipersonnelle à responsabilité limitée. Par défaut à l'IR (option IS possible). Comptabilité réelle."
+            title={t("eurlTitle")}
+            desc={t("eurlDesc")}
             selected={value === "eurl"}
             onClick={() => onChange("eurl")}
           />
@@ -1025,22 +989,22 @@ function StatusPicker({
         <div className="grid gap-3 sm:grid-cols-3">
           <StatusCard
             icon={<Building2 className="h-5 w-5" />}
-            title="SASU"
-            desc="SAS à associé unique. IS, TVA, bilan, DSN si tu te rémunères. Statut classique pour solopreneur."
+            title={t("sasuTitle")}
+            desc={t("sasuDesc")}
             selected={value === "sasu"}
             onClick={() => onChange("sasu")}
           />
           <StatusCard
             icon={<Building2 className="h-5 w-5" />}
-            title="SAS"
-            desc="Plusieurs associés. Mêmes obligations qu'une SASU. Président toujours assimilé salarié."
+            title={t("sasTitle")}
+            desc={t("sasDesc")}
             selected={value === "sas"}
             onClick={() => onChange("sas")}
           />
           <StatusCard
             icon={<Building2 className="h-5 w-5" />}
-            title="SARL"
-            desc="2 à 100 associés. IS par défaut. DSN seulement si gérant minoritaire (assimilé salarié)."
+            title={t("sarlTitle")}
+            desc={t("sarlDesc")}
             selected={value === "sarl"}
             onClick={() => onChange("sarl")}
           />
@@ -1095,13 +1059,13 @@ function ParticulierFields({
   onChange: (v: ParticulierRevenueType) => void;
   error: string | undefined;
 }) {
+  const t = useTranslations("comptaConfig");
   return (
     <Card className="p-5 space-y-4">
       <div>
-        <h4 className="font-semibold">Quelle est la nature de tes revenus ?</h4>
+        <h4 className="font-semibold">{t("particulierQuestion")}</h4>
         <p className="text-xs text-muted-foreground mt-1">
-          Ça détermine la case à remplir sur ta déclaration de revenus
-          (formulaire 2042 + 2042-C-PRO).
+          {t("particulierQuestionHint")}
         </p>
       </div>
 
@@ -1109,10 +1073,9 @@ function ParticulierFields({
         <div className="flex items-start gap-3 py-2">
           <RadioGroupItem value="bnc_accessoire" id="bnc_accessoire" className="mt-1" />
           <Label htmlFor="bnc_accessoire" className="font-normal cursor-pointer">
-            <span className="font-medium">Activités libérales accessoires</span>
+            <span className="font-medium">{t("bncAccessLabel")}</span>
             <span className="block text-xs text-muted-foreground mt-0.5">
-              Consulting, coaching, formation, prestations intellectuelles…{" "}
-              <span className="italic">(régime BNC)</span>
+              {t("bncAccessHint")}
             </span>
           </Label>
         </div>
@@ -1120,10 +1083,9 @@ function ParticulierFields({
         <div className="flex items-start gap-3 py-2">
           <RadioGroupItem value="bic_accessoire" id="bic_accessoire" className="mt-1" />
           <Label htmlFor="bic_accessoire" className="font-normal cursor-pointer">
-            <span className="font-medium">Vente / services commerciaux accessoires</span>
+            <span className="font-medium">{t("bicAccessLabel")}</span>
             <span className="block text-xs text-muted-foreground mt-0.5">
-              Vente de produits, services artisanaux, e-commerce…{" "}
-              <span className="italic">(régime BIC)</span>
+              {t("bicAccessHint")}
             </span>
           </Label>
         </div>
@@ -1131,9 +1093,9 @@ function ParticulierFields({
         <div className="flex items-start gap-3 py-2">
           <RadioGroupItem value="autre" id="autre" className="mt-1" />
           <Label htmlFor="autre" className="font-normal cursor-pointer">
-            <span className="font-medium">Autre</span>
+            <span className="font-medium">{t("otherLabel")}</span>
             <span className="block text-xs text-muted-foreground mt-0.5">
-              Revenus de location, droits d&apos;auteur, autre cas particulier.
+              {t("otherHint")}
             </span>
           </Label>
         </div>
@@ -1143,7 +1105,7 @@ function ParticulierFields({
 
       <ExternalLinkRow
         href="https://www.impots.gouv.fr/particulier/professions-non-salariees-revenus-fonciers-pme"
-        label="Aide officielle impots.gouv.fr — déclarer des revenus accessoires"
+        label={t("particulierHelpLabel")}
       />
     </Card>
   );
@@ -1162,27 +1124,27 @@ function AutoEntrepreneurFields({
   update: <K extends keyof ComptaProfileSlice>(key: K, value: ComptaProfileSlice[K]) => void;
   errors: Record<string, string>;
 }) {
+  const t = useTranslations("comptaConfig");
   return (
     <Card className="p-5 space-y-5">
       {/* Activité */}
       <div className="space-y-2">
-        <Label htmlFor="ae-activity">Type d&apos;activité</Label>
+        <Label htmlFor="ae-activity">{t("aeActivityLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          Détermine les seuils de TVA et les taux URSSAF qui
-          s&apos;appliquent à toi.
+          {t("aeActivityHint")}
         </p>
         <Select
           value={draft.ae_activity_type ?? ""}
           onValueChange={(v) => update("ae_activity_type", v as AeActivityType)}
         >
           <SelectTrigger id="ae-activity">
-            <SelectValue placeholder="Choisis ton activité" />
+            <SelectValue placeholder={t("aeActivityPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="vente">Vente de marchandises</SelectItem>
-            <SelectItem value="services_bic">Prestations commerciales / artisanales (BIC)</SelectItem>
-            <SelectItem value="services_bnc">Prestations libérales / intellectuelles (BNC)</SelectItem>
-            <SelectItem value="mixte">Activité mixte (vente + services)</SelectItem>
+            <SelectItem value="vente">{t("aeActivityVente")}</SelectItem>
+            <SelectItem value="services_bic">{t("aeActivityServicesBic")}</SelectItem>
+            <SelectItem value="services_bnc">{t("aeActivityServicesBnc")}</SelectItem>
+            <SelectItem value="mixte">{t("aeActivityMixte")}</SelectItem>
           </SelectContent>
         </Select>
         {errors.ae_activity_type ? (
@@ -1192,10 +1154,9 @@ function AutoEntrepreneurFields({
 
       {/* Date début */}
       <div className="space-y-2">
-        <Label htmlFor="ae-started-at">Date de début d&apos;activité</Label>
+        <Label htmlFor="ae-started-at">{t("aeStartedLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          Date à laquelle tu as immatriculé ta micro-entreprise. Sert à
-          calculer le prorata des seuils la 1ʳᵉ année.
+          {t("aeStartedHint")}
         </p>
         <Input
           id="ae-started-at"
@@ -1212,10 +1173,10 @@ function AutoEntrepreneurFields({
       {/* ACRE */}
       <BoolRow
         id="ae-acre"
-        title="Tu bénéficies de l'ACRE ?"
-        desc="L'ACRE = exonération partielle de tes cotisations URSSAF la 1ʳᵉ année (taux réduit). Seulement si tu l'as demandée et acceptée à l'inscription."
+        title={t("aeAcreTitle")}
+        desc={t("aeAcreDesc")}
         helpHref="https://www.urssaf.fr/accueil/independant/cotisations/exonerations/acre.html"
-        helpLabel="C'est quoi l'ACRE ?"
+        helpLabel={t("aeAcreHelpLabel")}
         checked={!!draft.ae_acre}
         onChange={(b) => update("ae_acre", b)}
       />
@@ -1223,10 +1184,10 @@ function AutoEntrepreneurFields({
       {/* Versement libératoire */}
       <BoolRow
         id="ae-vl"
-        title="Tu as opté pour le versement libératoire ?"
-        desc="Tu paies ton impôt sur le revenu en même temps que tes cotisations (1 % à 2,2 % du CA selon activité), au lieu de la déclaration annuelle classique."
+        title={t("aeVlTitle")}
+        desc={t("aeVlDesc")}
         helpHref="https://www.service-public.fr/particuliers/vosdroits/F23267"
-        helpLabel="C'est quoi le versement libératoire ?"
+        helpLabel={t("aeVlHelpLabel")}
         checked={!!draft.ae_versement_liberatoire}
         onChange={(b) => update("ae_versement_liberatoire", b)}
       />
@@ -1234,10 +1195,10 @@ function AutoEntrepreneurFields({
       {/* Franchise TVA */}
       <BoolRow
         id="ae-vat-franchise"
-        title="Tu es en franchise de TVA ?"
-        desc="Par défaut oui pour la majorité des AE en début d'activité. Si tu as dépassé les seuils ou opté pour la TVA volontairement, décoche."
+        title={t("aeVatFranchiseTitle")}
+        desc={t("aeVatFranchiseDesc")}
         helpHref="https://www.service-public.fr/professionnels-entreprises/vosdroits/F32353"
-        helpLabel="Seuils de la franchise TVA en 2026"
+        helpLabel={t("aeVatFranchiseHelpLabel")}
         checked={!!draft.ae_vat_franchise}
         onChange={(b) => update("ae_vat_franchise", b)}
       />
@@ -1249,19 +1210,17 @@ function AutoEntrepreneurFields({
       {!draft.ae_vat_franchise ? (
         <div className="space-y-1.5 pt-3 border-t">
           <label className="text-sm font-medium block">
-            Quel régime TVA ?
+            {t("aeVatRegimeLabel")}
           </label>
           <p className="text-xs text-muted-foreground">
-            Tu n&apos;es plus en franchise → tu déposes des déclarations
-            de TVA. Le régime simplifié (CA12 annuelle + 2 acomptes)
-            est le plus courant pour les AE qui sortent de franchise.
+            {t("aeVatRegimeHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             {(
               [
-                { v: "simplifie", label: "Simplifié", hint: "CA12 annuelle + 2 acomptes" },
-                { v: "reel_trimestriel", label: "Réel trimestriel", hint: "CA3 chaque trimestre" },
-                { v: "reel_mensuel", label: "Réel mensuel", hint: "CA3 chaque mois" },
+                { v: "simplifie", label: t("aeVatSimplifie"), hint: t("aeVatSimplifieHint") },
+                { v: "reel_trimestriel", label: t("aeVatReelTrim"), hint: t("aeVatReelTrimHint") },
+                { v: "reel_mensuel", label: t("aeVatReelMens"), hint: t("aeVatReelMensHint") },
               ] as const
             ).map((opt) => {
               const active = (draft.ae_vat_regime ?? "simplifie") === opt.v;
@@ -1291,17 +1250,16 @@ function AutoEntrepreneurFields({
           dans le calendrier fiscal (1i). Trimestrielle = défaut. */}
       <div className="space-y-1.5 pt-3 border-t">
         <label className="text-sm font-medium block">
-          Tu déclares ton CA à l&apos;URSSAF…
+          {t("aeUrssafLabel")}
         </label>
         <p className="text-xs text-muted-foreground">
-          Choisi à ton inscription URSSAF (modifiable une fois par an).
-          Détermine les dates butoir affichées dans ton calendrier fiscal.
+          {t("aeUrssafHint")}
         </p>
         <div className="flex gap-2 flex-wrap">
           {(
             [
-              { v: "trimestrielle", label: "Tous les trimestres", hint: "le plus courant" },
-              { v: "mensuelle", label: "Tous les mois", hint: "" },
+              { v: "trimestrielle", label: t("aeUrssafQuarterly"), hint: t("aeUrssafQuarterlyHint") },
+              { v: "mensuelle", label: t("aeUrssafMonthly"), hint: "" },
             ] as const
           ).map((opt) => {
             const active = (draft.ae_urssaf_periodicity ?? "trimestrielle") === opt.v;
@@ -1349,6 +1307,7 @@ function SasuFields({
    *  (option IS) et SARL (gérant majoritaire). */
   status: "sasu" | "sas" | "sarl" | "eurl";
 }) {
+  const t = useTranslations("comptaConfig");
   const isEurlIR = status === "eurl" && !draft.eurl_is_election;
   const isAtIS =
     status === "sasu" ||
@@ -1360,13 +1319,13 @@ function SasuFields({
   const sirenLabel = (() => {
     switch (status) {
       case "sasu":
-        return "SIREN de ta SASU";
+        return t("sirenLabelSASU");
       case "sas":
-        return "SIREN de ta SAS";
+        return t("sirenLabelSAS");
       case "sarl":
-        return "SIREN de ta SARL";
+        return t("sirenLabelSARL");
       case "eurl":
-        return "SIREN de ton EURL";
+        return t("sirenLabelEURL");
     }
   })();
 
@@ -1376,12 +1335,9 @@ function SasuFields({
           change la nature des autres champs (TVA notamment). */}
       {status === "eurl" ? (
         <div className="space-y-2">
-          <Label>Régime fiscal de ton EURL</Label>
+          <Label>{t("eurlRegimeLabel")}</Label>
           <p className="text-xs text-muted-foreground">
-            Par défaut une EURL est à l&apos;IR (le bénéfice est
-            ajouté à ta déclaration personnelle via 2031/2035).
-            Tu peux opter pour l&apos;IS si tu préfères payer
-            l&apos;impôt au niveau de la société.
+            {t("eurlRegimeHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             <button
@@ -1393,9 +1349,9 @@ function SasuFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              <div>IR (par défaut)</div>
+              <div>{t("eurlIRDefault")}</div>
               <div className="text-[10px] text-muted-foreground font-normal">
-                Liasse 2031/2035 + 2042 perso
+                {t("eurlIRHint")}
               </div>
             </button>
             <button
@@ -1407,9 +1363,9 @@ function SasuFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              <div>IS (sur option)</div>
+              <div>{t("eurlISOption")}</div>
               <div className="text-[10px] text-muted-foreground font-normal">
-                Comme une SASU
+                {t("eurlISHint")}
               </div>
             </button>
           </div>
@@ -1419,12 +1375,9 @@ function SasuFields({
       {/* Spécificité SARL : gérant majoritaire vs minoritaire */}
       {status === "sarl" ? (
         <div className="space-y-2">
-          <Label>Tu es gérant majoritaire ?</Label>
+          <Label>{t("sarlGerantQuestion")}</Label>
           <p className="text-xs text-muted-foreground">
-            Gérant majoritaire (&gt; 50% des parts) = TNS,
-            cotisations URSSAF séparées, pas de DSN. Minoritaire
-            ou égalitaire = assimilé salarié, DSN obligatoire si
-            rémunéré.
+            {t("sarlGerantHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             <button
@@ -1436,7 +1389,7 @@ function SasuFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Majoritaire (TNS)
+              {t("sarlMajoritaire")}
             </button>
             <button
               type="button"
@@ -1447,7 +1400,7 @@ function SasuFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Minoritaire / égalitaire
+              {t("sarlMinoritaire")}
             </button>
           </div>
         </div>
@@ -1455,11 +1408,7 @@ function SasuFields({
 
       {isEurlIR ? (
         <div className="rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs text-blue-900 dark:text-blue-200">
-          <strong>Mode EURL à l&apos;IR :</strong> ta liasse fiscale
-          (2031 ou 2035 selon ton activité) doit être télétransmise
-          au plus tard début mai chaque année. Le bénéfice est
-          ensuite reporté dans ta 2042 personnelle. Pas d&apos;IS
-          ni de DSN dans ce cas.
+          {t("eurlIRBox")}
         </div>
       ) : null}
 
@@ -1467,7 +1416,7 @@ function SasuFields({
       <div className="space-y-2">
         <Label htmlFor="sasu-siren">{sirenLabel}</Label>
         <p className="text-xs text-muted-foreground">
-          9 chiffres. Tu le trouves sur ton extrait Kbis ou sur{" "}
+          {t("sirenHintBefore")}{" "}
           <a
             href="https://annuaire-entreprises.data.gouv.fr/"
             target="_blank"
@@ -1498,10 +1447,9 @@ function SasuFields({
 
       {/* Exercice fiscal */}
       <div className="space-y-2">
-        <Label>Exercice fiscal</Label>
+        <Label>{t("fiscalYearLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          La majorité des SASU clôture au 31 décembre. Si ta clôture
-          tombe à un autre mois, indique-le ci-dessous.
+          {t("fiscalYearHintFR")}
         </p>
 
         <div className="flex items-center gap-3 py-1">
@@ -1514,26 +1462,26 @@ function SasuFields({
             }}
           />
           <Label htmlFor="sasu-fy-calendar" className="font-normal cursor-pointer">
-            Mon exercice = année civile (1ᵉʳ janvier → 31 décembre)
+            {t("fyCalendarLabel")}
           </Label>
         </div>
 
         {!draft.sasu_fiscal_year_calendar ? (
           <div className="space-y-1 pl-1">
             <Label htmlFor="sasu-fy-start" className="text-xs">
-              Mois de début d&apos;exercice
+              {t("fyStartMonthLabel")}
             </Label>
             <Select
               value={draft.sasu_fiscal_year_start_month?.toString() ?? ""}
               onValueChange={(v) => update("sasu_fiscal_year_start_month", parseInt(v, 10))}
             >
               <SelectTrigger id="sasu-fy-start" className="w-[200px]">
-                <SelectValue placeholder="Choisis le mois" />
+                <SelectValue placeholder={t("fyStartMonthPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {[
-                  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-                  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+                  t("monthJanuary"), t("monthFebruary"), t("monthMarch"), t("monthApril"), t("monthMay"), t("monthJune"),
+                  t("monthJuly"), t("monthAugust"), t("monthSeptember"), t("monthOctober"), t("monthNovember"), t("monthDecember"),
                 ].map((label, i) => (
                   <SelectItem key={i + 1} value={(i + 1).toString()}>
                     {label}
@@ -1550,22 +1498,21 @@ function SasuFields({
 
       {/* Régime TVA */}
       <div className="space-y-2">
-        <Label htmlFor="sasu-vat-regime">Régime de TVA</Label>
+        <Label htmlFor="sasu-vat-regime">{t("vatRegimeLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          Tu trouves cette info sur ton avis de situation fiscale ou
-          sur impots.gouv.fr → Espace pro → Démarches → Consulter.
+          {t("vatRegimeHint")}
         </p>
         <Select
           value={draft.sasu_vat_regime ?? ""}
           onValueChange={(v) => update("sasu_vat_regime", v as SasuVatRegime)}
         >
           <SelectTrigger id="sasu-vat-regime">
-            <SelectValue placeholder="Choisis ton régime" />
+            <SelectValue placeholder={t("vatRegimePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="reel_mensuel">Réel normal mensuel (CA3 chaque mois)</SelectItem>
-            <SelectItem value="reel_trimestriel">Réel normal trimestriel (CA3 chaque trimestre)</SelectItem>
-            <SelectItem value="simplifie">Simplifié (CA12 annuelle + 2 acomptes)</SelectItem>
+            <SelectItem value="reel_mensuel">{t("vatReelMensuel")}</SelectItem>
+            <SelectItem value="reel_trimestriel">{t("vatReelTrim")}</SelectItem>
+            <SelectItem value="simplifie">{t("vatSimplifie")}</SelectItem>
           </SelectContent>
         </Select>
         {errors.sasu_vat_regime ? (
@@ -1573,17 +1520,17 @@ function SasuFields({
         ) : null}
         <ExternalLinkRow
           href="https://www.impots.gouv.fr/professionnel/declaration-de-tva"
-          label="Comment déclarer ma TVA ?"
+          label={t("vatHelpLabel")}
         />
       </div>
 
       {/* TVA intra */}
       <BoolRow
         id="sasu-vat-intra"
-        title="Tu factures des clients dans l'Union européenne (hors France) ?"
-        desc="Si oui, tu dois faire une DES (Déclaration européenne des services) chaque mois où tu as facturé un client UE. Active cette option pour que Tipote te le rappelle."
+        title={t("sasuVatIntraTitle")}
+        desc={t("sasuVatIntraDesc")}
         helpHref="https://www.douane.gouv.fr/des-prestations-de-services"
-        helpLabel="Tout sur la DES"
+        helpLabel={t("sasuVatIntraHelpLabel")}
         checked={!!draft.sasu_vat_intra_enabled}
         onChange={(b) => update("sasu_vat_intra_enabled", b)}
       />
@@ -1591,10 +1538,10 @@ function SasuFields({
       {/* Dirigeant rémunéré */}
       <BoolRow
         id="sasu-dirigeant-remunere"
-        title="Tu te verses une rémunération comme dirigeant ?"
-        desc="Si oui, tu cotises à l'URSSAF (régime assimilé salarié) et tu déposes une DSN. Si tu te rémunères uniquement en dividendes, décoche."
+        title={t("sasuDirigeantTitle")}
+        desc={t("sasuDirigeantDesc")}
         helpHref="https://www.service-public.fr/professionnels-entreprises/vosdroits/F31198"
-        helpLabel="Statut social du président de SASU"
+        helpLabel={t("sasuDirigeantHelpLabel")}
         checked={!!draft.sasu_dirigeant_remunere}
         onChange={(b) => update("sasu_dirigeant_remunere", b)}
       />
@@ -1617,6 +1564,7 @@ function SuisseFields({
   errors: Record<string, string>;
   status: "independant_ch" | "sarl_ch" | "sa_ch";
 }) {
+  const t = useTranslations("comptaConfig");
   const isCorporate = status === "sarl_ch" || status === "sa_ch";
 
   return (
@@ -1624,19 +1572,14 @@ function SuisseFields({
       {/* Disclaimer cantonal — Tipote couvre les 26 cantons sur les
           dates butoir et le portail, mais pas les taux d'imposition. */}
       <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
-        <strong>Important Suisse :</strong> Tipote calcule tes
-        échéances en fonction de ton canton (date butoir de
-        déclaration d&apos;impôt + portail). Les taux d&apos;imposition
-        (IBO, IRPP) varient selon les 26 cantons et leurs communes —
-        ton fiduciaire reste la référence pour les calculs exacts.
+        {t("chImportantBox")}
       </div>
 
       {/* Canton — sélecteur des 26 valeurs ISO 3166-2 CH-XX */}
       <div className="space-y-2">
-        <Label htmlFor="ch-canton">Ton canton</Label>
+        <Label htmlFor="ch-canton">{t("chCantonLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          Détermine la date butoir de ta déclaration d&apos;impôt et
-          le portail vers lequel on te dirige.
+          {t("chCantonHint")}
         </p>
         <select
           id="ch-canton"
@@ -1644,7 +1587,7 @@ function SuisseFields({
           onChange={(e) => update("ch_canton", e.target.value || null)}
           className="w-full h-9 rounded-md border bg-background px-3 text-sm"
         >
-          <option value="">— Choisis ton canton —</option>
+          <option value="">{t("chCantonPlaceholder")}</option>
           {CH_CANTONS_ORDERED.map((c) => (
             <option key={c.code} value={c.code}>
               {c.code} — {c.label}
@@ -1656,8 +1599,8 @@ function SuisseFields({
       {/* Date de début d'activité (optionnel) */}
       <div className="space-y-2">
         <Label htmlFor="ch-started">
-          Date de début d&apos;activité{" "}
-          <span className="text-muted-foreground font-normal">(optionnel)</span>
+          {t("startedAtLabel")}{" "}
+          <span className="text-muted-foreground font-normal">{t("optional")}</span>
         </Label>
         <input
           id="ch-started"
@@ -1677,11 +1620,10 @@ function SuisseFields({
       {isCorporate ? (
         <div className="space-y-2">
           <Label htmlFor="ch-ide">
-            Numéro IDE (Numéro d&apos;identification d&apos;entreprise)
+            {t("chIdeLabel")}
           </Label>
           <p className="text-xs text-muted-foreground">
-            Format CHE-XXX.XXX.XXX. Tu le trouves sur ton extrait du
-            registre du commerce ou sur{" "}
+            {t("chIdeHintBefore")}{" "}
             <a
               href="https://www.uid.admin.ch/Search.aspx?lang=fr"
               target="_blank"
@@ -1705,7 +1647,7 @@ function SuisseFields({
           sasu_fiscal_year_*. */}
       {isCorporate ? (
         <div className="space-y-2">
-          <Label>Exercice comptable</Label>
+          <Label>{t("accountingExerciseLabel")}</Label>
           <div className="flex gap-2 flex-wrap">
             <button
               type="button"
@@ -1716,7 +1658,7 @@ function SuisseFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Année civile (jan → déc)
+              {t("calendarYearShort")}
             </button>
             <button
               type="button"
@@ -1727,12 +1669,12 @@ function SuisseFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Décalé
+              {t("shifted")}
             </button>
           </div>
           {!draft.sasu_fiscal_year_calendar ? (
             <div className="space-y-1 pt-2">
-              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <Label className="text-xs">{t("fyStartMonthShortLabel")}</Label>
               <select
                 value={draft.sasu_fiscal_year_start_month ?? ""}
                 onChange={(e) =>
@@ -1743,7 +1685,7 @@ function SuisseFields({
                 <option value="">—</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                   <option key={m} value={m}>
-                    {monthName(m)}
+                    {monthName(m, t)}
                   </option>
                 ))}
               </select>
@@ -1755,10 +1697,10 @@ function SuisseFields({
       {/* Assujettissement TVA — seuil unique CHF 100'000/an */}
       <BoolRow
         id="ch-vat-assujetti"
-        title="Assujetti à la TVA suisse ?"
-        desc="L'assujettissement devient obligatoire dès que ton CA mondial dépasse CHF 100'000 / an. En dessous, tu peux rester non-assujetti (ou opter volontairement)."
+        title={t("chVatAssujettiTitle")}
+        desc={t("chVatAssujettiDesc")}
         helpHref="https://www.estv.admin.ch/estv/fr/accueil/tva.html"
-        helpLabel="Seuils TVA suisses"
+        helpLabel={t("chVatThresholdsLabel")}
         checked={!!draft.ch_vat_assujetti}
         onChange={(b) => update("ch_vat_assujetti", b)}
       />
@@ -1767,18 +1709,17 @@ function SuisseFields({
       {draft.ch_vat_assujetti ? (
         <>
           <div className="space-y-2 pt-3 border-t">
-            <Label>Périodicité du décompte TVA</Label>
+            <Label>{t("chVatPeriodicityLabel")}</Label>
             <p className="text-xs text-muted-foreground">
-              Détermine les dates butoir de tes décomptes (T1→31 mai,
-              T2→31 août, T3→30 nov, T4→28 fév pour le trimestriel).
+              {t("chVatPeriodicityHint")}
             </p>
             <div className="flex gap-2 flex-wrap">
               {(
                 [
-                  { v: "trimestrielle", label: "Trimestrielle", hint: "défaut" },
-                  { v: "mensuelle", label: "Mensuelle", hint: "rare" },
-                  { v: "semestrielle", label: "Semestrielle", hint: "TDFN" },
-                  { v: "annuelle", label: "Annuelle", hint: "petits CA" },
+                  { v: "trimestrielle", label: t("freqTrimestrielle"), hint: t("hintDefault") },
+                  { v: "mensuelle", label: t("freqMensuelle"), hint: t("hintRare") },
+                  { v: "semestrielle", label: t("freqSemestrielle"), hint: t("hintTDFN") },
+                  { v: "annuelle", label: t("freqAnnuelle"), hint: t("hintSmallCA") },
                 ] as const
               ).map((opt) => {
                 const active = (draft.ch_vat_periodicity ?? "trimestrielle") === opt.v;
@@ -1807,18 +1748,15 @@ function SuisseFields({
           </div>
 
           <div className="space-y-2">
-            <Label>Méthode de décompte</Label>
+            <Label>{t("chVatMethodLabel")}</Label>
             <p className="text-xs text-muted-foreground">
-              Effective = TVA déductible classique (chaque facture
-              fournisseur). TDFN = Taux de la Dette Fiscale Nette =
-              taux forfaitaire selon ta branche d&apos;activité (plus
-              simple, mais souvent moins avantageux).
+              {t("chVatMethodHint")}
             </p>
             <div className="flex gap-2 flex-wrap">
               {(
                 [
-                  { v: "effective", label: "Effective", hint: "défaut" },
-                  { v: "tdfn", label: "TDFN", hint: "forfaitaire par branche" },
+                  { v: "effective", label: t("chMethodEffective"), hint: t("hintDefault") },
+                  { v: "tdfn", label: t("chMethodTDFN"), hint: t("chTDFNHint") },
                 ] as const
               ).map((opt) => {
                 const active = (draft.ch_vat_method ?? "effective") === opt.v;
@@ -1848,12 +1786,13 @@ function SuisseFields({
   );
 }
 
-function monthName(m: number): string {
-  const months = [
-    "janvier", "février", "mars", "avril", "mai", "juin",
-    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+function monthName(m: number, t: (key: string) => string): string {
+  const keys = [
+    "monthJanuary", "monthFebruary", "monthMarch", "monthApril", "monthMay", "monthJune",
+    "monthJuly", "monthAugust", "monthSeptember", "monthOctober", "monthNovember", "monthDecember",
   ];
-  return months[m - 1] ?? "";
+  const k = keys[m - 1];
+  return k ? t(k) : "";
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -1876,6 +1815,7 @@ function PortugalFields({
     | "lda_pt"
     | "sa_pt";
 }) {
+  const t = useTranslations("comptaConfig");
   const isCorporate =
     status === "lda_unipessoal_pt" ||
     status === "lda_pt" ||
@@ -1886,18 +1826,14 @@ function PortugalFields({
   return (
     <Card className="p-5 space-y-5">
       <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
-        <strong>Portugal :</strong> Tipote calcule tes échéances IVA,
-        IRS / IRC et Segurança Social à partir des dates butoir
-        officielles de l&apos;AT (Autoridade Tributária). Les taux
-        d&apos;impôt et la derrama municipal varient — ton
-        contabilista certificado reste la référence pour les calculs.
+        {t("ptImportantBox")}
       </div>
 
       {/* NIF — 9 chiffres, géré par l'AT */}
       <div className="space-y-2">
-        <Label htmlFor="pt-nif">NIF (Número de Identificação Fiscal)</Label>
+        <Label htmlFor="pt-nif">{t("ptNifLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          9 chiffres. Tu peux le retrouver sur le portail{" "}
+          {t("ptNifHintBefore")}{" "}
           <a
             href="https://www.portaldasfinancas.gov.pt/"
             target="_blank"
@@ -1923,17 +1859,16 @@ function PortugalFields({
 
       {/* Région : continent / Madère / Açores — affecte les taux IVA */}
       <div className="space-y-2">
-        <Label>Ta région</Label>
+        <Label>{t("ptRegionLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          Madère et Açores ont des taux IVA réduits par rapport au
-          continent (22% et 16% au lieu de 23% pour le taux normal).
+          {t("ptRegionHint")}
         </p>
         <div className="flex gap-2 flex-wrap">
           {(
             [
-              { v: "continente", label: "Portugal continental", hint: "23% / 13% / 6%" },
-              { v: "madeira", label: "Madeira", hint: "22% / 12% / 5%" },
-              { v: "acores", label: "Açores", hint: "16% / 9% / 4%" },
+              { v: "continente", label: t("ptRegionContinent"), hint: "23% / 13% / 6%" },
+              { v: "madeira", label: t("ptRegionMadeira"), hint: "22% / 12% / 5%" },
+              { v: "acores", label: t("ptRegionAcores"), hint: "16% / 9% / 4%" },
             ] as const
           ).map((opt) => {
             const active = (draft.pt_region ?? "continente") === opt.v;
@@ -1961,8 +1896,8 @@ function PortugalFields({
       {/* Date début activité */}
       <div className="space-y-2">
         <Label htmlFor="pt-started">
-          Date de début d&apos;activité{" "}
-          <span className="text-muted-foreground font-normal">(optionnel)</span>
+          {t("startedAtLabel")}{" "}
+          <span className="text-muted-foreground font-normal">{t("optional")}</span>
         </Label>
         <input
           id="pt-started"
@@ -1976,17 +1911,15 @@ function PortugalFields({
       {/* Régime fiscal — uniquement pour indépendants/ENI */}
       {isIndepOrEni ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Régime fiscal</Label>
+          <Label>{t("ptTaxRegimeLabel")}</Label>
           <p className="text-xs text-muted-foreground">
-            Régime simplificado : forfait sur 75% du CA, comptabilité
-            allégée. Contabilidade organizada : comptabilité réelle,
-            obligatoire au-dessus de 200 000 € de CA.
+            {t("ptTaxRegimeHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             {(
               [
-                { v: "simplificado", label: "Simplificado", hint: "défaut" },
-                { v: "organizada", label: "Contabilidade organizada", hint: "comptabilité réelle" },
+                { v: "simplificado", label: t("ptSimplificadoLabel"), hint: t("hintDefault") },
+                { v: "organizada", label: t("ptOrganizadaLabel"), hint: t("ptOrganizadaHint") },
               ] as const
             ).map((opt) => {
               const active = (draft.pt_tax_regime ?? "simplificado") === opt.v;
@@ -2026,7 +1959,7 @@ function PortugalFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Année civile (jan → déc)
+              {t("calendarYearShort")}
             </button>
             <button
               type="button"
@@ -2037,12 +1970,12 @@ function PortugalFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Décalé
+              {t("shifted")}
             </button>
           </div>
           {!draft.sasu_fiscal_year_calendar ? (
             <div className="space-y-1 pt-2">
-              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <Label className="text-xs">{t("fyStartMonthShortLabel")}</Label>
               <select
                 value={draft.sasu_fiscal_year_start_month ?? ""}
                 onChange={(e) =>
@@ -2053,7 +1986,7 @@ function PortugalFields({
                 <option value="">—</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                   <option key={m} value={m}>
-                    {monthName(m)}
+                    {monthName(m, t)}
                   </option>
                 ))}
               </select>
@@ -2065,10 +1998,10 @@ function PortugalFields({
       {/* Régime IVA — assujetti ou isento */}
       <BoolRow
         id="pt-iva-isento"
-        title="Régime de isenção IVA ?"
-        desc="Si tu es sous le seuil de 15 000 € de CA annuel (art. 53 CIVA), tu es exonéré et tu ne factures pas la TVA. Au-dessus, tu collectes l'IVA et déclares mensuellement / trimestriellement."
+        title={t("ptIvaIsentoTitle")}
+        desc={t("ptIvaIsentoDesc")}
         helpHref="https://info-ras.at.gov.pt/"
-        helpLabel="Plus d'infos sur le régime de isenção"
+        helpLabel={t("ptIvaIsentoHelpLabel")}
         checked={!!draft.pt_iva_isento}
         onChange={(b) => update("pt_iva_isento", b)}
       />
@@ -2076,17 +2009,15 @@ function PortugalFields({
       {/* Périodicité IVA si non-isento */}
       {!draft.pt_iva_isento ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Périodicité du décompte IVA</Label>
+          <Label>{t("ptIvaPeriodicityLabel")}</Label>
           <p className="text-xs text-muted-foreground">
-            Trimestrielle si CA &lt; 650 000 € (cas le plus courant).
-            Mensuelle au-delà. Date butoir : jour 25 du 2e mois suivant
-            la période.
+            {t("ptIvaPeriodicityHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             {(
               [
-                { v: "trimestral", label: "Trimestrielle", hint: "défaut, CA < 650k €" },
-                { v: "mensal", label: "Mensuelle", hint: "CA > 650k €" },
+                { v: "trimestral", label: t("ptFreqTrimestral"), hint: t("ptHintTrimestralDefault") },
+                { v: "mensal", label: t("ptFreqMensal"), hint: t("ptHintMensalLarge") },
               ] as const
             ).map((opt) => {
               const active = (draft.pt_iva_periodicity ?? "trimestral") === opt.v;
@@ -2133,6 +2064,7 @@ function BelgiqueFields({
     | "srl_be"
     | "sa_be";
 }) {
+  const t = useTranslations("comptaConfig");
   const isCorporate = status === "srl_be" || status === "sa_be";
   const isIndep =
     status === "independant_principal_be" ||
@@ -2141,17 +2073,13 @@ function BelgiqueFields({
   return (
     <Card className="p-5 space-y-5">
       <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
-        <strong>Belgique :</strong> Tipote calcule tes échéances TVA
-        (Intervat), IPP/ISoc, INASTI/RSVZ, comptes annuels BNB et
-        listings clients/intra-UE. Pour les calculs exacts d&apos;impôt
-        (taux ISoc + derrama, primes régionales, TVA véhicules), ton
-        comptable / expert-comptable reste la référence.
+        {t("beImportantBox")}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="be-bce">Numéro BCE (Banque-Carrefour des Entreprises)</Label>
+        <Label htmlFor="be-bce">{t("beBceLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          10 chiffres. Tu peux le retrouver sur{" "}
+          {t("beBceHintBefore")}{" "}
           <a
             href="https://kbopub.economie.fgov.be/kbopub/zoeknummerform.html"
             target="_blank"
@@ -2178,17 +2106,16 @@ function BelgiqueFields({
       </div>
 
       <div className="space-y-2">
-        <Label>Ta région</Label>
+        <Label>{t("beRegionLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          Affecte certaines primes / aides régionales. Le calendrier
-          fiscal lui-même reste fédéral.
+          {t("beRegionHint")}
         </p>
         <div className="flex gap-2 flex-wrap">
           {(
             [
-              { v: "wallonie", label: "Wallonie" },
-              { v: "flandre", label: "Flandre" },
-              { v: "bruxelles", label: "Bruxelles-Capitale" },
+              { v: "wallonie", label: t("beRegionWallonie") },
+              { v: "flandre", label: t("beRegionFlandre") },
+              { v: "bruxelles", label: t("beRegionBruxelles") },
             ] as const
           ).map((opt) => {
             const active = draft.be_region === opt.v;
@@ -2212,8 +2139,8 @@ function BelgiqueFields({
 
       <div className="space-y-2">
         <Label htmlFor="be-started">
-          Date de début d&apos;activité{" "}
-          <span className="text-muted-foreground font-normal">(optionnel)</span>
+          {t("startedAtLabel")}{" "}
+          <span className="text-muted-foreground font-normal">{t("optional")}</span>
         </Label>
         <input
           id="be-started"
@@ -2226,7 +2153,7 @@ function BelgiqueFields({
 
       {isCorporate ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Exercice comptable</Label>
+          <Label>{t("accountingExerciseLabel")}</Label>
           <div className="flex gap-2 flex-wrap">
             <button
               type="button"
@@ -2237,7 +2164,7 @@ function BelgiqueFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Année civile (jan → déc)
+              {t("calendarYearShort")}
             </button>
             <button
               type="button"
@@ -2248,12 +2175,12 @@ function BelgiqueFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Décalé
+              {t("shifted")}
             </button>
           </div>
           {!draft.sasu_fiscal_year_calendar ? (
             <div className="space-y-1 pt-2">
-              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <Label className="text-xs">{t("fyStartMonthShortLabel")}</Label>
               <select
                 value={draft.sasu_fiscal_year_start_month ?? ""}
                 onChange={(e) =>
@@ -2264,7 +2191,7 @@ function BelgiqueFields({
                 <option value="">—</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                   <option key={m} value={m}>
-                    {monthName(m)}
+                    {monthName(m, t)}
                   </option>
                 ))}
               </select>
@@ -2275,27 +2202,25 @@ function BelgiqueFields({
 
       <BoolRow
         id="be-vat-franchise"
-        title="Régime de franchise TVA ?"
-        desc="Si ton CA annuel est sous 25 000 € (art. 56bis CTVA), tu peux opter pour la franchise. Tu ne factures pas la TVA et tu n'as pas de déclarations TVA à déposer."
+        title={t("beVatFranchiseTitle")}
+        desc={t("beVatFranchiseDesc")}
         helpHref="https://finances.belgium.be/fr/entreprises/tva/regime-franchise"
-        helpLabel="Plus d'infos sur la franchise TVA"
+        helpLabel={t("beVatFranchiseHelpLabel")}
         checked={!!draft.be_vat_franchise}
         onChange={(b) => update("be_vat_franchise", b)}
       />
 
       {!draft.be_vat_franchise ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Périodicité du décompte TVA</Label>
+          <Label>{t("beVatPeriodicityLabel")}</Label>
           <p className="text-xs text-muted-foreground">
-            Trimestrielle si CA &lt; 2,5 M€ (cas le plus courant).
-            Mensuelle au-delà. Date butoir : 20 du mois suivant la
-            période, sur Intervat.
+            {t("beVatPeriodicityHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             {(
               [
-                { v: "trimestrielle", label: "Trimestrielle", hint: "défaut, CA < 2,5 M€" },
-                { v: "mensuelle", label: "Mensuelle", hint: "CA > 2,5 M€" },
+                { v: "trimestrielle", label: t("freqTrimestrielle"), hint: t("beHintTrimDefault") },
+                { v: "mensuelle", label: t("freqMensuelle"), hint: t("beHintMensLarge") },
               ] as const
             ).map((opt) => {
               const active = (draft.be_vat_periodicity ?? "trimestrielle") === opt.v;
@@ -2326,20 +2251,17 @@ function BelgiqueFields({
 
       <BoolRow
         id="be-intra-eu"
-        title="Tu fais des ventes vers l'UE ?"
-        desc="Si oui, tu dois déposer un listing intracommunautaire (état 723) chaque trimestre, en plus de tes déclarations TVA. Obligatoire dès 1 € facturé à un client UE assujetti."
+        title={t("beIntraEuTitle")}
+        desc={t("beIntraEuDesc")}
         helpHref="https://finances.belgium.be/fr/entreprises/tva/declaration_paiement/listings_intracommunautaires"
-        helpLabel="Plus d'infos sur le listing intra-UE"
+        helpLabel={t("beIntraEuHelpLabel")}
         checked={!!draft.be_intra_eu_listing}
         onChange={(b) => update("be_intra_eu_listing", b)}
       />
 
       {isIndep ? (
         <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          Cotisations INASTI/RSVZ : acomptes trimestriels (20 mars,
-          20 juin, 20 septembre, 20 décembre), à payer auprès de ta
-          caisse d&apos;assurances sociales (Acerta, Group S, Partena,
-          Liantis, Xerius…).
+          {t("beInastiBox")}
         </div>
       ) : null}
     </Card>
@@ -2361,6 +2283,7 @@ function EspagneFields({
   errors: Record<string, string>;
   status: "autonomo_es" | "slu_es" | "sl_es" | "sa_es";
 }) {
+  const t = useTranslations("comptaConfig");
   const isCorporate = status === "slu_es" || status === "sl_es" || status === "sa_es";
   const isAutonomo = status === "autonomo_es";
   const community = draft.es_community;
@@ -2371,40 +2294,33 @@ function EspagneFields({
   const cifLabel = (() => {
     switch (status) {
       case "autonomo_es":
-        return "NIF / DNI / NIE";
+        return t("esCifLabelAutonomo");
       case "slu_es":
-        return "CIF de ta SLU";
+        return t("esCifLabelSLU");
       case "sl_es":
-        return "CIF de ta SL";
+        return t("esCifLabelSL");
       case "sa_es":
-        return "CIF de ta SA";
+        return t("esCifLabelSA");
     }
   })();
 
   return (
     <Card className="p-5 space-y-5">
       <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
-        <strong>Espagne :</strong> Tipote calcule tes échéances IVA
-        (Modelo 303/390/349), IRPF (Modelos 100/130), IS (Modelo
-        200/202), RETA mensuel et comptes annuels Registro Mercantil.
-        Pour les calculs exacts d&apos;impôt et les déductions IRPF
-        spécifiques à ta Comunidad Autónoma, ton asesor fiscal reste
-        la référence.
+        {t("esImportantBox")}
       </div>
 
       <div className="space-y-2">
-        <Label>Comunidad Autónoma</Label>
+        <Label>{t("esCommunityLabel")}</Label>
         <p className="text-xs text-muted-foreground">
-          Détermine si tu dépends de l&apos;AEAT (régime commun) ou
-          d&apos;une Hacienda Foral (País Vasco, Navarra). Affecte
-          aussi l&apos;IVA → IGIC (Canarias) ou IPSI (Ceuta/Melilla).
+          {t("esCommunityHint")}
         </p>
         <Select
           value={draft.es_community ?? ""}
           onValueChange={(v) => update("es_community", v as EsCommunity)}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Choisis ta CCAA" />
+            <SelectValue placeholder={t("esCommunityPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {ES_COMMUNITIES.map((c) => (
@@ -2419,26 +2335,17 @@ function EspagneFields({
         ) : null}
         {isForal ? (
           <p className="text-[11px] text-muted-foreground italic">
-            Régimen Foral détecté → tu déclares via Hacienda Foral
-            (euskadi.eus pour le País Vasco, navarra.es pour la
-            Navarra), pas l&apos;AEAT. Calendrier identique mais
-            modelos forales.
+            {t("esForalNote")}
           </p>
         ) : null}
         {isCanarias ? (
           <p className="text-[11px] text-muted-foreground italic">
-            Canarias → IGIC au lieu d&apos;IVA. Tipo general 7%.
-            Modelo 420 (trimestriel) / 425 (annuel) au lieu de
-            303/390. Pas d&apos;opérations intra-UE.
+            {t("esCanariasNote")}
           </p>
         ) : null}
         {isIPSI ? (
           <p className="text-[11px] text-amber-800 dark:text-amber-200 italic">
-            Ceuta/Melilla → IPSI (Impuesto sobre la Producción, los
-            Servicios y la Importación) au lieu d&apos;IVA. Hors scope
-            MVP de Tipote — le module compta affichera tes échéances
-            IRPF / IS / RETA mais pas IPSI. Renseigne-toi auprès de
-            ta ciudad autónoma.
+            {t("esIpsiNote")}
           </p>
         ) : null}
       </div>
@@ -2446,9 +2353,7 @@ function EspagneFields({
       <div className="space-y-2">
         <Label htmlFor="es-cif">{cifLabel}</Label>
         <p className="text-xs text-muted-foreground">
-          Pour une société : 1 lettre + 8 chiffres (B = SL, A = SA).
-          Pour un autónomo : DNI (8 chiffres + 1 lettre) ou NIE.
-          Tu peux le retrouver sur{" "}
+          {t("esCifHintBefore")}{" "}
           <a
             href="https://www.agenciatributaria.gob.es/AEAT.sede/procedimientoini/G306.shtml"
             target="_blank"
@@ -2473,8 +2378,8 @@ function EspagneFields({
 
       <div className="space-y-2">
         <Label htmlFor="es-started">
-          Date de début d&apos;activité{" "}
-          <span className="text-muted-foreground font-normal">(optionnel)</span>
+          {t("startedAtLabel")}{" "}
+          <span className="text-muted-foreground font-normal">{t("optional")}</span>
         </Label>
         <input
           id="es-started"
@@ -2487,7 +2392,7 @@ function EspagneFields({
 
       {isCorporate ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Exercice comptable</Label>
+          <Label>{t("accountingExerciseLabel")}</Label>
           <div className="flex gap-2 flex-wrap">
             <button
               type="button"
@@ -2498,7 +2403,7 @@ function EspagneFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Année civile (jan → déc)
+              {t("calendarYearShort")}
             </button>
             <button
               type="button"
@@ -2509,12 +2414,12 @@ function EspagneFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Décalé
+              {t("shifted")}
             </button>
           </div>
           {!draft.sasu_fiscal_year_calendar ? (
             <div className="space-y-1 pt-2">
-              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <Label className="text-xs">{t("fyStartMonthShortLabel")}</Label>
               <select
                 value={draft.sasu_fiscal_year_start_month ?? ""}
                 onChange={(e) =>
@@ -2525,7 +2430,7 @@ function EspagneFields({
                 <option value="">—</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                   <option key={m} value={m}>
-                    {monthName(m)}
+                    {monthName(m, t)}
                   </option>
                 ))}
               </select>
@@ -2536,21 +2441,17 @@ function EspagneFields({
 
       {!isIPSI ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Régime IVA{isCanarias ? " (IGIC)" : ""}</Label>
+          <Label>{t("esIvaRegimeLabel")}{isCanarias ? " (IGIC)" : ""}</Label>
           <p className="text-xs text-muted-foreground">
-            General = défaut. Simplificado = forfait pour certaines
-            activités (modelo 303 simplifié). Recargo de equivalencia
-            = commerce de détail (l&apos;IVA est répercuté par le
-            fournisseur). Exención = activités exonérées (santé,
-            enseignement, etc.).
+            {t("esIvaRegimeHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             {(
               [
-                { v: "general", label: "General" },
-                { v: "simplificado", label: "Simplificado" },
-                { v: "recargo_equivalencia", label: "Recargo de equivalencia" },
-                { v: "exencion", label: "Exención" },
+                { v: "general", label: t("esRegimeGeneral") },
+                { v: "simplificado", label: t("esRegimeSimplificado") },
+                { v: "recargo_equivalencia", label: t("esRegimeRecargo") },
+                { v: "exencion", label: t("esRegimeExencion") },
               ] as const
             ).map((opt) => {
               const active = draft.es_iva_regime === opt.v;
@@ -2578,18 +2479,15 @@ function EspagneFields({
 
       {!isIPSI && draft.es_iva_regime && draft.es_iva_regime !== "exencion" ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Périodicité des déclarations{isCanarias ? " IGIC" : " IVA"}</Label>
+          <Label>{t("esIvaPeriodicityLabel")}{isCanarias ? " IGIC" : " IVA"}</Label>
           <p className="text-xs text-muted-foreground">
-            Trimestrielle par défaut (T1 → 20/04, T2 → 20/07, T3 →
-            20/10, T4 → 30/01). Mensuelle obligatoire si CA &gt; 6 M€
-            ou si tu es inscrit au REDEME (registre de remboursement
-            mensuel).
+            {t("esIvaPeriodicityHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             {(
               [
-                { v: "trimestral", label: "Trimestral", hint: "défaut" },
-                { v: "mensual", label: "Mensual", hint: "CA > 6M€ ou REDEME" },
+                { v: "trimestral", label: t("esPeriodTrimestral"), hint: t("hintDefault") },
+                { v: "mensual", label: t("esPeriodMensual"), hint: t("esHintMensualLarge") },
               ] as const
             ).map((opt) => {
               const active = (draft.es_iva_periodicity ?? "trimestral") === opt.v;
@@ -2618,10 +2516,10 @@ function EspagneFields({
 
           <BoolRow
             id="es-redeme"
-            title="Inscrit au REDEME ?"
-            desc="Le Registro de Devolución Mensual permet de récupérer la TVA chaque mois (au lieu d'attendre le solde annuel). Inscription volontaire via Modelo 036/039. Implique des déclarations mensuelles."
+            title={t("esRedemeTitle")}
+            desc={t("esRedemeDesc")}
             helpHref="https://sede.agenciatributaria.gob.es/Sede/iva/redeme.html"
-            helpLabel="Plus d'infos sur le REDEME"
+            helpLabel={t("esRedemeHelpLabel")}
             checked={!!draft.es_redeme}
             onChange={(b) => update("es_redeme", b)}
           />
@@ -2630,18 +2528,15 @@ function EspagneFields({
 
       {isAutonomo ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Méthode IRPF</Label>
+          <Label>{t("esIrpfMethodLabel")}</Label>
           <p className="text-xs text-muted-foreground">
-            Estimación directa = comptabilité réelle (Modelo 130
-            trimestriel). Module objetiva = forfait par secteur
-            d&apos;activité (Modelo 131 trimestriel) — limité à
-            certaines activités listées par l&apos;AEAT.
+            {t("esIrpfMethodHint")}
           </p>
           <div className="flex gap-2 flex-wrap">
             {(
               [
-                { v: "directa", label: "Estimación directa", hint: "Modelo 130" },
-                { v: "objetiva", label: "Módulos", hint: "Modelo 131" },
+                { v: "directa", label: t("esIrpfDirecta"), hint: "Modelo 130" },
+                { v: "objetiva", label: t("esIrpfObjetiva"), hint: "Modelo 131" },
               ] as const
             ).map((opt) => {
               const active = (draft.es_irpf_method ?? "directa") === opt.v;
@@ -2669,10 +2564,7 @@ function EspagneFields({
           ) : null}
 
           <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground mt-2">
-            RETA (Régimen Especial de Trabajadores Autónomos) :
-            cotisations mensuelles via la TGSS, basées sur tes
-            revenus réels (réforme 2023). Domiciliation bancaire le
-            dernier jour ouvré du mois.
+            {t("esRetaBox")}
           </div>
         </div>
       ) : null}
@@ -2728,6 +2620,7 @@ function CanadaFields({
   errors: Record<string, string>;
   status: AccountingStatus;
 }) {
+  const t = useTranslations("comptaConfig");
   const province = draft.ca_province;
   const taxRegime = caTaxRegime(province);
   const isCorporate = status === "inc_provincial_ca" || status === "inc_federal_ca";
@@ -2737,8 +2630,8 @@ function CanadaFields({
 
   // Étiquette de la taxe affichée à l'user selon la province choisie.
   const taxLabel = (() => {
-    if (taxRegime === "tps_tvq") return "TPS + TVQ";
-    if (taxRegime === "tvh") return "TVH";
+    if (taxRegime === "tps_tvq") return t("caTaxRegimeQQ");
+    if (taxRegime === "tvh") return t("caTaxRegimeTvh");
     if (taxRegime === "tps_pst") {
       return province === "MB" ? "TPS + RST" : "TPS + PST";
     }
@@ -2749,13 +2642,13 @@ function CanadaFields({
     <Card className="p-4 space-y-4">
       {/* Province / territoire */}
       <div className="space-y-2">
-        <Label>Province ou territoire</Label>
+        <Label>{t("caProvinceLabel")}</Label>
         <Select
           value={draft.ca_province ?? ""}
           onValueChange={(v) => update("ca_province", v as CaProvince)}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Choisis ta province / ton territoire" />
+            <SelectValue placeholder={t("caProvincePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {CA_PROVINCES.map((p) => (
@@ -2770,19 +2663,18 @@ function CanadaFields({
         ) : null}
         {province ? (
           <p className="text-xs text-muted-foreground">
-            Régime de taxes : <strong>{taxLabel}</strong>.{" "}
+            {t("caRegimeLabelPrefix")} <strong>{taxLabel}</strong>.{" "}
             {taxRegime === "tps_tvq" ? (
-              <>Revenu Québec gère TPS et TVQ ensemble via le formulaire FPZ-500.</>
+              <>{t("caRegimeQc")}</>
             ) : taxRegime === "tvh" ? (
-              <>TVH harmonisée gérée par l&apos;ARC ({province === "ON" ? "13 %" : "15 %"}).</>
+              <>{t("caRegimeTvhBefore")}{province === "ON" ? "13 %" : "15 %"}).</>
             ) : taxRegime === "tps_pst" ? (
               <>
-                TPS fédérale (5 %) et {province === "MB" ? "RST" : "PST"} provinciale
-                ({province === "BC" ? "7 %" : province === "SK" ? "6 %" : "7 %"}) déclarées
-                séparément.
+                {t("caRegimePstPrefix")} {province === "MB" ? "RST" : "PST"} {t("caRegimePstSuffix")}{" "}
+                ({province === "BC" ? "7 %" : province === "SK" ? "6 %" : "7 %"}) {t("caRegimePstDecl")}
               </>
             ) : (
-              <>Pas de taxe provinciale, juste la TPS fédérale (5 %).</>
+              <>{t("caRegimeNone")}</>
             )}
           </p>
         ) : null}
@@ -2791,9 +2683,9 @@ function CanadaFields({
       {/* Numéro d'entreprise */}
       <div className="space-y-2">
         <Label htmlFor="ca-bn">
-          Numéro d&apos;entreprise{" "}
+          {t("caBnLabel")}{" "}
           <span className="text-muted-foreground">
-            ({province === "QC" ? "NEQ ou Business Number ARC" : "Business Number ARC"})
+            ({province === "QC" ? t("caBnLabelQC") : t("caBnLabelGen")})
           </span>
         </Label>
         <Input
@@ -2803,14 +2695,13 @@ function CanadaFields({
           placeholder={province === "QC" ? "1234567890 (NEQ) ou 123456789 (BN)" : "123456789"}
         />
         <p className="text-[11px] text-muted-foreground">
-          Le BN ARC fait 9 chiffres (les comptes RT/RC/RP s&apos;ajoutent en suffixe). Le NEQ
-          québécois fait 10 chiffres. Optionnel si tu n&apos;es pas immatriculé.
+          {t("caBnHint")}
         </p>
       </div>
 
       {/* Date de début */}
       <div className="space-y-2">
-        <Label htmlFor="ca-started">Date de début d&apos;activité (facultative)</Label>
+        <Label htmlFor="ca-started">{t("caStartedLabel")}</Label>
         <Input
           id="ca-started"
           type="date"
@@ -2823,10 +2714,10 @@ function CanadaFields({
       {isAutonome ? (
         <BoolRow
           id="ca-petit-fournisseur"
-          title="Petit fournisseur (CA < 30 000 $/4 trimestres) ?"
-          desc="Si ton CA mondial est sous 30 000 $ sur 4 trimestres consécutifs, tu n'es pas obligé de t'inscrire à la TPS. Tu peux quand même t'inscrire volontairement pour récupérer les CTI/RTI sur tes achats."
+          title={t("caPetitFournisseurTitle")}
+          desc={t("caPetitFournisseurDesc")}
           helpHref="https://www.canada.ca/fr/agence-revenu/services/impot/entreprises/sujets/tps-tvh-entreprises/inscription-compte-tps-tvh.html"
-          helpLabel="En savoir plus sur l'inscription TPS"
+          helpLabel={t("caPetitFournisseurHelpLabel")}
           checked={!!draft.ca_petit_fournisseur}
           onChange={(b) => update("ca_petit_fournisseur", b)}
         />
@@ -2834,14 +2725,14 @@ function CanadaFields({
 
       <BoolRow
         id="ca-gst-registered"
-        title={`Inscrit à la ${taxLabel} ?`}
+        title={`${t("caGstRegisteredTitlePrefix")} ${taxLabel} ?`}
         desc={
           taxRegime === "tps_tvq"
-            ? "Inscrit à la TPS et à la TVQ (Revenu Québec gère les deux). Obligatoire si CA > 30 000 $, optionnel sinon."
-            : "Inscrit à la TPS (et à la taxe provinciale qui s'applique). Obligatoire si CA > 30 000 $, optionnel sinon (avec récupération des CTI/RTI à la clé)."
+            ? t("caGstRegisteredDescQQ")
+            : t("caGstRegisteredDescGen")
         }
         helpHref="https://www.canada.ca/fr/agence-revenu/services/impot/entreprises/sujets/tps-tvh-entreprises.html"
-        helpLabel="Tout sur la TPS/TVH"
+        helpLabel={t("caGstRegisteredHelpLabel")}
         checked={!!draft.ca_gst_registered}
         onChange={(b) => update("ca_gst_registered", b)}
       />
@@ -2849,13 +2740,13 @@ function CanadaFields({
       {/* Périodicité TPS */}
       {draft.ca_gst_registered ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Périodicité de tes déclarations {taxLabel}</Label>
+          <Label>{t("caGstPeriodicityLabelPrefix")} {taxLabel}</Label>
           <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
             {(
               [
-                { v: "annuelle", label: "Annuelle", hint: "CA < 1,5 M$ (défaut)" },
-                { v: "trimestrielle", label: "Trimestrielle", hint: "CA 1,5–6 M$" },
-                { v: "mensuelle", label: "Mensuelle", hint: "CA > 6 M$" },
+                { v: "annuelle", label: t("caGstPeriodAnnuelle"), hint: t("caHintAnnuelle") },
+                { v: "trimestrielle", label: t("caGstPeriodTrim"), hint: t("caHintTrim") },
+                { v: "mensuelle", label: t("caGstPeriodMens"), hint: t("caHintMens") },
               ] as const
             ).map((opt) => {
               const active = (draft.ca_gst_periodicity ?? "annuelle") === opt.v;
@@ -2882,9 +2773,7 @@ function CanadaFields({
             <p className="text-xs text-destructive">{errors.ca_gst_periodicity}</p>
           ) : null}
           <p className="text-[11px] text-muted-foreground">
-            La périodicité est assignée par l&apos;ARC selon ton volume — l&apos;option ici
-            correspond à ce qui t&apos;a été notifié. Tu peux demander un changement (vers
-            plus fréquent toujours possible, vers moins fréquent si CA en baisse).
+            {t("caGstPeriodFootnote")}
           </p>
         </div>
       ) : null}
@@ -2892,12 +2781,10 @@ function CanadaFields({
       {/* Disclaimer immatriculation REQ pour entreprise individuelle au QC */}
       {isImmatricule && province === "QC" ? (
         <div className="rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs">
-          <strong>Rappel REQ :</strong> en tant qu&apos;entreprise individuelle immatriculée
-          au Registraire des entreprises du Québec, tu dois produire une déclaration de
-          mise à jour annuelle (à la date anniversaire d&apos;immatriculation).{" "}
+          {t("caReqBox")}{" "}
           <ExternalLinkRow
             href="https://www.registreentreprises.gouv.qc.ca/"
-            label="Portail REQ"
+            label={t("caReqPortalLabel")}
           />
         </div>
       ) : null}
@@ -2905,7 +2792,7 @@ function CanadaFields({
       {/* Exercice comptable pour les sociétés */}
       {isCorporate ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Exercice comptable</Label>
+          <Label>{t("accountingExerciseLabel")}</Label>
           <div className="flex gap-2 flex-wrap">
             <button
               type="button"
@@ -2916,7 +2803,7 @@ function CanadaFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Année civile (jan → déc)
+              {t("calendarYearShort")}
             </button>
             <button
               type="button"
@@ -2927,12 +2814,12 @@ function CanadaFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Décalé
+              {t("shifted")}
             </button>
           </div>
           {!draft.ca_fiscal_year_calendar ? (
             <div className="space-y-1 pt-2">
-              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <Label className="text-xs">{t("fyStartMonthShortLabel")}</Label>
               <select
                 value={draft.ca_fiscal_year_start_month ?? ""}
                 onChange={(e) =>
@@ -2943,7 +2830,7 @@ function CanadaFields({
                 <option value="">—</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                   <option key={m} value={m}>
-                    {monthName(m)}
+                    {monthName(m, t)}
                   </option>
                 ))}
               </select>
@@ -2951,18 +2838,16 @@ function CanadaFields({
                 <p className="text-xs text-destructive">{errors.ca_fiscal_year_start_month}</p>
               ) : null}
               <p className="text-[11px] text-muted-foreground">
-                Le T2 fédéral est dû 6 mois après la fin d&apos;exercice. Le solde est dû à
-                2 mois (3 mois pour SPCC admissible à la déduction accordée aux petites
-                entreprises).
+                {t("caT2Footnote")}
               </p>
             </div>
           ) : null}
           <p className="text-[11px] text-muted-foreground">
             {status === "inc_federal_ca"
-              ? "Société fédérale (CBCA) : siège social typiquement déclaré dans une province d'opération. Si le siège est au QC, immatriculation REQ obligatoire en plus de Corporations Canada."
+              ? t("caFedFootnote")
               : province === "QC"
-                ? "Société provinciale du Québec (LSAQ) : immatriculation REQ obligatoire."
-                : "Société provinciale : immatriculation au registre provincial des entreprises (selon la province choisie)."}
+                ? t("caQcFootnote")
+                : t("caProvFootnote")}
           </p>
         </div>
       ) : null}
@@ -2981,6 +2866,7 @@ function UnitedStatesFields({
   errors: Record<string, string>;
   status: AccountingStatus;
 }) {
+  const t = useTranslations("comptaConfig");
   const isLLC = status === "single_member_llc_us" || status === "multi_member_llc_us";
   const isSingleLLC = status === "single_member_llc_us";
   const isMultiLLC = status === "multi_member_llc_us";
@@ -2999,25 +2885,18 @@ function UnitedStatesFields({
   return (
     <Card className="p-5 space-y-5">
       <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200">
-        <strong>États-Unis :</strong> Tipote calcule tes échéances
-        fédérales (Forms 1040 / 1120 / 1120-S / 1065 / 1040-ES / 1099-NEC),
-        ton state income tax (sauf 9 états sans), et un rappel mensuel par
-        état où tu collectes la sales tax. Pour les calculs exacts d&apos;impôt,
-        les élections fiscales (S-election, entity classification) et le
-        calcul des taux de sales tax (~10 000 juridictions locales), ton
-        CPA et un outil dédié (Stripe Tax / TaxJar / Avalara) restent la
-        référence.
+        {t("usImportantBox")}
       </div>
 
       {/* État principal */}
       <div className="space-y-2">
-        <Label>State (résidence / formation de l&apos;entité)</Label>
+        <Label>{t("usStateLabel")}</Label>
         <Select
           value={draft.us_state ?? ""}
           onValueChange={(v) => update("us_state", v as UsState)}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Choose your state" />
+            <SelectValue placeholder={t("usStatePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {US_STATES.map((s) => (
@@ -3034,20 +2913,16 @@ function UnitedStatesFields({
           <p className="text-xs text-muted-foreground">
             {!stateHasIncomeTax ? (
               <>
-                <strong>{draft.us_state}</strong> ne perçoit pas de state income
-                tax sur les revenus business — tu n&apos;as que le fédéral à
-                produire. Économie typique : 4 à 9 % du revenu net.
+                <strong>{draft.us_state}</strong> {t("usStateNoIncomeTax")}
               </>
             ) : (
               <>
-                <strong>{draft.us_state}</strong> perçoit un state income tax —
-                tu produis une déclaration parallèle au fédéral, généralement
-                à la même date (15 avril).
+                <strong>{draft.us_state}</strong> {t("usStateHasIncomeTax")}
               </>
             )}
             {!stateHasSalesTax ? (
               <>
-                {" "}Pas de sales tax au niveau state (NH, OR, MT, DE).
+                {" "}{t("usNoSalesTaxNote")}
               </>
             ) : null}
           </p>
@@ -3057,7 +2932,7 @@ function UnitedStatesFields({
       {/* EIN */}
       <div className="space-y-2">
         <Label htmlFor="us-ein">
-          EIN <span className="text-muted-foreground">(Employer Identification Number)</span>
+          {t("usEinLabel")} <span className="text-muted-foreground">{t("usEinSuffix")}</span>
         </Label>
         <Input
           id="us-ein"
@@ -3069,18 +2944,18 @@ function UnitedStatesFields({
           <p className="text-xs text-destructive">{errors.us_ein}</p>
         ) : null}
         <p className="text-[11px] text-muted-foreground">
-          Format <code>XX-XXXXXXX</code> (9 chiffres).{" "}
+          {t("usEinHintPrefix")} <code>XX-XXXXXXX</code> {t("usEinHintDigits")}{" "}
           {status === "sole_proprietorship_us" || isSingleLLC ? (
-            <>Optionnel — un sole prop / single-member LLC sans employés peut utiliser son SSN.</>
+            <>{t("usEinOptional")}</>
           ) : (
-            <>Obligatoire pour multi-member LLC, C-Corp, S-Corp et toute entité avec employés.</>
+            <>{t("usEinRequired")}</>
           )}
         </p>
       </div>
 
       {/* Date de début */}
       <div className="space-y-2">
-        <Label htmlFor="us-started">Date de début d&apos;activité (facultative)</Label>
+        <Label htmlFor="us-started">{t("usStartedLabel")}</Label>
         <Input
           id="us-started"
           type="date"
@@ -3092,28 +2967,28 @@ function UnitedStatesFields({
       {/* Élection fiscale LLC */}
       {isLLC ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Élection fiscale LLC</Label>
+          <Label>{t("usLlcElectionLabel")}</Label>
           <p className="text-[11px] text-muted-foreground">
             {isSingleLLC ? (
-              <>Par défaut : disregarded entity (= Schedule C, identique à sole prop côté impôt).</>
+              <>{t("usLlcDefaultSingle")}</>
             ) : (
-              <>Par défaut : partnership (Form 1065 + K-1).</>
+              <>{t("usLlcDefaultMulti")}</>
             )}{" "}
-            Tu peux élire S-Corp (Form 2553) ou C-Corp (Form 8832).
+            {t("usLlcElectS")}
           </p>
           <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
             {(
               [
                 {
                   v: null,
-                  label: "Par défaut",
+                  label: t("usLlcDefault"),
                   hint: isSingleLLC ? "Schedule C" : "Partnership",
                 },
                 { v: "s_corp", label: "S-Corp", hint: "Form 2553" },
                 { v: "c_corp", label: "C-Corp", hint: "Form 8832" },
                 {
                   v: isSingleLLC ? "disregarded" : "partnership",
-                  label: "Explicite",
+                  label: t("usLlcExplicit"),
                   hint: isSingleLLC ? "Disregarded" : "Partnership",
                 },
               ] as const
@@ -3149,13 +3024,9 @@ function UnitedStatesFields({
 
       {/* Sales tax states */}
       <div className="space-y-2 pt-3 border-t">
-        <Label>États où tu collectes la sales tax</Label>
+        <Label>{t("usSalesTaxStatesLabel")}</Label>
         <p className="text-[11px] text-muted-foreground">
-          Coche chaque état où tu es inscrit pour collecter et reverser la
-          sales tax (économic nexus si tu dépasses les seuils de revenus
-          ou de transactions). Tipote émet un rappel mensuel par état (le
-          20 du mois suivant). Si tu utilises Stripe Tax / TaxJar, indique
-          quand même les états ici pour avoir tes rappels de filing.
+          {t("usSalesTaxStatesHint")}
         </p>
         <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2 max-h-64 overflow-y-auto p-2 border rounded-md">
           {US_STATES.map((s) => {
@@ -3180,12 +3051,15 @@ function UnitedStatesFields({
         </div>
         {salesTaxStates.length > 0 ? (
           <p className="text-[11px] text-muted-foreground">
-            {salesTaxStates.length} état{salesTaxStates.length > 1 ? "s" : ""} sélectionné
-            {salesTaxStates.length > 1 ? "s" : ""} : {salesTaxStates.join(", ")}.
+            {t("usStatesSelected", {
+              n: salesTaxStates.length,
+              plural: salesTaxStates.length > 1 ? "s" : "",
+              list: salesTaxStates.join(", "),
+            })}
           </p>
         ) : (
           <p className="text-[11px] text-muted-foreground">
-            Aucun état sélectionné — pas de sales tax à collecter.
+            {t("usStatesNone")}
           </p>
         )}
       </div>
@@ -3193,27 +3067,21 @@ function UnitedStatesFields({
       {/* Disclaimer multi-member partnership */}
       {isMultiLLC ? (
         <div className="rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs">
-          <strong>Multi-member LLC :</strong> par défaut, ta LLC produit un{" "}
-          <code>Form 1065</code> (partnership return) et émet des K-1 à chaque
-          membre. Date limite : 15 mars (calendar year), extension automatique 6
-          mois (15 sept). Si tu as fait une élection S/C, le calendrier change.
+          {t("usMultiLlcBox")}
         </div>
       ) : null}
 
       {/* Disclaimer S-Corp */}
       {status === "s_corp_us" ? (
         <div className="rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/30 p-3 text-xs">
-          <strong>S-Corp :</strong> Form 1120-S due le 15 mars (calendar year).
-          Pass-through, pas d&apos;impôt fédéral au niveau de l&apos;entité.
-          Reasonable salary requis pour les owner-employees (sinon risque de
-          requalification IRS).
+          {t("usSCorpBox")}
         </div>
       ) : null}
 
       {/* Exercice comptable pour les corporations */}
       {isCorp ? (
         <div className="space-y-2 pt-3 border-t">
-          <Label>Exercice fiscal</Label>
+          <Label>{t("usFiscalYearLabel")}</Label>
           <div className="flex gap-2 flex-wrap">
             <button
               type="button"
@@ -3224,7 +3092,7 @@ function UnitedStatesFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Calendar year (jan → déc)
+              {t("usCalendarYear")}
             </button>
             <button
               type="button"
@@ -3235,12 +3103,12 @@ function UnitedStatesFields({
                   : "border-border hover:bg-muted/40"
               }`}
             >
-              Fiscal year décalé
+              {t("usFiscalYearShifted")}
             </button>
           </div>
           {!draft.us_fiscal_year_calendar ? (
             <div className="space-y-1 pt-2">
-              <Label className="text-xs">Mois de début d&apos;exercice</Label>
+              <Label className="text-xs">{t("fyStartMonthShortLabel")}</Label>
               <select
                 value={draft.us_fiscal_year_start_month ?? ""}
                 onChange={(e) =>
@@ -3251,7 +3119,7 @@ function UnitedStatesFields({
                 <option value="">—</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                   <option key={m} value={m}>
-                    {monthName(m)}
+                    {monthName(m, t)}
                   </option>
                 ))}
               </select>
@@ -3262,16 +3130,9 @@ function UnitedStatesFields({
           ) : null}
           <p className="text-[11px] text-muted-foreground">
             {status === "c_corp_us" ? (
-              <>
-                C-Corp 1120 due le 15 du 4e mois après la fin d&apos;exercice
-                (15 avril en calendar year). Extension auto 6 mois via Form 7004.
-              </>
+              <>{t("usCCorpFootnote")}</>
             ) : (
-              <>
-                S-Corp 1120-S due le 15 du 3e mois après la fin d&apos;exercice
-                (15 mars en calendar year). Doit en principe rester sur calendar
-                year sauf élection 444.
-              </>
+              <>{t("usSCorpFootnote")}</>
             )}
           </p>
         </div>
