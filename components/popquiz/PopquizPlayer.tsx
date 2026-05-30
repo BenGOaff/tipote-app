@@ -329,6 +329,7 @@ function SkipButton({
 // flash a dead button on browsers that don't support it (mobile Safari
 // + Firefox Linux for now).
 function PiPButton() {
+  const t = useTranslations("popquiz");
   const remote = useMediaRemote();
   const can = useMediaState("canPictureInPicture");
   const isOn = useMediaState("pictureInPicture");
@@ -337,7 +338,7 @@ function PiPButton() {
     <button
       type="button"
       onClick={() => remote.togglePictureInPicture()}
-      aria-label={isOn ? "Quitter le mode mini-fenêtre" : "Mode mini-fenêtre"}
+      aria-label={isOn ? t("pipExit") : t("pipEnter")}
       aria-pressed={isOn}
       className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 hidden sm:grid"
     >

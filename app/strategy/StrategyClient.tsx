@@ -199,11 +199,10 @@ export default function StrategyClient({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-              Tes Offres
+              {t("yourOffersTitle")}
             </h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              L&apos;offre de base, l&apos;offre coeur et l&apos;offre premium vont
-              structurer tout ton contenu, ton tunnel et tes automatisations.
+              {t("yourOffersDesc")}
             </p>
 
             {mode === "choose" && (
@@ -253,13 +252,13 @@ export default function StrategyClient({
           <>
             <div className="mb-4">
               <label className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Nom de tes offres
+                {t("offerSetNameLabel")}
               </label>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 text-sm text-slate-900 dark:text-slate-50 outline-none ring-0 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                 value={scenarioLabel}
                 onChange={(e) => updateName(e.target.value)}
-                placeholder="Ex : Ascension Affiliation Success"
+                placeholder={t("offerSetNamePlaceholder")}
               />
             </div>
 
@@ -273,13 +272,13 @@ export default function StrategyClient({
                       className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 p-3"
                     >
                       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        Niveau {idx + 1} · {label}
+                        {t("levelLabel", { idx: idx + 1, label })}
                       </p>
 
                       <div className="space-y-2">
                         <div>
                           <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                            Nom de l&apos;offre
+                            {t("offerNameLabel")}
                           </label>
                           <input
                             className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -287,13 +286,13 @@ export default function StrategyClient({
                             onChange={(e) =>
                               updateLevel(idx, "name", e.target.value)
                             }
-                            placeholder="Ex : Atelier express, Offre signature..."
+                            placeholder={t("offerNamePlaceholder")}
                           />
                         </div>
 
                         <div>
                           <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                            Description courte
+                            {t("offerDescriptionLabel")}
                           </label>
                           <textarea
                             className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -309,7 +308,7 @@ export default function StrategyClient({
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                              Prix indicatif
+                              {t("offerPriceLabel")}
                             </label>
                             <input
                               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -321,13 +320,13 @@ export default function StrategyClient({
                               onChange={(e) =>
                                 updateLevel(idx, "price", e.target.value)
                               }
-                              placeholder="Ex : 47€, 997€..."
+                              placeholder={t("offerPricePlaceholder")}
                             />
                           </div>
 
                           <div>
                             <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                              Fourchette / gamme
+                              {t("offerRangeLabel")}
                             </label>
                             <input
                               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -353,7 +352,7 @@ export default function StrategyClient({
                 disabled={saving}
                 className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
               >
-                {saving ? "Sauvegarde..." : "Sauvegarder les offres"}
+                {saving ? t("savingOffers") : t("saveOffers")}
               </button>
             </div>
           </>

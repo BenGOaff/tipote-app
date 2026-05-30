@@ -225,8 +225,16 @@ type StorytellingData = {
  * Formate un résumé persona plat en markdown structuré.
  * Détecte les labels "Douleurs principales :", "Désirs :", etc.
  * et les convertit en titres + listes à puces.
+ *
+ * NOTE i18n : on garde une liste hardcodée FR + un set étendu en
+ * passe-partout EN/ES car les résumés générés par l'IA arrivent
+ * fréquemment dans la langue de l'onboarding. Les labels affichés
+ * comme titres sont remplacés par leur traduction via `labelMap`.
  */
-function formatPersonaSummary(text: string): string {
+function formatPersonaSummary(
+  text: string,
+  labelMap?: Record<string, string>,
+): string {
   if (!text?.trim()) return text;
   // Si déjà formaté en markdown (contient des titres ou des listes), ne pas reformater
   if (/^##?\s/m.test(text) || /^\s*[-*]\s/m.test(text)) return text;
@@ -271,12 +279,14 @@ function formatPersonaSummary(text: string): string {
   if (intro) parts.push(intro + "\n");
 
   for (let i = 0; i < matches.length; i++) {
-    const label = matches[i].label;
+    const rawLabel = matches[i].label;
+    const displayLabel =
+      labelMap?.[rawLabel.toLowerCase()] ?? rawLabel;
     const start = matches[i].endIndex;
     const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
     const content = text.slice(start, end).replace(/[\s.]+$/, "").trim();
 
-    parts.push(`\n## ${label}\n`);
+    parts.push(`\n## ${displayLabel}\n`);
 
     // Split items on ";" or "," (for channels)
     const items = content
@@ -312,6 +322,27 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const [tab, setTab] = useState<TabKey>(activeTab);
   useEffect(() => setTab(activeTab), [activeTab]);
+
+  // Map des labels de sections persona (clés en lowercase) → libellé
+  // traduit. Utilisé par formatPersonaSummary pour afficher les
+  // titres dans la langue de l'UI tout en parsant les marqueurs FR
+  // produits par l'IA.
+  const personaSectionLabelMap = useMemo<Record<string, string>>(() => ({
+    "douleurs principales": tT("personaPainsMain"),
+    "douleurs": tT("personaPains"),
+    "points de douleur": tT("personaPainPoints"),
+    "désirs": tT("personaDesires"),
+    "objectifs": tT("personaGoals"),
+    "motivations": tT("personaMotivations"),
+    "objections fréquentes": tT("personaObjectionsFrequent"),
+    "objections": tT("personaObjections"),
+    "canaux préférés": tT("personaChannelsPreferred"),
+    "canaux": tT("personaChannels"),
+    "déclencheurs d'achat": tT("personaPurchaseTriggers"),
+    "déclencheurs": tT("personaTriggers"),
+    "phrases exactes": tT("personaExactPhrases"),
+    "phrases types": tT("personaTypicalPhrases"),
+  }), [tT]);
 
   const queryBase = useMemo(() => {
     const params = new URLSearchParams();
@@ -731,11 +762,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
 
   const assembledNiche = useMemo(() => {
     if (!nicheTarget && !nicheObjective && !nicheMechanism && !nicheMarker) return "";
-    const parts = [`J'aide les ${nicheTarget || "…"} à ${nicheObjective || "…"}`];
-    if (nicheMechanism) parts.push(`grâce à ${nicheMechanism}`);
-    if (nicheMarker) parts.push(`en ${nicheMarker}`);
+    const parts = [tT("nicheTemplate", { target: nicheTarget || "…", objective: nicheObjective || "…" })];
+    if (nicheMechanism) parts.push(tT("nicheMechanismSuffix", { mechanism: nicheMechanism }));
+    if (nicheMarker) parts.push(tT("nicheMarkerSuffix", { marker: nicheMarker }));
     return parts.join(" ");
-  }, [nicheTarget, nicheObjective, nicheMechanism, nicheMarker]);
+  }, [nicheTarget, nicheObjective, nicheMechanism, nicheMarker, tT]);
 
   const assembledStorytelling = useMemo<StorytellingData>(() => ({
     situation_initiale: storySituationInitiale,
@@ -1683,15 +1714,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
           <div className="mt-6 pt-6 border-t space-y-3">
             <div className="space-y-1">
               <Label htmlFor="tipote-affiliate-id" className="font-semibold">
-                Touche des commissions sur tes popquiz
+                {tT("tipoteAffiliateTitle")}
               </Label>
               <p className="text-sm text-muted-foreground">
-                Sur chaque popquiz publié, un discret <em>« Cette vidéo vous est proposée via Tiquiz »</em> redirige vers la page de présentation de Tiquiz. Si tu colles ton identifiant affilié Systeme.io ci-dessous, chaque inscription qui en découle te rapporte une commission — automatiquement.
+                {tT.rich("tipoteAffiliateDesc", { em: (chunks) => <em>{chunks}</em> })}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tipote-affiliate-id">Mon identifiant affilié Tipote</Label>
+              <Label htmlFor="tipote-affiliate-id">{tT("tipoteAffiliateIdLabel")}</Label>
               <Input
                 id="tipote-affiliate-id"
                 type="text"
@@ -1704,21 +1735,23 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
               />
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>
-                  <strong>Où trouver mon ID ?</strong> Connecte-toi à Systeme.io
-                  → <em>Tableau de bord affilié</em> → en haut à droite tu vois
-                  ton <em>identifiant affilié</em> (qui commence par{" "}
-                  <code className="px-1 py-0.5 rounded bg-muted">sa</code>).
-                  Copie-le, colle-le ici, c&apos;est tout.
+                  {tT.rich("tipoteAffiliateWhereToFind", {
+                    strong: (chunks) => <strong>{chunks}</strong>,
+                    em: (chunks) => <em>{chunks}</em>,
+                    code: (chunks) => (
+                      <code className="px-1 py-0.5 rounded bg-muted">{chunks}</code>
+                    ),
+                  })}
                 </p>
                 <p>
-                  Pas encore inscrit·e au programme ?{" "}
+                  {tT("tipoteAffiliateNotRegistered")}{" "}
                   <a
                     href="https://www.tipote.fr/part-tiquiz"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline text-primary hover:text-primary/80"
                   >
-                    Découvrir le programme d&apos;affiliation Tipote
+                    {tT("tipoteAffiliateDiscoverProgram")}
                   </a>
                   {" · "}
                   <a
@@ -1727,12 +1760,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                     rel="noopener noreferrer"
                     className="underline text-primary hover:text-primary/80"
                   >
-                    Conditions générales
+                    {tT("tipoteAffiliateTerms")}
                   </a>
                 </p>
                 <p className="italic">
-                  Si tu laisses ce champ vide, le footer reste visible mais
-                  sans tracking — les inscriptions ne te rapporteront rien.
+                  {tT("tipoteAffiliateEmptyHint")}
                 </p>
               </div>
             </div>
@@ -2874,7 +2906,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                   title={tT("clickToEdit")}
                 >
                   <AIContent
-                    content={formatPersonaSummary(mission)}
+                    content={formatPersonaSummary(mission, personaSectionLabelMap)}
                     mode="markdown"
                     scroll
                     maxHeight="70vh"

@@ -38,14 +38,17 @@ export type MascotProps = {
   ariaLabel?: string;
 };
 
+// Fallback ARIA labels in English — callers should pass `ariaLabel` with
+// a translated string for production UI, but these defaults keep the
+// component usable without a translation context.
 const ARIA_DEFAULTS: Record<MascotExpression, string> = {
-  hello: "Mascotte qui dit bonjour",
-  thinking: "Mascotte qui réfléchit",
-  happy: "Mascotte tout sourire",
-  wave: "Mascotte qui salue de la main",
-  sleepy: "Mascotte qui dort",
-  celebrate: "Mascotte qui célèbre",
-  search: "Mascotte qui cherche",
+  hello: "Mascot greeting",
+  thinking: "Mascot thinking",
+  happy: "Mascot smiling",
+  wave: "Mascot waving",
+  sleepy: "Mascot sleeping",
+  celebrate: "Mascot celebrating",
+  search: "Mascot searching",
 };
 
 export function Mascot({

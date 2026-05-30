@@ -20,38 +20,42 @@ import { ContentLocalePicker } from "../components/ContentLocalePicker";
 
 export const dynamic = "force-dynamic";
 
-const LINK_DESTINATIONS: LinkItem[] = [
-  {
-    label: "Page Tiquiz principale",
-    description: "La page d'accueil affiliation Tiquiz, recommandée par défaut.",
-    path: "/tiquiz/affiliation",
-  },
-  {
-    label: "Tiquiz essai gratuit",
-    description: "Compte gratuit à vie : 1 quiz, 10 réponses/mois, sans CB.",
-    path: "/part-tiquiz-gratuit",
-  },
-  {
-    label: "Tiquiz mensuel (9 €/mois)",
-    description: "Quiz et réponses illimités, sans engagement.",
-    path: "/part-tiquiz-mensuel",
-  },
-  {
-    label: "Tiquiz annuel (90 €/an)",
-    description: "2 mois offerts vs mensuel.",
-    path: "/part-tiquiz-annuel",
-  },
-  {
-    label: "Page Tipote principale",
-    description: "Affiliation Tipote (l'extension de pod d'engagement LinkedIn).",
-    path: "/affiliation",
-  },
-  {
-    label: "Commande Tipote",
-    description: "Page de commande directe Tipote.",
-    path: "/commande",
-  },
-];
+function buildLinkDestinations(
+  ld: ReturnType<typeof getDict>["link_destinations"],
+): LinkItem[] {
+  return [
+    {
+      label: ld.tiquiz_main_label,
+      description: ld.tiquiz_main_description,
+      path: "/tiquiz/affiliation",
+    },
+    {
+      label: ld.tiquiz_free_label,
+      description: ld.tiquiz_free_description,
+      path: "/part-tiquiz-gratuit",
+    },
+    {
+      label: ld.tiquiz_monthly_label,
+      description: ld.tiquiz_monthly_description,
+      path: "/part-tiquiz-mensuel",
+    },
+    {
+      label: ld.tiquiz_yearly_label,
+      description: ld.tiquiz_yearly_description,
+      path: "/part-tiquiz-annuel",
+    },
+    {
+      label: ld.tipote_main_label,
+      description: ld.tipote_main_description,
+      path: "/affiliation",
+    },
+    {
+      label: ld.tipote_order_label,
+      description: ld.tipote_order_description,
+      path: "/commande",
+    },
+  ];
+}
 
 export default async function PromouvoirPage({
   searchParams,
@@ -62,6 +66,7 @@ export default async function PromouvoirPage({
   if (!session) redirect("/login");
 
   const t = getDict(normaliseLocale(session.locale));
+  const LINK_DESTINATIONS = buildLinkDestinations(t.link_destinations);
   // MARCHÉ de diffusion choisi (≠ langue d'interface) : pilote le domaine des
   // liens (FR → tipote.fr, EN → tipote.blog). Défaut = langue de l'affilié.
   const sp = await searchParams;

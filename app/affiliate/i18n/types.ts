@@ -190,6 +190,22 @@ export type AffiliateDict = {
     leaderboard_unranked: string;
   };
 
+  // ─── Default LinksManager link destinations ──────────────────────
+  link_destinations: {
+    tiquiz_main_label: string;
+    tiquiz_main_description: string;
+    tiquiz_free_label: string;
+    tiquiz_free_description: string;
+    tiquiz_monthly_label: string;
+    tiquiz_monthly_description: string;
+    tiquiz_yearly_label: string;
+    tiquiz_yearly_description: string;
+    tipote_main_label: string;
+    tipote_main_description: string;
+    tipote_order_label: string;
+    tipote_order_description: string;
+  };
+
   // ─── Promouvoir ──────────────────────────────────────────────────
   promouvoir: {
     page_title: string;
@@ -295,6 +311,31 @@ export type AffiliateDict = {
     faq_title: string;
     terms_card_title: string;
     terms_card_button: string;
+    // FAQ entries
+    faq_payment_q: string;
+    faq_payment_a: string;
+    faq_cookie_q: string;
+    faq_cookie_a: string;
+    faq_multi_link_q: string;
+    faq_multi_link_a: string;
+    faq_best_channels_q: string;
+    faq_best_channels_a: string;
+    faq_minimum_q: string;
+    faq_minimum_a: string;
+    faq_subscriptions_q: string;
+    faq_subscriptions_a: string;
+    faq_self_click_q: string;
+    faq_self_click_a: string;
+    faq_paid_ads_q: string;
+    faq_paid_ads_a: string;
+    faq_first_revenue_q: string;
+    faq_first_revenue_a: string;
+    faq_taxes_q: string;
+    faq_taxes_a: string;
+    faq_avg_earnings_q: string;
+    faq_avg_earnings_a: string;
+    faq_missing_commission_q: string;
+    faq_missing_commission_a: string;
   };
 
   // ─── Trial Tipote ────────────────────────────────────────────────

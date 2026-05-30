@@ -194,13 +194,13 @@ export default function ProfileSection() {
         setProfile(json.profile ?? profile);
 
         toast({
-          title: "Profil mis à jour ✅",
-          description: "Tes infos ont été enregistrées.",
+          title: t("profileUpdatedTitle"),
+          description: t("profileUpdatedDesc"),
         });
       } catch (e) {
         toast({
-          title: "Sauvegarde impossible",
-          description: e instanceof Error ? e.message : "Erreur inconnue",
+          title: t("saveErrorTitle"),
+          description: e instanceof Error ? e.message : t("unknownError"),
           variant: "destructive",
         });
       }
@@ -216,8 +216,8 @@ export default function ProfileSection() {
 
       if (!res.ok || !json?.ok) {
         toast({
-          title: "Suppression impossible",
-          description: json?.error || "Erreur inconnue",
+          title: t("deleteErrorTitle"),
+          description: json?.error || t("unknownError"),
           variant: "destructive",
         });
         return;
@@ -227,8 +227,8 @@ export default function ProfileSection() {
       window.location.href = "/?account_deleted=true";
     } catch (e) {
       toast({
-        title: "Suppression impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        title: t("deleteErrorTitle"),
+        description: e instanceof Error ? e.message : t("unknownError"),
         variant: "destructive",
       });
     } finally {
@@ -238,12 +238,10 @@ export default function ProfileSection() {
   };
 
   const onReset = async () => {
-    const ok1 = window.confirm(
-      "⚠️ Réinitialiser CE Tipote ?\n\nTous les contenus, tâches et personnalisations de ce Tipote seront supprimés. Tes autres Tipote (s'il y en a) ne sont PAS affectés. C'est définitif.",
-    );
+    const ok1 = window.confirm(t("resetConfirm1"));
     if (!ok1) return;
 
-    const ok2 = window.confirm("Dernière confirmation : tu es sûr(e) à 100% ?");
+    const ok2 = window.confirm(t("resetConfirm2"));
     if (!ok2) return;
 
     setResetting(true);
@@ -262,24 +260,24 @@ export default function ProfileSection() {
 
       if (!res.ok || !json?.ok) {
         toast({
-          title: "Réinitialisation impossible",
-          description: json?.error || "Erreur inconnue",
+          title: t("resetErrorTitle"),
+          description: json?.error || t("unknownError"),
           variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: "Tipote réinitialisé ✅",
-        description: "Retour à l'onboarding…",
+        title: t("resetSuccessTitle"),
+        description: t("resetSuccessDesc"),
       });
 
       router.push("/onboarding");
       router.refresh();
     } catch (e) {
       toast({
-        title: "Réinitialisation impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        title: t("resetErrorTitle"),
+        description: e instanceof Error ? e.message : t("unknownError"),
         variant: "destructive",
       });
     } finally {
