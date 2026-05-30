@@ -82,9 +82,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const [results, setResults] = useState<QuizResult[]>([]);
   const [ctaText, setCtaText] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
-  const [consentText, setConsentText] = useState(
-    "En renseignant ton email, tu acceptes notre politique de confidentialité.",
-  );
+  const [consentText, setConsentText] = useState(t("defaultConsentText"));
   const [bonusDescription, setBonusDescription] = useState("");
   const [shareMessage, setShareMessage] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
@@ -113,13 +111,13 @@ export function QuizForm({ onClose }: QuizFormProps) {
         setSioTagsLoaded(true);
       } else if (json?.error === "NO_API_KEY") {
         toast({
-          title: "Clé API manquante",
-          description: "Configure ta clé API Systeme.io dans Réglages > Systeme.io.",
+          title: t("toastNoApiKeyTitle"),
+          description: t("toastNoApiKeyDesc"),
           variant: "destructive",
         });
       }
     } catch {
-      toast({ title: "Erreur", description: "Impossible de charger les tags.", variant: "destructive" });
+      toast({ title: t("toastGenericError"), description: t("toastTagsLoadFailed"), variant: "destructive" });
     } finally {
       setSioTagsLoading(false);
     }
@@ -146,7 +144,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
       return (
         <div className="flex gap-2">
           <Input
-            placeholder="Nom du nouveau tag"
+            placeholder={t("newTagPlaceholder")}
             value={newTagName}
             onChange={(e) => setNewTagName(e.target.value)}
             className="flex-1 text-sm"
@@ -165,7 +163,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
       return (
         <Button variant="outline" size="sm" onClick={loadSioTags} disabled={sioTagsLoading}>
           {sioTagsLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <ChevronDown className="w-3 h-3 mr-1" />}
-          {sioTagsLoading ? "Chargement..." : "Charger mes tags"}
+          {sioTagsLoading ? t("loadingTags") : t("loadMyTags")}
         </Button>
       );
     }
@@ -176,7 +174,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">— Aucun tag —</option>
+          <option value="">{t("noTagOption")}</option>
           {sioTags.map((t) => (
             <option key={t.id} value={t.name}>{t.name}</option>
           ))}
@@ -197,8 +195,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const handleGenerate = async () => {
     if (!objective.trim() || !target.trim()) {
       toast({
-        title: "Champs requis",
-        description: "Remplis au moins l'objectif et la cible.",
+        title: t("toastRequiredFieldsTitle"),
+        description: t("toastRequiredFieldsDesc"),
         variant: "destructive",
       });
       return;
@@ -227,17 +225,17 @@ export function QuizForm({ onClose }: QuizFormProps) {
         const json = await res.json();
         if (json?.error === "NO_CREDITS") {
           toast({
-            title: "Crédits insuffisants",
-            description: "La génération de quiz coûte 6 crédits.",
+            title: t("toastNoCreditsTitle"),
+            description: t("toastNoCreditsDesc"),
             variant: "destructive",
           });
           return;
         }
-        throw new Error(json?.error || "Erreur de génération");
+        throw new Error(json?.error || t("genErrorMsg"));
       }
 
       // Read SSE stream
-      if (!res.body) throw new Error("Pas de réponse du serveur");
+      if (!res.body) throw new Error(t("noServerResponse"));
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -267,13 +265,13 @@ export function QuizForm({ onClose }: QuizFormProps) {
             } else if (eventType === "error") {
               if (data.error === "NO_CREDITS") {
                 toast({
-                  title: "Crédits insuffisants",
-                  description: "La génération de quiz coûte 6 crédits.",
+                  title: t("toastNoCreditsTitle"),
+                  description: t("toastNoCreditsDesc"),
                   variant: "destructive",
                 });
                 return;
               }
-              throw new Error(data.error || "Erreur de génération");
+              throw new Error(data.error || t("genErrorMsg"));
             }
             // heartbeat and progress events are ignored
           } catch (parseErr) {
@@ -284,7 +282,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
       }
 
       if (!result?.ok) {
-        throw new Error("La génération n'a pas abouti. Réessaie.");
+        throw new Error(t("genFailedRetry"));
       }
 
       const quiz = result.quiz;
@@ -317,8 +315,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
       setStep("edit");
     } catch (err: any) {
       toast({
-        title: "Erreur",
-        description: err.message || "Impossible de générer le quiz.",
+        title: t("toastGenericError"),
+        description: err.message || t("toastGenFailedDesc"),
         variant: "destructive",
       });
     } finally {
@@ -328,7 +326,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
 
   const handleSave = async (status: "draft" | "active" = "draft") => {
     if (!title.trim()) {
-      toast({ title: "Titre requis", variant: "destructive" });
+      toast({ title: t("toastTitleRequired"), variant: "destructive" });
       return;
     }
 
@@ -371,14 +369,14 @@ export function QuizForm({ onClose }: QuizFormProps) {
       });
 
       const json = await res.json();
-      if (!json?.ok) throw new Error(json?.error || "Erreur");
+      if (!json?.ok) throw new Error(json?.error || t("toastGenericError"));
 
       toast({ title: status === "active" ? t("toastPublished") : t("toastSavedShort") });
       router.push(`/quiz/${json.quizId}`);
     } catch (err: any) {
       toast({
-        title: "Erreur",
-        description: err.message || "Impossible de sauvegarder.",
+        title: t("toastGenericError"),
+        description: err.message || t("toastSaveFailedDesc"),
         variant: "destructive",
       });
     } finally {
@@ -467,7 +465,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
         body: formData,
       });
       const json = await res.json();
-      if (!json?.ok) throw new Error(json?.error || "Erreur d'import");
+      if (!json?.ok) throw new Error(json?.error || t("toastImportError"));
 
       const quiz = json.quiz;
       setTitle(quiz.title ?? "");
@@ -496,8 +494,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
       toast({ title: t("toastImported"), description: t("toastImportedDesc", { qCount: quiz.questions?.length ?? 0, rCount: quiz.results?.length ?? 0 }) });
     } catch (err: any) {
       toast({
-        title: "Erreur d'import",
-        description: err.message || "Impossible de lire le fichier.",
+        title: t("toastImportError"),
+        description: err.message || t("toastImportReadFailed"),
         variant: "destructive",
       });
     } finally {

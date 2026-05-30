@@ -148,6 +148,9 @@ type ContentFolder = {
 };
 
 // Colors and icons 1:1 with Créer page (CreateLovableClient contentTypes)
+// Static folder labels here are display fallback only — the UI reads
+// the per-locale value via t(`folders.${id}`). Kept FR for legacy code
+// paths that look at `folder.label` directly (none currently).
 const CONTENT_FOLDERS: ContentFolder[] = [
   {
     id: "posts",
@@ -260,6 +263,9 @@ const statusColors: Record<string, string> = {
   failed: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
 };
 
+// statusLabels are fallbacks; the UI reads localised values via
+// t(`status.${key}`) from the myContent namespace. Kept FR-only because
+// no code path renders these directly any more.
 const statusLabels: Record<string, string> = {
   draft: "Brouillon",
   scheduled: "Planifié",
@@ -643,13 +649,13 @@ export default function MyContentLovableClient({
 
           <main className="flex-1 overflow-auto bg-background flex flex-col">
             <PageHeader
-              left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
+              left={<h1 className="text-lg font-display font-bold truncate">{t("pageTitle")}</h1>}
             />
 
             <div className="flex-1 p-4 sm:p-5 lg:p-6">
               <div className="max-w-[1200px] mx-auto w-full space-y-5">
                 <Card className="p-6">
-                  <p className="text-sm text-muted-foreground">Impossible de charger tes contenus pour le moment.</p>
+                  <p className="text-sm text-muted-foreground">{t("ui.loadError")}</p>
                   <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{error}</p>
                 </Card>
               </div>
@@ -667,7 +673,7 @@ export default function MyContentLovableClient({
 
         <main className="flex-1 overflow-auto bg-background flex flex-col">
           <PageHeader
-            left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
+            left={<h1 className="text-lg font-display font-bold truncate">{t("pageTitle")}</h1>}
           />
 
           {/* Phase-2 design-system pilot: clean heading replaces the heavy
@@ -676,13 +682,13 @@ export default function MyContentLovableClient({
               so the visual rhythm matches the rest of the (refreshed) app. */}
           <PageContainer>
             <PageHeading
-              title="Mes contenus"
+              title={t("pageTitle")}
               subtitle={t("ui.subtitle")}
               actions={
                 <Button asChild className="rounded-full">
                   <Link href="/create">
                     <Plus className="w-4 h-4 mr-1.5" />
-                    Créer
+                    {t("ui.create")}
                   </Link>
                 </Button>
               }
@@ -710,7 +716,7 @@ export default function MyContentLovableClient({
                   }`}
                 >
                   <List className="w-3.5 h-3.5" />
-                  Liste
+                  {t("ui.viewList")}
                 </button>
                 <button
                   onClick={() => setView("calendar")}
@@ -719,7 +725,7 @@ export default function MyContentLovableClient({
                   }`}
                 >
                   <CalendarDays className="w-3.5 h-3.5" />
-                  Calendrier
+                  {t("ui.viewCalendar")}
                 </button>
               </div>
             </SectionCard>
@@ -783,7 +789,7 @@ export default function MyContentLovableClient({
                                 pense ne rien avoir (cf. bug Fabienne). */}
                             {hidden > 0 ? (
                               <div className="text-[11px] text-amber-700 dark:text-amber-300 mt-1.5">
-                                +{hidden} dans tes autres projets
+                                {t("ui.hiddenInOtherProjects", { count: hidden })}
                               </div>
                             ) : null}
                           </Card>
@@ -796,7 +802,7 @@ export default function MyContentLovableClient({
                   {initialItems.length > 0 && (
                     <div className="space-y-3">
                       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                        Derniers contenus
+                        {t("ui.recentContent")}
                       </h3>
                       <div className="space-y-3">
                         {initialItems.slice(0, 5).map((item) => {
@@ -816,7 +822,7 @@ export default function MyContentLovableClient({
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                       <div className="font-medium truncate">
-                                        {safeString(item.title) || "Sans titre"}
+                                        {safeString(item.title) || t("ui.untitled")}
                                       </div>
                                       <Badge className={`${badgeClasses} shrink-0`}>{badgeLabel}</Badge>
                                     </div>
@@ -842,7 +848,7 @@ export default function MyContentLovableClient({
                                   </div>
                                 </div>
                                 <Button variant="outline" size="sm" asChild className="shrink-0">
-                                  <Link href={`/contents/${item.id}`}>Voir</Link>
+                                  <Link href={`/contents/${item.id}`}>{t("ui.view")}</Link>
                                 </Button>
                               </div>
                             </Card>
@@ -860,17 +866,17 @@ export default function MyContentLovableClient({
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Retour aux dossiers
+                    {t("ui.backToFolders")}
                   </button>
 
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold flex items-center gap-2">
                       <ClipboardList className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                      Mes Quiz
+                      {t("folders.quiz")}
                     </h2>
                     <Button size="sm" asChild>
                       <Link href="/quiz/new">
-                        <Plus className="w-4 h-4 mr-1" /> Créer un quiz
+                        <Plus className="w-4 h-4 mr-1" /> {t("ui.createQuiz")}
                       </Link>
                     </Button>
                   </div>
@@ -884,9 +890,7 @@ export default function MyContentLovableClient({
                           croire qu'il n'a rien. */}
                       {hiddenByProjectFilter.quizzes > 0 ? (
                         <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2 text-center">
-                          Tu as {hiddenByProjectFilter.quizzes} quiz dans
-                          tes autres projets. Change de projet en haut à
-                          droite pour les voir.
+                          {t("ui.hiddenQuizzesInProjects", { count: hiddenByProjectFilter.quizzes })}
                         </p>
                       ) : null}
                     </Card>
@@ -928,11 +932,11 @@ export default function MyContentLovableClient({
                                           contenir des `<span style="color:…">`. Pour cette ligne
                                           de listing, on rend en texte plat — le rendu coloré reste
                                           intact sur la page publique du quiz. */}
-                                      {stripHtml(qz.title) || (isSurvey ? "Sondage sans titre" : "Quiz sans titre")}
+                                      {stripHtml(qz.title) || (isSurvey ? t("ui.untitledSurvey") : t("ui.untitledQuiz"))}
                                     </div>
                                     {isSurvey && (
                                       <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-                                        Sondage
+                                        {t("ui.surveyBadge")}
                                       </Badge>
                                     )}
                                     <Badge
@@ -942,7 +946,7 @@ export default function MyContentLovableClient({
                                           : "bg-muted text-muted-foreground"
                                       }
                                     >
-                                      {isActive ? "Actif" : "Brouillon"}
+                                      {isActive ? t("ui.activeBadge") : t("status.draft")}
                                     </Badge>
                                     {/* Contextual highlight: at most one
                                         per row, top-performer wins over
@@ -952,14 +956,14 @@ export default function MyContentLovableClient({
                                   </div>
                                   <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                     <span className="inline-flex items-center gap-1">
-                                      <Eye className="h-3.5 w-3.5" /> {qz.views_count} vues
+                                      <Eye className="h-3.5 w-3.5" /> {t("ui.viewsCount", { count: qz.views_count })}
                                     </span>
                                     <span className="inline-flex items-center gap-1">
-                                      <Users className="h-3.5 w-3.5" /> {qz.leads_count} {isSurvey ? "réponses" : "emails"}
+                                      <Users className="h-3.5 w-3.5" /> {isSurvey ? t("ui.responsesCount", { count: qz.leads_count }) : t("ui.emailsCount", { count: qz.leads_count })}
                                     </span>
                                     {!isSurvey && (
                                       <span className="inline-flex items-center gap-1">
-                                        <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} partages
+                                        <Share2 className="h-3.5 w-3.5" /> {t("ui.sharesCount", { count: qz.shares_count })}
                                       </span>
                                     )}
                                   </div>
@@ -974,12 +978,12 @@ export default function MyContentLovableClient({
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem asChild>
                                     <Link href={`/quiz/${qz.id}`}>
-                                      <Edit className="w-4 h-4 mr-2" /> Gérer
+                                      <Edit className="w-4 h-4 mr-2" /> {t("ui.manage")}
                                     </Link>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem asChild>
                                     <Link href={`/quiz/${qz.id}/analytics`}>
-                                      <BarChart3 className="w-4 h-4 mr-2" /> Statistiques
+                                      <BarChart3 className="w-4 h-4 mr-2" /> {t("ui.statistics")}
                                     </Link>
                                   </DropdownMenuItem>
                                   {isActive && (() => {
@@ -993,13 +997,13 @@ export default function MyContentLovableClient({
                                           onClick={async () => {
                                             try {
                                               await navigator.clipboard.writeText(publicUrl);
-                                              toast({ title: "Lien copié" });
+                                              toast({ title: t("ui.linkCopied") });
                                             } catch {
                                               // silent
                                             }
                                           }}
                                         >
-                                          <Copy className="w-4 h-4 mr-2" /> Copier le lien
+                                          <Copy className="w-4 h-4 mr-2" /> {t("ui.copyLink")}
                                         </DropdownMenuItem>
                                         <DropdownMenuItem asChild>
                                           <a
@@ -1007,7 +1011,7 @@ export default function MyContentLovableClient({
                                             target="_blank"
                                             rel="noopener noreferrer"
                                           >
-                                            <ExternalLink className="w-4 h-4 mr-2" /> Voir en ligne
+                                            <ExternalLink className="w-4 h-4 mr-2" /> {t("ui.viewOnline")}
                                           </a>
                                         </DropdownMenuItem>
                                       </>
@@ -1017,7 +1021,7 @@ export default function MyContentLovableClient({
                                     className="text-destructive"
                                     onClick={() => setDeleteQuizConfirm(qz)}
                                   >
-                                    <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                                    <Trash2 className="w-4 h-4 mr-2" /> {tc("delete")}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1032,14 +1036,14 @@ export default function MyContentLovableClient({
                     <Dialog open onOpenChange={() => setDeleteQuizConfirm(null)}>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Supprimer ce quiz ?</DialogTitle>
+                          <DialogTitle>{t("ui.deleteQuizTitle")}</DialogTitle>
                           <DialogDescription>
-                            &laquo; {deleteQuizConfirm.title || (deleteQuizConfirm.mode === "survey" ? "Sondage sans titre" : "Quiz sans titre")} &raquo; et tous ses leads associ&eacute;s seront supprim&eacute;s d&eacute;finitivement. Cette action est irr&eacute;versible.
+                            {t("ui.deleteQuizDesc", { title: deleteQuizConfirm.title || (deleteQuizConfirm.mode === "survey" ? t("ui.untitledSurvey") : t("ui.untitledQuiz")) })}
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setDeleteQuizConfirm(null)}>
-                            Annuler
+                            {tc("cancel")}
                           </Button>
                           <Button
                             variant="destructive"
@@ -1050,16 +1054,16 @@ export default function MyContentLovableClient({
                                 const res = await fetch(`/api/quiz/${id}`, { method: "DELETE" });
                                 if (res.ok) {
                                   router.refresh();
-                                  toast({ title: "Quiz supprimé" });
+                                  toast({ title: t("ui.quizDeleted") });
                                 } else {
-                                  toast({ title: "Suppression échouée", variant: "destructive" as const });
+                                  toast({ title: t("ui.deleteFailed"), variant: "destructive" as const });
                                 }
                               } catch {
-                                toast({ title: "Suppression échouée", variant: "destructive" as const });
+                                toast({ title: t("ui.deleteFailed"), variant: "destructive" as const });
                               }
                             }}
                           >
-                            Supprimer
+                            {tc("delete")}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -1074,17 +1078,17 @@ export default function MyContentLovableClient({
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Retour aux dossiers
+                    {t("ui.backToFolders")}
                   </button>
 
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold flex items-center gap-2">
                       <Route className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                      Mes Pages
+                      {t("folders.funnels")}
                     </h2>
                     <Button size="sm" asChild>
                       <Link href="/pages">
-                        <Plus className="w-4 h-4 mr-1" /> Créer une page
+                        <Plus className="w-4 h-4 mr-1" /> {t("ui.createPage")}
                       </Link>
                     </Button>
                   </div>
@@ -1094,9 +1098,7 @@ export default function MyContentLovableClient({
                       <p className="text-sm text-muted-foreground text-center py-4">{t("ui.noPages")}</p>
                       {hiddenByProjectFilter.pages > 0 ? (
                         <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2 text-center">
-                          Tu as {hiddenByProjectFilter.pages} page(s) dans
-                          tes autres projets. Change de projet en haut à
-                          droite pour les voir.
+                          {t("ui.hiddenPagesInProjects", { count: hiddenByProjectFilter.pages })}
                         </p>
                       ) : null}
                     </Card>
@@ -1115,24 +1117,24 @@ export default function MyContentLovableClient({
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <div className="font-medium truncate max-w-[300px]">
-                                      {page.title || "Page sans titre"}
+                                      {page.title || t("ui.untitledPage")}
                                     </div>
                                     <Badge className={isPublished
                                       ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                                       : "bg-muted text-muted-foreground"
                                     }>
-                                      {isPublished ? "En ligne" : "Brouillon"}
+                                      {isPublished ? t("ui.pageOnline") : t("status.draft")}
                                     </Badge>
                                     <Badge variant="outline" className="text-xs">
-                                      {page.page_type === "sales" ? "Vente" : "Capture"}
+                                      {page.page_type === "sales" ? t("ui.pageTypeSales") : t("ui.pageTypeCapture")}
                                     </Badge>
                                   </div>
                                   <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                     <span className="inline-flex items-center gap-1">
-                                      <Eye className="h-3.5 w-3.5" /> {page.views_count} vues
+                                      <Eye className="h-3.5 w-3.5" /> {t("ui.viewsCount", { count: page.views_count })}
                                     </span>
                                     <span className="inline-flex items-center gap-1">
-                                      <Users className="h-3.5 w-3.5" /> {page.leads_count} leads
+                                      <Users className="h-3.5 w-3.5" /> {t("ui.leadsCount", { count: page.leads_count })}
                                     </span>
                                     {isPublished && (
                                       <a
@@ -1141,7 +1143,7 @@ export default function MyContentLovableClient({
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline"
                                       >
-                                        <ExternalLink className="h-3 w-3" /> Voir en ligne
+                                        <ExternalLink className="h-3 w-3" /> {t("ui.viewOnline")}
                                       </a>
                                     )}
                                   </div>
@@ -1155,11 +1157,11 @@ export default function MyContentLovableClient({
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem onClick={() => router.push(`/pages?edit=${page.id}`)}>
-                                    <Edit className="w-4 h-4 mr-2" /> Éditer
+                                    <Edit className="w-4 h-4 mr-2" /> {t("ui.edit")}
                                   </DropdownMenuItem>
                                   {isPublished && (
                                     <DropdownMenuItem onClick={() => window.open(publicUrl, "_blank")}>
-                                      <ExternalLink className="w-4 h-4 mr-2" /> Ouvrir
+                                      <ExternalLink className="w-4 h-4 mr-2" /> {t("ui.open")}
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuItem onClick={async () => {
@@ -1173,13 +1175,13 @@ export default function MyContentLovableClient({
                                       setLoadingLeads(false);
                                     }
                                   }}>
-                                    <Users className="w-4 h-4 mr-2" /> Voir les leads ({page.leads_count})
+                                    <Users className="w-4 h-4 mr-2" /> {t("ui.viewLeadsCount", { count: page.leads_count })}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     className="text-destructive"
                                     onClick={() => setDeleteFunnelConfirm(page)}
                                   >
-                                    <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                                    <Trash2 className="w-4 h-4 mr-2" /> {tc("delete")}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1206,9 +1208,9 @@ export default function MyContentLovableClient({
                               <table className="w-full text-sm">
                                 <thead>
                                   <tr className="border-b text-left">
-                                    <th className="pb-2 font-medium">Email</th>
+                                    <th className="pb-2 font-medium">{t("ui.emailHeader")}</th>
                                     <th className="pb-2 font-medium">{t("ui.firstName")}</th>
-                                    <th className="pb-2 font-medium">Date</th>
+                                    <th className="pb-2 font-medium">{t("ui.dateHeader")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1241,7 +1243,7 @@ export default function MyContentLovableClient({
                                 URL.revokeObjectURL(url);
                               }}
                             >
-                              <Download className="w-4 h-4 mr-2" /> Télécharger en CSV
+                              <Download className="w-4 h-4 mr-2" /> {t("ui.downloadCsv")}
                             </Button>
                           </div>
                         )}
@@ -1252,7 +1254,7 @@ export default function MyContentLovableClient({
                   {/* Loading leads */}
                   {loadingLeads && (
                     <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" /> Chargement des leads...
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" /> {t("ui.loadingLeads")}
                     </div>
                   )}
 
@@ -1261,14 +1263,14 @@ export default function MyContentLovableClient({
                     <Dialog open onOpenChange={() => setDeleteFunnelConfirm(null)}>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Supprimer cette page ?</DialogTitle>
+                          <DialogTitle>{t("ui.deletePageTitle")}</DialogTitle>
                           <DialogDescription>
-                            &laquo; {deleteFunnelConfirm.title || "Page sans titre"} &raquo; sera archivé et ne sera plus accessible.
+                            {t("ui.deletePageDesc", { title: deleteFunnelConfirm.title || t("ui.untitledPage") })}
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setDeleteFunnelConfirm(null)}>
-                            Annuler
+                            {tc("cancel")}
                           </Button>
                           <Button
                             variant="destructive"
@@ -1282,7 +1284,7 @@ export default function MyContentLovableClient({
                               } catch { /* ignore */ }
                             }}
                           >
-                            Supprimer
+                            {tc("delete")}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -1297,7 +1299,7 @@ export default function MyContentLovableClient({
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Retour aux dossiers
+                    {t("ui.backToFolders")}
                   </button>
 
                   {(() => {
@@ -1314,7 +1316,7 @@ export default function MyContentLovableClient({
 
                   {filtered.length === 0 ? (
                     <Card className="p-6">
-                      <p className="text-sm text-muted-foreground text-center py-4">Aucun contenu dans ce dossier.</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("ui.noContentInFolder")}</p>
                     </Card>
                   ) : (
                     <div className="space-y-8">
@@ -1356,7 +1358,7 @@ export default function MyContentLovableClient({
                                         <div className="min-w-0">
                                           <div className="flex items-center gap-2">
                                             <div className="font-medium truncate">
-                                              {safeString(item.title) || "Sans titre"}
+                                              {safeString(item.title) || t("ui.untitled")}
                                             </div>
                                             <Badge className={`${badgeClasses} shrink-0`}>{badgeLabel}</Badge>
                                           </div>
@@ -1386,7 +1388,7 @@ export default function MyContentLovableClient({
 
                                       <div className="flex items-center gap-2 shrink-0">
                                         <Button variant="outline" size="sm" asChild>
-                                          <Link href={`/contents/${item.id}`}>Voir</Link>
+                                          <Link href={`/contents/${item.id}`}>{t("ui.view")}</Link>
                                         </Button>
 
                                         <DropdownMenu>
@@ -1398,7 +1400,7 @@ export default function MyContentLovableClient({
                                           <DropdownMenuContent align="end">
                                             <DropdownMenuItem onClick={() => openEdit(item)} disabled={busy !== null}>
                                               <Edit className="w-4 h-4 mr-2" />
-                                              Modifier
+                                              {t("ui.modify")}
                                             </DropdownMenuItem>
 
                                             {normalizeKeyStatus(item.status) !== "published" ? (
@@ -1407,7 +1409,7 @@ export default function MyContentLovableClient({
                                                 disabled={busy !== null}
                                               >
                                                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                                                Marquer comme publié
+                                                {t("ui.markPublished")}
                                               </DropdownMenuItem>
                                             ) : null}
 
@@ -1424,7 +1426,7 @@ export default function MyContentLovableClient({
                                                 disabled={busy !== null}
                                               >
                                                 <CalendarX className="w-4 h-4 mr-2" />
-                                                Déplanifier
+                                                {t("ui.unschedule")}
                                               </DropdownMenuItem>
                                             ) : null}
 
@@ -1456,13 +1458,13 @@ export default function MyContentLovableClient({
             <Dialog open={!!editingContent} onOpenChange={(open) => (!open ? setEditingContent(null) : null)}>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                  <DialogTitle>Modifier le contenu</DialogTitle>
-                  <DialogDescription>Modifiez le titre et le contenu ci-dessous.</DialogDescription>
+                  <DialogTitle>{t("ui.editContent")}</DialogTitle>
+                  <DialogDescription>{t("ui.editContentDesc")}</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-title">Titre</Label>
+                    <Label htmlFor="edit-title">{t("ui.titleLabel")}</Label>
                     <Input
                       id="edit-title"
                       value={editTitle}
@@ -1472,7 +1474,7 @@ export default function MyContentLovableClient({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="edit-body">Contenu</Label>
+                    <Label htmlFor="edit-body">{t("ui.contentLabel")}</Label>
                     <Textarea
                       id="edit-body"
                       value={editBody}
@@ -1573,7 +1575,7 @@ export default function MyContentLovableClient({
 
             {/* Footer info (email) */}
             <div className="text-xs text-muted-foreground">
-              Connecté en tant que <span className="font-medium">{userEmail}</span>
+              {t.rich("ui.connectedAs", { email: () => <span className="font-medium">{userEmail}</span> })}
             </div>
           </PageContainer>
         </main>

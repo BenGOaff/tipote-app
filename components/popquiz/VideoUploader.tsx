@@ -203,7 +203,7 @@ export function VideoUploader({
   async function handleFile(file: File) {
     setError(null);
     if (!file.type.startsWith("video/")) {
-      setError("Choisis une vidéo (.mp4, .webm, .mov…).");
+      setError(t("videoChooseFileError"));
       return;
     }
 
@@ -223,7 +223,7 @@ export function VideoUploader({
       });
       const tokenJson = (await tokenRes.json()) as UploadTokenResponse;
       if (!tokenRes.ok || !tokenJson.ok) {
-        throw new Error(tokenJson.error || "Impossible de préparer l'import.");
+        throw new Error(tokenJson.error || t("videoPrepareImportError"));
       }
 
       setPhase({ kind: "uploading", sent: 0, total: file.size, pct: 0 });
@@ -275,7 +275,7 @@ export function VideoUploader({
       };
       if (!previewRes.ok || !previewJson.ok || !previewJson.signedUrl) {
         throw new Error(
-          previewJson.error ?? "Impossible de générer un lien de lecture.",
+          previewJson.error ?? t("videoPlaybackUrlError"),
         );
       }
 
@@ -348,7 +348,7 @@ export function VideoUploader({
         <div className="flex items-center gap-3">
           <Loader2 className="size-5 animate-spin text-primary shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">Importation en cours…</p>
+            <p className="text-sm font-medium">{t("videoImporting")}</p>
             <p className="text-xs text-muted-foreground tabular-nums">
               {formatBytes(phase.sent)} / {formatBytes(phase.total)}
             </p>
@@ -361,7 +361,7 @@ export function VideoUploader({
             onClick={handleCancel}
             className="shrink-0"
           >
-            Annuler
+            {t("cancelLabel")}
           </Button>
         </div>
         <Progress value={phase.pct} className="h-1.5" />
@@ -375,8 +375,8 @@ export function VideoUploader({
         <Loader2 className="size-5 animate-spin text-primary shrink-0" />
         <p className="text-sm">
           {phase.kind === "preparing"
-            ? "Préparation (extraction de la miniature…)"
-            : "Finalisation…"}
+            ? t("videoPreparing")
+            : t("videoFinalizing")}
         </p>
       </div>
     );
@@ -417,10 +417,10 @@ export function VideoUploader({
       >
         <Upload className="size-6 mx-auto text-muted-foreground mb-2" />
         <p className="text-sm font-medium">
-          Glisse une vidéo ici ou clique pour choisir
+          {t("videoDropZone")}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          MP4, WebM, MOV — jusqu&apos;à 20 Go.
+          {t("videoFormats")}
         </p>
         <input
           ref={inputRef}
