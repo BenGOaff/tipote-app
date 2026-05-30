@@ -15,6 +15,7 @@
 // écritures avant tout dépôt à l'admin fiscale.
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -37,17 +38,18 @@ interface Props {
 }
 
 export function FecExportCard({ hasSiren }: Props) {
+  const t = useTranslations("compta");
   const [from, setFrom] = useState<string>(startOfYearYmd());
   const [to, setTo] = useState<string>(ymdNow());
   const [downloading, setDownloading] = useState(false);
 
   async function handleDownload() {
     if (!hasSiren) {
-      toast.error("Renseigne ton SIREN dans la configuration SASU d'abord.");
+      toast.error(t("fecMissingSiren"));
       return;
     }
     if (from > to) {
-      toast.error("La date de début doit être avant la date de fin.");
+      toast.error(t("fecDateRangeError"));
       return;
     }
     setDownloading(true);
@@ -70,9 +72,9 @@ export function FecExportCard({ hasSiren }: Props) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       const entries = res.headers.get("X-Tipote-FEC-Entries") ?? "?";
-      toast.success(`FEC téléchargé (${entries} écritures sur la période).`);
+      toast.success(t("fecDownloaded", { entries }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Téléchargement échoué");
+      toast.error(e instanceof Error ? e.message : t("fecDownloadFailed"));
     } finally {
       setDownloading(false);
     }
@@ -85,11 +87,9 @@ export function FecExportCard({ hasSiren }: Props) {
           <FileText className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-base font-semibold">Export FEC pour ton comptable</h3>
+          <h3 className="text-base font-semibold">{t("fecTitle")}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Fichier des Écritures Comptables au format légal
-            (article A47 A-1 du LPF). C&apos;est ce que l&apos;administration
-            fiscale peut te demander en cas de contrôle.
+            {t("fecDescription")}
           </p>
         </div>
       </div>
@@ -98,16 +98,13 @@ export function FecExportCard({ hasSiren }: Props) {
       <div className="flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
         <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
         <p>
-          Tipote n&apos;a que la moitié de ta compta : tes ventes &amp;
-          encaissements (PSP + saisies manuelles). Pas tes achats, charges,
-          dotations ou paie. Donne ce fichier à ton comptable comme base —
-          il y agrégera le reste avant tout dépôt officiel.
+          {t("fecScopeWarning")}
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="fec-from">Date de début</Label>
+          <Label htmlFor="fec-from">{t("fecDateFrom")}</Label>
           <input
             id="fec-from"
             type="date"
@@ -117,7 +114,7 @@ export function FecExportCard({ hasSiren }: Props) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="fec-to">Date de fin</Label>
+          <Label htmlFor="fec-to">{t("fecDateTo")}</Label>
           <input
             id="fec-to"
             type="date"
@@ -130,8 +127,7 @@ export function FecExportCard({ hasSiren }: Props) {
 
       {!hasSiren ? (
         <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
-          Renseigne ton SIREN dans la configuration SASU plus bas — il
-          est obligatoire dans le nom du fichier FEC (norme fiscale).
+          {t("fecSirenRequired")}
         </p>
       ) : null}
 
@@ -144,12 +140,12 @@ export function FecExportCard({ hasSiren }: Props) {
           {downloading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Préparation…
+              {t("fecPreparing")}
             </>
           ) : (
             <>
               <Download className="h-4 w-4 mr-2" />
-              Télécharger le FEC
+              {t("fecDownload")}
             </>
           )}
         </Button>

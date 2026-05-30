@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { LayoutTemplate, FileText } from "lucide-react";
 
@@ -6,12 +7,13 @@ interface FunnelModeStepProps {
 }
 
 export function FunnelModeStep({ onSelectMode }: FunnelModeStepProps) {
+  const t = useTranslations("funnelConfig");
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold">Que veux-tu créer ?</h3>
+        <h3 className="text-lg font-semibold">{t("modeQuestion")}</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Choisis le format qui correspond à ton besoin.
+          {t("modeDescription")}
         </p>
       </div>
 
@@ -23,12 +25,11 @@ export function FunnelModeStep({ onSelectMode }: FunnelModeStepProps) {
           <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
             <LayoutTemplate className="w-6 h-6 text-primary" />
           </div>
-          <h3 className="font-semibold text-lg">Page prête à l'emploi</h3>
+          <h3 className="font-semibold text-lg">{t("modeVisualTitle")}</h3>
           <p className="text-sm text-muted-foreground">
-            Une page complète avec design + texte. Tu choisis un template, l'IA rédige le contenu
-            et tu obtiens un fichier HTML prêt à utiliser.
+            {t("modeVisualDesc")}
           </p>
-          <Badge variant="secondary" className="mt-1">Recommandé</Badge>
+          <Badge variant="secondary" className="mt-1">{t("modeRecommended")}</Badge>
         </button>
 
         <button
@@ -38,10 +39,9 @@ export function FunnelModeStep({ onSelectMode }: FunnelModeStepProps) {
           <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
             <FileText className="w-6 h-6 text-muted-foreground" />
           </div>
-          <h3 className="font-semibold text-lg">Juste le copywriting</h3>
+          <h3 className="font-semibold text-lg">{t("modeTextTitle")}</h3>
           <p className="text-sm text-muted-foreground">
-            L'IA génère uniquement le texte de ta page. Tu pourras le copier-coller
-            dans Systeme.io ou n'importe quel outil.
+            {t("modeTextDesc")}
           </p>
         </button>
       </div>

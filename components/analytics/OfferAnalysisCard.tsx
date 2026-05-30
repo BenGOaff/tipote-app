@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ interface OfferAnalysisCardProps {
 }
 
 export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: OfferAnalysisCardProps) => {
+  const t = useTranslations("analytics");
   if (isLoading) {
     return (
       <Card className="p-6">
@@ -22,8 +24,8 @@ export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: O
             <Loader2 className="w-5 h-5 text-primary-foreground animate-spin" />
           </div>
           <div>
-            <h3 className="text-lg font-bold">Analyse en cours...</h3>
-            <p className="text-sm text-muted-foreground">L&apos;IA examine tes données par offre</p>
+            <h3 className="text-lg font-bold">{t("offerAnalysisInProgress")}</h3>
+            <p className="text-sm text-muted-foreground">{t("offerAnalysisInProgressDesc")}</p>
           </div>
         </div>
         <div className="space-y-3">
@@ -44,18 +46,18 @@ export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: O
             <Sparkles className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="text-lg font-bold">Diagnostic IA par offre</h3>
+            <h3 className="text-lg font-bold">{t("offerAnalysisTitle")}</h3>
             <p className="text-sm text-muted-foreground">
-              Analyse les performances de chaque offre et obtiens des recommandations
+              {t("offerAnalysisSubtitle")}
             </p>
           </div>
         </div>
         <p className="text-muted-foreground text-sm mb-4">
-          L&apos;IA va analyser tes métriques par offre, identifier les goulots d&apos;étranglement (visiteurs → inscrits → ventes) et te donner des actions concrètes : modifier le CTA, poster plus souvent, revoir le positionnement, améliorer la page de capture...
+          {t("offerAnalysisDesc")}
         </p>
         <Button onClick={onAnalyze} disabled={!hasData} className="gradient-primary">
           <Sparkles className="w-4 h-4 mr-2" />
-          Lancer l&apos;analyse
+          {t("offerAnalysisLaunch")}
         </Button>
       </Card>
     );
@@ -69,18 +71,18 @@ export const OfferAnalysisCard = ({ analysis, isLoading, onAnalyze, hasData }: O
             <Sparkles className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h3 className="text-lg font-bold">Diagnostic IA par offre</h3>
+            <h3 className="text-lg font-bold">{t("offerAnalysisTitle")}</h3>
             <p className="text-sm text-muted-foreground">
-              Recommandations basées sur tes performances
+              {t("offerAnalysisRecoSubtitle")}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="gap-1">
-            <Sparkles className="w-3 h-3" /> IA
+            <Sparkles className="w-3 h-3" /> {t("aiBadge")}
           </Badge>
           <Button size="sm" variant="outline" onClick={onAnalyze}>
-            Relancer
+            {t("rerun")}
           </Button>
         </div>
       </div>

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, ExternalLink, HelpCircle } from "lucide-react";
 
 export const SioDataGuide = () => {
+  const t = useTranslations("analytics");
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -17,7 +19,7 @@ export const SioDataGuide = () => {
       >
         <span className="flex items-center gap-2 text-sm font-medium">
           <HelpCircle className="w-4 h-4 text-muted-foreground" />
-          Où trouver ces chiffres dans Systeme.io ou ton CRM ?
+          {t("sioGuideQuestion")}
         </span>
         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </Button>
@@ -60,7 +62,7 @@ export const SioDataGuide = () => {
 
           {/* Other CRMs */}
           <div className="space-y-2">
-            <h4 className="font-bold">Autres CRM / outils</h4>
+            <h4 className="font-bold">{t("sioGuideOtherCrms")}</h4>
             <ul className="space-y-1.5 text-muted-foreground ml-4">
               <li className="flex items-start gap-2">
                 <span className="font-medium text-foreground min-w-[70px] sm:min-w-[100px]">Mailchimp :</span>
@@ -88,7 +90,7 @@ export const SioDataGuide = () => {
           {/* Tipote auto-data */}
           <div className="p-3 rounded-lg bg-muted/50 border">
             <p className="text-xs text-muted-foreground">
-              <strong className="text-foreground">Astuce Tipote :</strong> Les visiteurs et inscrits de tes pages de capture et quiz Tipote sont remontés automatiquement. Tu n&apos;as qu&apos;à saisir les données de tes tunnels Système.io et tes ventes.
+              <strong className="text-foreground">{t("sioGuideTipLabel")}</strong> {t("sioGuideTipBody")}
             </p>
           </div>
         </div>

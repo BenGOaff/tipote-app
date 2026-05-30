@@ -15,6 +15,7 @@
 // que l'user comprenne sans avoir à googler.
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -70,6 +71,7 @@ export default function ComptaConfigForm({
   onSave,
   pending,
 }: Props) {
+  const t = useTranslations("comptaConfig");
   const [status, setStatus] = useState<AccountingStatus | null>(initial.accounting_status);
   const [draft, setDraft] = useState<ComptaProfileSlice>({
     ...emptyComptaSlice(),
@@ -91,17 +93,17 @@ export default function ComptaConfigForm({
     const next: Record<string, string> = {};
 
     if (!status) {
-      next.accounting_status = "Choisis un statut.";
+      next.accounting_status = t("errChooseStatus");
     } else if (status === "particulier") {
       if (!draft.particulier_revenue_type) {
-        next.particulier_revenue_type = "Indique la nature de tes revenus.";
+        next.particulier_revenue_type = t("errParticulierRevenue");
       }
     } else if (status === "auto_entrepreneur") {
       if (!draft.ae_activity_type) {
-        next.ae_activity_type = "Choisis ton type d'activité.";
+        next.ae_activity_type = t("errAeActivity");
       }
       if (!draft.ae_started_at) {
-        next.ae_started_at = "Renseigne la date de début d'activité.";
+        next.ae_started_at = t("errAeStarted");
       }
     } else if (
       status === "sasu" ||
@@ -112,10 +114,10 @@ export default function ComptaConfigForm({
       // Toutes les sociétés partagent la même validation :
       // SIREN obligatoire + exercice fiscal cohérent.
       if (!draft.sasu_siren || !SIREN_REGEX.test(draft.sasu_siren)) {
-        next.sasu_siren = "SIREN invalide (9 chiffres exactement).";
+        next.sasu_siren = t("errSirenInvalid");
       }
       if (!draft.sasu_fiscal_year_calendar && !draft.sasu_fiscal_year_start_month) {
-        next.sasu_fiscal_year_start_month = "Indique le mois de début d'exercice.";
+        next.sasu_fiscal_year_start_month = t("errFiscalYearStartMonth");
       }
       // Régime TVA obligatoire pour les sociétés à l'IS. Pour une
       // EURL à l'IR, la TVA reste optionnelle (souvent en franchise).
@@ -125,20 +127,15 @@ export default function ComptaConfigForm({
         status === "sarl" ||
         (status === "eurl" && draft.eurl_is_election);
       if (isAtIS && !draft.sasu_vat_regime) {
-        next.sasu_vat_regime = "Choisis ton régime de TVA.";
+        next.sasu_vat_regime = t("errVatRegime");
       }
     } else if (
       status === "independant_ch" ||
       status === "sarl_ch" ||
       status === "sa_ch"
     ) {
-      // Statuts CH — validations pragmatiques.
-      // Canton recommandé mais pas bloquant (l'user peut compléter
-      // plus tard ; le calendrier tombe sur les dates fédérales par
-      // défaut sinon). En revanche si l'user a coché "assujetti TVA",
-      // il doit choisir une périodicité.
       if (draft.ch_vat_assujetti && !draft.ch_vat_periodicity) {
-        next.ch_vat_periodicity = "Choisis la périodicité de tes décomptes TVA.";
+        next.ch_vat_periodicity = t("errChVatPeriodicity");
       }
     } else if (
       status === "trabalhador_independente_pt" ||
@@ -148,10 +145,10 @@ export default function ComptaConfigForm({
       status === "sa_pt"
     ) {
       if (draft.pt_nif && !/^\d{9}$/.test(draft.pt_nif)) {
-        next.pt_nif = "NIF invalide (9 chiffres exactement).";
+        next.pt_nif = t("errPtNifInvalid");
       }
       if (!draft.pt_iva_isento && !draft.pt_iva_periodicity) {
-        next.pt_iva_periodicity = "Choisis la périodicité de tes déclarations IVA.";
+        next.pt_iva_periodicity = t("errPtIvaPeriodicity");
       }
     } else if (
       status === "independant_principal_be" ||
@@ -160,10 +157,10 @@ export default function ComptaConfigForm({
       status === "sa_be"
     ) {
       if (draft.be_company_number && !/^\d{10}$/.test(draft.be_company_number)) {
-        next.be_company_number = "Numéro BCE invalide (10 chiffres exactement).";
+        next.be_company_number = t("errBeCompanyNumber");
       }
       if (!draft.be_vat_franchise && !draft.be_vat_periodicity) {
-        next.be_vat_periodicity = "Choisis la périodicité de tes déclarations TVA.";
+        next.be_vat_periodicity = t("errBeVatPeriodicity");
       }
     } else if (
       status === "autonomo_es" ||
@@ -172,10 +169,10 @@ export default function ComptaConfigForm({
       status === "sa_es"
     ) {
       if (!draft.es_community) {
-        next.es_community = "Choisis ta Comunidad Autónoma.";
+        next.es_community = t("errEsCommunity");
       }
       if (!draft.es_iva_regime && !isIPSICommunity(draft.es_community)) {
-        next.es_iva_regime = "Choisis ton régime IVA.";
+        next.es_iva_regime = t("errEsIvaRegime");
       }
       if (
         draft.es_iva_regime &&
@@ -183,10 +180,10 @@ export default function ComptaConfigForm({
         !isIPSICommunity(draft.es_community) &&
         !draft.es_iva_periodicity
       ) {
-        next.es_iva_periodicity = "Choisis la périodicité de tes déclarations.";
+        next.es_iva_periodicity = t("errEsIvaPeriodicity");
       }
       if (status === "autonomo_es" && !draft.es_irpf_method) {
-        next.es_irpf_method = "Choisis ta méthode IRPF.";
+        next.es_irpf_method = t("errEsIrpfMethod");
       }
     } else if (
       status === "travailleur_autonome_ca" ||
@@ -195,19 +192,17 @@ export default function ComptaConfigForm({
       status === "inc_federal_ca"
     ) {
       if (!draft.ca_province) {
-        next.ca_province = "Choisis ta province / ton territoire.";
+        next.ca_province = t("errCaProvince");
       }
-      // Inscrit à la TPS → périodicité requise.
       if (draft.ca_gst_registered && !draft.ca_gst_periodicity) {
-        next.ca_gst_periodicity = "Choisis la périodicité de tes déclarations TPS.";
+        next.ca_gst_periodicity = t("errCaGstPeriodicity");
       }
-      // Société → exercice cohérent.
       if (
         (status === "inc_provincial_ca" || status === "inc_federal_ca") &&
         !draft.ca_fiscal_year_calendar &&
         !draft.ca_fiscal_year_start_month
       ) {
-        next.ca_fiscal_year_start_month = "Indique le mois de début d'exercice.";
+        next.ca_fiscal_year_start_month = t("errFiscalYearStartMonth");
       }
     } else if (
       status === "sole_proprietorship_us" ||
@@ -217,21 +212,17 @@ export default function ComptaConfigForm({
       status === "s_corp_us"
     ) {
       if (!draft.us_state) {
-        next.us_state = "Choisis ton état.";
+        next.us_state = t("errUsState");
       }
-      // EIN format XX-XXXXXXX si renseigné. EIN obligatoire pour
-      // multi-member LLC, C-Corp, S-Corp (mais on n'impose pas la
-      // saisie immédiate — l'user peut compléter plus tard).
       if (draft.us_ein && !/^\d{2}-?\d{7}$/.test(draft.us_ein.replace(/\s/g, ""))) {
-        next.us_ein = "EIN invalide (format XX-XXXXXXX, 9 chiffres).";
+        next.us_ein = t("errUsEinInvalid");
       }
-      // Société → exercice cohérent.
       if (
         (status === "c_corp_us" || status === "s_corp_us") &&
         !draft.us_fiscal_year_calendar &&
         !draft.us_fiscal_year_start_month
       ) {
-        next.us_fiscal_year_start_month = "Indique le mois de début d'exercice.";
+        next.us_fiscal_year_start_month = t("errFiscalYearStartMonth");
       }
     }
 
@@ -528,19 +519,19 @@ export default function ComptaConfigForm({
             {pending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Enregistrement…
+                {t("saving")}
               </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Enregistrer ma config
+                {t("saveConfig")}
               </>
             )}
           </Button>
           {onCancel ? (
             <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Annuler
+              {t("cancel")}
             </Button>
           ) : null}
         </div>
@@ -562,19 +553,16 @@ function StatusPicker({
   country: "FR" | "CH" | "PT" | "BE" | "ES" | "CA" | "US";
   onChange: (v: AccountingStatus) => void;
 }) {
-  // Rend des cartes différentes selon le pays détecté côté parent.
-  // FR : 6 statuts (particulier / AE / EURL / SASU / SAS / SARL).
-  // CH : 4 statuts (particulier / Indépendant / Sàrl / SA).
-  // L'user pige direct ce qui le concerne (sa carte est colorée).
+  const t = useTranslations("comptaConfig");
 
   if (country === "CH") {
     return (
       <div className="space-y-4">
-        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+        <h3 className="font-semibold text-base">{t("statusQuestion")}</h3>
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Sans société dédiée
+            {t("withoutDedicatedCompany")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -596,7 +584,7 @@ function StatusPicker({
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Société commerciale
+            {t("commercialCompany")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -630,11 +618,11 @@ function StatusPicker({
   if (country === "PT") {
     return (
       <div className="space-y-4">
-        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+        <h3 className="font-semibold text-base">{t("statusQuestion")}</h3>
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Sans société dédiée
+            {t("withoutDedicatedCompany")}
           </p>
           <div className="grid gap-3 sm:grid-cols-3">
             <StatusCard
@@ -663,7 +651,7 @@ function StatusPicker({
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Société commerciale (à l&apos;IRC)
+            {t("commercialCompanyIRC")}
           </p>
           <div className="grid gap-3 sm:grid-cols-3">
             <StatusCard
@@ -705,11 +693,11 @@ function StatusPicker({
   if (country === "BE") {
     return (
       <div className="space-y-4">
-        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+        <h3 className="font-semibold text-base">{t("statusQuestion")}</h3>
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Sans société dédiée
+            {t("withoutDedicatedCompany")}
           </p>
           <div className="grid gap-3 sm:grid-cols-3">
             <StatusCard
@@ -738,7 +726,7 @@ function StatusPicker({
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Société commerciale (à l&apos;ISoc)
+            {t("commercialCompanyISoc")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -773,11 +761,11 @@ function StatusPicker({
   if (country === "ES") {
     return (
       <div className="space-y-4">
-        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+        <h3 className="font-semibold text-base">{t("statusQuestion")}</h3>
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Sans société dédiée
+            {t("withoutDedicatedCompany")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -799,7 +787,7 @@ function StatusPicker({
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Société commerciale (Impuesto sobre Sociedades)
+            {t("commercialCompanyIS_ES")}
           </p>
           <div className="grid gap-3 sm:grid-cols-3">
             <StatusCard
@@ -843,11 +831,11 @@ function StatusPicker({
   if (country === "CA") {
     return (
       <div className="space-y-4">
-        <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+        <h3 className="font-semibold text-base">{t("statusQuestion")}</h3>
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Sans société
+            {t("withoutCompany")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -876,7 +864,7 @@ function StatusPicker({
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Société par actions (T2 + impôt provincial)
+            {t("incorporated_CA")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -913,11 +901,11 @@ function StatusPicker({
   if (country === "US") {
     return (
       <div className="space-y-4">
-        <h3 className="font-semibold text-base">What's your business status?</h3>
+        <h3 className="font-semibold text-base">{t("statusQuestion")}</h3>
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Sans entité (revenus sur le 1040 personnel)
+            {t("withoutEntity_US")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -939,7 +927,7 @@ function StatusPicker({
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            LLC (Limited Liability Company)
+            {t("llc_US")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -961,7 +949,7 @@ function StatusPicker({
 
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Corporation (entité distincte fiscalement)
+            {t("corporation_US")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <StatusCard
@@ -999,11 +987,11 @@ function StatusPicker({
   // FR (défaut)
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold text-base">Quel est ton statut ?</h3>
+      <h3 className="font-semibold text-base">{t("statusQuestion")}</h3>
 
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-          Sans société dédiée
+          {t("withoutDedicatedCompany")}
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <StatusCard
@@ -1032,7 +1020,7 @@ function StatusPicker({
 
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-          Société à l&apos;IS
+          {t("companyIS_FR")}
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <StatusCard

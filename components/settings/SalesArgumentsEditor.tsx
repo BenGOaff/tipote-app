@@ -14,6 +14,7 @@
 // stays alive even if the user later tweaks the offer description.
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   ChevronDown,
   ChevronRight,
@@ -74,6 +75,7 @@ export function SalesArgumentsEditor({
   onChange,
   disabled,
 }: Props) {
+  const t = useTranslations("settings");
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -85,7 +87,7 @@ export function SalesArgumentsEditor({
   async function handleGenerate(regenerate = false) {
     if (!offerReady) {
       toast({
-        title: "Renseigne d'abord la promesse ou la description de l'offre",
+        title: t("salesArgsNeedOffer"),
         variant: "destructive",
       });
       return;
@@ -110,14 +112,14 @@ export function SalesArgumentsEditor({
       });
       toast({
         title: regenerate
-          ? "Arguments régénérés"
-          : "Arguments générés — relis-les et adapte si besoin",
+          ? t("salesArgsRegenerated")
+          : t("salesArgsGenerated"),
       });
       setOpen(true);
     } catch (e: any) {
       toast({
-        title: "Génération impossible",
-        description: e?.message ?? "Erreur inconnue",
+        title: t("salesArgsGenerationFailed"),
+        description: e?.message ?? t("salesArgsUnknownError"),
         variant: "destructive",
       });
     } finally {
@@ -152,11 +154,11 @@ export function SalesArgumentsEditor({
           ? json.salesArguments.bullets
           : bullets,
       });
-      toast({ title: "Arguments enregistrés" });
+      toast({ title: t("salesArgsSaved") });
     } catch (e: any) {
       toast({
-        title: "Enregistrement impossible",
-        description: e?.message ?? "Erreur inconnue",
+        title: t("salesArgsSaveFailed"),
+        description: e?.message ?? t("salesArgsUnknownError"),
         variant: "destructive",
       });
     } finally {

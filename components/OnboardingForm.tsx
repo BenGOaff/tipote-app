@@ -6,6 +6,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 
 type BusinessProfileRow = {
@@ -43,6 +44,7 @@ type OfferInput = {
 
 export default function OnboardingForm({ initialProfile }: OnboardingFormProps) {
   const router = useRouter();
+  const t = useTranslations("onboardingForm");
 
   const [step, setStep] = useState<number>(1);
   const [saving, setSaving] = useState(false);
@@ -195,19 +197,19 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
         const message =
-          data?.error ?? 'Erreur lors de la sauvegarde des réponses.';
+          data?.error ?? t("errorSave");
         throw new Error(message);
       }
 
       if (showToast) {
-        setSuccessMessage('Réponses sauvegardées.');
+        setSuccessMessage(t("answersSaved"));
       }
     } catch (err) {
       console.error('[OnboardingForm] saveAnswers error', err);
       setError(
         err instanceof Error
           ? err.message
-          : 'Erreur inattendue pendant la sauvegarde.',
+          : t("errorUnexpectedSave"),
       );
     } finally {
       setSaving(false);
@@ -234,12 +236,12 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
         const data = await response.json().catch(() => null);
         const message =
           data?.error ??
-          'Erreur lors de la génération du plan stratégique.';
+          t("errorGenerate");
         throw new Error(message);
       }
 
       setSuccessMessage(
-        'Plan stratégique généré avec succès. Redirection vers le dashboard...',
+        t("planGenerated"),
       );
 
       // 3) Redirection vers le dashboard
@@ -250,7 +252,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
       setError(
         err instanceof Error
           ? err.message
-          : 'Erreur inattendue pendant la génération du plan.',
+          : t("errorUnexpectedGenerate"),
       );
     } finally {
       setGenerating(false);
@@ -268,13 +270,13 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Étape {step} sur 4
+            {t("stepOf", { step, total: 4 })}
           </p>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-            {step === 1 && 'Ton identité'}
-            {step === 2 && 'Ta niche et ta mission'}
-            {step === 3 && 'Maturité, offres et audience'}
-            {step === 4 && 'Temps disponible et objectif'}
+            {step === 1 && t("step1Title")}
+            {step === 2 && t("step2Title")}
+            {step === 3 && t("step3Title")}
+            {step === 4 && t("step4Title")}
           </h2>
         </div>
         <div className="flex h-2 w-32 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
@@ -303,7 +305,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-              Comment tu t&apos;appelles ? (Prénom)
+              {t("firstName")}
             </label>
             <input
               type="text"
@@ -317,7 +319,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                Tranche d&apos;âge
+                {t("ageRange")}
               </label>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
@@ -325,7 +327,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                 onChange={(e) => setAgeRange(e.target.value)}
                 disabled={disableForm}
               >
-                <option value="">Sélectionne...</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 <option value="18-24">18-24</option>
                 <option value="25-34">25-34</option>
                 <option value="35-44">35-44</option>
@@ -336,7 +338,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
 
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                Genre
+                {t("gender")}
               </label>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
@@ -344,22 +346,22 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                 onChange={(e) => setGender(e.target.value)}
                 disabled={disableForm}
               >
-                <option value="">Sélectionne...</option>
-                <option value="feminin">Féminin</option>
-                <option value="masculin">Masculin</option>
-                <option value="non_genre">Non genré</option>
-                <option value="no_answer">Préfère ne pas répondre</option>
+                <option value="">{t("selectPlaceholder")}</option>
+                <option value="feminin">{t("genderFeminine")}</option>
+                <option value="masculin">{t("genderMasculine")}</option>
+                <option value="non_genre">{t("genderNonBinary")}</option>
+                <option value="no_answer">{t("genderNoAnswer")}</option>
               </select>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-              Pays
+              {t("country")}
             </label>
             <input
               type="text"
-              placeholder="France, Belgique, Canada..."
+              placeholder={t("countryPlaceholder")}
               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
@@ -374,7 +376,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-              Dans quel domaine veux-tu aider les gens ? (Niche)
+              {t("niche")}
             </label>
             <select
               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
@@ -382,27 +384,27 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
               onChange={(e) => setNiche(e.target.value)}
               disabled={disableForm}
             >
-              <option value="">Sélectionne...</option>
+              <option value="">{t("selectPlaceholder")}</option>
               <option value="argent">
-                Argent (e-commerce, affiliation, freelance, services...)
+                {t("nicheArgent")}
               </option>
               <option value="sante_bien_etre">
-                Santé / Bien-être (coaching, paramédical, hypnose...)
+                {t("nicheSante")}
               </option>
               <option value="developpement_perso">
-                Développement personnel (productivité, reconversion pro...)
+                {t("nicheDevPerso")}
               </option>
               <option value="relations">
-                Relations (famille, dating, parentalité...)
+                {t("nicheRelations")}
               </option>
-              <option value="autre">Autre</option>
+              <option value="autre">{t("nicheAutre")}</option>
             </select>
           </div>
 
           {niche === 'autre' && (
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                Précise ta niche
+                {t("nicheOther")}
               </label>
               <input
                 type="text"
@@ -416,19 +418,18 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
 
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-              Décris en une phrase : qui veux-tu aider à faire quoi, et comment ?
+              {t("mission")}
             </label>
             <textarea
               rows={3}
               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-              placeholder={`Exemple : "J'aide les mamans débordées à s'organiser grâce à des routines simples."`}
+              placeholder={t("missionPlaceholder")}
               value={mission}
               onChange={(e) => setMission(e.target.value)}
               disabled={disableForm}
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Tipote utilisera cette phrase pour générer ton persona client
-              idéal.
+              {t("missionHint")}
             </p>
           </div>
         </div>
@@ -439,7 +440,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
         <div className="space-y-6">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-              Où en es-tu aujourd&apos;hui ? (Maturité business)
+              {t("businessMaturity")}
             </label>
             <select
               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
@@ -447,23 +448,23 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
               onChange={(e) => setBusinessMaturity(e.target.value)}
               disabled={disableForm}
             >
-              <option value="">Sélectionne...</option>
-              <option value="not_launched">Je n&apos;ai pas encore lancé</option>
+              <option value="">{t("selectPlaceholder")}</option>
+              <option value="not_launched">{t("maturityNotLaunched")}</option>
               <option value="launched_no_sales">
-                J&apos;ai lancé mais pas encore vendu
+                {t("maturityLaunchedNoSales")}
               </option>
-              <option value="lt_500">Je fais moins de 500€/mois</option>
+              <option value="lt_500">{t("maturityLt500")}</option>
               <option value="500_2000">
-                Je fais entre 500€ et 2000€/mois
+                {t("maturity500_2000")}
               </option>
-              <option value="gt_2000">Je fais plus de 2000€/mois</option>
+              <option value="gt_2000">{t("maturityGt2000")}</option>
             </select>
           </div>
 
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                As-tu déjà des offres à vendre ?
+                {t("offersStatus")}
               </label>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
@@ -471,14 +472,14 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                 onChange={(e) => setOffersStatus(e.target.value)}
                 disabled={disableForm}
               >
-                <option value="">Sélectionne...</option>
-                <option value="none">Non, aucune</option>
+                <option value="">{t("selectPlaceholder")}</option>
+                <option value="none">{t("offersStatusNone")}</option>
                 <option value="lead_magnet">
-                  Oui, un lead magnet (gratuit)
+                  {t("offersStatusLeadMagnet")}
                 </option>
-                <option value="one_paid">Oui, une offre payante</option>
+                <option value="one_paid">{t("offersStatusOnePaid")}</option>
                 <option value="multiple_paid">
-                  Oui, plusieurs offres
+                  {t("offersStatusMultiplePaid")}
                 </option>
               </select>
             </div>
@@ -488,8 +489,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
               offersStatus === 'multiple_paid') && (
               <div className="space-y-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 p-3">
                 <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Détail de tes offres (optionnel mais très utile pour un plan
-                  précis)
+                  {t("offerDetailsHint")}
                 </p>
 
                 {offers.map((offer, index) => (
@@ -500,7 +500,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
                         <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                          Nom de l&apos;offre
+                          {t("offerName")}
                         </label>
                         <input
                           type="text"
@@ -514,7 +514,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                       </div>
                       <div>
                         <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                          Type (ebook, formation, coaching...)
+                          {t("offerType")}
                         </label>
                         <input
                           type="text"
@@ -530,7 +530,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
                         <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                          Prix (en €)
+                          {t("offerPrice")}
                         </label>
                         <input
                           type="number"
@@ -545,7 +545,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                       </div>
                       <div>
                         <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                          Nombre de ventes
+                          {t("offerSales")}
                         </label>
                         <input
                           type="number"
@@ -566,7 +566,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                         className="text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline"
                         disabled={disableForm}
                       >
-                        Supprimer cette offre
+                        {t("removeOffer")}
                       </button>
                     )}
                   </div>
@@ -578,7 +578,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
                   className="text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:underline"
                   disabled={disableForm}
                 >
-                  + Ajouter une offre
+                  {t("addOffer")}
                 </button>
               </div>
             )}
@@ -587,7 +587,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                Abonnés réseaux sociaux (approx.)
+                {t("audienceSocial")}
               </label>
               <input
                 type="number"
@@ -601,7 +601,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
 
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                Emails dans ta liste (approx.)
+                {t("audienceEmail")}
               </label>
               <input
                 type="number"
@@ -621,7 +621,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-              Combien de temps peux-tu consacrer à ton business par semaine ?
+              {t("timeAvailable")}
             </label>
             <select
               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
@@ -629,17 +629,17 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
               onChange={(e) => setTimeAvailable(e.target.value)}
               disabled={disableForm}
             >
-              <option value="">Sélectionne...</option>
-              <option value="lt_5h">Moins de 5h</option>
-              <option value="5_10h">5 à 10h</option>
-              <option value="10_20h">10 à 20h</option>
-              <option value="gt_20h">Plus de 20h</option>
+              <option value="">{t("selectPlaceholder")}</option>
+              <option value="lt_5h">{t("timeLt5h")}</option>
+              <option value="5_10h">{t("time5_10h")}</option>
+              <option value="10_20h">{t("time10_20h")}</option>
+              <option value="gt_20h">{t("timeGt20h")}</option>
             </select>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-              Quel est ton objectif prioritaire pour les 90 prochains jours ?
+              {t("mainGoal")}
             </label>
             <select
               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
@@ -647,28 +647,27 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
               onChange={(e) => setMainGoal(e.target.value)}
               disabled={disableForm}
             >
-              <option value="">Sélectionne...</option>
+              <option value="">{t("selectPlaceholder")}</option>
               <option value="create_first_offer">
-                Créer ma première offre
+                {t("goalCreateFirstOffer")}
               </option>
               <option value="build_audience">
-                Construire mon audience
+                {t("goalBuildAudience")}
               </option>
               <option value="first_sales">
-                Faire mes premières ventes
+                {t("goalFirstSales")}
               </option>
               <option value="increase_revenue">
-                Augmenter mon CA existant
+                {t("goalIncreaseRevenue")}
               </option>
               <option value="save_time">
-                Automatiser pour gagner du temps
+                {t("goalSaveTime")}
               </option>
             </select>
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Ton plan d&apos;action sera entièrement basé sur cette
-            réponse, ta maturité business et ton temps disponible.
+            {t("planNote")}
           </p>
         </div>
       )}
@@ -681,7 +680,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
           disabled={step === 1 || disableForm}
           className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Précédent
+          {t("previous")}
         </button>
 
         <div className="flex items-center gap-3">
@@ -691,7 +690,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
             disabled={disableForm}
             className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? 'Enregistrement...' : 'Enregistrer'}
+            {saving ? t("saving") : t("save")}
           </button>
 
           {step < 4 ? (
@@ -701,7 +700,7 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
               disabled={disableForm}
               className="inline-flex items-center rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Continuer
+              {t("continue")}
             </button>
           ) : (
             <button
@@ -710,8 +709,8 @@ export default function OnboardingForm({ initialProfile }: OnboardingFormProps) 
               className="inline-flex items-center rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {generating
-                ? 'Génération en cours...'
-                : 'Générer mon plan stratégique'}
+                ? t("generating")
+                : t("generatePlan")}
             </button>
           )}
         </div>
