@@ -1027,9 +1027,17 @@ export function ImageStudio({
                 />
                 {mode === "single" ? (
                   <>
-                    <p className="text-[11px] text-muted-foreground">
-                      L&apos;IA lit le post, choisit le format (texte, comparatif chiffré, avant/après) et l&apos;image qui collent au contenu.
-                    </p>
+                    {/* Hint "L'IA lit le post…" : pertinent UNIQUEMENT
+                        en mode pub/post (lecture du contenu source).
+                        En illustrationMode (quiz / sondage), pas de
+                        post : l'IA génère juste un fond illustratif à
+                        partir du sujet → on ne montre rien pour éviter
+                        de paumer l'user. */}
+                    {!illustrationMode && (
+                      <p className="text-[11px] text-muted-foreground">
+                        L&apos;IA lit le post, choisit le format (texte, comparatif chiffré, avant/après) et l&apos;image qui collent au contenu.
+                      </p>
+                    )}
                     {/* Style d'image : "Auto" (l'IA décide selon le post) + override. */}
                     <div className="flex flex-wrap gap-1.5">
                       <button
