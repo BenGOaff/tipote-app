@@ -3933,6 +3933,15 @@
   },
   "quizDetail": {
     "previewStartBtnPh": "Commencer le test",
+    "genderizeBtnTitle": "Générer les variantes de genre (Il / Elle / Iel)",
+    "bonusIntroLabel": "Message personnalisé (optionnel)",
+    "bonusIntroPh": "Laisse vide pour garder le message par défaut, ou écris ton propre message ici.",
+    "bonusUnlockedLabel": "Message après partage (optionnel)",
+    "bonusUnlockedPh": "Ex : Bonus débloqué ! Ton code promo : IMAGELYS20.",
+    "bonusUnlockedHint": "Affiché à la place du message par défaut une fois le bonus débloqué. Pratique pour livrer un code promo directement, sans email.",
+    "previewModeTitle": "Ouvrir en mode aperçu (aucun lead enregistré)",
+    "previewModeTitleSurvey": "Ouvrir en mode aperçu (aucune réponse enregistrée)",
+    "readinessTitle": "{passed}/{total} étapes — {percent}% prêt",
     "backToList": "Retour aux quiz",
     "tabEdit": "Édition",
     "tabLeads": "Leads",
@@ -5754,6 +5763,17 @@
     "playButtonColorLabel": "Couleur du bouton play",
     "reset": "réinitialiser",
     "showCreatorBranding": "Afficher mon logo et lien site sur la page publique"
+  },
+  "imageCrop": {
+    "title": "Recadrer l'image",
+    "description": "Déplace et redimensionne le cadre, puis ajuste la taille. L'animation des GIF est conservée.",
+    "widthLabel": "Largeur de l'image",
+    "cancel": "Annuler",
+    "apply": "Appliquer",
+    "toastFailedTitle": "Recadrage impossible",
+    "toastFailedRetry": "Réessaie.",
+    "toastUnavailableTitle": "Recadrage indisponible",
+    "toastUnavailableHint": "Vérifie ta connexion."
   },
   "gifPicker": {
     "title": "Choisir un GIF",

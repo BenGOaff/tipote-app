@@ -3926,6 +3926,15 @@
   },
   "quizDetail": {
     "previewStartBtnPh": "ابدأ الاختبار",
+    "genderizeBtnTitle": "إنشاء صيغ النوع (هو / هي / محايد)",
+    "bonusIntroLabel": "رسالة مخصّصة (اختياري)",
+    "bonusIntroPh": "اتركها فارغة للإبقاء على الرسالة الافتراضية، أو اكتب رسالتك هنا.",
+    "bonusUnlockedLabel": "رسالة بعد المشاركة (اختياري)",
+    "bonusUnlockedPh": "مثال: تم فتح المكافأة! رمز العرض الخاص بك: IMAGELYS20.",
+    "bonusUnlockedHint": "تظهر بدلاً من الرسالة الافتراضية بمجرد فتح المكافأة. مفيدة لتسليم رمز عرض مباشرة بدون بريد إلكتروني.",
+    "previewModeTitle": "فتح في وضع المعاينة (لا يتم تسجيل أي lead)",
+    "previewModeTitleSurvey": "فتح في وضع المعاينة (لا يتم تسجيل أي إجابة)",
+    "readinessTitle": "{passed}/{total} خطوات — {percent}% جاهز",
     "backToList": "العودة إلى الاختبارات",
     "tabEdit": "تعديل",
     "tabLeads": "العملاء المحتملون",
@@ -5747,6 +5756,17 @@
     "playButtonColorLabel": "لون زر التشغيل",
     "reset": "إعادة الضبط",
     "showCreatorBranding": "إظهار شعاري ورابط موقعي في الصفحة العامة"
+  },
+  "imageCrop": {
+    "title": "اقتصاص الصورة",
+    "description": "حرّك الإطار وغيّر حجمه، ثم اضبط الحجم. تُحفظ حركة صور GIF.",
+    "widthLabel": "عرض الصورة",
+    "cancel": "إلغاء",
+    "apply": "تطبيق",
+    "toastFailedTitle": "فشل الاقتصاص",
+    "toastFailedRetry": "حاول مرة أخرى.",
+    "toastUnavailableTitle": "الاقتصاص غير متاح",
+    "toastUnavailableHint": "تحقق من اتصالك."
   },
   "gifPicker": {
     "title": "اختر GIF",

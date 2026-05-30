@@ -3933,6 +3933,15 @@
   },
   "quizDetail": {
     "previewStartBtnPh": "Start the quiz",
+    "genderizeBtnTitle": "Generate gender variants (He / She / They)",
+    "bonusIntroLabel": "Custom message (optional)",
+    "bonusIntroPh": "Leave empty to keep the default message, or write your own here.",
+    "bonusUnlockedLabel": "Post-share message (optional)",
+    "bonusUnlockedPh": "E.g. Bonus unlocked! Your promo code: IMAGELYS20.",
+    "bonusUnlockedHint": "Shown instead of the default message once the bonus is unlocked. Handy to deliver a promo code directly, with no email.",
+    "previewModeTitle": "Open in preview mode (no lead recorded)",
+    "previewModeTitleSurvey": "Open in preview mode (no response recorded)",
+    "readinessTitle": "{passed}/{total} steps — {percent}% ready",
     "backToList": "Back to quizzes",
     "tabEdit": "Edit",
     "tabLeads": "Leads",
@@ -5754,6 +5763,17 @@
     "playButtonColorLabel": "Play button color",
     "reset": "reset",
     "showCreatorBranding": "Show my logo and website link on the public page"
+  },
+  "imageCrop": {
+    "title": "Crop the image",
+    "description": "Move and resize the frame, then adjust the size. GIF animation is preserved.",
+    "widthLabel": "Image width",
+    "cancel": "Cancel",
+    "apply": "Apply",
+    "toastFailedTitle": "Crop failed",
+    "toastFailedRetry": "Try again.",
+    "toastUnavailableTitle": "Crop unavailable",
+    "toastUnavailableHint": "Check your connection."
   },
   "gifPicker": {
     "title": "Pick a GIF",

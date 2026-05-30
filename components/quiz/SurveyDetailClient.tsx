@@ -167,6 +167,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
   /** Optional ✨ button asking the parent for 3 reformulations. */
   onAIRewrite?: (plainText: string) => Promise<string[] | null>;
 }) {
+  const t = useTranslations("quizDetail");
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
   const [rewriting, setRewriting] = useState(false);
@@ -259,7 +260,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
             type="button"
             onClick={handleGenderize}
             disabled={genderizing || !value?.trim()}
-            title="Générer les variantes de genre (Il / Elle / Iel)"
+            title={t("genderizeBtnTitle")}
             className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
           >
             {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -1375,7 +1376,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               status,
             });
             return (
-              <div className="hidden md:block" title={`${r.passedCount}/${r.totalCount} étapes — ${r.percent}% prêt`}>
+              <div className="hidden md:block" title={t("readinessTitle", { passed: r.passedCount, total: r.totalCount, percent: r.percent })}>
                 <ReadinessRing percent={r.percent} passed={r.passedCount} total={r.totalCount} size="sm" />
               </div>
             );
@@ -1388,7 +1389,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             size="sm"
             variant="outline"
             onClick={() => window.open(previewUrl, "_blank", "noopener")}
-            title="Ouvrir en mode aperçu (aucune réponse enregistrée)"
+            title={t("previewModeTitleSurvey")}
             className="shrink-0 px-2 sm:px-3"
           >
             <Eye className="w-4 h-4 sm:mr-1" />

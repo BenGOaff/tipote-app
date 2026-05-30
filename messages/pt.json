@@ -4232,6 +4232,15 @@
   },
   "quizDetail": {
     "previewStartBtnPh": "Começar o teste",
+    "genderizeBtnTitle": "Gerar variantes de género (Ele / Ela / Elu)",
+    "bonusIntroLabel": "Mensagem personalizada (opcional)",
+    "bonusIntroPh": "Deixa em branco para manteres a mensagem padrão, ou escreve a tua aqui.",
+    "bonusUnlockedLabel": "Mensagem após partilha (opcional)",
+    "bonusUnlockedPh": "Ex: Bónus desbloqueado! O teu código promocional: IMAGELYS20.",
+    "bonusUnlockedHint": "Mostrada em vez da mensagem padrão assim que o bónus é desbloqueado. Útil para entregar um código promocional diretamente, sem email.",
+    "previewModeTitle": "Abrir em modo de pré-visualização (nenhum lead registado)",
+    "previewModeTitleSurvey": "Abrir em modo de pré-visualização (nenhuma resposta registada)",
+    "readinessTitle": "{passed}/{total} etapas — {percent}% pronto",
     "backToList": "Voltar aos quizzes",
     "tabEdit": "Edição",
     "tabLeads": "Leads",
@@ -6053,6 +6062,17 @@
     "playButtonColorLabel": "Cor do botão play",
     "reset": "repor",
     "showCreatorBranding": "Mostrar o meu logótipo e link do site na página pública"
+  },
+  "imageCrop": {
+    "title": "Recortar a imagem",
+    "description": "Move e redimensiona o quadro, depois ajusta o tamanho. A animação dos GIF é preservada.",
+    "widthLabel": "Largura da imagem",
+    "cancel": "Cancelar",
+    "apply": "Aplicar",
+    "toastFailedTitle": "Falha ao recortar",
+    "toastFailedRetry": "Tenta novamente.",
+    "toastUnavailableTitle": "Recorte indisponível",
+    "toastUnavailableHint": "Verifica a tua ligação."
   },
   "gifPicker": {
     "title": "Escolher um GIF",

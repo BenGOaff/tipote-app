@@ -7,6 +7,7 @@
 // renvoie l'URL du fichier final optimisé.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Crop as CropIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export function ImageCropDialog({
   /** Reçoit l'URL du fichier recadré final. */
   onCropped: (url: string) => void;
 }) {
+  const t = useTranslations("imageCrop");
   const frameRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ handle: Handle; startX: number; startY: number; rect: Rect } | null>(null);
 
@@ -108,13 +110,13 @@ export function ImageCropDialog({
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body?.ok || !body.url) {
-        toast.error("Recadrage impossible", { description: body?.error || "Réessaie." });
+        toast.error(t("toastFailedTitle"), { description: body?.error || t("toastFailedRetry") });
         return;
       }
       onCropped(body.url as string);
       onOpenChange(false);
     } catch {
-      toast.error("Recadrage indisponible", { description: "Vérifie ta connexion." });
+      toast.error(t("toastUnavailableTitle"), { description: t("toastUnavailableHint") });
     } finally {
       setSaving(false);
     }
@@ -126,9 +128,9 @@ export function ImageCropDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Recadrer l&apos;image</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            Déplace et redimensionne le cadre, puis ajuste la taille. L&apos;animation des GIF est conservée.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -183,7 +185,7 @@ export function ImageCropDialog({
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Largeur de l&apos;image</span>
+            <span>{t("widthLabel")}</span>
             <span>{maxWidth} px</span>
           </div>
           <input
@@ -199,11 +201,11 @@ export function ImageCropDialog({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Annuler
+            {t("cancel")}
           </Button>
           <Button type="button" onClick={apply} disabled={saving || !srcUrl}>
             {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CropIcon className="h-4 w-4 mr-1.5" />}
-            Appliquer
+            {t("apply")}
           </Button>
         </DialogFooter>
       </DialogContent>

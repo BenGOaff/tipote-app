@@ -3926,6 +3926,15 @@
   },
   "quizDetail": {
     "previewStartBtnPh": "Inizia il test",
+    "genderizeBtnTitle": "Genera varianti di genere (Lui / Lei / Loro)",
+    "bonusIntroLabel": "Messaggio personalizzato (opzionale)",
+    "bonusIntroPh": "Lascia vuoto per mantenere il messaggio predefinito, o scrivi il tuo qui.",
+    "bonusUnlockedLabel": "Messaggio dopo la condivisione (opzionale)",
+    "bonusUnlockedPh": "Es: Bonus sbloccato! Il tuo codice promo: IMAGELYS20.",
+    "bonusUnlockedHint": "Mostrato al posto del messaggio predefinito una volta sbloccato il bonus. Utile per consegnare un codice promo direttamente, senza email.",
+    "previewModeTitle": "Apri in modalità anteprima (nessun lead registrato)",
+    "previewModeTitleSurvey": "Apri in modalità anteprima (nessuna risposta registrata)",
+    "readinessTitle": "{passed}/{total} passaggi — {percent}% pronto",
     "backToList": "Torna ai quiz",
     "tabEdit": "Modifica",
     "tabLeads": "Lead",
@@ -5747,6 +5756,17 @@
     "playButtonColorLabel": "Colore del pulsante play",
     "reset": "reimposta",
     "showCreatorBranding": "Mostra il mio logo e il link al sito sulla pagina pubblica"
+  },
+  "imageCrop": {
+    "title": "Ritaglia l'immagine",
+    "description": "Sposta e ridimensiona il riquadro, poi regola la dimensione. L'animazione delle GIF viene conservata.",
+    "widthLabel": "Larghezza dell'immagine",
+    "cancel": "Annulla",
+    "apply": "Applica",
+    "toastFailedTitle": "Ritaglio non riuscito",
+    "toastFailedRetry": "Riprova.",
+    "toastUnavailableTitle": "Ritaglio non disponibile",
+    "toastUnavailableHint": "Controlla la connessione."
   },
   "gifPicker": {
     "title": "Scegli una GIF",
