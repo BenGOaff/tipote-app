@@ -12,6 +12,7 @@ import { sanitizeRichText } from "@/lib/richText";
 import { ArticleEditorModal } from "@/components/create/forms/ArticleEditorModal";
 import { CopyButton } from "./CopyButton";
 import { CopyRichButton } from "./CopyRichButton";
+import { useDict } from "../../i18n/context";
 
 // Détecte un corps déjà mis en forme (HTML). Les anciens articles en texte
 // brut retombent sur l'affichage `whitespace-pre-wrap` (rétro-compat).
@@ -20,6 +21,8 @@ function looksLikeHtml(s: string): boolean {
 }
 
 export function ArticleCard({ article }: { article: { id: string; title: string | null; body: string | null } }) {
+  const t = useDict();
+  const ta = t.article_card;
   const [open, setOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const body = article.body ?? "";
@@ -30,10 +33,10 @@ export function ArticleCard({ article }: { article: { id: string; title: string 
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-base flex-1 min-w-0">{article.title || "Article"}</CardTitle>
+          <CardTitle className="text-base flex-1 min-w-0">{article.title || ta.default_title}</CardTitle>
           <Button type="button" size="sm" variant="ghost" onClick={() => setOpen((o) => !o)} className="flex-shrink-0">
             {open ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
-            {open ? "Fermer" : "Lire"}
+            {open ? ta.close : ta.open}
           </Button>
         </div>
       </CardHeader>
@@ -51,13 +54,13 @@ export function ArticleCard({ article }: { article: { id: string; title: string 
           )}
           <div className="flex flex-wrap gap-2">
             {isHtml ? (
-              <CopyRichButton html={safeHtml} label="Copier l'article" />
+              <CopyRichButton html={safeHtml} label={ta.copy_article} copiedLabel={t.common.copied} />
             ) : (
-              <CopyButton text={body} label="Copier l'article" size="default" variant="default" />
+              <CopyButton text={body} label={ta.copy_article} copiedLabel={t.common.copied} size="default" variant="default" />
             )}
             <Button type="button" size="default" variant="outline" onClick={() => setEditorOpen(true)}>
               <Pencil className="h-3.5 w-3.5 mr-1.5" />
-              Éditer et copier
+              {ta.edit_and_copy}
             </Button>
           </div>
         </CardContent>
@@ -68,8 +71,8 @@ export function ArticleCard({ article }: { article: { id: string; title: string 
         onOpenChange={setEditorOpen}
         initialValue={body}
         initialHtml={isHtml ? safeHtml : undefined}
-        title={article.title || "Éditer l'article"}
-        applyLabel="Terminé"
+        title={article.title || ta.edit_modal_title}
+        applyLabel={ta.apply_label}
       />
     </Card>
   );

@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import AffiliateLinkCopy from "./AffiliateLinkCopy";
 import { buildAffiliateLink, affiliateOrigin } from "@/lib/affiliate/links";
+import { useDict } from "../i18n/context";
+import { interpolate } from "../i18n";
 
 export type LinkItem = { label: string; description: string; path: string };
 
@@ -44,6 +46,8 @@ export function LinksManager({
   saved: LinkItem[] | null;
   sectionTitle: string;
 }) {
+  const t = useDict();
+  const tl = t.links_manager;
   // Domaine du marché de l'affilié (pour le placeholder + la construction d'URL).
   const marketOrigin = affiliateOrigin(locale);
   const marketHost = marketOrigin.replace(/^https?:\/\//, "");
@@ -88,26 +92,26 @@ export function LinksManager({
   const editForm = (
     <div className="space-y-2.5">
       <div className="space-y-1">
-        <Label className="text-xs">Libellé</Label>
-        <Input value={draft.label} onChange={(e) => setDraft((d) => ({ ...d, label: e.target.value }))} placeholder="Ex. Tiquiz essai gratuit" />
+        <Label className="text-xs">{tl.label_field}</Label>
+        <Input value={draft.label} onChange={(e) => setDraft((d) => ({ ...d, label: e.target.value }))} placeholder={tl.label_field_placeholder} />
       </div>
       <div className="space-y-1">
-        <Label className="text-xs">Description (optionnel)</Label>
-        <Input value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} placeholder="À quoi sert ce lien" />
+        <Label className="text-xs">{tl.description_field}</Label>
+        <Input value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} placeholder={tl.description_field_placeholder} />
       </div>
       <div className="space-y-1">
-        <Label className="text-xs">Destination</Label>
-        <Input value={draft.path} onChange={(e) => setDraft((d) => ({ ...d, path: e.target.value }))} placeholder={`/part-tiquiz-gratuit ou https://${marketHost}/article`} />
-        <p className="text-[11px] text-muted-foreground">Un chemin {marketHost} (ex. /commande) ou une URL complète. Ton {`?sa=${sa}`} est ajouté automatiquement.</p>
+        <Label className="text-xs">{tl.destination_field}</Label>
+        <Input value={draft.path} onChange={(e) => setDraft((d) => ({ ...d, path: e.target.value }))} placeholder={interpolate(tl.destination_placeholder, { host: marketHost })} />
+        <p className="text-[11px] text-muted-foreground">{interpolate(tl.destination_hint, { host: marketHost, sa })}</p>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={save} disabled={!draft.label.trim() || !draft.path.trim()}>
           <Check className="h-3.5 w-3.5 mr-1.5" />
-          Enregistrer
+          {tl.save}
         </Button>
         <Button size="sm" variant="ghost" onClick={cancel}>
           <X className="h-3.5 w-3.5 mr-1.5" />
-          Annuler
+          {tl.cancel}
         </Button>
       </div>
     </div>
@@ -119,7 +123,7 @@ export function LinksManager({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{sectionTitle}</h2>
         <Button size="sm" variant="outline" onClick={startAdd}>
           <Plus className="h-4 w-4 mr-1.5" />
-          Ajouter un lien
+          {tl.add_link}
         </Button>
       </div>
 
@@ -136,10 +140,10 @@ export function LinksManager({
                     {item.description && <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>}
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => startEdit(i)} title="Modifier">
+                    <Button size="sm" variant="ghost" onClick={() => startEdit(i)} title={tl.edit_title}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => remove(i)} title="Supprimer" className="text-muted-foreground hover:text-destructive">
+                    <Button size="sm" variant="ghost" onClick={() => remove(i)} title={tl.remove_title} className="text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>

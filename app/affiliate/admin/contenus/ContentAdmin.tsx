@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArticleEditorModal } from "@/components/create/forms/ArticleEditorModal";
 import { sanitizeRichText, stripHtml } from "@/lib/richText";
+import { useDict } from "../../i18n/context";
+import { interpolate } from "../../i18n";
 
 // Un corps d'article est stocké en HTML (mis en forme via l'éditeur). On
 // détecte la présence d'une balise de bloc/inline pour savoir s'il faut le
@@ -49,6 +51,8 @@ export function ContentAdmin({
   /** Affiche un bouton "Importer les modèles par défaut" quand la liste est vide. */
   seedable?: boolean;
 }) {
+  const t = useDict();
+  const ta = t.content_admin;
   const isEmail = kind === "email";
   const isArticle = kind === "article";
   const [items, setItems] = useState<ContentItem[]>(initial);
@@ -117,7 +121,7 @@ export function ContentAdmin({
   }
 
   async function remove(id: string) {
-    if (!confirm("Supprimer ce contenu ?")) return;
+    if (!confirm(ta.confirm_delete)) return;
     setBusy(true);
     await fetch(`/affiliate/api/admin/contents?id=${id}`, { method: "DELETE" });
     await refresh();
@@ -145,18 +149,18 @@ export function ContentAdmin({
   const form = (
     <div className="space-y-3">
       <div className="space-y-1">
-        <Label className="text-xs">{isEmail ? "Objet" : "Titre"}</Label>
-        <Input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder={isEmail ? "Objet de l'email" : "Titre de l'article"} />
+        <Label className="text-xs">{isEmail ? ta.label_subject : ta.label_title}</Label>
+        <Input value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder={isEmail ? ta.placeholder_email_subject : ta.placeholder_article_title} />
       </div>
       {isEmail && (
         <div className="space-y-1">
-          <Label className="text-xs">Pré-en-tête (aperçu boîte mail)</Label>
-          <Input value={draft.preheader} onChange={(e) => setDraft((d) => ({ ...d, preheader: e.target.value }))} placeholder="Petit texte d'aperçu" />
+          <Label className="text-xs">{ta.label_preheader}</Label>
+          <Input value={draft.preheader} onChange={(e) => setDraft((d) => ({ ...d, preheader: e.target.value }))} placeholder={ta.placeholder_preheader} />
         </div>
       )}
       {isArticle ? (
         <div className="space-y-1">
-          <Label className="text-xs">Contenu</Label>
+          <Label className="text-xs">{ta.label_content}</Label>
           {draft.body.trim() ? (
             <div
               className="tipote-quiz-rich rounded-md border bg-muted/20 px-3 py-2 text-sm leading-relaxed max-h-56 overflow-y-auto"
@@ -164,29 +168,29 @@ export function ContentAdmin({
             />
           ) : (
             <div className="rounded-md border border-dashed bg-muted/10 px-3 py-6 text-sm text-muted-foreground text-center">
-              Aucun contenu — clique sur « Éditer le contenu » pour rédiger l&apos;article.
+              {ta.empty_content}
             </div>
           )}
           <Button type="button" size="sm" variant="outline" onClick={() => setEditorOpen(true)} className="mt-1">
             <Type className="h-3.5 w-3.5 mr-1.5" />
-            Éditer le contenu (mise en forme)
+            {ta.edit_content_button}
           </Button>
         </div>
       ) : (
         <div className="space-y-1">
-          <Label className="text-xs">Contenu</Label>
+          <Label className="text-xs">{ta.label_content}</Label>
           <Textarea
             value={draft.body}
             onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
             rows={12}
             className="text-sm leading-relaxed"
-            placeholder={isEmail ? "Corps de l'email. {AFFILIATE_LINK} et {NAME} sont remplacés automatiquement." : "Le corps du contenu (l'affilié pourra le copier-coller)."}
+            placeholder={isEmail ? ta.placeholder_email_body : ta.placeholder_article_body}
           />
         </div>
       )}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <Label className="text-xs">Ordre</Label>
+          <Label className="text-xs">{ta.label_order}</Label>
           <Input
             type="number"
             value={draft.sort_order}
@@ -196,17 +200,17 @@ export function ContentAdmin({
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={draft.published} onChange={(e) => setDraft((d) => ({ ...d, published: e.target.checked }))} />
-          Publié
+          {ta.label_published}
         </label>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={save} disabled={busy || (!draft.title.trim() && !draft.body.trim())}>
           <Check className="h-3.5 w-3.5 mr-1.5" />
-          Enregistrer
+          {ta.save}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setEditing(null)} disabled={busy}>
           <X className="h-3.5 w-3.5 mr-1.5" />
-          Annuler
+          {ta.cancel}
         </Button>
       </div>
     </div>
@@ -215,17 +219,19 @@ export function ContentAdmin({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">{items.length} contenu{items.length > 1 ? "s" : ""}</p>
+        <p className="text-sm text-muted-foreground">
+          {interpolate(items.length > 1 ? ta.count_plural : ta.count_singular, { count: items.length })}
+        </p>
         <div className="flex gap-2">
           {seedable && items.length === 0 && locale === "fr" && (
             <Button size="sm" variant="outline" onClick={seed} disabled={busy}>
               <Download className="h-4 w-4 mr-1.5" />
-              Importer les modèles par défaut
+              {ta.import_defaults}
             </Button>
           )}
           <Button size="sm" onClick={startAdd} disabled={editing === "new"}>
             <Plus className="h-4 w-4 mr-1.5" />
-            Ajouter
+            {ta.add}
           </Button>
         </div>
       </div>
@@ -244,20 +250,20 @@ export function ContentAdmin({
             ) : (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-medium truncate">{it.title || "(sans titre)"}</p>
+                  <p className="font-medium truncate">{it.title || ta.untitled}</p>
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5 whitespace-pre-wrap">
                     {isArticle ? stripHtml(it.body) : it.body}
                   </p>
-                  {!it.published && <span className="text-[11px] text-amber-600">Brouillon</span>}
+                  {!it.published && <span className="text-[11px] text-amber-600">{ta.draft}</span>}
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => togglePublished(it)} disabled={busy} title={it.published ? "Dépublier" : "Publier"}>
+                  <Button size="sm" variant="ghost" onClick={() => togglePublished(it)} disabled={busy} title={it.published ? ta.unpublish : ta.publish}>
                     {it.published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => startEdit(it)} title="Modifier">
+                  <Button size="sm" variant="ghost" onClick={() => startEdit(it)} title={ta.edit}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(it.id)} disabled={busy} title="Supprimer" className="text-muted-foreground hover:text-destructive">
+                  <Button size="sm" variant="ghost" onClick={() => remove(it.id)} disabled={busy} title={ta.remove} className="text-muted-foreground hover:text-destructive">
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -273,8 +279,8 @@ export function ContentAdmin({
           onOpenChange={setEditorOpen}
           initialValue={draft.body}
           initialHtml={looksLikeHtml(draft.body) ? draft.body : undefined}
-          title="Éditer l'article"
-          applyLabel="Valider la mise en forme"
+          title={ta.article_modal_title}
+          applyLabel={ta.article_modal_apply}
           onApply={({ html }) => setDraft((d) => ({ ...d, body: sanitizeRichText(html) }))}
         />
       )}

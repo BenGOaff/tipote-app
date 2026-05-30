@@ -25,7 +25,7 @@ import { ArticleCard } from "../promouvoir/components/ArticleCard";
 import { EMAILS_FR, type EmailTemplate } from "../promouvoir/content/emails-fr";
 import { POSTS_FR, type PostDay, type SocialPost } from "../promouvoir/content/posts-fr";
 import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
-import { getDict, normaliseLocale } from "../i18n";
+import { getDict, interpolate, normaliseLocale } from "../i18n";
 import { localeLabel, AFFILIATE_LIVE_LOCALES, resolveAffiliateMarket } from "@/lib/affiliate/contentLocales";
 import { buildAffiliateLink } from "@/lib/affiliate/links";
 import { ContentLocalePicker } from "../components/ContentLocalePicker";
@@ -168,14 +168,14 @@ export default async function ContenusPage({
     <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Contenus</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t.contenus.page_title}</h1>
           <p className="text-muted-foreground mt-1">
-            Tes emails, posts, articles et visuels prêts à copier-coller.{" "}
-            <span className="text-foreground">{localeLabel(contentLocale)}</span> —
-            change la langue si tu vises une autre audience.
+            {t.contenus.page_subtitle}{" "}
+            <span className="text-foreground">{localeLabel(contentLocale)}</span>{" "}
+            {t.contenus.page_subtitle_market}
           </p>
         </div>
-        <ContentLocalePicker current={contentLocale} label="Langue du contenu" locales={AFFILIATE_LIVE_LOCALES} />
+        <ContentLocalePicker current={contentLocale} label={t.promouvoir.market_label} locales={AFFILIATE_LIVE_LOCALES} />
       </div>
 
       <Tabs defaultValue="posts" className="w-full">
@@ -190,7 +190,7 @@ export default async function ContenusPage({
           </TabsTrigger>
           <TabsTrigger value="articles" className="gap-1.5">
             <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Articles</span>
+            <span className="hidden sm:inline">{t.contenus.tab_articles}</span>
           </TabsTrigger>
           <TabsTrigger value="visuels" className="gap-1.5">
             <ImageIcon className="h-4 w-4" />
@@ -222,10 +222,10 @@ export default async function ContenusPage({
               <CardContent className="pt-6 pb-6 text-center space-y-2">
                 <Mail className="h-8 w-8 text-muted-foreground mx-auto" />
                 <p className="font-medium">
-                  Aucun email en <strong>{localeLabel(contentLocale)}</strong>
+                  {interpolate(t.contenus.empty_emails, { locale: localeLabel(contentLocale) })}
                 </p>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Cette langue n&apos;a pas encore d&apos;emails publiés. Repasse en français ou choisis une autre langue.
+                  {t.contenus.empty_lang_help}
                 </p>
               </CardContent>
             </Card>
@@ -256,10 +256,10 @@ export default async function ContenusPage({
               <CardContent className="pt-6 pb-6 text-center space-y-2">
                 <Share2 className="h-8 w-8 text-muted-foreground mx-auto" />
                 <p className="font-medium">
-                  Aucun post en <strong>{localeLabel(contentLocale)}</strong>
+                  {interpolate(t.contenus.empty_posts, { locale: localeLabel(contentLocale) })}
                 </p>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Cette langue n&apos;a pas encore de posts publiés. Repasse en français ou choisis une autre langue.
+                  {t.contenus.empty_lang_help}
                 </p>
               </CardContent>
             </Card>
@@ -278,10 +278,10 @@ export default async function ContenusPage({
               <CardContent className="pt-6 pb-6 text-center space-y-2">
                 <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
                 <p className="font-medium">
-                  Aucun article en <strong>{localeLabel(contentLocale)}</strong>
+                  {interpolate(t.contenus.empty_articles, { locale: localeLabel(contentLocale) })}
                 </p>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Cette langue n&apos;a pas encore d&apos;articles publiés. Repasse en français ou choisis une autre langue.
+                  {t.contenus.empty_lang_help}
                 </p>
               </CardContent>
             </Card>
@@ -297,12 +297,12 @@ export default async function ContenusPage({
           </Card>
           {adminVisuals.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Visuels ajoutés</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t.contenus.admin_visuals_title}</p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {adminVisuals.map((v) => (
                   <a key={v.id} href={v.url} download className="group relative rounded-md border border-border overflow-hidden bg-muted block">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={v.url} alt="Visuel" className="w-full h-auto block" />
+                    <img src={v.url} alt={t.contenus.visual_alt} className="w-full h-auto block" />
                   </a>
                 ))}
               </div>
@@ -314,10 +314,9 @@ export default async function ContenusPage({
             <Card className="border-dashed">
               <CardContent className="pt-6 pb-6 text-center space-y-2">
                 <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="font-medium">Aucun visuel disponible dans cette langue</p>
+                <p className="font-medium">{t.contenus.empty_visuals}</p>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Ajoute des visuels depuis l&apos;admin pour la langue{" "}
-                  <strong>{localeLabel(contentLocale)}</strong>, ou repasse en français.
+                  {interpolate(t.contenus.empty_visuals_help, { locale: localeLabel(contentLocale) })}
                 </p>
               </CardContent>
             </Card>

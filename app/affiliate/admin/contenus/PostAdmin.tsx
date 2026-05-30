@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useDict } from "../../i18n/context";
+import { interpolate } from "../../i18n";
 
 const NETWORKS = [
   { id: "instagram", label: "Instagram" },
@@ -65,6 +67,8 @@ export function PostAdmin({
   locale?: string;
   seedable?: boolean;
 }) {
+  const t = useDict();
+  const ta = t.post_admin;
   const [items, setItems] = useState<PostItem[]>(initial);
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(BLANK);
@@ -120,7 +124,7 @@ export function PostAdmin({
     setBusy(false);
   }
   async function remove(id: string) {
-    if (!confirm("Supprimer ce post ?")) return;
+    if (!confirm(ta.confirm_delete)) return;
     setBusy(true);
     await fetch(`/affiliate/api/admin/contents?id=${id}`, { method: "DELETE" });
     await refresh();
@@ -143,21 +147,21 @@ export function PostAdmin({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label className="text-xs">Jour / libellé</Label>
-          <Input value={draft.dayLabel} onChange={(e) => setDraft((d) => ({ ...d, dayLabel: e.target.value }))} placeholder="J1 — Annonce" />
+          <Label className="text-xs">{ta.label_day}</Label>
+          <Input value={draft.dayLabel} onChange={(e) => setDraft((d) => ({ ...d, dayLabel: e.target.value }))} placeholder={ta.placeholder_day} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Thème</Label>
-          <Input value={draft.theme} onChange={(e) => setDraft((d) => ({ ...d, theme: e.target.value }))} placeholder="Annonce — présenter l'outil" />
+          <Label className="text-xs">{ta.label_theme}</Label>
+          <Input value={draft.theme} onChange={(e) => setDraft((d) => ({ ...d, theme: e.target.value }))} placeholder={ta.placeholder_theme} />
         </div>
       </div>
       <div className="space-y-1">
-        <Label className="text-xs">Hook (accroche courte)</Label>
-        <Input value={draft.hook} onChange={(e) => setDraft((d) => ({ ...d, hook: e.target.value }))} placeholder="C'est live." />
+        <Label className="text-xs">{ta.label_hook}</Label>
+        <Input value={draft.hook} onChange={(e) => setDraft((d) => ({ ...d, hook: e.target.value }))} placeholder={ta.placeholder_hook} />
       </div>
       <div className="space-y-1">
-        <Label className="text-xs">Chemin du visuel par défaut (optionnel)</Label>
-        <Input value={draft.visualPath} onChange={(e) => setDraft((d) => ({ ...d, visualPath: e.target.value }))} placeholder="/affiliate-assets/visuels/singles/single-01.png" />
+        <Label className="text-xs">{ta.label_visual_path}</Label>
+        <Input value={draft.visualPath} onChange={(e) => setDraft((d) => ({ ...d, visualPath: e.target.value }))} placeholder={ta.placeholder_visual_path} />
       </div>
       {NETWORKS.map((n) => (
         <div key={n.id} className="space-y-1">
@@ -167,28 +171,28 @@ export function PostAdmin({
             onChange={(e) => setDraft((d) => ({ ...d, captions: { ...d.captions, [n.id]: e.target.value } }))}
             rows={5}
             className="text-sm leading-relaxed"
-            placeholder={`Caption ${n.label}. {AFFILIATE_LINK} est remplacé automatiquement.`}
+            placeholder={interpolate(ta.placeholder_caption, { network: n.label })}
           />
         </div>
       ))}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <Label className="text-xs">Ordre</Label>
+          <Label className="text-xs">{ta.label_order}</Label>
           <Input type="number" value={draft.sort_order} onChange={(e) => setDraft((d) => ({ ...d, sort_order: Number(e.target.value) || 0 }))} className="w-20" />
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={draft.published} onChange={(e) => setDraft((d) => ({ ...d, published: e.target.checked }))} />
-          Publié
+          {ta.label_published}
         </label>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={save} disabled={busy || !draft.dayLabel.trim()}>
           <Check className="h-3.5 w-3.5 mr-1.5" />
-          Enregistrer
+          {ta.save}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setEditing(null)} disabled={busy}>
           <X className="h-3.5 w-3.5 mr-1.5" />
-          Annuler
+          {ta.cancel}
         </Button>
       </div>
     </div>
@@ -197,17 +201,19 @@ export function PostAdmin({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">{items.length} post{items.length > 1 ? "s" : ""}</p>
+        <p className="text-sm text-muted-foreground">
+          {interpolate(items.length > 1 ? ta.count_plural : ta.count_singular, { count: items.length })}
+        </p>
         <div className="flex gap-2">
           {seedable && items.length === 0 && locale === "fr" && (
             <Button size="sm" variant="outline" onClick={seed} disabled={busy}>
               <Download className="h-4 w-4 mr-1.5" />
-              Importer les modèles par défaut
+              {ta.import_defaults}
             </Button>
           )}
           <Button size="sm" onClick={startAdd} disabled={editing === "new"}>
             <Plus className="h-4 w-4 mr-1.5" />
-            Ajouter
+            {ta.add}
           </Button>
         </div>
       </div>
@@ -226,20 +232,20 @@ export function PostAdmin({
             ) : (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-medium truncate">{it.title || "(sans titre)"}</p>
+                  <p className="font-medium truncate">{it.title || ta.untitled}</p>
                   <p className="text-sm text-muted-foreground truncate mt-0.5">
                     {String((it.meta as Record<string, unknown>)?.hook ?? "")}
                   </p>
-                  {!it.published && <span className="text-[11px] text-amber-600">Brouillon</span>}
+                  {!it.published && <span className="text-[11px] text-amber-600">{ta.draft}</span>}
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => togglePublished(it)} disabled={busy} title={it.published ? "Dépublier" : "Publier"}>
+                  <Button size="sm" variant="ghost" onClick={() => togglePublished(it)} disabled={busy} title={it.published ? ta.unpublish : ta.publish}>
                     {it.published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => startEdit(it)} title="Modifier">
+                  <Button size="sm" variant="ghost" onClick={() => startEdit(it)} title={ta.edit}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(it.id)} disabled={busy} title="Supprimer" className="text-muted-foreground hover:text-destructive">
+                  <Button size="sm" variant="ghost" onClick={() => remove(it.id)} disabled={busy} title={ta.remove} className="text-muted-foreground hover:text-destructive">
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>

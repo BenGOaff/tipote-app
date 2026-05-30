@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "./CopyButton";
 import { StudioLauncher } from "./StudioLauncher";
 import { useDict } from "../../i18n/context";
+import { interpolate } from "../../i18n";
 import type { PostDay } from "../content/posts-fr";
 
 function XIcon({ className }: { className?: string }) {
@@ -145,13 +146,13 @@ export function PostDayCard({
               </div>
             )}
             <div className="flex-1">
-              <p className="text-xs text-muted-foreground mb-2">Visuel à publier avec le post :</p>
+              <p className="text-xs text-muted-foreground mb-2">{t.post_card.visual_intro}</p>
               <div className="flex flex-wrap gap-2">
                 {/* Génère un visuel ADAPTÉ à ce post : l'IA lit LE POST (la
                     légende) → texte sur-mesure. Pas besoin d'y ajouter le hook,
                     il est déjà en tête de la légende (sinon doublon). */}
                 <StudioLauncher
-                  label="Générer un visuel"
+                  label={t.post_card.generate_visual}
                   intent={(day.posts[0]?.caption ?? day.hook).replaceAll("{AFFILIATE_LINK}", "").trim()}
                   onSaved={handleVisualSaved}
                   onSavedMany={handleVisualsSaved}
@@ -160,7 +161,7 @@ export function PostDayCard({
                   <Button size="sm" variant="outline" asChild>
                     <a href={day.visualPath} download>
                       <Download className="h-4 w-4 mr-1.5" />
-                      Télécharger
+                      {t.post_card.download}
                     </a>
                   </Button>
                 )}
@@ -172,19 +173,19 @@ export function PostDayCard({
           {visuals.length > 0 && (
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">
-                Tes visuels pour ce post ({visuals.length})
+                {interpolate(t.post_card.your_visuals, { count: visuals.length })}
               </p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {visuals.map((v) => (
                   <div key={v.path} className="group relative rounded-md border border-border overflow-hidden bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={v.url} alt="Visuel généré" className="w-full h-auto block" />
+                    <img src={v.url} alt={t.post_card.visual_generated_alt} className="w-full h-auto block" />
                     <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 p-1.5 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                       <a
                         href={v.url}
                         download
                         className="rounded bg-white/90 px-1.5 py-1 text-[11px] font-medium text-foreground hover:bg-white"
-                        title="Télécharger"
+                        title={t.post_card.download_title}
                       >
                         <Download className="h-3.5 w-3.5" />
                       </a>
@@ -192,7 +193,7 @@ export function PostDayCard({
                         type="button"
                         onClick={() => removeVisual(v.path)}
                         className="rounded bg-white/90 px-1.5 py-1 text-[11px] font-medium text-destructive hover:bg-white"
-                        title="Retirer"
+                        title={t.post_card.remove_title}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -261,7 +262,8 @@ export function PostDayCard({
                         </Button>
                         <CopyButton
                           text={resolved}
-                          label={`Copier le post ${NETWORK_LABELS[p.network]}`}
+                          label={interpolate(t.post_card.copy_post, { network: NETWORK_LABELS[p.network] })}
+                          copiedLabel={t.common.copied}
                           size="default"
                           variant="default"
                         />

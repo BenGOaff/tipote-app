@@ -404,6 +404,157 @@ export type AffiliateDict = {
     pt: string;
     ar: string;
   };
+
+  // ─── Contenus (page affilié) ─────────────────────────────────────
+  contenus: {
+    page_title: string;
+    page_subtitle: string; // "Tes emails, posts, articles et visuels prêts à copier-coller."
+    page_subtitle_market: string; // " — change la langue si tu vises une autre audience."
+    tab_articles: string;
+    empty_emails: string; // "Aucun email en {locale}"
+    empty_posts: string;
+    empty_articles: string;
+    empty_visuals: string;
+    empty_lang_help: string; // "Cette langue n'a pas encore..."
+    empty_visuals_help: string;
+    admin_visuals_title: string; // "Visuels ajoutés"
+    visual_alt: string; // "Visuel"
+  };
+
+  // ─── EmailCard (preview composant) ───────────────────────────────
+  email_card: {
+    preheader_inline: string; // "Pré-header : "
+    label_subject: string;
+    label_preheader: string;
+    label_body: string;
+    copy_subject: string;
+    copy_preheader: string;
+    copy_body: string;
+    copy_all: string;
+  };
+
+  // ─── PostDayCard ─────────────────────────────────────────────────
+  post_card: {
+    visual_intro: string; // "Visuel à publier avec le post :"
+    generate_visual: string;
+    download: string;
+    your_visuals: string; // "Tes visuels pour ce post ({count})"
+    visual_generated_alt: string;
+    download_title: string;
+    remove_title: string;
+    copy_post: string; // "Copier le post {network}"
+  };
+
+  // ─── ArticleCard ─────────────────────────────────────────────────
+  article_card: {
+    open: string; // "Lire"
+    close: string; // "Fermer"
+    default_title: string; // "Article"
+    copy_article: string;
+    edit_and_copy: string;
+    edit_modal_title: string;
+    apply_label: string;
+  };
+
+  // ─── VisualGallery ───────────────────────────────────────────────
+  visual_gallery: {
+    create_your_own_title: string;
+    create_your_own_body: string;
+    create_button: string;
+    singles_title: string; // "Visuels singles (8)"
+    singles_subtitle: string;
+    carousel_title: string;
+    carousel_subtitle: string;
+    download_zip: string;
+    download: string;
+  };
+
+  // ─── LinksManager ────────────────────────────────────────────────
+  links_manager: {
+    label_field: string; // "Libellé"
+    label_field_placeholder: string;
+    description_field: string; // "Description (optionnel)"
+    description_field_placeholder: string;
+    destination_field: string;
+    destination_placeholder: string; // "/part-tiquiz-gratuit ou https://{host}/article"
+    destination_hint: string; // "Un chemin {host} (ex. /commande)..."
+    save: string;
+    cancel: string;
+    add_link: string;
+    edit_title: string; // "Modifier"
+    remove_title: string;
+  };
+
+  // ─── Admin: ContentAdmin (article / email) ───────────────────────
+  content_admin: {
+    label_subject: string; // "Objet"
+    label_title: string;
+    placeholder_email_subject: string;
+    placeholder_article_title: string;
+    label_preheader: string; // "Pré-en-tête (aperçu boîte mail)"
+    placeholder_preheader: string;
+    label_content: string;
+    empty_content: string; // "Aucun contenu — clique sur..."
+    edit_content_button: string;
+    placeholder_email_body: string;
+    placeholder_article_body: string;
+    label_order: string;
+    label_published: string;
+    save: string;
+    cancel: string;
+    confirm_delete: string;
+    count_singular: string; // "{count} contenu"
+    count_plural: string;
+    import_defaults: string;
+    add: string;
+    untitled: string;
+    draft: string;
+    unpublish: string;
+    publish: string;
+    edit: string;
+    remove: string;
+    article_modal_title: string;
+    article_modal_apply: string;
+  };
+
+  // ─── Admin: PostAdmin ────────────────────────────────────────────
+  post_admin: {
+    label_day: string; // "Jour / libellé"
+    placeholder_day: string;
+    label_theme: string;
+    placeholder_theme: string;
+    label_hook: string;
+    placeholder_hook: string;
+    label_visual_path: string;
+    placeholder_visual_path: string;
+    placeholder_caption: string; // "Caption {network}. {AFFILIATE_LINK} est remplacé automatiquement."
+    label_order: string;
+    label_published: string;
+    save: string;
+    cancel: string;
+    confirm_delete: string;
+    count_singular: string;
+    count_plural: string;
+    import_defaults: string;
+    add: string;
+    untitled: string;
+    draft: string;
+    unpublish: string;
+    publish: string;
+    edit: string;
+    remove: string;
+  };
+
+  // ─── Admin: VisualAdmin ──────────────────────────────────────────
+  visual_admin: {
+    count_singular: string;
+    count_plural: string;
+    add_visuals: string;
+    empty_state: string;
+    confirm_delete: string;
+    remove_title: string;
+    visual_alt: string;
+  };
 };
 
 export const SUPPORTED_AFFILIATE_LOCALES = [
