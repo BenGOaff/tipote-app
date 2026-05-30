@@ -50,6 +50,10 @@ type QuizInput = {
   brand_font?: string | null;
   brand_color_primary?: string | null;
   brand_color_background?: string | null;
+  /** Override par quiz — NULL = fallback sur le logo du business profile. */
+  brand_logo_url?: string | null;
+  /** Si TRUE, aucun logo affiché (ni override, ni business profile). */
+  hide_brand_logo?: boolean | null;
 } | null | undefined;
 
 // Tipote stores branding on business_profiles: brand_color_base is the
@@ -65,13 +69,23 @@ export function resolveQuizBranding(quiz: QuizInput, profile: BusinessProfileInp
   const profileFont = sanitizeFont(profile?.brand_font, DEFAULT_BRAND_FONT);
   const profilePrimary = sanitizeHex(profile?.brand_color_base, DEFAULT_BRAND_COLOR_PRIMARY);
 
+  // Logo : priorité override quiz > business profile > rien. Si
+  // `hide_brand_logo` est explicitement TRUE, on force null (le visiteur
+  // ne voit AUCUN logo, pas même celui du business profile — cas "quiz
+  // fait pour un client" ou "quiz volontairement anonyme").
+  const quizLogo = typeof quiz?.brand_logo_url === "string" && quiz.brand_logo_url.trim().length > 0
+    ? quiz.brand_logo_url.trim()
+    : null;
+  const profileLogo = typeof profile?.brand_logo_url === "string" && profile.brand_logo_url.trim().length > 0
+    ? profile.brand_logo_url.trim()
+    : null;
+  const logoUrl = quiz?.hide_brand_logo === true ? null : (quizLogo ?? profileLogo);
+
   return {
     font: sanitizeFont(quiz?.brand_font, profileFont),
     primaryColor: sanitizeHex(quiz?.brand_color_primary, profilePrimary),
     backgroundColor: sanitizeHex(quiz?.brand_color_background, DEFAULT_BRAND_COLOR_BACKGROUND),
-    logoUrl: typeof profile?.brand_logo_url === "string" && profile.brand_logo_url.trim().length > 0
-      ? profile.brand_logo_url.trim()
-      : null,
+    logoUrl,
   };
 }
 
