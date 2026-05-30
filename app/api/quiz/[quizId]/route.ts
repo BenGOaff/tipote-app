@@ -164,7 +164,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
       "bonus_intro_text",
-      "bonus_image_url", "bonus_unlocked_message", "share_message", "status", "sio_share_tag_name",
+      "bonus_image_url", "bonus_image_position", "bonus_unlocked_message", "share_message", "status", "sio_share_tag_name",
       "locale", "og_image_url", "og_description",
       "ask_first_name", "ask_gender",
       "capture_heading", "capture_subtitle", "capture_submit_text", "capture_first_name",
