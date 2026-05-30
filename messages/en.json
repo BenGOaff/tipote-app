@@ -3932,6 +3932,7 @@
     "reorder": "Reorder"
   },
   "quizDetail": {
+    "previewStartBtnPh": "Start the quiz",
     "backToList": "Back to quizzes",
     "tabEdit": "Edit",
     "tabLeads": "Leads",
@@ -5754,6 +5755,15 @@
     "reset": "reset",
     "showCreatorBranding": "Show my logo and website link on the public page"
   },
+  "gifPicker": {
+    "title": "Pick a GIF",
+    "description": "Search a quality GIF to use as a cover or illustration.",
+    "searchPlaceholder": "Search a GIF…",
+    "notConfigured": "The GIF library is not enabled yet.",
+    "notConfiguredHint": "Add the <code>KLIPY_API_KEY</code> environment variable to enable it.",
+    "errorGeneric": "Search is unavailable right now. Try again in a moment.",
+    "noResults": "No GIF found. Try another keyword."
+  },
   "visualStudio": {
     "title": "Visual studio",
     "description": "Double-click a text to rewrite it, select a word to style it, drag to reposition.",
@@ -5831,6 +5841,8 @@
     "pdfDone": "PDF downloaded",
     "navKeysTip": "Tip: arrows ← → or swipe to navigate.",
     "brandLabel": "Brand",
+    "myBrand": "My brand",
+    "applyInsert": "Insert",
     "logoPosition": "Logo position",
     "logoSize": "Logo size",
     "aiNewBackground": "New background",

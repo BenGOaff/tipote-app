@@ -9,6 +9,7 @@
 // clair invitant à ajouter KLIPY_API_KEY plutôt que de planter.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Film, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ export function GifPickerButton({
   variant?: "default" | "outline" | "secondary" | "ghost";
   disabled?: boolean;
 }) {
+  const t = useTranslations("gifPicker");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [gifs, setGifs] = useState<Gif[]>([]);
@@ -108,9 +110,9 @@ export function GifPickerButton({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Choisir un GIF</DialogTitle>
+            <DialogTitle>{t("title")}</DialogTitle>
             <DialogDescription>
-              Recherche un GIF de qualité à utiliser comme couverture ou illustration.
+              {t("description")}
             </DialogDescription>
           </DialogHeader>
 
@@ -120,22 +122,22 @@ export function GifPickerButton({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un GIF…"
+              placeholder={t("searchPlaceholder")}
               className="pl-9"
             />
           </div>
 
           {error === "not_configured" ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              La bibliothèque de GIFs n&apos;est pas encore activée.
+              {t("notConfigured")}
               <br />
               <span className="text-xs">
-                Ajoute la variable d&apos;environnement <code>KLIPY_API_KEY</code> pour l&apos;activer.
+                {t.rich("notConfiguredHint", { code: (chunks) => <code>{chunks}</code> })}
               </span>
             </div>
           ) : error === "generic" ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              Recherche indisponible pour le moment. Réessaie dans un instant.
+              {t("errorGeneric")}
             </div>
           ) : loading && gifs.length === 0 ? (
             <div className="flex justify-center py-10">
@@ -143,7 +145,7 @@ export function GifPickerButton({
             </div>
           ) : gifs.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">
-              Aucun GIF trouvé. Essaie un autre mot-clé.
+              {t("noResults")}
             </div>
           ) : (
             // Masonry en colonnes CSS : chaque GIF garde son ratio (w-full h-auto),

@@ -4231,6 +4231,7 @@
     "reorder": "Reordenar"
   },
   "quizDetail": {
+    "previewStartBtnPh": "Começar o teste",
     "backToList": "Voltar aos quizzes",
     "tabEdit": "Edição",
     "tabLeads": "Leads",
@@ -6053,6 +6054,15 @@
     "reset": "redefinir",
     "showCreatorBranding": "Exibir meu logo e link do site na página pública"
   },
+  "gifPicker": {
+    "title": "Escolher um GIF",
+    "description": "Procure um GIF de qualidade para usar como capa ou ilustração.",
+    "searchPlaceholder": "Pesquisar um GIF…",
+    "notConfigured": "A biblioteca de GIFs ainda não está ativada.",
+    "notConfiguredHint": "Adicione a variável de ambiente <code>KLIPY_API_KEY</code> para ativá-la.",
+    "errorGeneric": "Pesquisa indisponível no momento. Tente novamente em instantes.",
+    "noResults": "Nenhum GIF encontrado. Tente outra palavra-chave."
+  },
   "visualStudio": {
     "title": "Estúdio visual",
     "description": "Dê um clique duplo em um texto para reescrevê-lo, selecione uma palavra para estilizá-la, arraste para reposicionar.",
@@ -6130,6 +6140,8 @@
     "pdfDone": "PDF baixado",
     "navKeysTip": "Dica: setas ← → ou deslize para navegar.",
     "brandLabel": "Marca",
+    "myBrand": "Minha marca",
+    "applyInsert": "Inserir",
     "logoPosition": "Posição do logo",
     "logoSize": "Tamanho do logo",
     "aiNewBackground": "Novo fundo",

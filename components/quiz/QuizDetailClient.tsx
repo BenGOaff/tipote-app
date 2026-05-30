@@ -2467,7 +2467,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         value={startButtonText}
                         onChange={setStartButtonText}
                         className="text-white font-semibold text-center"
-                        placeholder="Commencer le test"
+                        placeholder={t("previewStartBtnPh")}
                       />
                     </div>
                   </div>

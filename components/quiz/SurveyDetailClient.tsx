@@ -1782,7 +1782,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         value={startButtonText}
                         onChange={setStartButtonText}
                         className="text-white font-semibold text-center"
-                        placeholder="Commencer le test"
+                        placeholder={t("previewStartBtnPh")}
                       />
                     </div>
                   </div>

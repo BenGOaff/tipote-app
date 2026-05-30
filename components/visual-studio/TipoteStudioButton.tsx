@@ -13,6 +13,7 @@
 // génération + de l'upload storage.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Wand2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ export function TipoteStudioButton({
   /** Insère PLUSIEURS images (carrousel). Si absent, on retombe sur onApplyImage. */
   onApplyImages?: (imgs: StudioSavedImage[]) => void;
 }) {
+  const t = useTranslations("visualStudio");
   const [open, setOpen] = useState(false);
   // Brand kit + voix de marque de l'user, chargés à la 1re ouverture (puis
   // mémorisés). Fallback = preset Tipote tant que le fetch n'a pas répondu, pour
@@ -175,7 +177,7 @@ export function TipoteStudioButton({
         enableCarousel={illustrationMode ? false : enableCarousel}
         upload={makeContentImageUploader(contentId)}
         onChargeCredit={chargeCredit}
-        applyLabel="Insérer"
+        applyLabel={t("applyInsert")}
         onApply={handleApply}
         onApplyMany={handleApplyMany}
       />

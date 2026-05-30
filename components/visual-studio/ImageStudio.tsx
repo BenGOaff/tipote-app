@@ -847,7 +847,7 @@ export function ImageStudio({
     const a = document.createElement("a");
     const suffix = index != null ? `-${String(index + 1).padStart(2, "0")}` : "";
     a.href = href;
-    a.download = `${brandKit.name.toLowerCase().replace(/\s+/g, "-")}-${result.format.replace(":", "x")}${suffix}-${Date.now()}.png`;
+    a.download = `${(brandKit.name || "my-brand").toLowerCase().replace(/\s+/g, "-")}-${result.format.replace(":", "x")}${suffix}-${Date.now()}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -921,7 +921,7 @@ export function ImageStudio({
       const href = URL.createObjectURL(pdf);
       const a = document.createElement("a");
       a.href = href;
-      a.download = `${brandKit.name.toLowerCase().replace(/\s+/g, "-")}-carrousel-${Date.now()}.pdf`;
+      a.download = `${(brandKit.name || "my-brand").toLowerCase().replace(/\s+/g, "-")}-carrousel-${Date.now()}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -979,7 +979,10 @@ export function ImageStudio({
                             : "border-border text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        {b.label}
+                        {/* Si le serveur renvoie un label vide (marque
+                            perso sans nom), on affiche le label traduit
+                            "Ma marque" / "My brand" / etc. selon la locale. */}
+                        {b.label || t("myBrand")}
                       </button>
                     ))}
                   </div>
@@ -1233,7 +1236,7 @@ export function ImageStudio({
                         onChange={(c) => setBackground((b) => ({ ...b, color: c }))}
                         label="Couleur de fond"
                         userPalettes={brandPalette}
-                        userPalettesLabel={`Palette ${brandKit.name}`}
+                        userPalettesLabel={`Palette ${brandKit.name || t("myBrand")}`}
                       />
                       {background.mode === "gradient" ? t("gradientStart") : t("color")}
                     </div>
@@ -1244,7 +1247,7 @@ export function ImageStudio({
                           onChange={(c) => setBackground((b) => ({ ...b, color2: c }))}
                           label="Couleur de fin"
                           userPalettes={brandPalette}
-                          userPalettesLabel={`Palette ${brandKit.name}`}
+                          userPalettesLabel={`Palette ${brandKit.name || t("myBrand")}`}
                         />
                         {t("gradientEnd")}
                       </div>

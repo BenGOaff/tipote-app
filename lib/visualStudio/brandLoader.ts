@@ -86,9 +86,11 @@ export async function loadBrandBundle(
 
   const primary = hex(p.brand_color_base, DEFAULT_BRAND_COLOR_PRIMARY);
   const accent = hex(p.brand_color_accent, primary);
+  // Pas de fallback "Tipote" : on laisse vide quand l'user n'a pas
+  // de first_name → le client affiche le label traduit (t("myBrand"))
+  // côté UI. Évite d'avoir "Tipote" en dur dans une UI espagnole.
   const name =
-    (typeof p.first_name === "string" && p.first_name.trim()) ||
-    "Tipote";
+    (typeof p.first_name === "string" && p.first_name.trim()) || "";
 
   const brand: BrandKit = {
     name: String(name),

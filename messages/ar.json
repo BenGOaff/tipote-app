@@ -3925,6 +3925,7 @@
     "reorder": "إعادة الترتيب"
   },
   "quizDetail": {
+    "previewStartBtnPh": "ابدأ الاختبار",
     "backToList": "العودة إلى الاختبارات",
     "tabEdit": "تعديل",
     "tabLeads": "العملاء المحتملون",
@@ -5747,6 +5748,15 @@
     "reset": "إعادة الضبط",
     "showCreatorBranding": "إظهار شعاري ورابط موقعي في الصفحة العامة"
   },
+  "gifPicker": {
+    "title": "اختر GIF",
+    "description": "ابحث عن GIF عالي الجودة لاستخدامه كغلاف أو رسم توضيحي.",
+    "searchPlaceholder": "ابحث عن GIF…",
+    "notConfigured": "مكتبة GIF غير مفعّلة بعد.",
+    "notConfiguredHint": "أضف المتغير البيئي <code>KLIPY_API_KEY</code> لتفعيلها.",
+    "errorGeneric": "البحث غير متاح حاليًا. حاول مرة أخرى بعد قليل.",
+    "noResults": "لم يتم العثور على GIF. جرّب كلمة مفتاحية أخرى."
+  },
   "visualStudio": {
     "title": "الأستوديو المرئي",
     "description": "انقر نقرًا مزدوجًا على نص لإعادة كتابته، حدّد كلمة لتنسيقها، اسحب لإعادة وضعه.",
@@ -5824,6 +5834,8 @@
     "pdfDone": "تم تنزيل PDF",
     "navKeysTip": "نصيحة: استخدم ← → أو اسحب للتنقل.",
     "brandLabel": "العلامة",
+    "myBrand": "علامتي",
+    "applyInsert": "إدراج",
     "logoPosition": "موضع الشعار",
     "logoSize": "حجم الشعار",
     "aiNewBackground": "خلفية جديدة",
