@@ -91,6 +91,7 @@ type PublicQuizData = {
   virality_enabled: boolean;
   bonus_description: string | null;
   bonus_image_url?: string | null;
+  bonus_image_position?: "top" | "after_heading" | "after_intro" | "bottom" | null;
   // Image de la page d'INTRO (Hugo via Béné, 19 mai 2026). Slot parmi
   // top / after_title / after_intro / bottom.
   intro_image_url?: string | null;
@@ -2229,40 +2230,64 @@ export default function PublicQuizClient({
         {shareOverlay}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-lg w-full py-16 sm:py-20 space-y-10">
-          <div className="text-center space-y-4">
-            {/* Hero visuel — image bonus (IA, GIF ou upload) si configurée,
-                sinon l'icône cadeau de marque. Le créateur choisit dans
-                l'éditeur quelle "tête" porter sur l'écran de partage. */}
-            <div className="flex justify-center">
-              {quiz.bonus_image_url ? (
+          {/* Image bonus — positionnée selon `bonus_image_position`
+              (top / after_heading / after_intro / bottom). Si pas
+              d'image OU position défaut, on tombe sur l'icône cadeau
+              de marque au-dessus du titre. `w-full h-auto` côté
+              visiteur (pas de crop), miroir de l'image d'intro. */}
+          {(() => {
+            const bonusPos = (quiz.bonus_image_position ?? "top") as
+              | "top" | "after_heading" | "after_intro" | "bottom";
+            const bonusImg = quiz.bonus_image_url ? (
+              <div className="flex justify-center">
                 <div className="rounded-2xl overflow-hidden border bg-white dark:bg-card shadow-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={quiz.bonus_image_url}
                     alt=""
-                    className="block max-h-64 w-auto object-contain"
+                    className="w-full h-auto max-h-80 object-contain"
                   />
                 </div>
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Gift className="w-10 h-10 text-primary" />
-                </div>
-              )}
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
-              {t.bonusStepHeading}
-            </h2>
-            {hasCustomIntro ? (
-              <p
-                className="tipote-quiz-rich tipote-quiz-rich-inline text-muted-foreground text-base leading-relaxed whitespace-pre-line"
-                dangerouslySetInnerHTML={{ __html: customBonusIntroHtml }}
-              />
-            ) : (
-              <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
-                {t.bonusStepIntro(bonusText)}
-              </p>
-            )}
-          </div>
+              </div>
+            ) : null;
+            return (
+              <div className="text-center space-y-4">
+                {/* slot TOP — au-dessus du titre. Si pas d'image,
+                    fallback sur l'icône cadeau (compat historique). */}
+                {bonusImg && bonusPos === "top" ? (
+                  bonusImg
+                ) : !quiz.bonus_image_url ? (
+                  <div className="flex justify-center">
+                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Gift className="w-10 h-10 text-primary" />
+                    </div>
+                  </div>
+                ) : null}
+
+                <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
+                  {t.bonusStepHeading}
+                </h2>
+
+                {/* slot AFTER_HEADING — entre titre et intro */}
+                {bonusImg && bonusPos === "after_heading" ? bonusImg : null}
+
+                {hasCustomIntro ? (
+                  <p
+                    className="tipote-quiz-rich tipote-quiz-rich-inline text-muted-foreground text-base leading-relaxed whitespace-pre-line"
+                    dangerouslySetInnerHTML={{ __html: customBonusIntroHtml }}
+                  />
+                ) : (
+                  <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
+                    {t.bonusStepIntro(bonusText)}
+                  </p>
+                )}
+
+                {/* slot AFTER_INTRO — sous l'intro, avant les boutons
+                    partage rendus ci-dessous. */}
+                {bonusImg && bonusPos === "after_intro" ? bonusImg : null}
+              </div>
+            );
+          })()}
 
           {!hasShared ? (
             <div className="space-y-3">
@@ -2370,6 +2395,22 @@ export default function PublicQuizClient({
               <CheckCircle2 className="w-4 h-4 mr-2" />
               {bonusUnlocked ? t.bonusUnlockedContinue : t.continueToResult}
             </Button>
+          )}
+
+          {/* slot BOTTOM — image bonus tout en bas (sous les boutons
+              partage / continuer). Affiché uniquement si la créatrice
+              a positionné l'image à "bottom" dans l'éditeur. */}
+          {quiz.bonus_image_url && (quiz.bonus_image_position ?? "top") === "bottom" && (
+            <div className="flex justify-center pt-4">
+              <div className="rounded-2xl overflow-hidden border bg-white dark:bg-card shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={quiz.bonus_image_url}
+                  alt=""
+                  className="w-full h-auto max-h-80 object-contain"
+                />
+              </div>
+            </div>
           )}
 
           {/* Privacy mention sits only inside the consent checkbox at
