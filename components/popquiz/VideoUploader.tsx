@@ -20,6 +20,7 @@
 // about the storage layout.
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import * as tus from "tus-js-client";
 import { CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -186,6 +187,7 @@ export function VideoUploader({
   onUploaded: (file: UploadedVideo) => void;
   onCleared: () => void;
 }) {
+  const t = useTranslations("popquiz");
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<tus.Upload | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -286,16 +288,16 @@ export function VideoUploader({
         durationMs,
         bytes: file.size,
       });
-      toast.success("Vidéo importée");
+      toast.success(t("videoUploaded"));
       setPhase({ kind: "idle" });
     } catch (e) {
-      const raw = e instanceof Error ? e.message : "Erreur lors de l'import";
+      const raw = e instanceof Error ? e.message : t("videoUploadError");
       const friendly =
         raw.toLowerCase().includes("exceeded") ||
         raw.toLowerCase().includes("size")
-          ? "Fichier trop volumineux. La taille maximale acceptée est 20 Go."
+          ? t("videoTooLarge")
           : raw.toLowerCase().includes("abort")
-            ? "Import annulé."
+            ? t("videoUploadAborted")
             : raw;
       setError(friendly);
       setPhase({ kind: "idle" });
@@ -323,7 +325,7 @@ export function VideoUploader({
             {current.durationMs
               ? ` • ${Math.round(current.durationMs / 1000)} s`
               : ""}
-            {" • vidéo prête"}
+            {` • ${t("videoReady")}`}
           </p>
         </div>
         <Button
@@ -331,7 +333,7 @@ export function VideoUploader({
           variant="ghost"
           onClick={onCleared}
           type="button"
-          aria-label="Retirer la vidéo"
+          aria-label={t("removeVideoAria")}
           className="shrink-0 hover:bg-green-100"
         >
           <X className="size-4 text-green-900 dark:text-green-200" />

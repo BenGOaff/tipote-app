@@ -10,6 +10,7 @@
 // that earned them. If they're on every row they stop meaning anything.
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Trophy, Flame, Sparkles, AlertCircle } from "lucide-react";
 
@@ -23,9 +24,10 @@ const baseClasses =
   "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider";
 
 export function TopPerformerBadge({ className, compact }: Props) {
+  const t = useTranslations("highlightBadge");
   return (
     <span
-      title="Top performer"
+      title={t("topPerformer")}
       className={cn(
         baseClasses,
         "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
@@ -33,15 +35,16 @@ export function TopPerformerBadge({ className, compact }: Props) {
       )}
     >
       <Trophy className="w-3 h-3" />
-      {!compact && <span>Top</span>}
+      {!compact && <span>{t("top")}</span>}
     </span>
   );
 }
 
 export function TrendingBadge({ className, compact }: Props) {
+  const t = useTranslations("highlightBadge");
   return (
     <span
-      title="En forme — beaucoup d'activité récente"
+      title={t("trendingTitle")}
       className={cn(
         baseClasses,
         "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
@@ -49,15 +52,16 @@ export function TrendingBadge({ className, compact }: Props) {
       )}
     >
       <Flame className="w-3 h-3" />
-      {!compact && <span>En forme</span>}
+      {!compact && <span>{t("trending")}</span>}
     </span>
   );
 }
 
 export function NewBadge({ className, compact }: Props) {
+  const t = useTranslations("highlightBadge");
   return (
     <span
-      title="Nouveau"
+      title={t("newTitle")}
       className={cn(
         baseClasses,
         "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
@@ -65,15 +69,16 @@ export function NewBadge({ className, compact }: Props) {
       )}
     >
       <Sparkles className="w-3 h-3" />
-      {!compact && <span>Nouveau</span>}
+      {!compact && <span>{t("newLabel")}</span>}
     </span>
   );
 }
 
 export function NeedsAttentionBadge({ className, compact }: Props) {
+  const t = useTranslations("highlightBadge");
   return (
     <span
-      title="À regarder — peu d'activité"
+      title={t("needsAttentionTitle")}
       className={cn(
         baseClasses,
         "bg-muted text-muted-foreground",
@@ -81,7 +86,7 @@ export function NeedsAttentionBadge({ className, compact }: Props) {
       )}
     >
       <AlertCircle className="w-3 h-3" />
-      {!compact && <span>À regarder</span>}
+      {!compact && <span>{t("needsAttention")}</span>}
     </span>
   );
 }

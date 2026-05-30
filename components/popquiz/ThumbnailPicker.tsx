@@ -16,6 +16,7 @@
 // never deleted, so toggling between custom and auto is instant.
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import * as tus from "tus-js-client";
 import {
   Image as ImageIcon,
@@ -80,6 +81,7 @@ export function ThumbnailPicker({
   onUpdated,
   onBlobReady,
 }: Props) {
+  const t = useTranslations("popquiz");
   // Mode "stage local" si pas de popquizId — on délègue au parent.
   const isStageMode = !popquizId;
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +97,7 @@ export function ThumbnailPicker({
     const f = e.target.files?.[0];
     if (!f) return;
     if (!/^image\/(png|jpe?g|webp)$/i.test(f.type)) {
-      toast.error("Format non supporté (PNG, JPG, WebP).");
+      toast.error(t("thumbnailUnsupportedFormat"));
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
@@ -182,9 +184,9 @@ export function ThumbnailPicker({
         thumbnailPath: patchJson.thumbnailPath ?? null,
         thumbnailUrl: patchJson.thumbnailUrl ?? null,
       });
-      toast.success("Vignette personnalisée appliquée");
+      toast.success(t("thumbnailCustomApplied"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de l'envoi";
+      const msg = e instanceof Error ? e.message : t("thumbnailUploadError");
       toast.error(msg);
     } finally {
       setBusy(false);
@@ -212,16 +214,16 @@ export function ThumbnailPicker({
         error?: string;
       };
       if (!res.ok || !json.ok) {
-        throw new Error(json.error || "Impossible de restaurer la vignette auto.");
+        throw new Error(json.error || t("thumbnailAutoRestoreError"));
       }
       onUpdated?.({
         source: "auto",
         thumbnailPath: json.thumbnailPath ?? null,
         thumbnailUrl: json.thumbnailUrl ?? null,
       });
-      toast.success("Vignette auto restaurée");
+      toast.success(t("thumbnailAutoRestored"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur";
+      const msg = e instanceof Error ? e.message : t("genericError");
       toast.error(msg);
     } finally {
       setRestoring(false);
@@ -259,7 +261,7 @@ export function ThumbnailPicker({
         <div className="flex flex-col sm:flex-row gap-3 items-start">
           <div
             className="w-full sm:w-[240px] aspect-video rounded-lg overflow-hidden bg-muted ring-1 ring-border shrink-0"
-            aria-label="Aperçu de la vignette"
+            aria-label={t("thumbnailPreviewAria")}
           >
             {currentUrl ? (
               <img

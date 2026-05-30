@@ -811,7 +811,7 @@ export default function PopquizEditClient({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Vidéo source</Label>
+            <Label>{t("videoSourceLabel")}</Label>
             <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
               <Video className="size-4 text-muted-foreground shrink-0" />
               <span className="flex-1 min-w-0 truncate text-muted-foreground">
@@ -948,10 +948,9 @@ export default function PopquizEditClient({
           <CardContent className="py-5 space-y-4">
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <div>
-                <h2 className="text-base font-semibold">Aperçu de la vidéo</h2>
+                <h2 className="text-base font-semibold">{t("videoPreviewTitle")}</h2>
                 <p className="text-[11px] text-muted-foreground">
-                  Reflète l&apos;apparence en temps réel. Place les
-                  marqueurs en cliquant sur la timeline.
+                  {t("videoPreviewDesc")}
                 </p>
               </div>
               {/* Toggle direct/iframe — simule les 2 rendus côté visiteur. */}
@@ -1113,13 +1112,13 @@ export default function PopquizEditClient({
                             updateCue(cue.localId, { quizId: e.target.value })
                           }
                           className="flex-1 min-w-[160px] h-9 rounded-md border bg-background px-2 text-sm"
-                          aria-label="Quiz lié"
+                          aria-label={t("linkedQuizAria")}
                         >
                           {quizzes.map((q) => (
                             <option key={q.id} value={q.id}>
                               {/* Titre du quiz = rich-text → strip pour l'option du select. */}
                               {stripHtml(q.title)}
-                              {q.status !== "active" ? " (brouillon)" : ""}
+                              {q.status !== "active" ? ` (${t("draftLabel")})` : ""}
                             </option>
                           ))}
                         </select>
@@ -1167,9 +1166,9 @@ export default function PopquizEditClient({
         <Card>
           <CardContent className="py-5 space-y-4">
             <div>
-              <h2 className="text-base font-semibold">Partage & intégration</h2>
+              <h2 className="text-base font-semibold">{t("shareEmbedTitle")}</h2>
               <p className="text-xs text-muted-foreground">
-                Lien direct à partager ou code à coller dans une page.
+                {t("shareEmbedDesc")}
               </p>
             </div>
 

@@ -521,14 +521,14 @@ export default function PagesClient({ userEmail }: { userEmail: string }) {
                       <div className="flex items-start gap-3">
                         <span className="text-2xl leading-none">⚠️</span>
                         <div className="flex-1">
-                          <h3 className="font-semibold text-base mb-1">Tu as déjà une page très similaire</h3>
+                          <h3 className="font-semibold text-base mb-1">{t("similarPageTitle")}</h3>
                           <p className="text-sm text-muted-foreground">
                             « <span className="font-medium text-foreground">{(duplicateMatch.title || "").replace(/<[^>]*>/g, "").slice(0, 100)}</span> »
                             {" — "}
-                            {duplicateMatch.status === "published" ? "publiée" : "en brouillon"}, modifiée le {new Date(duplicateMatch.updated_at).toLocaleDateString("fr-FR")}.
+                            {duplicateMatch.status === "published" ? t("statusPublished") : t("statusDraft")}, {t("modifiedOn", { date: new Date(duplicateMatch.updated_at).toLocaleDateString() })}
                           </p>
                           <p className="text-sm text-muted-foreground mt-2">
-                            Veux-tu la <strong>modifier</strong> (recommandé) ou <strong>créer une nouvelle variante</strong> ?
+                            {t.rich("editOrCreateVariant", { strong: (chunks) => <strong>{chunks}</strong> })}
                           </p>
                         </div>
                       </div>

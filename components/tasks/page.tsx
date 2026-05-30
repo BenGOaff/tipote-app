@@ -4,6 +4,7 @@
 // ✅ Aucune régression
 
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getSupabaseServerClient } from '@/lib/supabaseServer'
 import AppShell from '@/components/AppShell'
 import TaskList from '@/components/tasks/TaskList'
@@ -17,6 +18,7 @@ export default async function TasksPage() {
   if (!session) redirect('/')
 
   const userEmail = session.user.email ?? ''
+  const t = await getTranslations('tasksPage')
 
   const { data: tasks } = await supabase
     .from('project_tasks')
@@ -29,9 +31,9 @@ export default async function TasksPage() {
     <AppShell userEmail={userEmail}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Tâches</h1>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">{t('pageTitle')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Exécute ton plan, une tâche à la fois.
+            {t('pageSubtitle')}
           </p>
         </div>
 

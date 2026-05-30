@@ -916,7 +916,7 @@ export default function QuizFormClient() {
         <div className="flex items-center justify-center min-h-[40vh]">
           <div className="text-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Création de ton quiz en cours…</p>
+            <p className="text-sm text-muted-foreground">{t("creatingQuiz")}</p>
           </div>
         </div>
       )}
@@ -1103,11 +1103,11 @@ export default function QuizFormClient() {
             </p>
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-              <p className="font-medium mb-2">Glisse ton fichier ici ou clique pour sélectionner</p>
-              <p className="text-xs text-muted-foreground mb-4">.txt uniquement — max 50 000 caractères</p>
+              <p className="font-medium mb-2">{t("importDropZone")}</p>
+              <p className="text-xs text-muted-foreground mb-4">{t("importTxtOnly")}</p>
               <input type="file" accept=".txt,text/plain" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="hidden" id="import-file" />
               <Button variant="outline" asChild>
-                <label htmlFor="import-file" className="cursor-pointer">Sélectionner un fichier</label>
+                <label htmlFor="import-file" className="cursor-pointer">{t("importChooseFile")}</label>
               </Button>
             </div>
             {importFile && (

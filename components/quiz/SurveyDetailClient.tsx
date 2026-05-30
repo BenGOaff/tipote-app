@@ -283,7 +283,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
       {aiProposals !== null && (
         <div className="mt-2 rounded-xl border bg-background shadow-sm p-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
           {aiProposals.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-2 py-1.5">L'IA n'a rien proposé. Réessaie.</p>
+            <p className="text-xs text-muted-foreground px-2 py-1.5">{t("aiNoProposals")}</p>
           ) : (
             aiProposals.map((p, i) => (
               <button
@@ -297,11 +297,11 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
             ))
           )}
           <div className="flex justify-between items-center pt-1">
-            <button type="button" onClick={dismissProposals} className="text-[11px] text-muted-foreground hover:underline px-2">Garder mon texte</button>
+            <button type="button" onClick={dismissProposals} className="text-[11px] text-muted-foreground hover:underline px-2">{t("aiKeepMyText")}</button>
             {aiProposals.length > 0 && (
               <button type="button" onClick={handleAIRewrite} disabled={rewriting} className="text-[11px] text-primary hover:underline px-2 inline-flex items-center gap-1">
                 {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                Régénérer
+                {t("aiRegenerate")}
               </button>
             )}
           </div>
@@ -1008,24 +1008,24 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Vignette OG — image affichée par WhatsApp / iMessage / X / etc. quand
   // le sondage est partagé. Sans upload : logo Tipote par défaut.
   async function handleOgImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy")); return; }
     setUploadingOgImage(true);
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Pas connecté"); return; }
+      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
       const ext = file.name.split(".").pop() ?? "png";
       const path = `og/${user.id}/${quizId}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setOgImageUrl(urlData.publicUrl);
-      toast.success("Vignette enregistrée");
+      toast.success(t("toastOgSaved"));
     } catch (err) {
       console.error("OG image upload failed:", err);
-      const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      const msg = err instanceof Error ? err.message : t("unknownError");
+      toast.error(t("toastUploadError", { msg }));
     } finally {
       setUploadingOgImage(false);
     }
@@ -1393,12 +1393,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             className="shrink-0 px-2 sm:px-3"
           >
             <Eye className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">Aperçu</span>
+            <span className="hidden sm:inline">{t("previewBtn")}</span>
           </Button>
           {savingDraft && (
             <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
               <Loader2 className="w-3 h-3 animate-spin" />
-              Brouillon enregistré
+              {t("draftSaved")}
             </span>
           )}
           {/* Mobile : Save en icône seule (l'autosave couvre déjà la sauvegarde)
@@ -1471,7 +1471,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-xs">Police d&apos;écriture</Label>
+                  <Label className="text-xs">{t("designFontLabel")}</Label>
                   <select
                     value={fontFamily}
                     onChange={e => setFontFamily(e.target.value as BrandFontChoice)}
@@ -1482,21 +1482,21 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-muted-foreground">Aperçu live dans le panneau de droite.</p>
+                  <p className="text-[10px] text-muted-foreground">{t("designFontHint")}</p>
                 </div>
-                <div className="space-y-3"><Label className="text-xs">Couleurs</Label>
-                  <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur principale</span></div>
-                  <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur de fond</span></div>
+                <div className="space-y-3"><Label className="text-xs">{t("designColorsLabel")}</Label>
+                  <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designPrimaryColor")}</span></div>
+                  <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designBgColor")}</span></div>
                   <UserPalettePicker
                     currentColor={primaryColor}
                     onPick={setPrimaryColor}
                     palettes={savedPalettes}
                     onChangePalettes={handleChangePalettes}
                   />
-                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">Réinitialiser aux couleurs du profil</button>
+                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">{t("designResetColors")}</button>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Logo</Label>
+                  <Label className="text-xs">{t("logoLabel")}</Label>
                   {brandLogoUrl ? (
                     <div className="space-y-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1505,7 +1505,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
                           {uploadingLogo ? t("uploading") : t("change")}
                         </button>
-                        <button type="button" onClick={async () => { await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brand_logo_url: null }) }); setBrandLogoUrl(null); }} className="text-xs text-destructive hover:underline">Retirer</button>
+                        <button type="button" onClick={async () => { await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brand_logo_url: null }) }); setBrandLogoUrl(null); }} className="text-xs text-destructive hover:underline">{t("remove")}</button>
                       </div>
                     </div>
                   ) : (
@@ -1521,22 +1521,22 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     className="hidden"
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
                   />
-                  <p className="text-[10px] text-muted-foreground">Partagé avec tous vos quiz (paramètre du profil).</p>
+                  <p className="text-[10px] text-muted-foreground">{t("logoSharedHint")}</p>
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
                 {/* ── Formulaire de prise de contact ── */}
                 <section className="space-y-2.5">
                   <div>
-                    <h3 className="text-sm font-semibold">Formulaire de prise de contact</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">Choisis les champs demandés avant l&apos;accès aux résultats.</p>
+                    <h3 className="text-sm font-semibold">{t("captureFormTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFormDesc")}</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <CapturePill label="Adresse email*" active locked />
+                    <CapturePill label={t("pillEmail")} active locked />
                     <CapturePill label={t("pillFirstName")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
-                    <CapturePill label="Nom*" active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
+                    <CapturePill label={t("pillLastName")} active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
                     <CapturePill label={t("pillPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
-                    <CapturePill label="Pays" active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
+                    <CapturePill label={t("pillCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
                   {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
                     <div className="flex flex-col gap-1.5 pt-1">
@@ -1576,7 +1576,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       }}
                       className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted/60 hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Ajouter un élément
+                      <Plus className="w-3.5 h-3.5" /> {t("addElement")}
                     </button>
                   )}
                   {/* Consent checkbox is opt-out — most creators want it for
@@ -1591,9 +1591,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       className="mt-0.5 w-4 h-4"
                     />
                     <span className="text-xs">
-                      <span className="font-medium">Afficher la case à cocher de consentement</span>
+                      <span className="font-medium">{t("consentToggle")}</span>
                       <span className="block text-muted-foreground leading-snug">
-                        Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page).
+                        {t("consentToggleHint")}
                       </span>
                     </span>
                   </label>
@@ -1659,13 +1659,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 {/* ── CTA par défaut ── */}
                 <section className="space-y-1.5">
                   <div>
-                    <h3 className="text-sm font-semibold">CTA par défaut</h3>
+                    <h3 className="text-sm font-semibold">{t("defaultCtaTitle")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Utilisé seulement pour les résultats qui n&apos;ont pas leur propre CTA. Tu peux en définir un spécifique sur chaque résultat depuis l&apos;onglet Édition.
+                      {t("defaultCtaDesc")}
                     </p>
                   </div>
-                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder="Texte du CTA" className="text-xs" />
-                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder="URL du CTA" className="text-xs" />
+                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPh")} className="text-xs" />
+                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPh")} className="text-xs" />
                 </section>
               </div>)}
             </div>
@@ -1997,11 +1997,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                 </div>
                               ))}
                             </div>
-                            <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>+ Ajouter une option</button>
+                            <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>+ {t("addOption")}</button>
                           </>
                         )}
 
-                        <p className="text-center text-xs text-muted-foreground pt-4 italic">Un clic sur une option passe à la question suivante.</p>
+                        <p className="text-center text-xs text-muted-foreground pt-4 italic">{t("optionClickAutoNext")}</p>
                       </div>
                     </div>
                   </div>
@@ -2018,7 +2018,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("csvFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                       {captureLastName && <div><label className="text-sm text-muted-foreground">{t("csvLastName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                     </div>}
-                    <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
+                    <div><label className="text-sm text-muted-foreground">{t("email")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>
                     {capturePhone && <div><label className="text-sm text-muted-foreground">{t("phoneOptional")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
                   {showConsentCheckbox && (
@@ -2034,7 +2034,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       </div>
                     </div>
                   )}
-                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>Accéder aux résultats</button>
+                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>{t("captureSubmitDefault")}</button>
                 </div>
               </div>
 
@@ -2134,8 +2134,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         <div className="flex-1 overflow-y-auto p-6"><div className="max-w-3xl mx-auto space-y-4">
           {/* Custom URL slug */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Lien personnalisé</h3>
-            <p className="text-xs text-muted-foreground">Choisis une URL courte et mémorable. Lettres minuscules, chiffres et tirets uniquement.</p>
+            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> {t("customLinkTitle")}</h3>
+            <p className="text-xs text-muted-foreground">{t("customLinkDesc")}</p>
             <ShareDomainPicker
               label={tc("shareDomain")}
               value={shareDomain}
@@ -2167,8 +2167,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> Réseaux de partage proposés</h3>
-            <p className="text-xs text-muted-foreground">Choisis les réseaux affichés sur la page de résultat.</p>
+            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> {t("shareNetworksTitle")}</h3>
+            <p className="text-xs text-muted-foreground">{t("shareNetworksDesc")}</p>
             <div className="flex flex-wrap gap-2">
               {ALLOWED_SHARE_NETWORKS.map((n) => {
                 const active = shareNetworks.includes(n);
@@ -2189,8 +2189,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           {/* SEO / Open Graph description + vignette de partage */}
           <Card><CardContent className="pt-6 space-y-4">
             <div className="space-y-3">
-              <h3 className="font-semibold">Aperçu sur les réseaux (SEO)</h3>
-              <p className="text-xs text-muted-foreground">Description utilisée quand un visiteur partage le lien.</p>
+              <h3 className="font-semibold">{t("seoPreviewTitle")}</h3>
+              <p className="text-xs text-muted-foreground">{t("seoPreviewDesc")}</p>
               <Textarea
                 value={ogDescription}
                 onChange={(e) => setOgDescription(e.target.value)}
@@ -2204,8 +2204,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
             {/* Vignette OG du sondage — même pattern que PageBuilder Tipote. */}
             <div className="space-y-2 pt-2 border-t">
-              <h3 className="font-semibold text-sm">Vignette de partage social</h3>
-              <p className="text-xs text-muted-foreground">Image affichée par WhatsApp, iMessage, X, etc. quand ton lien est partagé. Sans upload, c'est notre logo qui s'affiche.</p>
+              <h3 className="font-semibold text-sm">{t("ogImageTitle")}</h3>
+              <p className="text-xs text-muted-foreground">{t("ogImageDesc")}</p>
               {ogImageUrl ? (
                 <div className="space-y-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2219,14 +2219,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgImageUpload(f); }}
                         disabled={uploadingOgImage}
                       />
-                      {uploadingOgImage ? "Upload…" : "Remplacer"}
+                      {uploadingOgImage ? t("uploading") : t("change")}
                     </label>
                     <button
                       type="button"
                       onClick={() => setOgImageUrl(null)}
                       className="text-xs px-3 py-1.5 rounded border hover:bg-destructive/10 text-destructive"
                     >
-                      Retirer
+                      {t("remove")}
                     </button>
                   </div>
                 </div>
@@ -2239,10 +2239,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgImageUpload(f); }}
                     disabled={uploadingOgImage}
                   />
-                  {uploadingOgImage ? "Upload…" : "Téléverser une image"}
+                  {uploadingOgImage ? t("uploading") : t("uploadImage")}
                 </label>
               )}
-              <p className="text-[10px] text-muted-foreground">Format recommandé : 1200 × 630 px (ratio 1.91:1). Max 10 Mo.</p>
+              <p className="text-[10px] text-muted-foreground">{t("ogImageFormatHint")}</p>
             </div>
           </CardContent></Card>
 
@@ -2250,18 +2250,18 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           <Card className={isPaidPlan ? "" : "opacity-70"}>
             <CardContent className="pt-6 space-y-3">
               <h3 className="font-semibold flex items-center gap-2">
-                Pied de page personnalisé
-                {!isPaidPlan && <Badge variant="outline" className="text-[10px]">Payant</Badge>}
+                {t("customFooterTitle")}
+                {!isPaidPlan && <Badge variant="outline" className="text-[10px]">{t("paidBadge")}</Badge>}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {isPaidPlan
-                  ? "Remplace « Ce quiz vous est offert par Tipote » par votre propre signature."
+                  ? t("customFooterDesc")
                   : t("paidPlanOnly")}
               </p>
               <Input
                 value={customFooterText}
                 onChange={(e) => setCustomFooterText(e.target.value)}
-                placeholder="Ex: Ce quiz vous est offert par Mon Site"
+                placeholder={t("customFooterTextPh")}
                 className="text-sm"
                 disabled={!isPaidPlan}
               />
@@ -2278,19 +2278,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           {/* Per-quiz widget overrides */}
           <Card>
             <CardContent className="pt-6 space-y-4">
-              <h3 className="font-semibold">Widgets pour ce quiz</h3>
+              <h3 className="font-semibold">{t("widgetsTitle")}</h3>
               <p className="text-xs text-muted-foreground">
-                Choisis un widget de toast et un widget de partage spécifiques à ce quiz. Laisse sur « Automatique » pour utiliser le premier widget actif.
+                {t("widgetsDesc")}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Widget Toast</label>
+                  <label className="text-xs font-medium text-muted-foreground">{t("widgetToastLabel")}</label>
                   <select
                     value={selectedToastWidget}
                     onChange={(e) => setSelectedToastWidget(e.target.value)}
                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    <option value="">Automatique (premier actif)</option>
+                    <option value="">{t("widgetAutoOption")}</option>
                     {toastWidgets.map((w) => (
                       <option key={w.id} value={w.id} disabled={!w.enabled}>
                         {w.name}{!w.enabled ? t("widgetDisabled") : ""}
@@ -2299,13 +2299,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Widget Partage</label>
+                  <label className="text-xs font-medium text-muted-foreground">{t("widgetShareLabel")}</label>
                   <select
                     value={selectedShareWidget}
                     onChange={(e) => setSelectedShareWidget(e.target.value)}
                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    <option value="">Automatique (premier actif)</option>
+                    <option value="">{t("widgetAutoOption")}</option>
                     {shareWidgets.map((w) => (
                       <option key={w.id} value={w.id} disabled={!w.enabled}>
                         {w.name}{!w.enabled ? t("widgetDisabled") : ""}
@@ -2320,7 +2320,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           <div className="flex justify-end">
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-1" />}
-              Enregistrer
+              {t("save")}
             </Button>
           </div>
         </div></div>

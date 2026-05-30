@@ -123,20 +123,20 @@ export function TipoteStudioButton({
         body: JSON.stringify({ kind }),
       });
       if (res.status === 402) {
-        toast.error("Crédits IA épuisés", {
-          description: "Recharge tes crédits pour générer des visuels.",
-          action: { label: "Recharger", onClick: () => { window.location.href = "/settings?tab=billing"; } },
+        toast.error(t("toastNoCredits"), {
+          description: t("toastNoCreditsDesc"),
+          action: { label: t("toastReload"), onClick: () => { window.location.href = "/settings?tab=billing"; } },
         });
         return false;
       }
       if (!res.ok) {
-        toast.error("Génération indisponible", { description: "Réessaie dans un instant." });
+        toast.error(t("toastGenUnavailable"), { description: t("toastTryAgain") });
         return false;
       }
       emitCreditsUpdated(); // rafraîchit le solde affiché (sidebar/billing)
       return true;
     } catch {
-      toast.error("Génération indisponible", { description: "Vérifie ta connexion." });
+      toast.error(t("toastGenUnavailable"), { description: t("toastCheckConnection") });
       return false;
     }
   }

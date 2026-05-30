@@ -795,9 +795,9 @@ export default function StrategyLovable(props: StrategyLovableProps) {
                     className="text-primary-foreground hover:bg-primary-foreground/10"
                     onClick={handleRecalculatePlan}
                     disabled={isGeneratingPlan}
-                    title="Recalculer la stratégie en tenant compte des dernières infos de profil et de stats."
+                    title={t("recalculateTitle")}
                   >
-                    {isGeneratingPlan ? "Recalcul…" : "Recalculer"}
+                    {isGeneratingPlan ? t("recalculating") : t("recalculate")}
                   </Button>
                   <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={handleStartEditing}>
                     <Pencil className="w-4 h-4 mr-1" />

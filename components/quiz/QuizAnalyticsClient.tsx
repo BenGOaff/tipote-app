@@ -144,7 +144,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
           <Button variant="ghost" size="icon" asChild>
             <Link
               href={`/quiz/${quizId}`}
-              aria-label="Retour à l'éditeur"
+              aria-label={t("backToEditorAria")}
             >
               <ArrowLeft className="size-5" />
             </Link>
@@ -253,7 +253,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-sm font-semibold mb-3">Distribution par résultat</h2>
+          <h2 className="text-sm font-semibold mb-3">{t("distributionByResult")}</h2>
           {data.resultDistribution.length === 0 ? (
             <EmptyState message={t("analyticsEmptyResults")} />
           ) : (
