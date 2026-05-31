@@ -274,7 +274,7 @@ export function AppSidebar() {
                 className={MENU_ITEM_CLASS}
               >
                 <HandCoins className="w-5 h-5" />
-                <span>Devenir affilié</span>
+                <span>{t("becomeAffiliate")}</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

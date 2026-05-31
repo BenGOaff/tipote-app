@@ -9,6 +9,7 @@
 // fonctionnement. Plus jolie. Plus facile à utiliser. »
 
 import { useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -53,6 +54,7 @@ export function PopquizzesClient({
   maxFree: number;
 }) {
   const router = useRouter();
+  const t = useTranslations("popquiz");
   const [popquizzes, setPopquizzes] = useState<PopquizListItem[]>(initial);
   const [filter, setFilter] = useState<Filter>("all");
   const [embedHandle, setEmbedHandle] = useState<string | null>(null);
@@ -79,14 +81,12 @@ export function PopquizzesClient({
     const handle = p.slug ?? p.id;
     const url = `${window.location.origin}/pq/${handle}`;
     void navigator.clipboard.writeText(url);
-    toast.success("Lien copié");
+    toast.success(t("toastLinkCopied"));
   }
 
   function handleDelete(id: string, title: string) {
     const ok = window.confirm(
-      `Supprimer le popquiz « ${title || "(sans titre)"} » ?\n\n` +
-        "La vidéo et les marqueurs (cues) seront supprimés. Les quiz référencés " +
-        "restent intacts dans Mes projets. Cette action est définitive.",
+      t("deleteConfirm", { title: title || t("untitled") }),
     );
     if (!ok) return;
 
@@ -95,14 +95,14 @@ export function PopquizzesClient({
         const res = await fetch(`/api/popquiz/${id}`, { method: "DELETE" });
         const data = await res.json().catch(() => ({ ok: false }));
         if (!res.ok || !data.ok) {
-          toast.error(data.error || "Suppression échouée");
+          toast.error(data.error || t("toastDeleteFailed"));
           return;
         }
         setPopquizzes((prev) => prev.filter((p) => p.id !== id));
-        toast.success("Popquiz supprimé");
+        toast.success(t("toastDeleted"));
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Erreur réseau");
+        toast.error(e instanceof Error ? e.message : t("networkError"));
       }
     });
   }
@@ -116,9 +116,9 @@ export function PopquizzesClient({
           <Video className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">Mes Popquiz</h2>
+          <h2 className="text-lg font-bold">{t("listTitle")}</h2>
           <p className="text-sm text-white/70">
-            Vidéo + quiz qui s&apos;affichent à des moments précis.
+            {t("listSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -126,16 +126,16 @@ export function PopquizzesClient({
             <Button
               variant="secondary"
               disabled
-              title="Le plan gratuit est limité à 1 popquiz. Supprime celui en cours ou passe en plan payant."
+              title={t("freeLimitTitle")}
             >
               <Lock className="h-4 w-4 mr-2" />
-              Plan gratuit — 1 max
+              {t("freeLimitBtn")}
             </Button>
           ) : (
             <Button asChild variant="secondary">
               <Link href="/popquiz/new">
                 <Sparkles className="h-4 w-4 mr-2" />
-                Nouveau Popquiz
+                {t("newBtn")}
               </Link>
             </Button>
           )}
@@ -147,7 +147,7 @@ export function PopquizzesClient({
         <div className="flex items-center gap-2 flex-wrap">
           {(["all", "active", "draft"] as const).map((f) => {
             const label =
-              f === "all" ? "Tous" : f === "active" ? "Publiés" : "Brouillons";
+              f === "all" ? t("filterAll") : f === "active" ? t("filterPublished") : t("filterDrafts");
             const c = counts[f];
             return (
               <Button
@@ -170,10 +170,10 @@ export function PopquizzesClient({
       {popquizzes.length === 0 ? (
         <div className="rounded-lg border bg-card p-12 text-center space-y-3">
           <Video className="h-10 w-10 mx-auto text-muted-foreground/40" />
-          <p className="text-muted-foreground">Aucun popquiz pour l&apos;instant.</p>
+          <p className="text-muted-foreground">{t("emptyMessage")}</p>
           {atFreeLimit ? null : (
             <Button asChild>
-              <Link href="/popquiz/new">Créer le premier</Link>
+              <Link href="/popquiz/new">{t("createFirst")}</Link>
             </Button>
           )}
         </div>
@@ -215,25 +215,25 @@ export function PopquizzesClient({
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-baseline gap-2 flex-wrap">
                         <h3 className="font-semibold truncate">
-                          {p.title || <span className="italic text-muted-foreground">Sans titre</span>}
+                          {p.title || <span className="italic text-muted-foreground">{t("untitled")}</span>}
                         </h3>
                         {p.is_published ? (
                           <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/30">
-                            Publié
+                            {t("publishedBadge")}
                           </Badge>
                         ) : (
-                          <Badge variant="outline">Brouillon</Badge>
+                          <Badge variant="outline">{t("draftLabel")}</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                        <span>{p.views_count} vues</span>
+                        <span>{t("viewsCount", { n: p.views_count })}</span>
                         <span>·</span>
-                        <span>{p.completions_count} terminés</span>
+                        <span>{t("completionsCount", { n: p.completions_count })}</span>
                         {completionRate > 0 ? (
                           <>
                             <span>·</span>
                             <span className="font-medium text-foreground">
-                              {completionRate}% complétion
+                              {t("completionRate", { rate: completionRate })}
                             </span>
                           </>
                         ) : null}
@@ -247,7 +247,7 @@ export function PopquizzesClient({
                             variant="ghost"
                             size="icon"
                             onClick={() => copyLink(p)}
-                            title="Copier le lien public"
+                            title={t("copyPublicLink")}
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
@@ -255,18 +255,18 @@ export function PopquizzesClient({
                             variant="ghost"
                             size="icon"
                             onClick={() => setEmbedHandle(handle)}
-                            title="Code d'intégration iframe"
+                            title={t("embedCodeTitle")}
                           >
                             <Code className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" asChild title="Voir en ligne">
+                          <Button variant="ghost" size="icon" asChild title={t("viewOnline")}>
                             <Link href={`/pq/${handle}`} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4" />
                             </Link>
                           </Button>
                         </>
                       ) : null}
-                      <Button variant="ghost" size="icon" asChild title="Modifier">
+                      <Button variant="ghost" size="icon" asChild title={t("editAction")}>
                         <Link href={editHref}>
                           <Pencil className="h-4 w-4" />
                         </Link>

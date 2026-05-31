@@ -31,7 +31,9 @@ export async function GET() {
     // l'user (son branding) + les produits Tipote & Tiquiz : il choisit lequel
     // il promeut (logo + couleurs suivent). Si son branding perso est vide, il
     // reste les 2 produits. Le 1er = défaut.
-    const hasCustom = !!brand.logoUrl || brand.name !== "Tipote";
+    // hasCustom = la marque a un logo OU un nom configuré (first_name).
+    // Si label === "" → le client affichera t("myBrand") à la place.
+    const hasCustom = !!brand.logoUrl || brand.name !== "";
     const options = [
       ...(hasCustom ? [{ label: brand.name, kit: brand }] : []),
       { label: "Tipote", kit: BRAND_PRESETS.tipote },

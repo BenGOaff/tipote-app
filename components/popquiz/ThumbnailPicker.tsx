@@ -16,6 +16,7 @@
 // never deleted, so toggling between custom and auto is instant.
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import * as tus from "tus-js-client";
 import {
   Image as ImageIcon,
@@ -80,6 +81,7 @@ export function ThumbnailPicker({
   onUpdated,
   onBlobReady,
 }: Props) {
+  const t = useTranslations("popquiz");
   // Mode "stage local" si pas de popquizId — on délègue au parent.
   const isStageMode = !popquizId;
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,11 +97,11 @@ export function ThumbnailPicker({
     const f = e.target.files?.[0];
     if (!f) return;
     if (!/^image\/(png|jpe?g|webp)$/i.test(f.type)) {
-      toast.error("Format non supporté (PNG, JPG, WebP).");
+      toast.error(t("thumbnailUnsupportedFormat"));
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
-      toast.error("Image trop volumineuse (max 5 Mo). Compresse-la avant.");
+      toast.error(t("thumbnailTooLarge"));
       return;
     }
     setPendingFile(f);
@@ -139,7 +141,7 @@ export function ThumbnailPicker({
         error?: string;
       };
       if (!tokenRes.ok || !tokenJson.ok || !tokenJson.uploadUrl || !tokenJson.token) {
-        throw new Error(tokenJson.error || "Impossible de préparer l'envoi.");
+        throw new Error(tokenJson.error || t("thumbnailUploadPrepareError"));
       }
 
       // 2. upload via tus
@@ -174,7 +176,7 @@ export function ThumbnailPicker({
         error?: string;
       };
       if (!patchRes.ok || !patchJson.ok) {
-        throw new Error(patchJson.error || "Impossible d'appliquer la vignette.");
+        throw new Error(patchJson.error || t("thumbnailApplyError"));
       }
 
       onUpdated?.({
@@ -182,9 +184,9 @@ export function ThumbnailPicker({
         thumbnailPath: patchJson.thumbnailPath ?? null,
         thumbnailUrl: patchJson.thumbnailUrl ?? null,
       });
-      toast.success("Vignette personnalisée appliquée");
+      toast.success(t("thumbnailCustomApplied"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de l'envoi";
+      const msg = e instanceof Error ? e.message : t("thumbnailUploadError");
       toast.error(msg);
     } finally {
       setBusy(false);
@@ -212,16 +214,16 @@ export function ThumbnailPicker({
         error?: string;
       };
       if (!res.ok || !json.ok) {
-        throw new Error(json.error || "Impossible de restaurer la vignette auto.");
+        throw new Error(json.error || t("thumbnailAutoRestoreError"));
       }
       onUpdated?.({
         source: "auto",
         thumbnailPath: json.thumbnailPath ?? null,
         thumbnailUrl: json.thumbnailUrl ?? null,
       });
-      toast.success("Vignette auto restaurée");
+      toast.success(t("thumbnailAutoRestored"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur";
+      const msg = e instanceof Error ? e.message : t("genericError");
       toast.error(msg);
     } finally {
       setRestoring(false);
@@ -238,7 +240,7 @@ export function ThumbnailPicker({
             </span>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-bold">Vignette du popquiz</span>
+                <span className="text-sm font-bold">{t("thumbnailSectionTitle")}</span>
                 <span
                   className={
                     currentSource === "custom"
@@ -246,11 +248,11 @@ export function ThumbnailPicker({
                       : "text-[11px] font-semibold text-muted-foreground bg-muted rounded-full px-2 py-0.5"
                   }
                 >
-                  {currentSource === "custom" ? "Personnalisée" : "Auto (extraite à 2s)"}
+                  {currentSource === "custom" ? t("thumbnailBadgeCustom") : t("thumbnailBadgeAuto")}
                 </span>
               </div>
               <p className="text-[12px] text-muted-foreground mt-0.5">
-                Format conseillé : 1920×1080 (16/9). PNG, JPG ou WebP, max 5 Mo.
+                {t("thumbnailFormatHint")}
               </p>
             </div>
           </div>
@@ -259,7 +261,7 @@ export function ThumbnailPicker({
         <div className="flex flex-col sm:flex-row gap-3 items-start">
           <div
             className="w-full sm:w-[240px] aspect-video rounded-lg overflow-hidden bg-muted ring-1 ring-border shrink-0"
-            aria-label="Aperçu de la vignette"
+            aria-label={t("thumbnailPreviewAria")}
           >
             {currentUrl ? (
               <img
@@ -269,7 +271,7 @@ export function ThumbnailPicker({
               />
             ) : (
               <div className="w-full h-full grid place-items-center text-muted-foreground text-xs">
-                Aucune vignette
+                {t("thumbnailNone")}
               </div>
             )}
           </div>
@@ -285,12 +287,12 @@ export function ThumbnailPicker({
               {busy ? (
                 <>
                   <Loader2 className="size-4 animate-spin mr-1.5" />
-                  Envoi…
+                  {t("thumbnailUploading")}
                 </>
               ) : (
                 <>
                   <Upload className="size-4 mr-1.5" />
-                  Charger ma vignette
+                  {t("thumbnailLoadMine")}
                 </>
               )}
             </Button>
@@ -306,20 +308,19 @@ export function ThumbnailPicker({
                 {restoring ? (
                   <>
                     <Loader2 className="size-4 animate-spin mr-1.5" />
-                    Restauration…
+                    {t("thumbnailRestoring")}
                   </>
                 ) : (
                   <>
                     <RotateCcw className="size-4 mr-1.5" />
-                    Vignette auto
+                    {t("thumbnailAuto")}
                   </>
                 )}
               </Button>
             ) : null}
             {!enabled ? (
               <p className="text-[11px] text-muted-foreground">
-                Vignette personnalisée disponible uniquement pour les vidéos
-                uploadées (pas YouTube / Vimeo).
+                {t("thumbnailUploadedOnlyHint")}
               </p>
             ) : null}
           </div>
@@ -353,6 +354,7 @@ interface CropProps {
 }
 
 function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
+  const t = useTranslations("popquiz");
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
   const [scale, setScale] = useState(1);
@@ -459,7 +461,7 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
       canvas.width = FINAL_W;
       canvas.height = FINAL_H;
       const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas non disponible");
+      if (!ctx) throw new Error(t("cropCanvasUnavailable"));
 
       const drawnW = imgEl.naturalWidth * scale;
       const drawnH = imgEl.naturalHeight * scale;
@@ -485,10 +487,10 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9),
       );
-      if (!blob) throw new Error("Export JPEG impossible");
+      if (!blob) throw new Error(t("cropExportFailed"));
       onConfirm(blob);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur de cadrage";
+      const msg = e instanceof Error ? e.message : t("cropError");
       toast.error(msg);
     } finally {
       setExporting(false);
@@ -501,11 +503,10 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />
-            Cadre ta vignette en 16/9
+            {t("cropDialogTitle")}
           </DialogTitle>
           <DialogDescription>
-            Drag pour repositionner, slider pour zoomer. Export en
-            1920×1080 JPEG.
+            {t("cropDialogDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -545,7 +546,7 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
             </div>
           ) : (
             <div className="size-full grid place-items-center text-white/60 text-sm">
-              Chargement…
+              {t("loadingLabel")}
             </div>
           )}
           {/* 16:9 frame outline */}
@@ -562,7 +563,7 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
             value={Math.round(scale * 100)}
             onChange={(e) => onScaleChange(Number(e.target.value) / 100)}
             className="flex-1 accent-primary"
-            aria-label="Zoom"
+            aria-label={t("cropZoomAria")}
           />
           <span className="text-xs font-mono tabular-nums w-12 text-right text-muted-foreground">
             {scale.toFixed(2)}×
@@ -577,7 +578,7 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
             disabled={exporting}
           >
             <X className="size-4 mr-1.5" />
-            Annuler
+            {t("cancelLabel")}
           </Button>
           <Button
             type="button"
@@ -588,10 +589,10 @@ function ThumbnailCropDialog({ file, onCancel, onConfirm }: CropProps) {
             {exporting ? (
               <>
                 <Loader2 className="size-4 animate-spin mr-1.5" />
-                Préparation…
+                {t("cropPreparing")}
               </>
             ) : (
-              "Utiliser cette vignette"
+              t("cropUseThumbnail")
             )}
           </Button>
         </DialogFooter>

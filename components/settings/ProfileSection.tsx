@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ function arrayToCsv(a: string[]) {
 }
 
 export default function ProfileSection() {
+  const t = useTranslations("settingsProfile");
   const { toast } = useToast();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -192,13 +194,13 @@ export default function ProfileSection() {
         setProfile(json.profile ?? profile);
 
         toast({
-          title: "Profil mis à jour ✅",
-          description: "Tes infos ont été enregistrées.",
+          title: t("profileUpdatedTitle"),
+          description: t("profileUpdatedDesc"),
         });
       } catch (e) {
         toast({
-          title: "Sauvegarde impossible",
-          description: e instanceof Error ? e.message : "Erreur inconnue",
+          title: t("saveErrorTitle"),
+          description: e instanceof Error ? e.message : t("unknownError"),
           variant: "destructive",
         });
       }
@@ -214,8 +216,8 @@ export default function ProfileSection() {
 
       if (!res.ok || !json?.ok) {
         toast({
-          title: "Suppression impossible",
-          description: json?.error || "Erreur inconnue",
+          title: t("deleteErrorTitle"),
+          description: json?.error || t("unknownError"),
           variant: "destructive",
         });
         return;
@@ -225,8 +227,8 @@ export default function ProfileSection() {
       window.location.href = "/?account_deleted=true";
     } catch (e) {
       toast({
-        title: "Suppression impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        title: t("deleteErrorTitle"),
+        description: e instanceof Error ? e.message : t("unknownError"),
         variant: "destructive",
       });
     } finally {
@@ -236,12 +238,10 @@ export default function ProfileSection() {
   };
 
   const onReset = async () => {
-    const ok1 = window.confirm(
-      "⚠️ Réinitialiser CE Tipote ?\n\nTous les contenus, tâches et personnalisations de ce Tipote seront supprimés. Tes autres Tipote (s'il y en a) ne sont PAS affectés. C'est définitif.",
-    );
+    const ok1 = window.confirm(t("resetConfirm1"));
     if (!ok1) return;
 
-    const ok2 = window.confirm("Dernière confirmation : tu es sûr(e) à 100% ?");
+    const ok2 = window.confirm(t("resetConfirm2"));
     if (!ok2) return;
 
     setResetting(true);
@@ -260,24 +260,24 @@ export default function ProfileSection() {
 
       if (!res.ok || !json?.ok) {
         toast({
-          title: "Réinitialisation impossible",
-          description: json?.error || "Erreur inconnue",
+          title: t("resetErrorTitle"),
+          description: json?.error || t("unknownError"),
           variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: "Tipote réinitialisé ✅",
-        description: "Retour à l'onboarding…",
+        title: t("resetSuccessTitle"),
+        description: t("resetSuccessDesc"),
       });
 
       router.push("/onboarding");
       router.refresh();
     } catch (e) {
       toast({
-        title: "Réinitialisation impossible",
-        description: e instanceof Error ? e.message : "Erreur inconnue",
+        title: t("resetErrorTitle"),
+        description: e instanceof Error ? e.message : t("unknownError"),
         variant: "destructive",
       });
     } finally {
@@ -289,20 +289,20 @@ export default function ProfileSection() {
     <section className="space-y-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-card p-5 shadow-sm">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Profil business</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Ces infos alimentent la stratégie et la génération de contenu.</p>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{t("title")}</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t("subtitle")}</p>
         </div>
 
         <div className="flex items-center gap-2">
           {loading ? (
-            <Badge variant="secondary">Chargement…</Badge>
+            <Badge variant="secondary">{t("loading")}</Badge>
           ) : dirty ? (
-            <Badge>Modifié</Badge>
+            <Badge>{t("modified")}</Badge>
           ) : (
-            <Badge variant="secondary">À jour</Badge>
+            <Badge variant="secondary">{t("upToDate")}</Badge>
           )}
           <Button size="sm" onClick={onSave} disabled={loading || pending || !dirty}>
-            {pending ? "Sauvegarde…" : "Sauvegarder"}
+            {pending ? t("saving") : t("save")}
           </Button>
         </div>
       </div>
@@ -310,77 +310,77 @@ export default function ProfileSection() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
           <Label className="text-xs" htmlFor="firstName">
-            Prénom
+            {t("firstName")}
           </Label>
-          <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Béné" />
+          <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("firstNamePh")} />
         </div>
 
         <div className="grid gap-2">
           <Label className="text-xs" htmlFor="country">
-            Pays
+            {t("country")}
           </Label>
-          <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="France" />
+          <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder={t("countryPh")} />
         </div>
 
         <div className="grid gap-2">
           <Label className="text-xs" htmlFor="niche">
-            Niche
+            {t("niche")}
           </Label>
           <Input
             id="niche"
             value={niche}
             onChange={(e) => setNiche(e.target.value)}
-            placeholder="Coach, E-commerce, SaaS…"
+            placeholder={t("nichePh")}
           />
         </div>
 
         <div className="grid gap-2">
           <Label className="text-xs" htmlFor="tone">
-            Ton préféré
+            {t("tonePreferred")}
           </Label>
           <Input
             id="tone"
             value={tonePreference}
             onChange={(e) => setTonePreference(e.target.value)}
-            placeholder="Direct, fun, premium…"
+            placeholder={t("tonePh")}
           />
         </div>
       </div>
 
       <div className="grid gap-2">
         <Label className="text-xs" htmlFor="mission">
-          Mission
+          {t("mission")}
         </Label>
         <Textarea
           id="mission"
           value={mission}
           onChange={(e) => setMission(e.target.value)}
-          placeholder="En une ou deux phrases : qu’est-ce que tu fais, pour qui, et pourquoi ?"
+          placeholder={t("missionPh")}
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
           <Label className="text-xs" htmlFor="maturity">
-            Maturité business
+            {t("businessMaturity")}
           </Label>
           <Input
             id="maturity"
             value={businessMaturity}
             onChange={(e) => setBusinessMaturity(e.target.value)}
-            placeholder="Idée, lancement, croissance, scale…"
+            placeholder={t("businessMaturityPh")}
           />
         </div>
 
         <div className="grid gap-2">
           <Label className="text-xs" htmlFor="offersStatus">
-            Statut des offres
+            {t("offersStatus")}
           </Label>
           <Input
             id="offersStatus"
             value={offersStatus}
             onChange={(e) => setOffersStatus(e.target.value)}
-            placeholder="Pas d’offre, une offre, plusieurs offres…"
+            placeholder={t("offersStatusPh")}
           />
         </div>
       </div>
@@ -388,48 +388,44 @@ export default function ProfileSection() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
           <Label className="text-xs" htmlFor="goals">
-            Objectifs principaux (CSV)
+            {t("mainGoals")}
           </Label>
           <Input
             id="goals"
             value={mainGoalsCsv}
             onChange={(e) => setMainGoalsCsv(e.target.value)}
-            placeholder="Ex: trouver des clients, vendre une offre, construire une audience"
+            placeholder={t("mainGoalsPh")}
           />
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">Sépare par des virgules. Max 10.</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("csvHint10")}</p>
         </div>
 
         <div className="grid gap-2">
           <Label className="text-xs" htmlFor="types">
-            Types de contenus préférés (CSV)
+            {t("contentTypes")}
           </Label>
           <Input
             id="types"
             value={contentTypesCsv}
             onChange={(e) => setContentTypesCsv(e.target.value)}
-            placeholder="Ex: posts, emails, blog, scripts vidéo"
+            placeholder={t("contentTypesPh")}
           />
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">Sépare par des virgules. Max 12.</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("csvHint12")}</p>
         </div>
       </div>
 
-      {/* ✅ AJOUT : ZONE DANGER */}
+      {/* Zone danger */}
       <div className="mt-4 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-red-600 dark:text-red-400">⚠️</span>
-              <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">Zone danger</h3>
+              <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">{t("dangerZone")}</h3>
             </div>
 
-            <p className="text-sm font-medium text-slate-900 dark:text-slate-50">Réinitialiser ce Tipote</p>
+            <p className="text-sm font-medium text-slate-900 dark:text-slate-50">{t("resetTitle")}</p>
 
             <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-              Tu as changé de voie ou tu t&apos;es perdu en cours de route ? Tu veux repartir à zéro avec ce Tipote et
-              le lancer dans une autre direction ? Clique sur ce bouton. Attention : tous les contenus, toutes les tâches
-              et toutes les personnalisations créés depuis ton arrivée seront effacés, tu repartiras de zéro.
-              <strong> Si tu as plusieurs Tipote, seul celui que tu utilises maintenant est réinitialisé — les autres
-              ne sont pas touchés.</strong> C&apos;est définitif, tu ne pourras pas revenir en arrière.
+              {t.rich("resetDesc", { strong: (chunks) => <strong>{chunks}</strong> })}
             </p>
           </div>
 
@@ -440,7 +436,7 @@ export default function ProfileSection() {
               disabled={loading || pending || resetting || deleting}
               className="rounded-xl"
             >
-              {resetting ? "Réinitialisation…" : "Réinitialiser mon Tipote"}
+              {resetting ? t("resetting") : t("resetBtn")}
             </Button>
           </div>
         </div>
@@ -452,12 +448,11 @@ export default function ProfileSection() {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-red-600 dark:text-red-400">🗑️</span>
-              <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">Supprimer mon compte</h3>
+              <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">{t("deleteAccountTitle")}</h3>
             </div>
 
             <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-              Supprime définitivement ton compte Tipote, toutes tes données, et annule ton abonnement s&apos;il y en a un.
-              Cette action est irréversible. Tu ne pourras pas récupérer ton compte ni tes données.
+              {t("deleteAccountDesc")}
             </p>
           </div>
 
@@ -469,11 +464,11 @@ export default function ProfileSection() {
                 disabled={loading || pending || resetting || deleting}
                 className="rounded-xl"
               >
-                Supprimer mon compte
+                {t("deleteAccountBtn")}
               </Button>
             ) : (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium text-red-700 dark:text-red-300">Es-tu vraiment sûr(e) ?</p>
+                <p className="text-xs font-medium text-red-700 dark:text-red-300">{t("deleteAccountConfirm")}</p>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="destructive"
@@ -482,7 +477,7 @@ export default function ProfileSection() {
                     disabled={deleting}
                     className="rounded-xl"
                   >
-                    {deleting ? "Suppression…" : "Oui, supprimer définitivement"}
+                    {deleting ? t("deleting") : t("deleteYes")}
                   </Button>
                   <Button
                     variant="outline"
@@ -491,7 +486,7 @@ export default function ProfileSection() {
                     disabled={deleting}
                     className="rounded-xl"
                   >
-                    Annuler
+                    {t("cancel")}
                   </Button>
                 </div>
               </div>

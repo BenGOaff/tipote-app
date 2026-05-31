@@ -17,6 +17,7 @@
 // "slotInPast" flag is exposed so the parent can disable submit.
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Clock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,7 @@ export function DateTimePicker({
   showSummary = true,
   className,
 }: Props) {
+  const t = useTranslations("scheduleModal");
   // Refresh-from-the-outside protection : if the consumer doesn't
   // give us a `now`, we keep one ticking every 30s so picker state
   // stays accurate when the dialog is left open.
@@ -169,7 +171,7 @@ export function DateTimePicker({
         <div className="p-4 space-y-4 sm:max-w-[220px]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-              Créneaux rapides
+              {t("quickSlots")}
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {QUICK_TIMES.map((slot) => {
@@ -199,7 +201,7 @@ export function DateTimePicker({
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
               <Clock className="size-3" />
-              Heure personnalisée
+              {t("customTime")}
             </p>
             <Input
               type="time"
@@ -215,7 +217,7 @@ export function DateTimePicker({
               className="text-xs text-destructive bg-destructive/10 rounded-md px-2 py-1.5"
               role="alert"
             >
-              Tu ne peux pas programmer dans le passé.
+              {t("cantScheduleInPast")}
             </p>
           ) : null}
         </div>
@@ -223,7 +225,7 @@ export function DateTimePicker({
 
       {showSummary && combined ? (
         <p className="mt-3 text-sm">
-          <span className="text-muted-foreground">Programmé pour : </span>
+          <span className="text-muted-foreground">{t("scheduledFor")} </span>
           <span className="font-semibold">
             {format(combined, "EEEE d MMMM yyyy, HH'h'mm", { locale: dfLocale })}
           </span>

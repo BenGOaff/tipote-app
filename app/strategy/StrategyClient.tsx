@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -58,6 +59,7 @@ export default function StrategyClient({
   initialSelectedOffers,
 }: Props) {
   const router = useRouter();
+  const t = useTranslations("strategy");
 
   const hasInitial = !!initialSelectedOffers;
 
@@ -135,15 +137,15 @@ export default function StrategyClient({
           console.error("Save offer set error", body);
           setStatusMessage(
             (body as any)?.error ||
-              "Erreur lors de la sauvegarde des offres. Réessaie.",
+              t("errSaveOffersRetry"),
           );
           return;
         }
 
-        setStatusMessage("Offres choisies et sauvegardées ✅");
+        setStatusMessage(t("offersSavedOK"));
       } catch (e) {
         console.error(e);
-        setStatusMessage("Erreur réseau. Réessaie.");
+        setStatusMessage(t("networkErrRetry"));
       }
     });
   }
@@ -152,7 +154,7 @@ export default function StrategyClient({
     setStatusMessage(null);
 
     if (mode !== "edit" || draft == null || selectedIndex === null) {
-      setStatusMessage("Choisis d'abord un scénario d'offres avant de le modifier.");
+      setStatusMessage(t("chooseScenarioFirst"));
       return;
     }
 
@@ -172,15 +174,15 @@ export default function StrategyClient({
           console.error("Save offer set error", body);
           setStatusMessage(
             (body as any)?.error ||
-              "Erreur lors de la sauvegarde des offres. Réessaie.",
+              t("errSaveOffersRetry"),
           );
           return;
         }
 
-        setStatusMessage("Modifications sauvegardées ✅");
+        setStatusMessage(t("changesSavedOK"));
       } catch (e) {
         console.error(e);
-        setStatusMessage("Erreur réseau. Réessaie.");
+        setStatusMessage(t("networkErrRetry"));
       }
     });
   }
@@ -197,24 +199,21 @@ export default function StrategyClient({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-              Tes Offres
+              {t("yourOffersTitle")}
             </h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              L&apos;offre de base, l&apos;offre coeur et l&apos;offre premium vont
-              structurer tout ton contenu, ton tunnel et tes automatisations.
+              {t("yourOffersDesc")}
             </p>
 
             {mode === "choose" && (
               <p className="mt-2 text-xs font-semibold text-primary">
-                Commence par choisir un scénario sur la page dédiée, puis
-                personnalise les offres.
+                {t("startScenarioHint")}
               </p>
             )}
 
             {mode === "edit" && (
               <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                Tu peux ajuster les noms, descriptions et prix pour coller à ton
-                business actuel.
+                {t("adjustHint")}
               </p>
             )}
           </div>
@@ -227,10 +226,10 @@ export default function StrategyClient({
             </span>
             <div>
               <p className="font-medium text-slate-900 dark:text-slate-50">
-                {scenarioLabel || "Aucune offre encore sélectionnée"}
+                {scenarioLabel || t("noOfferSelected")}
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Scénarios générés automatiquement à partir de ton onboarding.
+                {t("scenariosFromOnboarding")}
               </p>
             </div>
           </div>
@@ -245,7 +244,7 @@ export default function StrategyClient({
             }}
             className="inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100"
           >
-            Changer de scénario
+            {t("changeScenario")}
           </button>
         </div>
 
@@ -253,18 +252,18 @@ export default function StrategyClient({
           <>
             <div className="mb-4">
               <label className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Nom de tes offres
+                {t("offerSetNameLabel")}
               </label>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-3 py-2 text-sm text-slate-900 dark:text-slate-50 outline-none ring-0 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                 value={scenarioLabel}
                 onChange={(e) => updateName(e.target.value)}
-                placeholder="Ex : Ascension Affiliation Success"
+                placeholder={t("offerSetNamePlaceholder")}
               />
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              {["Lead Magnet", "Entrée", "Offre Core", "Premium"].map(
+              {[t("leadMagnet"), t("entryOffer"), t("coreOffer"), t("premiumOffer")].map(
                 (label, idx) => {
                   const level = (draft.levels || [])[idx] || {};
                   return (
@@ -273,13 +272,13 @@ export default function StrategyClient({
                       className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 p-3"
                     >
                       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        Niveau {idx + 1} · {label}
+                        {t("levelLabel", { idx: idx + 1, label })}
                       </p>
 
                       <div className="space-y-2">
                         <div>
                           <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                            Nom de l&apos;offre
+                            {t("offerNameLabel")}
                           </label>
                           <input
                             className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -287,13 +286,13 @@ export default function StrategyClient({
                             onChange={(e) =>
                               updateLevel(idx, "name", e.target.value)
                             }
-                            placeholder="Ex : Atelier express, Offre signature..."
+                            placeholder={t("offerNamePlaceholder")}
                           />
                         </div>
 
                         <div>
                           <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                            Description courte
+                            {t("offerDescriptionLabel")}
                           </label>
                           <textarea
                             className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -302,14 +301,14 @@ export default function StrategyClient({
                             onChange={(e) =>
                               updateLevel(idx, "description", e.target.value)
                             }
-                            placeholder="À qui s'adresse cette offre ? Résultat principal, format..."
+                            placeholder={t("audiencePlaceholder")}
                           />
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                              Prix indicatif
+                              {t("offerPriceLabel")}
                             </label>
                             <input
                               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -321,13 +320,13 @@ export default function StrategyClient({
                               onChange={(e) =>
                                 updateLevel(idx, "price", e.target.value)
                               }
-                              placeholder="Ex : 47€, 997€..."
+                              placeholder={t("offerPricePlaceholder")}
                             />
                           </div>
 
                           <div>
                             <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
-                              Fourchette / gamme
+                              {t("offerRangeLabel")}
                             </label>
                             <input
                               className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-card px-3 py-2 text-xs text-slate-900 dark:text-slate-50 outline-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -335,7 +334,7 @@ export default function StrategyClient({
                               onChange={(e) =>
                                 updateLevel(idx, "price_range", e.target.value)
                               }
-                              placeholder="Ex : Offre d'entrée, coeur, premium..."
+                              placeholder={t("typePlaceholder")}
                             />
                           </div>
                         </div>
@@ -353,7 +352,7 @@ export default function StrategyClient({
                 disabled={saving}
                 className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
               >
-                {saving ? "Sauvegarde..." : "Sauvegarder les offres"}
+                {saving ? t("savingOffers") : t("saveOffers")}
               </button>
             </div>
           </>
@@ -371,7 +370,7 @@ export default function StrategyClient({
       {/* (optionnel) info silencieuse */}
       {draft == null && scenarios.length > 0 && chooserOpen && (
         <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
-          {scenarios.length} scénarios disponibles — choix sur /strategy/pyramids.
+          {t("scenariosAvailable", { n: scenarios.length })}
         </p>
       )}
     </>

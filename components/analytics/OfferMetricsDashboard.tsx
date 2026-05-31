@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
@@ -68,6 +68,7 @@ export const OfferMetricsDashboard = ({
   onAnalyze,
 }: OfferMetricsDashboardProps) => {
   const locale = useLocale();
+  const t = useTranslations("analytics");
   const hasData = metrics.length > 0;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -120,9 +121,9 @@ export const OfferMetricsDashboard = ({
     return (
       <Card className="p-12 text-center flex flex-col items-center gap-3">
         <Mascot expression="hello" size={88} tone="soft" />
-        <h3 className="text-lg font-semibold">Pas encore de données à analyser</h3>
+        <h3 className="text-lg font-semibold">{t("noDataTitle")}</h3>
         <p className="text-sm text-muted-foreground max-w-md">
-          Saisis tes premières données mensuelles (visiteurs, leads, ventes) dans l&apos;onglet « Saisir mes données ». Tipote te livre l&apos;analyse dès la première saisie.
+          {t("noDataDesc")}
         </p>
       </Card>
     );
@@ -135,11 +136,11 @@ export const OfferMetricsDashboard = ({
         <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
           <h3 className="font-bold text-base flex items-center gap-2">
             <Target className="w-4 h-4" />
-            Résultats totaux ({grandTotals.monthCount} mois de données)
+            {t("totalResults", { months: grandTotals.monthCount })}
           </h3>
           {grandTotals.revenueSource === "compta" ? (
             <span className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded px-2 py-0.5">
-              ↗ Ventes & CA synchronisés depuis tes comptes Stripe / PayPal / Mollie
+              {t("syncedFromAccounts")}
             </span>
           ) : null}
         </div>
@@ -169,7 +170,7 @@ export const OfferMetricsDashboard = ({
                 <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Leads capturés</p>
+            <p className="text-xs text-muted-foreground">{t("leadsCapturedShort")}</p>
             <p className="text-xl font-bold">{grandTotals.signups.toLocaleString(locale)}</p>
             {grandTotals.captureRate > 0 && (
               <p className="text-xs text-muted-foreground mt-0.5">Taux moyen : {grandTotals.captureRate.toFixed(1)}%</p>
@@ -297,7 +298,7 @@ export const OfferMetricsDashboard = ({
             <div>
               <h3 className="font-bold">Analyse IA</h3>
               <p className="text-xs text-muted-foreground">
-                Conseils personnalisés basés sur tes chiffres
+                {t("personalAdvice")}
               </p>
             </div>
           </div>
@@ -322,11 +323,11 @@ export const OfferMetricsDashboard = ({
         ) : (
           <div>
             <p className="text-sm text-muted-foreground mb-4">
-              L&apos;analyse sera générée automatiquement quand tu saisiras tes données. Elle diagnostique tes performances par offre, tes emails, et te donne des actions concrètes.
+              {t("analysisAutoDesc")}
             </p>
             <Button onClick={onAnalyze} disabled={!hasData || isAnalyzing} className="gradient-primary">
               <Sparkles className="w-4 h-4 mr-2" />
-              Lancer l&apos;analyse (1 crédit)
+              {t("launchAnalysis")}
             </Button>
           </div>
         )}

@@ -16,6 +16,7 @@
 // externally_connectable sur ce domaine), on considère extension absente.
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +90,7 @@ const AI_NETWORKS = [
 ];
 
 export default function BoostClient() {
+  const t = useTranslations("boost");
   const [me, setMe] = useState<PodMeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [extStatus, setExtStatus] = useState<ExtensionStatus>("checking");
@@ -171,7 +173,7 @@ export default function BoostClient() {
   if (loading && !me) {
     return (
       <Card className="p-5 flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
+        <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
       </Card>
     );
   }
@@ -195,17 +197,17 @@ export default function BoostClient() {
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-sm">
               {extStatus === "installed"
-                ? "Extension Chrome installée"
+                ? t("extInstalled")
                 : extStatus === "checking"
-                  ? "Détection de l'extension…"
-                  : "Extension Chrome non détectée"}
+                  ? t("extChecking")
+                  : t("extNotDetected")}
             </h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               {extStatus === "installed"
-                ? "L'extension communique avec Tipote. Les deux modes ci-dessous sont actifs dès que tu ouvres un de tes réseaux."
+                ? t("extInstalledDesc")
                 : extStatus === "checking"
                   ? " "
-                  : "Installe l'extension Tipote depuis le Chrome Web Store (ou recharge cette page si tu viens de l'installer) pour activer le pod et le commentateur IA."}
+                  : t("extNotDetectedDesc")}
             </p>
           </div>
           <Button
@@ -217,7 +219,7 @@ export default function BoostClient() {
             className="shrink-0"
           >
             {syncing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
-            Synchroniser
+            {t("sync")}
           </Button>
         </div>
       </Card>
@@ -229,17 +231,14 @@ export default function BoostClient() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Rocket className="h-4 w-4 text-primary" />
-            <h2 className="text-base font-semibold">Pod d&apos;engagement</h2>
+            <h2 className="text-base font-semibold">{t("podTitle")}</h2>
             <Badge variant="outline" className="text-[10px] font-normal">
-              LinkedIn uniquement
+              {t("linkedInOnly")}
             </Badge>
           </div>
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Quand tu publies sur LinkedIn, les autres membres de ton pod reçoivent
-          un like et un commentaire IA à valider — ton post gagne de la portée
-          dans les premières minutes, exactement quand l&apos;algo décide. Tu rends
-          la pareille sur leurs posts. Système de karma : pas de free-riders.
+          {t("podDesc")}
         </p>
 
         {/* État matching LinkedIn */}
@@ -252,7 +251,7 @@ export default function BoostClient() {
             )}
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-sm">
-                {linkedin ? "Compte LinkedIn lié" : "Compte LinkedIn pas encore lié"}
+                {linkedin ? t("linkedInLinked") : t("linkedInNotLinked")}
               </h3>
               {linkedin ? (
                 <div className="mt-2 space-y-1">
@@ -263,7 +262,7 @@ export default function BoostClient() {
                     <div className="text-xs text-muted-foreground">{linkedin.headline}</div>
                   )}
                   {!linkedin.full_name && !linkedin.headline && (
-                    <div className="text-xs text-muted-foreground">Connexion réussie.</div>
+                    <div className="text-xs text-muted-foreground">{t("connectionSuccess")}</div>
                   )}
                   {linkedin.profile_url && (
                     <a
@@ -272,14 +271,13 @@ export default function BoostClient() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                     >
-                      Voir le profil <ExternalLink className="h-3 w-3" />
+                      {t("seeProfile")} <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Ouvre LinkedIn (linkedin.com) avec l&apos;extension installée. On récupère
-                  automatiquement ton URN et on te rattache au pod adapté.
+                  {t("linkedInNotLinkedDesc")}
                 </p>
               )}
             </div>
@@ -288,11 +286,10 @@ export default function BoostClient() {
 
         {/* Pods */}
         <Card className="p-5">
-          <h3 className="font-semibold text-sm mb-3">Pods rejoints</h3>
+          <h3 className="font-semibold text-sm mb-3">{t("podsJoined")}</h3>
           {memberships.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              Aucun pod pour le moment. Tu seras auto-joiné au pod FR dès que ton
-              compte LinkedIn sera détecté.
+              {t("podsJoinedEmpty")}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -305,7 +302,7 @@ export default function BoostClient() {
                     <span className="truncate">{m.pods.name}</span>
                   </div>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {m.pods.member_count} membres
+                    {t("members", { count: m.pods.member_count })}
                   </span>
                 </li>
               ))}
@@ -315,27 +312,26 @@ export default function BoostClient() {
 
         {/* Karma */}
         <Card className="p-5">
-          <h3 className="font-semibold text-sm mb-3">Karma</h3>
+          <h3 className="font-semibold text-sm mb-3">{t("karmaTitle")}</h3>
           {!karma ? (
             <p className="text-xs text-muted-foreground">
-              Tes statistiques d&apos;engagement apparaîtront ici dès que tu auras donné
-              ou reçu ton premier boost.
+              {t("karmaEmpty")}
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-2xl font-bold">{karma.boosts_given}</div>
-                <div className="text-xs text-muted-foreground">Boosts donnés (total)</div>
+                <div className="text-xs text-muted-foreground">{t("boostsGiven")}</div>
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  {karma.current_week_given} cette semaine
-                  {karma.weekly_quota ? ` · quota ${karma.weekly_quota}` : ""}
+                  {t("thisWeekGiven", { count: karma.current_week_given })}
+                  {karma.weekly_quota ? t("quotaSuffix", { quota: karma.weekly_quota }) : ""}
                 </div>
               </div>
               <div>
                 <div className="text-2xl font-bold">{karma.boosts_received}</div>
-                <div className="text-xs text-muted-foreground">Boosts reçus (total)</div>
+                <div className="text-xs text-muted-foreground">{t("boostsReceived")}</div>
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  {karma.current_week_received} cette semaine
+                  {t("thisWeekReceived", { count: karma.current_week_received })}
                 </div>
               </div>
             </div>
@@ -350,23 +346,19 @@ export default function BoostClient() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <h2 className="text-base font-semibold">Commentateur IA</h2>
+            <h2 className="text-base font-semibold">{t("aiCommenterTitle")}</h2>
             <Badge variant="outline" className="text-[10px] font-normal">
-              7 réseaux
+              {t("sevenNetworks")}
             </Badge>
           </div>
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Sur n&apos;importe quel post que tu visites, un badge Tipote apparaît à
-          côté de la zone commentaire avec 4 tons proposés (« je suis
-          d&apos;accord », « pas d&apos;accord », « ajouter de la valeur », « poser une
-          question »). Tu choisis, tu édites au besoin, tu publies en 1 clic.
-          Pas de pod, pas de karma — c&apos;est ton outil de productivité solo.
+          {t("aiCommenterDesc")}
         </p>
 
         <Card className="p-5 space-y-4">
           <div>
-            <h3 className="font-semibold text-sm mb-2">Disponible sur</h3>
+            <h3 className="font-semibold text-sm mb-2">{t("availableOn")}</h3>
             <div className="flex flex-wrap gap-2">
               {AI_NETWORKS.map((n) => (
                 <span
@@ -381,20 +373,20 @@ export default function BoostClient() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="space-y-1">
-              <p className="font-medium text-foreground">Comment ça marche</p>
+              <p className="font-medium text-foreground">{t("howItWorks")}</p>
               <ol className="list-decimal list-inside text-muted-foreground space-y-0.5 leading-relaxed">
-                <li>Ouvre un fil et visite un post</li>
-                <li>Clique le badge Tipote à côté du commentaire</li>
-                <li>Choisis un ton parmi les 4</li>
-                <li>Édite si besoin, valide en 1 clic</li>
+                <li>{t("step1")}</li>
+                <li>{t("step2")}</li>
+                <li>{t("step3")}</li>
+                <li>{t("step4")}</li>
               </ol>
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-foreground">À savoir</p>
+              <p className="font-medium text-foreground">{t("goodToKnow")}</p>
               <ul className="list-disc list-inside text-muted-foreground space-y-0.5 leading-relaxed">
-                <li>Aucun commentaire posté sans ton clic explicite</li>
-                <li>Max 12 actions / heure pour rester naturel</li>
-                <li>Pas besoin d&apos;être dans un pod pour t&apos;en servir</li>
+                <li>{t("note1")}</li>
+                <li>{t("note2")}</li>
+                <li>{t("note3")}</li>
               </ul>
             </div>
           </div>

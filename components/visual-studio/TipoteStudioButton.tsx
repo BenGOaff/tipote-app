@@ -13,6 +13,7 @@
 // génération + de l'upload storage.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Wand2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ export function TipoteStudioButton({
   /** Insère PLUSIEURS images (carrousel). Si absent, on retombe sur onApplyImage. */
   onApplyImages?: (imgs: StudioSavedImage[]) => void;
 }) {
+  const t = useTranslations("visualStudio");
   const [open, setOpen] = useState(false);
   // Brand kit + voix de marque de l'user, chargés à la 1re ouverture (puis
   // mémorisés). Fallback = preset Tipote tant que le fetch n'a pas répondu, pour
@@ -121,20 +123,20 @@ export function TipoteStudioButton({
         body: JSON.stringify({ kind }),
       });
       if (res.status === 402) {
-        toast.error("Crédits IA épuisés", {
-          description: "Recharge tes crédits pour générer des visuels.",
-          action: { label: "Recharger", onClick: () => { window.location.href = "/settings?tab=billing"; } },
+        toast.error(t("toastNoCredits"), {
+          description: t("toastNoCreditsDesc"),
+          action: { label: t("toastReload"), onClick: () => { window.location.href = "/settings?tab=billing"; } },
         });
         return false;
       }
       if (!res.ok) {
-        toast.error("Génération indisponible", { description: "Réessaie dans un instant." });
+        toast.error(t("toastGenUnavailable"), { description: t("toastTryAgain") });
         return false;
       }
       emitCreditsUpdated(); // rafraîchit le solde affiché (sidebar/billing)
       return true;
     } catch {
-      toast.error("Génération indisponible", { description: "Vérifie ta connexion." });
+      toast.error(t("toastGenUnavailable"), { description: t("toastCheckConnection") });
       return false;
     }
   }
@@ -175,7 +177,7 @@ export function TipoteStudioButton({
         enableCarousel={illustrationMode ? false : enableCarousel}
         upload={makeContentImageUploader(contentId)}
         onChargeCredit={chargeCredit}
-        applyLabel="Insérer"
+        applyLabel={t("applyInsert")}
         onApply={handleApply}
         onApplyMany={handleApplyMany}
       />

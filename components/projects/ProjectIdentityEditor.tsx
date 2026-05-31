@@ -8,6 +8,7 @@
 // in handleSubmit so it can batch / show toast / close the dialog.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, ImageOff, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ export function ProjectIdentityEditor({
   onChange,
   disabled,
 }: Props) {
+  const t = useTranslations("projectSwitcher");
   const [value, setValue] = useState<ProjectIdentityValue>(initial);
 
   // If `initial` changes (e.g. parent loaded async data), resync.
@@ -57,20 +59,20 @@ export function ProjectIdentityEditor({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="project-name" className="text-xs">
-          Nom du projet
+          {t("projectNameLabel")}
         </Label>
         <Input
           id="project-name"
           value={value.name}
           onChange={(e) => update({ name: e.target.value })}
           disabled={disabled}
-          placeholder="Mon projet"
+          placeholder={t("projectNamePlaceholder")}
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label className="text-xs">Couleur d&apos;accent</Label>
+          <Label className="text-xs">{t("accentColorLabel")}</Label>
           {value.accent_color ? (
             <button
               type="button"
@@ -79,7 +81,7 @@ export function ProjectIdentityEditor({
               className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
             >
               <RotateCcw className="size-3" />
-              Réinitialiser
+              {t("reset")}
             </button>
           ) : null}
         </div>
@@ -113,7 +115,7 @@ export function ProjectIdentityEditor({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label className="text-xs">Icône</Label>
+          <Label className="text-xs">{t("iconLabel")}</Label>
           {value.icon_emoji ? (
             <button
               type="button"
@@ -122,7 +124,7 @@ export function ProjectIdentityEditor({
               className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
             >
               <RotateCcw className="size-3" />
-              Réinitialiser
+              {t("reset")}
             </button>
           ) : null}
         </div>
@@ -158,11 +160,10 @@ export function ProjectIdentityEditor({
               htmlFor="use-branding-logo"
               className="text-xs font-semibold"
             >
-              Utiliser le logo de mon branding
+              {t("useBrandingLogoLabel")}
             </Label>
             <p className="text-[11px] text-muted-foreground">
-              Affiche le logo défini dans Settings → Branding du projet à la
-              place de l&apos;emoji.
+              {t("useBrandingLogoDesc")}
             </p>
           </div>
           <Switch
@@ -181,19 +182,19 @@ export function ProjectIdentityEditor({
                 className="size-10 rounded border bg-background object-cover"
               />
               <span className="text-[11px] text-muted-foreground">
-                Aperçu du logo branding
+                {t("logoPreview")}
               </span>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300">
               <ImageOff className="size-3.5" />
-              Aucun logo défini dans le branding du projet — ajoute-le d&apos;abord.
+              {t("noBrandingLogoDefined")}
             </div>
           )
         ) : null}
         {!brandingLogoUrl && !value.use_branding_logo ? (
           <p className="text-[11px] text-muted-foreground">
-            Pas encore de logo branding configuré pour ce projet.
+            {t("noBrandingLogoConfigured")}
           </p>
         ) : null}
       </div>

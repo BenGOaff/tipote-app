@@ -7,6 +7,7 @@
 // modifier la valeur en 30 secondes et fermer l'onglet.
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,17 +37,20 @@ interface Threshold {
   updated_at: string;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  vat_franchise_vente: "Franchise TVA — Vente de marchandises",
-  vat_franchise_services_bic: "Franchise TVA — Prestations BIC",
-  vat_franchise_services_bnc: "Franchise TVA — Prestations BNC",
-};
-
-function categoryLabel(c: string): string {
-  return CATEGORY_LABELS[c] ?? c;
+function useCategoryLabel() {
+  const t = useTranslations("adminFiscal");
+  return (c: string): string => {
+    const labels: Record<string, string> = {
+      vat_franchise_vente: t("catVatFranchiseVente"),
+      vat_franchise_services_bic: t("catVatFranchiseServicesBic"),
+      vat_franchise_services_bnc: t("catVatFranchiseServicesBnc"),
+    };
+    return labels[c] ?? c;
+  };
 }
 
 export default function FiscalThresholdsAdminClient() {
+  const t = useTranslations("adminFiscal");
   const [loading, setLoading] = useState(true);
   const [thresholds, setThresholds] = useState<Threshold[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -64,7 +68,7 @@ export default function FiscalThresholdsAdminClient() {
         setThresholds(json.thresholds);
       } else {
         toast({
-          title: "Erreur de chargement",
+          title: t("loadError"),
           description: json?.error,
           variant: "destructive",
         });
@@ -80,10 +84,10 @@ export default function FiscalThresholdsAdminClient() {
 
   // Group par pays + année pour faire 1 card par "lot annuel"
   const grouped = new Map<string, Threshold[]>();
-  for (const t of thresholds) {
-    const key = `${t.country} ${t.fiscal_year}`;
+  for (const row of thresholds) {
+    const key = `${row.country} ${row.fiscal_year}`;
     const list = grouped.get(key) ?? [];
-    list.push(t);
+    list.push(row);
     grouped.set(key, list);
   }
 
@@ -94,25 +98,20 @@ export default function FiscalThresholdsAdminClient() {
           <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="font-semibold text-blue-900 dark:text-blue-200 text-sm">
-              Seuils fiscaux affichés aux users dans /settings?tab=compta
+              {t("introTitle")}
             </p>
             <p className="text-xs text-blue-900/80 leading-relaxed">
-              Le cron <code>/api/cron/check-fiscal-thresholds</code>{" "}
-              vérifie chaque jour que les valeurs ci-dessous sont toujours
-              présentes sur les pages officielles. Quand ce n&apos;est pas
-              le cas, un email t&apos;est envoyé avec un lien direct ici.
-              Mets simplement à jour la valeur, l&apos;impact est immédiat
-              côté users (le dashboard relit la DB à chaque chargement).
+              {t("introBody")}
             </p>
           </div>
         </div>
       </Card>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Seuils enregistrés</h2>
+        <h2 className="text-lg font-bold">{t("recordedThresholds")}</h2>
         <Button variant="outline" size="sm" onClick={() => setShowCreate(true)}>
           <Plus className="h-3.5 w-3.5 mr-2" />
-          Ajouter un seuil
+          {t("addThreshold")}
         </Button>
       </div>
 
@@ -122,7 +121,7 @@ export default function FiscalThresholdsAdminClient() {
           onCreated={async () => {
             setShowCreate(false);
             await reload();
-            toast({ title: "Seuil ajouté" });
+            toast({ title: t("thresholdAdded") });
           }}
         />
       ) : null}
@@ -130,13 +129,11 @@ export default function FiscalThresholdsAdminClient() {
       {loading ? (
         <Card className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Chargement…
+          {t("loading")}
         </Card>
       ) : thresholds.length === 0 ? (
         <Card className="p-6 text-sm text-muted-foreground">
-          Aucun seuil en base. Le seed initial (migration{" "}
-          <code>20260508_fiscal_thresholds.sql</code>) n&apos;a peut-être
-          pas été appliqué.
+          {t("emptyState")}
         </Card>
       ) : (
         Array.from(grouped.entries()).map(([key, items]) => (
@@ -145,17 +142,17 @@ export default function FiscalThresholdsAdminClient() {
               {key}
             </h3>
             <div className="divide-y border rounded-md">
-              {items.map((t) => (
+              {items.map((row) => (
                 <ThresholdRow
-                  key={t.id}
-                  threshold={t}
-                  editing={editingId === t.id}
-                  onEdit={() => setEditingId(t.id)}
+                  key={row.id}
+                  threshold={row}
+                  editing={editingId === row.id}
+                  onEdit={() => setEditingId(row.id)}
                   onCancel={() => setEditingId(null)}
                   onSaved={async () => {
                     setEditingId(null);
                     await reload();
-                    toast({ title: "Seuil mis à jour" });
+                    toast({ title: t("thresholdUpdated") });
                   }}
                 />
               ))}
@@ -184,6 +181,8 @@ function ThresholdRow({
   onCancel: () => void;
   onSaved: () => void | Promise<void>;
 }) {
+  const t = useTranslations("adminFiscal");
+  const categoryLabel = useCategoryLabel();
   const [base, setBase] = useState(String(threshold.base_value));
   const [major, setMajor] = useState(threshold.major_value !== null ? String(threshold.major_value) : "");
   const [sourceUrl, setSourceUrl] = useState(threshold.source_url ?? "");
@@ -220,12 +219,12 @@ function ThresholdRow({
         });
         const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
         if (!json?.ok) {
-          setError(json?.error ?? "Erreur");
+          setError(json?.error ?? t("error"));
           return;
         }
         await onSaved();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur réseau");
+        setError(e instanceof Error ? e.message : t("networkError"));
       }
     });
   }
@@ -241,7 +240,7 @@ function ThresholdRow({
             </span>
             {threshold.major_value !== null ? (
               <>
-                {" — seuil majoré : "}
+                {" — "}{t("majorThresholdInline")}{" : "}
                 <span className="font-semibold text-foreground">
                   {new Intl.NumberFormat("fr-FR").format(threshold.major_value)} €
                 </span>
@@ -249,7 +248,7 @@ function ThresholdRow({
             ) : null}
           </div>
           <div className="text-xs text-muted-foreground">
-            En vigueur depuis le {threshold.effective_from}
+            {t("inEffectSince", { date: threshold.effective_from })}
             {threshold.source_url ? (
               <>
                 {" — "}
@@ -259,7 +258,7 @@ function ThresholdRow({
                   rel="noopener noreferrer"
                   className="text-primary underline inline-flex items-center gap-0.5"
                 >
-                  Source officielle
+                  {t("officialSource")}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </>
@@ -271,7 +270,7 @@ function ThresholdRow({
         </div>
         <Button variant="ghost" size="sm" onClick={onEdit}>
           <Pencil className="h-3.5 w-3.5 mr-1.5" />
-          Modifier
+          {t("edit")}
         </Button>
       </div>
     );
@@ -283,7 +282,7 @@ function ThresholdRow({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label className="text-xs" htmlFor={`base-${threshold.id}`}>
-            Valeur de base (€)
+            {t("baseValue")}
           </Label>
           <Input
             id={`base-${threshold.id}`}
@@ -296,7 +295,7 @@ function ThresholdRow({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs" htmlFor={`major-${threshold.id}`}>
-            Seuil majoré (€) — laisser vide si pas applicable
+            {t("majorThreshold")}
           </Label>
           <Input
             id={`major-${threshold.id}`}
@@ -308,7 +307,7 @@ function ThresholdRow({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs" htmlFor={`url-${threshold.id}`}>
-            URL source officielle
+            {t("sourceUrl")}
           </Label>
           <Input
             id={`url-${threshold.id}`}
@@ -321,7 +320,7 @@ function ThresholdRow({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs" htmlFor={`from-${threshold.id}`}>
-            En vigueur depuis le
+            {t("effectiveFrom")}
           </Label>
           <Input
             id={`from-${threshold.id}`}
@@ -335,14 +334,14 @@ function ThresholdRow({
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs" htmlFor={`notes-${threshold.id}`}>
-          Notes (optionnel)
+          {t("notesOptional")}
         </Label>
         <Input
           id={`notes-${threshold.id}`}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           disabled={pending}
-          placeholder="Ex : Loi de finances 2026 — vote du 28/12/2025"
+          placeholder={t("notesPlaceholder")}
         />
       </div>
       {error ? (
@@ -357,7 +356,7 @@ function ThresholdRow({
           ) : (
             <Save className="h-3.5 w-3.5 mr-1.5" />
           )}
-          Enregistrer
+          {t("save")}
         </Button>
         <Button
           type="button"
@@ -370,7 +369,7 @@ function ThresholdRow({
           disabled={pending}
         >
           <X className="h-3.5 w-3.5 mr-1.5" />
-          Annuler
+          {t("cancel")}
         </Button>
       </div>
     </form>
@@ -388,6 +387,7 @@ function CreateForm({
   onCancel: () => void;
   onCreated: () => void | Promise<void>;
 }) {
+  const t = useTranslations("adminFiscal");
   const [country, setCountry] = useState("FR");
   const [fiscalYear, setFiscalYear] = useState(String(new Date().getUTCFullYear() + 1));
   const [category, setCategory] = useState("vat_franchise_vente");
@@ -420,22 +420,22 @@ function CreateForm({
         });
         const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
         if (!json?.ok) {
-          setError(json?.error ?? "Erreur");
+          setError(json?.error ?? t("error"));
           return;
         }
         await onCreated();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur réseau");
+        setError(e instanceof Error ? e.message : t("networkError"));
       }
     });
   }
 
   return (
     <Card className="p-5 space-y-4 bg-muted/20">
-      <h3 className="font-semibold">Nouveau seuil</h3>
+      <h3 className="font-semibold">{t("newThreshold")}</h3>
       <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label className="text-xs">Pays (ISO 2 lettres)</Label>
+          <Label className="text-xs">{t("country")}</Label>
           <Input
             value={country}
             onChange={(e) => setCountry(e.target.value)}
@@ -445,7 +445,7 @@ function CreateForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Année fiscale</Label>
+          <Label className="text-xs">{t("fiscalYear")}</Label>
           <Input
             type="number"
             value={fiscalYear}
@@ -455,7 +455,7 @@ function CreateForm({
           />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label className="text-xs">Catégorie (clé code)</Label>
+          <Label className="text-xs">{t("categoryCodeKey")}</Label>
           <Input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -464,13 +464,13 @@ function CreateForm({
             placeholder="ex: vat_franchise_vente"
           />
           <p className="text-[11px] text-muted-foreground">
-            Clés actuellement utilisées par le code :{" "}
+            {t("categoryHint")}{" "}
             <code>vat_franchise_vente</code>, <code>vat_franchise_services_bic</code>,{" "}
             <code>vat_franchise_services_bnc</code>.
           </p>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Valeur de base (€)</Label>
+          <Label className="text-xs">{t("baseValue")}</Label>
           <Input
             inputMode="numeric"
             value={base}
@@ -480,7 +480,7 @@ function CreateForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Seuil majoré (€) — facultatif</Label>
+          <Label className="text-xs">{t("majorThresholdOptional")}</Label>
           <Input
             inputMode="numeric"
             value={major}
@@ -489,7 +489,7 @@ function CreateForm({
           />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label className="text-xs">URL source officielle</Label>
+          <Label className="text-xs">{t("sourceUrl")}</Label>
           <Input
             type="url"
             value={sourceUrl}
@@ -499,7 +499,7 @@ function CreateForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">En vigueur depuis le</Label>
+          <Label className="text-xs">{t("effectiveFrom")}</Label>
           <Input
             type="date"
             value={effectiveFrom}
@@ -509,7 +509,7 @@ function CreateForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Notes</Label>
+          <Label className="text-xs">{t("notes")}</Label>
           <Input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -528,11 +528,11 @@ function CreateForm({
             ) : (
               <Plus className="h-3.5 w-3.5 mr-1.5" />
             )}
-            Créer
+            {t("create")}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={pending}>
             <X className="h-3.5 w-3.5 mr-1.5" />
-            Annuler
+            {t("cancel")}
           </Button>
         </div>
       </form>

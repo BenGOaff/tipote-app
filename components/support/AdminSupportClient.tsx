@@ -344,7 +344,7 @@ export default function AdminSupportClient() {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-1 block">Tags (séparés par des virgules)</label>
+                <label className="text-sm font-medium mb-1 block">{ta("tagsCsvLabel")}</label>
                 <Input
                   value={(editArticle.tags ?? []).join(", ")}
                   onChange={(e) =>
@@ -357,7 +357,7 @@ export default function AdminSupportClient() {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-1 block">Articles liés (slugs, séparés par des virgules)</label>
+                <label className="text-sm font-medium mb-1 block">{ta("relatedSlugsLabel")}</label>
                 <Input
                   value={(editArticle.related_slugs ?? []).join(", ")}
                   onChange={(e) =>

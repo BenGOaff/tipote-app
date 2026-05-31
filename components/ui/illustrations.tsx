@@ -57,7 +57,7 @@ function wrap(
 
 export function EmptyInboxArt({ className, size, ariaLabel }: IllustrationProps) {
   return wrap(
-    "Boîte de réception vide",
+    "Empty inbox",
     ariaLabel,
     className,
     size,
@@ -95,7 +95,7 @@ export function EmptyInboxArt({ className, size, ariaLabel }: IllustrationProps)
 
 export function EmptyCanvasArt({ className, size, ariaLabel }: IllustrationProps) {
   return wrap(
-    "Toile vierge — prête à être remplie",
+    "Blank canvas — ready to be filled",
     ariaLabel,
     className,
     size,
@@ -143,7 +143,7 @@ export function EmptyCanvasArt({ className, size, ariaLabel }: IllustrationProps
 
 export function EmptyChartArt({ className, size, ariaLabel }: IllustrationProps) {
   return wrap(
-    "Pas encore de données",
+    "No data yet",
     ariaLabel,
     className,
     size,
@@ -172,7 +172,7 @@ export function EmptyChartArt({ className, size, ariaLabel }: IllustrationProps)
 
 export function EmptySearchArt({ className, size, ariaLabel }: IllustrationProps) {
   return wrap(
-    "Aucun résultat trouvé",
+    "No results found",
     ariaLabel,
     className,
     size,

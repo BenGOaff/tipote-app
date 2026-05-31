@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "./CopyButton";
 import { useDict } from "../../i18n/context";
+import { interpolate } from "../../i18n";
 import type { EmailTemplate } from "../content/emails-fr";
 
 async function patchPromo(key: string, value: string | null) {
@@ -100,7 +101,7 @@ export function EmailCard({
               )}
             </CardTitle>
             <CardDescription className="mt-1 text-xs">
-              Pré-header : {preheader}
+              {interpolate(t.email_card.preheader_inline, { value: preheader })}
             </CardDescription>
           </div>
           <Button
@@ -130,15 +131,15 @@ export function EmailCard({
                 {t.promouvoir.edit_hint}
               </div>
               <div className="space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Objet</span>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.email_card.label_subject}</span>
                 <Input value={subject} onChange={(e) => setSubject(e.target.value)} className="text-sm" />
               </div>
               <div className="space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Pré-header</span>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.email_card.label_preheader}</span>
                 <Input value={preheader} onChange={(e) => setPreheader(e.target.value)} className="text-sm" />
               </div>
               <div className="space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Corps de l&apos;email</span>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.email_card.label_body}</span>
                 <Textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
@@ -165,8 +166,8 @@ export function EmailCard({
             <>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Objet</span>
-                  <CopyButton text={resolvedSubject} label="Copier l'objet" />
+                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.email_card.label_subject}</span>
+                  <CopyButton text={resolvedSubject} label={t.email_card.copy_subject} copiedLabel={t.common.copied} />
                 </div>
                 <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm font-medium">
                   {resolvedSubject}
@@ -175,8 +176,8 @@ export function EmailCard({
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Pré-header</span>
-                  <CopyButton text={preheader} label="Copier" />
+                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.email_card.label_preheader}</span>
+                  <CopyButton text={preheader} label={t.email_card.copy_preheader} copiedLabel={t.common.copied} />
                 </div>
                 <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
                   {preheader}
@@ -185,8 +186,8 @@ export function EmailCard({
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Corps de l&apos;email</span>
-                  <CopyButton text={resolvedBody} label="Copier le corps" />
+                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.email_card.label_body}</span>
+                  <CopyButton text={resolvedBody} label={t.email_card.copy_body} copiedLabel={t.common.copied} />
                 </div>
                 <div className="rounded-md border border-border bg-muted/30 px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
                   {resolvedBody}
@@ -195,8 +196,9 @@ export function EmailCard({
 
               <div className="flex items-center gap-2 pt-2 border-t border-border">
                 <CopyButton
-                  text={`Objet : ${resolvedSubject}\nPré-header : ${preheader}\n\n${resolvedBody}`}
-                  label="Tout copier (objet + corps)"
+                  text={`${t.email_card.label_subject}: ${resolvedSubject}\n${t.email_card.label_preheader}: ${preheader}\n\n${resolvedBody}`}
+                  label={t.email_card.copy_all}
+                  copiedLabel={t.common.copied}
                   size="default"
                   variant="default"
                 />

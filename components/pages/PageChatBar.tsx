@@ -442,7 +442,7 @@ export default function PageChatBar({ pageId, templateId, kind, contentData, bra
       {messages.length === 0 && !loading && !reformulating && !reformulation && (
         <div className="px-3 pb-2 space-y-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-            <span className="text-[11px] text-blue-700 dark:text-blue-300">💡 Clique directement sur un texte ou une image dans l&apos;aperçu pour le modifier.</span>
+            <span className="text-[11px] text-blue-700 dark:text-blue-300">{t("inlineEditTip")}</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {suggestions.map((s) => (

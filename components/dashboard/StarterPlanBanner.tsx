@@ -5,6 +5,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ function extractStarterPlan(planJson: unknown): {
 }
 
 export default function StarterPlanBanner({ planJson }: { planJson: unknown | null }) {
+  const t = useTranslations("dashboard");
   if (!planJson) return null;
 
   const extracted = extractStarterPlan(planJson);
@@ -90,8 +92,8 @@ export default function StarterPlanBanner({ planJson }: { planJson: unknown | nu
                 <Sparkles className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Ton plan de départ</p>
-                <h2 className="text-xl md:text-2xl font-bold truncate">Ce que Tipote a compris</h2>
+                <p className="text-sm text-muted-foreground">{t("starterPlanLabel")}</p>
+                <h2 className="text-xl md:text-2xl font-bold truncate">{t("starterPlanTitle")}</h2>
               </div>
             </div>
 
@@ -146,11 +148,11 @@ export default function StarterPlanBanner({ planJson }: { planJson: unknown | nu
           <div className="hidden md:flex flex-col gap-3 shrink-0">
             <Button asChild className="gap-2">
               <Link href="/strategy">
-                Voir la stratégie <ArrowRight className="w-4 h-4" />
+                {t("seeStrategy")} <ArrowRight className="w-4 h-4" />
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/tasks">Voir mes tâches</Link>
+              <Link href="/tasks">{t("seeMyTasks")}</Link>
             </Button>
           </div>
         </div>
@@ -158,11 +160,11 @@ export default function StarterPlanBanner({ planJson }: { planJson: unknown | nu
         <div className="mt-5 md:hidden flex gap-3">
           <Button asChild className="flex-1 gap-2">
             <Link href="/strategy">
-              Stratégie <ArrowRight className="w-4 h-4" />
+              {t("strategyShort")} <ArrowRight className="w-4 h-4" />
             </Link>
           </Button>
           <Button asChild variant="outline" className="flex-1">
-            <Link href="/tasks">Tâches</Link>
+            <Link href="/tasks">{t("tasksShort")}</Link>
           </Button>
         </div>
       </Card>

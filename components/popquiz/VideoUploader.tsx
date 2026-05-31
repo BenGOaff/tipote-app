@@ -20,6 +20,7 @@
 // about the storage layout.
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import * as tus from "tus-js-client";
 import { CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -186,6 +187,7 @@ export function VideoUploader({
   onUploaded: (file: UploadedVideo) => void;
   onCleared: () => void;
 }) {
+  const t = useTranslations("popquiz");
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<tus.Upload | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -201,7 +203,7 @@ export function VideoUploader({
   async function handleFile(file: File) {
     setError(null);
     if (!file.type.startsWith("video/")) {
-      setError("Choisis une vidéo (.mp4, .webm, .mov…).");
+      setError(t("videoChooseFileError"));
       return;
     }
 
@@ -221,7 +223,7 @@ export function VideoUploader({
       });
       const tokenJson = (await tokenRes.json()) as UploadTokenResponse;
       if (!tokenRes.ok || !tokenJson.ok) {
-        throw new Error(tokenJson.error || "Impossible de préparer l'import.");
+        throw new Error(tokenJson.error || t("videoPrepareImportError"));
       }
 
       setPhase({ kind: "uploading", sent: 0, total: file.size, pct: 0 });
@@ -273,7 +275,7 @@ export function VideoUploader({
       };
       if (!previewRes.ok || !previewJson.ok || !previewJson.signedUrl) {
         throw new Error(
-          previewJson.error ?? "Impossible de générer un lien de lecture.",
+          previewJson.error ?? t("videoPlaybackUrlError"),
         );
       }
 
@@ -286,16 +288,16 @@ export function VideoUploader({
         durationMs,
         bytes: file.size,
       });
-      toast.success("Vidéo importée");
+      toast.success(t("videoUploaded"));
       setPhase({ kind: "idle" });
     } catch (e) {
-      const raw = e instanceof Error ? e.message : "Erreur lors de l'import";
+      const raw = e instanceof Error ? e.message : t("videoUploadError");
       const friendly =
         raw.toLowerCase().includes("exceeded") ||
         raw.toLowerCase().includes("size")
-          ? "Fichier trop volumineux. La taille maximale acceptée est 20 Go."
+          ? t("videoTooLarge")
           : raw.toLowerCase().includes("abort")
-            ? "Import annulé."
+            ? t("videoUploadAborted")
             : raw;
       setError(friendly);
       setPhase({ kind: "idle" });
@@ -323,7 +325,7 @@ export function VideoUploader({
             {current.durationMs
               ? ` • ${Math.round(current.durationMs / 1000)} s`
               : ""}
-            {" • vidéo prête"}
+            {` • ${t("videoReady")}`}
           </p>
         </div>
         <Button
@@ -331,7 +333,7 @@ export function VideoUploader({
           variant="ghost"
           onClick={onCleared}
           type="button"
-          aria-label="Retirer la vidéo"
+          aria-label={t("removeVideoAria")}
           className="shrink-0 hover:bg-green-100"
         >
           <X className="size-4 text-green-900 dark:text-green-200" />
@@ -346,7 +348,7 @@ export function VideoUploader({
         <div className="flex items-center gap-3">
           <Loader2 className="size-5 animate-spin text-primary shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">Importation en cours…</p>
+            <p className="text-sm font-medium">{t("videoImporting")}</p>
             <p className="text-xs text-muted-foreground tabular-nums">
               {formatBytes(phase.sent)} / {formatBytes(phase.total)}
             </p>
@@ -359,7 +361,7 @@ export function VideoUploader({
             onClick={handleCancel}
             className="shrink-0"
           >
-            Annuler
+            {t("cancelLabel")}
           </Button>
         </div>
         <Progress value={phase.pct} className="h-1.5" />
@@ -373,8 +375,8 @@ export function VideoUploader({
         <Loader2 className="size-5 animate-spin text-primary shrink-0" />
         <p className="text-sm">
           {phase.kind === "preparing"
-            ? "Préparation (extraction de la miniature…)"
-            : "Finalisation…"}
+            ? t("videoPreparing")
+            : t("videoFinalizing")}
         </p>
       </div>
     );
@@ -415,10 +417,10 @@ export function VideoUploader({
       >
         <Upload className="size-6 mx-auto text-muted-foreground mb-2" />
         <p className="text-sm font-medium">
-          Glisse une vidéo ici ou clique pour choisir
+          {t("videoDropZone")}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          MP4, WebM, MOV — jusqu&apos;à 20 Go.
+          {t("videoFormats")}
         </p>
         <input
           ref={inputRef}

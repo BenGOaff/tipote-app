@@ -217,7 +217,7 @@ export const MetricsForm = ({
 
         {/* Calculated metrics */}
         <div className="border-t pt-4">
-          <p className="text-sm text-muted-foreground mb-3">📈 Taux calculés automatiquement</p>
+          <p className="text-sm text-muted-foreground mb-3">{t("ratesAutoLabel")}</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-3 rounded-lg bg-muted/50">
               <p className="text-xs text-muted-foreground">Taux de capture</p>

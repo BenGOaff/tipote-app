@@ -354,7 +354,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
           {emailType === "newsletter" && (
             <>
               <div className="space-y-2">
-                <Label>Thème *</Label>
+                <Label>{t("themeLabel")} *</Label>
                 <Input
                   placeholder={t("subjectPh")}
                   value={newsletterTheme}
@@ -384,7 +384,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="sequence_7" id="sequence_7" />
-                    <Label htmlFor="sequence_7">Séquence complète (7 emails)</Label>
+                    <Label htmlFor="sequence_7">{t("fullSequence")}</Label>
                   </div>
                 </RadioGroup>
               </div>
@@ -404,7 +404,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
               </div>
 
               <div className="space-y-2">
-                <Label>Offre à vendre</Label>
+                <Label>{t("offerToSellLabel")}</Label>
 
                 <RadioGroup value={offerSource} onValueChange={(v) => setOfferSource(v as "existing" | "manual")} className="flex gap-4">
                   <div className="flex items-center space-x-2">
@@ -467,7 +467,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
                           {selectedSalesOffer.main_outcome && (
                             <div className="text-xs">
-                              <span className="text-muted-foreground">Résultat : </span>
+                              <span className="text-muted-foreground">{t("resultLabel")}</span>
                               {selectedSalesOffer.main_outcome}
                             </div>
                           )}
@@ -581,7 +581,7 @@ export function EmailForm({ onGenerate, onSave, onClose, isGenerating, isSaving 
 
                           {selectedLeadMagnetOffer.main_outcome && (
                             <div className="text-xs">
-                              <span className="text-muted-foreground">Résultat : </span>
+                              <span className="text-muted-foreground">{t("resultLabel")}</span>
                               {selectedLeadMagnetOffer.main_outcome}
                             </div>
                           )}

@@ -166,6 +166,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
    *  current plain-text value. Same signature as the RichTextEdit prop. */
   onAIRewrite?: (plainText: string) => Promise<string[] | null>;
 }) {
+  const t = useTranslations("quizDetail");
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
   const [rewriting, setRewriting] = useState(false);
@@ -258,7 +259,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
             type="button"
             onClick={handleGenderize}
             disabled={genderizing || !value?.trim()}
-            title="Générer les variantes de genre (Il / Elle / Iel)"
+            title={t("genderizeBtnTitle")}
             className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
           >
             {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -281,7 +282,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
       {aiProposals !== null && (
         <div className="mt-2 rounded-xl border bg-background shadow-sm p-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
           {aiProposals.length === 0 ? (
-            <p className="text-xs text-muted-foreground px-2 py-1.5">L'IA n'a rien proposé. Réessaie.</p>
+            <p className="text-xs text-muted-foreground px-2 py-1.5">{t("aiNoProposals")}</p>
           ) : (
             aiProposals.map((p, i) => (
               <button
@@ -295,11 +296,11 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
             ))
           )}
           <div className="flex justify-between items-center pt-1">
-            <button type="button" onClick={dismissProposals} className="text-[11px] text-muted-foreground hover:underline px-2">Garder mon texte</button>
+            <button type="button" onClick={dismissProposals} className="text-[11px] text-muted-foreground hover:underline px-2">{t("aiKeepMyText")}</button>
             {aiProposals.length > 0 && (
               <button type="button" onClick={handleAIRewrite} disabled={rewriting} className="text-[11px] text-primary hover:underline px-2 inline-flex items-center gap-1">
                 {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                Régénérer
+                {t("aiRegenerate")}
               </button>
             )}
           </div>
@@ -864,15 +865,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        toast.error(data?.error ?? data?.message ?? "Erreur IA");
+        toast.error(data?.error ?? data?.message ?? t("toastAiError"));
         return null;
       }
       return Array.isArray(data.proposals) ? data.proposals : null;
     } catch {
-      toast.error("Erreur IA");
+      toast.error(t("toastAiError"));
       return null;
     }
-  }, [quizId]);
+  }, [quizId, t]);
   const aiRewriteTitle = useCallback((p: string) => aiRewrite(p, "title"), [aiRewrite]);
   const aiRewriteIntro = useCallback((p: string) => aiRewrite(p, "intro"), [aiRewrite]);
   const aiRewriteQuestion = useCallback((p: string) => aiRewrite(p, "question"), [aiRewrite]);
@@ -952,7 +953,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         }),
       }));
     });
-    toast.success(`${rebalanceProposal.changes.length} option(s) réassignée(s). Pense à enregistrer.`);
+    toast.success(t("toastRebalanceApplied", { count: rebalanceProposal.changes.length }));
     closeRebalance();
   }, [rebalanceProposal, closeRebalance]);
 
@@ -1206,8 +1207,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   // Logo upload (reuses public-assets bucket, same layout as SettingsClient)
   async function handleLogoUpload(file: File, scope: "quiz" | "profile" = "quiz") {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error("Image trop lourde (max 2 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 2 })); return; }
     setUploadingLogo(true);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -1240,7 +1241,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err) {
       console.error("Logo upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload logo : ${msg}`);
+      toast.error(t("toastLogoUploadError", { msg }));
     } finally {
       setUploadingLogo(false);
     }
@@ -1250,8 +1251,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // le créateur (ou un visiteur) partage le lien. Sans upload, c'est le
   // logo Tipote par défaut.
   async function handleOgImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
     setUploadingOgImage(true);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -1263,11 +1264,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setOgImageUrl(urlData.publicUrl);
-      toast.success("Vignette enregistrée");
+      toast.success(t("toastOgImageSaved"));
     } catch (err) {
       console.error("OG image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      toast.error(t("toastImageUploadError", { msg }));
     } finally {
       setUploadingOgImage(false);
     }
@@ -1276,8 +1277,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // Bonus image upload: mockup / image / GIF shown on the share step so the
   // visitor understands what they unlock before sharing.
   async function handleBonusImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
     setUploadingBonusImage(true);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -1293,7 +1294,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err) {
       console.error("Bonus image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      toast.error(t("toastImageUploadError", { msg }));
     } finally {
       setUploadingBonusImage(false);
     }
@@ -1307,8 +1308,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // d'insérer le <img> au point de drop. Bucket dédié `rich-content/`
   // pour ne pas mélanger avec les autres images du quiz.
   async function handleRichTextImageUpload(file: File): Promise<string | null> {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return null; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return null; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return null; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return null; }
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -1322,7 +1323,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err) {
       console.error("Rich text image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      toast.error(t("toastImageUploadError", { msg }));
       return null;
     }
   }
@@ -1447,8 +1448,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // incluant GIF.
   const [uploadingOptionKey, setUploadingOptionKey] = useState<string | null>(null);
   async function handleOptionImageUpload(file: File, qi: number, oi: number) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
     const key = `${qi}-${oi}`;
     setUploadingOptionKey(key);
     try {
@@ -1467,7 +1468,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err) {
       console.error("Option image upload failed:", err);
       const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      toast.error(t("toastImageUploadError", { msg }));
     } finally {
       setUploadingOptionKey(null);
     }
@@ -1481,9 +1482,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   // Save
   const handleSave = async () => {
-    if (!title.trim()) { toast.error("Titre requis"); return; }
+    if (!title.trim()) { toast.error(t("toastTitleRequired")); return; }
     const cleanedSlug = slug.trim() ? sanitizeSlug(slug) : null;
-    if (slug.trim() && !cleanedSlug) { toast.error("Slug invalide (a-z, 0-9, -)"); return; }
+    if (slug.trim() && !cleanedSlug) { toast.error(t("toastSlugInvalid")); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/quiz/${quizId}`, {
@@ -1592,7 +1593,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     const timer = setTimeout(async () => {
       const cleanedSlug = trimmed ? sanitizeSlug(trimmed) : null;
       if (trimmed && !cleanedSlug) {
-        toast.error("Slug invalide (a-z, 0-9, -)");
+        toast.error(t("toastSlugInvalid"));
         return;
       }
       try {
@@ -1603,7 +1604,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         });
         const json = await res.json().catch(() => null);
         if (res.status === 409 && json?.error === "SLUG_TAKEN") {
-          toast.error("Ce slug est déjà pris");
+          toast.error(t("toastSlugTaken"));
           return;
         }
         if (!json?.ok) {
@@ -1834,7 +1835,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               status,
             });
             return (
-              <div className="hidden md:block" title={`${r.passedCount}/${r.totalCount} étapes — ${r.percent}% prêt`}>
+              <div className="hidden md:block" title={t("readinessTitle", { passed: r.passedCount, total: r.totalCount, percent: r.percent })}>
                 <ReadinessRing percent={r.percent} passed={r.passedCount} total={r.totalCount} size="sm" />
               </div>
             );
@@ -1847,16 +1848,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             size="sm"
             variant="outline"
             onClick={() => window.open(previewUrl, "_blank", "noopener")}
-            title="Ouvrir en mode aperçu (aucun lead enregistré)"
+            title={t("previewModeTitle")}
             className="shrink-0 px-2 sm:px-3"
           >
             <Eye className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">Aperçu</span>
+            <span className="hidden sm:inline">{t("previewBtn")}</span>
           </Button>
           {savingDraft && (
             <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
               <Loader2 className="w-3 h-3 animate-spin" />
-              Brouillon enregistré
+              {t("draftSaved")}
             </span>
           )}
           {/* Mobile : Save en icône seule (l'autosave couvre déjà la sauvegarde)
@@ -1899,7 +1900,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <span className="text-xs text-muted-foreground mr-2">1</span>Introduction
                 </button>
                 {/* Questions (drag-and-drop to reorder) */}
-                <div className="flex items-center justify-between"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Questions</span><button onClick={addQuestion} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
+                <div className="flex items-center justify-between"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">{t("sidebarQuestionsTitle")}</span><button onClick={addQuestion} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
                 <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleQuestionDragEnd}>
                   <SortableContext items={editQuestions.map((_, i) => `q-${i}`)} strategy={verticalListSortingStrategy}>
                     {editQuestions.map((q, i) => (
@@ -1911,7 +1912,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           // Strip {name}/{m|f|x} placeholders + HTML before truncating
                           // (Marie's #5: sidebar showed literal "{name}, ..." text).
                           const plain = stripHtml(cleanPlaceholdersForLabel(q.question_text));
-                          return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : "Question vide";
+                          return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : t("sidebarEmptyQuestion");
                         })()}
                         onClick={() => scrollToSection(`q-${i}`)}
                         onRemove={() => removeQuestion(i)}
@@ -1921,13 +1922,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </SortableContext>
                 </DndContext>
                 {/* Accès aux résultats */}
-                <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground pt-2">Accès aux résultats</div>
+                <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground pt-2">{t("sidebarResultsAccessTitle")}</div>
                 <button onClick={() => scrollToSection("capture")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
-                  <span className="text-xs text-muted-foreground mr-2">1</span>Prise d&apos;informations
+                  <span className="text-xs text-muted-foreground mr-2">1</span>{t("sidebarCapture")}
                 </button>
                 {viralityEnabled && (
                   <button onClick={() => scrollToSection("bonus")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
-                    <span className="text-xs text-muted-foreground mr-2">2</span>Demande de partage
+                    <span className="text-xs text-muted-foreground mr-2">2</span>{t("sidebarShareRequest")}
                   </button>
                 )}
                 {/* Résultats — réordonnables par drag (Marie's #2) avec
@@ -1938,10 +1939,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     {editResults.map((r, i) => {
                       const cov = resultCoverage[i] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
                       const sevTitle = cov.severity === "danger"
-                        ? `Aucune question ne mène à ce résultat (${cov.totalQuestions} questions au total)`
+                        ? t("sidebarResultDanger", { total: cov.totalQuestions })
                         : cov.severity === "warn"
-                          ? `Seulement ${cov.questionsLeading}/${cov.totalQuestions} questions y mènent`
-                          : `${cov.questionsLeading}/${cov.totalQuestions} questions y mènent — bon équilibre`;
+                          ? t("sidebarResultWarn", { leading: cov.questionsLeading, total: cov.totalQuestions })
+                          : t("sidebarResultOk", { leading: cov.questionsLeading, total: cov.totalQuestions });
                       return (
                         <SortableSidebarResult
                           key={`r-${i}`}
@@ -1961,7 +1962,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-xs">Police d&apos;écriture</Label>
+                  <Label className="text-xs">{t("designFontLabel")}</Label>
                   <select
                     value={fontFamily}
                     onChange={e => setFontFamily(e.target.value as BrandFontChoice)}
@@ -1972,9 +1973,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-muted-foreground">Aperçu live dans le panneau de droite.</p>
+                  <p className="text-[10px] text-muted-foreground">{t("designFontHint")}</p>
                 </div>
-                <div className="space-y-3"><Label className="text-xs">Couleurs</Label>
+                <div className="space-y-3"><Label className="text-xs">{t("designColorsLabel")}</Label>
                   {/* Picker "à la systeme.io" — carré HSV + slider hue +
                       hex input + palette curée + mes palettes personnelles.
                       Beaucoup plus précis que <input type="color"> et
@@ -1983,19 +1984,19 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <ColorSwatchPicker
                       value={primaryColor}
                       onChange={setPrimaryColor}
-                      label="Couleur principale"
+                      label={t("designPrimaryColor")}
                       userPalettes={savedPalettes}
                     />
-                    <span className="text-xs text-muted-foreground">Couleur principale</span>
+                    <span className="text-xs text-muted-foreground">{t("designPrimaryColor")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <ColorSwatchPicker
                       value={bgColor}
                       onChange={setBgColor}
-                      label="Couleur de fond"
+                      label={t("designBgColor")}
                       userPalettes={savedPalettes}
                     />
-                    <span className="text-xs text-muted-foreground">Couleur de fond</span>
+                    <span className="text-xs text-muted-foreground">{t("designBgColor")}</span>
                   </div>
                   <UserPalettePicker
                     currentColor={primaryColor}
@@ -2003,10 +2004,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     palettes={savedPalettes}
                     onChangePalettes={handleChangePalettes}
                   />
-                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">Réinitialiser aux couleurs du profil</button>
+                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">{t("designResetColors")}</button>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Logo</Label>
+                  <Label className="text-xs">{t("logoLabel")}</Label>
                   {/* Trois états :
                       • hideBrandLogo TRUE → aucun logo, on montre la zone
                         "Logo masqué" + bouton réactiver.
@@ -2021,21 +2022,21 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   {hideBrandLogo ? (
                     <div className="space-y-2">
                       <div className="rounded border border-dashed bg-muted/20 p-3 text-center text-[11px] text-muted-foreground">
-                        Logo masqué sur ce quiz.
+                        {t("logoHidden")}
                       </div>
                       <button
                         type="button"
                         onClick={() => setHideBrandLogo(false)}
                         className="text-xs text-primary hover:underline"
                       >
-                        Afficher le logo
+                        {t("logoShow")}
                       </button>
                     </div>
                   ) : quizBrandLogoUrl ? (
                     <div className="space-y-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={quizBrandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white dark:bg-card p-1" />
-                      <p className="text-[10px] text-primary">Logo spécifique à ce quiz.</p>
+                      <p className="text-[10px] text-primary">{t("logoQuizSpecific")}</p>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
                           {uploadingLogo ? t("uploading") : t("change")}
@@ -2045,14 +2046,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           onClick={() => setQuizBrandLogoUrl(null)}
                           className="text-xs text-muted-foreground hover:underline"
                         >
-                          Revenir au logo du profil
+                          {t("logoBackToProfile")}
                         </button>
                         <button
                           type="button"
                           onClick={() => setHideBrandLogo(true)}
                           className="text-xs text-destructive hover:underline"
                         >
-                          Masquer le logo
+                          {t("logoHide")}
                         </button>
                       </div>
                     </div>
@@ -2060,17 +2061,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="space-y-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white dark:bg-card p-1" />
-                      <p className="text-[10px] text-muted-foreground">Logo du profil utilisé par défaut.</p>
+                      <p className="text-[10px] text-muted-foreground">{t("logoProfileDefault")}</p>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
-                          {uploadingLogo ? t("uploading") : "Utiliser un autre logo pour ce quiz"}
+                          {uploadingLogo ? t("uploading") : t("logoUseAnother")}
                         </button>
                         <button
                           type="button"
                           onClick={() => setHideBrandLogo(true)}
                           className="text-xs text-destructive hover:underline"
                         >
-                          Masquer le logo
+                          {t("logoHide")}
                         </button>
                       </div>
                     </div>
@@ -2087,22 +2088,22 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     className="hidden"
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "quiz"); e.target.value = ""; }}
                   />
-                  <p className="text-[10px] text-muted-foreground">Partagé avec tous vos quiz (paramètre du profil).</p>
+                  <p className="text-[10px] text-muted-foreground">{t("logoSharedHint")}</p>
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
                 {/* ── Formulaire de prise de contact ── */}
                 <section className="space-y-2.5">
                   <div>
-                    <h3 className="text-sm font-semibold">Formulaire de prise de contact</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">Choisis les champs demandés avant l&apos;accès aux résultats.</p>
+                    <h3 className="text-sm font-semibold">{t("captureFormTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFormDesc")}</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <CapturePill label="Adresse email*" active locked />
+                    <CapturePill label={t("pillEmail")} active locked />
                     <CapturePill label={t("pillFirstName")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
-                    <CapturePill label="Nom*" active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
+                    <CapturePill label={t("pillLastName")} active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
                     <CapturePill label={t("pillPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
-                    <CapturePill label="Pays" active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
+                    <CapturePill label={t("pillCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
                   {/* Sub-toggles "obligatoire" pour chaque champ capturé.
                       Convention SaaS : asterisk côté visiteur sur les
@@ -2146,7 +2147,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       }}
                       className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted/60 hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Ajouter un élément
+                      <Plus className="w-3.5 h-3.5" /> {t("addElement")}
                     </button>
                   )}
                   {/* Consent checkbox is opt-out — most creators want it for
@@ -2161,9 +2162,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       className="mt-0.5 w-4 h-4"
                     />
                     <span className="text-xs">
-                      <span className="font-medium">Afficher la case à cocher de consentement</span>
+                      <span className="font-medium">{t("consentToggle")}</span>
                       <span className="block text-muted-foreground leading-snug">
-                        Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page).
+                        {t("consentToggleHint")}
                       </span>
                     </span>
                   </label>
@@ -2311,10 +2312,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {viralityEnabled && (
                   <section className="space-y-3 bg-muted/30 border rounded-xl p-3">
                     <div>
-                      <h4 className="text-xs font-semibold">Bonus offert pour un partage</h4>
-                      <p className="text-[11px] text-muted-foreground leading-snug">Décris ce que le visiteur reçoit quand il partage.</p>
+                      <h4 className="text-xs font-semibold">{t("bonusShareTitle")}</h4>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{t("bonusShareDesc")}</p>
                     </div>
-                    <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder="Ex. : ma mini-formation exclusive" className="text-xs" />
+                    <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder={t("bonusDescriptionPh")} className="text-xs" />
 
                     {/* Visuel bonus : édité directement dans le preview
                         (WYSIWYG, miroir de la couverture intro) → dropzone
@@ -2322,14 +2323,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         4 slots + crop. Plus rien à gérer dans la sidebar. */}
 
                     <div>
-                      <Label className="text-[11px] font-semibold">Message de partage</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">Texte pré-rempli lorsque le visiteur partage.</p>
-                      <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={`Je viens de faire le quiz "${title || "…"}" !`} className="text-xs" rows={2} />
+                      <Label className="text-[11px] font-semibold">{t("shareMessageLabel")}</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareMessageHint")}</p>
+                      <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={t("shareMessagePh", { title: title || "…" })} className="text-xs" rows={2} />
                     </div>
 
                     <div>
-                      <Label className="text-[11px] font-semibold">Tag Systeme.io après partage</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">Ajouté au contact quand il partage réellement. Déclenche ton automatisation.</p>
+                      <Label className="text-[11px] font-semibold">{t("sioShareTagLabel")}</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("sioShareTagHint")}</p>
                       <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
                     </div>
                   </section>
@@ -2340,13 +2341,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {/* ── CTA par défaut ── */}
                 <section className="space-y-1.5">
                   <div>
-                    <h3 className="text-sm font-semibold">CTA par défaut</h3>
+                    <h3 className="text-sm font-semibold">{t("defaultCtaTitle")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Utilisé seulement pour les résultats qui n&apos;ont pas leur propre CTA. Tu peux en définir un spécifique sur chaque résultat depuis l&apos;onglet Édition.
+                      {t("defaultCtaDesc")}
                     </p>
                   </div>
-                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder="Texte du CTA" className="text-xs" />
-                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder="URL du CTA" className="text-xs" />
+                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPh")} className="text-xs" />
+                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPh")} className="text-xs" />
                 </section>
               </div>)}
             </div>
@@ -2467,7 +2468,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         value={startButtonText}
                         onChange={setStartButtonText}
                         className="text-white font-semibold text-center"
-                        placeholder="Commencer le test"
+                        placeholder={t("previewStartBtnPh")}
                       />
                     </div>
                   </div>
@@ -2570,8 +2571,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   toucher au result_index porté par chaque option. */}
                               {q.options.length > 1 && (
                                 <div className="absolute top-2 left-2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button type="button" onClick={() => moveOpt(qi, oi, -1)} disabled={oi === 0} aria-label="Monter la réponse" className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronUp className="w-3.5 h-3.5" /></button>
-                                  <button type="button" onClick={() => moveOpt(qi, oi, +1)} disabled={oi === q.options.length - 1} aria-label="Descendre la réponse" className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronDown className="w-3.5 h-3.5" /></button>
+                                  <button type="button" onClick={() => moveOpt(qi, oi, -1)} disabled={oi === 0} aria-label={t("ariaMoveOptionUp")} className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronUp className="w-3.5 h-3.5" /></button>
+                                  <button type="button" onClick={() => moveOpt(qi, oi, +1)} disabled={oi === q.options.length - 1} aria-label={t("ariaMoveOptionDown")} className="hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed rounded p-0.5"><ChevronDown className="w-3.5 h-3.5" /></button>
                                 </div>
                               )}
                               {q.options.length > 2 && <button onClick={() => removeOpt(qi, oi)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 rounded p-0.5"><X className="w-3.5 h-3.5" /></button>}
@@ -2583,11 +2584,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           {q.options.length > 1 && (
                             <button type="button" onClick={() => shuffleOpts(qi)} className="text-xs hover:underline inline-flex items-center gap-1" style={{ color: pc }}>
                               <Shuffle className="w-3 h-3" />
-                              Mélanger les réponses
+                              {t("shuffleAnswers")}
                             </button>
                           )}
                         </div>
-                        <p className="text-center text-xs text-muted-foreground pt-4 italic">Un clic sur une option passe à la question suivante.</p>
+                        <p className="text-center text-xs text-muted-foreground pt-4 italic">{t("optionClickAutoNext")}</p>
                       </div>
                     </div>
                   </div>
@@ -2604,7 +2605,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("csvFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                       {captureLastName && <div><label className="text-sm text-muted-foreground">{t("csvLastName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                     </div>}
-                    <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
+                    <div><label className="text-sm text-muted-foreground">{t("email")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>
                     {capturePhone && <div><label className="text-sm text-muted-foreground">{t("phoneOptional")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
                   {/* Adeline (18 mai 2026) : la case à cocher RGPD doit
@@ -2633,11 +2634,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       (capture pour les quiz existants strictement préservée). */}
                   <button className="w-full max-w-md mx-auto block min-h-[48px] h-auto px-8 py-3 rounded-full text-white font-semibold text-lg whitespace-normal leading-snug" style={{ backgroundColor: pc }}>
                     <RichTextEdit
-                      value={captureSubmitText || "Accéder aux résultats"}
+                      value={captureSubmitText || t("captureSubmitDefault")}
                       onChange={setCaptureSubmitText}
                       singleLine
                       className="text-white font-semibold text-center w-full"
-                      placeholder="Accéder aux résultats"
+                      placeholder={t("captureSubmitDefault")}
                     />
                   </button>
                 </div>
@@ -2777,12 +2778,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           custom paragraph. Empty = keep the default. */}
                       <div className="text-left space-y-1 pt-1">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                          Message personnalisé (optionnel)
+                          {t("bonusIntroLabel")}
                         </p>
                         <textarea
                           value={bonusIntroText}
                           onChange={(e) => setBonusIntroText(e.target.value)}
-                          placeholder="Laisse vide pour garder le message par défaut, ou écris ton propre message ici."
+                          placeholder={t("bonusIntroPh")}
                           rows={3}
                           className="w-full text-sm bg-background border rounded-lg px-3 py-2 resize-y"
                         />
@@ -2795,22 +2796,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           email pipeline set up. Empty = locale default. */}
                       <div className="text-left space-y-1 pt-3">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                          Message après partage (optionnel)
+                          {t("bonusUnlockedLabel")}
                         </p>
                         <textarea
                           value={bonusUnlockedMessage}
                           onChange={(e) =>
                             setBonusUnlockedMessage(e.target.value)
                           }
-                          placeholder="Ex : Bonus débloqué ! Ton code promo : IMAGELYS20."
+                          placeholder={t("bonusUnlockedPh")}
                           rows={2}
                           maxLength={500}
                           className="w-full text-sm bg-background border rounded-lg px-3 py-2 resize-y"
                         />
                         <p className="text-[11px] text-muted-foreground">
-                          Affiché à la place du message par défaut une fois
-                          le bonus débloqué. Pratique pour livrer un code
-                          promo directement, sans email.
+                          {t("bonusUnlockedHint")}
                         </p>
                       </div>
                     </div>
@@ -2985,11 +2984,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         <div className="flex-1">
                           <p className="font-semibold">
                             {cov.severity === "danger"
-                              ? "Ce résultat ne peut jamais être attribué"
-                              : `Faible chance d'être attribué — ${cov.questionsLeading}/${cov.totalQuestions} questions y mènent`}
+                              ? t("resultUnreachable")
+                              : t("resultLowChance", { leading: cov.questionsLeading, total: cov.totalQuestions })}
                           </p>
                           <p className="text-xs opacity-90 mt-0.5">
-                            Pour qu'un résultat soit choisi, plusieurs questions doivent y mener. Pense à ajuster les options de tes questions ou à demander à l'IA de rééquilibrer.
+                            {t("resultCoverageHint")}
                           </p>
                           <Button
                             type="button"
@@ -2999,7 +2998,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             onClick={() => openRebalance(ri)}
                           >
                             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                            Rééquilibrer avec l&apos;IA
+                            {t("resultRebalanceAi")}
                           </Button>
                         </div>
                       </div>
@@ -3088,12 +3087,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     )}
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
-                        <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-white font-semibold text-center" placeholder="Texte du CTA…" />
+                        <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-white font-semibold text-center" placeholder={t("ctaTextInlinePh")} />
                       </button>
-                      <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder="URL du CTA (https://…)" />
+                      <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder={t("ctaUrlInlinePh")} />
                     </div>
                     <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
-                      <div className="text-xs font-semibold text-foreground mb-1">Tag Systeme.io pour ce résultat</div>
+                      <div className="text-xs font-semibold text-foreground mb-1">{t("resultSioTagTitle")}</div>
                       {/* Adeline (18 mai 2026) : auparavant on injectait
                           `r.title` brut dans le hint, ce qui laissait
                           visibles les placeholders gendrés et le `{name}`
@@ -3152,11 +3151,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  Rééquilibrer ton quiz
+                  {t("rebalanceDialogTitle")}
                 </DialogTitle>
                 <DialogDescription>
                   {rebalanceTarget !== null
-                    ? `L'IA va proposer de réassigner certaines options pour que « ${stripHtml(cleanPlaceholdersForLabel(editResults[rebalanceTarget]?.title)) || `Résultat ${rebalanceTarget + 1}`} » soit atteignable. Le texte de tes questions et résultats reste inchangé.`
+                    ? t("rebalanceDialogDesc", { label: stripHtml(cleanPlaceholdersForLabel(editResults[rebalanceTarget]?.title)) || t("rebalanceFallbackLabel", { n: rebalanceTarget + 1 }) })
                     : ""}
                 </DialogDescription>
               </DialogHeader>
@@ -3164,17 +3163,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {rebalanceProposal === null && (
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="rebalance-intent" className="text-xs">Précise (optionnel)</Label>
+                    <Label htmlFor="rebalance-intent" className="text-xs">{t("rebalanceIntentLabel")}</Label>
                     <textarea
                       id="rebalance-intent"
                       value={rebalanceIntent}
                       onChange={(e) => setRebalanceIntent(e.target.value.slice(0, 500))}
-                      placeholder="Ex : ce résultat doit s'orienter vers les autrices qui veulent une formation"
+                      placeholder={t("rebalanceIntentPlaceholder")}
                       rows={3}
                       className="w-full text-sm mt-1.5 rounded-md border bg-background px-3 py-2"
                       disabled={rebalanceLoading}
                     />
-                    <p className="text-[11px] text-muted-foreground mt-1">L&apos;IA s&apos;en sert pour choisir les options les plus pertinentes.</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{t("rebalanceIntentHint")}</p>
                   </div>
                   {rebalanceError && (
                     <div className="rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-900 dark:text-red-100">
@@ -3254,8 +3253,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         <div className="flex-1 overflow-y-auto p-6"><div className="max-w-3xl mx-auto space-y-4">
           {/* Custom URL slug */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Lien personnalisé</h3>
-            <p className="text-xs text-muted-foreground">Choisis une URL courte et mémorable. Lettres minuscules, chiffres et tirets uniquement.</p>
+            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> {t("customLinkTitle")}</h3>
+            <p className="text-xs text-muted-foreground">{t("customLinkDesc")}</p>
             <ShareDomainPicker
               label={tc("shareDomain")}
               value={shareDomain}
@@ -3300,8 +3299,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> Réseaux de partage proposés</h3>
-            <p className="text-xs text-muted-foreground">Choisis les réseaux affichés sur la page de résultat.</p>
+            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> {t("shareNetworksTitle")}</h3>
+            <p className="text-xs text-muted-foreground">{t("shareNetworksDesc")}</p>
             <div className="flex flex-wrap gap-2">
               {ALLOWED_SHARE_NETWORKS.map((n) => {
                 const active = shareNetworks.includes(n);
@@ -3322,8 +3321,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           {/* SEO / Open Graph description + vignette de partage */}
           <Card><CardContent className="pt-6 space-y-4">
             <div className="space-y-3">
-              <h3 className="font-semibold">Aperçu sur les réseaux (SEO)</h3>
-              <p className="text-xs text-muted-foreground">Description utilisée quand un visiteur partage le lien.</p>
+              <h3 className="font-semibold">{t("seoPreviewTitle")}</h3>
+              <p className="text-xs text-muted-foreground">{t("seoPreviewDesc")}</p>
               <Textarea
                 value={ogDescription}
                 onChange={(e) => setOgDescription(e.target.value)}
@@ -3340,8 +3339,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 logo qui s'affiche. Même pattern que les pages capture /
                 vente Tipote (cf. PageBuilder). */}
             <div className="space-y-2 pt-2 border-t">
-              <h3 className="font-semibold text-sm">Vignette de partage social</h3>
-              <p className="text-xs text-muted-foreground">Image affichée par WhatsApp, iMessage, X, etc. quand ton lien est partagé. Sans upload, c'est notre logo qui s'affiche.</p>
+              <h3 className="font-semibold text-sm">{t("ogImageTitle")}</h3>
+              <p className="text-xs text-muted-foreground">{t("ogImageDesc")}</p>
               {ogImageUrl ? (
                 <div className="space-y-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -3355,14 +3354,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgImageUpload(f); }}
                         disabled={uploadingOgImage}
                       />
-                      {uploadingOgImage ? "Upload…" : "Remplacer"}
+                      {uploadingOgImage ? t("uploading") : t("change")}
                     </label>
                     <button
                       type="button"
                       onClick={() => setOgImageUrl(null)}
                       className="text-xs px-3 py-1.5 rounded border hover:bg-destructive/10 text-destructive"
                     >
-                      Retirer
+                      {t("remove")}
                     </button>
                   </div>
                 </div>
@@ -3375,10 +3374,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgImageUpload(f); }}
                     disabled={uploadingOgImage}
                   />
-                  {uploadingOgImage ? "Upload…" : "Téléverser une image"}
+                  {uploadingOgImage ? t("uploading") : t("uploadImage")}
                 </label>
               )}
-              <p className="text-[10px] text-muted-foreground">Format recommandé : 1200 × 630 px (ratio 1.91:1). Max 10 Mo.</p>
+              <p className="text-[10px] text-muted-foreground">{t("ogImageFormatHint")}</p>
             </div>
 
             {/* Toggle "masquer aux moteurs de recherche". Quand coché :
@@ -3394,10 +3393,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   className="mt-0.5"
                 />
                 <div className="flex-1">
-                  <div className="text-sm font-medium">Masquer ce quiz aux moteurs de recherche</div>
+                  <div className="text-sm font-medium">{t("seoNoindexLabel")}</div>
                   <p className="text-xs text-muted-foreground">
-                    Coche si tu ne veux pas que Google, Bing ou les IA (ChatGPT, Perplexity…) indexent ce quiz.
-                    Ton lien direct reste partageable.
+                    {t("seoNoindexDesc")}
                   </p>
                 </div>
               </label>
@@ -3408,18 +3406,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           <Card className={isPaidPlan ? "" : "opacity-70"}>
             <CardContent className="pt-6 space-y-3">
               <h3 className="font-semibold flex items-center gap-2">
-                Pied de page personnalisé
-                {!isPaidPlan && <Badge variant="outline" className="text-[10px]">Payant</Badge>}
+                {t("customFooterTitle")}
+                {!isPaidPlan && <Badge variant="outline" className="text-[10px]">{t("paidBadge")}</Badge>}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {isPaidPlan
-                  ? "Remplace « Ce quiz vous est offert par Tipote » par votre propre signature."
+                  ? t("customFooterDesc")
                   : t("paidPlanOnly")}
               </p>
               <Input
                 value={customFooterText}
                 onChange={(e) => setCustomFooterText(e.target.value)}
-                placeholder="Ex: Ce quiz vous est offert par Mon Site"
+                placeholder={t("customFooterTextPh")}
                 className="text-sm"
                 disabled={!isPaidPlan}
               />
@@ -3436,19 +3434,19 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           {/* Per-quiz widget overrides */}
           <Card>
             <CardContent className="pt-6 space-y-4">
-              <h3 className="font-semibold">Widgets pour ce quiz</h3>
+              <h3 className="font-semibold">{t("widgetsTitle")}</h3>
               <p className="text-xs text-muted-foreground">
-                Choisis un widget de toast et un widget de partage spécifiques à ce quiz. Laisse sur « Automatique » pour utiliser le premier widget actif.
+                {t("widgetsDesc")}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Widget Toast</label>
+                  <label className="text-xs font-medium text-muted-foreground">{t("widgetToastLabel")}</label>
                   <select
                     value={selectedToastWidget}
                     onChange={(e) => setSelectedToastWidget(e.target.value)}
                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    <option value="">Automatique (premier actif)</option>
+                    <option value="">{t("widgetAutoOption")}</option>
                     {toastWidgets.map((w) => (
                       <option key={w.id} value={w.id} disabled={!w.enabled}>
                         {w.name}{!w.enabled ? t("widgetDisabled") : ""}
@@ -3457,13 +3455,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Widget Partage</label>
+                  <label className="text-xs font-medium text-muted-foreground">{t("widgetShareLabel")}</label>
                   <select
                     value={selectedShareWidget}
                     onChange={(e) => setSelectedShareWidget(e.target.value)}
                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    <option value="">Automatique (premier actif)</option>
+                    <option value="">{t("widgetAutoOption")}</option>
                     {shareWidgets.map((w) => (
                       <option key={w.id} value={w.id} disabled={!w.enabled}>
                         {w.name}{!w.enabled ? t("widgetDisabled") : ""}
@@ -3478,7 +3476,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           <div className="flex justify-end">
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-1" />}
-              Enregistrer
+              {t("save")}
             </Button>
           </div>
         </div></div>

@@ -818,7 +818,7 @@ export function ContentEditor({ initialItem }: Props) {
 
           {channel && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Canal :</span>
+              <span>{t("channelLabel")}</span>
               <Badge variant="secondary" className="capitalize">{channel}</Badge>
             </div>
           )}
@@ -826,7 +826,7 @@ export function ContentEditor({ initialItem }: Props) {
 
         <Card className="p-4 space-y-2">
           <div>
-            <p className="font-semibold">Contenu</p>
+            <p className="font-semibold">{t("content")}</p>
             <p className="text-sm text-muted-foreground">
               {isFunnel
                 ? t("funnelHint")
@@ -839,47 +839,47 @@ export function ContentEditor({ initialItem }: Props) {
               <TabsList className="w-full justify-start">
                 <TabsTrigger value="data" className="flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  Données (JSON)
+                  {t("tabData")}
                 </TabsTrigger>
                 <TabsTrigger value="html" className="flex items-center gap-2">
                   <Eye className="w-4 h-4" />
-                  HTML (preview + kit)
+                  {t("tabHtml")}
                 </TabsTrigger>
                 <TabsTrigger value="chat" className="flex items-center gap-2">
                   <Wand2 className="w-4 h-4" />
-                  Itérations (chat)
+                  {t("tabChat")}
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="data" className="mt-4 space-y-3">
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="space-y-1">
-                    <Label>Type</Label>
+                    <Label>{t("type")}</Label>
                     <Select value={funnelKind} onValueChange={(v) => setFunnelKind(v === "vente" ? "vente" : "capture")}>
                       <SelectTrigger>
                         <SelectValue placeholder="capture" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="capture">Capture</SelectItem>
-                        <SelectItem value="vente">Vente</SelectItem>
+                        <SelectItem value="capture">{t("capture")}</SelectItem>
+                        <SelectItem value="vente">{t("sale")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1 md:col-span-2">
-                    <Label>Template</Label>
+                    <Label>{t("templateLabel")}</Label>
                     <Input
                       value={funnelTemplateId}
                       onChange={(e) => setFunnelTemplateId(e.target.value)}
                       placeholder='ex: "capture-01" / "vente-03"'
                     />
                     <p className="text-xs text-muted-foreground">
-                      Astuce : pour garder une compat DB maximale, le JSON est stocké dans <span className="font-medium">content</span>.
+                      {t("compatHint")}
                     </p>
                   </div>
 
                   <div className="space-y-1 md:col-span-3">
-                    <Label>Variant (optionnel)</Label>
+                    <Label>{t("variantOptional")}</Label>
                     <Input
                       value={funnelVariantId ?? ""}
                       onChange={(e) => setFunnelVariantId(e.target.value ? e.target.value : null)}
@@ -907,7 +907,7 @@ export function ContentEditor({ initialItem }: Props) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>brandTokens (optionnel)</Label>
+                  <Label>{t("brandTokensOptional")}</Label>
                   <Textarea
                     value={JSON.stringify(funnelBrandTokens ?? {}, null, 2)}
                     onChange={(e) => {
@@ -945,12 +945,12 @@ export function ContentEditor({ initialItem }: Props) {
                     {isRenderingHtml ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        Rendu…
+                        {t("rendering")}
                       </>
                     ) : (
                       <>
                         <Wand2 className="w-4 h-4 mr-1" />
-                        Générer HTML
+                        {t("generateHtml")}
                       </>
                     )}
                   </Button>
@@ -962,7 +962,7 @@ export function ContentEditor({ initialItem }: Props) {
                     disabled={!htmlPreview}
                   >
                     <Download className="w-4 h-4 mr-1" />
-                    Télécharger preview
+                    {t("downloadPreview")}
                   </Button>
 
                   <Button
@@ -972,7 +972,7 @@ export function ContentEditor({ initialItem }: Props) {
                     disabled={!htmlPreview}
                   >
                     <Copy className="w-4 h-4 mr-1" />
-                    Copier preview
+                    {t("copyPreview")}
                   </Button>
 
                   <Button
@@ -982,24 +982,24 @@ export function ContentEditor({ initialItem }: Props) {
                     disabled={!htmlKit}
                   >
                     <Download className="w-4 h-4 mr-1" />
-                    Télécharger kit
+                    {t("downloadKit")}
                   </Button>
 
                   <Button variant="outline" size="sm" onClick={() => copyToClipboard(htmlKit, t("toast.kitCopied"))} disabled={!htmlKit}>
                     <Copy className="w-4 h-4 mr-1" />
-                    Copier kit
+                    {t("copyKit")}
                   </Button>
                 </div>
 
                 {!htmlPreview && !htmlKit ? (
                   <div className="text-sm text-muted-foreground border rounded-lg p-4 bg-muted/30">
-                    Clique sur <span className="font-medium">Générer HTML</span> pour obtenir :
+                    {t("clickGenerateIntro")}
                     <ul className="list-disc pl-5 mt-2 space-y-1">
                       <li>
-                        Une page <span className="font-medium">Preview</span> (projection maximale)
+                        {t("previewFullPage")}
                       </li>
                       <li>
-                        Un <span className="font-medium">Kit Systeme-compatible</span> (blocs + SLOTS)
+                        {t("systemeKit")}
                       </li>
                     </ul>
                   </div>
@@ -1007,8 +1007,8 @@ export function ContentEditor({ initialItem }: Props) {
                   <div className="grid gap-4 lg:grid-cols-2">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="font-semibold">Preview</p>
-                        <Badge variant="secondary">HTML complet</Badge>
+                        <p className="font-semibold">{t("previewLabel")}</p>
+                        <Badge variant="secondary">{t("htmlComplete")}</Badge>
                       </div>
                       <div className="border rounded-lg overflow-hidden bg-white dark:bg-card">
                         <iframe title="Preview" srcDoc={htmlPreview || "<html><body></body></html>"} className="w-full h-[360px] sm:h-[560px]" />
@@ -1017,13 +1017,12 @@ export function ContentEditor({ initialItem }: Props) {
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="font-semibold">Kit Systeme</p>
-                        <Badge variant="outline">Copier/coller bloc par bloc</Badge>
+                        <p className="font-semibold">{t("kitSystemeLabel")}</p>
+                        <Badge variant="outline">{t("copyBlockByBlock")}</Badge>
                       </div>
                       <Textarea value={htmlKit} readOnly rows={22} className="font-mono text-xs" />
                       <p className="text-xs text-muted-foreground">
-                        Astuce : dans Systeme.io, crée une section puis colle un bloc du kit dans “Code”. Les zones{" "}
-                        <span className="font-medium">SLOT SYSTEME</span> indiquent où placer les éléments natifs (formulaire, bouton paiement, etc.).
+                        {t("systemeHint")}
                       </p>
                     </div>
                   </div>
@@ -1081,7 +1080,7 @@ export function ContentEditor({ initialItem }: Props) {
             />
             {isPinterest && (
               <p className="text-xs text-muted-foreground">
-                Pinterest : image requise, recommandée 1000×1500 px (ratio 2:3), max 32 Mo (PNG, JPG, WEBP).
+                {t("pinterestImageHint")}
               </p>
             )}
           </Card>
@@ -1093,7 +1092,7 @@ export function ContentEditor({ initialItem }: Props) {
             <div>
               <p className="font-semibold">{t("pinterestSettings")}</p>
               <p className="text-sm text-muted-foreground">
-                Titre max 100 car. · Description max 500 car. · Image requise
+                {t("pinterestSettingsDesc")}
               </p>
             </div>
             <PinterestBoardSelector
@@ -1148,19 +1147,18 @@ export function ContentEditor({ initialItem }: Props) {
                   className="text-slate-500 dark:text-slate-400 hover:text-slate-700"
                 >
                   <Copy className="h-4 w-4 mr-1" />
-                  Copier
+                  {t("copyBtn")}
                 </Button>
               </div>
               {status === "scheduled" && scheduledDate && (
                 <p className="text-xs text-muted-foreground">
-                  Programmé pour le{" "}
-                  <span className="font-medium">
-                    {new Date(scheduledDate + "T00:00:00").toLocaleDateString(locale, {
+                  {t("scheduledFor", {
+                    date: new Date(scheduledDate + "T00:00:00").toLocaleDateString(locale, {
                       day: "numeric",
                       month: "long",
                       year: "numeric",
-                    })}
-                  </span>
+                    }),
+                  })}
                 </p>
               )}
             </div>

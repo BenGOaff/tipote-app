@@ -25,6 +25,7 @@
 
 import "@vidstack/react/player/styles/default/theme.css";
 
+import { useTranslations } from "next-intl";
 import {
   useEffect,
   useMemo,
@@ -328,6 +329,7 @@ function SkipButton({
 // flash a dead button on browsers that don't support it (mobile Safari
 // + Firefox Linux for now).
 function PiPButton() {
+  const t = useTranslations("popquiz");
   const remote = useMediaRemote();
   const can = useMediaState("canPictureInPicture");
   const isOn = useMediaState("pictureInPicture");
@@ -336,7 +338,7 @@ function PiPButton() {
     <button
       type="button"
       onClick={() => remote.togglePictureInPicture()}
-      aria-label={isOn ? "Quitter le mode mini-fenêtre" : "Mode mini-fenêtre"}
+      aria-label={isOn ? t("pipExit") : t("pipEnter")}
       aria-pressed={isOn}
       className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 hidden sm:grid"
     >
@@ -449,6 +451,7 @@ export function PopquizPlayer({
   onDurationChange,
   renderOverlay,
 }: PopquizPlayerProps) {
+  const t = useTranslations("popquiz");
   const playerRef = useRef<MediaPlayerInstance>(null);
   const [snap, dispatch] = useReducer(reducer, undefined, initialSnapshot);
   // Affiché si la vidéo ne charge pas (réseau, ou lien signé expiré sur
@@ -583,7 +586,7 @@ export function PopquizPlayer({
             type="button"
             onClick={dismissCue}
             className="absolute top-3 right-3 z-30 size-9 rounded-full bg-white/95 hover:bg-white grid place-items-center text-foreground shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            aria-label="Reprendre la vidéo"
+            aria-label={t("resumeVideoAria")}
           >
             <X className="size-4" />
           </button>

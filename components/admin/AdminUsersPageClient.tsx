@@ -345,7 +345,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
         throw new Error(json?.error || "Failed to resend magic link");
       }
       toast({
-        title: t("toast.magicLinkSent") || "Magic link envoyé",
+        title: t("toast.magicLinkSent"),
         description: user.email ?? user.id,
       });
     } catch (e) {
@@ -366,7 +366,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
   async function deleteUser(user: AdminUser) {
     if (!user.id) return;
     const ok = window.confirm(
-      `Supprimer DÉFINITIVEMENT ${user.email ?? user.id} ?\n\nCascade : profil, projets, pages hostées, connexions sociales, données comptables — tout sera détruit. Action irréversible.`,
+      t("deleteUserConfirm", { who: user.email ?? user.id }),
     );
     if (!ok) return;
     setDeletingId(user.id);
@@ -380,7 +380,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       if (!res.ok || !json?.ok) {
         throw new Error(json?.error || "Failed to delete user");
       }
-      toast({ title: "User supprimé", description: user.email ?? user.id });
+      toast({ title: t("toast.userDeleted"), description: user.email ?? user.id });
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
       setSelectedIds((prev) => {
         const next = new Set(prev);
@@ -655,7 +655,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             {/* Segment filter (only if no users selected) */}
             {selectedIds.size === 0 && (
               <div className="space-y-1">
-                <div className="text-xs font-medium text-muted-foreground">Segment (plans ciblés) :</div>
+                <div className="text-xs font-medium text-muted-foreground">{t("segmentLabel")}</div>
                 <div className="flex flex-wrap gap-2">
                   {PLANS.map((plan) => (
                     <label key={plan} className="flex items-center gap-1.5 text-sm cursor-pointer">
@@ -673,7 +673,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                   ))}
                 </div>
                 {emailSegment.length === 0 && (
-                  <div className="text-xs text-amber-600 dark:text-amber-400">⚠ Aucun segment = envoi à TOUS les users</div>
+                  <div className="text-xs text-amber-600 dark:text-amber-400">{t("noSegmentWarning")}</div>
                 )}
               </div>
             )}
@@ -770,7 +770,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                     const data = await res.json();
                     if (data.ok) {
                       setEmailResult({ sent: data.sent, failed: data.failed, total: data.total });
-                      toast({ title: `✅ ${data.sent}/${data.total} emails envoyés` });
+                      toast({ title: t("toast.emailsSent", { sent: data.sent, total: data.total }) });
                     } else {
                       toast({ title: tc("error"), description: data.error, variant: "destructive" });
                     }
@@ -802,7 +802,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
             {/* Preview */}
             {emailPreviewHtml && (
               <div className="mt-3 space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">Prévisualisation :</div>
+                <div className="text-xs font-medium text-muted-foreground">{t("previewLabel")}</div>
                 <div className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900/40">
                   <iframe
                     srcDoc={emailPreviewHtml}
@@ -872,9 +872,9 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
 
         {showCreateForm && (
           <div className="mt-4 border-t pt-4 space-y-3">
-            <div className="text-sm font-medium">Créer un utilisateur manuellement</div>
+            <div className="text-sm font-medium">{t("createUserManuallyTitle")}</div>
             <div className="text-xs text-muted-foreground">
-              Crée le compte Supabase + profil + envoie un magic link de connexion.
+              {t("createUserManuallyDesc")}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
               <div className="sm:col-span-2">
@@ -987,7 +987,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 >
                   Plan{sortIndicator("plan")}
                 </TableHead>
-                <TableHead className="min-w-[140px]">Crédits IA</TableHead>
+                <TableHead className="min-w-[140px]">{t("aiCreditsCol")}</TableHead>
                 <TableHead
                   className="min-w-[110px] cursor-pointer select-none hidden sm:table-cell"
                   onClick={() => handleSort("last_sign_in_at")}
@@ -1056,9 +1056,9 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                         </Select>
 
                         {dirty ? (
-                          <Badge>modifié</Badge>
+                          <Badge>{t("modifiedBadge")}</Badge>
                         ) : (
-                          <Badge variant="secondary">ok</Badge>
+                          <Badge variant="secondary">{t("okBadge")}</Badge>
                         )}
                       </div>
                     </TableCell>
@@ -1122,7 +1122,7 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                         <Button
                           size="sm"
                           variant="outline"
-                          title="Supprimer définitivement"
+                          title={t("deletePermanently")}
                           onClick={() => deleteUser(u)}
                           disabled={deletingId === u.id || resendingId === u.id}
                           className="border-destructive/40 text-destructive hover:bg-destructive/10"
@@ -1191,10 +1191,9 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
       <Dialog open={bulkDialog === "credits"} onOpenChange={(open) => !open && setBulkDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter des crédits bonus</DialogTitle>
+            <DialogTitle>{t("addBonusCreditsTitle")}</DialogTitle>
             <DialogDescription>
-              Ajouter des crédits bonus à {selectedIds.size} utilisateur(s) sélectionné(s).
-              Ces crédits s&apos;ajoutent au quota mensuel.
+              {t("addBonusCreditsDesc", { n: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

@@ -17,6 +17,7 @@
 // table — flagged as v2.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -75,12 +76,14 @@ interface AnalyticsResponse {
   error?: string;
 }
 
-const PERIOD_LABELS: Record<Period, string> = {
-  "7": "7 derniers jours",
-  "30": "30 derniers jours",
-  "90": "90 derniers jours",
-  all: "Depuis le début",
-};
+function buildPeriodLabels(t: (key: string) => string): Record<Period, string> {
+  return {
+    "7": t("analyticsPeriod7"),
+    "30": t("analyticsPeriod30"),
+    "90": t("analyticsPeriod90"),
+    all: t("analyticsPeriodAll"),
+  };
+}
 
 // Pie palette — 6 colors that read well stacked. We loop if the user
 // has more buckets than colors (rare, but happens for very segmented
@@ -101,6 +104,8 @@ interface Props {
 }
 
 export function QuizAnalyticsClient({ quizId, initial }: Props) {
+  const t = useTranslations("quizDetail");
+  const PERIOD_LABELS = buildPeriodLabels(t);
   const [period, setPeriod] = useState<Period>(initial.period);
   const [data, setData] = useState<AnalyticsResponse>(initial);
   const [loading, setLoading] = useState(false);
@@ -142,7 +147,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
           <Button variant="ghost" size="icon" asChild>
             <Link
               href={`/quiz/${quizId}`}
-              aria-label="Retour à l'éditeur"
+              aria-label={t("backToEditorAria")}
             >
               <ArrowLeft className="size-5" />
             </Link>
@@ -153,7 +158,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
               <span className="truncate">{stripHtml(data.quiz.title)}</span>
             </h1>
             <p className="text-xs text-muted-foreground">
-              Statistiques · {PERIOD_LABELS[data.period]}
+              {t("analyticsStatsLabel")} · {PERIOD_LABELS[data.period]}
             </p>
           </div>
         </div>
@@ -170,7 +175,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {p === "all" ? "Tout" : `${p}j`}
+              {p === "all" ? t("analyticsPeriodAllShort") : t("analyticsPeriodDaysShort", { count: Number(p) })}
             </button>
           ))}
         </div>
@@ -180,28 +185,28 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
           icon={<Eye className="size-4" />}
-          label="Vues"
+          label={t("analyticsViewsLabel")}
           value={m.viewsCount.toLocaleString("fr-FR")}
-          hint="Nombre total de visiteurs (cumulé depuis le début)"
+          hint={t("analyticsViewsHint")}
         />
         <KpiCard
           icon={<Users className="size-4" />}
-          label="Leads"
+          label={t("analyticsLeadsLabel")}
           value={m.leadsCount.toLocaleString("fr-FR")}
-          hint={`${m.exportedSioCount} exportés vers Systeme.io`}
+          hint={t("analyticsLeadsHint", { count: m.exportedSioCount })}
         />
         <KpiCard
           icon={<Activity className="size-4" />}
-          label="Taux de capture"
+          label={t("analyticsCaptureRateLabel")}
           value={`${m.captureRate}%`}
-          hint="Leads / vues (cumulé)"
+          hint={t("analyticsCaptureRateHint")}
           accent="primary"
         />
         <KpiCard
           icon={<Send className="size-4" />}
-          label="Export Systeme.io"
+          label={t("analyticsExportSioLabel")}
           value={`${m.exportRate}%`}
-          hint="% des leads taggés dans SIO"
+          hint={t("analyticsExportSioHint")}
         />
       </div>
 
@@ -209,13 +214,13 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold">Évolution des leads</h2>
+            <h2 className="text-sm font-semibold">{t("analyticsLeadsEvolution")}</h2>
             {loading ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             ) : null}
           </div>
           {data.leadsByDay.length === 0 ? (
-            <EmptyState message="Aucun lead capturé sur cette période." />
+            <EmptyState message={t("analyticsEmptyLeads")} />
           ) : (
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={data.leadsByDay} margin={{ top: 4, left: -12, right: 8 }}>
@@ -251,9 +256,9 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-sm font-semibold mb-3">Distribution par résultat</h2>
+          <h2 className="text-sm font-semibold mb-3">{t("distributionByResult")}</h2>
           {data.resultDistribution.length === 0 ? (
-            <EmptyState message="Aucun résultat à afficher." />
+            <EmptyState message={t("analyticsEmptyResults")} />
           ) : (
             <>
               <ResponsiveContainer width="100%" height={180}>

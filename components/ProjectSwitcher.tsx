@@ -543,18 +543,18 @@ export function ProjectSwitcher() {
             </p>
             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-1.5">
               <p className="text-xs font-semibold text-destructive">
-                Ce qui sera définitivement supprimé :
+                {t("deleteListTitle")}
               </p>
               <ul className="text-xs text-foreground/80 space-y-0.5 list-disc ml-4">
-                <li>Ton positionnement, ton persona, tes offres</li>
-                <li>Tous tes contenus (posts, emails, articles, pages)</li>
-                <li>Tous tes quiz, sondages et popquizzes du projet</li>
-                <li>Tous les leads et clients liés à ce projet</li>
-                <li>Tes connexions réseaux sociaux et automations</li>
-                <li>Tes pages publiées (les URLs renverront 404)</li>
+                <li>{t("deleteItem1")}</li>
+                <li>{t("deleteItem2")}</li>
+                <li>{t("deleteItem3")}</li>
+                <li>{t("deleteItem4")}</li>
+                <li>{t("deleteItem5")}</li>
+                <li>{t("deleteItem6")}</li>
               </ul>
               <p className="text-[11px] text-muted-foreground pt-1">
-                Aucun autre de tes projets ne sera affecté.
+                {t("deleteOtherUnaffected")}
               </p>
             </div>
             <div className="space-y-1.5">

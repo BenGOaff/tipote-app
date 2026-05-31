@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,7 @@ interface QuizFormProps {
 export function QuizForm({ onClose }: QuizFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("quizForm");
 
   const [step, setStep] = useState<"choose" | "config" | "import" | "edit">("choose");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -80,9 +82,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const [results, setResults] = useState<QuizResult[]>([]);
   const [ctaText, setCtaText] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
-  const [consentText, setConsentText] = useState(
-    "En renseignant ton email, tu acceptes notre politique de confidentialité.",
-  );
+  const [consentText, setConsentText] = useState(t("defaultConsentText"));
   const [bonusDescription, setBonusDescription] = useState("");
   const [shareMessage, setShareMessage] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
@@ -111,13 +111,13 @@ export function QuizForm({ onClose }: QuizFormProps) {
         setSioTagsLoaded(true);
       } else if (json?.error === "NO_API_KEY") {
         toast({
-          title: "Clé API manquante",
-          description: "Configure ta clé API Systeme.io dans Réglages > Systeme.io.",
+          title: t("toastNoApiKeyTitle"),
+          description: t("toastNoApiKeyDesc"),
           variant: "destructive",
         });
       }
     } catch {
-      toast({ title: "Erreur", description: "Impossible de charger les tags.", variant: "destructive" });
+      toast({ title: t("toastGenericError"), description: t("toastTagsLoadFailed"), variant: "destructive" });
     } finally {
       setSioTagsLoading(false);
     }
@@ -144,7 +144,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
       return (
         <div className="flex gap-2">
           <Input
-            placeholder="Nom du nouveau tag"
+            placeholder={t("newTagPlaceholder")}
             value={newTagName}
             onChange={(e) => setNewTagName(e.target.value)}
             className="flex-1 text-sm"
@@ -163,7 +163,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
       return (
         <Button variant="outline" size="sm" onClick={loadSioTags} disabled={sioTagsLoading}>
           {sioTagsLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <ChevronDown className="w-3 h-3 mr-1" />}
-          {sioTagsLoading ? "Chargement..." : "Charger mes tags"}
+          {sioTagsLoading ? t("loadingTags") : t("loadMyTags")}
         </Button>
       );
     }
@@ -174,7 +174,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">— Aucun tag —</option>
+          <option value="">{t("noTagOption")}</option>
           {sioTags.map((t) => (
             <option key={t.id} value={t.name}>{t.name}</option>
           ))}
@@ -184,7 +184,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           size="icon"
           className="h-9 w-9"
           onClick={() => { setNewTagFor(pickerId); setNewTagName(""); }}
-          title="Créer un nouveau tag"
+          title={t("createNewTagTitle")}
         >
           <Plus className="w-3 h-3" />
         </Button>
@@ -195,8 +195,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
   const handleGenerate = async () => {
     if (!objective.trim() || !target.trim()) {
       toast({
-        title: "Champs requis",
-        description: "Remplis au moins l'objectif et la cible.",
+        title: t("toastRequiredFieldsTitle"),
+        description: t("toastRequiredFieldsDesc"),
         variant: "destructive",
       });
       return;
@@ -225,17 +225,17 @@ export function QuizForm({ onClose }: QuizFormProps) {
         const json = await res.json();
         if (json?.error === "NO_CREDITS") {
           toast({
-            title: "Crédits insuffisants",
-            description: "La génération de quiz coûte 6 crédits.",
+            title: t("toastNoCreditsTitle"),
+            description: t("toastNoCreditsDesc"),
             variant: "destructive",
           });
           return;
         }
-        throw new Error(json?.error || "Erreur de génération");
+        throw new Error(json?.error || t("genErrorMsg"));
       }
 
       // Read SSE stream
-      if (!res.body) throw new Error("Pas de réponse du serveur");
+      if (!res.body) throw new Error(t("noServerResponse"));
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -265,13 +265,13 @@ export function QuizForm({ onClose }: QuizFormProps) {
             } else if (eventType === "error") {
               if (data.error === "NO_CREDITS") {
                 toast({
-                  title: "Crédits insuffisants",
-                  description: "La génération de quiz coûte 6 crédits.",
+                  title: t("toastNoCreditsTitle"),
+                  description: t("toastNoCreditsDesc"),
                   variant: "destructive",
                 });
                 return;
               }
-              throw new Error(data.error || "Erreur de génération");
+              throw new Error(data.error || t("genErrorMsg"));
             }
             // heartbeat and progress events are ignored
           } catch (parseErr) {
@@ -282,7 +282,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
       }
 
       if (!result?.ok) {
-        throw new Error("La génération n'a pas abouti. Réessaie.");
+        throw new Error(t("genFailedRetry"));
       }
 
       const quiz = result.quiz;
@@ -315,8 +315,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
       setStep("edit");
     } catch (err: any) {
       toast({
-        title: "Erreur",
-        description: err.message || "Impossible de générer le quiz.",
+        title: t("toastGenericError"),
+        description: err.message || t("toastGenFailedDesc"),
         variant: "destructive",
       });
     } finally {
@@ -326,7 +326,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
 
   const handleSave = async (status: "draft" | "active" = "draft") => {
     if (!title.trim()) {
-      toast({ title: "Titre requis", variant: "destructive" });
+      toast({ title: t("toastTitleRequired"), variant: "destructive" });
       return;
     }
 
@@ -369,14 +369,14 @@ export function QuizForm({ onClose }: QuizFormProps) {
       });
 
       const json = await res.json();
-      if (!json?.ok) throw new Error(json?.error || "Erreur");
+      if (!json?.ok) throw new Error(json?.error || t("toastGenericError"));
 
-      toast({ title: status === "active" ? "Quiz publié !" : "Quiz sauvegardé !" });
+      toast({ title: status === "active" ? t("toastPublished") : t("toastSavedShort") });
       router.push(`/quiz/${json.quizId}`);
     } catch (err: any) {
       toast({
-        title: "Erreur",
-        description: err.message || "Impossible de sauvegarder.",
+        title: t("toastGenericError"),
+        description: err.message || t("toastSaveFailedDesc"),
         variant: "destructive",
       });
     } finally {
@@ -465,7 +465,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
         body: formData,
       });
       const json = await res.json();
-      if (!json?.ok) throw new Error(json?.error || "Erreur d'import");
+      if (!json?.ok) throw new Error(json?.error || t("toastImportError"));
 
       const quiz = json.quiz;
       setTitle(quiz.title ?? "");
@@ -491,11 +491,11 @@ export function QuizForm({ onClose }: QuizFormProps) {
         })),
       );
       setStep("edit");
-      toast({ title: "Quiz importé !", description: `${quiz.questions?.length ?? 0} questions et ${quiz.results?.length ?? 0} profils détectés.` });
+      toast({ title: t("toastImported"), description: t("toastImportedDesc", { qCount: quiz.questions?.length ?? 0, rCount: quiz.results?.length ?? 0 }) });
     } catch (err: any) {
       toast({
-        title: "Erreur d'import",
-        description: err.message || "Impossible de lire le fichier.",
+        title: t("toastImportError"),
+        description: err.message || t("toastImportReadFailed"),
         variant: "destructive",
       });
     } finally {
@@ -512,9 +512,9 @@ export function QuizForm({ onClose }: QuizFormProps) {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h2 className="text-xl font-bold">Créer un Quiz Lead Magnet</h2>
+            <h2 className="text-xl font-bold">{t("chooseTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              Choisis comment tu veux créer ton quiz
+              {t("chooseSubtitle")}
             </p>
           </div>
         </div>
@@ -529,11 +529,11 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 <Sparkles className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-bold">Créer avec l&apos;IA</h3>
+                <h3 className="font-bold">{t("cardAiTitle")}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Décris ton objectif et ta cible, l&apos;IA génère un quiz complet (questions, réponses, profils résultat). Tu n&apos;as plus qu&apos;à ajuster.
+                  {t("cardAiDesc")}
                 </p>
-                <Badge variant="secondary" className="mt-2 text-xs">6 crédits</Badge>
+                <Badge variant="secondary" className="mt-2 text-xs">{t("creditsCount", { n: 6 })}</Badge>
               </div>
             </div>
           </Card>
@@ -547,11 +547,11 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 <FileUp className="w-5 h-5 text-blue-500 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="font-bold">Importer un quiz existant</h3>
+                <h3 className="font-bold">{t("cardImportTitle")}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Tu as déjà un quiz ? Importe-le depuis un fichier (PDF, Word, Excel ou texte) et Tipote le transforme automatiquement.
+                  {t("cardImportDesc")}
                 </p>
-                <Badge variant="secondary" className="mt-2 text-xs">6 crédits</Badge>
+                <Badge variant="secondary" className="mt-2 text-xs">{t("creditsCount", { n: 6 })}</Badge>
               </div>
             </div>
           </Card>
@@ -565,11 +565,11 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 <PenLine className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
               </div>
               <div>
-                <h3 className="font-bold">Créer de zéro</h3>
+                <h3 className="font-bold">{t("cardScratchTitle")}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Tu sais exactement ce que tu veux ? Rédige tes questions, réponses et profils résultat manuellement.
+                  {t("cardScratchDesc")}
                 </p>
-                <Badge variant="secondary" className="mt-2 text-xs">0 crédit</Badge>
+                <Badge variant="secondary" className="mt-2 text-xs">{t("creditsZero")}</Badge>
               </div>
             </div>
           </Card>
@@ -587,9 +587,9 @@ export function QuizForm({ onClose }: QuizFormProps) {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h2 className="text-xl font-bold">Importer un quiz</h2>
+            <h2 className="text-xl font-bold">{t("importTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              L&apos;IA analyse ton fichier et en extrait les questions, réponses et profils
+              {t("importDesc")}
             </p>
           </div>
         </div>
@@ -598,7 +598,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           {isImporting ? (
             <div className="flex flex-col items-center gap-3 py-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Analyse du fichier en cours...</p>
+              <p className="text-sm text-muted-foreground">{t("importAnalyzing")}</p>
             </div>
           ) : (
             <>
@@ -608,9 +608,9 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 </div>
               </div>
               <div>
-                <p className="font-medium">Glisse ton fichier ici ou clique pour sélectionner</p>
+                <p className="font-medium">{t("importDropZone")}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Formats acceptés : PDF, Word (.docx), Excel (.xlsx), Texte (.txt)
+                  {t("importFormats")}
                 </p>
               </div>
               <input
@@ -627,7 +627,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 variant="outline"
                 onClick={() => document.getElementById("quiz-import-file")?.click()}
               >
-                <Upload className="w-4 h-4 mr-2" /> Choisir un fichier
+                <Upload className="w-4 h-4 mr-2" /> {t("importChooseFile")}
               </Button>
             </>
           )}
@@ -635,13 +635,13 @@ export function QuizForm({ onClose }: QuizFormProps) {
 
         <div className="p-4 rounded-lg bg-muted/50 border space-y-2">
           <p className="text-sm font-medium flex items-center gap-1.5">
-            <Info className="w-4 h-4 text-primary" /> Comment formater ton fichier ?
+            <Info className="w-4 h-4 text-primary" /> {t("importHowToTitle")}
           </p>
           <ul className="text-xs text-muted-foreground space-y-1 ml-5 list-disc">
-            <li>Écris tes questions numérotées (1. Question, 2. Question...)</li>
-            <li>Sous chaque question, liste les réponses possibles (A. Réponse, B. Réponse...)</li>
-            <li>Ajoute une section &quot;Résultats&quot; ou &quot;Profils&quot; avec un titre et une description pour chaque profil</li>
-            <li>L&apos;IA s&apos;adapte à la plupart des formats — fais au plus simple !</li>
+            <li>{t("importHow1")}</li>
+            <li>{t("importHow2")}</li>
+            <li>{t("importHow3")}</li>
+            <li>{t("importHow4")}</li>
           </ul>
         </div>
       </div>
@@ -661,18 +661,18 @@ export function QuizForm({ onClose }: QuizFormProps) {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h2 className="text-xl font-bold">Créer avec l&apos;IA</h2>
+            <h2 className="text-xl font-bold">{t("cardAiTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              L&apos;IA va générer un quiz complet à partir de tes paramètres
+              {t("aiConfigDesc")}
             </p>
           </div>
         </div>
 
         <div className="grid gap-4">
           <div className="space-y-2">
-            <Label>Objectif du quiz *</Label>
+            <Label>{t("aiObjectiveLabel")} *</Label>
             <Textarea
-              placeholder="Ex: Aider mes prospects à identifier leur profil d'entrepreneur pour leur proposer mon accompagnement"
+              placeholder={t("aiObjectiveExample")}
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
               rows={2}
@@ -680,9 +680,9 @@ export function QuizForm({ onClose }: QuizFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Cible *</Label>
+            <Label>{t("aiTargetLabel")} *</Label>
             <Input
-              placeholder="Ex: Entrepreneurs débutants qui veulent lancer leur business en ligne"
+              placeholder={t("aiTargetExample")}
               value={target}
               onChange={(e) => setTarget(e.target.value)}
             />
@@ -690,22 +690,22 @@ export function QuizForm({ onClose }: QuizFormProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Ton</Label>
+              <Label>{t("aiToneLabel")}</Label>
               <Select value={tone} onValueChange={setTone}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="inspirant">Inspirant</SelectItem>
-                  <SelectItem value="professionnel">Professionnel</SelectItem>
-                  <SelectItem value="décontracté">Décontracté</SelectItem>
-                  <SelectItem value="provocateur">Provocateur</SelectItem>
-                  <SelectItem value="bienveillant">Bienveillant</SelectItem>
+                  <SelectItem value="inspirant">{t("toneInspiring")}</SelectItem>
+                  <SelectItem value="professionnel">{t("toneProfessional")}</SelectItem>
+                  <SelectItem value="décontracté">{t("toneCasual")}</SelectItem>
+                  <SelectItem value="provocateur">{t("toneProvocative")}</SelectItem>
+                  <SelectItem value="bienveillant">{t("toneCaring")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Nombre de questions</Label>
+              <Label>{t("aiQuestionCountLabel")}</Label>
               <Input
                 type="number"
                 min={3}
@@ -724,22 +724,22 @@ export function QuizForm({ onClose }: QuizFormProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Nombre de profils résultat</Label>
+              <Label>{t("aiResultCountLabel")}</Label>
               <Select value={resultCount} onValueChange={setResultCount}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2">2 profils</SelectItem>
-                  <SelectItem value="3">3 profils</SelectItem>
-                  <SelectItem value="4">4 profils</SelectItem>
+                  <SelectItem value="2">{t("profilesCount", { n: 2 })}</SelectItem>
+                  <SelectItem value="3">{t("profilesCount", { n: 3 })}</SelectItem>
+                  <SelectItem value="4">{t("profilesCount", { n: 4 })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>CTA final</Label>
+              <Label>{t("aiCtaLabel")}</Label>
               <Input
-                placeholder="Ex: Réserve ton appel découverte"
+                placeholder={t("aiCtaExample")}
                 value={cta}
                 onChange={(e) => setCta(e.target.value)}
               />
@@ -747,7 +747,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Langue du quiz</Label>
+            <Label>{t("aiQuizLocaleLabel")}</Label>
             <Select value={locale} onValueChange={setLocale}>
               <SelectTrigger>
                 <SelectValue />
@@ -765,17 +765,17 @@ export function QuizForm({ onClose }: QuizFormProps) {
 
           <div className="flex items-center justify-between p-4 rounded-lg border">
             <div>
-              <p className="font-medium">Activer le bonus de partage</p>
-              <p className="text-sm text-muted-foreground">1 partage = bonus débloqué</p>
+              <p className="font-medium">{t("viralityLabel")}</p>
+              <p className="text-sm text-muted-foreground">{t("viralityDesc")}</p>
             </div>
             <Switch checked={viralityEnabled} onCheckedChange={setViralityEnabled} />
           </div>
 
           {viralityEnabled && (
             <div className="space-y-2">
-              <Label>Bonus offert après partage</Label>
+              <Label>{t("aiBonusLabel")}</Label>
               <Input
-                placeholder="Ex: Checklist des 10 étapes pour lancer ton business"
+                placeholder={t("aiBonusExample")}
                 value={bonus}
                 onChange={(e) => setBonus(e.target.value)}
               />
@@ -785,16 +785,16 @@ export function QuizForm({ onClose }: QuizFormProps) {
 
         <div className="flex gap-3 pt-4">
           <Button variant="outline" onClick={onClose}>
-            Annuler
+            {t("cancel")}
           </Button>
           <Button onClick={handleGenerate} disabled={isGenerating}>
             {isGenerating ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Génération en cours...
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("aiGenerating")}
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4 mr-2" /> Générer le quiz
+                <Sparkles className="w-4 h-4 mr-2" /> {t("aiGenerate")}
               </>
             )}
           </Button>
@@ -812,43 +812,43 @@ export function QuizForm({ onClose }: QuizFormProps) {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h2 className="text-xl font-bold">Modifier le quiz</h2>
-            <p className="text-sm text-muted-foreground">Personnalise le contenu généré avant de publier</p>
+            <h2 className="text-xl font-bold">{t("editQuizTitle")}</h2>
+            <p className="text-sm text-muted-foreground">{t("editQuizDesc")}</p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => handleSave("draft")} disabled={isSaving}>
-            <Save className="w-4 h-4 mr-2" /> Brouillon
+            <Save className="w-4 h-4 mr-2" /> {t("draft")}
           </Button>
           <Button onClick={() => handleSave("active")} disabled={isSaving}>
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}
-            Publier
+            {t("publish")}
           </Button>
         </div>
       </div>
 
       <Tabs defaultValue="content" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="content">Contenu</TabsTrigger>
-          <TabsTrigger value="results">Résultats ({results.length})</TabsTrigger>
-          <TabsTrigger value="settings">Paramètres</TabsTrigger>
+          <TabsTrigger value="content">{t("tabContent")}</TabsTrigger>
+          <TabsTrigger value="results">{t("tabResults", { n: results.length })}</TabsTrigger>
+          <TabsTrigger value="settings">{t("tabSettings")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content" className="space-y-6 mt-4">
           <div className="space-y-2">
-            <Label>Titre du quiz</Label>
+            <Label>{t("titleLabel")}</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Introduction</Label>
+            <Label>{t("introLabel")}</Label>
             <Textarea value={introduction} onChange={(e) => setIntroduction(e.target.value)} rows={3} />
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold">Questions ({questions.length})</h3>
+              <h3 className="font-bold">{t("questionsCount", { n: questions.length })}</h3>
               <Button variant="outline" size="sm" onClick={addQuestion}>
-                <Plus className="w-4 h-4 mr-1" /> Question
+                <Plus className="w-4 h-4 mr-1" /> {t("questionLabel")}
               </Button>
             </div>
 
@@ -864,7 +864,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                       <Input
                         value={q.question_text}
                         onChange={(e) => updateQuestion(qi, "question_text", e.target.value)}
-                        placeholder="Texte de la question"
+                        placeholder={t("questionPlaceholder")}
                       />
                       <Button
                         variant="ghost"
@@ -884,7 +884,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                           <Input
                             value={opt.text}
                             onChange={(e) => updateOption(qi, oi, "text", e.target.value)}
-                            placeholder="Texte de l'option"
+                            placeholder={t("optionPlaceholder")}
                             className="flex-1"
                           />
                           <Select
@@ -892,15 +892,15 @@ export function QuizForm({ onClose }: QuizFormProps) {
                             onValueChange={(v) => updateOption(qi, oi, "result_index", parseInt(v))}
                           >
                             <SelectTrigger className="w-[160px] shrink-0">
-                              <SelectValue placeholder="Profil →" />
+                              <SelectValue placeholder={t("profilePickerPlaceholder")} />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="-1">
-                                <span className="text-muted-foreground">Aucun profil</span>
+                                <span className="text-muted-foreground">{t("noProfile")}</span>
                               </SelectItem>
                               {results.map((r, ri) => (
                                 <SelectItem key={ri} value={String(ri)}>
-                                  Profil {ri + 1}
+                                  {t("profileN", { n: ri + 1 })}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -929,7 +929,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                         }}
                         className="text-xs"
                       >
-                        <Plus className="w-3 h-3 mr-1" /> Option
+                        <Plus className="w-3 h-3 mr-1" /> {t("addOption")}
                       </Button>
                     </div>
                   </div>
@@ -942,11 +942,11 @@ export function QuizForm({ onClose }: QuizFormProps) {
         <TabsContent value="results" className="space-y-4 mt-4">
           <div className="flex items-center justify-between p-3 rounded-lg border">
             <div>
-              <p className="font-medium text-sm">CTA par résultat</p>
+              <p className="font-medium text-sm">{t("ctaPerResultLabel")}</p>
               <p className="text-xs text-muted-foreground">
                 {ctaPerResult
-                  ? "Chaque profil a son propre bouton CTA et lien"
-                  : "Un seul CTA global pour tous les résultats (configurable dans Paramètres)"}
+                  ? t("ctaPerResultOn")
+                  : t("ctaPerResultOff")}
               </p>
             </div>
             <Switch
@@ -957,11 +957,11 @@ export function QuizForm({ onClose }: QuizFormProps) {
           {results.map((r, ri) => (
             <Card key={ri} className="p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <Badge className="whitespace-nowrap shrink-0">Profil {ri + 1}</Badge>
+                <Badge className="whitespace-nowrap shrink-0">{t("profileN", { n: ri + 1 })}</Badge>
                 <Input
                   value={r.title}
                   onChange={(e) => updateResult(ri, "title", e.target.value)}
-                  placeholder="Nom du profil"
+                  placeholder={t("profileNamePlaceholder")}
                   className="font-bold flex-1"
                 />
                 {results.length > 1 && (
@@ -985,14 +985,14 @@ export function QuizForm({ onClose }: QuizFormProps) {
                         })),
                       );
                     }}
-                    title="Supprimer ce profil"
+                    title={t("deleteProfileTitle")}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 )}
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Description</Label>
+                <Label className="text-xs text-muted-foreground">{t("descriptionLabel")}</Label>
                 <Textarea
                   value={r.description || ""}
                   onChange={(e) => updateResult(ri, "description", e.target.value)}
@@ -1000,7 +1000,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Insight (prise de conscience)</Label>
+                <Label className="text-xs text-muted-foreground">{t("insightLabel")}</Label>
                 <Textarea
                   value={r.insight || ""}
                   onChange={(e) => updateResult(ri, "insight", e.target.value)}
@@ -1008,7 +1008,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Projection</Label>
+                <Label className="text-xs text-muted-foreground">{t("projectionLabel")}</Label>
                 <Textarea
                   value={r.projection || ""}
                   onChange={(e) => updateResult(ri, "projection", e.target.value)}
@@ -1017,23 +1017,23 @@ export function QuizForm({ onClose }: QuizFormProps) {
               </div>
               {ctaPerResult && (
                 <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-dashed">
-                  <Label className="text-xs text-muted-foreground font-medium">CTA pour ce profil</Label>
+                  <Label className="text-xs text-muted-foreground font-medium">{t("ctaForProfileLabel")}</Label>
                   <Input
                     value={r.cta_text || ""}
                     onChange={(e) => updateResult(ri, "cta_text", e.target.value)}
-                    placeholder="Texte du bouton (ex: Réserve ton appel)"
+                    placeholder={t("resultCtaTextPlaceholder")}
                   />
                   <Input
                     value={r.cta_url || ""}
                     onChange={(e) => updateResult(ri, "cta_url", e.target.value)}
-                    placeholder="URL du lien (https://...)"
+                    placeholder={t("resultCtaUrlPlaceholder")}
                   />
                 </div>
               )}
               <div className="space-y-1 pt-2 border-t">
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  Tag Systeme.io
-                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">optionnel</span>
+                  {t("sioTagLabelShort")}
+                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{t("optional")}</span>
                 </Label>
                 {renderTagPicker(
                   `result-${ri}`,
@@ -1041,7 +1041,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
                   (v) => updateResult(ri, "sio_tag_name", v || null),
                 )}
                 <p className="text-[10px] text-muted-foreground">
-                  Quand un visiteur obtient ce profil, ce tag sera appliqué dans Systeme.io.
+                  {t("sioTagAppliedHint")}
                 </p>
               </div>
             </Card>
@@ -1076,7 +1076,7 @@ export function QuizForm({ onClose }: QuizFormProps) {
             }}
             className="w-full"
           >
-            <Plus className="w-4 h-4 mr-2" /> Ajouter un profil résultat
+            <Plus className="w-4 h-4 mr-2" /> {t("addResult")}
           </Button>
 
           {/* Systeme.io explanation */}
@@ -1084,32 +1084,32 @@ export function QuizForm({ onClose }: QuizFormProps) {
             <div className="flex items-start gap-3">
               <Upload className="w-5 h-5 text-primary mt-0.5 shrink-0" />
               <div className="space-y-1">
-                <h4 className="font-bold text-sm">Automatisation Systeme.io</h4>
+                <h4 className="font-bold text-sm">{t("sioAutomationTitle")}</h4>
                 <p className="text-xs text-muted-foreground">
-                  Tipote envoie automatiquement chaque lead vers ton Systeme.io avec le bon tag.
+                  {t("sioAutomationDesc")}
                 </p>
               </div>
             </div>
             <div className="p-3 rounded-lg bg-muted/60 border text-xs space-y-1.5">
               <p className="font-medium text-foreground flex items-center gap-1">
-                <Info className="w-3.5 h-3.5 text-primary" /> Comment ça marche
+                <Info className="w-3.5 h-3.5 text-primary" /> {t("howItWorks")}
               </p>
               <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground ml-0.5">
-                <li>Configure ta clé API dans <a href="/settings?tab=settings" className="underline text-primary">Réglages</a></li>
-                <li>Assigne un tag par profil résultat ci-dessus</li>
-                <li>Dans Systeme.io, crée une automatisation : &quot;Quand le tag X est ajouté → envoyer la séquence email Y&quot;</li>
+                <li>{t.rich("sioStep1", { settingsLink: (chunks) => <a href="/settings?tab=settings" className="underline text-primary">{chunks}</a> })}</li>
+                <li>{t("sioStep2")}</li>
+                <li>{t("sioStep3")}</li>
               </ol>
             </div>
 
             {viralityEnabled && (
               <div className="space-y-1.5">
                 <Label className="text-xs flex items-center gap-1.5">
-                  Tag &quot;Quiz partagé&quot;
-                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">bonus</span>
+                  {t("sioShareTagLabel")}
+                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{t("bonus")}</span>
                 </Label>
                 {renderTagPicker("share", sioShareTagName, setSioShareTagName)}
                 <p className="text-[10px] text-muted-foreground">
-                  Ce tag sera ajouté quand un visiteur partage le quiz. Crée une automatisation dans Systeme.io pour envoyer le bonus.
+                  {t("sioShareTagHintQF")}
                 </p>
               </div>
             )}
@@ -1120,8 +1120,8 @@ export function QuizForm({ onClose }: QuizFormProps) {
               }`} />
               <p className="text-[10px] text-muted-foreground">
                 {results.some((r) => r.sio_tag_name?.trim())
-                  ? `${results.filter((r) => r.sio_tag_name?.trim()).length}/${results.length} profils ont un tag`
-                  : "Aucun tag configuré — les leads ne seront pas envoyés vers Systeme.io (tu pourras le faire plus tard)"}
+                  ? t("tagsAssignedCount", { current: results.filter((r) => r.sio_tag_name?.trim()).length, total: results.length })
+                  : t("noTagsConfigured")}
               </p>
             </div>
           </Card>
@@ -1131,79 +1131,79 @@ export function QuizForm({ onClose }: QuizFormProps) {
           {!ctaPerResult ? (
             <>
               <div className="space-y-2">
-                <Label>CTA principal (texte du bouton)</Label>
+                <Label>{t("mainCtaLabel")}</Label>
                 <Input
                   value={ctaText}
                   onChange={(e) => setCtaText(e.target.value)}
-                  placeholder="Ex: Réserve ton appel"
+                  placeholder={t("ctaTextPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>URL du CTA</Label>
+                <Label>{t("ctaUrlLabel")}</Label>
                 <Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="https://..." />
               </div>
             </>
           ) : (
             <p className="text-sm text-muted-foreground p-3 rounded-lg bg-muted/50 border">
-              Les CTA sont configurés individuellement sur chaque profil résultat dans l&apos;onglet Résultats.
+              {t("ctaPerResultNote")}
             </p>
           )}
           <div className="space-y-2">
-            <Label>Texte de consentement</Label>
+            <Label>{t("consentLabel")}</Label>
             <Textarea value={consentText} onChange={(e) => setConsentText(e.target.value)} rows={2} />
           </div>
 
           <div className="p-4 rounded-lg border space-y-3">
-            <p className="font-medium">Page de capture email</p>
-            <p className="text-sm text-muted-foreground">Personnalise le texte affiché avant la saisie de l&apos;email.</p>
+            <p className="font-medium">{t("capturePageTitle")}</p>
+            <p className="text-sm text-muted-foreground">{t("capturePageDesc")}</p>
             <div className="space-y-2">
-              <Label>Titre de la page de capture</Label>
+              <Label>{t("captureHeadingLabel")}</Label>
               <Input
                 value={captureHeading}
                 onChange={(e) => setCaptureHeading(e.target.value)}
-                placeholder="Ton résultat est prêt !"
+                placeholder={t("captureHeadingPlaceholder")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Sous-titre / texte d&apos;accroche</Label>
+              <Label>{t("captureSubtitleLabel")}</Label>
               <Textarea
                 value={captureSubtitle}
                 onChange={(e) => setCaptureSubtitle(e.target.value)}
                 rows={3}
-                placeholder="Entre ton email pour découvrir ton profil.&#10;&#10;Tu peux ajouter plusieurs lignes ici pour donner envie."
+                placeholder={t("captureSubtitlePlaceholder")}
               />
-              <p className="text-xs text-muted-foreground">Les sauts de ligne seront préservés.</p>
+              <p className="text-xs text-muted-foreground">{t("lineBreaksPreserved")}</p>
             </div>
 
             <div className="space-y-3 pt-3 border-t">
-              <p className="text-sm font-medium">Champs à capturer</p>
-              <p className="text-xs text-muted-foreground">L&apos;email est toujours requis. Active les champs supplémentaires que tu veux collecter.</p>
+              <p className="text-sm font-medium">{t("captureFieldsTitle")}</p>
+              <p className="text-xs text-muted-foreground">{t("captureFieldsDesc")}</p>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Prénom</span>
+                  <span className="text-sm">{t("captureFirstName")}</span>
                   <Switch checked={captureFirstName} onCheckedChange={setCaptureFirstName} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Nom de famille</span>
+                  <span className="text-sm">{t("captureLastName")}</span>
                   <Switch checked={captureLastName} onCheckedChange={setCaptureLastName} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Téléphone</span>
+                  <span className="text-sm">{t("capturePhone")}</span>
                   <Switch checked={capturePhone} onCheckedChange={setCapturePhone} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Pays</span>
+                  <span className="text-sm">{t("captureCountry")}</span>
                   <Switch checked={captureCountry} onCheckedChange={setCaptureCountry} />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Ces informations seront envoyées automatiquement dans Systeme.io.</p>
+              <p className="text-xs text-muted-foreground">{t("captureFieldsSioHint")}</p>
             </div>
           </div>
 
           <div className="flex items-center justify-between p-4 rounded-lg border">
             <div>
-              <p className="font-medium">Bonus de partage</p>
-              <p className="text-sm text-muted-foreground">Active pour inciter au partage viral</p>
+              <p className="font-medium">{t("shareBonusLabel")}</p>
+              <p className="text-sm text-muted-foreground">{t("shareBonusDesc")}</p>
             </div>
             <Switch checked={viralityEnabled} onCheckedChange={setViralityEnabled} />
           </div>
@@ -1211,16 +1211,16 @@ export function QuizForm({ onClose }: QuizFormProps) {
           {viralityEnabled && (
             <>
               <div className="space-y-2">
-                <Label>Description du bonus</Label>
+                <Label>{t("bonusDescriptionLabel")}</Label>
                 <Textarea
                   value={bonusDescription}
                   onChange={(e) => setBonusDescription(e.target.value)}
                   rows={2}
-                  placeholder="Ce que la personne reçoit"
+                  placeholder={t("bonusReceivedPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Message d&apos;incitation au partage</Label>
+                <Label>{t("shareMessageLabel")}</Label>
                 <Textarea
                   value={shareMessage}
                   onChange={(e) => setShareMessage(e.target.value)}

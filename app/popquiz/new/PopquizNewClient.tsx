@@ -321,6 +321,7 @@ export default function PopquizNewClient({
     }
   }
   const tc = useTranslations("common");
+  const t = useTranslations("popquiz");
   const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
@@ -651,10 +652,10 @@ export default function PopquizNewClient({
       }
 
       if (publish && newId) {
-        toast.success("Popquiz publié");
+        toast.success(t("toastPublished"));
         router.push(`/popquiz/${newId}`);
       } else if (newId) {
-        toast.success("Brouillon enregistré");
+        toast.success(t("toastDraftSaved"));
         router.push(`/popquiz/${newId}`);
       } else {
         // Fallback safety si l'API ne renvoie pas d'id
@@ -666,7 +667,7 @@ export default function PopquizNewClient({
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur réseau");
+      setError(e instanceof Error ? e.message : t("networkError"));
     } finally {
       setSaving(false);
     }
@@ -685,10 +686,10 @@ export default function PopquizNewClient({
     try {
       await navigator.clipboard.writeText(publishedUrl);
       setCopied(true);
-      toast.success("Lien copié");
+      toast.success(t("toastLinkCopied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Impossible de copier le lien");
+      toast.error(t("toastCopyLinkFailed"));
     }
   }
 
@@ -697,38 +698,38 @@ export default function PopquizNewClient({
     try {
       await navigator.clipboard.writeText(embedSnippet);
       setCopiedEmbed(true);
-      toast.success("Code copié");
+      toast.success(t("toastCodeCopied"));
       setTimeout(() => setCopiedEmbed(false), 2000);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("toastCopyFailed"));
     }
   }
 
   const markerColor = "hsl(var(--primary))";
 
   return (
-    <AppShell userEmail={userEmail} headerTitle="Nouveau Popquiz" contentClassName="flex-1">
+    <AppShell userEmail={userEmail} headerTitle={t("newHeaderTitle")} contentClassName="flex-1">
       <PageContainer>
       <PageBanner
         icon={<Video className="h-5 w-5" />}
-        title="Nouveau popquiz"
-        subtitle="Charge une vidéo, place des marqueurs pour faire apparaître un quiz au bon moment."
+        title={t("newBannerTitle")}
+        subtitle={t("newBannerSubtitle")}
       />
 
       <Card>
         <CardContent className="py-5 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="title">Titre</Label>
+            <Label htmlFor="title">{t("titleLabel")}</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex. Onboarding vidéo Q1"
+              placeholder={t("titlePlaceholder")}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Source vidéo</Label>
+            <Label>{t("videoSourceLabel")}</Label>
             <Tabs
               value={sourceMode}
               onValueChange={(v) => setSourceMode(v as SourceMode)}
@@ -849,10 +850,9 @@ export default function PopquizNewClient({
           <CardContent className="py-5 space-y-4">
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <div>
-                <h2 className="text-base font-semibold">Aperçu de la vidéo</h2>
+                <h2 className="text-base font-semibold">{t("videoPreviewTitle")}</h2>
                 <p className="text-[11px] text-muted-foreground">
-                  Reflète l&apos;apparence en temps réel. Place les
-                  marqueurs en cliquant sur la timeline.
+                  {t("videoPreviewDesc")}
                 </p>
               </div>
               <div className="flex items-center gap-1 text-xs">
@@ -1010,12 +1010,12 @@ export default function PopquizNewClient({
                             updateCue(cue.localId, { quizId: e.target.value })
                           }
                           className="flex-1 min-w-[160px] h-9 rounded-md border bg-background px-2 text-sm"
-                          aria-label="Quiz lié"
+                          aria-label={t("linkedQuizAria")}
                         >
                           {quizzes.map((q) => (
                             <option key={q.id} value={q.id}>
                               {stripHtml(q.title)}
-                              {q.status !== "active" ? " (brouillon)" : ""}
+                              {q.status !== "active" ? ` (${t("draftLabel")})` : ""}
                             </option>
                           ))}
                         </select>
@@ -1089,9 +1089,9 @@ export default function PopquizNewClient({
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="space-y-1">
-            <DialogTitle className="text-base">Popquiz publié</DialogTitle>
+            <DialogTitle className="text-base">{t("dialogPublishedTitle")}</DialogTitle>
             <DialogDescription className="text-sm">
-              Partage le lien direct ou intègre la vidéo sur ton site.
+              {t("dialogPublishedDesc")}
             </DialogDescription>
           </DialogHeader>
 
