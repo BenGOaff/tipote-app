@@ -1243,6 +1243,34 @@ je propose des features :
   `/healthz`. Si on en code un, c'est pour de l'observabilité interne,
   pas pour remplacer UptimeRobot.
 
+## AS bis) AVANT de créer une table, GREP les migrations existantes (1er juin 2026)
+
+Je viens de me planter : j'ai créé `user_notifications` (migration
+`20260604_business_events_foundation.sql`) sans vérifier que la table
+`notifications` existait déjà depuis mars 2026
+(`20260309_notifications.sql`) avec à peu près le même rôle. Résultat :
+doublon dangereux (deux systèmes de notifs en parallèle = bugs garantis,
+UI qui lit une table, cron qui écrit dans l'autre).
+
+Fix de correction : migration `20260605_consolidate_notifications.sql`
+qui DROP `user_notifications` + ALTER `notifications` pour ajouter les
+2 colonnes manquantes (`email_dedupe_key`, `email_sent_at`). Béné a dû
+re-run la migration en plus de la 20260604.
+
+**Règle à appliquer à CHAQUE nouvelle table** :
+```bash
+# AVANT d'écrire ta migration, fais :
+grep -rln "CREATE TABLE.*<table_name>\|CREATE TABLE.*\.<table_name>" \
+  supabase/migrations/
+# Et regarde si une table existante ne couvre pas 80%+ du besoin.
+# Si oui : ALTER + helper existant, pas une nouvelle table.
+```
+
+**Quand un helper existe déjà** : `lib/notifications.ts` était déjà là
+avec `createNotification()`. J'ai créé `lib/userNotifications.ts` en
+doublon. Lesson : `ls lib/ | grep -i <feature>` AVANT de coder un
+helper.
+
 ## AS) Foundation `business_events` — table unique log (planifiée roadmap phase 0)
 
 Quand on attaque la phase 0 de `ROADMAP_RETENTION.md`, respecter :
