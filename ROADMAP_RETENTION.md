@@ -365,22 +365,58 @@ Optionnel mais gros différenciateur vs Typeform :
 
 ---
 
-## Phase 7 — Tests E2E routes publiques critiques
+## Phase 7 — Tests E2E routes publiques critiques — V1 FAIT (juin 2026)
 
-### 7.A Playwright minimal
+Deux niveaux livrés, ZÉRO impact sur le code applicatif (uniquement
+des fichiers de test + scripts, le runtime est inchangé) :
 
-- Tipote : visite `/q/[quiz-public-actif]`, complète le funnel, vérifie
-  tag SIO + `business_events` insérés. Itération sur `/p/[slug]`,
-  `/pq/[popquiz]`, `/[publicSlug]`.
-- Tiquiz : `/q/[quiz]`, `/[publicSlug]`.
-- Tests embed iframe (CSP frame-ancestors, cf. PITFALLS X) — JB & co
-  ne doivent plus jamais casser silencieusement.
-- Tests OG meta sur custom domain (cf. PITFALLS K).
+### 7.A Smoke test (rapide, sans browser) ✅
 
-### 7.B Run sur push branche claude
+`scripts/smoke-public-routes.sh` — bash + curl, aucune dépendance npm.
+Détecte en < 30 secondes les régressions critiques :
+- Status 200
+- `X-Frame-Options` absent (PITFALLS X — iframe cassée chez les users
+  qui embed)
+- CSP `frame-ancestors *` présent
+- `og:title` / `og:url` présents
+- `og:url` cohérent avec le host requêté (PITFALLS K — sur custom
+  domain, og:url ne doit pas pointer sur app.tipote.com)
+- `robots.txt` / `sitemap.xml` / `favicon.ico` accessibles
 
-GitHub Actions sur la branche `claude/busy-wright-501xR`. Pas de
-blocage de push (les tests servent à m'alerter, pas à bloquer Béné).
+Lancement : `npm run smoke` avec `BASE_URL` + `SMOKE_QUIZ_ID` +
+`SMOKE_PAGE_SLUG` + `SMOKE_POPQUIZ_ID` (les 3 IDs optionnels
+indépendamment, skip si non fourni).
+
+Idéal pour un check post-déploiement depuis le VPS.
+
+### 7.B Tests Playwright (browser réel) ✅
+
+`tests/e2e/public-quiz.spec.ts` — Playwright Chromium.
+
+Vérifie en plus du smoke :
+- Body non vide (garde-fou white-screen)
+- OG meta parsables côté DOM
+- Bouton de démarrage du quiz cliquable
+- `/api/quiz/[id]/track` répond toujours 200 (PITFALLS D)
+
+Lancement :
+```
+npm run test:e2e:install   # 1x pour installer Chromium
+BASE_URL=... SMOKE_QUIZ_ID=... npm run test:e2e
+```
+
+### 7.C Doc d'usage ✅
+
+`tests/e2e/README.md` : usage local, CI GitHub Actions,
+post-déploiement VPS, maintien d'un quiz de test stable.
+
+### V2 si besoin
+
+- Ajouter Tiquiz (mêmes patterns, BASE_URL=quiz.tipote.com)
+- Workflow GitHub Actions qui run le smoke sur push
+- Tests Playwright qui complètent un funnel jusqu'à la capture email
+  (besoin d'un email de test poubelle + d'asserter la création du lead
+  via /api/quiz/[id]/public en POST direct, sans browser)
 
 ---
 
