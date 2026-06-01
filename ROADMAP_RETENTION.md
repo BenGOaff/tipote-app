@@ -84,12 +84,25 @@ Sélection par fenêtre temporelle + filtre kind. Bucketing par
 
 ### 0.D Service notification générique
 
-- Table `user_notifications` (id, user_id, kind, payload jsonb, read_at,
-  created_at).
-- API `/api/notifications` : list + mark-read.
-- Composant `<NotificationCenter />` (bell dans le header).
-- Email helper `sendBusinessEmail(userId, template, payload)` — Resend
-  ou équivalent existant. Dédup 24h par `(userId, template, hash payload)`.
+⚠️ **CORRECTION 1er juin 2026** : la table `notifications` existait DÉJÀ
+(`supabase/migrations/20260309_notifications.sql`) avec un helper
+`lib/notifications.ts → createNotification()` consommé par les crons
+existants. Le doublon `user_notifications` que j'ai créé a été retiré
+en `20260605_consolidate_notifications.sql`.
+
+État définitif :
+- Table : `notifications` (existante) — étendue en 20260605 avec
+  `email_dedupe_key` + `email_sent_at` pour les notifs rétention.
+- Helper côté serveur : `lib/notifications.ts` → 2 fonctions :
+  - `createNotification(...)` (signature historique, conservée pour les
+    crons existants).
+  - `createNotificationWithEmail(...)` (nouvelle, support email associé
+    + dedupe). Utilisée par les chantiers rétention.
+- API `/api/notifications` existante : list + mark-read.
+- Bell header : composant `<NotificationBell />` existant (cf.
+  `DashboardLayout.tsx`).
+- Email helper : `lib/email.ts → sendEmail()` (Resend). Réutilisé tel
+  quel via `createNotificationWithEmail`.
 
 ---
 

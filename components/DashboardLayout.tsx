@@ -9,6 +9,7 @@ import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { NotificationBell } from "@/components/NotificationBell";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Button } from "@/components/ui/button";
+import { MilestoneToastListener } from "@/components/MilestoneToastListener";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -69,6 +70,9 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+      {/* Toasts de milestones débloqués (phase 1 ROADMAP_RETENTION). Lu
+          côté client uniquement, fire-and-forget, jamais bloquant. */}
+      <MilestoneToastListener />
     </SidebarProvider>
   );
 }
