@@ -20,6 +20,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { decrypt } from "@/lib/crypto";
 import {
+  dedupeKeys,
+  logBusinessEvent,
+  type BusinessEventSource,
+} from "@/lib/businessEvents";
+import {
   fetchAllStripeCharges,
   type NormalizedTransaction,
 } from "@/lib/compta/providers/stripe";
@@ -220,6 +225,46 @@ export async function syncConnection(
       return { ...out, error: upErr.message };
     }
     out.upserted = count ?? rows.length;
+
+    // Log business_events pour les VENTES réelles (status paid /
+    // partial_refund + category sale — pas les commissions affiliation,
+    // pas les refunds totaux, pas les pending/failed). Le dedupeKey
+    // <provider>:<provider_transaction_id> matche la contrainte UNIQUE
+    // existante côté transactions → idempotent à 100% (re-run du cron
+    // ne dupliquera jamais un event sale). Cf. ROADMAP_RETENTION
+    // phase 1.5 + PITFALLS section AR.
+    //
+    // Fire-and-forget : on n'attend pas — si Supabase est lent ou si
+    // l'engine milestones plante, le sync compta réussit quand même
+    // (priorité absolue : que les rows transactions soient en DB).
+    for (const row of rows) {
+      if (row.status !== "paid" && row.status !== "partial_refund") continue;
+      if (row.category !== "sale") continue;
+      const netCents =
+        (row.amount_cents ?? 0) - (row.refunded_cents ?? 0);
+      if (netCents <= 0) continue;
+      void logBusinessEvent({
+        userId: row.user_id,
+        projectId: row.project_id,
+        kind: "sale",
+        source: row.provider as BusinessEventSource,
+        amountCents: netCents,
+        currency: row.currency,
+        occurredAt: row.paid_at,
+        dedupeKey: dedupeKeys.externalSale(
+          row.provider as BusinessEventSource,
+          row.provider_transaction_id,
+        ),
+        payload: {
+          provider: row.provider,
+          provider_transaction_id: row.provider_transaction_id,
+          status: row.status,
+          customer_email: row.customer_email ?? null,
+        },
+      }).catch((err) => {
+        console.error("[syncEngine] logBusinessEvent sale failed", err);
+      });
+    }
   }
 
   // Sync OK — on stamp last_sync_at + (si applicable) initial_sync_done_at

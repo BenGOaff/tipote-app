@@ -40,6 +40,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isBot } from "@/lib/userAgent";
 import { randomUUID } from "node:crypto";
+import { logBusinessEvent } from "@/lib/businessEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +129,43 @@ async function isDuplicate(
   return !!data;
 }
 
+/**
+ * Log un business_event pour les events visiteurs à forte valeur
+ * (complete, share). Fait UN fetch pour récupérer le user_id du
+ * créateur du quiz + project_id — ce coût est acceptable car ces
+ * events sont rares (1x par visiteur vs view/start qui sont haute
+ * fréquence). On NE LOG PAS view/start dans business_events : Wall
+ * of Wins les lira directement depuis quiz_events.
+ *
+ * DedupeKey : <kind>:<quizId>:<sessionId> → idempotent même si le
+ * client re-fire l'event ou que le cookie session est partagé.
+ */
+async function logBusinessEventForQuizFunnel(
+  quizId: string,
+  event: "complete" | "share",
+  sessionId: string,
+): Promise<void> {
+  const { data: quiz } = await supabaseAdmin
+    .from("quizzes")
+    .select("user_id, project_id, title")
+    .eq("id", quizId)
+    .maybeSingle();
+  if (!quiz?.user_id) return;
+  const kind = event === "complete" ? "quiz_complete" : "quiz_share";
+  await logBusinessEvent({
+    userId: quiz.user_id as string,
+    projectId: (quiz.project_id as string | null) ?? null,
+    kind,
+    source: "internal",
+    payload: {
+      quizId,
+      quizTitle: (quiz.title as string | null) ?? null,
+      sessionId,
+    },
+    dedupeKey: `${kind}:${quizId}:${sessionId}`,
+  });
+}
+
 // Si le visiteur est authentifié et qu'il est propriétaire du quiz,
 // on skip tout tracking. Évite que le créateur gonfle ses stats en
 // previewant son propre quiz. Retourne true si l'utilisateur est le
@@ -201,6 +239,20 @@ export async function POST(req: NextRequest, context: RouteContext) {
         session_id: sessionId,
       });
       if (insErr) console.error("[track] quiz_events insert failed", event, insErr);
+
+      // Log business_event pour les events à forte valeur (complete,
+      // share). On NE LOG PAS view/start (très haute fréquence — Wall
+      // of Wins les lit directement depuis quiz_events). Fire-and-forget,
+      // strictement non-bloquant pour le visiteur. Cf. ROADMAP_RETENTION
+      // phase 1.5.
+      if ((event === "complete" || event === "share") && !insErr) {
+        void logBusinessEventForQuizFunnel(quizId, event, sessionId).catch(
+          (err) => {
+            console.error("[track] logBusinessEvent failed", event, err);
+          },
+        );
+      }
+
       const res = ok({ event });
       if (needSetCookie) attachSessionCookie(res, sessionId);
       return res;

@@ -35,9 +35,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 
 import type { BusinessEventKind } from "@/lib/businessEvents";
-import { countOutcomes } from "@/lib/businessOutcomes";
+import { countOutcomes, sumSalesForUser } from "@/lib/businessOutcomes";
 import {
   MILESTONE_CATALOG,
+  milestoneThreshold,
   type MilestoneDefinition,
 } from "@/lib/milestones/catalog";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -175,16 +176,35 @@ async function backfillForUser(target: UserAndProject): Promise<BackfillResult> 
   const now = new Date().toISOString();
 
   for (const [kind, milestones] of byKind.entries()) {
-    const totalCount = await countOutcomes(userId, kind, { projectId });
-    if (totalCount === 0) continue;
+    const countTriggers = milestones.filter((m) => m.trigger.type === "count");
+    const monetaryTriggers = milestones.filter(
+      (m) => m.trigger.type === "monetary_threshold",
+    );
 
-    for (const milestone of milestones.sort(
-      (a, b) => a.trigger.threshold - b.trigger.threshold,
+    // Compteur d'events pour les triggers de type "count"
+    let totalCount = 0;
+    if (countTriggers.length > 0) {
+      totalCount = await countOutcomes(userId, kind, { projectId });
+    }
+
+    // Somme cumulée pour les triggers monétaires (uniquement kind="sale")
+    let totalAmountCents = 0;
+    if (monetaryTriggers.length > 0) {
+      const sums = await sumSalesForUser(userId, { projectId });
+      totalAmountCents = sums.amountCents;
+    }
+
+    if (totalCount === 0 && totalAmountCents === 0) continue;
+
+    // Triggers count, triés ASC pour break dès qu'on est sous le seuil.
+    for (const milestone of countTriggers.sort(
+      (a, b) => milestoneThreshold(a.trigger) - milestoneThreshold(b.trigger),
     )) {
       if (existingKeys.has(milestone.key)) {
         skipped += 1;
         continue;
       }
+      if (milestone.trigger.type !== "count") continue;
       if (totalCount < milestone.trigger.threshold) break;
       rowsToInsert.push({
         user_id: userId,
@@ -196,8 +216,30 @@ async function backfillForUser(target: UserAndProject): Promise<BackfillResult> 
           title: milestone.title,
           backfilled: true,
         },
-        // seen_at = now() → JAMAIS de toast/email pour ce milestone
-        // rétro-actif. Acquis silencieux.
+        seen_at: now,
+      });
+    }
+
+    // Triggers monétaires, triés ASC sur thresholdCents.
+    for (const milestone of monetaryTriggers.sort(
+      (a, b) => milestoneThreshold(a.trigger) - milestoneThreshold(b.trigger),
+    )) {
+      if (existingKeys.has(milestone.key)) {
+        skipped += 1;
+        continue;
+      }
+      if (milestone.trigger.type !== "monetary_threshold") continue;
+      if (totalAmountCents < milestone.trigger.thresholdCents) break;
+      rowsToInsert.push({
+        user_id: userId,
+        project_id: projectId,
+        milestone_key: milestone.key,
+        payload: {
+          amount_cents: totalAmountCents,
+          emoji: milestone.emoji,
+          title: milestone.title,
+          backfilled: true,
+        },
         seen_at: now,
       });
     }

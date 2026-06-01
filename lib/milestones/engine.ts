@@ -13,7 +13,7 @@
 //     skip ceux déjà débloqués.
 
 import type { BusinessEventKind } from "@/lib/businessEvents";
-import { countOutcomes } from "@/lib/businessOutcomes";
+import { countOutcomes, sumSalesForUser } from "@/lib/businessOutcomes";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
@@ -71,21 +71,45 @@ export async function evaluateMilestonesForUser(
     return { unlocked: [], ok: true };
   }
 
-  // Une seule lecture du compteur agrégé pour ce kind (chaque candidate
-  // a le même trigger.kind par construction de milestonesForKind).
+  // Sépare les triggers count vs monetary_threshold. Tous les triggers
+  // ici partagent le même `kind` (par construction de milestonesForKind),
+  // mais peuvent être de types différents (count = "ma 10e vente",
+  // monetary_threshold = "1er 1k€ de CA").
+  const countTriggers = toEvaluate.filter((m) => m.trigger.type === "count");
+  const monetaryTriggers = toEvaluate.filter(
+    (m) => m.trigger.type === "monetary_threshold",
+  );
+
   // CRITIQUE : on lit la SOURCE HISTORIQUE (quiz_leads, content_item,
   // transactions, etc.) via countOutcomes — PAS business_events qui ne
-  // couvre que depuis 2026-06-04 et ferait sortir "first_lead" chez
-  // des users qui ont 500 leads. Cf. lib/businessOutcomes.ts.
-  const totalCount = await countOutcomes(args.userId, args.eventKind, {
-    projectId: args.projectId ?? null,
-  });
+  // couvre que depuis 2026-06-04. Cf. lib/businessOutcomes.ts + pitfalls
+  // section AS ter.
+  let totalCount = 0;
+  if (countTriggers.length > 0) {
+    totalCount = await countOutcomes(args.userId, args.eventKind, {
+      projectId: args.projectId ?? null,
+    });
+  }
+
+  // Pour les paliers monétaires, une lecture séparée de la somme.
+  // Ne se produit que si kind = "sale" + au moins un trigger
+  // monetary_threshold candidat (zéro coût sinon).
+  let totalAmountCents = 0;
+  if (monetaryTriggers.length > 0) {
+    const sums = await sumSalesForUser(args.userId, {
+      projectId: args.projectId ?? null,
+    });
+    totalAmountCents = sums.amountCents;
+  }
 
   const unlocked: string[] = [];
-  for (const milestone of toEvaluate) {
+
+  // Évaluation des triggers count, triés ASC par threshold (le filtre
+  // milestonesForKind les a déjà triés au global).
+  for (const milestone of countTriggers) {
+    if (milestone.trigger.type !== "count") continue;
     if (totalCount < milestone.trigger.threshold) {
-      // Les milestones sont triés par threshold ASC ; dès qu'on est
-      // sous le seuil, les suivants sont aussi hors de portée.
+      // Les triggers count sont triés ASC ; on peut break.
       break;
     }
     const ok = await unlockMilestone({
@@ -93,6 +117,19 @@ export async function evaluateMilestonesForUser(
       projectId: args.projectId ?? null,
       milestone,
       countAtUnlock: totalCount,
+    });
+    if (ok) unlocked.push(milestone.key);
+  }
+
+  // Évaluation des triggers monétaires (cumul CA).
+  for (const milestone of monetaryTriggers) {
+    if (milestone.trigger.type !== "monetary_threshold") continue;
+    if (totalAmountCents < milestone.trigger.thresholdCents) continue;
+    const ok = await unlockMilestone({
+      userId: args.userId,
+      projectId: args.projectId ?? null,
+      milestone,
+      countAtUnlock: totalAmountCents,
     });
     if (ok) unlocked.push(milestone.key);
   }

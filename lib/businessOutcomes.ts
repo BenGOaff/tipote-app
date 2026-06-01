@@ -55,7 +55,13 @@ export async function countOutcomes(
       return result.count;
     }
     case "quiz_complete":
-      return countQuizCompletesForUser(userId, opts);
+      return countQuizEventsForUser(userId, "complete", opts);
+    case "quiz_view":
+      return countQuizEventsForUser(userId, "view", opts);
+    case "quiz_start":
+      return countQuizEventsForUser(userId, "start", opts);
+    case "quiz_share":
+      return countQuizEventsForUser(userId, "share", opts);
     case "quiz_published":
       return countPublishedQuizzesForUser(userId, opts);
     default:
@@ -183,12 +189,14 @@ async function countSalesForUser(
 }
 
 /**
- * Compte les complétions de quiz (event visiteur, pas lead). Source =
- * `quiz_events.event_type = 'complete'` filtré par quiz_id du user.
- * Même stratégie 2-requêtes que les leads.
+ * Compte les events visiteurs (view / start / complete / share) de
+ * type donné, sur tous les quiz du user. Source = `quiz_events` via
+ * JOIN par `quiz_id`. Même stratégie 2-requêtes que les leads (Supabase
+ * JS ne joint pas pour un count agrégé).
  */
-async function countQuizCompletesForUser(
+async function countQuizEventsForUser(
   userId: string,
+  eventType: "view" | "start" | "complete" | "share",
   opts: CountOptions,
 ): Promise<number> {
   let quizQ = supabaseAdmin
@@ -211,7 +219,7 @@ async function countQuizCompletesForUser(
     const { count, error } = await supabaseAdmin
       .from("quiz_events")
       .select("id", { count: "exact", head: true })
-      .eq("event_type", "complete")
+      .eq("event_type", eventType)
       .in("quiz_id", slice);
     if (error) {
       console.error("[outcomes] quiz_events count failed", error.message);
