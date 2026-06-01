@@ -1212,6 +1212,36 @@ Côté extension (badge.ts) :
 - Disponible sur les 2 modes (task + quick) pour que même les
   suggestions pré-générées au fan-out soient regenerable on-demand.
 
+## AQ bis) Opus 4.7+ rejette `temperature` / `top_p` / `top_k` (panne prod 1er juin 2026)
+
+Anthropic a **RETIRÉ** les paramètres de sampling (`temperature`,
+`top_p`, `top_k`) de l'API Messages sur Opus 4.7 et 4.8. Les envoyer
+renvoie `400 invalid_request_error: "temperature is deprecated for this
+model"`. Constaté en prod après bump du tier `opus` 4.7 → 4.8 dans
+`lib/anthropicModel.ts` — TOUS les users qui généraient un quiz IA
+voyaient un échec silencieux côté éditeur.
+
+**Source de vérité unique** : `lib/claudeRequest.ts → buildClaudeMessageBody`.
+Tous les call-sites qui appellent l'API Anthropic en direct DOIVENT
+construire leur body via ce helper plutôt que poser `temperature` à
+la main. Il détecte les modèles Opus 4.7+ via la regex
+`/^claude-opus-4-(?:[7-9]|\d{2,})\b/i` et omet les params interdits.
+
+Les models antérieurs (sonnet 4.6, haiku 4.5, opus 4.6) acceptent
+toujours `temperature` — le helper laisse passer normalement.
+
+**À VÉRIFIER quand je bump un tier ou ajoute un call-site IA** :
+- Si le call-site appelle `/v1/messages` en direct (pas via `callClaude`),
+  utiliser `buildClaudeMessageBody` au lieu de hardcoder le body.
+- Si je bump à un modèle nouveau (Opus 4.9, 5.x…), vérifier la doc
+  migration Anthropic pour les nouveaux paramètres retirés (la regex
+  d'Opus 4.7+ couvre déjà 4.8/4.9/4.10+, mais une nouvelle famille
+  -- Sonnet 5, etc. -- nécessiterait un check supplémentaire).
+
+`lib/claude.ts → callClaude` applique déjà le filtrage en interne →
+les call-sites qui passent par ce helper sont automatiquement
+protégés.
+
 ## AR) Contraintes business validées par Béné — 1er juin 2026
 
 Audit global du 1er juin 2026 → roadmap rétention dans
