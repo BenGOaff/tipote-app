@@ -116,15 +116,20 @@ check_embeddable_route() {
     ko "X-Frame-Options présent: ${xfo} → iframe CASSÉE chez les users qui embed"
   fi
 
-  # Critique : CSP frame-ancestors * (autorise embed)
+  # CSP frame-ancestors. RÈGLE RÉELLE : l'embed iframe est cassé UNIQUEMENT
+  # si X-Frame-Options est posé (déjà testé au-dessus) OU si un CSP
+  # frame-ancestors RESTRICTIF est présent. L'absence de CSP = embed
+  # autorisé par défaut du navigateur → ce n'est PAS une erreur.
   local csp
   csp=$(extract_last_header "$headers" "Content-Security-Policy")
-  if echo "$csp" | grep -qiE 'frame-ancestors[[:space:]]+\*'; then
-    ok "CSP frame-ancestors *"
-  elif [ -z "$csp" ]; then
-    ko "Content-Security-Policy absent → embed non autorisé par défaut"
+  if [ -z "$csp" ]; then
+    sk "pas de CSP (embed autorisé par défaut du navigateur)"
+  elif echo "$csp" | grep -qiE 'frame-ancestors[^;]*\*'; then
+    ok "CSP frame-ancestors autorise l'embed (*)"
+  elif echo "$csp" | grep -qiE 'frame-ancestors'; then
+    ko "CSP frame-ancestors RESTRICTIF → embed tiers cassé"
   else
-    ko "CSP présent mais frame-ancestors manquant ou restrictif → embed cassé"
+    ok "CSP présent, pas de restriction frame-ancestors (embed permis)"
   fi
 
   # OG meta : og:url + og:title + og:image attendus pour un partage propre
@@ -150,7 +155,11 @@ check_embeddable_route() {
     if [ "$req_host" = "$og_host" ]; then
       ok "og:url cohérent (${og_host})"
     else
-      ko "og:url=${og_host} ≠ host requêté ${req_host} (cf. PITFALLS K)"
+      # Mismatch = NORMAL quand le quiz a un domaine custom : il
+      # canonicalise vers le domaine de son propriétaire. Note info,
+      # pas une erreur. (La vraie régression PITFALLS K serait l'inverse :
+      # un quiz SUR son domaine custom dont l'og:url montre app.tipote.com.)
+      sk "og:url pointe sur ${og_host} (≠ ${req_host}) — normal si domaine custom"
     fi
   else
     ko "og:url absent → preview affiche metadataBase au lieu du custom domain"

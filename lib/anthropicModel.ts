@@ -36,11 +36,13 @@ export const CURRENT_MODELS = {
   // Haiku 4.5 — latence faible, parfait pour les tâches courtes
   // (chat conversationnel, reformulation 1-ligne, salutations).
   haiku: "claude-haiku-4-5-20251001",
-  // Opus 4.7 — max quality. Dispo pour bumper un endpoint spécifique
-  // quand le créateur juge que la sortie le mérite (ex. génération
-  // de quiz from-scratch sur tâche critique). Pas utilisé en défaut
-  // pour éviter d'imposer le coût Opus partout.
-  opus: "claude-opus-4-7",
+  // Opus 4.8 — max quality. Dispo pour bumper un endpoint spécifique
+  // quand le créateur juge que la sortie le mérite (coach proactif,
+  // analyse de sondage, génération critique). Pas utilisé en défaut
+  // pour éviter d'imposer le coût Opus partout. Béné (juin 2026) :
+  // "toujours la meilleure version de Claude dispo pour la meilleure
+  // qualité" sur le contenu → on garde ce tier sur le dernier Opus.
+  opus: "claude-opus-4-8",
 } as const;
 
 export type AnthropicTier = keyof typeof CURRENT_MODELS;
