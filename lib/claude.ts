@@ -41,6 +41,8 @@ export interface CallClaudeArgs {
   apiKey: string;
   system: string;
   user: string;
+  /** Override du model ID. Défaut : resolveClaudeModel() (sonnet). */
+  model?: string;
   maxTokens?: number;
   temperature?: number;
   /** Idle timeout: abort if no chunk for this many ms. Default 90s. */
@@ -83,7 +85,11 @@ export async function callClaude(args: CallClaudeArgs): Promise<string> {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: resolveClaudeModel(),
+        // `args.model` permet de bumper un endpoint sur un tier plus
+        // puissant (ex. Opus pour le contenu premium). Défaut inchangé
+        // (resolveClaudeModel = sonnet) → aucun impact sur les call-sites
+        // existants qui ne passent pas de model.
+        model: args.model?.trim() || resolveClaudeModel(),
         max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
         temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
         system: args.system,
