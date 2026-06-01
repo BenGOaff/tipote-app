@@ -911,6 +911,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         .insert({ quiz_id: quizId, event_type: "share", meta: null, session_id: null });
       if (shareErr) console.error("[public/share] quiz_events insert failed", shareErr);
 
+      // Log business_event (fire-and-forget, non-bloquant). Dedupe par
+      // email pour ne pas re-compter si un visiteur partage 2x depuis
+      // 2 onglets. Cf. ROADMAP_RETENTION phase 1.5.
+      if (!shareErr && quiz.user_id) {
+        logBusinessEvent({
+          userId: quiz.user_id as string,
+          projectId: (quiz.project_id as string | null) ?? null,
+          kind: "quiz_share",
+          source: "internal",
+          payload: { quizId, side: "server", email },
+          dedupeKey: `quiz_share:${quizId}:${email.toLowerCase()}`,
+        }).catch(() => {});
+      }
+
       // ── Auto-apply share tag in Systeme.io (non-blocking) ──
       const shareTagName = String(quiz.sio_share_tag_name ?? "").trim();
       if (shareTagName && quiz.user_id) {
