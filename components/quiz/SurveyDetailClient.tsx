@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu, Crop,
+  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu, Crop, Settings2,
 } from "lucide-react";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
@@ -135,6 +135,7 @@ type QuizData = {
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
   capture_heading: string | null; capture_subtitle: string | null;
+  survey_thanks_heading: string | null; survey_thanks_body: string | null;
   result_insight_heading: string | null; result_projection_heading: string | null;
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
@@ -485,6 +486,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  // Adeline (1er juin 2026) : page de remerciement éditable WYSIWYG.
+  // "" = on affiche la string i18n par défaut côté visiteur.
+  const [surveyThanksHeading, setSurveyThanksHeading] = useState("");
+  const [surveyThanksBody, setSurveyThanksBody] = useState("");
   const [resultInsightHeading, setResultInsightHeading] = useState("");
   const [resultProjectionHeading, setResultProjectionHeading] = useState("");
   const [captureFirstName, setCaptureFirstName] = useState(false);
@@ -608,6 +613,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     consent_text: consentText,
     capture_heading: captureHeading,
     capture_subtitle: captureSubtitle,
+    survey_thanks_heading: surveyThanksHeading,
+    survey_thanks_body: surveyThanksBody,
     result_insight_heading: resultInsightHeading,
     result_projection_heading: resultProjectionHeading,
     capture_first_name: captureFirstName,
@@ -641,7 +648,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     questions: editQuestions,
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
-    captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
+    captureHeading, captureSubtitle, surveyThanksHeading, surveyThanksBody,
+    resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, askFirstName, askGender,
@@ -669,6 +677,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.consent_text === "string") setConsentText(s.consent_text);
     if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
     if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
+    if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
+    if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
     if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
@@ -792,6 +802,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setStartButtonText(q.start_button_text ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
+      setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
+      setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
@@ -1144,6 +1156,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
+          survey_thanks_heading: surveyThanksHeading.trim() || null,
+          survey_thanks_body: surveyThanksBody.trim() || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
@@ -1895,9 +1909,20 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 500;
                           return (
                             <div className="space-y-3">
-                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} className="w-full rounded-xl border-2 px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t">
-                                <label className="inline-flex items-center gap-1">{t("textMaxLength")}<input type="number" min={50} max={5000} value={maxLength} onChange={(e) => updateQuestionConfig(qi, { maxLength: Math.min(5000, Math.max(50, Number(e.target.value) || 500)) })} className="w-20 border rounded px-1.5 py-0.5 text-center" /></label>
+                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
+                              {/* Réglage créateur — discret, clairement
+                                  hors du visuel participant. Adeline (31
+                                  mai 2026) : "ne pas faire flotter ce
+                                  champ comme s'il faisait partie du
+                                  preview". On le pose dans une pill
+                                  grise avec une icône de réglage. */}
+                              <div className="flex justify-end">
+                                <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer" title={t("textMaxLengthHint")}>
+                                  <Settings2 className="w-3 h-3 opacity-60" />
+                                  <span>{t("textMaxLengthShort")}</span>
+                                  <input type="number" min={50} max={5000} value={maxLength} onChange={(e) => updateQuestionConfig(qi, { maxLength: Math.min(5000, Math.max(50, Number(e.target.value) || 500)) })} className="w-14 bg-background border border-border/60 rounded px-1.5 py-0.5 text-center text-[11px] font-medium" />
+                                  <span>{t("textMaxLengthChars")}</span>
+                                </label>
                               </div>
                             </div>
                           );
@@ -2011,8 +2036,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <RichTextEdit singleLine value={captureHeading || (quiz?.address_form === "vous" ? t("captureHeadingDefaultFormal") : t("captureHeadingDefault"))} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
-                  <RichTextEdit value={captureSubtitle || (quiz?.address_form === "vous" ? t("captureSubtitleDefaultFormal") : t("captureSubtitleDefault"))} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
+                  {/* Defaults survey-spécifiques : sur un sondage il n'y a
+                      pas de "profil" à révéler, le visiteur valide juste
+                      ses réponses. Adeline (31 mai 2026). */}
+                  <RichTextEdit singleLine value={captureHeading || t("previewCaptureHeadingDefaultSurvey")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
+                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefaultSurvey")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("csvFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
@@ -2053,11 +2081,22 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     </div>
                   </div>
                   <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
-                    Merci pour ta participation !
+                    <RichTextEdit
+                      value={surveyThanksHeading}
+                      onChange={setSurveyThanksHeading}
+                      singleLine
+                      className="text-2xl sm:text-4xl font-bold text-center"
+                      placeholder="Merci pour ta participation !"
+                    />
                   </h2>
-                  <p className="text-muted-foreground text-base leading-relaxed">
-                    Tes réponses ont bien été enregistrées.
-                  </p>
+                  <div className="text-muted-foreground text-base leading-relaxed">
+                    <RichTextEdit
+                      value={surveyThanksBody}
+                      onChange={setSurveyThanksBody}
+                      className="text-muted-foreground text-base text-center"
+                      placeholder="Tes réponses ont bien été enregistrées."
+                    />
+                  </div>
 
                   <div className="space-y-2">
                     <button
