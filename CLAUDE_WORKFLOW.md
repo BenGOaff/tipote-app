@@ -7,7 +7,7 @@ maître de `main` côté GitHub et côté VPS.**
 
 Le process invariable de Béné, à respecter à 100 % :
 
-1. Béné **télécharge** depuis ma branche de travail (`claude/setup-dev-guidelines-CmXl0`) vers son dossier local
+1. Béné **télécharge** depuis ma branche de travail (`claude/busy-wright-501xR`) vers son dossier local
 2. Elle **remplace** son ancien code local par mon code à jour
 3. Elle **commit + push sur main** depuis son PC vers GitHub
 4. Elle **pull main sur le VPS** + rebuild
@@ -42,13 +42,13 @@ Idem pour `tiquiz` (chemin `C:\Users\hello\Desktop\tiquiz` côté PC,
 
 À chaque sprint où je code :
 
-1. Je travaille sur la branche `claude/setup-dev-guidelines-CmXl0`
+1. Je travaille sur la branche `claude/busy-wright-501xR`
 2. Je push sur cette branche UNIQUEMENT
 3. **NE JAMAIS faire `git push origin main` directement**
 4. **NE JAMAIS faire `git merge` vers main puis push**
 
 Quand le code est prêt, je dis à Béné :
-> « C'est pushé sur `claude/setup-dev-guidelines-CmXl0`. Récupère mes
+> « C'est pushé sur `claude/busy-wright-501xR`. Récupère mes
 >   fichiers et push sur main avec ton process habituel. »
 
 Et je lui donne la commande pour récupérer mes fichiers sans casser sa branche main locale :
@@ -56,8 +56,8 @@ Et je lui donne la commande pour récupérer mes fichiers sans casser sa branche
 ```powershell
 # Sur son PC : récupère mes derniers fichiers depuis ma branche
 # (sans switcher de branche, applique mes fichiers dans son working tree main)
-git fetch origin claude/setup-dev-guidelines-CmXl0
-git checkout origin/claude/setup-dev-guidelines-CmXl0 -- .
+git fetch origin claude/busy-wright-501xR
+git checkout origin/claude/busy-wright-501xR -- .
 
 # Puis son process habituel
 git add .

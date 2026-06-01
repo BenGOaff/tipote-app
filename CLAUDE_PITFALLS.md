@@ -1211,3 +1211,58 @@ Côté extension (badge.ts) :
   ..., indications}})` → background → `/api/pod/ai-suggest`.
 - Disponible sur les 2 modes (task + quick) pour que même les
   suggestions pré-générées au fan-out soient regenerable on-demand.
+
+## AR) Contraintes business validées par Béné — 1er juin 2026
+
+Audit global du 1er juin 2026 → roadmap rétention dans
+`ROADMAP_RETENTION.md`. Hors-scope explicite à NE PAS confondre quand
+je propose des features :
+
+- **Tiquiz lifetime 57€ est TERMINÉ depuis longtemps**. Plans actifs
+  Tiquiz : Free / Monthly 9€ / Yearly 90€. Les lifetime existants
+  restent grandfathérés à vie. Ne JAMAIS proposer de nouvelle vente
+  lifetime Tiquiz, ne JAMAIS retirer les lifetime existants côté DB.
+- **Nouveau pricing Tiquiz à venir** : 19€/mois et 190€/an pour les
+  futurs users. Mécanique = colonne `profiles.pricing_grandfathered_at`
+  TIMESTAMPTZ, NULL = nouveau prix, NOT NULL = grandfathéré sur l'ancien
+  prix. Au moment du switch, backfill `now()` pour tous les users
+  existants. Stripe : nouveaux Price IDs, anciens gardés actifs.
+- **Bridge in-app Tiquiz → Tipote IMPOSSIBLE actuellement** : Systeme.io
+  a bloqué le whitelabel Tipote, donc on ne peut plus VENDRE Tipote
+  depuis l'écosystème Systeme.io. Ne PAS proposer / coder de CTA
+  "upgrade vers Tipote" dans Tiquiz tant que ce blocage n'est pas levé.
+  Garder l'archi compatible (pas de hardcode "Tipote n'existe pas"),
+  mais l'UI ne doit rien exposer.
+- **Affiliate (commissions, payouts, statements, leaderboard) = Systeme.io**.
+  Le dashboard `affiliate.tipote.com` ne gère QUE les contenus marketing
+  (emails, posts, articles, visuels) et les liens trackés. Toute la
+  mécanique financière est côté Systeme.io. NE PAS coder de payout
+  Stripe Connect, de statement PDF, de leaderboard de gains.
+- **Monitoring uptime VPS** : déjà couvert par UptimeRobot côté Béné.
+  Pas besoin de re-coder un healthcheck custom ni d'endpoint
+  `/healthz`. Si on en code un, c'est pour de l'observabilité interne,
+  pas pour remplacer UptimeRobot.
+
+## AS) Foundation `business_events` — table unique log (planifiée roadmap phase 0)
+
+Quand on attaque la phase 0 de `ROADMAP_RETENTION.md`, respecter :
+
+- **Une seule helper d'INSERT côté serveur** : `lib/businessEvents.ts →
+  logBusinessEvent({userId, projectId?, kind, payload, amountCents?,
+  currency?, source, occurredAt?, dedupeKey?})`. INSERT direct, lecture
+  `{ error }`. PAS de RPC (cf. section F — les RPC silent-fail).
+- **`dedupe_key` UNIQUE partiel** pour idempotence des syncs Stripe /
+  PayPal / Mollie / Systeme.io. Schéma : `<source>:<external_id>` (ex
+  `stripe:ch_xxx`, `systemeio:order_yyy`). `INSERT … ON CONFLICT
+  (user_id, dedupe_key) DO NOTHING WHERE dedupe_key IS NOT NULL`.
+- **Bucketing temps via `lib/dateKeys.ts`** (cf. section V — toujours
+  jour LOCAL du créateur, jamais UTC pour l'affichage).
+- **Trigger AFTER INSERT → `evaluate_milestones(user_id)`** : lit les
+  compteurs agrégés (SELECT COUNT par kind) et insère dans
+  `user_milestones` UNIQUE `(user_id, milestone_key)` si nouveau.
+  Insertion dans `user_notifications` en cascade. Pas d'UPDATE de
+  compteur direct (cf. section F).
+- **RLS** : user lit ses events. Service role (cron / webhook) bypass.
+- **Index obligatoires** : `(user_id, occurred_at DESC)`, `(user_id,
+  kind, occurred_at DESC)`, `(user_id, project_id, occurred_at DESC)`.
+  Sans ça les agrégats Wall of Wins traînent dès 1000 events / user.

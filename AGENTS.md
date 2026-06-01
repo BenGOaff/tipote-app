@@ -7,7 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 **Avant TOUT push, lire `CLAUDE_WORKFLOW.md`.**
 
 Résumé : je ne pousse JAMAIS sur `main`. Je pousse uniquement sur la
-branche `claude/setup-dev-guidelines-CmXl0`. Béné est seule maître de
+branche `claude/busy-wright-501xR`. Béné est seule maître de
 `main` côté GitHub.
 
 ## Claude personal notes — pitfalls + conventions
@@ -16,6 +16,12 @@ branche `claude/setup-dev-guidelines-CmXl0`. Béné est seule maître de
 Bugs récurrents identifiés + conventions implicites à respecter pour
 ne pas casser l'existant. Ce fichier doit être mis à jour quand un
 bug remonte plusieurs fois.
+
+**Pour les chantiers rétention en cours : lire `ROADMAP_RETENTION.md`**
+(audit Béné du 1er juin 2026 — phases 0 à 8). Contraintes business y
+sont listées (pricing Tiquiz, bridge Tipote bloqué Systeme.io,
+affiliate géré côté SIO, etc.) — ces contraintes sont aussi rappelées
+en section AR du pitfalls.
 
 Checklist minimum :
 - Migration SQL → `IF NOT EXISTS` + `NOTIFY pgrst, 'reload schema';` en fin.
