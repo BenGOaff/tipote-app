@@ -397,7 +397,7 @@ export const PT: AffiliateDict = {
     step1_subtitle: "1 minuto para perceber como funciona.",
     step1_body_1:
       "Já fazes parte do programa de afiliados Tipote × Tiquiz. Ganhas 40 a 50% de comissão em cada venda gerada pelo teu link.",
-    step1_body_2: "Aqui estão as 4 coisas a saber para começar em força.",
+    step1_body_2: "Aqui estão os 5 passos a saber para começar em força.",
     step2_title: "O teu link de afiliado rastreado",
     step2_subtitle: "A única coisa a recordar para ganhar comissões.",
     step2_body_intro: "Na tua visão geral encontras o teu link principal: tipote.fr/?sa=o_teu_id",
@@ -406,12 +406,12 @@ export const PT: AffiliateDict = {
     step2_bullet_lasttouch:
       "Last-touch — se vários afiliados influenciaram, ganha o último clique.",
     step2_bullet_anywhere: "Podes adicionar ?sa=o_teu_id a qualquer URL tipote.fr/.com/.blog.",
-    step3_title: "Separador Promover — todo o material pronto",
-    step3_subtitle: "Emails, publicações de redes, visuais. Copia-cola em todo o lado.",
-    step3_body_intro: "O separador Promover contém:",
-    step3_bullet_emails: "8 emails evergreen prontos a copiar (sequência de 2 semanas)",
-    step3_bullet_posts: "24 publicações (8 dias × 3 redes: Instagram / LinkedIn / X)",
-    step3_bullet_visuals: "18 visuais descarregáveis (formato Instagram 1080×1350)",
+    step3_title: "Separador Conteúdos — todo o material pronto",
+    step3_subtitle: "Emails, publicações de redes, artigos, visuais. Copia-cola em todo o lado.",
+    step3_body_intro: "O separador Conteúdos contém:",
+    step3_bullet_emails: "Emails evergreen prontos a copiar",
+    step3_bullet_posts: "Publicações de redes (LinkedIn / Instagram / X)",
+    step3_bullet_visuals: "Artigos longos + visuais descarregáveis",
     step3_body_outro:
       "O teu link rastreado é inserido automaticamente em todos os emails e publicações. Clicas em « Copiar », colas. É tudo.",
     step4_title: "🎁 1 mês de Tipote Elite oferecido",
@@ -419,7 +419,7 @@ export const PT: AffiliateDict = {
     step4_body_1:
       "Oferecemos-te 30 dias de acesso ao Tipote Elite para experimentares a ferramenta, capturares ecrãs do TEU próprio painel e fazeres vídeos demo autênticos.",
     step4_body_2:
-      "É uma só vez na tua vida de afiliado. Reserva-o para quando tiveres 2 h para explorar a fundo. Separador Teste Tipote no menu.",
+      "É uma só vez na tua vida de afiliado. Reserva-o para quando tiveres 2 h para explorar a fundo. Separador Teste grátis no menu.",
     step5_title: "Os teus níveis de comissão",
     step5_subtitle: "Quanto mais vendes, mais sobe a tua comissão.",
     step5_body_intro: "Começas com 40%. A tua comissão aumenta automaticamente:",

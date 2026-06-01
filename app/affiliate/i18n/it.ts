@@ -397,7 +397,7 @@ export const IT: AffiliateDict = {
     step1_subtitle: "1 minuto per capire come funziona.",
     step1_body_1:
       "Ora fai parte del programma di affiliazione Tipote × Tiquiz. Guadagni dal 40 al 50% di commissione su ogni vendita generata dal tuo link.",
-    step1_body_2: "Ecco le 4 cose da sapere per partire forte.",
+    step1_body_2: "Ecco i 5 passi da sapere per partire forte.",
     step2_title: "Il tuo link affiliato tracciato",
     step2_subtitle: "L'unica cosa da ricordare per guadagnare commissioni.",
     step2_body_intro: "Nella tua panoramica trovi il link principale: tipote.fr/?sa=tuo_id",
@@ -406,12 +406,12 @@ export const IT: AffiliateDict = {
     step2_bullet_lasttouch:
       "Last-touch — se più affiliati hanno influito, vince l'ultimo clic.",
     step2_bullet_anywhere: "Puoi aggiungere ?sa=tuo_id a qualsiasi URL tipote.fr/.com/.blog.",
-    step3_title: "Scheda Promuovere — tutto il materiale pronto",
-    step3_subtitle: "Email, post social, visual. Copia-incolla ovunque.",
-    step3_body_intro: "La scheda Promuovere contiene:",
-    step3_bullet_emails: "8 email evergreen pronte da copiare (sequenza di 2 settimane)",
-    step3_bullet_posts: "24 post (8 giorni × 3 reti: Instagram / LinkedIn / X)",
-    step3_bullet_visuals: "18 visual scaricabili (formato Instagram 1080×1350)",
+    step3_title: "Scheda Contenuti — tutto il materiale pronto",
+    step3_subtitle: "Email, post social, articoli, visual. Copia-incolla ovunque.",
+    step3_body_intro: "La scheda Contenuti contiene:",
+    step3_bullet_emails: "Email evergreen pronte da copiare",
+    step3_bullet_posts: "Post social (LinkedIn / Instagram / X)",
+    step3_bullet_visuals: "Articoli lunghi + visual scaricabili",
     step3_body_outro:
       "Il tuo link tracciato è inserito automaticamente in tutte le email e i post. Clicchi « Copia », incolli. Tutto qui.",
     step4_title: "🎁 1 mese di Tipote Elite in regalo",
@@ -419,7 +419,7 @@ export const IT: AffiliateDict = {
     step4_body_1:
       "Ti offriamo 30 giorni di accesso a Tipote Elite per testare lo strumento, catturare screenshot della TUA dashboard e fare video demo autentici.",
     step4_body_2:
-      "È una volta sola nella tua vita di affiliato. Riservalo a quando hai 2 ore per esplorare a fondo. Scheda Prova Tipote nel menu.",
+      "È una volta sola nella tua vita di affiliato. Riservalo a quando hai 2 ore per esplorare a fondo. Scheda Prova gratuita nel menu.",
     step5_title: "I tuoi livelli di commissione",
     step5_subtitle: "Più vendi, più sale la tua commissione.",
     step5_body_intro: "Parti dal 40%. La tua commissione aumenta automaticamente:",
