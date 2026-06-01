@@ -401,7 +401,7 @@ export const FR: AffiliateDict = {
     step1_body_2: "Voici les 5 étapes pour démarrer en force.",
     step2_title: "Ton lien d'affiliation tracké",
     step2_subtitle: "Le seul truc à retenir pour toucher tes commissions.",
-    step2_body_intro: "Sur ta vue d'ensemble, tu trouves ton lien principal : tipote.fr/?sa=ton_id",
+    step2_body_intro: "Sur Promouvoir, tu trouves ton lien principal : tipote.fr/tiquiz/affiliation?sa=ton_id",
     step2_bullet_cookie:
       "Cookie 90 jours — même si le client achète 3 mois après son clic, c'est toi qui touches.",
     step2_bullet_lasttouch:

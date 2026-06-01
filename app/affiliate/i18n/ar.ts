@@ -401,7 +401,7 @@ export const AR: AffiliateDict = {
     step1_body_2: "إليك 5 خطوات يجب معرفتها لانطلاقة قوية.",
     step2_title: "رابط التسويق المتتبَّع الخاص بك",
     step2_subtitle: "الشيء الوحيد الذي يجب تذكّره لكسب العمولات.",
-    step2_body_intro: "في نظرتك العامة تجد رابطك الرئيسي: tipote.fr/?sa=معرّفك",
+    step2_body_intro: "في تبويب الترويج تجد رابطك الرئيسي: tipote.fr/tiquiz/affiliation?sa=معرّفك",
     step2_bullet_cookie:
       "كوكي 90 يومًا — حتى لو اشترى العميل بعد 3 أشهر من نقرته، تكسب أنت.",
     step2_bullet_lasttouch:

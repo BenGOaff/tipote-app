@@ -400,7 +400,7 @@ export const PT: AffiliateDict = {
     step1_body_2: "Aqui estão os 5 passos a saber para começar em força.",
     step2_title: "O teu link de afiliado rastreado",
     step2_subtitle: "A única coisa a recordar para ganhar comissões.",
-    step2_body_intro: "Na tua visão geral encontras o teu link principal: tipote.fr/?sa=o_teu_id",
+    step2_body_intro: "No separador Promover encontras o teu link principal: tipote.fr/tiquiz/affiliation?sa=o_teu_id",
     step2_bullet_cookie:
       "Cookie de 90 dias — mesmo que o cliente compre 3 meses após o clique, ganhas tu.",
     step2_bullet_lasttouch:
