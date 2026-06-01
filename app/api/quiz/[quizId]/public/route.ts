@@ -14,6 +14,7 @@ import { isPaidPlan } from "@/lib/planLimits";
 import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
 import { resolveSioApiKey } from "@/lib/sio/resolveApiKey";
 import { sendCapiLead } from "@/lib/metaCapi";
+import { logBusinessEvent, dedupeKeys } from "@/lib/businessEvents";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -661,6 +662,24 @@ export async function POST(req: NextRequest, context: RouteContext) {
       console.error("[POST /api/quiz/[quizId]/public] Lead insert error:", error.message);
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
+
+    // ── Log business event (fire-and-forget, non-blocking) ──
+    // Dedup via dedupeKey = quiz_lead:<quizId>:<emailHash> → un seul event
+    // par email par quiz, même si le visiteur soumet plusieurs fois.
+    // Cf. ROADMAP_RETENTION.md phase 0 + PITFALLS section AR.
+    logBusinessEvent({
+      userId: quiz.user_id,
+      projectId: quiz.project_id ?? null,
+      kind: "lead_captured",
+      source: "internal",
+      payload: {
+        quizId,
+        quizTitle: quiz.title,
+        resultId,
+        leadId: lead?.id,
+      },
+      dedupeKey: dedupeKeys.quizLead(quizId, email),
+    }).catch(() => {});
 
     // ── Sync to unified leads table (non-blocking) ──
     (async () => {
