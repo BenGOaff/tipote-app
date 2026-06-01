@@ -13,8 +13,10 @@ import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AffiliateLinkCopy from "../components/AffiliateLinkCopy";
 import { LinksManager, type LinkItem } from "../components/LinksManager";
+import { BlogArticlesPicker } from "../components/BlogArticlesPicker";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
 import { buildAffiliateLink } from "@/lib/affiliate/links";
+import { fetchBlogArticles } from "@/lib/affiliate/blogFeed";
 import { resolveAffiliateMarket, localeLabel, AFFILIATE_LIVE_LOCALES } from "@/lib/affiliate/contentLocales";
 import { ContentLocalePicker } from "../components/ContentLocalePicker";
 
@@ -72,6 +74,10 @@ export default async function PromouvoirPage({
   const sp = await searchParams;
   const market = resolveAffiliateMarket(sp.locale, session.locale);
   const baseLink = buildAffiliateLink(market, "/tiquiz/affiliation", session.sa);
+  // Articles de blog du marché courant — 20 derniers, antéchrono. Best-effort :
+  // si le feed est down, on retourne tableau vide et la section n'affiche rien.
+  const blogMarket: "fr" | "en" = market === "en" ? "en" : "fr";
+  const blogArticles = await fetchBlogArticles(blogMarket, 20);
 
   // Liste de liens personnalisée par l'affilié (sinon les liens par défaut).
   const { data: ov } = await supabaseAdmin
@@ -137,6 +143,16 @@ export default async function PromouvoirPage({
           {interpolate(t.promouvoir.links_info, { sa: session.sa })}
         </CardContent>
       </Card>
+
+      {/* Articles de blog Tipote — sélecteur de cible affilié (juin 2026).
+          Béné : "L'user choisit ce qu'il veut promouvoir, il choisit la
+          page de vente, le bon de commande ou l'article qu'il veut et
+          hop il a son lien." */}
+      <BlogArticlesPicker
+        articles={blogArticles}
+        sa={session.sa}
+        market={blogMarket}
+      />
 
       <Card>
         <CardHeader>

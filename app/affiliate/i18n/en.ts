@@ -229,6 +229,10 @@ export const EN: AffiliateDict = {
     edit_badge: "Customized",
     edit_hint: "Adapt this text to your voice. Keep variables like {first_name} and the link — they're auto-replaced on copy.",
     edit_saved: "Changes saved",
+    blog_section_title: "Blog articles",
+    blog_section_description: "Pick a Tipote blog article to promote — your tracked link is generated for that article.",
+    blog_search_placeholder: "Search articles…",
+    blog_empty_search: "No article matches your search.",
   },
   revenus: {
     page_title: "Earnings",
@@ -400,7 +404,7 @@ export const EN: AffiliateDict = {
     step1_body_2: "Here are the 5 steps to know for a strong start.",
     step2_title: "Your tracked affiliate link",
     step2_subtitle: "The one thing to remember to earn commissions.",
-    step2_body_intro: "On your overview, you'll find your main link: tipote.fr/?sa=your_id",
+    step2_body_intro: "On the Promote tab, you'll find your main link: tipote.fr/tiquiz/affiliation?sa=your_id",
     step2_bullet_cookie:
       "90-day cookie — even if the customer buys 3 months after their click, you earn.",
     step2_bullet_lasttouch:

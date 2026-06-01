@@ -235,6 +235,11 @@ export type AffiliateDict = {
     edit_badge: string;
     edit_hint: string;
     edit_saved: string;
+    // Articles de blog — sélecteur de cible affilié (juin 2026)
+    blog_section_title: string;
+    blog_section_description: string;
+    blog_search_placeholder: string;
+    blog_empty_search: string;
   };
 
   // ─── Revenus ─────────────────────────────────────────────────────

@@ -229,6 +229,10 @@ export const ES: AffiliateDict = {
     edit_badge: "Personalizado",
     edit_hint: "Adapta este texto a tu voz. Conserva las variables como {first_name} y el enlace — se reemplazan automáticamente al copiar.",
     edit_saved: "Cambios guardados",
+    blog_section_title: "Artículos del blog",
+    blog_section_description: "Elige un artículo del blog de Tipote para promocionar — tu enlace de seguimiento se genera para ese artículo.",
+    blog_search_placeholder: "Buscar artículos…",
+    blog_empty_search: "Ningún artículo coincide con tu búsqueda.",
   },
   revenus: {
     page_title: "Ingresos",
@@ -400,7 +404,7 @@ export const ES: AffiliateDict = {
     step1_body_2: "Estos son los 5 pasos que debes saber para empezar con fuerza.",
     step2_title: "Tu enlace de afiliado con seguimiento",
     step2_subtitle: "Lo único que recordar para ganar comisiones.",
-    step2_body_intro: "En tu resumen encontrarás tu enlace principal: tipote.fr/?sa=tu_id",
+    step2_body_intro: "En la pestaña Promocionar encontrarás tu enlace principal: tipote.fr/tiquiz/affiliation?sa=tu_id",
     step2_bullet_cookie:
       "Cookie de 90 días — aunque el cliente compre 3 meses tras su clic, ganas tú.",
     step2_bullet_lasttouch:

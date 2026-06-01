@@ -31,6 +31,33 @@ import { Button } from "@/components/ui/button";
 
 import { useDict } from "../i18n/context";
 
+// Si la PATCH /affiliate/api/onboarded plante côté serveur (DB down,
+// session expirée, etc.), le modal se réouvrait à chaque visite parce
+// qu'`onboarded_at` restait NULL en base → boucle infinie pour l'user.
+// On retombe sur ce flag côté navigateur quand on échoue côté serveur :
+// l'user a démarré → on ne lui ré-impose pas le tour, même si la base
+// n'a pas pu être marquée. Best-effort, reset si l'user clear ses
+// données. Pas une fuite de confidentialité — juste un bit local.
+const TOUR_DISMISSED_KEY = "tipote.affiliate.tour.dismissed";
+
+function readTourDismissedLocal(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(TOUR_DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeTourDismissedLocal() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(TOUR_DISMISSED_KEY, "1");
+  } catch {
+    /* localStorage indispo (mode privé strict) — on ignore */
+  }
+}
+
 export function AffiliateTour({ onboardedAt }: { onboardedAt: string | null }) {
   const t = useDict();
   const router = useRouter();
@@ -145,6 +172,10 @@ export function AffiliateTour({ onboardedAt }: { onboardedAt: string | null }) {
 
   useEffect(() => {
     if (onboardedAt) return;
+    // Backstop : si la PATCH onboarded a planté la dernière fois mais
+    // qu'on a tagué localStorage, on n'ouvre pas le tour. Évite le loop
+    // pour les users dont onboarded_at est resté NULL côté serveur.
+    if (readTourDismissedLocal()) return;
     const timer = setTimeout(() => setIsOpen(true), 600);
     return () => clearTimeout(timer);
   }, [onboardedAt]);
@@ -158,20 +189,30 @@ export function AffiliateTour({ onboardedAt }: { onboardedAt: string | null }) {
     return () => window.removeEventListener("affiliate-tour-start", handler);
   }, []);
 
+  // Ferme le modal IMMÉDIATEMENT côté client + tag localStorage backstop,
+  // puis tente la PATCH en arrière-plan. Si la PATCH plante (DB, réseau,
+  // session), l'user voit quand même le modal disparaître et il ne se
+  // ré-ouvre plus au prochain refresh — fini la boucle infinie remontée
+  // par Monique (1er juin 2026).
   async function complete() {
     setSaving(true);
+    writeTourDismissedLocal();
+    setIsOpen(false);
     try {
-      await fetch("/affiliate/api/onboarded", {
+      const res = await fetch("/affiliate/api/onboarded", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "complete" }),
       });
+      if (res.ok) {
+        // Source de vérité = serveur quand dispo. router.refresh
+        // re-fetch la session pour que onboardedAt ne soit plus NULL.
+        router.refresh();
+      }
     } catch {
-      // best effort
+      // best effort — localStorage tient le coup pour la session locale.
     }
     setSaving(false);
-    setIsOpen(false);
-    router.refresh();
   }
 
   async function skip() {

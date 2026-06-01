@@ -230,6 +230,10 @@ export const AR: AffiliateDict = {
     edit_badge: "مخصّص",
     edit_hint: "كيّف هذا النص بأسلوبك. احتفظ بالمتغيّرات مثل {first_name} والرابط — تُستبدل تلقائيًا عند النسخ.",
     edit_saved: "تم حفظ التغييرات",
+    blog_section_title: "مقالات المدونة",
+    blog_section_description: "اختر مقالًا من مدونة Tipote للترويج له — يتم إنشاء رابطك المتتبَّع لهذا المقال.",
+    blog_search_placeholder: "ابحث في المقالات…",
+    blog_empty_search: "لا يطابق أي مقال بحثك.",
   },
   revenus: {
     page_title: "الأرباح",
@@ -401,7 +405,7 @@ export const AR: AffiliateDict = {
     step1_body_2: "إليك 5 خطوات يجب معرفتها لانطلاقة قوية.",
     step2_title: "رابط التسويق المتتبَّع الخاص بك",
     step2_subtitle: "الشيء الوحيد الذي يجب تذكّره لكسب العمولات.",
-    step2_body_intro: "في نظرتك العامة تجد رابطك الرئيسي: tipote.fr/?sa=معرّفك",
+    step2_body_intro: "في تبويب الترويج تجد رابطك الرئيسي: tipote.fr/tiquiz/affiliation?sa=معرّفك",
     step2_bullet_cookie:
       "كوكي 90 يومًا — حتى لو اشترى العميل بعد 3 أشهر من نقرته، تكسب أنت.",
     step2_bullet_lasttouch:
