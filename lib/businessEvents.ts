@@ -133,6 +133,22 @@ export async function logBusinessEvent(
     return { ok: false, reason: "db_error", error: error.message };
   }
 
+  // Post-hook : évalue les milestones potentiellement déclenchés par cet
+  // event. Dynamic import pour casser la circular dependency
+  // (engine.ts importe lui-même businessEvents pour countUserEvents).
+  // Fire-and-forget, jamais throw vers le caller.
+  void import("@/lib/milestones/engine")
+    .then(({ evaluateMilestonesForUser }) =>
+      evaluateMilestonesForUser({
+        userId: input.userId,
+        eventKind: input.kind,
+        projectId: input.projectId ?? null,
+      }),
+    )
+    .catch((err) => {
+      console.error("[businessEvents] evaluate milestones failed", err);
+    });
+
   return { ok: true, eventId: data?.id, reason: "inserted" };
 }
 
