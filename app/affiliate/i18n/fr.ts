@@ -398,7 +398,7 @@ export const FR: AffiliateDict = {
     step1_subtitle: "1 minute pour comprendre comment ça marche.",
     step1_body_1:
       "Tu fais maintenant partie du programme d'affiliation Tipote × Tiquiz. Tu touches une commission de 40 à 50% sur chaque vente générée par ton lien.",
-    step1_body_2: "Voici les 4 trucs à savoir pour démarrer en force.",
+    step1_body_2: "Voici les 5 étapes pour démarrer en force.",
     step2_title: "Ton lien d'affiliation tracké",
     step2_subtitle: "Le seul truc à retenir pour toucher tes commissions.",
     step2_body_intro: "Sur ta vue d'ensemble, tu trouves ton lien principal : tipote.fr/?sa=ton_id",
@@ -408,12 +408,12 @@ export const FR: AffiliateDict = {
       "Last-touch — si plusieurs affiliés ont influencé, c'est le dernier clic qui compte.",
     step2_bullet_anywhere:
       "Tu peux rajouter ?sa=ton_id à n'importe quelle URL tipote.fr/.com/.blog.",
-    step3_title: "Onglet Promouvoir — tout le matos prêt",
-    step3_subtitle: "Emails, posts réseaux, visuels. Copy-paste partout.",
-    step3_body_intro: "L'onglet Promouvoir contient :",
-    step3_bullet_emails: "8 emails evergreen prêts à copier (séquence sur 2 semaines)",
-    step3_bullet_posts: "24 posts (8 jours × 3 réseaux : Instagram / LinkedIn / X)",
-    step3_bullet_visuals: "18 visuels téléchargeables (format Instagram 1080×1350)",
+    step3_title: "Onglet Contenus — tout le matos prêt",
+    step3_subtitle: "Emails, posts réseaux, articles, visuels. Copy-paste partout.",
+    step3_body_intro: "L'onglet Contenus contient :",
+    step3_bullet_emails: "Emails evergreen prêts à copier",
+    step3_bullet_posts: "Posts réseaux (LinkedIn / Instagram / X)",
+    step3_bullet_visuals: "Articles long format + visuels téléchargeables",
     step3_body_outro:
       "Ton lien tracké est automatiquement injecté dans tous les emails et posts. Tu cliques « Copier », tu colles. C'est tout.",
     step4_title: "🎁 1 mois Tipote Elite offert",
@@ -421,7 +421,7 @@ export const FR: AffiliateDict = {
     step4_body_1:
       "On t'offre 30 jours d'accès Elite à Tipote pour que tu testes l'outil, captures des screenshots de TON propre dashboard, et puisses faire des démos vidéo authentiques.",
     step4_body_2:
-      "C'est une seule fois dans ta vie d'affilié. Réserve-le pour quand tu auras 2h devant toi pour explorer à fond. Onglet Trial Tipote dans la nav.",
+      "C'est une seule fois dans ta vie d'affilié. Réserve-le pour quand tu auras 2h devant toi pour explorer à fond. Onglet Essai gratuit dans la nav.",
     step5_title: "Tes paliers de commission",
     step5_subtitle: "Plus tu vends, plus ta com' monte.",
     step5_body_intro: "Tu démarres à 40%. Ta commission augmente automatiquement :",
