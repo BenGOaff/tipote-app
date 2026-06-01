@@ -17,6 +17,7 @@ import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { loadBrandBundle, brandVoiceToPromptHint } from "@/lib/visualStudio/brandLoader";
 import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
+import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -262,13 +263,18 @@ export async function POST(req: NextRequest) {
               "anthropic-version": "2023-06-01",
             },
             signal: abortController.signal,
-            body: JSON.stringify({
-              model: getClaudeModel(),
-              max_tokens: 8000,
-              temperature: 0.7,
-              system,
-              messages: [{ role: "user", content: userPrompt }],
-            }),
+            // buildClaudeMessageBody retire temperature/top_p/top_k pour
+            // les modèles qui les rejettent (Opus 4.7+, sinon 400
+            // "temperature is deprecated for this model").
+            body: JSON.stringify(
+              buildClaudeMessageBody({
+                model: getClaudeModel(),
+                max_tokens: 8000,
+                temperature: 0.7,
+                system,
+                messages: [{ role: "user", content: userPrompt }],
+              }),
+            ),
           });
         } catch (fetchErr: any) {
           const name = String(fetchErr?.name ?? "");

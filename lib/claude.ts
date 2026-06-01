@@ -75,6 +75,30 @@ export async function callClaude(args: CallClaudeArgs): Promise<string> {
   armIdleTimer();
 
   let res: Response;
+  // Opus 4.7+ a RETIRÉ les paramètres temperature/top_p/top_k de l'API
+  // Messages — les envoyer renvoie 400 "temperature is deprecated for
+  // this model" (constaté en prod le 1er juin 2026 après le bump opus
+  // 4.7 → 4.8 du tier). Sur les modèles plus anciens (sonnet 4.6,
+  // haiku 4.5, etc.) le paramètre fonctionne normalement.
+  //
+  // Cf. doc migration Anthropic : Opus 4.7 et 4.8 = adaptive thinking
+  // uniquement, pas de sampling params.
+  const resolvedModel = args.model?.trim() || resolveClaudeModel();
+  const isOpus47Plus = /^claude-opus-4-(?:[7-9]|\d{2,})\b/i.test(resolvedModel);
+
+  const requestBody: Record<string, unknown> = {
+    model: resolvedModel,
+    max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
+    system: args.system,
+    messages: [{ role: "user", content: args.user }],
+    stream: true,
+  };
+  if (!isOpus47Plus && typeof args.temperature === "number") {
+    requestBody.temperature = args.temperature;
+  } else if (!isOpus47Plus) {
+    requestBody.temperature = 0.7;
+  }
+
   try {
     res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -84,18 +108,7 @@ export async function callClaude(args: CallClaudeArgs): Promise<string> {
         "anthropic-version": "2023-06-01",
       },
       signal: controller.signal,
-      body: JSON.stringify({
-        // `args.model` permet de bumper un endpoint sur un tier plus
-        // puissant (ex. Opus pour le contenu premium). Défaut inchangé
-        // (resolveClaudeModel = sonnet) → aucun impact sur les call-sites
-        // existants qui ne passent pas de model.
-        model: args.model?.trim() || resolveClaudeModel(),
-        max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
-        temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
-        system: args.system,
-        messages: [{ role: "user", content: args.user }],
-        stream: true,
-      }),
+      body: JSON.stringify(requestBody),
     });
   } catch (e: any) {
     if (idleTimer) clearTimeout(idleTimer);

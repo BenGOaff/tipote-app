@@ -11,6 +11,69 @@
 
 ---
 
+## 🔖 POINT D'ÉTAPE — reprendre ici (dernière session : 1er juin 2026)
+
+> Tout est poussé sur la branche `claude/busy-wright-501xR` (Tipote ET
+> Tiquiz). Rien sur main — Béné déploie via son process habituel.
+
+### ✅ FAIT cette session (Tipote + Tiquiz)
+- **Rétention Tipote** : milestones, Wall of Wins, récap mensuel,
+  value-nudges (cron `value-nudges`), coach IA proactif Opus 4.8, tests
+  E2E (smoke + Playwright).
+- **Rétention Tiquiz** : milestones, Wall of Wins, 8 templates métier
+  (galerie SEO `/templates`), smoke tests.
+- **Sondages (2 apps)** : export CSV + PDF brandé (hero + KPI + barres
+  par question + analyse IA embarquée + footer paginé), analyse IA des
+  résultats (≥5 réponses). Tipote = 1 crédit (re-runs gratuits).
+  Tiquiz = gate plan (`canUseSurveyAI`, ouvert au plan `beta` + allowlist
+  env en attendant le plan premium). IA = Claude Opus 4.8 (contenu =
+  meilleur Claude, règle Béné).
+- Tier Opus bumpé 4.7 → **4.8** dans les 2 apps.
+
+### ⚠️ À DÉPLOYER PAR BÉNÉ (actions en attente, sinon features KO)
+1. **Tipote** : run migration `supabase/migrations/20260604_business_events_foundation.sql`
+   + `20260605_consolidate_notifications.sql` + `20260606_survey_ai_analysis.sql`
+   (les 2 premières peut-être déjà faites — vérifier).
+   Puis build + restart pm2 `tipote-prod`.
+   Puis cron déjà run : backfill-milestones ✅ (fait).
+   Ajouter à la crontab : `value-nudges` (1x/jour 10h — cf. section
+   phase 3).
+2. **Tiquiz** : run migration `20260604_business_events_foundation.sql`
+   ✅ (fait) + `20260605_survey_ai_analysis.sql` (NOUVELLE — à run).
+   Build + restart pm2 `tiquiz-prod`. Backfill-milestones ✅ (fait,
+   60 milestones).
+3. Les refontes PDF (sondages) = pas de migration, juste build+restart.
+
+### 🕓 EN ATTENTE DU RETOUR DE BÉNÉ
+- Retour sur les **8 templates Tiquiz** (qualité/ton — ajuster si besoin).
+- Retour sur le **PDF sondage** brandé (tester sur un sondage qui a une
+  analyse IA générée pour voir le rendu complet).
+
+### 📋 À REPRENDRE (todo priorisée)
+1. **Tiquiz — multiprofils** : DESIGN documenté (section "Multiprofils
+   Tiquiz — DESIGN" du roadmap Tiquiz + pitfall en tête). NON codé.
+   Béné veut le préparer sans casser les quiz actifs existants. Plan de
+   migration backward-compat prêt.
+2. **Tiquiz — analyse IA + multiprofils → plan premium** : quand le
+   pricing reprend, ajouter le slug du plan premium dans
+   `canUseSurveyAI` (lib/planLimits). NE PAS ouvrir à isPaidPlan.
+3. **Tiquiz — pricing 19/190** (phase 6) : EN PAUSE sur demande Béné.
+4. **Templates V2** (Tiquiz) : plus de modèles (objectif 15+), A/B
+   testing titres/questions, auto-instanciation post-signup.
+5. **Tests E2E V2** : workflow GitHub Actions (smoke auto sur push),
+   port smoke→Tiquiz fait ✅, funnel Playwright jusqu'à la capture.
+6. **i18n EN** des panneaux sondage (FR en dur pour l'instant).
+7. Optionnel : CSP `frame-ancestors *` sur Tiquiz `/q/` (durcissement
+   embed, marche déjà sans).
+
+### ❌ HORS SCOPE (décidé)
+- Value-nudges Tiquiz (pas de mailer Tiquiz).
+- Coach proactif Tiquiz (pas de coach IA Tiquiz).
+- Bridge in-app Tiquiz → Tipote (Systeme.io a bloqué le whitelabel).
+- Affiliate (géré côté Systeme.io).
+
+---
+
 ## Contraintes business validées par Béné (1er juin 2026)
 
 À respecter à 100% dans tous les chantiers ci-dessous :
