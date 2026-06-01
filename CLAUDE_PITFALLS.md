@@ -1211,3 +1211,51 @@ Côté extension (badge.ts) :
   ..., indications}})` → background → `/api/pod/ai-suggest`.
 - Disponible sur les 2 modes (task + quick) pour que même les
   suggestions pré-générées au fan-out soient regenerable on-demand.
+
+---
+
+## AR) NE JAMAIS éditer package-lock.json à la main (1er juin 2026)
+
+**Bug régressif évitable.** Le commit f053a60 (mirror Tiquiz, +
+`@types/pdf-parse`) a réduit le lockfile de 695 lignes — un agent a
+édité/tronqué le lock au lieu de laisser npm le régénérer. Résultat :
+`npm ci` côté CI plante avec une longue liste de Missing/Invalid
+(svelte, vue, @swc/helpers, @babel/parser, postcss, nanoid…) parce
+que des optional/peer deps transitives ont disparu du lock alors
+qu'elles restent référencées par les packages installés (chaîne
+`oxc-parser` / `unrs-resolver` côté tooling Next).
+
+**Règle absolue.** Quand je touche `package.json` (ajout, suppression,
+bump de dep) :
+
+1. **TOUJOURS** lancer `npm install` (ou `npm install --package-lock-only
+   --ignore-scripts` si je ne veux pas toucher node_modules) pour que
+   npm resynchronise `package-lock.json` lui-même.
+2. **JAMAIS** éditer `package-lock.json` à la main, ni le tronquer, ni
+   le régénérer partiellement.
+3. **VÉRIFIER** avec `npm ci --dry-run --ignore-scripts` avant commit
+   — doit afficher "added X packages" sans erreur, sinon le lock est
+   désynchro et CI plantera.
+4. **NE PAS** committer un diff `package-lock.json` qui *réduit*
+   massivement le fichier après un ajout de dep. C'est le signal
+   d'alarme : un ajout de dep ne devrait *jamais* faire perdre des
+   lignes au lock (sauf cleanup volontaire et explicite, et même là
+   on le fait via `npm prune`/`npm install`, pas à la main).
+
+**Symptôme côté CI à reconnaître :**
+
+```
+npm error `npm ci` can only install packages when your package.json
+and package-lock.json or npm-shrinkwrap.json are in sync.
+npm error Missing: svelte@… from lock file
+npm error Missing: vue@… from lock file
+npm error Invalid: lock file's @babel/parser@… does not satisfy …
+```
+
+**Fix.** `npm install --package-lock-only --ignore-scripts` →
+`npm ci --dry-run` pour valider → commit du lock resynchro.
+
+**Philosophie.** On avance toujours en *préservant* l'existant qui
+marche. Le lockfile est l'état figé de "ça build et ça tourne en prod",
+on ne le touche jamais à la légère. Penser PREMIUM = ne jamais casser
+ce qui marche pour livrer ce qui marche.
