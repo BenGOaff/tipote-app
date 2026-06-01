@@ -228,7 +228,13 @@ export async function getUserEventsSince(
 export async function countUserEvents(
   userId: string,
   kind: BusinessEventKind,
-  opts: { since?: Date; projectId?: string | null; client?: SupabaseClient } = {},
+  opts: {
+    since?: Date;
+    /** Borne supérieure exclusive (occurred_at < until). */
+    until?: Date;
+    projectId?: string | null;
+    client?: SupabaseClient;
+  } = {},
 ): Promise<number> {
   if (!userId) return 0;
   const client = opts.client ?? supabaseAdmin;
@@ -241,6 +247,9 @@ export async function countUserEvents(
   if (opts.since) {
     query = query.gte("occurred_at", opts.since.toISOString());
   }
+  if (opts.until) {
+    query = query.lt("occurred_at", opts.until.toISOString());
+  }
   if (opts.projectId) {
     query = query.eq("project_id", opts.projectId);
   }
@@ -251,6 +260,49 @@ export async function countUserEvents(
     return 0;
   }
   return count ?? 0;
+}
+
+/**
+ * Somme `amount_cents` (en monnaie ORIGINALE) des events d'un kind
+ * donné dans une fenêtre temporelle. Utilisé par Wall of Wins (phase 2)
+ * pour calculer le CA tracké du mois en cours.
+ *
+ * IMPORTANT : ne couvre QUE les events post-création de business_events
+ * (4 juin 2026). Pour le CA cumulé historique total, utiliser
+ * `sumSalesForUser` dans lib/businessOutcomes.ts qui lit `transactions`.
+ */
+export async function sumEventAmountsInRange(
+  userId: string,
+  kind: BusinessEventKind,
+  opts: {
+    since?: Date;
+    until?: Date;
+    projectId?: string | null;
+    client?: SupabaseClient;
+  } = {},
+): Promise<number> {
+  if (!userId) return 0;
+  const client = opts.client ?? supabaseAdmin;
+  let query = client
+    .from("business_events")
+    .select("amount_cents")
+    .eq("user_id", userId)
+    .eq("kind", kind)
+    .not("amount_cents", "is", null);
+
+  if (opts.since) query = query.gte("occurred_at", opts.since.toISOString());
+  if (opts.until) query = query.lt("occurred_at", opts.until.toISOString());
+  if (opts.projectId) query = query.eq("project_id", opts.projectId);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[businessEvents] sumEventAmountsInRange failed", error.message);
+    return 0;
+  }
+  return (data ?? []).reduce(
+    (sum, row) => sum + ((row as { amount_cents: number | null }).amount_cents ?? 0),
+    0,
+  );
 }
 
 // ----------------------------------------------------------------------------

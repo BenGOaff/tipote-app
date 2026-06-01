@@ -11,6 +11,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PageHeader } from "@/components/PageHeader";
 import { PageBanner } from "@/components/PageBanner";
 import RevenueGoalProgress from "@/components/business/RevenueGoalProgress";
+import { WallOfWins } from "@/components/dashboard/WallOfWins";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -893,6 +894,12 @@ export default function TodayLovable() {
                 visible during loading so the dashboard never feels
                 empty while the data fetches. */}
             <Greeting subtitle />
+
+            {/* Wall of Wins — phase 2 ROADMAP_RETENTION. Auto-caché
+                si aucun résultat sur la période (règle Béné "motivant
+                ou rien"). Fetch indépendant du `loading` du dashboard
+                pour ne pas bloquer l'affichage des autres cards. */}
+            <WallOfWins />
 
             {loading ? (
               <div className="space-y-5">
