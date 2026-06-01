@@ -54,6 +54,54 @@ export default function SurveyFormClient() {
 
   // ── Import ────────────────────────────────────────────────────────
   const [importText, setImportText] = useState("");
+  // File upload (.txt / .docx / .pdf) → on extrait côté serveur puis on
+  // remplit le textarea pour que l'user voie le contenu détecté avant
+  // de lancer l'import. Adeline (1er juin 2026) : "j'ai pas de boutons
+  // pour importer le document". Mirror du fix Tiquiz côté sondage.
+  const [extracting, setExtracting] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFileUpload(file: File) {
+    const name = file.name.toLowerCase();
+    const mime = file.type;
+    const isTxt = name.endsWith(".txt") || mime === "text/plain";
+    const isDocx = name.endsWith(".docx") ||
+      mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const isPdf = name.endsWith(".pdf") || mime === "application/pdf";
+    if (!isTxt && !isDocx && !isPdf) {
+      toast.error(t("importFormatsNotice"));
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(t("importFileTooLarge"));
+      return;
+    }
+    setExtracting(true);
+    try {
+      let text = "";
+      if (isTxt) {
+        text = await file.text();
+      } else {
+        const form = new FormData();
+        form.append("file", file);
+        const exRes = await fetch("/api/quiz/import-extract", { method: "POST", body: form });
+        const exBody = await exRes.json().catch(() => ({}));
+        if (!exRes.ok || !exBody?.ok) {
+          toast.error(exBody?.hint || t("errImport"));
+          return;
+        }
+        text = String(exBody.text || "");
+      }
+      if (!text.trim()) {
+        toast.error(t("importEmpty"));
+        return;
+      }
+      setImportText(text.slice(0, 50000));
+      toast.success(t("importFileExtracted", { name: file.name }));
+    } finally {
+      setExtracting(false);
+    }
+  }
 
   // Load the user's default content_locale + tone so the form starts pre-filled.
   useEffect(() => {
@@ -441,6 +489,49 @@ export default function SurveyFormClient() {
               <p className="text-sm text-muted-foreground">{t("importHint")}</p>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Upload de fichier (.txt / .docx / .pdf). Adeline (1er
+                  juin 2026) : "j'ai pas de boutons pour importer le
+                  document". Mirror du fix Tiquiz côté sondage. */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const f = Array.from(e.dataTransfer?.files ?? [])[0];
+                  if (f) void handleFileUpload(f);
+                }}
+                className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors"
+              >
+                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="font-medium mb-1 text-sm">{t("importDropHint")}</p>
+                <p className="text-xs text-muted-foreground mb-3">{t("importFormatsAccepted")}</p>
+                <input
+                  ref={importFileInputRef}
+                  type="file"
+                  accept=".txt,text/plain,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFileUpload(f); e.target.value = ""; }}
+                  className="hidden"
+                  id="survey-import-file"
+                />
+                <Button variant="outline" type="button" disabled={extracting} asChild>
+                  <label htmlFor="survey-import-file" className="cursor-pointer">
+                    {extracting ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("importExtracting")}</>
+                    ) : (
+                      t("importSelectFile")
+                    )}
+                  </label>
+                </Button>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-3 text-muted-foreground tracking-wider">{t("importOrPaste")}</span>
+                </div>
+              </div>
+
               <Textarea
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
