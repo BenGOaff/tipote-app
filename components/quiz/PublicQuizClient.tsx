@@ -109,6 +109,10 @@ type PublicQuizData = {
   capture_heading: string | null;
   capture_subtitle: string | null;
   capture_submit_text: string | null;
+  // Sondage uniquement (1er juin 2026) : overrides rich-text pour la
+  // page de remerciement. NULL = string i18n par défaut.
+  survey_thanks_heading?: string | null;
+  survey_thanks_body?: string | null;
   result_insight_heading?: string | null;
   result_projection_heading?: string | null;
   capture_first_name?: boolean | null;
@@ -2464,12 +2468,22 @@ export default function PublicQuizClient({
         {shareOverlay}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
-            {t.surveyThanksHeading ?? "Thanks for your responses!"}
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            {t.surveyThanksBody ?? "Your answers have been recorded. You can close this page or continue below."}
-          </p>
+          <h2
+            className="tipote-quiz-rich text-3xl sm:text-4xl font-bold leading-tight"
+            dangerouslySetInnerHTML={{
+              __html:
+                sanitizeRichText(interp(quiz.survey_thanks_heading?.trim() || "")) ||
+                (t.surveyThanksHeading ?? "Thanks for your responses!"),
+            }}
+          />
+          <div
+            className="tipote-quiz-rich text-muted-foreground text-lg"
+            dangerouslySetInnerHTML={{
+              __html:
+                sanitizeRichText(interp(quiz.survey_thanks_body?.trim() || "")) ||
+                (t.surveyThanksBody ?? "Your answers have been recorded. You can close this page or continue below."),
+            }}
+          />
 
           {ctaUrl && (
             <Button

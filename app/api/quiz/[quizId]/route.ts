@@ -17,7 +17,14 @@ import { isPaidPlan } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
-const RICH_TEXT_FIELDS = ["introduction", "capture_heading", "capture_subtitle", "capture_submit_text"] as const;
+const RICH_TEXT_FIELDS = [
+  "introduction",
+  "capture_heading",
+  "capture_subtitle",
+  "capture_submit_text",
+  "survey_thanks_heading",
+  "survey_thanks_body",
+] as const;
 
 // Plain-text quiz fields that benefit from French typography. Capture
 // fields are stored as rich text on tipote (above), so they're handled by
@@ -167,7 +174,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "bonus_image_url", "bonus_image_position", "bonus_unlocked_message", "share_message", "status", "sio_share_tag_name",
       "locale", "og_image_url", "og_description",
       "ask_first_name", "ask_gender",
-      "capture_heading", "capture_subtitle", "capture_submit_text", "capture_first_name",
+      "capture_heading", "capture_subtitle", "capture_submit_text",
+      "survey_thanks_heading", "survey_thanks_body",
+      "capture_first_name",
       "capture_last_name", "capture_phone", "capture_country",
       "phone_required", "first_name_required", "last_name_required", "country_required",
       "show_other_results",

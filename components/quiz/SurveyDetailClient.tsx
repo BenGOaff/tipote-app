@@ -135,6 +135,7 @@ type QuizData = {
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
   capture_heading: string | null; capture_subtitle: string | null;
+  survey_thanks_heading: string | null; survey_thanks_body: string | null;
   result_insight_heading: string | null; result_projection_heading: string | null;
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
@@ -485,6 +486,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  // Adeline (1er juin 2026) : page de remerciement éditable WYSIWYG.
+  // "" = on affiche la string i18n par défaut côté visiteur.
+  const [surveyThanksHeading, setSurveyThanksHeading] = useState("");
+  const [surveyThanksBody, setSurveyThanksBody] = useState("");
   const [resultInsightHeading, setResultInsightHeading] = useState("");
   const [resultProjectionHeading, setResultProjectionHeading] = useState("");
   const [captureFirstName, setCaptureFirstName] = useState(false);
@@ -608,6 +613,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     consent_text: consentText,
     capture_heading: captureHeading,
     capture_subtitle: captureSubtitle,
+    survey_thanks_heading: surveyThanksHeading,
+    survey_thanks_body: surveyThanksBody,
     result_insight_heading: resultInsightHeading,
     result_projection_heading: resultProjectionHeading,
     capture_first_name: captureFirstName,
@@ -641,7 +648,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     questions: editQuestions,
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
-    captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
+    captureHeading, captureSubtitle, surveyThanksHeading, surveyThanksBody,
+    resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, askFirstName, askGender,
@@ -669,6 +677,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.consent_text === "string") setConsentText(s.consent_text);
     if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
     if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
+    if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
+    if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
     if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
@@ -792,6 +802,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setStartButtonText(q.start_button_text ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
+      setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
+      setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
@@ -1144,6 +1156,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
+          survey_thanks_heading: surveyThanksHeading.trim() || null,
+          survey_thanks_body: surveyThanksBody.trim() || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
@@ -2067,11 +2081,22 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     </div>
                   </div>
                   <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
-                    Merci pour ta participation !
+                    <RichTextEdit
+                      value={surveyThanksHeading}
+                      onChange={setSurveyThanksHeading}
+                      singleLine
+                      className="text-2xl sm:text-4xl font-bold text-center"
+                      placeholder="Merci pour ta participation !"
+                    />
                   </h2>
-                  <p className="text-muted-foreground text-base leading-relaxed">
-                    Tes réponses ont bien été enregistrées.
-                  </p>
+                  <div className="text-muted-foreground text-base leading-relaxed">
+                    <RichTextEdit
+                      value={surveyThanksBody}
+                      onChange={setSurveyThanksBody}
+                      className="text-muted-foreground text-base text-center"
+                      placeholder="Tes réponses ont bien été enregistrées."
+                    />
+                  </div>
 
                   <div className="space-y-2">
                     <button
