@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu, Crop,
+  Sparkles, TrendingUp, Star, MessageCircle, Wand2, ImagePlus, Menu, Crop, Settings2,
 } from "lucide-react";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
@@ -1895,9 +1895,20 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 500;
                           return (
                             <div className="space-y-3">
-                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} className="w-full rounded-xl border-2 px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t">
-                                <label className="inline-flex items-center gap-1">{t("textMaxLength")}<input type="number" min={50} max={5000} value={maxLength} onChange={(e) => updateQuestionConfig(qi, { maxLength: Math.min(5000, Math.max(50, Number(e.target.value) || 500)) })} className="w-20 border rounded px-1.5 py-0.5 text-center" /></label>
+                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
+                              {/* Réglage créateur — discret, clairement
+                                  hors du visuel participant. Adeline (31
+                                  mai 2026) : "ne pas faire flotter ce
+                                  champ comme s'il faisait partie du
+                                  preview". On le pose dans une pill
+                                  grise avec une icône de réglage. */}
+                              <div className="flex justify-end">
+                                <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer" title={t("textMaxLengthHint")}>
+                                  <Settings2 className="w-3 h-3 opacity-60" />
+                                  <span>{t("textMaxLengthShort")}</span>
+                                  <input type="number" min={50} max={5000} value={maxLength} onChange={(e) => updateQuestionConfig(qi, { maxLength: Math.min(5000, Math.max(50, Number(e.target.value) || 500)) })} className="w-14 bg-background border border-border/60 rounded px-1.5 py-0.5 text-center text-[11px] font-medium" />
+                                  <span>{t("textMaxLengthChars")}</span>
+                                </label>
                               </div>
                             </div>
                           );
@@ -2011,8 +2022,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <RichTextEdit singleLine value={captureHeading || (quiz?.address_form === "vous" ? t("captureHeadingDefaultFormal") : t("captureHeadingDefault"))} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
-                  <RichTextEdit value={captureSubtitle || (quiz?.address_form === "vous" ? t("captureSubtitleDefaultFormal") : t("captureSubtitleDefault"))} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
+                  {/* Defaults survey-spécifiques : sur un sondage il n'y a
+                      pas de "profil" à révéler, le visiteur valide juste
+                      ses réponses. Adeline (31 mai 2026). */}
+                  <RichTextEdit singleLine value={captureHeading || t("previewCaptureHeadingDefaultSurvey")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("captureTitlePlaceholder")} />
+                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefaultSurvey")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-center text-base" placeholder={t("captureSubtitlePlaceholder")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("csvFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}

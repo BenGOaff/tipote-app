@@ -795,21 +795,46 @@ export default function QuizFormClient() {
   async function handleImportFile() {
     if (!importFile) return;
 
-    // Only .txt is supported end-to-end today. PDF/DOCX would need a
-    // server-side parser (pdf-parse, mammoth) to turn binary into text;
-    // without that, `.text()` returns gibberish and the AI hallucinates.
-    // Fail fast with a clear message rather than silently producing
-    // garbage questions.
+    // .txt / .docx / .pdf supportés. Adeline (1er juin 2026) : un user
+    // a remonté que l'import d'un .docx échouait silencieusement → on
+    // détecte tous les formats acceptés, et pour .docx/.pdf on passe par
+    // /api/quiz/import-extract qui parse côté serveur via mammoth/pdf-parse.
     const name = importFile.name.toLowerCase();
-    const isTxt = name.endsWith(".txt") || importFile.type === "text/plain";
-    if (!isTxt) {
+    const mime = importFile.type;
+    const isTxt = name.endsWith(".txt") || mime === "text/plain";
+    const isDocx = name.endsWith(".docx") ||
+      mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const isPdf = name.endsWith(".pdf") || mime === "application/pdf";
+    if (!isTxt && !isDocx && !isPdf) {
       toast.error(t("errImportFormat"));
       return;
     }
 
     setImporting(true);
     try {
-      const text = await importFile.text();
+      // Extraction du texte. Pour .txt on lit côté browser (rapide,
+      // pas d'aller-retour serveur), pour .docx/.pdf on délègue à
+      // /api/quiz/import-extract qui sait parser les binaires.
+      let text = "";
+      if (isTxt) {
+        text = await importFile.text();
+      } else {
+        const form = new FormData();
+        form.append("file", importFile);
+        const exRes = await fetch("/api/quiz/import-extract", {
+          method: "POST",
+          body: form,
+        });
+        const exBody = await exRes.json().catch(() => ({}));
+        if (!exRes.ok || !exBody?.ok) {
+          // Surface le hint utile du serveur (ex: "PDF est un scan,
+          // exporte en .docx") ou un fallback générique.
+          toast.error(exBody?.hint || t("errImport"));
+          setImporting(false);
+          return;
+        }
+        text = String(exBody.text || "");
+      }
       if (!text.trim()) {
         toast.error(t("errImportEmpty"));
         setImporting(false);
@@ -839,6 +864,14 @@ export default function QuizFormClient() {
       const decoder = new TextDecoder();
       let buffer = "";
       let currentEvent = "";
+      // Adeline (1er juin 2026) : avant ce flag, si populateFromQuiz
+      // throw ou si le parser SSE rate le payload, on tombait dans le
+      // catch silencieux et le toast.success s'affichait quand même
+      // → l'user voyait "Quiz importé !" sur un formulaire vide.
+      // Maintenant on ne déclenche success QUE si on a effectivement
+      // chargé un quiz.
+      let importedSomething = false;
+      let lastErrorMessage = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -861,17 +894,37 @@ export default function QuizFormClient() {
           try {
             const parsed = JSON.parse(payload);
             if (currentEvent === "result" && parsed.ok && parsed.quiz) {
-              populateFromQuiz(parsed.quiz as Record<string, unknown>);
+              try {
+                populateFromQuiz(parsed.quiz as Record<string, unknown>);
+                importedSomething = true;
+              } catch (popErr) {
+                // Log + surface : avant on swallow-ait, l'user voyait
+                // success sur form vide. Maintenant on lui dit clair.
+                console.error("[import] populateFromQuiz failed:", popErr);
+                lastErrorMessage = popErr instanceof Error ? popErr.message : "populate_failed";
+              }
             } else if (currentEvent === "error") {
-              toast.error(parsed.error || t("errImport"));
+              lastErrorMessage = parsed.error || t("errImport");
+              toast.error(lastErrorMessage);
             }
-          } catch { /* skip */ }
+          } catch (parseErr) {
+            // JSON parse error → log pour debug, on n'arrête pas la
+            // boucle (heartbeats peuvent générer du bruit).
+            console.warn("[import] SSE payload parse failed:", parseErr, payload.slice(0, 200));
+          }
           currentEvent = "";
         }
       }
 
-      toast.success(t("importSuccess"));
-      setActiveTab("manual");
+      if (importedSomething) {
+        toast.success(t("importSuccess"));
+        setActiveTab("manual");
+      } else {
+        // Aucun quiz n'est arrivé via le stream → l'import a échoué
+        // côté IA ou stream coupé. On informe l'user au lieu de
+        // mentir avec un toast.success.
+        toast.error(lastErrorMessage || t("errImport"));
+      }
     } catch {
       toast.error(t("errImport"));
     } finally {
@@ -1096,16 +1149,19 @@ export default function QuizFormClient() {
           </CardHeader>
           <CardContent className="space-y-5">
             <p className="text-sm text-muted-foreground">
-              Importe un fichier <strong>.txt</strong> contenant tes questions et réponses.
-              L&apos;IA va structurer le contenu en quiz (questions, options, résultats).
-              <br />
-              <span className="text-xs">Pour les PDF / DOCX, copie le texte dans un fichier .txt avant d&apos;importer.</span>
+              {t("importIntro")}
             </p>
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
               <p className="font-medium mb-2">{t("importDropZone")}</p>
-              <p className="text-xs text-muted-foreground mb-4">{t("importTxtOnly")}</p>
-              <input type="file" accept=".txt,text/plain" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="hidden" id="import-file" />
+              <p className="text-xs text-muted-foreground mb-4">{t("importFormatsAccepted")}</p>
+              <input
+                type="file"
+                accept=".txt,text/plain,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                className="hidden"
+                id="import-file"
+              />
               <Button variant="outline" asChild>
                 <label htmlFor="import-file" className="cursor-pointer">{t("importChooseFile")}</label>
               </Button>

@@ -180,6 +180,11 @@ type QuizTranslations = {
   min: string;
   captureHeadingDefault: string;
   captureSubtitleDefault: string;
+  // Defaults pour les SONDAGES (pas de "profil" à révéler — le visiteur
+  // valide juste ses réponses). Utilisés quand quiz.mode === "survey"
+  // ET que la créatrice n'a pas customisé son texte.
+  captureHeadingDefaultSurvey: string;
+  captureSubtitleDefaultSurvey: string;
   firstNamePlaceholder: string;
   lastNamePlaceholder: string;
   phonePlaceholder: string;
@@ -255,6 +260,8 @@ const translations: Record<string, QuizTranslations> = {
     min: "min",
     captureHeadingDefault: "Ton r\u00e9sultat est pr\u00eat !",
     captureSubtitleDefault: "Entre ton email pour d\u00e9couvrir ton profil.",
+    captureHeadingDefaultSurvey: "Encore une \u00e9tape !",
+    captureSubtitleDefaultSurvey: "Entre tes infos pour valider tes r\u00e9ponses.",
     firstNamePlaceholder: "Pr\u00e9nom",
     lastNamePlaceholder: "Nom",
     phonePlaceholder: "T\u00e9l\u00e9phone",
@@ -322,6 +329,8 @@ const translations: Record<string, QuizTranslations> = {
     min: "min",
     captureHeadingDefault: "Votre r\u00e9sultat est pr\u00eat !",
     captureSubtitleDefault: "Entrez votre email pour d\u00e9couvrir votre profil.",
+    captureHeadingDefaultSurvey: "Encore une \u00e9tape !",
+    captureSubtitleDefaultSurvey: "Entrez vos infos pour valider vos r\u00e9ponses.",
     firstNamePlaceholder: "Pr\u00e9nom",
     lastNamePlaceholder: "Nom",
     phonePlaceholder: "T\u00e9l\u00e9phone",
@@ -380,6 +389,8 @@ const translations: Record<string, QuizTranslations> = {
     min: "min",
     captureHeadingDefault: "Your results are ready!",
     captureSubtitleDefault: "Enter your email to discover your profile.",
+    captureHeadingDefaultSurvey: "One last step!",
+    captureSubtitleDefaultSurvey: "Enter your info to submit your answers.",
     firstNamePlaceholder: "First name",
     lastNamePlaceholder: "Last name",
     phonePlaceholder: "Phone",
@@ -438,6 +449,8 @@ const translations: Record<string, QuizTranslations> = {
     min: "min",
     captureHeadingDefault: "\u00a1Tus resultados est\u00e1n listos!",
     captureSubtitleDefault: "Ingresa tu email para descubrir tu perfil.",
+    captureHeadingDefaultSurvey: "\u00a1Un \u00faltimo paso!",
+    captureSubtitleDefaultSurvey: "Ingresa tus datos para validar tus respuestas.",
     firstNamePlaceholder: "Nombre",
     lastNamePlaceholder: "Apellido",
     phonePlaceholder: "Tel\u00e9fono",
@@ -496,6 +509,8 @@ const translations: Record<string, QuizTranslations> = {
     min: "Min",
     captureHeadingDefault: "Dein Ergebnis ist bereit!",
     captureSubtitleDefault: "Gib deine E-Mail ein, um dein Profil zu entdecken.",
+    captureHeadingDefaultSurvey: "Ein letzter Schritt!",
+    captureSubtitleDefaultSurvey: "Gib deine Daten ein, um deine Antworten zu bestätigen.",
     firstNamePlaceholder: "Vorname",
     lastNamePlaceholder: "Nachname",
     phonePlaceholder: "Telefon",
@@ -554,6 +569,8 @@ const translations: Record<string, QuizTranslations> = {
     min: "min",
     captureHeadingDefault: "Seu resultado est\u00e1 pronto!",
     captureSubtitleDefault: "Digite seu email para descobrir seu perfil.",
+    captureHeadingDefaultSurvey: "Mais uma etapa!",
+    captureSubtitleDefaultSurvey: "Digite seus dados para validar suas respostas.",
     firstNamePlaceholder: "Nome",
     lastNamePlaceholder: "Sobrenome",
     phonePlaceholder: "Telefone",
@@ -612,6 +629,8 @@ const translations: Record<string, QuizTranslations> = {
     min: "min",
     captureHeadingDefault: "Il tuo risultato \u00e8 pronto!",
     captureSubtitleDefault: "Inserisci la tua email per scoprire il tuo profilo.",
+    captureHeadingDefaultSurvey: "Un ultimo passaggio!",
+    captureSubtitleDefaultSurvey: "Inserisci i tuoi dati per validare le tue risposte.",
     firstNamePlaceholder: "Nome",
     lastNamePlaceholder: "Cognome",
     phonePlaceholder: "Telefono",
@@ -670,6 +689,8 @@ const translations: Record<string, QuizTranslations> = {
     min: "\u062f\u0642\u064a\u0642\u0629",
     captureHeadingDefault: "\u0646\u062a\u0627\u0626\u062c\u0643 \u062c\u0627\u0647\u0632\u0629!",
     captureSubtitleDefault: "\u0623\u062f\u062e\u0644 \u0628\u0631\u064a\u062f\u0643 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0644\u0627\u0643\u062a\u0634\u0627\u0641 \u0645\u0644\u0641\u0643 \u0627\u0644\u0634\u062e\u0635\u064a.",
+    captureHeadingDefaultSurvey: "\u062e\u0637\u0648\u0629 \u0623\u062e\u064a\u0631\u0629!",
+    captureSubtitleDefaultSurvey: "\u0623\u062f\u062e\u0644 \u0645\u0639\u0644\u0648\u0645\u0627\u062a\u0643 \u0644\u062a\u0623\u0643\u064a\u062f \u0625\u062c\u0627\u0628\u0627\u062a\u0643.",
     firstNamePlaceholder: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644",
     lastNamePlaceholder: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0626\u0644\u0629",
     phonePlaceholder: "\u0627\u0644\u0647\u0627\u062a\u0641",
@@ -2016,7 +2037,7 @@ export default function PublicQuizClient({
               }
               return (
                 <h2 className="text-2xl sm:text-4xl font-bold text-center leading-tight">
-                  {headingRaw || t.captureHeadingDefault}
+                  {headingRaw || (quiz.mode === "survey" ? t.captureHeadingDefaultSurvey : t.captureHeadingDefault)}
                 </h2>
               );
             })()}
@@ -2033,7 +2054,7 @@ export default function PublicQuizClient({
               return (
                 <RichParagraph
                   className="text-muted-foreground text-center text-lg"
-                  text={subtitleRaw || t.captureSubtitleDefault}
+                  text={subtitleRaw || (quiz.mode === "survey" ? t.captureSubtitleDefaultSurvey : t.captureSubtitleDefault)}
                 />
               );
             })()}
