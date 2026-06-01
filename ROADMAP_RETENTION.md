@@ -209,30 +209,68 @@ Cron 1er du mois 9h locale créateur. Template "Ton mois avec Tipote" :
 
 ## Phase 3 — Email réengagement intelligent
 
-### 3.A Détecteur d'inactivité
+### 3.A Détecteur d'inactivité — V1 IMPLÉMENTÉ ✅
 
-Cron quotidien :
-- Last `business_events` > 7j → bucket A
-- > 14j → bucket B
-- > 30j → bucket C
-- Plus user actif mais quiz à 0 vue depuis 14j → bucket D
-- Stratégie en drift depuis 21j → bucket E
+`lib/reengagement/detector.ts → detectReengagementBucket({userId,
+lastSignInAt, now})` retourne le bucket applicable ou null.
 
-### 3.B Templates par bucket
+V1 unique bucket : **`idle_producer_7d`**
+- Pas de business_event d'ACTION (post_published, quiz_published,
+  page_published, popquiz_published) sur 7 derniers jours
+- ET last_sign_in_at > 3 jours (on évite ceux qui consultent leur
+  dashboard quotidiennement même sans rien produire)
 
-- A (J7) : "Pas de post programmé cette semaine, je t'ai préparé 5 idées
-  d'après tes 3 meilleures perfs" (Tipote : sample posts ; Tiquiz :
-  ouvre le brainstorm IA d'un quiz template métier)
-- B (J14) : "Voici ce qui a marché chez tes pairs ce mois" (insights
-  anonymisés génériques par niche)
-- C (J30) : "Tu nous manques. Avant de te désabonner, voici ce qu'on
-  peut faire ensemble en 5 min." → 1 CTA action ultra-court
-- D : "Ton quiz X n'a pas encore de vue, 3 raisons probables"
-- E : "Ta stratégie a 90j, elle a dérivé — recalcule en 30s"
+Le cron `engagement` EXISTANT (`app/api/cron/engagement/route.ts`)
+reste INCHANGÉ — il gère J7/J14 basé sur last_sign_in_at avec
+templates génériques. Le nouveau cron `value-nudges` le complète avec
+des nudges value-driven sur la PRODUCTION (events réels), pas le
+login.
 
-### 3.C Dédup + opt-out
+### 3.B Templates par bucket — V1 IMPLÉMENTÉ ✅
 
-Max 1 email réengagement / 7j. Opt-out par catégorie depuis settings.
+`lib/reengagement/templates.ts → buildNudgeTemplate(bucket, args)`.
+
+Bucket `idle_producer_7d` : ton décontracté, pas d'angoisse, pas de
+countdown. "Pas de prod cette semaine — pas grave, voilà 3 idées
+prêtes" + CTA `/create`. Personnalisation via `fetchUserHighlights`
+(best post / top quiz).
+
+Templates FR + EN. Exhaustiveness check via never sur le switch
+bucket (compile error si on ajoute un bucket sans template).
+
+### 3.C Dédup + opt-out — V1 IMPLÉMENTÉ ✅
+
+- 1 email max par bucket par fenêtre de 14j (check sur
+  notifications.type = "value_nudge_idle_producer_7d")
+- Opt-out via `email_preferences.weekly_digest` (pattern réutilisé du
+  cron engagement pour cohérence — un user qui opt-out du digest opt-out
+  aussi du nudge)
+- Rate limit global quotidien via `canSendEmailToday()` (helper partagé
+  email.ts) → un user ne peut pas recevoir 2 emails Tipote le même jour
+- Track in-app notifications row → apparaît aussi dans la bell
+
+### Cron à installer en prod
+
+```bash
+# 1x/jour 10h locale (laisse le user prendre son café)
+0 10 * * * curl -fsS -H "Authorization: Bearer $NOTIFICATIONS_INTERNAL_KEY" \
+  https://app.tipote.com/api/cron/value-nudges \
+  > /tmp/value-nudges.log 2>&1
+```
+
+### Buckets V2 (à venir si Béné juge utile)
+
+- **`sleeping_quiz`** : quiz publié actif avec 0 vue sur 14j →
+  relance sur CE quiz avec CTA "boost ton quiz" + 3 angles concrets
+  (re-partager, changer titre, changer image hero).
+- **`strategy_drift`** : stratégie générée il y a 90j+, infos profil
+  ont changé → CTA "recalculer ma stratégie en 30s".
+- **`milestone_nearly_unlocked`** : à 90 %+ d'un palier proche
+  (ex. 9 leads sur 10) → encouragement "un dernier pour débloquer".
+  À traiter avec parcimonie : peut être perçu comme harcèlement si on
+  envoie pour chaque palier.
+
+Décision V2 = à valider quand on a un peu de feedback prod sur V1.
 
 ---
 
