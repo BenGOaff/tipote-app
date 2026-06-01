@@ -61,13 +61,21 @@ section F — les RPC `await rpc(...)` qui ne lisent pas `{ error }`
 masquent les échecs). INSERT direct + lecture erreur.
 
 Points d'appel à brancher en parallèle (Tipote phase 0) :
-- Sync ventes Systeme.io (cron + webhook) → `sale`
-- Sync Stripe / PayPal / Mollie (compta) → `sale` avec `source`
-- Quiz / popquiz / pages capture lead → `lead_captured`
-- Publication réseau OK → `post_published`
-- Publication réseau échec après 5 retries → `post_failed`
-- OAuth déconnexion détectée → `account_disconnected`
-- Drift stratégie détectée → `strategy_drift`
+- **`sale` business** : sync **API Systeme.io clé user** (la clé que l'user
+  a posée dans `/settings/connexions` — pas le webhook Tipote SIO qui
+  lui sert au plan Tipote) + sync Stripe/PayPal/Mollie de la compta
+  user. Source = `systemeio` | `stripe` | `paypal` | `mollie` | `manual`.
+  ⚠️ NE PAS confondre avec `app/api/systeme-io/webhook/route.ts` qui
+  reçoit les ventes des plans Tipote (CA Béné, pas CA du créateur).
+- Quiz / popquiz / pages capture lead → `lead_captured` (upsert
+  `quiz_leads` dans `app/api/quiz/[quizId]/public/route.ts:641`,
+  `app/api/popquiz/[id]/lead/...`, `app/api/pages/[id]/lead/...`).
+  Dedupe via `dedupe_key = "quiz_lead:<quizId>:<emailHash>"`.
+- Publication réseau OK → `post_published` (dans
+  `app/api/social/publish/route.ts:516` direct ET via n8n :659).
+- Publication réseau échec après 5 retries → `post_failed`.
+- OAuth déconnexion détectée → `account_disconnected`.
+- Drift stratégie détectée → `strategy_drift`.
 
 ### 0.C Helper consommation `getUserEventsSince(userId, since, opts)`
 
@@ -146,6 +154,14 @@ Carte tout en haut du dashboard `app/dashboard/page.tsx` (Tipote) /
   du mois, milestones.
 - Comparaison vs période précédente.
 - Source = `business_events` agrégés via helper 0.C.
+
+**RÈGLE CARDINALE Béné (1er juin 2026)** : si la période ne contient AUCUN
+résultat (0 lead, 0 vente, 0 post publié, 0 milestone récent), on
+**N'AFFICHE PAS** la carte Wall of Wins. Un dashboard qui affiche "0
+partout" démotive et augmente le churn. À la place, état neutre type
+"Pas encore de chiffres ce mois, voici comment démarrer →" avec 1 CTA
+action concrète. Côté code : helper `shouldShowWallOfWins(stats)` qui
+retourne false si toutes les métriques agrégées valent 0/null.
 
 ### 2.B Email récap mensuel automatique
 
@@ -326,15 +342,24 @@ Total estimé : ~17-20 sessions de dev.
 
 ---
 
+## Décisions tranchées par Béné (1er juin 2026)
+
+- **Phase 2.A — Wall of Wins en haut MAIS conditionnel "motivant ou rien"** :
+  si la fenêtre n'a aucun résultat à montrer (0 lead, 0 vente, 0 post
+  publié sur la période), on **N'AFFICHE PAS** la carte. Un Wall of Wins
+  vide ou avec "0 partout" = effet inverse = démotivation = churn. À la
+  place, on garde un état neutre genre "Pas encore de chiffres ce mois,
+  voici comment démarrer →" qui pousse vers une action concrète (créer
+  un quiz, programmer un post). C'est la phase 3 réengagement qui prend
+  le relais à ce moment-là, pas le Wall of Wins.
+- **Phase 3.B — V1 = email + in-app, pas de push browser**. Push browser
+  reporté en V2 (trop de friction d'opt-in pour le gain en V1).
+
 ## Décisions en suspens (à confirmer Béné quand on arrive sur le chantier)
 
 - Phase 1.A : la liste de milestones est-elle complète ? Béné veut
   peut-être en ajouter des "fun" (1er post à minuit, 1er post le
   week-end, etc.).
-- Phase 2.A : dashboard Aujourd'hui actuel garde-t-il ses widgets, ou
-  Wall of Wins les remplace ? (recommandation : remplace).
-- Phase 3.B : faut-il aussi pousser via notif push browser (besoin
-  Service Worker + opt-in user) ou seulement email + in-app ?
 - Phase 4.A : Sonnet 4.6 ou supérieur ? Cost vs qualité.
 - Phase 5.A : liste finale des niches.
 - Phase 6.A : date du switch (besoin date concrète pour le grandfathering).

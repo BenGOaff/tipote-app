@@ -15,6 +15,7 @@ import { publishTweet } from "@/lib/twitter";
 import { createPin } from "@/lib/pinterest";
 import { publishPhoto as publishTikTokPhoto, publishVideo as publishTikTokVideo, type TikTokPublishOptions } from "@/lib/tiktok";
 import { runAutoCommentBatch } from "@/lib/autoCommentEngine";
+import { logBusinessEvent, dedupeKeys, type BusinessEventSource } from "@/lib/businessEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -521,6 +522,17 @@ export async function POST(req: NextRequest) {
 
       await updateContentStatus(contentId, n8nMeta);
 
+      // Log business event (fire-and-forget, non-bloquant).
+      // Cf. ROADMAP_RETENTION.md phase 0 + section AR pitfalls.
+      logBusinessEvent({
+        userId: user.id,
+        projectId,
+        kind: "post_published",
+        source: platform as BusinessEventSource,
+        payload: { contentId, platform, mode: "n8n", postId: n8nPostId, postUrl: n8nPostUrl },
+        dedupeKey: dedupeKeys.postPublished(contentId, platform),
+      }).catch(() => {});
+
       return NextResponse.json({
         ok: true,
         mode: "n8n",
@@ -664,6 +676,17 @@ export async function POST(req: NextRequest) {
   if (postUrl) metaUpdate[`${platform}_post_url`] = postUrl;
 
   await updateContentStatus(contentId, metaUpdate);
+
+  // Log business event (fire-and-forget, non-bloquant).
+  // Cf. ROADMAP_RETENTION.md phase 0 + section AR pitfalls.
+  logBusinessEvent({
+    userId: user.id,
+    projectId,
+    kind: "post_published",
+    source: platform as BusinessEventSource,
+    payload: { contentId, platform, mode: "direct", postId, postUrl },
+    dedupeKey: dedupeKeys.postPublished(contentId, platform),
+  }).catch(() => {});
 
   const responsePayload: Record<string, unknown> = {
     ok: true,
