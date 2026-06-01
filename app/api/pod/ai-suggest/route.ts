@@ -94,6 +94,9 @@ export async function POST(req: Request) {
     activity_urn?: string;
     content_excerpt?: string;
     language?: string;
+    /** Free-form hint from the user when they hit "Regenerate" in the
+     *  badge (ex: "plus court", "moins formel", "parle de ton expé"). */
+    indications?: string;
   };
   try {
     body = await req.json();
@@ -105,6 +108,7 @@ export async function POST(req: Request) {
   // suffit) — utile en log pour diag + futur cache par URN.
   const language = body.language?.trim().toLowerCase() || "fr";
   const excerpt = body.content_excerpt?.trim() || null;
+  const indications = body.indications?.trim().slice(0, 400) || null;
 
   // Lookup contexte commenter (best-effort, ne bloque pas la suggestion
   // si la query échoue — on tombe sur du générique).
@@ -119,6 +123,7 @@ export async function POST(req: Request) {
     contentExcerpt: excerpt,
     language,
     commenter,
+    indications,
   });
 
   return NextResponse.json({ ok: true, suggestions });

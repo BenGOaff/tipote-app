@@ -166,6 +166,16 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
     .status.loading { background: #f3f4f6; color: #4b5563; }
     .loader { display: inline-block; width: 12px; height: 12px; border: 2px solid #c7d2fe; border-top-color: #5d6cdb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px; vertical-align: -2px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .regen { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e5e7eb; }
+    .regen-label { font-size: 11px; color: #6b7280; }
+    .regen-row { display: flex; gap: 6px; align-items: stretch; }
+    .regen-row input { flex: 1; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; font-size: 12px; box-sizing: border-box; }
+    .regen-row input:focus { outline: none; border-color: #5d6cdb; }
+    .regen-btn { background: #5d6cdb; color: white; border: 0; border-radius: 8px; padding: 0 10px; cursor: pointer; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+    .regen-btn:disabled { opacity: 0.5; cursor: wait; }
+    .regen-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .chip { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 3px 8px; cursor: pointer; font-size: 11px; color: #4b5563; }
+    .chip:hover { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
   `;
 
   root.innerHTML = `
@@ -201,6 +211,18 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
         </div>
       </div>
       <div id="status"></div>
+      <div class="regen" id="regen">
+        <div class="regen-label">Pas convaincu ? Donne une indication et regénère :</div>
+        <div class="regen-row">
+          <input id="regen-input" type="text" placeholder="ex: plus court, parle de mon expé, moins formel…" maxlength="400" />
+          <button class="regen-btn" id="regen-btn" type="button" title="Regénérer">↻</button>
+        </div>
+        <div class="regen-chips">
+          <button class="chip" data-chip="Plus court et plus direct" type="button">+ court</button>
+          <button class="chip" data-chip="Moins formel, plus parlé" type="button">- formel</button>
+          <button class="chip" data-chip="Avec un chiffre ou un détail concret" type="button">+ concret</button>
+        </div>
+      </div>
       ${isTask ? `<button class="decline" id="decline">Pas pertinent pour moi</button>` : ""}
     </div>
   `;
@@ -263,6 +285,66 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
       editor.classList.add("show");
       editorText.focus();
     });
+  });
+
+  // Regenerate flow — Monique feedback (1er juin 2026) : les commentaires
+  // sonnaient trop génériques. L'user peut maintenant donner UNE indication
+  // libre et recharger les 4 tons avec cette contrainte (ex: "plus court",
+  // "parle de mon expérience CMO"). Le backend ré-injecte la même
+  // CommenterContext + ces indications dans le system prompt.
+  const regenInput = root.getElementById("regen-input") as HTMLInputElement;
+  const regenBtn = root.getElementById("regen-btn") as HTMLButtonElement;
+  const chips = root.querySelectorAll<HTMLButtonElement>(".chip");
+  chips.forEach((c) => {
+    c.addEventListener("click", () => {
+      regenInput.value = c.dataset.chip ?? "";
+      regenInput.focus();
+    });
+  });
+
+  const doRegenerate = () => {
+    const indications = regenInput.value.trim();
+    regenBtn.disabled = true;
+    toneButtons.forEach((b) => (b.disabled = true));
+    showStatus(statusEl, "loading", "<span class='loader'></span>Regénération…");
+    // Content depends on mode :
+    //  - task : on a déjà l'excerpt côté task, sinon on scrape la page
+    //  - quick : on rescrape (l'user est sur le permalink LinkedIn)
+    const content = isTask
+      ? mode.task.pod_posts.content_excerpt ?? scrapePostContent()
+      : scrapePostContent();
+    const language = detectLanguageFromCookie();
+    chrome.runtime.sendMessage(
+      {
+        type: "ai/suggest",
+        payload: {
+          activity_urn: activityUrn,
+          content_excerpt: content,
+          language,
+          indications: indications || undefined,
+        },
+      },
+      (resp: unknown) => {
+        const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
+        if (r?.ok && r.suggestions) {
+          suggestions = r.suggestions as Record<Tone, string>;
+          showStatus(statusEl, "ok", "✓ Suggestions mises à jour.");
+          setTimeout(() => (statusEl.textContent = ""), 1500);
+        } else {
+          showStatus(statusEl, "err", "IA indisponible — anciennes suggestions conservées.");
+        }
+        regenBtn.disabled = false;
+        toneButtons.forEach((b) => (b.disabled = false));
+      },
+    );
+  };
+
+  regenBtn.addEventListener("click", doRegenerate);
+  regenInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      doRegenerate();
+    }
   });
 
   root.getElementById("cancel")?.addEventListener("click", () => {

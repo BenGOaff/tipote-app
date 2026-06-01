@@ -37,10 +37,12 @@ import {
   Bell,
   Mail,
   Calculator,
+  Rocket,
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
+import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
 import BrandingSettings from "@/components/settings/BrandingSettings";
 import type { BrandingData } from "@/components/settings/BrandingSettings";
 import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
@@ -100,7 +102,7 @@ function PinterestIcon({ className }: { className?: string }) {
   );
 }
 
-type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "pricing" | "compta" | "domain";
+type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "boost" | "pricing" | "compta" | "domain";
 
 type Props = {
   userEmail: string;
@@ -109,7 +111,7 @@ type Props = {
 
 function normalizeTab(v: string | null): TabKey {
   const s = (v ?? "").trim().toLowerCase();
-  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources" || s === "compta" || s === "domain") return s;
+  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources" || s === "boost" || s === "compta" || s === "domain") return s;
   // compat ancien: tab=billing, tab=ai
   if (s === "billing" || s === "pricing" || s === "ai") return "pricing";
   return "profile";
@@ -157,6 +159,7 @@ type ProfileRow = {
   first_name?: string | null;
   niche?: string | null;
   mission?: string | null;
+  plan?: string | null;
   offers?: OfferItem[] | null;
   privacy_url?: string | null;
   terms_url?: string | null;
@@ -1441,6 +1444,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         <TabsTrigger value="branding" className="gap-2">
           <Paintbrush className="w-4 h-4" />
           {tSettings("tabs.branding")}
+        </TabsTrigger>
+        <TabsTrigger value="boost" className="gap-2">
+          <Rocket className="w-4 h-4" />
+          {tSettings("tabs.boost")}
         </TabsTrigger>
         <TabsTrigger value="sources" className="gap-2">
           <BookOpen className="w-4 h-4" />
@@ -3161,6 +3168,15 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
       {/* SOURCES DE CONTEXTE */}
       <TabsContent value="sources" className="space-y-6">
         <ProjectSourcesSection />
+      </TabsContent>
+
+      {/* BOOST — réglages des commentaires LinkedIn pour l'extension
+          Tipote Boost. AutoCommentSettings nourrit le contexte
+          commenter (ton, langage, objectifs) injecté dans les prompts
+          /api/pod/ai-suggest. Sans ce tab les fields étaient
+          inaccessibles → suggestions génériques pour tout le monde. */}
+      <TabsContent value="boost" className="space-y-6">
+        <AutoCommentSettings userPlan={initialProfile?.plan ?? null} />
       </TabsContent>
 
 {/* ABONNEMENT */}

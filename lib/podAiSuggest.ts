@@ -17,6 +17,7 @@
 
 import { callClaude, getClaudeApiKey } from "@/lib/claude";
 import type { CommentTone } from "@/lib/podBoost";
+import { NATURAL_WRITING_BLOCK } from "@/lib/prompts/quiz/system";
 
 export type CommentSuggestions = Record<CommentTone, string>;
 
@@ -112,6 +113,10 @@ function buildPrompt(args: {
   contentExcerpt: string | null;
   language: string;
   commenter?: CommenterContext;
+  /** Indication libre saisie par l'user au moment de la regénération.
+   *  Ex: "plus court", "moins formel", "parle de mon expérience en B2B".
+   *  Injectée en fin de system prompt avec un poids fort. */
+  indications?: string | null;
 }): { system: string; user: string } {
   // Langue par nom complet — Claude écrit naturellement dans la bonne
   // langue quand on lui passe le nom (vs un code ISO qu'il interprète
@@ -129,23 +134,55 @@ function buildPrompt(args: {
   const language = languageMap[args.language] ?? "français";
   const contextBlock = formatCommenterContext(args.commenter);
   const allowEmojis = !!args.commenter?.langage?.emojis?.length;
+  const indications = args.indications?.trim();
 
-  const system = `Tu es un assistant qui aide à commenter rapidement des posts LinkedIn.
-Tu génères 4 suggestions de commentaire courtes (max 280 caractères chacune, sans hashtag${allowEmojis ? "" : ", sans emoji"}) dans la langue du post (${language}), une pour chacun des tons suivants :
+  const indicationsBlock = indications
+    ? `\n### Indication EXPRESSE du commenter (priorité haute, à respecter)\n\n"${indications.slice(0, 400)}"\n`
+    : "";
 
-- "agree": appuie le propos avec un détail concret tiré de l'expérience ; jamais lèche-bottes
-- "disagree": ouvre un débat constructif ; jamais agressif ni condescendant
-- "add_value": complète le propos avec une nuance utile ou un point manqué
-- "ask_question": relance la conversation par une question précise et engageante
+  // Few-shot examples ground the 4 tons in concrete, "human" patterns.
+  // Choisis volontairement courts + spécifiques (un détail, un chiffre,
+  // une situation) pour rompre avec le style "assistant générique" que
+  // Claude produit par défaut.
+  const fewShotBlock = `\n### Exemples de tonalité attendue (à NE PAS recopier, juste pour le ton)
 
-Style attendu : naturel, professionnel, percutant. Pas de "Excellent article !" ni de formules creuses. Pas de "merci pour le partage". Va droit au sujet.${contextBlock}
-### Règles de qualité
+agree (appui personnel, concret) :
+- "Vu pareil chez nos clients SaaS — dès qu'on coupe le call de découverte, le NPS dérape. Pas une coïncidence."
+- "100% — j'ai testé l'inverse 6 mois, on a perdu 2 deals high-ticket avant de revenir au format long."
+
+disagree (débat ouvert, posture nette) :
+- "Pas si sûr — on a vu l'inverse sur l'audit Q3 : les équipes les + structurées sont aussi celles qui sortent le moins de prod. Le cadre tue parfois la traction."
+- "Pas convaincu que le canal soit la cause. Chez nous c'est le brief avant le canal qui change tout."
+
+add_value (apport spécifique non-redondant) :
+- "Un point qu'on rate souvent : la qualif passe AUSSI par les objections sur le pricing. Si elles arrivent tard, le funnel est cassé en amont."
+- "Petite nuance qui a tout changé pour moi : faire la review d'offre AVANT la review produit, sinon on optimise un truc que personne veut acheter."
+
+ask_question (question précise ancrée dans le post) :
+- "Quand tu dis "petit comité", ça représente combien de personnes dans tes process ?"
+- "Tu mesures comment l'impact de ce changement de cadence sur le revenu net, hors signal vanity ?"
+`;
+
+  const system = `Tu es un assistant qui aide à commenter rapidement des posts LinkedIn — comme si TU étais le commenter.
+
+Génère 4 suggestions de commentaire courtes (max 280 caractères chacune, sans hashtag${allowEmojis ? "" : ", sans emoji"}) dans la langue du post (${language}), une pour chacun des tons :
+
+- "agree": appuie le propos avec UN détail concret tiré de l'expérience (chiffre, situation, contre-exemple raté). Jamais lèche-bottes, jamais "excellent article".
+- "disagree": ouvre un débat constructif. Tu prends position nettement mais sans arrogance ni condescendance. Apporte UN angle ou UN fait qui complique le propos.
+- "add_value": complète le propos avec UNE nuance utile que l'auteur n'a pas évoquée. Pas de redite déguisée.
+- "ask_question": question précise et ancrée dans LE contenu du post (cite ou paraphrase un élément). Pas de question vague "et toi tu fais comment ?".
+${contextBlock}${indicationsBlock}
+${NATURAL_WRITING_BLOCK}
+
+### Règles spécifiques aux commentaires LinkedIn
 
 - Le commentaire doit sonner comme écrit PAR le commenter à la première personne, pas par un assistant IA.
-- Pas de "En effet", "Tout à fait", "Effectivement" en début de phrase (mots-marqueurs IA).
-- Pas de formulations trop polies, trop génériques.
-- Si tu vois une opportunité de placer un mot-clé / expression du commenter ci-dessus de manière naturelle, fais-le. Si forcer ça ferait du commentaire un truc bizarre, ne le force pas.
-
+- Pas de "En effet", "Tout à fait", "Effectivement", "Article très intéressant", "Merci pour le partage", "Belle réflexion" — formules creuses à bannir.
+- Pas d'introduction inutile : on attaque DIRECTEMENT le fond.
+- Si le commenter a un métier / une audience listés ci-dessus, place UN détail concret ancré dans son expérience (ex: "chez nos clients SaaS B2B", "en accompagnement coaching") quand c'est naturel — jamais forcé.
+- Pour "ask_question" : ta question doit montrer que tu as LU le post. Cite un élément spécifique ou paraphrase une phrase clé.
+- Varie la longueur des 4 commentaires (pas tous au même format).
+${fewShotBlock}
 Tu réponds UNIQUEMENT par un JSON strict de cette forme exacte (pas de markdown, pas de \`\`\`, pas de texte avant ni après) :
 
 {
@@ -211,6 +248,8 @@ export async function generateSuggestions(args: {
   contentExcerpt: string | null;
   language: string;
   commenter?: CommenterContext;
+  /** Free-form user-supplied hint for this generation (regenerate flow). */
+  indications?: string | null;
 }): Promise<CommentSuggestions> {
   let apiKey: string;
   try {

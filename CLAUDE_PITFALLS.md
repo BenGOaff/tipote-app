@@ -1163,3 +1163,51 @@ et alimente `quizBrandLogoUrl`, sans toucher au profil.
 
 **À ne JAMAIS faire** : remettre un bouton "Retirer" qui appelle
 `/api/profile` avec `brand_logo_url: null` depuis l'éditeur quiz.
+
+## AP) AutoCommentSettings monté en tab "Boost" — sinon prompts génériques (1er juin 2026)
+
+Pendant des semaines `AutoCommentSettings` existait mais n'était mounté
+NULLE PART. Conséquence : tous les fields `business_profiles.auto_comment_*`
+restaient NULL pour tout le monde → `formatCommenterContext` renvoyait
+vide → le system prompt de `podAiSuggest.ts` était générique → les
+suggestions ne ressemblaient pas à l'user (retour Monique).
+
+Le composant est désormais mounté dans `SettingsTabsShell` → onglet
+"Boost" (`tab=boost`). Reads/writes via `/api/automation/settings`
+(GET + PATCH) qui scope par `(user_id, project_id)` sur `business_profiles`.
+
+**À vérifier** quand on ajoute un nouveau setting auto-comment :
+1. Colonne ajoutée à `business_profiles` (migration).
+2. Whitelistée dans `app/api/automation/settings/route.ts` (UpdateSchema +
+   SELECT GET).
+3. Injectée dans `CommenterContext` côté `app/api/pod/ai-suggest/route.ts`
+   → `fetchCommenterContext()`.
+4. Formattée dans `formatCommenterContext()` dans `lib/podAiSuggest.ts`.
+5. UI éditable dans `components/settings/AutoCommentSettings.tsx`.
+
+Sans le tab Boost, l'utilisateur n'a aucun moyen de remplir ces champs
+→ retour aux commentaires IA génériques. NE JAMAIS retirer le tab.
+
+## AQ) podAiSuggest : NATURAL_WRITING_BLOCK + few-shot + indications (1er juin 2026)
+
+Le prompt initial était poli mais générique. Améliorations :
+- Import de `NATURAL_WRITING_BLOCK` depuis `lib/prompts/quiz/system.ts`
+  → mêmes règles anti-IA que partout ailleurs (pas de tirets cadratins,
+  pas de triades, pas de "il ne s'agit pas de X mais de Y", etc.).
+- Few-shot par tonalité (agree / disagree / add_value / ask_question)
+  avec exemples courts + spécifiques. Tu peux les adapter par persona
+  mais NE LES SUPPRIME PAS — Claude reproduit la structure beaucoup
+  mieux avec des exemples.
+- Pour "ask_question" : exigence forte de citer/paraphraser un élément
+  du post (sinon question vague type "et toi tu fais comment ?").
+- Nouveau param `indications?: string` → texte libre que l'user saisit
+  dans le badge de l'extension (champ "Pas convaincu ? Donne une
+  indication et regénère"). Injecté avec priorité haute dans le system.
+
+Côté extension (badge.ts) :
+- Champ input "indications" + 3 chips suggestions (court, moins formel,
+  plus concret) + bouton "Regénérer" (↻).
+- Appelle `chrome.runtime.sendMessage({type: "ai/suggest", payload: {
+  ..., indications}})` → background → `/api/pod/ai-suggest`.
+- Disponible sur les 2 modes (task + quick) pour que même les
+  suggestions pré-générées au fan-out soient regenerable on-demand.
