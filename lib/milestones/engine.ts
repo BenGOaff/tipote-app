@@ -12,7 +12,8 @@
 //     trigger.kind matche le kind de l'event qui vient d'arriver, et on
 //     skip ceux déjà débloqués.
 
-import { countUserEvents, type BusinessEventKind } from "@/lib/businessEvents";
+import type { BusinessEventKind } from "@/lib/businessEvents";
+import { countOutcomes } from "@/lib/businessOutcomes";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
@@ -72,7 +73,11 @@ export async function evaluateMilestonesForUser(
 
   // Une seule lecture du compteur agrégé pour ce kind (chaque candidate
   // a le même trigger.kind par construction de milestonesForKind).
-  const totalCount = await countUserEvents(args.userId, args.eventKind, {
+  // CRITIQUE : on lit la SOURCE HISTORIQUE (quiz_leads, content_item,
+  // transactions, etc.) via countOutcomes — PAS business_events qui ne
+  // couvre que depuis 2026-06-04 et ferait sortir "first_lead" chez
+  // des users qui ont 500 leads. Cf. lib/businessOutcomes.ts.
+  const totalCount = await countOutcomes(args.userId, args.eventKind, {
     projectId: args.projectId ?? null,
   });
 

@@ -77,10 +77,30 @@ Points d'appel à brancher en parallèle (Tipote phase 0) :
 - OAuth déconnexion détectée → `account_disconnected`.
 - Drift stratégie détectée → `strategy_drift`.
 
-### 0.C Helper consommation `getUserEventsSince(userId, since, opts)`
+### 0.C Helpers de lecture / agrégation
 
-Sélection par fenêtre temporelle + filtre kind. Bucketing par
-**jour LOCAL** via `lib/dateKeys.ts` (cf. PITFALLS section V).
+⚠️ **CRITIQUE (Béné, 1er juin 2026)** : `business_events` n'est qu'un
+log incrémental depuis le 4 juin. Les users Tipote ont DES MOIS
+d'historique dans les tables source (`quiz_leads`, `content_item`,
+`transactions`, `quiz_events`, `quizzes`). TOUT compteur qui doit
+refléter le total historique de l'user (milestones, Wall of Wins,
+coach proactif, dashboard "leads ce mois") DOIT lire ces tables-là,
+pas `business_events`.
+
+Helpers définitifs :
+- `lib/businessOutcomes.ts → countOutcomes(userId, kind, opts)` :
+  source de vérité historique. À utiliser pour toute agrégation
+  rétroactive. Mapping :
+    - lead_captured → quiz_leads via JOIN quizzes
+    - post_published → content_item status='published'
+    - sale → transactions status IN ('paid','partial_refund')
+    - quiz_complete → quiz_events event_type='complete' via JOIN
+    - quiz_published → quizzes status='active'
+- `lib/businessEvents.ts → getUserEventsSince / countUserEvents` :
+  conservés pour les events qui n'ont PAS de source canonique
+  historique (account_disconnected, strategy_drift, etc.) et pour la
+  timeline détaillée (afficher "il s'est passé X à 14h32" dans le
+  coach proactif).
 
 ### 0.D Service notification générique
 

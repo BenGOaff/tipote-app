@@ -1243,6 +1243,37 @@ je propose des features :
   `/healthz`. Si on en code un, c'est pour de l'observabilité interne,
   pas pour remplacer UptimeRobot.
 
+## AS ter) Milestones / Wall of Wins / coach proactif → JAMAIS compter depuis `business_events` (1er juin 2026)
+
+Erreur que j'ai failli faire : utiliser `countUserEvents` (qui lit
+`business_events`) pour évaluer les milestones rétention. Conséquence
+inacceptable : un user avec 500 leads historiques se serait vu débloquer
+`first_lead` puis `leads_10` puis `leads_100` au prochain capture
+event — 3 toasts d'affilée pour des paliers déjà franchis depuis des
+mois. Effet "ton outil débloque trop tard, je ne te crois plus".
+
+**Règle absolue** : `business_events` n'est qu'un log incrémental
+**à partir de sa date de création** (2026-06-04). Pour TOUT calcul
+agrégé qui doit refléter l'historique complet du user (milestones,
+Wall of Wins, dashboard "leads ce mois", coach IA contexte), utiliser
+`lib/businessOutcomes.ts → countOutcomes(userId, kind, opts)` qui lit
+directement la source canonique :
+
+- `lead_captured`   → `quiz_leads` via JOIN `quizzes.user_id`
+- `post_published`  → `content_item` WHERE `status = 'published'`
+- `sale`            → `transactions` WHERE `status IN ('paid','partial_refund')`
+- `quiz_complete`   → `quiz_events` WHERE `event_type='complete'` via JOIN
+- `quiz_published`  → `quizzes` WHERE `status = 'active'` (PAS `'published'` ! Convention historique Tipote, cf. routes quiz)
+
+`countUserEvents` reste OK pour les events SANS source canonique
+(account_disconnected, strategy_drift, etc.) — fallback automatique
+dans countOutcomes.
+
+**Backfill silencieux à run après tout ajout de milestones au catalog** :
+`/api/cron/backfill-milestones` (one-shot, idempotent). Insère les
+milestones rétro-actifs avec `seen_at = now()` → pas de toast/email,
+juste un état correct en DB. Auth via `X-Cron-Secret`.
+
 ## AS bis) AVANT de créer une table, GREP les migrations existantes (1er juin 2026)
 
 Je viens de me planter : j'ai créé `user_notifications` (migration
