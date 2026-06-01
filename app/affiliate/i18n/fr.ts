@@ -230,6 +230,10 @@ export const FR: AffiliateDict = {
     edit_badge: "Personnalisé",
     edit_hint: "Adapte ce texte à ta voix. Garde les variables comme {first_name} et le lien — ils sont remplacés automatiquement à la copie.",
     edit_saved: "Modifications enregistrées",
+    blog_section_title: "Articles de blog",
+    blog_section_description: "Choisis un article du blog Tipote à promouvoir — ton lien tracké est généré pour cet article.",
+    blog_search_placeholder: "Rechercher un article…",
+    blog_empty_search: "Aucun article ne correspond à ta recherche.",
   },
   revenus: {
     page_title: "Revenus",

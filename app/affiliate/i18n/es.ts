@@ -229,6 +229,10 @@ export const ES: AffiliateDict = {
     edit_badge: "Personalizado",
     edit_hint: "Adapta este texto a tu voz. Conserva las variables como {first_name} y el enlace — se reemplazan automáticamente al copiar.",
     edit_saved: "Cambios guardados",
+    blog_section_title: "Artículos del blog",
+    blog_section_description: "Elige un artículo del blog de Tipote para promocionar — tu enlace de seguimiento se genera para ese artículo.",
+    blog_search_placeholder: "Buscar artículos…",
+    blog_empty_search: "Ningún artículo coincide con tu búsqueda.",
   },
   revenus: {
     page_title: "Ingresos",

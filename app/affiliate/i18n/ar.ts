@@ -230,6 +230,10 @@ export const AR: AffiliateDict = {
     edit_badge: "مخصّص",
     edit_hint: "كيّف هذا النص بأسلوبك. احتفظ بالمتغيّرات مثل {first_name} والرابط — تُستبدل تلقائيًا عند النسخ.",
     edit_saved: "تم حفظ التغييرات",
+    blog_section_title: "مقالات المدونة",
+    blog_section_description: "اختر مقالًا من مدونة Tipote للترويج له — يتم إنشاء رابطك المتتبَّع لهذا المقال.",
+    blog_search_placeholder: "ابحث في المقالات…",
+    blog_empty_search: "لا يطابق أي مقال بحثك.",
   },
   revenus: {
     page_title: "الأرباح",

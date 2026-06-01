@@ -229,6 +229,10 @@ export const IT: AffiliateDict = {
     edit_badge: "Personalizzato",
     edit_hint: "Adatta questo testo alla tua voce. Mantieni le variabili come {first_name} e il link — vengono sostituiti automaticamente alla copia.",
     edit_saved: "Modifiche salvate",
+    blog_section_title: "Articoli del blog",
+    blog_section_description: "Scegli un articolo del blog Tipote da promuovere — il tuo link tracciato è generato per quell'articolo.",
+    blog_search_placeholder: "Cerca articoli…",
+    blog_empty_search: "Nessun articolo corrisponde alla tua ricerca.",
   },
   revenus: {
     page_title: "Guadagni",

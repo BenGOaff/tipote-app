@@ -229,6 +229,10 @@ export const EN: AffiliateDict = {
     edit_badge: "Customized",
     edit_hint: "Adapt this text to your voice. Keep variables like {first_name} and the link — they're auto-replaced on copy.",
     edit_saved: "Changes saved",
+    blog_section_title: "Blog articles",
+    blog_section_description: "Pick a Tipote blog article to promote — your tracked link is generated for that article.",
+    blog_search_placeholder: "Search articles…",
+    blog_empty_search: "No article matches your search.",
   },
   revenus: {
     page_title: "Earnings",
