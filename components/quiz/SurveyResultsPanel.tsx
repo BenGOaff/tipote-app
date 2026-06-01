@@ -84,40 +84,25 @@ export default function SurveyResultsPanel({
         return;
       }
 
-      // jspdf chargé dynamiquement (client-only, pas dans le bundle SSR).
-      const { jsPDF } = await import("jspdf");
+      // jspdf + renderer chargés en dynamic import (client-only).
+      const [{ jsPDF }, { renderSurveyPdf, BRAND_TIPOTE }] = await Promise.all([
+        import("jspdf"),
+        import("@/lib/survey/pdfReport"),
+      ]);
       const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 40;
-      let y = margin;
 
-      const line = (text: string, size: number, bold = false, gap = 6) => {
-        doc.setFont("helvetica", bold ? "bold" : "normal");
-        doc.setFontSize(size);
-        const wrapped = doc.splitTextToSize(text, pageWidth - margin * 2) as string[];
-        for (const w of wrapped) {
-          if (y > doc.internal.pageSize.getHeight() - margin) {
-            doc.addPage();
-            y = margin;
-          }
-          doc.text(w, margin, y);
-          y += size + gap;
-        }
-      };
-
-      line(data.title ?? surveyTitle, 18, true, 10);
-      line(`${data.totalResponses} réponse(s) — ${new Date().toLocaleDateString("fr-FR")}`, 10, false, 16);
-
-      for (const q of data.questions ?? []) {
-        line(`Q${(q.index ?? 0) + 1}. ${q.text}`, 12, true, 8);
-        for (const o of q.options ?? []) {
-          line(`   • ${o.text} — ${o.pct}% (${o.count})`, 10, false, 4);
-        }
-        if (q.average !== null && q.average !== undefined) {
-          line(`   Note moyenne : ${q.average}`, 10, false, 4);
-        }
-        y += 8;
-      }
+      renderSurveyPdf(
+        doc,
+        {
+          title: String(data.title ?? surveyTitle),
+          totalResponses: data.totalResponses ?? 0,
+          questions: data.questions ?? [],
+          // On embarque l'analyse IA déjà chargée dans l'état (zéro
+          // round-trip supplémentaire ; absente si jamais générée).
+          analysis: state?.analysis ?? null,
+        },
+        BRAND_TIPOTE,
+      );
 
       const safe = String(data.title ?? "sondage").replace(/[^a-z0-9]+/gi, "-").slice(0, 40);
       doc.save(`${safe}-${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -127,7 +112,7 @@ export default function SurveyResultsPanel({
     } finally {
       setExportingPdf(false);
     }
-  }, [quizId, surveyTitle]);
+  }, [quizId, surveyTitle, state?.analysis]);
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
