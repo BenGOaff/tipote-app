@@ -6596,6 +6596,7 @@
     "extNotDetected": "Estensione Chrome non rilevata",
     "extInstalledDesc": "L'estensione comunica con Tipote. Le due modalità qui sotto sono attive non appena apri una delle tue reti.",
     "extNotDetectedDesc": "Installa l'estensione Tipote da Chrome Web Store (o ricarica questa pagina se l'hai appena installata) per attivare il pod e il commentatore IA.",
+    "installExtension": "Installa estensione",
     "sync": "Sincronizza",
     "podTitle": "Pod di engagement",
     "linkedInOnly": "Solo LinkedIn",

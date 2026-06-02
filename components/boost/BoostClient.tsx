@@ -210,17 +210,39 @@ export default function BoostClient() {
                   : t("extNotDetectedDesc")}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={syncing || extStatus !== "installed"}
-            onClick={onSync}
-            className="shrink-0"
-          >
-            {syncing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
-            {t("sync")}
-          </Button>
+          {extStatus === "installed" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={syncing}
+              onClick={onSync}
+              className="shrink-0"
+            >
+              {syncing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+              {t("sync")}
+            </Button>
+          ) : (
+            // Quand l'extension n'est pas détectée, CTA explicite vers
+            // le Chrome Web Store. Avant : pas de bouton → l'user voyait
+            // "Extension non détectée" mais ne savait pas où l'installer.
+            // (Bug Laurent 2 juin 2026.)
+            <Button
+              type="button"
+              size="sm"
+              asChild
+              className="shrink-0"
+            >
+              <a
+                href="https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg?utm_source=tipote_boost_panel"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                {t("installExtension")}
+              </a>
+            </Button>
+          )}
         </div>
       </Card>
 
