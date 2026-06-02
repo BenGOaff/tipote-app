@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { upsertByProject } from "@/lib/projects/upsertByProject";
 
@@ -353,11 +354,33 @@ export async function GET() {
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
 
+    // Enrichit avec profiles.plan (BUG Laurent 2 juin 2026 : depuis
+    // l'introduction du multiprofils, /api/profile renvoie la row
+    // business_profiles per-projet, qui n'a pas la colonne `plan`.
+    // Conséquence : TOUS les composants qui lisaient profile.plan
+    // (AutoCommentSettings, etc.) voyaient undefined → fallback "free"
+    // → Elite bloqué dans Settings → Boost). Le plan vit sur la table
+    // `profiles` (global par user, pas par projet — c'est de l'abonnement).
+    let profileOut = data ?? null;
+    try {
+      const { data: planRow } = await supabaseAdmin
+        .from("profiles")
+        .select("plan")
+        .eq("id", user.id)
+        .maybeSingle();
+      const plan = (planRow as { plan?: string | null } | null)?.plan ?? null;
+      profileOut = { ...(profileOut ?? {}), plan };
+    } catch (e) {
+      console.error("[profile.GET] plan enrichment failed", e);
+      // Fail-open : on renvoie ce qu'on a (sans plan) → AutoCommentSettings
+      // affichera le gate Pro/Elite mais l'user peut quand même charger
+      // ses autres réglages.
+    }
+
     // Décrypte la clé SIO pour la renvoyer au front (l'éditeur en a
     // besoin pour pré-remplir le champ password-masqué). Le front
     // affiche la clé en type=password — l'utilisateur doit cliquer 👁
     // pour la lire en clair. Côté DB elle reste en ciphertext.
-    let profileOut = data ?? null;
     if (profileOut) {
       const enc = (profileOut as { sio_user_api_key_enc?: string | null }).sio_user_api_key_enc;
       if (enc) {

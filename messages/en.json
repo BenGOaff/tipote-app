@@ -6603,6 +6603,7 @@
     "extNotDetected": "Chrome extension not detected",
     "extInstalledDesc": "The extension is talking to Tipote. Both modes below are live as soon as you open one of your networks.",
     "extNotDetectedDesc": "Install the Tipote extension from the Chrome Web Store (or reload this page if you just installed it) to activate the pod and the AI commenter.",
+    "installExtension": "Install extension",
     "sync": "Sync",
     "podTitle": "Engagement pod",
     "linkedInOnly": "LinkedIn only",
