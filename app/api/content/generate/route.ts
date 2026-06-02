@@ -25,6 +25,7 @@ import { formatBulletsForPrompt } from "@/lib/salesArguments";
 import { buildSocialPostPrompt } from "@/lib/prompts/content/socialPost";
 import { buildVideoScriptPrompt, type VideoDurationId, type VideoPlatform } from "@/lib/prompts/content/video";
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
+import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
@@ -1439,13 +1440,26 @@ async function callClaude(args: {
   // Per-call override > env var > default 120s
   const timeoutMs = args.timeoutMs ?? (envTimeout || 120_000);
 
-  const reqBody = JSON.stringify({
-    model,
-    max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
-    temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
-    system: args.system,
-    messages: [{ role: "user", content: args.user }],
-  });
+  // Prompt caching + safety hotfix Opus 4.7+ (cf. lib/claudeRequest.ts).
+  // - cache_control sur le system → cache 5 min, économie ~90 % sur les
+  //   tokens system aux appels suivants avec mêmes params (regen,
+  //   cross-user identiques)
+  // - buildClaudeMessageBody retire temperature si modèle = Opus 4.7+
+  const reqBody = JSON.stringify(
+    buildClaudeMessageBody({
+      model,
+      max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
+      temperature: typeof args.temperature === "number" ? args.temperature : 0.7,
+      system: [
+        {
+          type: "text",
+          text: args.system,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [{ role: "user", content: args.user }],
+    }),
+  );
 
   let lastError: Error | null = null;
 
@@ -1494,6 +1508,15 @@ async function callClaude(args: {
     }
 
     const json = (await res.json()) as any;
+    // Log cache hit rate pour mesurer l'efficacité du prompt caching.
+    if (json?.usage) {
+      console.log("[content/generate] usage:", {
+        input: json.usage.input_tokens,
+        output: json.usage.output_tokens,
+        cache_write: json.usage.cache_creation_input_tokens ?? 0,
+        cache_read: json.usage.cache_read_input_tokens ?? 0,
+      });
+    }
     const parts = Array.isArray(json?.content) ? json.content : [];
     const text = parts
       .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
