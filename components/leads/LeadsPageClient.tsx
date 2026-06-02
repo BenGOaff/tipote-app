@@ -109,6 +109,11 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
   const [sourceFilter, setSourceFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
+  // Filtre par clic sur les KPI cards (Gwenn 2 juin 2026 : "c'est
+  // possible de cliquer sur Non synchronisés et que ça nous montre les
+  // leads concernés ?"). Toggle : 2e clic sur la même card → "all".
+  type KpiFilter = "all" | "exported" | "not_exported" | "this_month";
+  const [kpiFilter, setKpiFilter] = useState<KpiFilter>("all");
 
   // Detail sheet
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
@@ -132,8 +137,19 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
     if (sourceFilter !== "all") {
       result = result.filter((l) => l.source === sourceFilter);
     }
+    if (kpiFilter === "exported") {
+      result = result.filter((l) => l.exported_sio === true);
+    } else if (kpiFilter === "not_exported") {
+      result = result.filter((l) => l.exported_sio !== true);
+    } else if (kpiFilter === "this_month") {
+      const now = new Date();
+      result = result.filter((l) => {
+        const d = new Date(l.created_at);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+    }
     return result;
-  }, [leads, search, sourceFilter]);
+  }, [leads, search, sourceFilter, kpiFilter]);
 
   // Split visible/locked so pagination only walks unlocked rows. Locked
   // leads land in a single blurred block below — one cadenas, one CTA, no
@@ -275,30 +291,48 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                 banner here — that pattern was redundant with the visual
                 lock block and added noise above the fold. */}
 
-            {/* Stats bar */}
+            {/* Stats bar — cliquable pour filtrer la liste (Gwenn 2 juin 2026).
+                Toggle : 2e clic sur la même card enlève le filtre. */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Card className="p-4 text-center">
-                <p className="text-2xl font-bold">{leads.length}</p>
-                <p className="text-xs text-muted-foreground">{t("totalLeads")}</p>
-              </Card>
-              <Card className="p-4 text-center">
-                <p className="text-2xl font-bold">{leads.filter((l) => l.source === "quiz").length}</p>
-                <p className="text-xs text-muted-foreground">{t("source_quiz")}</p>
-              </Card>
-              <Card className="p-4 text-center">
-                <p className="text-2xl font-bold">{leads.filter((l) => l.exported_sio).length}</p>
-                <p className="text-xs text-muted-foreground">{t("exported")}</p>
-              </Card>
-              <Card className="p-4 text-center">
-                <p className="text-2xl font-bold">
-                  {leads.filter((l) => {
-                    const d = new Date(l.created_at);
-                    const now = new Date();
-                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                  }).length}
-                </p>
-                <p className="text-xs text-muted-foreground">{t("thisMonth")}</p>
-              </Card>
+              {(() => {
+                const now = new Date();
+                const thisMonth = leads.filter((l) => {
+                  const d = new Date(l.created_at);
+                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).length;
+                const exported = leads.filter((l) => l.exported_sio).length;
+                const cards: { key: KpiFilter; value: number; label: string; ring: string }[] = [
+                  { key: "all", value: leads.length, label: t("totalLeads"), ring: "ring-primary" },
+                  { key: "exported", value: exported, label: t("exported"), ring: "ring-emerald-500" },
+                  { key: "not_exported", value: leads.length - exported, label: t("notExported"), ring: "ring-amber-500" },
+                  { key: "this_month", value: thisMonth, label: t("thisMonth"), ring: "ring-sky-500" },
+                ];
+                return cards.map(({ key, value, label, ring }) => {
+                  const isActive = kpiFilter === key;
+                  return (
+                    <Card
+                      key={label}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isActive}
+                      onClick={() => { setKpiFilter(isActive ? "all" : key); setPage(0); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setKpiFilter(isActive ? "all" : key);
+                          setPage(0);
+                        }
+                      }}
+                      className={`p-4 text-center cursor-pointer transition-all hover:shadow-md ${
+                        isActive ? `ring-2 ${ring} ring-offset-2` : ""
+                      }`}
+                    >
+                      <p className="text-2xl font-bold tabular-nums">{value}</p>
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                    </Card>
+                  );
+                });
+              })()}
             </div>
 
             {/* Security badge */}

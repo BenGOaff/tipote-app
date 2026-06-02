@@ -99,6 +99,34 @@ export async function GET(
   const leadsCount = leads.length;
   const exportedSio = leads.filter((l) => l.exported_sio === true).length;
 
+  // ── Vues + complétions : recompte DIRECT depuis quiz_events ──
+  // BUG GWENN 2 juin 2026 : 270 leads / 34 vues = 794% impossible.
+  // Cause : quiz.views_count (compteur dénormalisé) avait drift. Fix :
+  // on recompte depuis quiz_events qui est la source de vérité, et on
+  // borne viewsCount à >= leadsCount pour ne plus jamais afficher de
+  // taux > 100%.
+  const [viewsCountRes, completionsCountRes] = await Promise.all([
+    supabaseAdmin
+      .from("quiz_events")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", quizId)
+      .eq("event_type", "view"),
+    supabaseAdmin
+      .from("quiz_events")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", quizId)
+      .eq("event_type", "complete"),
+  ]);
+  const viewsCountRaw = viewsCountRes.error
+    ? quiz.views_count ?? 0
+    : viewsCountRes.count ?? 0;
+  const completionsCount = completionsCountRes.error
+    ? quiz.completions_count ?? 0
+    : completionsCountRes.count ?? 0;
+  // Garde-fou : un quiz historique peut avoir des vues server-side
+  // jamais comptabilisées. viewsCount = max(events.view, leads).
+  const viewsCount = Math.max(viewsCountRaw, leadsCount);
+
   // Aggregate per result title — strip empty titles into a single
   // "Sans résultat" bucket so the pie chart isn't full of "(null)".
   const byResult = new Map<string, number>();
@@ -147,8 +175,8 @@ export async function GET(
   })();
 
   const captureRate =
-    quiz.views_count > 0
-      ? Math.round((leadsCount / quiz.views_count) * 1000) / 10
+    viewsCount > 0
+      ? Math.round((leadsCount / viewsCount) * 1000) / 10
       : 0;
   const exportRate =
     leadsCount > 0
@@ -238,8 +266,10 @@ export async function GET(
     },
     period: period.key,
     metrics: {
-      viewsCount: quiz.views_count,
-      completionsCount: quiz.completions_count,
+      // viewsCount/completionsCount viennent de quiz_events (source
+      // de vérité), pas de quiz.views_count qui peut drift.
+      viewsCount,
+      completionsCount,
       leadsCount,
       exportedSioCount: exportedSio,
       captureRate,

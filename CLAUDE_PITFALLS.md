@@ -39,6 +39,36 @@ Si je dois ajouter `nouvelle_colonne` à la SELECT chain de `public/route.ts`, j
 `scripts/smoke-public-routes.sh` détecte le 404 mais pas la CAUSE. À ajouter en V2 :
 - Si l'endpoint répond 404 sur le smoke quiz, faire 2e curl avec `Accept: application/json` et logger le body → si c'est `{"ok":false,"error":"Quiz not found or inactive"}` ET que le quiz est censé exister (smoke quiz fixe), alerter explicitement "MIGRATION MANQUANTE" plutôt que juste "404".
 
+## A quater) `npm run check:schema` — détection automatique des migrations en retard (juin 2026)
+
+Né de la panne A bis. Le script `scripts/check-schema.mjs` tente un
+SELECT explicite sur chaque table/colonne attendue. Si Supabase
+renvoie PGRST204 (column not found) ou PGRST205 (table not found),
+c'est la migration qui est en retard.
+
+**Usage** (workflow Béné après chaque déploiement) :
+```bash
+set -a; . .env; set +a   # OU .env.local selon le repo
+npm run check:schema
+```
+Exit 0 si toutes les migrations sont appliquées, 1 + détail des
+migrations en retard sinon.
+
+**À chaque nouvelle migration** qui ajoute une colonne/table critique,
+ajouter une entrée dans `EXPECTED` de `scripts/check-schema.mjs`. **Lire
+le contenu RÉEL du .sql** (`grep "CREATE TABLE\|ADD COLUMN" file.sql`) —
+j'ai généré 2 faux positifs en supposant les noms (visual_studio_brand_name
+qui n'existait pas, affiliate_accounts au lieu de affiliates). Pattern :
+```js
+{ migration: "<filename>", table: "<table>", columns: ["c1","c2"] }
+```
+
+**Variables ENV** acceptées (Tipote utilise `.env` pas `.env.local` et
+`SUPABASE_SERVICE_ROLE` sans `_KEY`) :
+- URL : `SUPABASE_URL` | `NEXT_PUBLIC_SUPABASE_URL` | `SUPABASE_PROJECT_URL`
+- Service-role : `SUPABASE_SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_ROLE`
+  | `SERVICE_ROLE_KEY` | `SUPABASE_SECRET_KEY`
+
 ## A) Checklist quand j'ajoute une COLONNE sur `quizzes`
 
 Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silencieusement :
