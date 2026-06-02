@@ -2739,6 +2739,7 @@
     "source_website": "Sitio web",
     "source_manual": "Manual",
     "exported": "Exportados a Systeme.io",
+    "notExported": "No exportados",
     "thisMonth": "Este mes",
     "searchPlaceholder": "Buscar un lead…",
     "allSources": "Todas las fuentes",

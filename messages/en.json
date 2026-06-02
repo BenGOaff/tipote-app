@@ -2746,6 +2746,7 @@
     "source_website": "Website",
     "source_manual": "Manual",
     "exported": "Exported to Systeme.io",
+    "notExported": "Not exported",
     "thisMonth": "This month",
     "searchPlaceholder": "Search a lead…",
     "allSources": "All sources",
