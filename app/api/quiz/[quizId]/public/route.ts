@@ -301,6 +301,33 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order,image_url,image_position").eq("quiz_id", quizId).order("sort_order"),
     ]);
 
+    // DIAGNOSTIC 2 juin 2026 — log la vraie raison du 404 (colonne
+    // manquante, schema cache stale, etc.) pour identifier la cause
+    // du "Quiz not found or inactive" généralisé en prod.
+    if (quizRes.error) {
+      console.error("[public/GET] quizzes SELECT error:", {
+        quizId,
+        code: quizRes.error.code,
+        message: quizRes.error.message,
+        details: quizRes.error.details,
+        hint: quizRes.error.hint,
+      });
+    }
+    if (questionsRes.error) {
+      console.error("[public/GET] quiz_questions SELECT error:", {
+        quizId,
+        code: questionsRes.error.code,
+        message: questionsRes.error.message,
+      });
+    }
+    if (resultsRes.error) {
+      console.error("[public/GET] quiz_results SELECT error:", {
+        quizId,
+        code: resultsRes.error.code,
+        message: resultsRes.error.message,
+      });
+    }
+
     if (!quizRes.data) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
