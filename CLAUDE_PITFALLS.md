@@ -7,6 +7,38 @@
 
 ---
 
+## A bis) PANNE 2 juin 2026 — migration en retard = TOUS les quiz publics 404
+
+**Symptôme** : `app.tipote.com/api/quiz/<id>/public` répond `404 {"ok":false,"error":"Quiz not found or inactive"}` pour TOUS les quiz simultanément. Quiz embeds chez les users (JB / imagelys) en panne sèche.
+
+**Cause racine** : la migration `20260603_quizzes_survey_thanks.sql` (qui ajoute `survey_thanks_heading` + `survey_thanks_body`) n'avait JAMAIS été appliquée en prod, alors que le code de `public/route.ts` mentionne ces colonnes dans sa SELECT chain depuis le push de la migration. Postgres rejette la requête avec `42703 column "X" does not exist` → `quizRes.data` est `null` → la route renvoie 404 silencieusement.
+
+**Pourquoi ça n'avait pas explosé avant** : Béné a rebuild/redéployé Tipote pour le hotfix `temperature` (Opus 4.7+), ce qui a forcé Next à re-générer ses caches. Avant le rebuild, Next servait peut-être encore des réponses cachées d'avant l'introduction de la colonne dans la SELECT chain.
+
+**Fix appliqué** (à reproduire dans Supabase Studio en cas de récidive) :
+```sql
+ALTER TABLE public.quizzes
+  ADD COLUMN IF NOT EXISTS survey_thanks_heading TEXT,
+  ADD COLUMN IF NOT EXISTS survey_thanks_body TEXT;
+NOTIFY pgrst, 'reload schema';
+```
+
+**Diagnostic préservé en place** : `app/api/quiz/[quizId]/public/route.ts` logge maintenant l'erreur Supabase quand quizRes/questionsRes/resultsRes est en error (`console.error("[public/GET] quizzes SELECT error:", ...)`). En cas de récidive, `pm2 logs tipote-prod | grep "public/GET"` donne instantanément le code Postgres + la colonne manquante.
+
+**Règle absolue à respecter pour les futurs ajouts de colonne sur `quizzes`** :
+1. Pousser la migration sur la branche Claude
+2. Béné applique la migration dans Supabase **AVANT** de pull/build/restart
+3. **NE JAMAIS push un code qui SELECT une colonne avant que la migration soit en prod**
+
+Si je dois ajouter `nouvelle_colonne` à la SELECT chain de `public/route.ts`, je dois :
+- Vérifier `git log supabase/migrations/ -- *<nom-colonne>*` que la migration existe
+- Demander explicitement à Béné de la run AVANT de push le code Tipote
+
+## A ter) Smoke test à étendre pour détecter ce piège en 30s (V2)
+
+`scripts/smoke-public-routes.sh` détecte le 404 mais pas la CAUSE. À ajouter en V2 :
+- Si l'endpoint répond 404 sur le smoke quiz, faire 2e curl avec `Accept: application/json` et logger le body → si c'est `{"ok":false,"error":"Quiz not found or inactive"}` ET que le quiz est censé exister (smoke quiz fixe), alerter explicitement "MIGRATION MANQUANTE" plutôt que juste "404".
+
 ## A) Checklist quand j'ajoute une COLONNE sur `quizzes`
 
 Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silencieusement :
