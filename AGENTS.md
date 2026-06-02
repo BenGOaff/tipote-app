@@ -10,6 +10,34 @@ Résumé : je ne pousse JAMAIS sur `main`. Je pousse uniquement sur la
 branche `claude/busy-wright-501xR`. Béné est seule maître de
 `main` côté GitHub.
 
+## Migrations SQL — ALERTE OBLIGATOIRE (drame 2 juin 2026)
+
+**Dès que je touche `supabase/migrations/*.sql`** (création OU
+modification), mon message final à Béné DOIT contenir un bloc visuellement
+visible :
+
+```
+🚨 MIGRATION À APPLIQUER SUR SUPABASE
+   Fichier(s) : supabase/migrations/<YYYYMMDD_xxx>.sql
+   Étapes : Studio → SQL Editor → coller le contenu → Run
+   Vérification : npm run check:migrations-pending  (doit passer ✓)
+```
+
+Pourquoi non négociable :
+- 18 mai → 2 juin 2026 : `quiz_events.meta` jamais appliquée sur Tiquiz →
+  TOUTES les vues, starts, completes ont été perdues silencieusement
+  pendant 15 jours. Stats fausses sur TOUS les quizzes.
+- 2 juin matin : `quizzes.survey_thanks_*` jamais appliquée sur Tipote →
+  TOUS les quiz publics ont retourné 404. App offline ~2h.
+- 2 juin midi : table `quiz_events` entièrement absente sur Tipote
+  (migration `20260521_tracking_foundation` jamais appliquée). Aucune
+  stat depuis le lancement Tipote.
+
+**Garde-fou auto** : `npm run check:migrations-pending` parse tous les
+`.sql` du repo et liste ce qui manque en prod (sans intervention manuelle
+nécessaire — contrairement à `check:schema` qui exige une liste
+hand-curated). À lancer après chaque déploiement.
+
 ## Claude personal notes — pitfalls + conventions
 
 **Avant de coder, lire `CLAUDE_PITFALLS.md` (pense-bête perso).**
