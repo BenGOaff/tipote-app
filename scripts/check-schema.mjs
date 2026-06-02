@@ -144,18 +144,25 @@ const EXPECTED = [
     columns: ["default_meta_capi_token"],
   },
 
-  // ── Visual studio prefs ─────────────────────────────────────────
+  // ── Visual studio prefs (juin 2026) ─────────────────────────────
+  // La migration crée 2 tables, pas de colonnes business_profiles.
   {
     migration: "20260602_visual_studio_prefs",
-    table: "business_profiles",
-    columns: ["visual_studio_brand_name"],
+    table: "visual_studio_styles",
+    columns: ["id"],
+  },
+  {
+    migration: "20260602_visual_studio_prefs",
+    table: "visual_studio_votes",
+    columns: ["id"],
   },
 
-  // ── Affiliate program ───────────────────────────────────────────
+  // ── Affiliate program (mai 2026) ────────────────────────────────
+  // Table principale : `affiliates` (clé naturelle = sa).
   {
     migration: "20260525_affiliate_program",
-    table: "affiliate_accounts",
-    columns: ["id", "user_id"],
+    table: "affiliates",
+    columns: ["sa", "email", "status"],
   },
 ];
 
