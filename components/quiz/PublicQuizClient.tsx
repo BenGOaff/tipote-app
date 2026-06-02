@@ -969,12 +969,16 @@ export default function PublicQuizClient({
     (event: "view" | "start" | "complete" | "share") => {
       if (previewData || trackedRef.has(event)) return;
       trackedRef.add(event);
-      // 1) Tracking interne (quiz_events table) — Phase A
+      // 1) Tracking interne (quiz_events table) — Phase A. keepalive:true
+      // → le navigateur garantit l'envoi même si l'user navigue/ferme
+      // juste après le mount (sinon le fetch view était droppé sur les
+      // visites courtes → vues sous-comptées, cf. bug stats Gwenn 2 juin).
       fetch(`/api/quiz/${quizId}/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ event }),
         credentials: "same-origin",
+        keepalive: true,
       }).catch(() => {});
       // 2) Tracking externe Meta + Google — Phase B. On ne fire PAS
       // "view" : l'init script du pixel (server-rendered) fire déjà

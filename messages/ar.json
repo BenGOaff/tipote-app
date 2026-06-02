@@ -4382,6 +4382,7 @@
     "analyticsLeadsLabel": "العملاء المحتملون",
     "analyticsCaptureRateLabel": "معدل التحويل",
     "analyticsCaptureRateHint": "العملاء المحتملون / المشاهدات (تراكمي)",
+    "analyticsCaptureRateUnreliable": "تم تتبع المشاهدات جزئياً (اختبار مضمّن أو سابق للتتبع) — النسبة موثوقة على المشاهدات الجديدة",
     "analyticsExportSioLabel": "تصدير Systeme.io",
     "analyticsExportSioHint": "نسبة العملاء المُعلَّمين في SIO",
     "analyticsLeadsEvolution": "تطور العملاء المحتملين",
