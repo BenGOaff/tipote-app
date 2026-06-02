@@ -17,6 +17,7 @@
     "format": "prettier --write .",
     "ingest:resources": "node scripts/ingest-resources.cjs",
     "smoke": "bash scripts/smoke-public-routes.sh",
+    "check:schema": "node scripts/check-schema.mjs",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium"
   },
