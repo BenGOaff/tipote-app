@@ -266,12 +266,26 @@ export async function POST(req: NextRequest) {
             // buildClaudeMessageBody retire temperature/top_p/top_k pour
             // les modèles qui les rejettent (Opus 4.7+, sinon 400
             // "temperature is deprecated for this model").
+            //
+            // Prompt caching (2 juin 2026) : on envoie le system en
+            // bloc unique avec cache_control: ephemeral. Le cache se
+            // déclenche quand un user regen son quiz dans les 5 min
+            // (rafale d'itération) OU quand 2 users avec params
+            // identiques génèrent à la suite. Économie ~90 % sur les
+            // tokens system lus (~5K tokens → ~500 tokens facturés).
+            // Mesure via response.usage.cache_read_input_tokens.
             body: JSON.stringify(
               buildClaudeMessageBody({
                 model: getClaudeModel(),
                 max_tokens: 8000,
                 temperature: 0.7,
-                system,
+                system: [
+                  {
+                    type: "text",
+                    text: system,
+                    cache_control: { type: "ephemeral" },
+                  },
+                ],
                 messages: [{ role: "user", content: userPrompt }],
               }),
             ),
@@ -321,6 +335,20 @@ export async function POST(req: NextRequest) {
           console.error("[quiz/generate] Empty response from Claude. stop_reason:", json?.stop_reason);
           sendSSE("error", { ok: false, error: "L'IA a retourné une réponse vide. Réessaie." });
           return;
+        }
+
+        // Log cache hit rate pour mesurer l'efficacité du prompt caching
+        // (cf. cache_control sur le system block). Si cache_read = 0 sur
+        // plusieurs appels avec mêmes params → vérifier qu'aucun byte ne
+        // change dans le system entre 2 appels (timestamp, randomUUID,
+        // etc.) cf. PITFALLS prompt caching.
+        if (json?.usage) {
+          console.log("[quiz/generate] usage:", {
+            input: json.usage.input_tokens,
+            output: json.usage.output_tokens,
+            cache_write: json.usage.cache_creation_input_tokens ?? 0,
+            cache_read: json.usage.cache_read_input_tokens ?? 0,
+          });
         }
 
         if (json?.stop_reason === "max_tokens") {

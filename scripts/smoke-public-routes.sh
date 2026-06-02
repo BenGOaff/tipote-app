@@ -101,6 +101,26 @@ check_embeddable_route() {
     ok "status 200"
   else
     ko "status attendu 200, obtenu ${status}"
+    # Diagnostic ciblé : si on a un 404 sur /q/<slug>, vérifier la
+    # route API /api/quiz/<slug>/public — si elle renvoie le format
+    # "Quiz not found or inactive" alors que le slug est censé exister,
+    # c'est quasi certainement une COLONNE MANQUANTE en DB (migration
+    # en retard) ou un schema cache stale. Cf. pitfall A bis (panne
+    # 2 juin 2026 matin).
+    if [ "$status" = "404" ] && [[ "$url" == */q/* ]]; then
+      local quiz_slug api_url api_body
+      quiz_slug="${url##*/q/}"
+      api_url="${url%/q/*}/api/quiz/${quiz_slug}/public"
+      api_body=$(curl -sL -H "Accept: application/json" "$api_url" 2>/dev/null)
+      if echo "$api_body" | grep -q '"Quiz not found or inactive"'; then
+        printf "  %s⚠%s probable %sMIGRATION MANQUANTE%s ou schema cache stale\n" \
+          "$C_RED" "$C_RESET" "$C_RED" "$C_RESET"
+        printf "  %s     → check pm2 logs tipote-prod | grep public/GET%s\n" \
+          "$C_DIM" "$C_RESET"
+        printf "  %s     → ou Supabase Studio : NOTIFY pgrst, 'reload schema';%s\n" \
+          "$C_DIM" "$C_RESET"
+      fi
+    fi
     return
   fi
 
