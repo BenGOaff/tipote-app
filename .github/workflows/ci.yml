@@ -1,0 +1,56 @@
+name: CI
+
+# Checks automatiques sur push/PR pour éviter les pannes type 2 juin
+# matin (migration en retard découverte EN PROD). Sans ce CI, un bug
+# de typage ou de lint passe inaperçu jusqu'au build sur le serveur.
+#
+# Ce que ce workflow COUVRE (= bloque le merge sur main si KO) :
+#   - Typecheck strict (npx tsc --noEmit) — attrape la majorité des bugs
+#   - Syntax des scripts Node .mjs (check-schema, smoke, etc.)
+#
+# Lint volontairement EXCLU pour l'instant : `npm run lint` est cassé
+# (script Next.js 16 buggué + 80+ erreurs préexistantes). À ré-activer
+# une fois la base nettoyée (chantier propre dédié).
+#
+# Ce que ce workflow NE COUVRE PAS (= reste manuel post-deploy) :
+#   - check:schema contre la DB prod (pas de service-role key en CI)
+#   - smoke:public-routes contre la prod (URL prod hardcodée)
+#   - Tests Playwright (besoin d'un serveur tourné)
+#   - Migrations Supabase appliquées (à vérifier via npm run check:schema)
+#
+# Ces checks manuels sont à lancer par Béné après chaque déploiement
+# (cf. CLAUDE_PITFALLS.md section A bis et A quater).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.6"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Validate .mjs script syntax
+        run: |
+          for f in scripts/*.mjs; do
+            if [ -f "$f" ]; then
+              echo "Checking $f"
+              node --check "$f"
+            fi
+          done
