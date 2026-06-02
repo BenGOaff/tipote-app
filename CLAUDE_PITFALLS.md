@@ -7,13 +7,13 @@
 
 ---
 
-## A bis) PANNE 2 juin 2026 — migration en retard = TOUS les quiz publics 404
+## A bis) PANNE 2 juin 2026 matin — migration en retard = TOUS les quiz publics 404
 
-**Symptôme** : `app.tipote.com/api/quiz/<id>/public` répond `404 {"ok":false,"error":"Quiz not found or inactive"}` pour TOUS les quiz simultanément. Quiz embeds chez les users (JB / imagelys) en panne sèche.
+**Symptôme** (2 juin 2026, ~8h-10h) : `app.tipote.com/api/quiz/<id>/public` répond `404 {"ok":false,"error":"Quiz not found or inactive"}` pour TOUS les quiz simultanément. Quiz embeds chez les users (JB / imagelys) en panne sèche.
 
 **Cause racine** : la migration `20260603_quizzes_survey_thanks.sql` (qui ajoute `survey_thanks_heading` + `survey_thanks_body`) n'avait JAMAIS été appliquée en prod, alors que le code de `public/route.ts` mentionne ces colonnes dans sa SELECT chain depuis le push de la migration. Postgres rejette la requête avec `42703 column "X" does not exist` → `quizRes.data` est `null` → la route renvoie 404 silencieusement.
 
-**Pourquoi ça n'avait pas explosé avant** : Béné a rebuild/redéployé Tipote pour le hotfix `temperature` (Opus 4.7+), ce qui a forcé Next à re-générer ses caches. Avant le rebuild, Next servait peut-être encore des réponses cachées d'avant l'introduction de la colonne dans la SELECT chain.
+**Pourquoi ça n'avait pas explosé avant** : Béné a rebuild/redéployé Tipote dans la nuit pour le hotfix `temperature` (Opus 4.7+, fix 1er juin tard / 2 juin tôt), ce qui a forcé Next à re-générer ses caches. Avant le rebuild, Next servait peut-être encore des réponses cachées d'avant l'introduction de la colonne dans la SELECT chain.
 
 **Fix appliqué** (à reproduire dans Supabase Studio en cas de récidive) :
 ```sql
