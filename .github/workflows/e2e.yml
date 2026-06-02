@@ -11,14 +11,14 @@ name: E2E Playwright
 #   - workflow_dispatch : Béné peut lancer manuellement depuis
 #     l'onglet Actions de GitHub (utile post-deploy)
 #
-# Secrets à configurer dans GitHub → Settings → Secrets and variables
-# → Actions :
+# Variables (NON-secrètes, juste des IDs publics) à configurer dans
+# GitHub → Settings → Secrets and variables → Actions → tab Variables :
 #   - SMOKE_QUIZ_ID         (slug ou UUID d'un quiz actif en prod)
 #   - SMOKE_POPQUIZ_ID      (id d'un popquiz actif en prod)
 #   - SMOKE_PAGE_SLUG       (slug d'une page active en prod)
-#   - BASE_URL              (https://app.tipote.com par défaut, override)
+#   - BASE_URL (optionnel)  (https://app.tipote.com par défaut, override)
 #
-# Si un secret manque : les tests correspondants sont SKIPPÉS (via
+# Si une variable manque : les tests correspondants sont SKIPPÉS (via
 # test.skip dans les specs) — pas d'échec, juste rien à vérifier.
 
 on:
@@ -55,10 +55,10 @@ jobs:
 
       - name: Run Playwright tests
         env:
-          BASE_URL: ${{ inputs.base_url || secrets.BASE_URL || 'https://app.tipote.com' }}
-          SMOKE_QUIZ_ID: ${{ secrets.SMOKE_QUIZ_ID }}
-          SMOKE_POPQUIZ_ID: ${{ secrets.SMOKE_POPQUIZ_ID }}
-          SMOKE_PAGE_SLUG: ${{ secrets.SMOKE_PAGE_SLUG }}
+          BASE_URL: ${{ inputs.base_url || vars.BASE_URL || 'https://app.tipote.com' }}
+          SMOKE_QUIZ_ID: ${{ vars.SMOKE_QUIZ_ID }}
+          SMOKE_POPQUIZ_ID: ${{ vars.SMOKE_POPQUIZ_ID }}
+          SMOKE_PAGE_SLUG: ${{ vars.SMOKE_PAGE_SLUG }}
         run: npm run test:e2e
 
       - name: Upload Playwright report on failure
