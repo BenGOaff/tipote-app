@@ -23,7 +23,6 @@ import {
   AreaChart,
   CartesianGrid,
   Cell,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -286,12 +285,10 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                     ))}
                   </Pie>
                   <Tooltip content={<ResultTooltip />} />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={32}
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: 11 }}
-                  />
+                  {/* La légende recharts a été retirée (Béné 2 juin 2026) :
+                      elle chevauchait visuellement la liste custom ci-dessous,
+                      surtout quand les titres de profils sont longs. La <ul>
+                      qui suit suffit à identifier chaque tranche. */}
                 </PieChart>
               </ResponsiveContainer>
               <ul className="mt-2 space-y-1 text-xs">
