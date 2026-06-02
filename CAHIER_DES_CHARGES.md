@@ -1,6 +1,18 @@
-# CAHIER DES CHARGES Tipote — Version Mai 2026 (État actuel du produit)
+# CAHIER DES CHARGES Tipote — Version Juin 2026 (État actuel du produit)
 
 Application Web SaaS multilingue (FR/EN/ES/IT/AR) pour analyse business, planification stratégique, génération de contenus IA et publication automatisée sur les réseaux sociaux.
+
+> **Notes de version Juin 2026** — sprint fiabilité (panne 2 juin matin) + extension Boost + hotfix Opus 4.7 :
+>
+> - **Bug fix Elite gate Boost** (2 juin 2026) : `GET /api/profile` retournait `business_profiles` (per-(user, project)) sans le champ `plan` → tous les Pro / Elite / Beta voyaient le gate « il faut être Pro/Elite pour accéder à Boost » dans Settings → Boost. Fix : `/api/profile` GET enrichit désormais la réponse avec `profiles.plan` via `supabaseAdmin` (cross-table lookup). **Règle d'invariant** : la source de vérité du plan reste `profiles.plan` (global par user, c'est de l'abonnement), JAMAIS `business_profiles` (per-projet). Toute lecture de plan doit passer par cette jointure.
+> - **Lien d'installation extension Chrome Tipote Boost** : avant, le panneau Settings → Boost affichait « Extension Chrome non détectée » sans aucun lien actionnable. Désormais, bouton « Installer l'extension » qui pointe vers `https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg`. L'extension Tipote Boost est en cours de validation Chrome Web Store ; LinkedIn dispo en premier, autres réseaux (X / Threads / Instagram) à venir.
+> - **Fix stats analytics quiz** (2 juin 2026) : bug Gwenn « 270 leads pour 34 vues = 794 % taux de capture ». Cause : on lisait `quizzes.views_count` (compteur dénormalisé qui drift) au lieu de la source de vérité `quiz_events`. Fix : `app/api/quiz/[id]/analytics/route.ts` recompute `viewsCount` + `completionsCount` DIRECTEMENT depuis `quiz_events` à chaque requête, avec garde-fou `viewsCount = max(events.view, leadsCount)`. Conséquence : taux de capture toujours ≤ 100 %.
+> - **KPI cards cliquables dans `/leads`** : refonte du header de la page Leads. Les 4 cards (Total / Exportés / Non exportés / Ce mois) sont maintenant des `<button>` qui togglent un filtre sur la liste (2e clic = retire le filtre). Ring colorée quand actif. Nouvelle KPI « Non exportés » remplace l'ancienne « Source quiz » (plus actionnable pour l'use case principal : « qui dois-je pousser dans SIO ? »). i18n FR / EN / IT / PT / ES.
+> - **Hotfix Opus 4.7+ rejette `temperature`** (1er juin 2026) : Anthropic a retiré les params de sampling sur Opus 4.7 / 4.8 — toute requête avec `temperature` / `top_p` / `top_k` renvoie 400. Source unique de vérité : `lib/claudeRequest.ts:buildClaudeMessageBody()` qui détecte Opus 4.7+ via regex sur le model id et omet les params interdits. Tous les appels Claude doivent passer par ce helper. Tier Opus bumpé 4.7 → 4.8 dans `lib/anthropicModel.ts`.
+> - **CI GitHub Actions** : ajout de `.github/workflows/ci.yml` (typecheck + script syntax sur chaque push) et `.github/workflows/e2e.yml` (tests Playwright en schedule daily 3h UTC + `workflow_dispatch` manuel). Filet anti-panne installé après l'incident « 2 juin matin » (migration `20260603_quizzes_survey_thanks` qui avait été codée mais pas migrée en prod → toutes les pages quiz/analytics ont 500'd). Variables GitHub Actions (non-secrets) : `SMOKE_QUIZ_ID`, `SMOKE_POPQUIZ_ID`, `SMOKE_PAGE_SLUG`, `BASE_URL`.
+> - **Tests E2E Playwright** : nouveau dossier `tests/e2e/` avec `public-quiz.spec.ts` qui couvre 5 catégories sur `/q/`, `/p/`, `/pq/` : (1) headers iframe (X-Frame-Options absent, CSP `frame-ancestors *`), (2) contenu visible (titre + bouton start render côté DOM), (3) OG meta (og:title / og:description / og:image présents), (4) bouton start cliquable, (5) endpoint `/track` retourne 200 même sur payload mal formé (soft fail `{ok: false, reason}`). Run via `npm run test:e2e` ou en CI daily.
+> - **Script `check:schema`** (`scripts/check-schema.mjs`) : `npm run check:schema` vérifie que les 10 migrations Tipote critiques sont appliquées en prod (dont `20260603_quizzes_survey_thanks` qui a causé la panne 2 juin matin). Accepte plusieurs variantes d'env vars (`SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_SERVICE_ROLE`). À lancer avant chaque déploiement et en backup manuel.
+> - **Multiprofils** documenté en détail dans la section 4.13 (Paramètres) + 6.2 (Tables). Tables `projects` (avec `accent_color` / `icon_emoji` / `use_branding_logo` / `is_default`) + `business_profiles` per-(user, project). Cookie `tipote_active_project`. `ProjectSwitcher`, `SessionResetGate`, danger-zone delete. Helpers `lib/projects/{client,activeProject,ensureDefaultProject,upsertByProject,visualIdentity}.ts`. Endpoint unique `/api/projects` (GET / POST / PATCH / DELETE).
 
 > **Notes de version 27 mai 2026** — refonte du **dashboard affilié** (`affiliate.tipote.com`, app `/affiliate`) + studio visuels IA + CMS contenus géré par l'admin :
 >
@@ -410,12 +422,14 @@ Gestion centralisée des leads capturés.
 - Pagination (20 par page)  
 - Sélection multiple \+ export CSV
 
-**4 stats :**
+**4 KPI cards cliquables (mis à jour juin 2026) :**
 
-- Total leads  
-- Leads quiz  
-- Exportés Systeme.io  
-- Ce mois-ci
+- **Total leads** — clic = retire tous les filtres (reset)
+- **Exportés Systeme.io** — clic = filtre `exported_to_sio = true`
+- **Non exportés** — clic = filtre `exported_to_sio = false` (remplace l'ancienne KPI « Source quiz », plus actionnable pour répondre à « qui dois-je pousser dans SIO ? »)
+- **Ce mois-ci** — clic = filtre `created_at` sur le mois courant
+
+Chaque card est un `<button>` ; 2e clic sur une card active retire le filtre. Ring colorée (`ring-2 ring-primary`) quand active. Filtre persisté en query string pour permettre le partage / refresh. i18n FR / EN / IT / PT / ES.
 
 **Panel détail (Sheet latéral) :**
 
@@ -610,6 +624,15 @@ Repository d'insights et de pépites business multilingues.
 - Consommation par type de contenu  
 - Actions : Acheter crédits, Upgrade/Downgrade, Gérer abonnement
 
+**Onglet Boost (Juin 2026) :**
+
+URL : `/settings?tab=boost`. Panneau de gestion de l'extension Chrome **Tipote Boost** (amplification automatique de la portée des publications sociales).
+
+- **Plan gate** : Pro / Elite / Beta uniquement. Free / Basic voient un CTA upgrade. La lecture du plan passe OBLIGATOIREMENT par `profiles.plan` (jointure cross-table dans `/api/profile`) — **JAMAIS** par `business_profiles` (per-projet) car le plan est un attribut global d'abonnement.
+- **Détection extension** : tentative de ping sur `window.tipoteBoost` injecté par l'extension. Si l'extension est détectée → affiche le statut (connectée / déconnectée), les réseaux compatibles, et les réglages de boost.
+- **Si extension absente** : affichage d'un bouton « Installer l'extension » qui pointe vers `https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg` (Chrome Web Store, en cours de validation). Avant juin 2026, le message « Extension non détectée » s'affichait sans aucun lien actionnable → bug fixé.
+- **Réseaux supportés** : LinkedIn (au lancement), X / Threads / Instagram (à venir). Le panneau liste explicitement la roadmap des réseaux pour gérer l'attente.
+
 **Onglet Compta (France uniquement, Mai 2026) :**
 
 URL : `/settings?tab=compta`. Disponible uniquement pour les users avec `business_profiles.country` reconnu comme France (synonymes tolérés : "France", "FR", "française"…). Les autres pays voient un message "bientôt disponible".
@@ -755,7 +778,7 @@ Constructeur de quiz interactifs pour capture de leads.
   - Ajout auto à une **communauté SIO** (`sio_community_id`)
 - **Enrichissement contact SIO** : le résultat du quiz est stocké comme champ personnalisé sur le contact
 - Sync leads vers Systeme.io (**avec prénom, nom, téléphone, pays** — corrigé)
-- Stats : vues, partages, leads capturés
+- Stats : vues, partages, leads capturés. **Recompute en direct depuis `quiz_events` (juin 2026)** — `quizzes.views_count` est un compteur dénormalisé qui drift, on ne le lit JAMAIS pour le ratio de capture. Garde-fou serveur `viewsCount = max(events.view, leadsCount)` → impossible d'afficher un taux > 100 %.
 
 ### 4.16. Coach IA
 
@@ -915,6 +938,50 @@ Pages dynamiques via `/legal/[slug]` :
 - Mentions légales  
 - CGV
 
+### 4.21 bis. Multiprofils Tipote (Elite, documenté Juin 2026)
+
+Un user Elite peut gérer plusieurs « projets » (marques / sub-business) au sein d'un même compte Tipote, avec isolation totale des données.
+
+**Tables :**
+
+- `projects` — `id`, `user_id`, `name`, `is_default` (BOOLEAN, un seul projet par user à `true`), `accent_color` (HEX), `icon_emoji` (TEXT), `use_branding_logo` (BOOLEAN), `created_at`. RLS user-bound.
+- `business_profiles` — désormais per-(`user_id`, `project_id`). Toutes les colonnes business (onboarding, offres, country, accounting_*, custom domains, tipote_affiliate_id, etc.) sont scopées au projet.
+
+**Cookie & contexte :**
+
+- Cookie `tipote_active_project` (HTTP-only côté serveur, mais lu/écrit côté client via helper `lib/projects/client.ts`).
+- Helper `lib/projects/activeProject.ts` (server) résout le projet actif à chaque request handler, avec fallback sur `is_default = true` si le cookie est manquant ou pointe sur un projet supprimé.
+- Helper `lib/projects/ensureDefaultProject.ts` crée le projet `is_default = true` automatiquement à la première connexion pour les users historiques.
+- Helper `lib/projects/upsertByProject.ts` standardise les upserts dans `business_profiles` avec la clé composite `(user_id, project_id)`.
+- Helper `lib/projects/visualIdentity.ts` formate l'identité visuelle (couleur + emoji) pour les composants.
+
+**Composants UI :**
+
+- `ProjectSwitcher` (sidebar) : dropdown avec liste des projets, identité visuelle (pill couleur + emoji), bouton « + Nouveau projet ».
+- `ProjectIdentityBadge` / `ProjectIdentityEditor` / `ProjectIndicatorSidebar` : affichage de l'identité visuelle (header, sidebar).
+- `SessionResetGate` : composant top-level qui, à chaque nouvelle session navigateur (détecté via `sessionStorage` flag), redirige sur le projet `is_default = true`. Évite qu'un user qui ferme son nav sur un sous-projet rouvre directement dessus le lendemain.
+
+**API :**
+
+- `GET /api/projects` — liste des projets de l'user (avec identité visuelle).
+- `POST /api/projects` — créer un projet. Insert `projects` row + `business_profiles` vide avec `onboarding_completed = false`. Réponse inclut un flag `requires_onboarding = true` que le `ProjectSwitcher` consomme pour rediriger explicitement vers `/onboarding`.
+- `PATCH /api/projects?id=<uuid>` — rename, change accent_color / icon_emoji / use_branding_logo, marquer is_default.
+- `DELETE /api/projects?id=<uuid>` — danger zone : confirmation par recopie du nom côté UI, cascade FK alignée (popquizzes / clients / hosted_pages / widgets en `CASCADE` depuis migration `20260507_project_delete_cascade`). Refuse si c'est l'unique projet de l'user.
+
+**Plan gate :**
+
+- Helper `canUseMultiProjects(plan)` → `plan === 'elite'`. Free / Basic / Pro ne voient pas le `ProjectSwitcher` (mais leur projet implicite reste un row `projects` `is_default = true` pour homogénéiser le code).
+
+**Sémantique :**
+
+- Un nouveau projet = un profil business neuf, **VIDE**, à re-onboarder complètement. Aucune copie depuis le projet courant (l'objectif est l'isolation totale, pas le clonage).
+- Domaines personnalisés, contenus publics (quiz / popquiz / pages), leads, clients, connexions sociales, clé Systeme.io : tout est per-projet. Un autre projet du même user ne voit RIEN.
+
+**Plan (global) vs projets (per-user-project) :**
+
+- Le **plan d'abonnement** reste un attribut **global du user** (table `profiles`, colonne `plan`). Il NE varie PAS d'un projet à l'autre.
+- Toute lecture de plan doit passer par la jointure `profiles.plan` (et non `business_profiles`). Bug Juin 2026 : `/api/profile` GET retournait `business_profiles` sans le `plan`, ce qui faisait que tous les Pro/Elite/Beta voyaient le gate Boost. Fix : enrichir la réponse avec `profiles.plan` via `supabaseAdmin`.
+
 ### 4.21. Backoffice Admin (/admin)
 
 Accès restreint aux emails listés dans `lib/adminEmails.ts` (`isAdminEmail()`).
@@ -1001,8 +1068,9 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Profil & Auth :**
 
-- `users` — id, email, locale, timezone, plan, is\_owner, onboarding\_completed, sio\_contact\_id  
-- `business_profiles` — profil business, diagnostic, storytelling (JSONB), offres  
+- `users` / `profiles` — id, email, locale, timezone, **plan** (source de vérité globale par user, jamais per-projet), is\_owner, onboarding\_completed, sio\_contact\_id
+- `projects` (multi-projets Elite) — id, user\_id, name, is\_default, accent\_color, icon\_emoji, use\_branding\_logo (mis à jour Juin 2026)
+- `business_profiles` — profil business, diagnostic, storytelling (JSONB), offres. **Scopé per-(user\_id, project\_id)** — chaque projet a son profil indépendant
 - `personas` — persona\_json (role \= client\_ideal)
 
 **Stratégie :**
@@ -1088,8 +1156,16 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 
 **Auth & Compte :**
 
-- POST /api/account/delete, /ensure-profile, /reset  
+- POST /api/account/delete, /ensure-profile, /reset
+- GET /api/profile — **enrichi Juin 2026** : retourne `business_profiles` (per-projet) + `profiles.plan` (global) via une jointure cross-table avec `supabaseAdmin`. Source unique pour les plan gates côté client (Boost, Coach IA, multi-projets, etc.)
 - GET/POST /api/auth/{linkedin,twitter,tiktok,pinterest,instagram,meta,threads}/callback
+
+**Projets (multi-projets Elite, Juin 2026) :**
+
+- GET /api/projects — liste des projets de l'user (avec identité visuelle)
+- POST /api/projects — créer un projet (insert `projects` + `business_profiles` vide), retourne `requires_onboarding: true`
+- PATCH /api/projects?id=&lt;uuid&gt; — rename, accent\_color, icon\_emoji, use\_branding\_logo, is\_default
+- DELETE /api/projects?id=&lt;uuid&gt; — danger zone, cascade FK, refuse si projet unique
 
 **Social :**
 
@@ -1118,6 +1194,7 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 - GET/POST /api/quiz/\[quizId\]  
 - GET /api/quiz/\[quizId\]/public  
 - POST /api/quiz/\[quizId\]/sync-systeme
+- GET /api/quiz/\[quizId\]/analytics — **refactor Juin 2026** : recompute `viewsCount` + `completionsCount` directement depuis `quiz_events`, ne lit JAMAIS `quizzes.views_count` (compteur drift). Garde-fou `viewsCount = max(events.view, leadsCount)` → ratio ≤ 100 %.
 
 **Clients :**
 
@@ -1205,6 +1282,40 @@ Automatisations → auto\_comment\_logs → webhook\_logs
 - SYSTEME\_IO\_API\_KEY  
 - N8N\_WEBHOOK\_BASE\_URL, N8N\_SHARED\_SECRET  
 - MESSENGER\_PAGE\_ACCESS\_TOKEN
+
+---
+
+## 6 bis. CI, TESTS & GARDE-FOUS (Juin 2026)
+
+### 6 bis.1. GitHub Actions
+
+- `.github/workflows/ci.yml` — sur chaque push (toutes branches) : `npx tsc --noEmit` (exit 0 obligatoire) + lint syntax des scripts Node (`node --check scripts/*.mjs`). Filet anti-régression sur la base la plus chaude.
+- `.github/workflows/e2e.yml` — schedule daily 3h UTC + `workflow_dispatch` manuel. Exécute `npm run test:e2e` (Playwright) sur la prod via `BASE_URL`. Idéal pour détecter les régressions post-déploiement silencieuses.
+
+### 6 bis.2. Tests E2E Playwright
+
+- Dossier `tests/e2e/`.
+- `public-quiz.spec.ts` — 5 catégories de checks sur `/q/<SMOKE_QUIZ_ID>`, `/p/<SMOKE_PAGE_SLUG>`, `/pq/<SMOKE_POPQUIZ_ID>` :
+  1. **Headers iframe** : `X-Frame-Options` absent + CSP `frame-ancestors *` présent (les contenus publics doivent pouvoir s'embedder partout).
+  2. **Contenu visible** : titre + bouton « Commencer » render côté DOM (anti hydration mismatch).
+  3. **OG meta** : `og:title` / `og:description` / `og:image` présents (partage social).
+  4. **Bouton start** cliquable et redirige vers la première étape.
+  5. **Endpoint `/track`** retourne 200 même sur payload mal formé (soft fail `{ok: false, reason}` — voir AGENTS.md).
+- Run local : `npm run test:e2e`.
+- Variables d'environnement attendues (configurables côté GitHub Actions en tant que variables non-secrets) : `SMOKE_QUIZ_ID`, `SMOKE_POPQUIZ_ID`, `SMOKE_PAGE_SLUG`, `BASE_URL`.
+
+### 6 bis.3. Script `check:schema` (`scripts/check-schema.mjs`)
+
+- `npm run check:schema` : vérifie que 10 migrations Tipote critiques sont appliquées en prod, en interrogeant `pg_catalog` via la service role key Supabase.
+- Liste maintenue dans le script lui-même. Migration de référence : `20260603_quizzes_survey_thanks` (la non-application en prod a causé la panne du 2 juin matin — toutes les pages quiz / analytics retournaient 500).
+- Accepte plusieurs variantes d'env vars : `SUPABASE_URL` ou `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ou `SUPABASE_SERVICE_ROLE`.
+- À lancer avant chaque déploiement et en backup manuel après une push de migration.
+
+### 6 bis.4. Helper Claude unifié (`lib/claudeRequest.ts`)
+
+- `buildClaudeMessageBody({ model, system, messages, max_tokens, temperature, ... })` — source unique pour construire le body des requêtes Anthropic.
+- **Hotfix Opus 4.7 / 4.8 (Juin 2026)** : Anthropic a retiré les params de sampling sur Opus 4.7+. Toute requête avec `temperature` / `top_p` / `top_k` renvoie 400. Le helper détecte le model id via regex et omet ces params sur Opus 4.7+. Tier Opus bumpé de 4.7 → 4.8 dans `lib/anthropicModel.ts`.
+- **Tous** les appels Claude (génération posts, emails, articles, scripts, quiz, stratégie, coach IA, auto-commentaires, etc.) doivent passer par ce helper. Ne JAMAIS construire le body en inline.
 
 ---
 
@@ -1382,7 +1493,7 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 
 ## 12\. ROADMAP
 
-### V1 (État actuel — Mars 2026\) ✅
+### V1 (État actuel — Juin 2026) ✅
 
 - Architecture complète (9+ pages principales)  
 - Onboarding intelligent  
@@ -1397,6 +1508,11 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 - **Module Compta** (Mai 2026, France) — onglet dans Paramètres avec configuration statut (particulier / auto-entrepreneur / SASU + IS + TVA), connexions Stripe / PayPal / Mollie (sync 24 mois historique + cron daily), saisies manuelles (virement / espèces / chèque), tableau de bord business (CA mois/an, MRR, churn, refund rate, top produits, jauge franchise TVA), catégorisation ventes vs commissions affiliation, calendrier fiscal personnalisé. Connecté au coach IA, à la page Aujourd'hui, à la stratégie et à la page Analytics
 - **Lien d'affiliation Tiquiz** (Mai 2026) — footer permanent sur les popquiz publics + embed iframe + quiz publics free, redirige vers `tipote.fr/part-tiquiz?sa=<id>` avec tracking commission via l'ID affilié SIO du créateur
 - **Notifications de déconnexion sociale + post raté** (Mai 2026) — email immédiat dès qu'un token social meurt (LinkedIn / FB / IG / X / TikTok / Pinterest / Threads / Reddit) ou qu'un post programmé bascule en `failed`
+- **Extension Chrome Tipote Boost** (Juin 2026) — lien d'installation direct dans Settings → Boost (`chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg`), en cours de validation Chrome Web Store, LinkedIn d'abord, autres réseaux à venir. Plan gate Pro / Elite / Beta corrigé (lecture depuis `profiles.plan` global, plus `business_profiles`)
+- **Multiprofils Elite** (Juin 2026, documentation rétroactive) — projets avec identité visuelle (couleur + emoji), reset session sur projet par défaut, danger-zone delete, plan gate `canUseMultiProjects`
+- **KPI cards cliquables dans /leads** (Juin 2026) — Total / Exportés / Non exportés / Ce mois deviennent des filtres, i18n FR / EN / IT / PT / ES
+- **Fix analytics quiz** (Juin 2026) — recompute depuis `quiz_events` avec garde-fou ≤ 100 % de capture
+- **CI + E2E + check:schema** (Juin 2026) — GitHub Actions typecheck sur chaque push, Playwright daily, détecteur de migrations manquantes
 - Calendrier éditorial (édition des posts programmés)  
 - Système de crédits (achat \+ consommation)  
 - Templates Systeme.io  
@@ -1423,4 +1539,4 @@ Gestion via next-intl avec fichiers de messages (\~1800+ clés par langue).
 
 ---
 
-*— Fin du cahier des charges — Mars 2026*  
+*— Fin du cahier des charges — Juin 2026*  

@@ -4,6 +4,15 @@
 >
 > Pour la documentation technique destinée aux développeurs : voir `CAHIER_DES_CHARGES.md` (ce dossier) et `docs/INVARIANTS.md`.
 
+> **Note de version Juin 2026** — sprint fiabilité + extension Boost + multiprofils :
+>
+> - **Extension Chrome Tipote Boost** (en cours de validation Chrome Web Store) : lien d'installation direct depuis Settings → Boost (`https://chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg`). LinkedIn dispo en premier, autres réseaux à venir. Plus de message « Extension non détectée » sans solution — bouton « Installer l'extension » disponible.
+> - **Multiprofils Tipote (Elite)** documenté en détail : chaque projet = profil business neuf VIDE à re-onboarder, identité visuelle propre (couleur accent + emoji), reset session sur projet par défaut à chaque nouvelle session navigateur, danger-zone delete avec confirmation par recopie du nom.
+> - **Fiabilité analytics quiz** : taux de capture désormais recalculé en direct depuis les événements quiz (vues + complétions), avec garde-fou ≤ 100 %. Plus jamais de « 794 % de capture » dans les stats.
+> - **KPI cards cliquables dans /leads** : les 4 cards Total / Exportés / Non exportés / Ce mois sont devenues des filtres cliquables (2e clic = retire le filtre). Nouvelle KPI « Non exportés » remplace « Source quiz » (plus actionnable).
+> - **Bug Elite gate Boost corrigé** : tous les Pro / Elite / Beta voient bien leurs fonctionnalités Boost (et non plus le gate « il faut être Pro/Elite » alors qu'ils y sont déjà).
+> - **CI + E2E** : pipeline GitHub Actions sur chaque push (typecheck + lint scripts) + tests Playwright quotidiens sur les pages publiques (/q/, /p/, /pq/) pour filet anti-régression. Script `npm run check:schema` pour détecter les migrations en retard avant qu'elles ne cassent la prod.
+
 ---
 
 ## 1. Identité
@@ -151,7 +160,7 @@ Variations à utiliser selon le canal :
 - **Quiz** : ultra simple à créer, capture email + tags, viralité (étape de partage), résultats personnalisés avec CTA
 - **Popquiz vidéo** (Mai 2026) : vidéo YouTube/Vimeo/upload (jusqu'à 2 GB) avec quiz incrustés à des timestamps précis. Embed iframe pour intégrer sur n'importe quel site
 - **Pages de capture** drag-and-drop avec branding cohérent
-- **Tableau leads** centralisé avec tags, source, statut
+- **Tableau leads** centralisé avec tags, source, statut. **KPI cards cliquables** (Total / Exportés / Non exportés / Ce mois) qui filtrent la liste en un clic (juin 2026)
 - **Module clients** : suivi des prospects qui ont acheté, notes, statuts, processus d'accompagnement
 
 ### 7.5. Intégration Systeme.io (pivot stratégique)
@@ -163,7 +172,7 @@ Variations à utiliser selon le canal :
 - **Clé API chiffrée at rest** (AES-256-GCM, DEK per-user) — sécurité bancaire
 
 ### 7.6. Pilotage & insight
-- **Analytics** par contenu, plateforme, période, offre — alimentés par les vraies ventes synchronisées (cf. 7.7)
+- **Analytics** par contenu, plateforme, période, offre — alimentés par les vraies ventes synchronisées (cf. 7.7). Stats quiz recalculées en direct depuis les événements (vues + complétions), avec garde-fou taux de capture ≤ 100 % (mis à jour juin 2026)
 - **Diagnostic IA** : analyse statistique avec recommandations (Basic+)
 - **Coach IA contextuel** (Pro/Elite) : pose des questions, le coach connaît TOUT ton business — y compris ton CA réel du mois, ton avancée vers ton objectif, le nombre d'abonnés perdus, etc. Conseils calibrés sur les chiffres, pas génériques
 - **Pépites** : insights traduits automatiquement en 5 langues, multi-format
@@ -204,11 +213,21 @@ Espace dédié aux affiliés qui promeuvent Tiquiz / Tipote. Pensé pour qu'un a
 - **Détection automatique** de "token mort" pendant la publication (détection 401/invalid_grant) — pas d'attente du cron quotidien
 - **Dédup 3 jours** par compte pour ne pas spammer en cas d'échecs en cascade
 
-### 7.10. Multi-projets (Elite)
+### 7.9 bis. Extension Chrome Tipote Boost (Juin 2026)
+- **Tipote Boost** : extension de navigateur Chrome qui amplifie la portée des publications sociales de l'user (auto-engagement intelligent, monitoring, signaux faibles). En cours de validation Chrome Web Store
+- **Plan-gated** : Pro / Elite / Beta uniquement. L'onglet Settings → Boost affiche le statut de l'extension (installée ou non), un lien direct vers le Chrome Web Store (`chromewebstore.google.com/detail/tipote-boost/gligkkmphgcpfghplnmknmkkgonolchg`), et les réseaux compatibles
+- **LinkedIn** disponible en premier, autres réseaux (X / Threads / Instagram) à venir
+- Plus de message « Extension non détectée » sans solution — le bouton « Installer l'extension » est désormais proposé dès qu'on ouvre Settings → Boost
+
+### 7.10. Multi-projets (Elite) — (mis à jour juin 2026)
 - Une instance Tipote par projet/marque/sub-business
 - Chaque projet a sa propre clé Systeme.io, son onboarding, ses contenus
-- Switch d'un clic
-- Reset par projet sans toucher aux autres
+- **Identité visuelle par projet** : couleur d'accent + emoji icône (pill colorée dans le header, bloc « Projet actif » dans la sidebar), option « utiliser le logo de mon branding » par projet
+- **Switch d'un clic** depuis le `ProjectSwitcher` (sidebar). Le cookie `tipote_active_project` mémorise le projet courant côté navigateur
+- **Reset par session** : à chaque nouvelle session navigateur, Tipote ramène automatiquement l'user sur son projet « par défaut » (flag `is_default`). L'user ferme son navigateur, le rouvre, atterrit sur son projet principal — pas sur un sous-projet ouvert la veille
+- **Reset par projet** sans toucher aux autres (refusé si l'user n'a qu'un seul projet — utiliser le reset compte)
+- **Suppression projet — danger zone** : confirmation par recopie du nom du projet + liste explicite de ce qui sera détruit (contenus, leads, quiz, popquiz, pages, clients, domaines)
+- **Sémantique d'un nouveau projet** : c'est un profil business neuf, VIDE, à re-onboarder de zéro. Tipote redirige automatiquement vers `/onboarding` à la création
 - **Chaque projet a aussi ses propres domaines personnalisés et son propre catalogue de contenus publics** — isolation totale, comme si c'étaient des comptes séparés (voir 7.11)
 
 ### 7.11. Domaines personnalisés (Pro+)
@@ -299,6 +318,9 @@ Espace dédié aux affiliés qui promeuvent Tiquiz / Tipote. Pensé pour qu'un a
 - 5 langues UI (FR / EN / ES / IT / AR avec support RTL)
 - 8 variantes pour les quiz publics (FR / FR-vous / EN / ES / IT / DE / PT / AR)
 - Tests de non-régression documentés (`docs/INVARIANTS.md`)
+- **CI GitHub Actions** sur chaque push : typecheck + lint des scripts (juin 2026)
+- **Tests E2E Playwright** quotidiens sur les pages publiques (/q/, /p/, /pq/) — headers iframe, contenu visible, OG meta, tracking 200
+- **Détecteur de migrations manquantes** en prod (`npm run check:schema`) — évite les pannes type « la colonne existe en code mais pas en DB »
 
 ### Service client
 - Support FR par chatbot IA + tickets
