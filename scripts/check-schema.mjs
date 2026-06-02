@@ -21,11 +21,41 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Tolère plusieurs noms de variables : Tipote utilise historiquement
+// SUPABASE_SERVICE_ROLE (sans _KEY) dans .env.local, certains envs
+// utilisent NEXT_PUBLIC_SUPABASE_URL côté browser-public.
+const SUPABASE_URL =
+  process.env.SUPABASE_URL ??
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  process.env.SUPABASE_PROJECT_URL;
+const SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??
+  process.env.SUPABASE_SERVICE_ROLE ??
+  process.env.SERVICE_ROLE_KEY ??
+  process.env.SUPABASE_SECRET_KEY;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("ENV manquantes : SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY");
+  console.error("ENV manquantes pour check:schema.\n");
+  if (!SUPABASE_URL) {
+    console.error("URL Supabase introuvable. Variantes cherchées :");
+    console.error("  SUPABASE_URL  |  NEXT_PUBLIC_SUPABASE_URL  |  SUPABASE_PROJECT_URL");
+  }
+  if (!SERVICE_ROLE_KEY) {
+    console.error("Service-role key introuvable. Variantes cherchées :");
+    console.error("  SUPABASE_SERVICE_ROLE_KEY  |  SUPABASE_SERVICE_ROLE");
+    console.error("  SERVICE_ROLE_KEY  |  SUPABASE_SECRET_KEY");
+  }
+  // Aide debug : liste les variables SUPABASE* présentes (sans valeur).
+  const supaVars = Object.keys(process.env)
+    .filter((k) => /SUPABASE|SERVICE_ROLE/i.test(k))
+    .sort();
+  if (supaVars.length > 0) {
+    console.error("\nVariables présentes dans l'env qui matchent SUPABASE/SERVICE_ROLE :");
+    for (const k of supaVars) console.error(`  - ${k}`);
+    console.error("\nSi l'un de ces noms est ta clé service-role, ajoute-le dans le fallback du script.");
+  } else {
+    console.error("\nAucune variable SUPABASE* dans l'env — as-tu bien fait `set -a; . .env.local; set +a` ?");
+  }
   process.exit(2);
 }
 
