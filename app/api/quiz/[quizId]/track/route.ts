@@ -117,7 +117,7 @@ async function isDuplicate(
   sessionId: string,
 ): Promise<boolean> {
   const since = new Date(Date.now() - DEDUP_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("quiz_events")
     .select("id")
     .eq("quiz_id", quizId)
@@ -126,6 +126,9 @@ async function isDuplicate(
     .gte("created_at", since)
     .limit(1)
     .maybeSingle();
+  // Si session_id manque (migration en retard), la query erreure → on
+  // retourne false (pas un doublon) pour laisser l'INSERT se faire.
+  if (error) return false;
   return !!data;
 }
 
@@ -230,15 +233,37 @@ export async function POST(req: NextRequest, context: RouteContext) {
       // INSERT direct dans quiz_events → le trigger trg_quiz_events_bump_counter
       // bumpe le compteur. On NE passe PLUS par la RPC log_quiz_event : un
       // insert direct ne dépend pas de la signature/surcharge de la fonction
-      // et son erreur est lue (la RPC awaitée sans lire `error` masquait les
-      // échecs). MÊME chemin fiable que quiz_question_events.
-      const { error: insErr } = await supabaseAdmin.from("quiz_events").insert({
-        quiz_id: quizId,
-        event_type: event as ProjectEvent,
-        meta: body.meta ?? null,
-        session_id: sessionId,
-      });
-      if (insErr) console.error("[track] quiz_events insert failed", event, insErr);
+      // et son erreur est lue. MÊME chemin fiable que quiz_question_events.
+      //
+      // RÉSILIENCE MIGRATION (bug stats Tiquiz 18 mai → 2 juin 2026) : si
+      // les colonnes `meta`/`session_id` manquent (migration en retard),
+      // l'INSERT complet échoue silencieusement → 0 event tracké pendant
+      // des semaines. On retombe sur un INSERT MINIMAL (quiz_id + event_type)
+      // pour que le tracking fonctionne TOUJOURS, même migration en retard.
+      let insErr: { message?: string; code?: string } | null = null;
+      {
+        const full = await supabaseAdmin.from("quiz_events").insert({
+          quiz_id: quizId,
+          event_type: event as ProjectEvent,
+          meta: body.meta ?? null,
+          session_id: sessionId,
+        });
+        if (full.error) {
+          console.error(
+            "[track] insert complet KO (colonne manquante ? migration en retard) →",
+            event,
+            full.error.message,
+          );
+          const minimal = await supabaseAdmin.from("quiz_events").insert({
+            quiz_id: quizId,
+            event_type: event as ProjectEvent,
+          });
+          if (minimal.error) {
+            insErr = minimal.error;
+            console.error("[track] insert minimal KO aussi", event, minimal.error.message);
+          }
+        }
+      }
 
       // Log business_event pour les events à forte valeur (complete,
       // share). On NE LOG PAS view/start (très haute fréquence — Wall

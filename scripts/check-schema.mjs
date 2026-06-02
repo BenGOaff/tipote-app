@@ -83,6 +83,23 @@ function ko(label, detail) {
  * ici les colonnes/tables qu'elle crée.
  */
 const EXPECTED = [
+  // ── Tracking : quiz_events (CAUSE PANNE STATS Tiquiz 18 mai → 2 juin) ─
+  // Le /track INSERT direct dans quiz_events (meta + session_id). Si une
+  // de ces colonnes manque (migration en retard), AUCUNE vue/start/
+  // complete n'est trackée en silence → stats fausses. Sur Tipote la
+  // table est créée d'un coup (20260521) avec meta+session_id, mais on
+  // vérifie quand même par sécurité.
+  {
+    migration: "20260521_tracking_foundation",
+    table: "quiz_events",
+    columns: ["event_type", "meta", "session_id"],
+  },
+  {
+    migration: "20260507_quiz_question_events",
+    table: "quiz_question_events",
+    columns: ["quiz_id", "question_index", "session_id", "event"],
+  },
+
   // ── Quizzes : colonnes critiques pour le viewer public ──────────
   // (cf. PITFALL A : nouvelle colonne sur quizzes = 7 endroits à toucher)
   {
