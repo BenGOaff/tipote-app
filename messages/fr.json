@@ -4390,6 +4390,7 @@
     "analyticsLeadsLabel": "Leads",
     "analyticsCaptureRateLabel": "Taux de capture",
     "analyticsCaptureRateHint": "Leads / vues (cumulé)",
+    "analyticsCaptureRateUnreliable": "Vues partiellement trackées (quiz embarqué ou antérieur au suivi) — taux fiable sur les nouvelles vues",
     "analyticsExportSioLabel": "Export Systeme.io",
     "analyticsExportSioHint": "% des leads taggés dans SIO",
     "analyticsLeadsEvolution": "Évolution des leads",

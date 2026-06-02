@@ -4383,6 +4383,7 @@
     "analyticsLeadsLabel": "Lead",
     "analyticsCaptureRateLabel": "Tasso di cattura",
     "analyticsCaptureRateHint": "Lead / visualizzazioni (cumulato)",
+    "analyticsCaptureRateUnreliable": "Visualizzazioni tracciate parzialmente (quiz incorporato o precedente al tracciamento) — tasso affidabile sulle nuove visite",
     "analyticsExportSioLabel": "Esportazione Systeme.io",
     "analyticsExportSioHint": "% di lead taggati in SIO",
     "analyticsLeadsEvolution": "Evoluzione dei lead",

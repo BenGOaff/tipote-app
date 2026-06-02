@@ -4688,6 +4688,7 @@
     "analyticsLeadsLabel": "Leads",
     "analyticsCaptureRateLabel": "Taxa de captação",
     "analyticsCaptureRateHint": "Leads / visualizações (acumulado)",
+    "analyticsCaptureRateUnreliable": "Visualizações parcialmente registadas (quiz incorporado ou anterior ao rastreio) — taxa fiável nas novas visualizações",
     "analyticsExportSioLabel": "Exportação Systeme.io",
     "analyticsExportSioHint": "% de leads marcados no SIO",
     "analyticsLeadsEvolution": "Evolução dos leads",
