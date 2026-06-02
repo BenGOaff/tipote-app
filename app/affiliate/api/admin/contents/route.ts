@@ -65,8 +65,12 @@ export async function POST(req: NextRequest) {
   const row = {
     kind,
     locale: typeof body.locale === "string" ? body.locale : "fr",
-    title: typeof body.title === "string" ? body.title.slice(0, 300) : null,
-    body: typeof body.body === "string" ? body.body.slice(0, 40000) : null,
+    // PAS de troncature silencieuse (retour Béné 2 juin 2026 : ses articles
+    // étaient coupés avant la fin sans aucune alerte). La colonne body est
+    // un `text` Postgres = illimité, et cette route est admin-only
+    // (getAffiliateAdmin) donc aucun risque d'abus. On stocke l'intégralité.
+    title: typeof body.title === "string" ? body.title : null,
+    body: typeof body.body === "string" ? body.body : null,
     meta: typeof body.meta === "object" && body.meta ? body.meta : {},
     sort_order: Number.isFinite(Number(body.sort_order)) ? Number(body.sort_order) : 0,
     published: body.published !== false,
@@ -87,8 +91,9 @@ export async function PATCH(req: NextRequest) {
   const id = typeof body.id === "string" ? body.id : "";
   if (!id) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (typeof body.title === "string") patch.title = body.title.slice(0, 300);
-  if (typeof body.body === "string") patch.body = body.body.slice(0, 40000);
+  // Pas de troncature silencieuse (cf. POST + retour Béné 2 juin 2026).
+  if (typeof body.title === "string") patch.title = body.title;
+  if (typeof body.body === "string") patch.body = body.body;
   if (typeof body.meta === "object" && body.meta) patch.meta = body.meta;
   if (typeof body.locale === "string" && body.locale.length <= 10) patch.locale = body.locale;
   if (Number.isFinite(Number(body.sort_order))) patch.sort_order = Number(body.sort_order);
