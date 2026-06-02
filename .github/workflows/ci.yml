@@ -46,6 +46,14 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # Note : pas de `npm run build` dans ce CI car les routes Tipote
+      # appellent Supabase pendant la "page data collection" du build
+      # Next 16 — avec des dummy vars ça plante (PGRST + connexion DNS).
+      # Sur le serveur prod, les vraies vars Supabase font passer.
+      # Trade-off accepté : on couvre le typage, on ne couvre pas les
+      # erreurs spécifiques au build Next 16 (rares, et Tipote n'a pas
+      # le pitfall Playwright qui a causé la panne Tiquiz du 2 juin).
+
       - name: Validate .mjs script syntax
         run: |
           for f in scripts/*.mjs; do
