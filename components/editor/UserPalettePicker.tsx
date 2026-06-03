@@ -74,9 +74,16 @@ export function UserPalettePicker({
 
   // Restore last picked palette from localStorage so the row stays in
   // sync between editor reopens (and between editors of the same user).
+  // try/catch protege contre Brave Shields strict / Safari ITP / navigation
+  // privee qui peuvent throw sur localStorage.getItem (drame 3 juin 2026).
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(STORAGE_KEY);
+    } catch {
+      /* storage indispo : on retombe sur la 1re palette */
+    }
     if (stored && palettes.some((p) => p.id === stored)) {
       setSelectedId(stored);
     } else if (palettes.length > 0) {
