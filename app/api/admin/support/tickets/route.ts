@@ -154,8 +154,8 @@ async function sendReplyEmail(
 <head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a2e;">
   <div style="text-align: center; margin-bottom: 24px;">
-    <div style="display: inline-block; background: linear-gradient(135deg, hsl(233,66%,62%) 0%, hsl(230,41%,28%) 100%); border-radius: 10px; padding: 8px 16px;">
-      <span style="color: white; font-weight: bold; font-size: 18px;">Tipote</span>
+    <div style="display: inline-block; background-color: #5D6CDB; background-image: linear-gradient(135deg, hsl(233,66%,62%) 0%, hsl(230,41%,28%) 100%); border-radius: 10px; padding: 8px 16px;">
+      <span style="color: #ffffff; font-weight: bold; font-size: 18px;">Tipote</span>
     </div>
   </div>
 
