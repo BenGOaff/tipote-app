@@ -954,9 +954,18 @@ export default function MyContentLovableClient({
                                     {topQuizId === qz.id && <TopPerformerBadge />}
                                     {trendingQuizIds.has(qz.id) && topQuizId !== qz.id && <TrendingBadge />}
                                   </div>
+                                  {/* Réconciliation cohérence (Béné 2 juin
+                                      2026 — retour Gwenn) : vues >= leads.
+                                      Si le tracking de vues a raté en
+                                      silence avant les fixes du 2 juin, le
+                                      compteur dénormalisé reste sous le
+                                      vrai nombre de leads → on affichait
+                                      "44 vues pour 276 leads", absurde.
+                                      On plancher l'affichage des vues sur
+                                      le nombre de leads. */}
                                   <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                     <span className="inline-flex items-center gap-1">
-                                      <Eye className="h-3.5 w-3.5" /> {t("ui.viewsCount", { count: qz.views_count })}
+                                      <Eye className="h-3.5 w-3.5" /> {t("ui.viewsCount", { count: Math.max(qz.views_count, qz.leads_count) })}
                                     </span>
                                     <span className="inline-flex items-center gap-1">
                                       <Users className="h-3.5 w-3.5" /> {isSurvey ? t("ui.responsesCount", { count: qz.leads_count }) : t("ui.emailsCount", { count: qz.leads_count })}
