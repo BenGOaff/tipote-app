@@ -33,6 +33,23 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
+  // Rate-limit serveur (Béné 3 juin 2026) : 1 batch / semaine max.
+  // Si profiles.next_milestone_toast_at est dans le futur, on retourne
+  // 0 milestones — le client n'affichera donc aucun toast. Sans ça,
+  // chaque chargement du dashboard re-affichait les toasts non vus,
+  // et chaque nouveau milestone débloqué pop instantanément. Trop
+  // intrusif (retour Gwenn + Béné).
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("next_milestone_toast_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  const nextAt =
+    (profile as { next_milestone_toast_at: string | null } | null)?.next_milestone_toast_at;
+  if (nextAt && new Date(nextAt) > new Date()) {
+    return NextResponse.json({ ok: true, milestones: [] });
+  }
+
   const { data, error } = await supabase
     .from("user_milestones")
     .select("id,milestone_key,unlocked_at,payload")

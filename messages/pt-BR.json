@@ -242,7 +242,9 @@
       "errDelete": "Erro ao excluir",
       "errNetwork": "Erro de rede",
       "errUpdate": "Erro ao atualizar",
-      "errSave": "Erro ao salvar"
+      "errSave": "Erro ao salvar",
+      "markedDone": "Tarefa marcada como concluída",
+      "undo": "Desfazer"
     },
     "subtitle": "Acompanhe tudo o que você tem a fazer",
     "empty": "Sem tarefas",

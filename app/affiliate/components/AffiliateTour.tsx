@@ -180,6 +180,31 @@ export function AffiliateTour({ onboardedAt }: { onboardedAt: string | null }) {
     return () => clearTimeout(timer);
   }, [onboardedAt]);
 
+  // Garde-fou anti-stuck (Monique 3 juin 2026) : si le DialogContent ne
+  // se rend pas pour une raison opaque (extension navigateur, conflit
+  // CSS, vieux browser), l'utilisateur se retrouve coincé avec un
+  // backdrop noir et zéro moyen d'interagir. On auto-ferme après 60s
+  // sans changement de step. Reset à chaque navigation de step.
+  useEffect(() => {
+    if (!isOpen) return;
+    const safetyTimer = window.setTimeout(() => {
+      console.warn("[AffiliateTour] auto-close après 60s d'inactivité (anti-stuck)");
+      void skip();
+    }, 60_000);
+    return () => window.clearTimeout(safetyTimer);
+  }, [isOpen, currentStep]);
+
+  // Touche Escape attrapée au niveau WINDOW (pas seulement Dialog) :
+  // même si DialogContent fail à render, ESC force la fermeture.
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") void skip();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen]);
+
   useEffect(() => {
     function handler() {
       setCurrentStep(0);
@@ -225,8 +250,27 @@ export function AffiliateTour({ onboardedAt }: { onboardedAt: string | null }) {
   const Icon = step.icon;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && skip()}>
-      <DialogContent className="max-w-md">
+    <>
+      {/* Bouton de secours rendu HORS du Dialog (Monique 3 juin 2026) :
+          si DialogContent ne se rend pas pour raison opaque (extension,
+          CSS, browser), l'utilisateur ne peut interagir avec rien. Ce
+          bouton flottant est rendu hors du portail Radix donc TOUJOURS
+          visible et cliquable tant qu'isOpen est true. z-index supérieur
+          à la backdrop Dialog (z-50). */}
+      {isOpen && (
+        <button
+          type="button"
+          onClick={() => void skip()}
+          disabled={saving}
+          className="fixed top-4 right-4 z-[60] inline-flex items-center gap-1.5 rounded-full bg-background border border-border shadow-lg px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
+          aria-label={t.tour.skip}
+        >
+          <X className="h-3.5 w-3.5" />
+          {t.tour.skip}
+        </button>
+      )}
+      <Dialog open={isOpen} onOpenChange={(open) => !open && skip()}>
+        <DialogContent className="max-w-md">
         <DialogHeader className="pb-2">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -295,7 +339,8 @@ export function AffiliateTour({ onboardedAt }: { onboardedAt: string | null }) {
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
