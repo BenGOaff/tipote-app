@@ -15,7 +15,6 @@ import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, Ar
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AffiliateTour } from "./components/AffiliateTour";
 import AffiliateLinkCopy from "./components/AffiliateLinkCopy";
 import { LaunchGuideCard } from "./components/LaunchGuideCard";
 import { BadgesCard } from "./components/BadgesCard";
@@ -125,16 +124,9 @@ export default async function AffiliateOverviewPage() {
   const t = getDict(normaliseLocale(session.locale));
   const displayName = session.display_name ?? session.email.split("@")[0];
 
-  // Stats + onboarded_at en parallèle (un seul round-trip Supabase)
-  const [stats, { data: meta }] = await Promise.all([
-    fetchStats(session.sa),
-    supabaseAdmin
-      .from("affiliates")
-      .select("onboarded_at")
-      .eq("sa", session.sa)
-      .maybeSingle(),
-  ]);
-  const onboardedAt = (meta as { onboarded_at: string | null } | null)?.onboarded_at ?? null;
+  // onboarded_at est lu côté layout pour le tour (cf. layout.tsx), pas
+  // besoin de re-fetch ici.
+  const stats = await fetchStats(session.sa);
 
   const tier = currentTier(stats.total_sales);
   // Lien principal du marché de l'affilié (FR → tipote.fr, EN → tipote.blog).
@@ -146,11 +138,6 @@ export default async function AffiliateOverviewPage() {
 
   return (
     <>
-      {/* Tutoriel guidé : s'auto-déclenche si onboardedAt = null (premier
-          login) ; sinon dormant. Peut être relancé via l'événement
-          "affiliate-tour-start" depuis Support. */}
-      <AffiliateTour onboardedAt={onboardedAt} />
-
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">

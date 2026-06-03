@@ -12,9 +12,11 @@
 import type { Metadata } from "next";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { normaliseLocale, getDict } from "./i18n";
 import { AffiliateI18nProvider } from "./i18n/context";
 import { AffiliateSidebar } from "./components/AffiliateSidebar";
+import { AffiliateTour } from "./components/AffiliateTour";
 
 export async function generateMetadata(): Promise<Metadata> {
   // Pour la metadata, on lit la locale de la session si dispo, sinon FR.
@@ -52,14 +54,35 @@ export default async function AffiliateLayout({ children }: { children: React.Re
     ? session.display_name ?? session.email.split("@")[0]
     : "";
 
+  // onboarded_at lu côté layout (au lieu de page.tsx /affiliate uniquement)
+  // pour que le tour s'auto-déclenche sur N'IMPORTE QUELLE page affiliée
+  // où l'user arrive en premier (Monique 3 juin 2026 : elle landait
+  // directement sur /affiliate/contenus depuis un bookmark, et le tour
+  // ne se déclenchait jamais car AffiliateTour était monté uniquement
+  // dans /affiliate/page.tsx).
+  let onboardedAt: string | null = null;
+  if (session) {
+    const { data } = await supabaseAdmin
+      .from("affiliates")
+      .select("onboarded_at")
+      .eq("sa", session.sa)
+      .maybeSingle();
+    onboardedAt = (data as { onboarded_at: string | null } | null)?.onboarded_at ?? null;
+  }
+
   return (
     <AffiliateI18nProvider locale={locale}>
       <div dir={dir}>
         {session ? (
-          <div className="min-h-screen lg:flex bg-background">
-            <AffiliateSidebar displayName={displayName} isAdmin={isAdminEmail(session.email)} />
-            <div className="flex-1 min-w-0">{children}</div>
-          </div>
+          <>
+            {/* Tour monté au niveau layout = auto-déclenche sur n'importe
+                quelle page affiliée si onboardedAt=null (cf. supra). */}
+            <AffiliateTour onboardedAt={onboardedAt} />
+            <div className="min-h-screen lg:flex bg-background">
+              <AffiliateSidebar displayName={displayName} isAdmin={isAdminEmail(session.email)} />
+              <div className="flex-1 min-w-0">{children}</div>
+            </div>
+          </>
         ) : (
           children
         )}

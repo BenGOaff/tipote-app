@@ -285,7 +285,7 @@ export default function LoginAffiliateForm() {
               </p>
               <Button variant="outline" className="w-full" asChild>
                 <a
-                  href="https://www.tipote.fr/affiliation"
+                  href="https://www.tipote.fr/conditions-generales-affiliation"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
