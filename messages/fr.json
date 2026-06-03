@@ -171,7 +171,9 @@
       "errDelete": "Erreur lors de la suppression",
       "errNetwork": "Erreur réseau",
       "errUpdate": "Erreur lors de la mise à jour",
-      "errSave": "Erreur lors de la sauvegarde"
+      "errSave": "Erreur lors de la sauvegarde",
+      "markedDone": "Tâche cochée",
+      "undo": "Annuler"
     },
     "pageTitle": "Tâches",
     "pageSubtitle": "Exécute ton plan, une tâche à la fois.",

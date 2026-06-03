@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 import { Button } from '@/components/ui/button'
@@ -87,6 +88,21 @@ export default function TaskItem({
 
   const done = optimisticDone
 
+  // Re-PATCH discret sans refresh ni toast (utilisé par le bouton "Annuler"
+  // du toast d'undo). Si ça plante on resync la prochaine fois.
+  const patchStatus = async (status: 'todo' | 'done') => {
+    try {
+      const res = await fetch(`/api/tasks/${encodeURIComponent(id)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   const toggleDone = () => {
     if (isPending) return
     const nextStatus = done ? 'todo' : 'done'
@@ -108,6 +124,30 @@ export default function TaskItem({
           setOptimisticDone((v) => !v)
           setInlineError(extractErrorMessage(json, ti('errUpdate')))
           return
+        }
+
+        // Toast d'undo uniquement quand on COCHE (todo → done). Laurent
+        // (3 juin 2026) : "comment faire marche arrière quand on coche par
+        // mégarde ?" — l'undo est désormais accessible 6 secondes via le
+        // toast. Au-delà, il reste re-toggle-able depuis la section
+        // "Tâches terminées" (collapsible en bas de la liste).
+        if (nextStatus === 'done') {
+          toast.success(ti('markedDone'), {
+            duration: 6000,
+            action: {
+              label: ti('undo'),
+              onClick: async () => {
+                setOptimisticDone(false)
+                const ok = await patchStatus('todo')
+                if (ok) {
+                  router.refresh()
+                } else {
+                  setOptimisticDone(true)
+                  toast.error(ti('errUpdate'))
+                }
+              },
+            },
+          })
         }
 
         router.refresh()

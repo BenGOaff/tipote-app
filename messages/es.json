@@ -171,7 +171,9 @@
       "errDelete": "Error al eliminar",
       "errNetwork": "Error de red",
       "errUpdate": "Error al actualizar",
-      "errSave": "Error al guardar"
+      "errSave": "Error al guardar",
+      "markedDone": "Tarea marcada como hecha",
+      "undo": "Deshacer"
     },
     "pageTitle": "Tareas",
     "pageSubtitle": "Ejecuta tu plan, una tarea a la vez.",

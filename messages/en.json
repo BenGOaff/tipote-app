@@ -171,7 +171,9 @@
       "errDelete": "Error during deletion",
       "errNetwork": "Network error",
       "errUpdate": "Error during update",
-      "errSave": "Error during save"
+      "errSave": "Error during save",
+      "markedDone": "Task marked done",
+      "undo": "Undo"
     },
     "pageTitle": "Tasks",
     "pageSubtitle": "Run your plan, one task at a time.",

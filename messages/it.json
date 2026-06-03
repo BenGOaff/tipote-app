@@ -171,7 +171,9 @@
       "errDelete": "Errore durante l'eliminazione",
       "errNetwork": "Errore di rete",
       "errUpdate": "Errore durante l'aggiornamento",
-      "errSave": "Errore durante il salvataggio"
+      "errSave": "Errore durante il salvataggio",
+      "markedDone": "Attività completata",
+      "undo": "Annulla"
     },
     "pageTitle": "Attività",
     "pageSubtitle": "Esegui il tuo piano, un'attività alla volta.",
