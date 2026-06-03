@@ -338,62 +338,63 @@ export const IT: AffiliateDict = {
     faq_missing_commission_a: "Contatta il supporto col massimo dettaglio (email del cliente, data approssimativa dell'acquisto, il link che hai condiviso). Possiamo tracciare nei nostri log e correggere se è scivolato un errore. Tempo di risposta: 2-3 giorni lavorativi.",
   },
   trial: {
-    page_title: "Prova gratis Tipote 1 mese",
+    page_title: "Tiquiz Plus — 1 mese in regalo",
     page_subtitle:
-      "Goditi Tipote Elite gratis per 30 giorni per testare lo strumento e creare contenuti promo.",
-    not_activated_title: "La tua prova Tipote ti aspetta",
+      "Goditi gratis Tiquiz Plus per 30 giorni per testare lo strumento, catturare screenshot autentici e creare contenuti promo.",
+    not_activated_title: "Il tuo mese gratuito su Tiquiz Plus ti aspetta",
     not_activated_subtitle: "Un'attivazione, valida 30 giorni, da usare quando vuoi.",
-    feature_1: "Piano Elite sbloccato sul tuo account Tipote (il più completo)",
-    feature_2: "Creazione illimitata di quiz, popquiz, pagine link-in-bio",
-    feature_3: "Accesso alle perle IA, alla strategia, ai template premium",
-    feature_4: "Ideale per creare screenshot, video demo, contenuti promo",
-    feature_5: "Nessuna carta di credito. Stop automatico al giorno +30.",
-    timing_title: "⏰ Scegli tu quando attivarla",
+    feature_1: "Piano Plus sbloccato sul tuo account Tiquiz (29 €/mese — in regalo)",
+    feature_2: "Multi-profili: 1 spazio per cliente, branding distinto, statistiche separate",
+    feature_3: "Analisi IA dei risultati + multi-chiavi API Systeme io + template preconfezionati",
+    feature_4: "Ideale per catturare screenshot del TUO dashboard, fare video demo autentici",
+    feature_5: "Nessuna carta di credito. Ritorno automatico al tuo piano originale al giorno +30.",
+    timing_title: "⏰ Scegli tu quando attivarlo",
     timing_body:
-      "Puoi attivare la prova solo UNA volta. Riservala al momento giusto — quando hai 2 ore davanti per esplorare, creare il tuo primo quiz e catturare contenuti per la tua promo.",
-    activate_button: "Attiva la mia prova Tipote di 1 mese",
+      "Puoi attivare questo mese gratuito solo UNA volta. Riservalo al momento giusto — quando hai 2 ore davanti per esplorare Tiquiz Plus, creare il tuo primo quiz con analisi IA e catturare contenuti per la tua promo.",
+    activate_button: "Attiva il mio mese Tiquiz Plus",
     activate_loading: "Attivazione…",
-    activate_modal_title: "Attivare la tua prova Tipote?",
+    activate_modal_title: "Attivare il tuo mese Tiquiz Plus?",
     activate_modal_body_1:
-      "Stai per sbloccare 30 giorni di accesso Elite gratuito a Tipote sul tuo account ({email}).",
-    activate_modal_body_2: "È offerto UNA sola volta. Non potrai riattivarlo in seguito.",
+      "Stai per sbloccare 30 giorni di accesso Tiquiz Plus gratuito sul tuo account ({email}).",
+    activate_modal_body_2:
+      "È offerto UNA sola volta. Non potrai riattivarlo in seguito. A fine mese il tuo account torna automaticamente al tuo piano Tiquiz originale (gratuito, mensile o annuale — nessuna sorpresa).",
     activate_modal_warning:
-      "Se hai già un piano Tipote a pagamento, l'attivazione sarà rifiutata per non sovrascrivere il tuo piano attuale.",
+      "Se hai già un account Tiquiz Plus a pagamento o Lifetime, l'attivazione sarà rifiutata per non sovrascrivere il tuo piano attuale.",
     activate_modal_confirm: "Sì, attiva ora",
     activate_modal_cancel: "Annulla",
-    err_already_paid: "Hai già un account Tipote a pagamento.",
-    err_already_activated: "La tua prova è già stata attivata. Ricarica la pagina.",
+    err_already_paid: "Hai già un account Tiquiz Plus a pagamento — non hai bisogno del mese gratis, godi a fondo!",
+    err_already_activated: "Il tuo mese gratuito è già stato attivato. Ricarica la pagina.",
     err_generic: "Qualcosa è andato storto. Riprova o contatta il supporto.",
     err_network: "Impossibile contattare il server.",
     why_offered_title: "Perché te lo offriamo?",
     why_offered_body_1:
-      "Sarai un ambasciatore migliore dopo aver visto Tipote funzionare con i tuoi dati. Potrai mostrare screenshot autentici al tuo pubblico, fare un video tipo «ecco cosa ho creato con Tipote in 10 min» e rispondere alle domande dei tuoi lead con precisione.",
+      "Sarai un ambasciatore migliore dopo aver visto Tiquiz Plus funzionare con i tuoi dati. Potrai mostrare screenshot autentici al tuo pubblico, fare un video tipo «ecco cosa ho creato con Tiquiz in 10 min» e rispondere alle domande dei tuoi lead con precisione.",
     why_offered_body_2:
       "È un win-win: ti facilitiamo la vendita, tu incassi le commissioni più facilmente.",
-    active_title: "Prova attiva",
-    active_subtitle: "Il tuo account Tipote è sul piano Elite fino al {date}.",
+    active_title: "Mese Tiquiz Plus attivo",
+    active_subtitle: "Il tuo account Tiquiz è su Plus fino al {date}.",
     active_remaining_singular: "Manca {count} giorno",
     active_remaining_plural: "Mancano {count} giorni",
     today_label: "Oggi",
-    end_label: "Fine della prova",
+    end_label: "Fine del mese gratuito",
     access_tiquiz: "Apri Tiquiz",
     ideas_title: "Buone idee di contenuto da creare ora",
     idea_screencast:
-      "⏱️ Screencast di 5 minuti: mostra la creazione di un quiz Tiquiz dall'inizio alla fine. Pubblicalo come Reel / short YouTube.",
+      "⏱️ Screencast di 5 minuti: mostra la creazione di un quiz Tiquiz dall'inizio alla fine, analisi IA dei risultati inclusa. Pubblicalo come Reel / short YouTube.",
     idea_screenshots:
-      "📸 Screenshot prima/dopo: la tua dashboard vuota vs. dopo 30 lead catturati. Il prima/dopo è ciò che converte meglio.",
+      "📸 Screenshot prima/dopo: la tua dashboard vuota vs. dopo 30 lead catturati e analizzati dall'IA. Il prima/dopo è ciò che converte meglio.",
     idea_niche:
       "🧪 Test sulla tua nicchia: crea un quiz adatto al tuo pubblico (es.: «Che tipo di [la tua professione] sei?»), condividilo con la tua lista e racconta i risultati.",
     idea_bonus:
       "🎁 Bonus esclusivo: prometti ai tuoi affiliati il tuo template di quiz gratis se si iscrivono tramite il tuo link. Urgenza + valore aggiunto.",
-    expired_title: "La tua prova è terminata",
+    expired_title: "Il tuo mese Tiquiz Plus è terminato",
     expired_subtitle:
-      "È scaduta il {date}. Il tuo account Tipote è tornato al piano gratuito.",
+      "È scaduto il {date}. Il tuo account Tiquiz è tornato al tuo piano originale.",
     expired_body_1:
-      "Hai testato Tipote Elite per 30 giorni. Ora conosci lo strumento nei dettagli. È tutto ciò che serviva per venderlo bene al tuo pubblico.",
+      "Hai testato Tiquiz Plus per 30 giorni. Ora conosci lo strumento nei dettagli (multi-profili, analisi IA, multi-chiavi API). È tutto ciò che serviva per venderlo bene al tuo pubblico.",
     expired_body_2:
-      "Se vuoi continuare a usarlo per te (sul tuo business), attiva un abbonamento Elite. Puoi anche continuare a promuovere Tipote dal tuo account gratuito — i link affiliati e le risorse promo restano disponibili qui.",
-    discover_plans: "Scopri i piani Tipote",
+      "Se vuoi continuare a usare Tiquiz Plus per il tuo business, passa all'abbonamento Plus mensile o annuale. Puoi anche continuare a promuovere Tiquiz dal tuo account attuale — i link affiliati e le risorse promo restano disponibili qui.",
+    discover_plans: "Scopri i piani Tiquiz",
     continue_promoting: "Continua a promuovere",
   },
   tour: {
@@ -418,10 +419,10 @@ export const IT: AffiliateDict = {
     step3_bullet_visuals: "Articoli lunghi + visual scaricabili",
     step3_body_outro:
       "Il tuo link tracciato è inserito automaticamente in tutte le email e i post. Clicchi « Copia », incolli. Tutto qui.",
-    step4_title: "🎁 1 mese di Tipote Elite in regalo",
+    step4_title: "🎁 1 mese di Tiquiz Plus in regalo",
     step4_subtitle: "Per testare lo strumento e creare contenuti autentici.",
     step4_body_1:
-      "Ti offriamo 30 giorni di accesso a Tipote Elite per testare lo strumento, catturare screenshot della TUA dashboard e fare video demo autentici.",
+      "Ti offriamo 30 giorni di accesso a Tiquiz Plus per testare lo strumento (multi-profili, analisi IA, multi-chiavi API), catturare screenshot della TUA dashboard e fare video demo autentici.",
     step4_body_2:
       "È una volta sola nella tua vita di affiliato. Riservalo a quando hai 2 ore per esplorare a fondo. Scheda Prova gratuita nel menu.",
     step5_title: "I tuoi livelli di commissione",
@@ -437,13 +438,13 @@ export const IT: AffiliateDict = {
     next: "Avanti",
   },
   banner: {
-    title_active: "Prova Tipote attiva",
+    title_active: "Mese Tiquiz Plus attivo",
     expires_today: "— scade oggi",
     expires_singular: "— manca 1 giorno",
     expires_plural: "— mancano {days} giorni",
-    offered_via_affiliate: "(offerta tramite il tuo account affiliato)",
-    keep_tipote: "Tenere Tipote?",
-    my_trial: "La mia prova",
+    offered_via_affiliate: "(offerto tramite il tuo account affiliato)",
+    keep_tipote: "Tenere Tiquiz Plus?",
+    my_trial: "Il mio mese gratuito",
   },
   locale_switcher: {
     label: "Lingua",
