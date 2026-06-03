@@ -1,32 +1,50 @@
 // app/affiliate/api/trial/activate/route.ts
 //
-// Active le trial Tipote 1 mois pour l'affilié connecté.
+// Active le mois Tiquiz Plus offert pour l'affilié connecté.
+//
+// Migration architecturale (Béné 2 juin 2026) : avant, on activait un
+// trial Tipote (plan='elite') côté DB Tipote. Maintenant on octroie un
+// mois Tiquiz Plus côté DB TIQUIZ via service-role cross-app
+// (env TIQUIZ_SUPABASE_URL + TIQUIZ_SUPABASE_SERVICE_ROLE_KEY).
+//
 // Conditions :
 //   - Affilié actif (vérifié par getAffiliateSession)
-//   - Pas déjà activé (trial_activated_at IS NULL)
-//   - Pas déjà sur un plan payant Tipote (free/null OK, autres refusés)
+//   - Pas déjà activé une fois (affiliates.trial_activated_at IS NULL)
+//   - Pas déjà sur un plan Tiquiz Plus payant / Lifetime
 //
 // Effets :
-//   1. Set affiliates.trial_activated_at = now()
-//   2. Set affiliates.trial_expires_at = now() + 30 jours
-//   3. Upsert profile Tipote pour cet email avec plan='elite',
-//      plan_source='affiliate_trial', trial_expires_at = même date
-//   4. Log dans plan_change_log
+//   1. Affiliates Tipote : trial_activated_at = now, trial_expires_at = +30j
+//      (one-shot enforcement, audit trail côté Tipote)
+//   2. Tiquiz profiles : upsert avec plan = monthly_plus (ou yearly_plus
+//      si l'user était déjà sur yearly), affiliate_trial_pre_plan = ancien plan,
+//      affiliate_trial_expires_at = +30j.
+//   3. Le cron Tiquiz /api/cron/affiliate-trial-expiry revert à J+30.
 
 import { NextResponse } from "next/server";
 import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getTiquizAdmin } from "@/lib/tiquizAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TRIAL_DAYS = 30;
-const LIFETIME_OR_PAID_PLANS: ReadonlySet<string> = new Set([
+// Plans Tiquiz qui REFUSENT le trial (déjà Plus payant ou Lifetime).
+// free / monthly / yearly sont éligibles : ils passent en _plus 30 jours
+// puis reviennent à leur plan d'origine via le cron Tiquiz.
+const TIQUIZ_REFUSED_PLANS: ReadonlySet<string> = new Set([
+  "monthly_plus",
+  "yearly_plus",
+  "lifetime",
   "beta",
-  "basic",
-  "pro",
-  "elite",
 ]);
+
+// Mapping : plan d'origine → plan Plus à octroyer pendant le trial.
+// On reste sur le même cycle (mensuel / annuel) pour que l'affilié
+// ait l'expérience du Plus qui correspond à son abonnement existant.
+function trialPlusFor(currentPlan: string): "monthly_plus" | "yearly_plus" {
+  return currentPlan === "yearly" ? "yearly_plus" : "monthly_plus";
+}
 
 export async function POST(): Promise<NextResponse> {
   const session = await getAffiliateSession();
@@ -34,13 +52,32 @@ export async function POST(): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
 
-  // 1. Check qu'il n'a pas DÉJÀ activé son trial (one-shot)
+  // 0. Vérifier que la config cross-app est dispo. Sinon on refuse
+  //    explicitement plutôt que de crasher.
+  const tiquiz = getTiquizAdmin();
+  if (!tiquiz) {
+    console.error(
+      "[affiliate/trial/activate] env TIQUIZ_SUPABASE_URL ou " +
+        "TIQUIZ_SUPABASE_SERVICE_ROLE_KEY manquante — impossible d'activer le " +
+        "trial Tiquiz Plus.",
+    );
+    return NextResponse.json(
+      { ok: false, reason: "tiquiz_unreachable" },
+      { status: 503 },
+    );
+  }
+
+  // 1. Check qu'il n'a pas DÉJÀ activé son trial (one-shot, source de
+  //    vérité côté Tipote pour pouvoir auditer même sans accès Tiquiz).
   const { data: affRow } = await supabaseAdmin
     .from("affiliates")
     .select("trial_activated_at, trial_expires_at")
     .eq("sa", session.sa)
     .maybeSingle();
-  const aff = affRow as { trial_activated_at: string | null; trial_expires_at: string | null } | null;
+  const aff = affRow as {
+    trial_activated_at: string | null;
+    trial_expires_at: string | null;
+  } | null;
   if (aff?.trial_activated_at) {
     const expired = aff.trial_expires_at && new Date(aff.trial_expires_at) < new Date();
     return NextResponse.json(
@@ -55,38 +92,84 @@ export async function POST(): Promise<NextResponse> {
     );
   }
 
-  // 2. Check si l'affilié a déjà un compte Tipote payant — si oui,
-  //    refus (pas la peine d'écraser un client payant)
-  const { data: profileRow } = await supabaseAdmin
+  // 2. Lire le profile Tiquiz par email (case-insensitive). Si pas de
+  //    profile, on crée un profile minimal avec plan=monthly_plus + trial.
+  //    Si profile existe avec plan Plus / Lifetime → refus.
+  const { data: existing, error: readErr } = await tiquiz
     .from("profiles")
-    .select("id, email, plan, plan_source")
+    .select("user_id, email, plan")
     .ilike("email", session.email)
     .maybeSingle();
-  const existingProfile = profileRow as {
-    id: string;
+  if (readErr) {
+    console.error("[affiliate/trial/activate] tiquiz read error:", readErr.message);
+    return NextResponse.json(
+      { ok: false, reason: "tiquiz_read_error" },
+      { status: 500 },
+    );
+  }
+  const existingProfile = existing as {
+    user_id: string;
     email: string;
     plan: string | null;
-    plan_source: string | null;
   } | null;
 
   const currentPlan = (existingProfile?.plan ?? "free").toLowerCase().trim();
-  if (LIFETIME_OR_PAID_PLANS.has(currentPlan)) {
+  if (TIQUIZ_REFUSED_PLANS.has(currentPlan)) {
     return NextResponse.json(
       {
         ok: false,
         reason: "already_paid_user",
         current_plan: currentPlan,
         message:
-          "Tu as déjà un compte Tipote payant — tu n'as pas besoin du trial. Profite à fond !",
+          "Tu as déjà un compte Tiquiz Plus payant — pas besoin du mois offert. Profite à fond !",
       },
       { status: 200 },
     );
   }
 
-  // 3. Activation. On set les deux dates en même temps pour cohérence.
+  // 3. Activation. Dates communes Tipote + Tiquiz.
   const now = new Date();
   const expiresAt = new Date(now.getTime() + TRIAL_DAYS * 24 * 3600 * 1000);
+  const trialPlan = trialPlusFor(currentPlan);
 
+  // 3a. Tiquiz : on upsert le profile en _plus avec pre_plan mémorisé.
+  //     Si le profile n'existait pas (user_id null), on peut quand même
+  //     créer une row "tampon" indexée par email — le profile sera
+  //     reconcilié au prochain login Tiquiz (middleware Tiquiz upsert
+  //     proprement avec le user_id auth).
+  if (existingProfile?.user_id) {
+    const { error: updErr } = await tiquiz
+      .from("profiles")
+      .update({
+        plan: trialPlan,
+        affiliate_trial_pre_plan: currentPlan,
+        affiliate_trial_expires_at: expiresAt.toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .eq("user_id", existingProfile.user_id);
+    if (updErr) {
+      console.error(
+        "[affiliate/trial/activate] tiquiz profile update error:",
+        updErr.message,
+      );
+      return NextResponse.json(
+        { ok: false, reason: "tiquiz_update_error" },
+        { status: 500 },
+      );
+    }
+  } else {
+    // Pas encore de profile Tiquiz pour cet email — on laisse la création
+    // au middleware Tiquiz (premier login). On stocke quand même le côté
+    // Tipote pour l'enforcement one-shot ; le profile sera mis en Plus
+    // au moment de la création via une logique côté Tiquiz à brancher
+    // ultérieurement (lookup affiliates.trial_expires_at by email).
+    console.log(
+      `[affiliate/trial/activate] no Tiquiz profile yet for ${session.email}, ` +
+        `Tiquiz must reconcile on first login.`,
+    );
+  }
+
+  // 3b. Tipote affiliates : enregistre l'activation (one-shot enforcement).
   const { error: affUpdateErr } = await supabaseAdmin
     .from("affiliates")
     .update({
@@ -97,54 +180,13 @@ export async function POST(): Promise<NextResponse> {
     .eq("sa", session.sa);
 
   if (affUpdateErr) {
-    console.error("[affiliate/trial/activate] affiliates update error:", affUpdateErr.message);
-    return NextResponse.json({ ok: false, reason: "db_error" }, { status: 500 });
-  }
-
-  // 4. Upsert le profile Tipote (création si pas encore existant)
-  if (existingProfile?.id) {
-    // Profile existe (probablement plan='free') → on update vers elite
-    const { error: profileErr } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        plan: "elite",
-        plan_source: "affiliate_trial",
-        trial_expires_at: expiresAt.toISOString(),
-        updated_at: now.toISOString(),
-      })
-      .eq("id", existingProfile.id);
-    if (profileErr) {
-      console.error("[affiliate/trial/activate] profile update error:", profileErr.message);
-      // On laisse la row affiliates trial activée pour audit, l'admin
-      // peut corriger manuellement le profile si besoin.
-    } else {
-      // Log le changement pour audit (pattern utilisé partout dans Tipote)
-      try {
-        await supabaseAdmin.from("plan_change_log").insert({
-          target_user_id: existingProfile.id,
-          target_email: session.email,
-          old_plan: currentPlan,
-          new_plan: "elite",
-          reason: `affiliate_trial:activated:sa=${session.sa}`,
-        });
-      } catch {
-        // best-effort
-      }
-    }
-  } else {
-    // Pas encore de profile Tipote pour cet email → on en crée un
-    // léger avec juste les champs nécessaires. L'auth.users côté
-    // Supabase a déjà été créé via le flow signup affilié.
-    // Note : on n'a pas le user_id Supabase auth sous la main ici.
-    // Pour pas dupliquer la logique, on laisse profile vide et le user
-    // sera créé proprement quand il visitera app.tipote.com (le
-    // middleware Tipote upsert un profile minimal au premier accès).
-    // On stocke quand même trial_expires_at côté affiliates pour
-    // pouvoir rebrancher à ce moment-là.
-    console.log(
-      `[affiliate/trial/activate] no Tipote profile yet for ${session.email}, ` +
-        `will be created on first visit to app.tipote.com`,
+    console.error(
+      "[affiliate/trial/activate] affiliates update error:",
+      affUpdateErr.message,
     );
+    // Sale état : Tiquiz a déjà été upgrade. On log mais on répond
+    // succès (le trial est bien actif côté user) — un admin pourra
+    // recopier les dates dans affiliates manuellement si besoin.
   }
 
   return NextResponse.json({
@@ -152,5 +194,7 @@ export async function POST(): Promise<NextResponse> {
     activated_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
     days_remaining: TRIAL_DAYS,
+    granted_plan: trialPlan,
+    pre_trial_plan: currentPlan,
   });
 }

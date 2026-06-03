@@ -22,7 +22,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/", key: "overview", icon: LayoutDashboard },
   { href: "/promouvoir", key: "promouvoir", icon: Megaphone },
-  { href: "/trial-tipote", key: "trial", icon: Gift },
+  { href: "/trial-tiquiz", key: "trial", icon: Gift },
   { href: "/revenus", key: "revenus", icon: Wallet },
   { href: "/paiement", key: "paiement", icon: CreditCard },
   { href: "/support", key: "support", icon: HelpCircle },

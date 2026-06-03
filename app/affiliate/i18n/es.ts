@@ -376,7 +376,7 @@ export const ES: AffiliateDict = {
     active_remaining_plural: "Quedan {count} días",
     today_label: "Hoy",
     end_label: "Fin de la prueba",
-    access_tipote: "Abrir Tipote",
+    access_tiquiz: "Abrir Tiquiz",
     ideas_title: "Buenas ideas de contenido para crear ahora",
     idea_screencast:
       "⏱️ Screencast de 5 minutos: muestra la creación de un quiz Tiquiz de principio a fin. Publícalo como Reel / short de YouTube.",

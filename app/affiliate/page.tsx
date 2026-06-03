@@ -45,7 +45,7 @@ async function TrialTipoteCard({ sa, t }: { sa: string; t: AffiliateDict }) {
               {t.overview.trial_cta_description}
             </p>
             <Button asChild className="mt-3">
-              <Link href="/trial-tipote">
+              <Link href="/trial-tiquiz">
                 {t.overview.trial_cta_button}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

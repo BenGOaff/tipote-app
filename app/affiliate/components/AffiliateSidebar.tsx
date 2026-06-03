@@ -33,7 +33,7 @@ const NAV: NavItem[] = [
   { href: "/", key: "overview", icon: LayoutDashboard },
   { href: "/promouvoir", key: "promouvoir", icon: Megaphone },
   { href: "/contenus", key: "contenus", icon: Library },
-  { href: "/trial-tipote", key: "trial", icon: Gift },
+  { href: "/trial-tiquiz", key: "trial", icon: Gift },
   { href: "/support", key: "support", icon: HelpCircle },
 ];
 
