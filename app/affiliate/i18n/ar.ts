@@ -377,7 +377,7 @@ export const AR: AffiliateDict = {
     active_remaining_plural: "يتبقّى {count} أيام",
     today_label: "اليوم",
     end_label: "نهاية التجربة",
-    access_tipote: "فتح Tipote",
+    access_tiquiz: "فتح Tiquiz",
     ideas_title: "أفكار محتوى جيدة لإنشائها الآن",
     idea_screencast:
       "⏱️ تسجيل شاشة 5 دقائق: اعرض إنشاء اختبار Tiquiz من البداية للنهاية. انشره كـ Reel / short على YouTube.",

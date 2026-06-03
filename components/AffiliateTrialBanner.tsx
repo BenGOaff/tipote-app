@@ -1,12 +1,14 @@
 // components/AffiliateTrialBanner.tsx
 //
 // Bandeau qui s'affiche dans le dashboard Tipote (haut de page) quand
-// l'utilisateur est en trial affilié actif. Indique les jours restants.
+// l'utilisateur connecté est un affilié en mois Tiquiz Plus offert.
+// Indique les jours restants et renvoie vers Tiquiz.
 //
-// Server component qui lit profiles.trial_expires_at. Mounté dans le
-// root layout Tipote. Utilise les traductions affilié (getDict du
-// dossier /app/affiliate/i18n) avec fallback sur la locale Tipote
-// next-intl pour suivre le choix global de l'user.
+// Server component mounté dans le root layout Tipote. Lit la row
+// affiliates en faisant le join via l'email auth du user — la table
+// affiliates (côté Tipote) reste la source de vérité du trial même
+// après le swap Tipote→Tiquiz (Béné 2 juin 2026), pour pouvoir afficher
+// le bandeau sans avoir à interroger la DB Tiquiz à chaque page Tipote.
 
 import Link from "next/link";
 import { Gift, ArrowRight } from "lucide-react";
@@ -22,24 +24,27 @@ function daysUntil(dateIso: string): number {
 export async function AffiliateTrialBanner() {
   const supabase = await getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user?.email) return null;
 
   const { data } = await supabaseAdmin
-    .from("profiles")
-    .select("trial_expires_at, plan_source")
-    .eq("id", user.id)
+    .from("affiliates")
+    .select("trial_expires_at, trial_activated_at")
+    .ilike("email", user.email)
     .maybeSingle();
-  const profile = data as { trial_expires_at: string | null; plan_source: string | null } | null;
+  const aff = data as {
+    trial_expires_at: string | null;
+    trial_activated_at: string | null;
+  } | null;
 
-  if (!profile?.trial_expires_at || profile.plan_source !== "affiliate_trial") return null;
+  if (!aff?.trial_activated_at || !aff.trial_expires_at) return null;
 
-  const expiresAt = profile.trial_expires_at;
+  const expiresAt = aff.trial_expires_at;
   const daysLeft = daysUntil(expiresAt);
   if (daysLeft < 0) return null;
 
   // Locale : on suit la locale Tipote de l'user (cookie ui_locale).
-  // Pas besoin de lire la locale affiliate spécifiquement — le banner
-  // s'affiche dans le contexte Tipote, donc on respecte ce choix-là.
+  // Le banner s'affiche dans le contexte Tipote, donc on respecte ce
+  // choix-là (et non la locale de la session affilié).
   const tipoteLocale = await getLocale();
   const t = getDict(normaliseLocale(tipoteLocale));
 
@@ -74,14 +79,14 @@ export async function AffiliateTrialBanner() {
       <div className="flex items-center gap-2 flex-shrink-0">
         {isUrgent && (
           <Link
-            href="https://www.tipote.fr/commande"
+            href="https://www.tipote.fr/tiquiz/commande"
             className="underline text-xs font-medium whitespace-nowrap"
           >
             {t.banner.keep_tipote}
           </Link>
         )}
         <Link
-          href="https://affiliate.tipote.com/trial-tipote"
+          href="/affiliate/trial-tiquiz"
           className="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap"
         >
           {t.banner.my_trial}

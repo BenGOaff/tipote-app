@@ -1,10 +1,20 @@
-// app/affiliate/trial-tipote/page.tsx
+// app/affiliate/trial-tiquiz/page.tsx
 //
-// Page de gestion du trial Tipote 1 mois pour les affiliés.
+// Page de gestion du trial Tiquiz Plus 1 mois pour les affiliés.
+//
+// Important — cross-app : Tiquiz et Tipote sont 2 bases Supabase
+// distinctes. L'activation (côté endpoint POST /affiliate/api/trial/
+// activate) écrit dans la DB Tiquiz via TIQUIZ_SUPABASE_URL +
+// TIQUIZ_SUPABASE_SERVICE_ROLE_KEY (env Tipote). La DB Tipote ne
+// stocke que la date d'activation côté affiliates (one-shot, audit).
+//
+// Branding aligné sur les autres pages affiliées (max-w-6xl, space-y-8,
+// pas d'icône à côté du H1) — Béné 2 juin 2026 "TOUTES les pages
+// doivent être présentées de la même manière".
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Gift, Clock, CheckCircle2, ExternalLink, Sparkles } from "lucide-react";
+import { Clock, CheckCircle2, ExternalLink, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +65,7 @@ function formatDate(iso: string, locale: string): string {
   });
 }
 
-export default async function TrialTipotePage() {
+export default async function TrialTiquizPage() {
   const session = await getAffiliateSession();
   if (!session) redirect("/login");
 
@@ -70,25 +80,17 @@ export default async function TrialTipotePage() {
   const isActive = isActivated && expiresAt && expiresAt > now;
   const isExpired = isActivated && expiresAt && expiresAt <= now;
 
-
   return (
-    <>
-      <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Gift className="h-7 w-7 text-primary" />
-            {t.trial.page_title}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t.trial.page_subtitle}
-          </p>
-        </div>
+    <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">{t.trial.page_title}</h1>
+        <p className="text-muted-foreground mt-1">{t.trial.page_subtitle}</p>
+      </div>
 
-        {!isActivated && <TrialNotActivated email={session.email} t={t} />}
-        {isActive && expiresAt && <TrialActive expiresAt={expiresAt} now={now} t={t} locale={locale} />}
-        {isExpired && expiresAt && <TrialExpired expiresAt={expiresAt} t={t} locale={locale} />}
-      </main>
-    </>
+      {!isActivated && <TrialNotActivated email={session.email} t={t} />}
+      {isActive && expiresAt && <TrialActive expiresAt={expiresAt} now={now} t={t} locale={locale} />}
+      {isExpired && expiresAt && <TrialExpired expiresAt={expiresAt} t={t} locale={locale} />}
+    </main>
   );
 }
 
@@ -174,11 +176,11 @@ function TrialActive({ expiresAt, now, t, locale }: { expiresAt: Date; now: Date
 
           <Button size="lg" className="w-full" asChild>
             <a
-              href="https://app.tipote.com"
+              href="https://www.tipote.fr/tiquiz/dashboard"
               target="_blank"
               rel="noopener noreferrer"
             >
-              {t.trial.access_tipote}
+              {t.trial.access_tiquiz}
               <ExternalLink className="ml-2 h-4 w-4" />
             </a>
           </Button>
@@ -215,7 +217,7 @@ function TrialExpired({ expiresAt, t, locale }: { expiresAt: Date; t: AffiliateD
         <div className="flex flex-col sm:flex-row gap-2">
           <Button asChild>
             <a
-              href="https://www.tipote.fr/commande"
+              href="https://www.tipote.fr/tiquiz/commande"
               target="_blank"
               rel="noopener noreferrer"
             >

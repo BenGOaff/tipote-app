@@ -379,7 +379,7 @@ export type AffiliateDict = {
     active_remaining_plural: string;
     today_label: string;
     end_label: string;
-    access_tipote: string;
+    access_tiquiz: string;
     ideas_title: string;
     idea_screencast: string;
     idea_screenshots: string;
