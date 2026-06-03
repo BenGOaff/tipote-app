@@ -29,6 +29,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // silencé sur cet élément précis (recommandation officielle
     // next-themes pour éviter le flash de thème incorrect).
     <html lang={locale} dir={dir} suppressHydrationWarning>
+      {/* color-scheme : empeche les browsers (Brave Force Dark, Chrome
+          force-dark flag, Edge "dark mode pour les sites web") d'appliquer
+          un filtre d'inversion qui tinte la page en gris (drame Monique
+          3 juin 2026 : Brave Shields + Force Dark donnaient un overlay
+          gris uniforme sur le contenu, sans backdrop bloquant — symptome
+          difficile a diagnostiquer car la page restait cliquable). */}
+      <meta name="color-scheme" content="light" />
       {/* Polices display pour le studio visuel (typo "2026" : titres lourds,
           condensé, script d'accent). Chargées côté navigateur ; React 19
           hoiste ces <link> dans le <head>. */}
