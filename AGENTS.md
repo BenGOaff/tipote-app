@@ -2,6 +2,22 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+## Fichier env sur le serveur prod — À NE PAS CONFONDRE (drame 3 juin 2026)
+
+Sur le serveur prod, **les deux apps utilisent `.env`** (pas `.env.local`).
+`.env.local` est une convention de DEV Next.js uniquement.
+
+| Repo | Sur prod (à sourcer pour le shell) | En dev local |
+|---|---|---|
+| `~/tipote-app/` | **`.env`** | `.env.local` |
+| `~/tiquiz-app/` | **`.env`** | `.env.local` |
+
+Pour avoir `CRON_SECRET` (et toutes les autres vars) dans le shell :
+```bash
+cd ~/tiquiz-app && set -a; . .env; set +a
+echo "CRON_SECRET = '$CRON_SECRET'"   # doit afficher une valeur, pas ''
+```
+
 ## Workflow Git — RÈGLE ABSOLUE
 
 **Avant TOUT push, lire `CLAUDE_WORKFLOW.md`.**
