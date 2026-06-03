@@ -79,7 +79,7 @@ export async function AffiliateTrialBanner() {
       <div className="flex items-center gap-2 flex-shrink-0">
         {isUrgent && (
           <Link
-            href="https://www.tipote.fr/tiquiz/commande"
+            href="https://www.tipote.fr/tiquiz"
             className="underline text-xs font-medium whitespace-nowrap"
           >
             {t.banner.keep_tipote}

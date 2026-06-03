@@ -10,6 +10,25 @@ Résumé : je ne pousse JAMAIS sur `main`. Je pousse uniquement sur la
 branche `claude/busy-wright-501xR`. Béné est seule maître de
 `main` côté GitHub.
 
+## URLs canoniques prod — À NE PAS INVENTER (drame 3 juin 2026)
+
+J'ai pondu `https://www.tipote.fr/tiquiz/api/cron/...` dans un curl alors
+que c'était faux. À mémoriser une fois pour toutes :
+
+| Domaine | Sert | Exemples |
+|---|---|---|
+| `https://app.tipote.com/` | App Tipote (dashboard authentifié) | `/admin`, `/api/cron/...` |
+| `https://www.tipote.fr/` | Sales pages Tipote (Systeme.io) | `/commande`, `/elite` |
+| `https://quiz.tipote.com/` | App Tiquiz (dashboard authentifié) | `/admin`, `/api/cron/...` |
+| `https://www.tipote.fr/tiquiz` | Sales hub Tiquiz (Systeme.io) | — |
+| `https://www.tipote.fr/tiquiz-mensuel` etc. | Pages plan Tiquiz spécifiques | `-gratuit`, `-mensuel`, `-mensuel-plus`, `-annuel`, `-annuel-plus` |
+| `https://affiliate.tipote.com/` | Dashboard affilié (sous-domaine Tipote) | `/trial-tiquiz`, `/promouvoir` |
+
+**Erreurs typiques à éviter** :
+- ❌ `tipote.fr/tiquiz/api/...` (n'existe pas — Tiquiz est sur `quiz.tipote.com`)
+- ❌ `tipote.fr/tiquiz/dashboard` (idem)
+- ❌ `tipote.fr/tiquiz/commande` (la page d'accueil de vente est `tipote.fr/tiquiz` tout court)
+
 ## Migrations SQL — ALERTE OBLIGATOIRE (drame 2 juin 2026)
 
 **Dès que je touche `supabase/migrations/*.sql`** (création OU

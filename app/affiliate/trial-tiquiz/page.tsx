@@ -176,7 +176,7 @@ function TrialActive({ expiresAt, now, t, locale }: { expiresAt: Date; now: Date
 
           <Button size="lg" className="w-full" asChild>
             <a
-              href="https://www.tipote.fr/tiquiz/dashboard"
+              href="https://quiz.tipote.com/"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -217,7 +217,7 @@ function TrialExpired({ expiresAt, t, locale }: { expiresAt: Date; t: AffiliateD
         <div className="flex flex-col sm:flex-row gap-2">
           <Button asChild>
             <a
-              href="https://www.tipote.fr/tiquiz/commande"
+              href="https://www.tipote.fr/tiquiz"
               target="_blank"
               rel="noopener noreferrer"
             >
