@@ -65,9 +65,9 @@ export async function POST(req: NextRequest) {
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a2e; background: #fafafa;">
   ${preheaderHtml}
   <div style="background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-    <div style="background: linear-gradient(135deg, hsl(233,66%,62%) 0%, hsl(230,41%,28%) 100%); padding: 20px; text-align: center;">
+    <div style="background-color: #5D6CDB; background-image: linear-gradient(135deg, hsl(233,66%,62%) 0%, hsl(230,41%,28%) 100%); padding: 20px; text-align: center;">
       <a href="${appUrl}" style="text-decoration: none;">
-        <span style="color: white; font-weight: bold; font-size: 22px; letter-spacing: 0.5px;">Tipote</span>
+        <span style="color: #ffffff; font-weight: bold; font-size: 22px; letter-spacing: 0.5px;">Tipote</span>
       </a>
     </div>
     <div style="padding: 28px 24px;">
@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
       </div>
       ${ctaLabel && ctaUrl ? `
       <div style="text-align: center; margin: 24px 0;">
-        <a href="${ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, hsl(233,66%,62%) 0%, hsl(230,41%,28%) 100%); color: white; font-weight: 600; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 15px;">
-          ${ctaLabel}
+        <a href="${ctaUrl}" style="display: inline-block; background-color: #5D6CDB; background-image: linear-gradient(135deg, hsl(233,66%,62%) 0%, hsl(230,41%,28%) 100%); color: #ffffff; font-weight: 600; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 15px; mso-padding-alt: 12px 28px;">
+          <!--[if mso]>&nbsp;&nbsp;<![endif]--><span style="color: #ffffff;">${ctaLabel}</span><!--[if mso]>&nbsp;&nbsp;<![endif]-->
         </a>
       </div>` : ""}
     </div>
