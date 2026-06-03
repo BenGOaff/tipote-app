@@ -252,20 +252,27 @@ export function AffiliateTour({ onboardedAt }: { onboardedAt: string | null }) {
   return (
     <>
       {/* Bouton de secours rendu HORS du Dialog (Monique 3 juin 2026) :
-          si DialogContent ne se rend pas pour raison opaque (extension,
-          CSS, browser), l'utilisateur ne peut interagir avec rien. Ce
-          bouton flottant est rendu hors du portail Radix donc TOUJOURS
-          visible et cliquable tant qu'isOpen est true. z-index supérieur
-          à la backdrop Dialog (z-50). */}
+          si DialogContent ne se rend pas correctement (Brave Force Dark
+          rendait le modal illisible), l'utilisateur ne pouvait deviner
+          qu'il y a un modal interactif. Ce bouton flottant est rendu
+          hors du portail Radix donc visible et cliquable même si le
+          contenu modal est foiré. z-index supérieur à la backdrop (z-50).
+
+          Couleurs EXPLICITES (zinc-900 / white) au lieu de bg-background
+          + text-foreground : Brave Force Dark a moins de chances d'inverser
+          des hex codés en dur. Affiche aussi explicitement "← Fermer le
+          tutoriel" (au lieu juste "Passer") pour qu'un user qui ne
+          comprend pas le mot "skip" sache que c'est l'issue de secours. */}
       {isOpen && (
         <button
           type="button"
           onClick={() => void skip()}
           disabled={saving}
-          className="fixed top-4 right-4 z-[60] inline-flex items-center gap-1.5 rounded-full bg-background border border-border shadow-lg px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
+          style={{ backgroundColor: "#18181b", color: "#ffffff", borderColor: "#27272a" }}
+          className="fixed top-4 right-4 z-[60] inline-flex items-center gap-1.5 rounded-full border shadow-lg px-3.5 py-2 text-sm font-semibold transition-opacity disabled:opacity-60 hover:opacity-90"
           aria-label={t.tour.skip}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
           {t.tour.skip}
         </button>
       )}
