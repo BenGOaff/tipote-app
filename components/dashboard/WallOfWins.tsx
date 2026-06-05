@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { stripHtml } from "@/lib/richText";
 
 type Period = "month" | "30d" | "90d";
 
@@ -284,7 +285,7 @@ export function WallOfWins() {
                     Top quiz de la période
                   </p>
                   <p className="text-sm font-medium text-foreground truncate">
-                    {c.topQuiz.title}
+                    {stripHtml(c.topQuiz.title) || c.topQuiz.title}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatCount(c.topQuiz.completes)} complétions

@@ -20,6 +20,7 @@ import {
   sumEventAmountsInRange,
   type BusinessEventKind,
 } from "@/lib/businessEvents";
+import { stripHtml } from "@/lib/richText";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export interface WallOfWinsStats {
@@ -215,7 +216,10 @@ async function fetchTopQuizInRange(
       .maybeSingle();
     title = (quizRow?.title as string | undefined) ?? "Quiz sans titre";
   }
-  return { id: topId, title, completes: topCount };
+  // Strip HTML cote serveur (mirror Tiquiz, Adeline 4 juin 2026) :
+  // les titres quiz sont du rich-text editor, on retourne du texte plat
+  // pour eviter la fuite HTML dans le payload Wall of Wins.
+  return { id: topId, title: stripHtml(title) || title, completes: topCount };
 }
 
 async function fetchMilestonesUnlockedInRange(
