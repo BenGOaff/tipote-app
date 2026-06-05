@@ -3298,13 +3298,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             </div>
           </CardContent></Card>
 
-          {/* QR code — utile pour print, livre, flyer, slide */}
-          {status === "active" && (
-            <QrCodeCard
-              url={buildPublicUrl("q", publicSegment)}
-              filename={publicSegment}
-            />
-          )}
+          {/* QR code — affiche meme en draft (Bene 4 juin 2026) : permet
+              de preparer le QR pour print/livre avant la publication.
+              L'URL est valide pour l'owner et le visitor qui scan avant
+              publication tombe sur la page draft. */}
+          <QrCodeCard
+            url={buildPublicUrl("q", publicSegment)}
+            filename={publicSegment}
+          />
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">

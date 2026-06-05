@@ -2206,13 +2206,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             <pre className="text-xs font-mono bg-muted rounded-lg p-3 overflow-x-auto border mt-3">{`<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`}</pre>
           </CardContent></Card>
 
-          {/* QR code — utile pour print, livre, flyer, slide */}
-          {status === "active" && (
-            <QrCodeCard
-              url={buildPublicUrl("q", publicSegment)}
-              filename={publicSegment}
-            />
-          )}
+          {/* QR code — affiche meme en draft (cf. note QuizDetailClient). */}
+          <QrCodeCard
+            url={buildPublicUrl("q", publicSegment)}
+            filename={publicSegment}
+          />
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
