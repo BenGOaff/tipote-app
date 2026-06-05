@@ -179,6 +179,16 @@
     "pageSubtitle": "Ejecuta tu plan, una tarea a la vez.",
     "completedTitle": "Tareas terminadas"
   },
+  "qrCode": {
+    "title": "Código QR",
+    "description": "Escanea con un móvil para abrir el quiz directamente.",
+    "ariaLabel": "Código QR del quiz",
+    "generating": "Generando…",
+    "hint": "Práctico para imprimir en un libro, flyer, diapositiva o cualquier soporte print. El SVG es vectorial (sin pérdida a cualquier tamaño), el PNG funciona en todos lados.",
+    "downloadSvg": "Descargar SVG",
+    "downloadPng": "Descargar PNG (1024 px)",
+    "printTip": "Imprime a 2,5 cm mínimo para un escaneo fiable en todos los móviles."
+  },
   "quizShare": {
     "publicationTitle": "Publicación",
     "publicationDesc": "Activa o desactiva el acceso público a tu quiz",

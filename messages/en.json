@@ -179,6 +179,16 @@
     "pageSubtitle": "Run your plan, one task at a time.",
     "completedTitle": "Completed tasks"
   },
+  "qrCode": {
+    "title": "QR code",
+    "description": "Scan with a phone to open the quiz directly.",
+    "ariaLabel": "Quiz QR code",
+    "generating": "Generating…",
+    "hint": "Handy for printing in a book, flyer, slide, or any print material. SVG is vector (lossless at any size), PNG works everywhere.",
+    "downloadSvg": "Download SVG",
+    "downloadPng": "Download PNG (1024 px)",
+    "printTip": "Print at 2.5 cm minimum for reliable scanning on all phones."
+  },
   "quizShare": {
     "publicationTitle": "Publication",
     "publicationDesc": "Enable or disable public access to your quiz",

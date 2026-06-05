@@ -179,6 +179,16 @@
     "pageSubtitle": "Esegui il tuo piano, un'attività alla volta.",
     "completedTitle": "Attività completate"
   },
+  "qrCode": {
+    "title": "Codice QR",
+    "description": "Scansiona con uno smartphone per aprire il quiz direttamente.",
+    "ariaLabel": "Codice QR del quiz",
+    "generating": "Generazione…",
+    "hint": "Pratico per stampare in un libro, flyer, slide o qualsiasi supporto print. SVG è vettoriale (nessuna perdita a qualsiasi dimensione), PNG funziona ovunque.",
+    "downloadSvg": "Scarica SVG",
+    "downloadPng": "Scarica PNG (1024 px)",
+    "printTip": "Stampa a 2,5 cm minimo per una scansione affidabile su tutti gli smartphone."
+  },
   "quizShare": {
     "publicationTitle": "Pubblicazione",
     "publicationDesc": "Attiva o disattiva l'accesso pubblico al tuo quiz",
