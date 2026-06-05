@@ -179,6 +179,16 @@
     "pageSubtitle": "Exécute ton plan, une tâche à la fois.",
     "completedTitle": "Tâches terminées"
   },
+  "qrCode": {
+    "title": "Code QR",
+    "description": "À scanner avec un téléphone pour ouvrir le quiz direct.",
+    "ariaLabel": "Code QR du quiz",
+    "generating": "Génération…",
+    "hint": "Pratique pour insérer dans un livre, un flyer, une slide ou un support print. Le SVG est vectoriel (aucune perte de qualité), le PNG marche partout.",
+    "downloadSvg": "Télécharger en SVG",
+    "downloadPng": "Télécharger en PNG (1024 px)",
+    "printTip": "Imprime à 2,5 cm minimum pour un scan fiable sur tous les téléphones."
+  },
   "quizShare": {
     "publicationTitle": "Publication",
     "publicationDesc": "Active ou désactive l'accès public à ton quiz",
