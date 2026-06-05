@@ -872,6 +872,12 @@ export default function QuizFormClient() {
       // chargé un quiz.
       let importedSomething = false;
       let lastErrorMessage = "";
+      // Béné 4 juin 2026 : après import success, on doit POST le quiz en
+      // DB + router.push vers l'éditeur (comme la tab AI ligne 748-756).
+      // Avant, on faisait juste setActiveTab("manual") qui rend un loader
+      // infini ("Création de ton quiz en cours…") parce que rien ne déclenche
+      // la création serveur. Capture le payload pour le save après le stream.
+      let importedQuizData: Record<string, unknown> | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -897,6 +903,7 @@ export default function QuizFormClient() {
               try {
                 populateFromQuiz(parsed.quiz as Record<string, unknown>);
                 importedSomething = true;
+                importedQuizData = parsed.quiz as Record<string, unknown>;
               } catch (popErr) {
                 // Log + surface : avant on swallow-ait, l'user voyait
                 // success sur form vide. Maintenant on lui dit clair.
@@ -916,9 +923,41 @@ export default function QuizFormClient() {
         }
       }
 
-      if (importedSomething) {
-        toast.success(t("importSuccess"));
-        setActiveTab("manual");
+      if (importedSomething && importedQuizData) {
+        // Save to DB + redirect (même pattern que la tab AI ligne 748-756).
+        // Avant ce fix, on faisait juste setActiveTab("manual") qui rend
+        // un loader infini "Création de ton quiz en cours…" parce qu'aucun
+        // POST n'était fait (Béné 4 juin 2026).
+        try {
+          const q = importedQuizData;
+          const savePayload = {
+            title: String(q.title || ""),
+            introduction: q.introduction ? String(q.introduction) : null,
+            locale: aiLocale,
+            address_form: "tu",
+            cta_text: q.cta_text ? String(q.cta_text) : null,
+            virality_enabled: Boolean(q.virality_enabled),
+            bonus_description: q.bonus_description ? String(q.bonus_description) : null,
+            share_message: q.share_message ? String(q.share_message) : null,
+            questions: Array.isArray(q.questions) ? q.questions : [],
+            results: Array.isArray(q.results) ? q.results : [],
+          };
+          const saveRes = await fetch("/api/quiz", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(savePayload),
+          });
+          const saveData = await saveRes.json();
+          if (saveData.ok && saveData.quizId) {
+            toast.success(t("importSuccess"));
+            router.push(`/quiz/${saveData.quizId}`);
+            return;
+          }
+          toast.error(saveData.error || t("errImport"));
+        } catch (e) {
+          console.error("[import] save failed", e);
+          toast.error(t("errImport"));
+        }
       } else {
         // Aucun quiz n'est arrivé via le stream → l'import a échoué
         // côté IA ou stream coupé. On informe l'user au lieu de
