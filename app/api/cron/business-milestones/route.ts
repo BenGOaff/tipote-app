@@ -185,7 +185,9 @@ async function maybeSendMilestone(
   let ctaLabel = "Voir mon dashboard";
   let ctaUrl = `${appUrl}/app`;
   let title = "";
-  let icon = "trophy";
+  // EMOJI obligatoire (cf. type Notification dans NotificationBell.tsx) —
+  // les noms Lucide leaks tels quels dans la cloche (drame 4 juin 2026).
+  let icon = "🏆";
 
   const formatEur = (n: number) =>
     new Intl.NumberFormat("fr-FR", {
@@ -207,7 +209,7 @@ async function maybeSendMilestone(
     ctaLabel = "Définir mon prochain palier";
     ctaUrl = `${appUrl}/strategy`;
     title = "Objectif atteint !";
-    icon = "trophy";
+    icon = "🏆";
   } else if (type === "goal_half") {
     subject = `📈 Tu es à mi-parcours sur ton objectif`;
     preheader = `${Math.round(ctx.data.progress_pct ?? 0)} % atteint, il reste ${ctx.data.days_remaining_in_month} jours.`;
@@ -219,7 +221,7 @@ async function maybeSendMilestone(
       pour boucler. Pile le moment de poster un peu plus, relancer un prospect ou
       activer une offre flash si tu veux finir fort.</p>`;
     title = "Mi-parcours sur ton objectif";
-    icon = "target";
+    icon = "🎯";
   } else if (type === "churn_alert") {
     subject = `⚠️ ${ctx.data.churned_customers_count} abonné${ctx.data.churned_customers_count > 1 ? "s" : ""} ${ctx.data.churned_customers_count > 1 ? "ont" : "a"} arrêté ce mois`;
     preheader = "Avant qu'ils oublient pourquoi ils s'étaient inscrits.";
@@ -235,7 +237,7 @@ async function maybeSendMilestone(
     ctaLabel = "Voir mes clients";
     ctaUrl = `${appUrl}/clients`;
     title = `${ctx.data.churned_customers_count} abonné${ctx.data.churned_customers_count > 1 ? "s arrêtés" : " arrêté"}`;
-    icon = "alert-triangle";
+    icon = "⚠️";
   }
 
   const result = await sendEmail({

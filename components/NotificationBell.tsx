@@ -17,6 +17,11 @@ type Notification = {
   type: string;
   title: string;
   body: string | null;
+  /** ATTENTION : doit être un EMOJI (ex. "⚠️", "🏆") et JAMAIS un nom
+   *  Lucide ("alert-triangle", "trophy"). Le rendu (ligne ~277) écrit
+   *  cette valeur en text() pur dans un <span>. Si un producer commit
+   *  un nom Lucide, c'est le nom qui s'affiche brut à l'écran (drame
+   *  Béné 4 juin 2026 — "alert-triangle" visible dans la cloche). */
   icon: string | null;
   action_url: string | null;
   action_label: string | null;

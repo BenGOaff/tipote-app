@@ -215,7 +215,7 @@ export async function notifySocialDisconnected(args: DisconnectArgs): Promise<vo
       type: "social_disconnected",
       title: subjects[ctx.locale] || subjects.fr,
       body: `Reconnecte ${platformLabel} pour reprendre tes publications programmées.`,
-      icon: "alert-triangle",
+      icon: "⚠️",
       action_url: "/settings?tab=connections",
       action_label: ctaLabels[ctx.locale] || ctaLabels.fr,
       meta: {
@@ -339,7 +339,7 @@ export async function notifyPostPublishFailed(args: PublishFailedArgs): Promise<
       type: "post_publish_failed",
       title: subjects[ctx.locale] || subjects.fr,
       body: snippetSafe ? snippetSafe.slice(0, 120) : null,
-      icon: "alert-circle",
+      icon: "🚨",
       action_url: `/calendar?content=${encodeURIComponent(contentId)}`,
       action_label: ctaLabels[ctx.locale] || ctaLabels.fr,
       meta: {

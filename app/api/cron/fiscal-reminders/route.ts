@@ -269,7 +269,7 @@ async function maybeSendReminder(
     type: "fiscal_reminder",
     title: `📅 ${deadline.title}`,
     body: deadline.description,
-    icon: "calendar",
+    icon: "📅",
     action_url: deadline.officialUrl,
     action_label: "Aller déclarer",
     meta: { deadline_id: deadline.id, due_date: deadline.dueDate, kind: deadline.kind },
