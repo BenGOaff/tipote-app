@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
+import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { Button } from "@/components/ui/button";
 import { TipoteStudioButton } from "@/components/visual-studio/TipoteStudioButton";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
@@ -3296,6 +3297,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </Button>
             </div>
           </CardContent></Card>
+
+          {/* QR code — utile pour print, livre, flyer, slide */}
+          {status === "active" && (
+            <QrCodeCard
+              url={buildPublicUrl("q", publicSegment)}
+              filename={publicSegment}
+            />
+          )}
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">

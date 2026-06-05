@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
+import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { Button } from "@/components/ui/button";
 import { TipoteStudioButton } from "@/components/visual-studio/TipoteStudioButton";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
@@ -2204,6 +2205,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             </div>
             <pre className="text-xs font-mono bg-muted rounded-lg p-3 overflow-x-auto border mt-3">{`<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`}</pre>
           </CardContent></Card>
+
+          {/* QR code — utile pour print, livre, flyer, slide */}
+          {status === "active" && (
+            <QrCodeCard
+              url={buildPublicUrl("q", publicSegment)}
+              filename={publicSegment}
+            />
+          )}
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
