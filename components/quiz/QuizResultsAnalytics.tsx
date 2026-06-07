@@ -115,23 +115,49 @@ export default function QuizResultsAnalytics({
   const conversionRate =
     viewsCount > 0 ? (leads.length / viewsCount) * 100 : 0;
 
-  // ─── Results distribution ────────────────────────────────────────────────
+  // ─── Results distribution (refonte Gwenn 7 juin 2026) ───────────────
+  // Avant ce fix, on iterait sur `results` (les results CURRENT du quiz),
+  // donc les leads pointant vers un result_id supprime depuis (ou
+  // existant mais orphan) n'apparaissaient pas → "il en oublie un".
+  // Maintenant on groupe par result_id COTE leads, on resout le titre
+  // depuis results[] (live) ou lead.result_title (snapshot fallback),
+  // puis on MERGE par titre — meme rule que la route /api/quiz/[id]/
+  // analytics pour eviter les fantomes "L'Hyper adaptation" en double.
   const resultsDistribution = useMemo(() => {
-    if (results.length === 0) return [];
-    const counts = new Map<string, number>();
-    for (const lead of leads) {
-      if (!lead.result_id) continue;
-      counts.set(lead.result_id, (counts.get(lead.result_id) ?? 0) + 1);
+    const liveTitleById = new Map<string, string>();
+    for (const r of results) {
+      if (r.id) liveTitleById.set(r.id, stripHtml(r.title) || "");
     }
-    return results
-      .map((r) => ({
-        // stripHtml so the pie chart legend doesn't show raw `<span
-        // style="color:…">…</span>` (the result title field is rich
-        // text in DB — cf. rapport Adeline, 17 mai 2026).
-        name: stripHtml(r.title) || t("untitledResult"),
-        value: r.id ? counts.get(r.id) ?? 0 : 0,
-      }))
-      .filter((r) => r.value > 0);
+
+    // 1. Groupe par result_id + snapshot le plus recent
+    type Bucket = { count: number; snapshot: string | null };
+    const byResultId = new Map<string | null, Bucket>();
+    for (const lead of leads) {
+      const key = lead.result_id ?? null;
+      const b = byResultId.get(key) ?? { count: 0, snapshot: null };
+      b.count += 1;
+      if (!b.snapshot && lead.result_title && lead.result_title.trim()) {
+        b.snapshot = stripHtml(lead.result_title) || lead.result_title.trim();
+      }
+      byResultId.set(key, b);
+    }
+
+    // 2. Resout chaque bucket vers son titre + merge par titre
+    const byTitle = new Map<string, number>();
+    for (const [resultId, b] of byResultId) {
+      const live = resultId ? liveTitleById.get(resultId) : undefined;
+      const title =
+        (live && live.trim()) ||
+        b.snapshot ||
+        t("untitledResult");
+      byTitle.set(title, (byTitle.get(title) ?? 0) + b.count);
+    }
+
+    // 3. Format final + filter zero
+    return Array.from(byTitle.entries())
+      .map(([name, value]) => ({ name, value }))
+      .filter((r) => r.value > 0)
+      .sort((a, b) => b.value - a.value);
   }, [leads, results, t]);
 
   // ─── Lead acquisition trend (last 30 days) ───────────────────────────────

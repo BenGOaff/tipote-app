@@ -32,6 +32,7 @@ function parsePeriod(raw: string | null): { key: PeriodKey; sinceISO: string | n
 
 interface LeadRow {
   created_at: string;
+  quiz_result_id: string | null;
   quiz_result_title: string | null;
   exported_sio: boolean | null;
 }
@@ -100,7 +101,7 @@ export async function GET(
   // Leads de la PÉRIODE (time-series + distribution).
   let leadsQuery = supabase
     .from("leads")
-    .select("created_at, quiz_result_title, exported_sio")
+    .select("created_at, quiz_result_id, quiz_result_title, exported_sio")
     .eq("user_id", user.id)
     .eq("source", "quiz")
     .eq("source_id", quizId)
@@ -146,14 +147,51 @@ export async function GET(
       ? Math.round((leadsCount / viewsCount) * 1000) / 10
       : null;
 
-  // Aggregate per result title (sur la période — répond au sélecteur).
-  const byResult = new Map<string, number>();
+  // ─── Distribution par résultat (refonte Gwenn 7 juin 2026) ──────────
+  // Bug remonte par Gwenn : 2 entrees avec le meme titre dans le donut
+  // (ex. ancien nom + nouveau nom apres rename, ou 2 result_ids
+  // distincts qui resolvent au meme titre). Regle unifiee maintenant :
+  //   1. Groupe par quiz_result_id (cle stable, ON DELETE SET NULL)
+  //   2. Resout le titre via quiz_results.title (LIVE — repercute les
+  //      renames) ou snapshot quiz_result_title (fallback orphans)
+  //   3. MERGE les buckets avec le meme titre resolu
+  //
+  // Note Tipote : le quiz_result_id sur leads a ete ajoute le 7 juin
+  // 2026 (migration 20260607). Les leads anterieurs ont ete backfilled
+  // best-effort ; pour les leads sans match (rename + suppression
+  // depuis), on retombe sur le snapshot title.
+  const { data: currentResults } = await supabaseAdmin
+    .from("quiz_results")
+    .select("id, title")
+    .eq("quiz_id", quizId);
+  const currentTitleById = new Map<string, string>(
+    (currentResults ?? []).map((r) => [r.id as string, (r.title as string) ?? ""]),
+  );
+
+  const NO_RESULT_KEY = "__no_result__";
+  type Bucket = { count: number; snapshotTitle: string | null };
+  const byResult = new Map<string, Bucket>();
   for (const l of leads) {
-    const key = (l.quiz_result_title ?? "").trim() || "Sans résultat";
-    byResult.set(key, (byResult.get(key) ?? 0) + 1);
+    const key = l.quiz_result_id ?? NO_RESULT_KEY;
+    const b = byResult.get(key) ?? { count: 0, snapshotTitle: null };
+    b.count += 1;
+    if (!b.snapshotTitle && l.quiz_result_title && l.quiz_result_title.trim()) {
+      b.snapshotTitle = l.quiz_result_title.trim();
+    }
+    byResult.set(key, b);
   }
+
   const periodLeadsTotal = leads.length;
-  const resultDistribution = Array.from(byResult.entries())
+
+  // Merge par titre resolu (dedoublonne les fantomes).
+  const byTitle = new Map<string, number>();
+  for (const [key, b] of byResult) {
+    const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
+    const title = (live && live.trim()) || b.snapshotTitle || "Sans résultat";
+    byTitle.set(title, (byTitle.get(title) ?? 0) + b.count);
+  }
+
+  const resultDistribution = Array.from(byTitle.entries())
     .map(([title, count]) => ({
       title,
       count,
