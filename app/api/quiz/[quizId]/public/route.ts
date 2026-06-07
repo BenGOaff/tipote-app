@@ -744,6 +744,11 @@ export async function POST(req: NextRequest, context: RouteContext) {
               source_id: quizId,
               source_name: quiz.title,
               quiz_answers: answers,
+              // Stable lookup key : permet de resoudre le titre LIVE depuis
+              // quiz_results meme apres rename. Le snapshot quiz_result_title
+              // reste comme fallback si le result est supprime plus tard
+              // (ON DELETE SET NULL — cf. migration 20260607_leads_quiz_result_id).
+              quiz_result_id: resultId || null,
               quiz_result_title: resultTitle,
             },
             { onConflict: "user_id,source,source_id,email" },
