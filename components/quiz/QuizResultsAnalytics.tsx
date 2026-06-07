@@ -112,8 +112,17 @@ export default function QuizResultsAnalytics({
   const t = useTranslations("quizDetail");
   const locale = useLocale();
 
+  // ─── Réconciliation des compteurs (invariant AGENTS.md) ────────────────
+  // vues >= starts >= completions >= leads. Mirror Tiquiz, audit 7 juin 2026.
+  const reconciledCompletions = Math.max(completionsCount, leads.length);
+  const reconciledStarts = Math.max(startsCount, reconciledCompletions);
+  const reconciledViews = Math.max(viewsCount, reconciledStarts);
+
+  // Taux de conversion HONNÊTE : null si starts < leads (tracking foireux).
   const conversionRate =
-    viewsCount > 0 ? (leads.length / viewsCount) * 100 : 0;
+    startsCount >= leads.length && startsCount > 0
+      ? Math.round((leads.length / startsCount) * 100)
+      : null;
 
   // ─── Results distribution (refonte Gwenn 7 juin 2026) ───────────────
   // Avant ce fix, on iterait sur `results` (les results CURRENT du quiz),
@@ -241,10 +250,11 @@ export default function QuizResultsAnalytics({
   const hasAnyAnswers = questionStats.some((q) => q.totalAnswered > 0);
 
   // ─── KPI card config ─────────────────────────────────────────────────────
+  // Compteurs RÉCONCILIÉS (cf. invariant supra).
   const kpis = [
-    { icon: Eye, label: t("kpiViews"), value: viewsCount },
-    { icon: Play, label: t("kpiStarts"), value: startsCount },
-    { icon: CheckCircle, label: t("kpiCompletions"), value: completionsCount },
+    { icon: Eye, label: t("kpiViews"), value: reconciledViews },
+    { icon: Play, label: t("kpiStarts"), value: reconciledStarts },
+    { icon: CheckCircle, label: t("kpiCompletions"), value: reconciledCompletions },
     { icon: Users, label: t("kpiLeads"), value: leads.length },
     { icon: Share2, label: t("kpiShares"), value: sharesCount },
   ];
@@ -274,12 +284,13 @@ export default function QuizResultsAnalytics({
               {t("conversionRate")}
             </h3>
             <div className="text-4xl font-bold">
-              {conversionRate.toFixed(1)}%
+              {conversionRate === null ? "—" : `${conversionRate}%`}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
+              {/* Compteur réconcilié pour cohérence avec le KPI vues. */}
               {t("conversionSubtitle", {
                 leads: leads.length,
-                views: viewsCount,
+                views: reconciledViews,
               })}
             </p>
           </CardContent>
