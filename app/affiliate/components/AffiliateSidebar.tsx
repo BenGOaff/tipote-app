@@ -76,18 +76,32 @@ export function AffiliateSidebar({ displayName, isAdmin = false }: { displayName
         );
       })}
       {isAdmin && (
-        <Link
-          href="/admin/contenus"
-          onClick={() => setOpen(false)}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-            isActive("/admin")
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          }`}
-        >
-          <ShieldCheck className="w-5 h-5 shrink-0" />
-          <span>Admin — Contenus</span>
-        </Link>
+        <>
+          <Link
+            href="/admin/contenus"
+            onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              isActive("/admin/contenus")
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5 shrink-0" />
+            <span>Admin - Contenus</span>
+          </Link>
+          <Link
+            href="/admin/links"
+            onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              isActive("/admin/links")
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5 shrink-0" />
+            <span>Admin - Liens</span>
+          </Link>
+        </>
       )}
     </nav>
   );

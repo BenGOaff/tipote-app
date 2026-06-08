@@ -188,6 +188,10 @@ export const PT: AffiliateDict = {
     tiquiz_monthly_description: "Quizzes e respostas ilimitados, sem compromisso.",
     tiquiz_yearly_label: "Tiquiz anual (90 €/ano)",
     tiquiz_yearly_description: "2 meses oferecidos vs mensal.",
+    tiquiz_monthly_plus_label: "Tiquiz mensal Plus",
+    tiquiz_monthly_plus_description: "Multi-perfis, análise IA, multi-chaves API.",
+    tiquiz_yearly_plus_label: "Tiquiz anual Plus",
+    tiquiz_yearly_plus_description: "O nível Plus, faturação anual com meses oferecidos.",
     tipote_main_label: "Página principal Tipote",
     tipote_main_description: "Afiliação Tipote (a extensão de pod de engagement LinkedIn).",
     tipote_order_label: "Encomenda Tipote",
@@ -201,6 +205,8 @@ export const PT: AffiliateDict = {
     market_hint: "Os teus links apontam para o site do mercado {market}. Muda de mercado se visas outra audiência.",
     main_link_title: "Link de afiliado principal",
     main_link_description: "O teu link rastreado universal. Mais abaixo encontras variantes por destino.",
+    warning_naked_url_title: "Atenção: NUNCA partilhes tipote.fr/tiquiz tal como está",
+    warning_naked_url_body: "Este URL NÃO está marcado como afiliação no Systeme.io. Se o partilhares sem ?sa=, NÃO recebes comissão. Usa sempre um dos links abaixo (contêm o teu ID de rastreio).",
     tab_links: "Links",
     tab_emails: "Emails",
     tab_posts: "Redes",
@@ -405,7 +411,7 @@ export const PT: AffiliateDict = {
     step1_body_2: "Aqui estão os 5 passos a saber para começar em força.",
     step2_title: "O teu link de afiliado rastreado",
     step2_subtitle: "A única coisa a recordar para ganhar comissões.",
-    step2_body_intro: "No separador Promover encontras o teu link principal: tipote.fr/tiquiz/affiliation?sa=o_teu_id",
+    step2_body_intro: "No separador Promover encontras o teu link principal: tipote.fr/part-tiquiz?sa=o_teu_id",
     step2_bullet_cookie:
       "Cookie de 90 dias - mesmo que o cliente compre 3 meses após o clique, ganhas tu.",
     step2_bullet_lasttouch:

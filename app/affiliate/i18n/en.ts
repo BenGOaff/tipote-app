@@ -188,6 +188,10 @@ export const EN: AffiliateDict = {
     tiquiz_monthly_description: "Unlimited quizzes and responses, no commitment.",
     tiquiz_yearly_label: "Tiquiz yearly (€90/year)",
     tiquiz_yearly_description: "2 months free vs monthly.",
+    tiquiz_monthly_plus_label: "Tiquiz monthly Plus",
+    tiquiz_monthly_plus_description: "Multi-profiles, AI analysis, multi API keys.",
+    tiquiz_yearly_plus_label: "Tiquiz yearly Plus",
+    tiquiz_yearly_plus_description: "The Plus tier, yearly billing with months free.",
     tipote_main_label: "Tipote main page",
     tipote_main_description: "Tipote affiliate (the LinkedIn engagement pod extension).",
     tipote_order_label: "Tipote checkout",
@@ -201,6 +205,8 @@ export const EN: AffiliateDict = {
     market_hint: "Your links point to the site for the {market} market. Switch market if you target another audience.",
     main_link_title: "Main affiliate link",
     main_link_description: "Your universal tracked link. Below you'll find variants by destination.",
+    warning_naked_url_title: "Heads up: NEVER share tipote.fr/tiquiz as is",
+    warning_naked_url_body: "This URL is NOT affiliate-tagged on Systeme.io. If you share it without ?sa=, you earn ZERO commission. Always use one of the links below (they include your tracking ID).",
     tab_links: "Links",
     tab_emails: "Emails",
     tab_posts: "Social",
@@ -405,7 +411,7 @@ export const EN: AffiliateDict = {
     step1_body_2: "Here are the 5 steps to know for a strong start.",
     step2_title: "Your tracked affiliate link",
     step2_subtitle: "The one thing to remember to earn commissions.",
-    step2_body_intro: "On the Promote tab, you'll find your main link: tipote.fr/tiquiz/affiliation?sa=your_id",
+    step2_body_intro: "On the Promote tab, you'll find your main link: tipote.fr/part-tiquiz?sa=your_id",
     step2_bullet_cookie:
       "90-day cookie - even if the customer buys 3 months after their click, you earn.",
     step2_bullet_lasttouch:

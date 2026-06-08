@@ -189,6 +189,10 @@ export const AR: AffiliateDict = {
     tiquiz_monthly_description: "كويزات وردود غير محدودة، بدون التزام.",
     tiquiz_yearly_label: "Tiquiz سنوي (90 €/سنة)",
     tiquiz_yearly_description: "شهران مجانيان مقارنة بالشهري.",
+    tiquiz_monthly_plus_label: "تيكويز شهري بلس",
+    tiquiz_monthly_plus_description: "ملفات تعريف متعددة، تحليل بالذكاء الاصطناعي، مفاتيح API متعددة.",
+    tiquiz_yearly_plus_label: "تيكويز سنوي بلس",
+    tiquiz_yearly_plus_description: "المستوى Plus، فوترة سنوية مع أشهر مجانية.",
     tipote_main_label: "صفحة Tipote الرئيسية",
     tipote_main_description: "إحالة Tipote (إضافة بود التفاعل على LinkedIn).",
     tipote_order_label: "طلب Tipote",
@@ -202,6 +206,8 @@ export const AR: AffiliateDict = {
     market_hint: "روابطك تشير إلى موقع سوق {market}. غيّر السوق إذا كنت تستهدف جمهورًا آخر.",
     main_link_title: "رابط التسويق الرئيسي",
     main_link_description: "رابطك المتتبَّع الشامل. أدناه تجد نسخًا حسب الوجهة.",
+    warning_naked_url_title: "تنبيه: لا تشارك أبدًا tipote.fr/tiquiz كما هو",
+    warning_naked_url_body: "هذا الرابط ليس مُعلَّمًا بالإحالة على Systeme.io. إذا شاركته بدون ?sa=، فلن تحصل على عمولة. استخدم دائمًا أحد الروابط أدناه (تحتوي على معرّف التتبع الخاص بك).",
     tab_links: "الروابط",
     tab_emails: "الرسائل",
     tab_posts: "الشبكات",
@@ -406,7 +412,7 @@ export const AR: AffiliateDict = {
     step1_body_2: "إليك 5 خطوات يجب معرفتها لانطلاقة قوية.",
     step2_title: "رابط التسويق المتتبَّع الخاص بك",
     step2_subtitle: "الشيء الوحيد الذي يجب تذكّره لكسب العمولات.",
-    step2_body_intro: "في تبويب الترويج تجد رابطك الرئيسي: tipote.fr/tiquiz/affiliation?sa=معرّفك",
+    step2_body_intro: "في تبويب الترويج تجد رابطك الرئيسي: tipote.fr/part-tiquiz?sa=معرّفك",
     step2_bullet_cookie:
       "كوكي 90 يومًا - حتى لو اشترى العميل بعد 3 أشهر من نقرته، تكسب أنت.",
     step2_bullet_lasttouch:
