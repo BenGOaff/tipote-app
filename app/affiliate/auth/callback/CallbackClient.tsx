@@ -99,8 +99,16 @@ export default function CallbackClient() {
           return;
         }
 
-        // Affilié déjà actif → dashboard (ou next si demandé)
-        router.replace(next && next.startsWith("/") ? next : "/");
+        // Affilié déjà actif → dashboard (ou next si demandé).
+        // Navigation DURE (pas router.replace) : le cookie de session
+        // vient d'être posé côté navigateur par exchangeCodeForSession/
+        // verifyOtp. Une nav soft laisse le SSR du layout affilié
+        // s'exécuter avant que le cookie soit lisible côté serveur →
+        // getAffiliateSession() renvoie null → sidebar absente jusqu'au
+        // refresh (drame Gwenn 8 juin 2026). Le document request force
+        // l'envoi du cookie → session vue du premier coup.
+        const dest = next && next.startsWith("/") ? next : "/";
+        window.location.assign(dest);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setErrorMsg(msg);

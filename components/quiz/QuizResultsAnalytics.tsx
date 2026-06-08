@@ -124,21 +124,30 @@ export default function QuizResultsAnalytics({
       ? Math.round((leads.length / startsCount) * 100)
       : null;
 
-  // ─── Results distribution (refonte Gwenn 7 juin 2026) ───────────────
-  // Avant ce fix, on iterait sur `results` (les results CURRENT du quiz),
-  // donc les leads pointant vers un result_id supprime depuis (ou
-  // existant mais orphan) n'apparaissaient pas → "il en oublie un".
-  // Maintenant on groupe par result_id COTE leads, on resout le titre
-  // depuis results[] (live) ou lead.result_title (snapshot fallback),
-  // puis on MERGE par titre — meme rule que la route /api/quiz/[id]/
-  // analytics pour eviter les fantomes "L'Hyper adaptation" en double.
+  // ─── Results distribution (refonte Gwenn 8 juin 2026) ───────────────
+  // Bene 8 juin : "les users doivent voir leur quiz EXISTANT en temps
+  // reel, pas d'anciennes versions ou tronquees". Donc :
+  //   1. Seed byTitle avec TOUS les profils actuels (count = 0 inclus)
+  //      -> profil sans lead visible avec 0 ; aucun profil "oublie"
+  //   2. Walk leads : match via id-live OU snapshot-title-encore-current
+  //      Les orphelins/anciens noms sont silencieusement IGNORES (pas
+  //      de bucket "Anciens", Bene n'en veut pas).
+  //   3. Pas de filtre zero (profils a 0 affiches). Sort par count desc.
+  // Strictement aligne sur /api/quiz/[id]/analytics route Tipote.
   const resultsDistribution = useMemo(() => {
     const liveTitleById = new Map<string, string>();
+    const currentTitles = new Set<string>();
+    const byTitle = new Map<string, number>();
     for (const r of results) {
-      if (r.id) liveTitleById.set(r.id, stripHtml(r.title) || "");
+      const title = (stripHtml(r.title) || "").trim();
+      if (!title) continue;
+      if (r.id) liveTitleById.set(r.id, title);
+      if (!byTitle.has(title)) {
+        byTitle.set(title, 0);
+        currentTitles.add(title);
+      }
     }
 
-    // 1. Groupe par result_id + snapshot le plus recent
     type Bucket = { count: number; snapshot: string | null };
     const byResultId = new Map<string | null, Bucket>();
     for (const lead of leads) {
@@ -146,28 +155,35 @@ export default function QuizResultsAnalytics({
       const b = byResultId.get(key) ?? { count: 0, snapshot: null };
       b.count += 1;
       if (!b.snapshot && lead.result_title && lead.result_title.trim()) {
-        b.snapshot = stripHtml(lead.result_title) || lead.result_title.trim();
+        b.snapshot = (stripHtml(lead.result_title) || lead.result_title).trim();
       }
       byResultId.set(key, b);
     }
 
-    // 2. Resout chaque bucket vers son titre + merge par titre
-    const byTitle = new Map<string, number>();
     for (const [resultId, b] of byResultId) {
       const live = resultId ? liveTitleById.get(resultId) : undefined;
-      const title =
-        (live && live.trim()) ||
-        b.snapshot ||
-        t("untitledResult");
-      byTitle.set(title, (byTitle.get(title) ?? 0) + b.count);
+      const liveTitle = live?.trim();
+      if (liveTitle && currentTitles.has(liveTitle)) {
+        byTitle.set(liveTitle, (byTitle.get(liveTitle) ?? 0) + b.count);
+      } else if (b.snapshot && currentTitles.has(b.snapshot.trim())) {
+        const snap = b.snapshot.trim();
+        byTitle.set(snap, (byTitle.get(snap) ?? 0) + b.count);
+      }
+      // else: orphan / ancien profil -> exclu silencieusement.
     }
 
-    // 3. Format final + filter zero
     return Array.from(byTitle.entries())
       .map(([name, value]) => ({ name, value }))
-      .filter((r) => r.value > 0)
       .sort((a, b) => b.value - a.value);
-  }, [leads, results, t]);
+  }, [leads, results]);
+
+  // Denominateur des % = total des leads MATCHES (pas leads.length, qui
+  // inclut les orphans desormais exclus du donut). Permet aux % de
+  // sommer exactement a 100%.
+  const distributionTotal = useMemo(
+    () => resultsDistribution.reduce((acc, r) => acc + r.value, 0),
+    [resultsDistribution],
+  );
 
   // ─── Lead acquisition trend (last 30 days) ───────────────────────────────
   // Bucketing en jour LOCAL du créateur (pas UTC) via localDateKey, pour
@@ -362,8 +378,9 @@ export default function QuizResultsAnalytics({
         </Card>
       </div>
 
-      {/* Results distribution */}
-      {resultsDistribution.length > 0 && (
+      {/* Results distribution — render only if there's at least one lead;
+          sinon le donut serait vide (tous les profils a 0). */}
+      {resultsDistribution.length > 0 && leads.length > 0 && (
         <Card>
           <CardContent className="pt-6">
             <h3 className="text-sm font-semibold flex items-center gap-2 mb-4">
@@ -396,7 +413,7 @@ export default function QuizResultsAnalytics({
                         fontSize: 12,
                       }}
                       formatter={(v: number, _n, p) => [
-                        `${v} (${formatPct(v, leads.length)})`,
+                        `${v} (${formatPct(v, distributionTotal)})`,
                         p?.payload?.name ?? "",
                       ]}
                     />
@@ -415,7 +432,7 @@ export default function QuizResultsAnalytics({
                       <span className="flex-1 truncate">{r.name}</span>
                       <span className="font-medium">{r.value}</span>
                       <span className="text-muted-foreground text-xs w-10 text-right">
-                        {formatPct(r.value, leads.length)}
+                        {formatPct(r.value, distributionTotal)}
                       </span>
                     </li>
                   );

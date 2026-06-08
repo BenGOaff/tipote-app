@@ -1,6 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Providers from "@/components/Providers";
 import { HotjarTracker } from "@/components/HotjarTracker";
 import { AffiliateTrialBanner } from "@/components/AffiliateTrialBanner";
@@ -21,6 +22,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getLocale();
   const messages = await getMessages();
   const dir = (RTL_LOCALES as string[]).includes(locale) ? "rtl" : "ltr";
+
+  // Espace affilié = sous-domaine affiliate.tipote.com, rewrité vers
+  // /affiliate/* (cf. next.config.ts). PIÈGE : sur ce sous-domaine, le
+  // `usePathname()` côté client renvoie le path SANS préfixe /affiliate
+  // (ex. "/promouvoir"), donc un gate basé uniquement sur
+  // pathname.startsWith("/affiliate") est MORT sur le sous-domaine et
+  // les widgets Tipote (CoachWidget = bouton chat, TutorialOverlay =
+  // overlay gris) fuitent sur les pages affiliées (drame Gwenn 8 juin
+  // 2026). On lit donc le host côté serveur ici et on le passe à
+  // Providers pour un gating fiable. En DEV, l'affilié est servi via le
+  // path /affiliate, le gate pathname prend le relais.
+  const hostHeader = (await headers()).get("host") ?? "";
+  const isAffiliateHost = hostHeader.toLowerCase().startsWith("affiliate.");
 
   return (
     // suppressHydrationWarning : next-themes ajoute la classe `.dark`
@@ -51,7 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans antialiased">
         <HotjarTracker />
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers>
+          <Providers isAffiliateHost={isAffiliateHost}>
             {/* Bandeau "trial Tipote actif" si user affilié en trial.
                 Server component qui retourne null si pas applicable. */}
             <AffiliateTrialBanner />

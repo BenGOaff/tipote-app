@@ -147,19 +147,25 @@ export async function GET(
       ? Math.round((leadsCount / viewsCount) * 1000) / 10
       : null;
 
-  // ─── Distribution par résultat (refonte Gwenn 7 juin 2026) ──────────
-  // Bug remonte par Gwenn : 2 entrees avec le meme titre dans le donut
-  // (ex. ancien nom + nouveau nom apres rename, ou 2 result_ids
-  // distincts qui resolvent au meme titre). Regle unifiee maintenant :
-  //   1. Groupe par quiz_result_id (cle stable, ON DELETE SET NULL)
-  //   2. Resout le titre via quiz_results.title (LIVE — repercute les
-  //      renames) ou snapshot quiz_result_title (fallback orphans)
-  //   3. MERGE les buckets avec le meme titre resolu
+  // ─── Distribution par résultat (refonte Gwenn 8 juin 2026) ──────────
+  // Bene 8 juin (DRAME final) : "je veux que mes users voient leur quiz
+  // EXISTANT, en temps reel, pas des anciennes versions ou des versions
+  // tronquees". Concretement :
+  //   - tous les profils actuels visibles (meme a 0 lead) - drame compte 1
+  //   - aucun ancien nom de profil affiche - drame compte 2
+  //   - aucun bucket "Anciens profils" non plus (Bene n'en veut pas)
   //
-  // Note Tipote : le quiz_result_id sur leads a ete ajoute le 7 juin
-  // 2026 (migration 20260607). Les leads anterieurs ont ete backfilled
-  // best-effort ; pour les leads sans match (rename + suppression
-  // depuis), on retombe sur le snapshot title.
+  // Algo :
+  //   1. Seed byTitle avec TOUS les profils current de quiz_results
+  //      (count = 0 inclus) -> source de verite = le quiz actuel.
+  //   2. Pour chaque bucket de leads, tenter de matcher a un profil
+  //      current via id-live OU snapshot-title-qui-existe-encore.
+  //      Les leads orphelins (ancien nom + renomme depuis, ou result
+  //      supprime) sont silencieusement EXCLUS du donut.
+  //   3. Pourcentages calcules sur le total des leads MATCHES (somme =
+  //      100% strictement) - sinon le donut affiche 95% avec gap
+  //      visuel, pire UX que la verite.
+  //   4. Sort par count desc, pas de filtre zero (profils a 0 affiches).
   const { data: currentResults } = await supabaseAdmin
     .from("quiz_results")
     .select("id, title")
@@ -181,21 +187,41 @@ export async function GET(
     byResult.set(key, b);
   }
 
-  const periodLeadsTotal = leads.length;
-
-  // Merge par titre resolu (dedoublonne les fantomes).
+  // Seed avec tous les profils actuels (count = 0).
   const byTitle = new Map<string, number>();
+  const currentTitles = new Set<string>();
+  for (const r of currentResults ?? []) {
+    const title = ((r.title as string) ?? "").trim();
+    if (title && !byTitle.has(title)) {
+      byTitle.set(title, 0);
+      currentTitles.add(title);
+    }
+  }
+
+  // Walk leads : match via id-live OU snapshot-title-encore-current.
+  // Sinon = orphan/ancien, on l'ignore silencieusement.
   for (const [key, b] of byResult) {
     const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
-    const title = (live && live.trim()) || b.snapshotTitle || "Sans résultat";
-    byTitle.set(title, (byTitle.get(title) ?? 0) + b.count);
+    const liveTitle = live?.trim();
+    if (liveTitle && currentTitles.has(liveTitle)) {
+      byTitle.set(liveTitle, (byTitle.get(liveTitle) ?? 0) + b.count);
+    } else if (b.snapshotTitle && currentTitles.has(b.snapshotTitle.trim())) {
+      const snap = b.snapshotTitle.trim();
+      byTitle.set(snap, (byTitle.get(snap) ?? 0) + b.count);
+    }
+    // else: orphan / ancien profil -> exclu du donut.
   }
+
+  // Total des leads MATCHES (denominateur du %). Si tout est orphan,
+  // matchedTotal = 0 et tous les profils a 0% (donut vide, OK).
+  let matchedTotal = 0;
+  for (const v of byTitle.values()) matchedTotal += v;
 
   const resultDistribution = Array.from(byTitle.entries())
     .map(([title, count]) => ({
       title,
       count,
-      pct: periodLeadsTotal > 0 ? Math.round((count / periodLeadsTotal) * 1000) / 10 : 0,
+      pct: matchedTotal > 0 ? Math.round((count / matchedTotal) * 1000) / 10 : 0,
     }))
     .sort((a, b) => b.count - a.count);
 

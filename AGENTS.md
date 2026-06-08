@@ -2,6 +2,35 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+## Espace affilié = sous-domaine, le pathname N'A PAS /affiliate (drame Gwenn 8 juin 2026)
+
+`affiliate.tipote.com/<path>` est rewrité vers `/affiliate/<path>`
+(next.config.ts, beforeFiles). MAIS le `usePathname()` côté client
+renvoie le path SANS préfixe (ex. `/promouvoir`, pas
+`/affiliate/promouvoir`). Conséquence : tout gate du type
+`pathname.startsWith("/affiliate")` est **MORT en prod** sur le
+sous-domaine.
+
+Bugs déjà causés par ce piège :
+- `CoachWidget` (bouton chat IA Tipote) qui fuit sur les pages affiliées.
+- `TutorialOverlay` (overlay gris du didacticiel Tipote) qui grise les
+  sous-pages affiliées (l'overview semblait OK car ces widgets
+  s'auto-masquent sur `pathname === "/"`).
+
+**Règle :** pour gater un composant hors de l'espace affilié, détecter
+le HOST, pas (seulement) le pathname :
+- côté serveur (root layout) : `headers().get("host").startsWith("affiliate.")`
+  → passé en prop (`isAffiliateHost`) à `Providers`.
+- défense en profondeur côté client : `window.location.hostname.startsWith("affiliate.")`
+  EN PLUS du `pathname.startsWith("/affiliate")` (qui couvre le dev où
+  l'affilié est servi en direct sous /affiliate).
+
+**Auth affilié :** après `signInWithPassword` / `exchangeCodeForSession`,
+faire une navigation DURE (`window.location.assign`) et PAS
+`router.push/replace`. Sinon le SSR du layout affilié s'exécute avant
+que le cookie de session soit lisible côté serveur → `getAffiliateSession()`
+renvoie null → sidebar absente jusqu'au refresh.
+
 ## Anti-IA writing — JAMAIS de tiret long (drame 7 juin 2026)
 
 Béné a une règle absolue dans tout le contenu user-visible (emails
@@ -26,23 +55,30 @@ Cette règle s'applique aux contenus USER-VISIBLE uniquement. Les
 commentaires de code (`//`, `/* */`) peuvent contenir des em-dash sans
 souci - le user ne les voit jamais.
 
-## Distribution par résultat — RÈGLE UNIQUE (drame Gwenn 7 juin 2026)
+## Distribution par résultat — RÈGLE UNIQUE (drame Gwenn 8 juin 2026)
 
 Tout endroit qui affiche la distribution des leads par résultat de quiz
 DOIT suivre cette règle exacte. La répétition de bugs (entrées
-dupliquées, résultats oubliés, anciens noms) vient TOUJOURS d'un
+dupliquées, résultats oubliés, anciens noms) vient TOUJOURS d'une
 ré-implémentation partielle qui zappe une étape.
 
+**Citation Béné 8 juin :** "je veux que mes users voient leur quiz
+EXISTANT, en temps réel, pas des anciennes versions ou des versions
+tronquées." → source de vérité = `quiz_results` actuel.
+
 **Algorithme obligatoire :**
-1. Groupe les leads par `quiz_result_id` (ou `result_id` selon la table —
-   `leads` côté Tipote analytics depuis migration 20260607, `quiz_leads`
-   côté Tipote QuizResultsAnalytics, Tiquiz `quiz_leads` partout).
-2. Résout le titre via `quiz_results.title` (LIVE — répercute les renames),
-   fallback sur le snapshot `quiz_result_title`/`result_title` du lead.
-3. **MERGE** les buckets avec le même titre résolu (dédoublonne les
-   fantômes : ancien nom + nouveau nom après rename, ou 2 result_ids
-   distincts qui résolvent au même titre).
-4. Filter les zéros, sort par count desc.
+1. **SEED** `byTitle` avec TOUS les profils actuels de `quiz_results`,
+   `count = 0` inclus (pas de filtre zero). Source de vérité.
+2. Pour chaque lead, tenter d'attribuer à un profil current :
+   - via `quiz_result_id` (ou `result_id`) → `quiz_results.title` LIVE
+     (suit les renames)
+   - sinon via le snapshot `quiz_result_title`/`result_title` SI ce
+     titre existe encore dans `currentTitles`
+   - **sinon : on EXCLUT silencieusement** (orphan / ancien nom après
+     rename / profil supprimé). Pas de bucket "Anciens profils" affiché.
+3. Le dénominateur des `%` = somme des leads MATCHÉS (pas `leads.length`),
+   pour que les pourcentages affichés somment exactement à 100%.
+4. Sort par count desc.
 
 **Endroits à respecter (Tipote) :**
 - `app/api/quiz/[quizId]/analytics/route.ts` — table `leads`, colonnes
@@ -53,10 +89,14 @@ ré-implémentation partielle qui zappe une étape.
   `quiz_result_id` ET `quiz_result_title`
 - Toute nouvelle UI affichant des compteurs par résultat
 
-**Si je vois `iterate results.map(r => counts.get(r.id))` quelque part,
-c'est CASSÉ** (oublie les leads orphans). Si je vois `groupBy(result_title)`
-sans dédup par titre résolu, c'est CASSÉ (anciens noms après rename).
-Suis l'algorithme à la lettre.
+**Anti-patterns INTERDITS :**
+- Ne PAS seeder avec `quiz_results` actuels → profils à 0 lead absents.
+- Afficher un bucket "Anciens profils" ou "Sans résultat" → bruit visuel
+  que Béné refuse.
+- Calculer le `%` sur `leads.length` au lieu de `matchedTotal` → la
+  somme ne fait pas 100% quand il y a des orphans exclus.
+- `groupBy(result_title)` sans match au titre LIVE → anciens noms
+  apparaissent en double après rename.
 
 ## Fichier env sur le serveur prod — À NE PAS CONFONDRE (drame 3 juin 2026)
 

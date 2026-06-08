@@ -17,9 +17,19 @@ export function TutorialOverlay() {
   //
   // Le didacticiel démarre au premier vrai "dashboard" (/app ou /dashboard),
   // puis peut continuer sur les pages de l'app (create/strategy/etc).
+  // Garde-fou supplémentaire (drame Gwenn 8 juin 2026) : ne JAMAIS
+  // afficher le didacticiel Tipote (overlay gris) sur l'espace affilié.
+  // Sur affiliate.tipote.com le pathname client n'a pas le préfixe
+  // /affiliate (rewrite next.config), d'où le test host en plus.
+  const onAffiliate =
+    pathname.startsWith("/affiliate") ||
+    (typeof window !== "undefined" &&
+      window.location.hostname.toLowerCase().startsWith("affiliate."));
+
   const isBlockedRoute =
     pathname === "/" ||
     pathname === "/login" ||
+    onAffiliate ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/onboarding");
 
