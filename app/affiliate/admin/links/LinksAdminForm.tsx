@@ -30,8 +30,6 @@ const SLUG_HINTS: Record<string, string> = {
   tiquiz_monthly_plus: "Plus mensuel. ATTENTION ordre inverse : /tiquiz-mensuel-plus-part",
   tiquiz_yearly: "Abonnement annuel 90 EUR.",
   tiquiz_yearly_plus: "Plus annuel. ATTENTION ordre inverse : /tiquiz-annuel-plus-part",
-  tipote_main: "Affiliation Tipote (extension LinkedIn).",
-  tipote_order: "Page de commande Tipote.",
 };
 
 export function LinksAdminForm({ initial }: { initial: LinkDestinationRow[] }) {

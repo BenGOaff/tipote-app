@@ -41,8 +41,6 @@ function buildLinkDestinations(
     tiquiz_monthly_plus: { label: ld.tiquiz_monthly_plus_label, description: ld.tiquiz_monthly_plus_description },
     tiquiz_yearly:       { label: ld.tiquiz_yearly_label,       description: ld.tiquiz_yearly_description },
     tiquiz_yearly_plus:  { label: ld.tiquiz_yearly_plus_label,  description: ld.tiquiz_yearly_plus_description },
-    tipote_main:         { label: ld.tipote_main_label,         description: ld.tipote_main_description },
-    tipote_order:        { label: ld.tipote_order_label,        description: ld.tipote_order_description },
   };
   const out: LinkItem[] = [];
   for (const [slug, path] of pathBySlug) {

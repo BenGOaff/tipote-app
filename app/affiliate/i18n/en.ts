@@ -206,7 +206,7 @@ export const EN: AffiliateDict = {
     main_link_title: "Main affiliate link",
     main_link_description: "Your universal tracked link. Below you'll find variants by destination.",
     warning_naked_url_title: "Heads up: NEVER share tipote.fr/tiquiz as is",
-    warning_naked_url_body: "This URL is NOT affiliate-tagged on Systeme.io. If you share it without ?sa=, you earn ZERO commission. Always use one of the links below (they include your tracking ID).",
+    warning_naked_url_body: "This page is NOT set up for affiliation on Systeme.io. Even if you add your ?sa=, the link tracks NOTHING and you earn ZERO commission. Never use it: always pick one of the links below (those are properly tagged).",
     tab_links: "Links",
     tab_emails: "Emails",
     tab_posts: "Social",
