@@ -12,6 +12,7 @@
 
 import "server-only";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 const DEFAULT_IDLE_TIMEOUT_MS = 90_000;
 
@@ -186,5 +187,11 @@ export async function callClaude(args: CallClaudeArgs): Promise<string> {
     }
   }
 
-  return textAccum.trim();
+  // Sanitize systematique avant return : strip em-dash + en-dash + leading
+  // emojis decoratifs. Bene 7 juin 2026 : "JAMAIS nulle part" de tiret long
+  // dans le contenu user-visible. Sanitize ici = aucun consumer ne peut
+  // oublier de le faire (defense en profondeur, le bloc NATURAL_WRITING
+  // dans le prompt fait deja le travail cote LLM, ce strip cote serveur
+  // est l'assurance que rien ne passe).
+  return sanitizeAiText(textAccum.trim());
 }

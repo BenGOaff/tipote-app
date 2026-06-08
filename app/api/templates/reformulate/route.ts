@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,11 +75,12 @@ async function callClaude(args: {
 
   const json = (await res.json()) as any;
   const parts = Array.isArray(json?.content) ? json.content : [];
-  return parts
+  const text = parts
     .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
     .filter(Boolean)
     .join("\n")
     .trim();
+  return sanitizeAiText(text);
 }
 
 const InputSchema = z.object({

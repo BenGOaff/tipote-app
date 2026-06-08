@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { buildBusinessContext } from "@/lib/compta/businessContext";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 function toStr(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
@@ -163,7 +164,8 @@ ${businessContext.text ? `\n${businessContext.text}` : ""}
     }
 
     const json = (await res.json()) as any;
-    const text = json.content?.[0]?.text?.trim() || null;
+    const rawText = json.content?.[0]?.text?.trim() || "";
+    const text = rawText ? sanitizeAiText(rawText) : null;
 
     // Return with cache hint (client should cache for ~30min)
     return NextResponse.json(

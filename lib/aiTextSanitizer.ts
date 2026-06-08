@@ -10,17 +10,26 @@
 // em-dashes, leading sparkle emojis). We DO NOT rewrite phrases, we
 // DO NOT change meaning.
 
-/** Replace em / en dashes used in incise by commas. Preserves user-typed
- *  hyphens (-) and dashes in numeric ranges (e.g. "2024-2026"). */
+/** Strip em/en dashes from AI output. Rule absolue Béné 7 juin 2026 :
+ *  aucun em-dash ni en-dash ne doit survivre dans du contenu user-visible
+ *  car c'est la signature stylistique #1 des LLM. On préserve les hyphens
+ *  simples user-typed (-) et les ranges numériques ("2024-2026").
+ *
+ *  3 passes du plus precis au plus brut, pour gerer tous les cas sans
+ *  laisser une seule occurrence passer : */
 export function stripEmDashes(input: string): string {
   if (!input) return input;
   let out = input;
-  // " — " or " – " (with spaces) → ", " — typical AI "incise" pattern.
+  // 1. " — " ou " – " avec espaces → ", " (cas incise typique IA)
   out = out.replace(/\s+[—–]\s+/g, ", ");
-  // Em / en dash glued without spaces between two words ("mot—mot") → "mot, mot".
+  // 2. Em/en dash colle entre 2 mots ("mot—mot") → "mot, mot"
   out = out.replace(/([A-Za-zÀ-ÿ0-9)])[—–]([A-Za-zÀ-ÿ(])/g, "$1, $2");
-  // Stray em dash at start of a line ("— phrase").
-  out = out.replace(/(^|\n)\s*[—–]\s+/g, "$1");
+  // 3. Em dash en debut de ligne ("— phrase") → liste bullet "- phrase"
+  out = out.replace(/(^|\n)\s*[—–]\s+/g, "$1- ");
+  // 4. CATCH-ALL : toute occurrence restante (em-dash isole, repete,
+  //    colle de facon bizarre) → simple hyphen avec espace propre.
+  //    Cette ligne garantit qu'aucun em-dash ne survit jamais.
+  out = out.replace(/[—–]+/g, "-");
   return out;
 }
 

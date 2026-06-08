@@ -10,6 +10,7 @@ import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { buildQuizChatSystemPrompt } from "@/lib/prompts/quiz/chat";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -196,7 +197,9 @@ export async function POST(req: NextRequest) {
               if (parsed.type === "content_block_delta") {
                 const delta = parsed.delta as Record<string, unknown> | undefined;
                 if (delta?.type === "text_delta") {
-                  const text = String(delta.text ?? "");
+                  // Strip em-dash a la volee (Bene 7 juin 2026). Sanitization
+                  // complete sur `full` au moment du `done`.
+                  const text = String(delta.text ?? "").replace(/[—–]/g, "-");
                   if (text) {
                     full += text;
                     sendSSE("delta", { text });
@@ -219,7 +222,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        sendSSE("done", { full, brief });
+        sendSSE("done", { full: sanitizeAiText(full), brief });
       } catch (e) {
         console.error("[idea-chat] SSE stream error:", e);
         sendSSE("error", { ok: false, error: e instanceof Error ? e.message : "Unknown error" });

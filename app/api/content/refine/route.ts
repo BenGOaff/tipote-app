@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import {
   getUserContextBundle,
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
       max_completion_tokens: 4000,
     } as any);
 
-    const refined = resp.choices?.[0]?.message?.content?.trim() ?? "";
+    const refined = sanitizeAiText(resp.choices?.[0]?.message?.content?.trim() ?? "");
     if (!refined) {
       return NextResponse.json(
         { error: "Réponse IA vide" },

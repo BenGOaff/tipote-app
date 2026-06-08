@@ -18,6 +18,7 @@
 import { callClaude, getClaudeApiKey } from "@/lib/claude";
 import type { CommentTone } from "@/lib/podBoost";
 import { NATURAL_WRITING_BLOCK } from "@/lib/prompts/quiz/system";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 export type CommentSuggestions = Record<CommentTone, string>;
 
@@ -224,8 +225,11 @@ function parseSuggestions(rawResponse: string): CommentSuggestions | null {
     for (const k of keys) {
       const v = parsed[k];
       if (typeof v === "string" && v.trim().length > 0) {
+        // sanitizeAiText : strip em-dash, decorative emojis, double spaces.
+        // Bene 7 juin 2026 : aucun em-dash ne doit survivre dans les
+        // commentaires generes (signature LLM #1 qui ruine la credibilite).
         // Trim + cap à 280 chars (limite LinkedIn confortable)
-        out[k] = v.trim().slice(0, 280);
+        out[k] = sanitizeAiText(v).slice(0, 280);
       } else {
         return null;
       }
