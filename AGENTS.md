@@ -2,6 +2,35 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+## Espace affilié = sous-domaine, le pathname N'A PAS /affiliate (drame Gwenn 8 juin 2026)
+
+`affiliate.tipote.com/<path>` est rewrité vers `/affiliate/<path>`
+(next.config.ts, beforeFiles). MAIS le `usePathname()` côté client
+renvoie le path SANS préfixe (ex. `/promouvoir`, pas
+`/affiliate/promouvoir`). Conséquence : tout gate du type
+`pathname.startsWith("/affiliate")` est **MORT en prod** sur le
+sous-domaine.
+
+Bugs déjà causés par ce piège :
+- `CoachWidget` (bouton chat IA Tipote) qui fuit sur les pages affiliées.
+- `TutorialOverlay` (overlay gris du didacticiel Tipote) qui grise les
+  sous-pages affiliées (l'overview semblait OK car ces widgets
+  s'auto-masquent sur `pathname === "/"`).
+
+**Règle :** pour gater un composant hors de l'espace affilié, détecter
+le HOST, pas (seulement) le pathname :
+- côté serveur (root layout) : `headers().get("host").startsWith("affiliate.")`
+  → passé en prop (`isAffiliateHost`) à `Providers`.
+- défense en profondeur côté client : `window.location.hostname.startsWith("affiliate.")`
+  EN PLUS du `pathname.startsWith("/affiliate")` (qui couvre le dev où
+  l'affilié est servi en direct sous /affiliate).
+
+**Auth affilié :** après `signInWithPassword` / `exchangeCodeForSession`,
+faire une navigation DURE (`window.location.assign`) et PAS
+`router.push/replace`. Sinon le SSR du layout affilié s'exécute avant
+que le cookie de session soit lisible côté serveur → `getAffiliateSession()`
+renvoie null → sidebar absente jusqu'au refresh.
+
 ## Anti-IA writing — JAMAIS de tiret long (drame 7 juin 2026)
 
 Béné a une règle absolue dans tout le contenu user-visible (emails

@@ -754,8 +754,17 @@ export function CoachWidget() {
 
   const showQuickReplies = open && view === "chat" && !locked && !bootstrapping && !loading && input.trim().length === 0;
 
-  // Hide coach on onboarding, auth, and other pre-dashboard pages
-  const hidden = pathname === "/" || HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
+  // Hide coach on onboarding, auth, and other pre-dashboard pages.
+  // Garde-fou supplémentaire (drame Gwenn 8 juin 2026) : ne JAMAIS
+  // afficher le coach IA sur l'espace affilié. Sur affiliate.tipote.com
+  // le pathname client n'a pas le préfixe /affiliate (rewrite), donc on
+  // teste AUSSI le host. Defense-in-depth par-dessus le gate de Providers.
+  const onAffiliate =
+    pathname.startsWith("/affiliate") ||
+    (typeof window !== "undefined" &&
+      window.location.hostname.toLowerCase().startsWith("affiliate."));
+  const hidden =
+    pathname === "/" || onAffiliate || HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
   if (hidden) return null;
 
   /* ────────────────── Render ────────────────── */

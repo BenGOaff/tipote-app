@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, AlertTriangle, CheckCircle2 } from "lucide-react";
 
@@ -24,7 +24,6 @@ type Mode = "password" | "magic";
 
 export default function LoginAffiliateForm() {
   const t = useDict();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
 
@@ -71,7 +70,15 @@ export default function LoginAffiliateForm() {
         setLoadingPassword(false);
         return;
       }
-      router.push("/");
+      // Navigation DURE (pas router.push) : signInWithPassword vient de
+      // poser le cookie de session côté navigateur. Un router.push fait
+      // une nav soft dont le rendu SSR du layout affilié peut s'exécuter
+      // AVANT que le cookie soit lisible côté serveur → getAffiliateSession
+      // renvoie null → sidebar absente jusqu'au refresh (drame Gwenn 8
+      // juin 2026 : "après mon inscription je n'avais pas le panneau de
+      // gauche"). window.location.assign force un document request qui
+      // embarque le cookie → le layout voit la session du premier coup.
+      window.location.assign("/");
     } catch {
       setErrorPassword(t.login.err_generic);
       setLoadingPassword(false);
