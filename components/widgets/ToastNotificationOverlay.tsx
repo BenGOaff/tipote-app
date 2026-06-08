@@ -151,9 +151,16 @@ export default function ToastNotificationOverlay({ widgetId }: { widgetId: strin
       })
       .catch(() => {});
 
-    // Ping
-    const vid = sessionStorage.getItem("tipote_vid") || `v_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
-    sessionStorage.setItem("tipote_vid", vid);
+    // Ping. try/catch sur sessionStorage : Brave strict / mode privé peuvent
+    // throw (sessionStorage disabled). On retombe sur un vid éphémère —
+    // l'identification visiteur est best-effort, pas critique.
+    let vid: string;
+    try {
+      vid = sessionStorage.getItem("tipote_vid") || `v_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+      sessionStorage.setItem("tipote_vid", vid);
+    } catch {
+      vid = `v_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    }
     const ping = () =>
       fetch(`/api/widgets/toast/${widgetId}/ping`, {
         method: "POST",
