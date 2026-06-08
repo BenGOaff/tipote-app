@@ -127,39 +127,56 @@ export default function PhaseTaskBoard({
   const addTask = useCallback(async () => {
     const name = newTaskName.trim();
     if (!name) return;
-    setNewTaskName("");
     setIsAdding(true);
     const phaseKey = phaseSlug === "fondations" ? "p1" : phaseSlug === "croissance" ? "p2" : "p3";
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: name, status: "todo", phase: phaseKey }),
+        body: JSON.stringify({ title: name, status: "todo", phase: phaseKey, priority: "high" }),
       });
-      const json = await res.json();
-      if (json.ok && json.task) {
-        setTasks((prev) => [
-          ...prev,
-          {
-            id: json.task.id,
-            title: json.task.title,
-            description: null,
-            status: "todo",
-            priority: null,
-            due_date: null,
-            estimated_duration: null,
-            tags: [],
-            subtasks_total: 0,
-            subtasks_done: 0,
-          },
-        ]);
+      const json = (await res.json().catch(() => null)) as
+        | { ok?: boolean; task?: { id: string; title: string }; error?: string }
+        | null;
+
+      if (!res.ok || !json?.ok || !json.task?.id) {
+        toast({
+          title: tc("error"),
+          description: json?.error || "Impossible d'ajouter la tâche. Réessaie.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      setNewTaskName("");
+      setTasks((prev) => [
+        ...prev,
+        {
+          id: json.task!.id,
+          title: json.task!.title,
+          description: null,
+          status: "todo",
+          priority: "high",
+          due_date: null,
+          estimated_duration: null,
+          tags: [],
+          subtasks_total: 0,
+          subtasks_done: 0,
+        },
+      ]);
+      // Refresh server-side data so the new task is reflected dans tous
+      // les compteurs (objectifs, encouragement coach, stats execution).
+      router.refresh();
     } catch {
-      toast({ title: tc("error"), variant: "destructive" });
+      toast({
+        title: tc("error"),
+        description: "Erreur reseau. Verifie ta connexion.",
+        variant: "destructive",
+      });
     } finally {
       setIsAdding(false);
     }
-  }, [newTaskName, phaseSlug, toast]);
+  }, [newTaskName, phaseSlug, toast, tc, router]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
