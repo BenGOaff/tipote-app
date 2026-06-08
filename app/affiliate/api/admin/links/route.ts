@@ -17,6 +17,7 @@ import { getAffiliateAdmin } from "@/lib/affiliate/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Tipote n'est pas en vente : pas de slug Tipote. Tiquiz uniquement.
 const ALLOWED_SLUGS = new Set([
   "tiquiz_main",
   "tiquiz_free",
@@ -24,8 +25,6 @@ const ALLOWED_SLUGS = new Set([
   "tiquiz_monthly_plus",
   "tiquiz_yearly",
   "tiquiz_yearly_plus",
-  "tipote_main",
-  "tipote_order",
 ]);
 
 function forbidden() {

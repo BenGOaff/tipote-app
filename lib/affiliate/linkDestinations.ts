@@ -19,9 +19,7 @@ export type LinkDestinationSlug =
   | "tiquiz_monthly"
   | "tiquiz_monthly_plus"
   | "tiquiz_yearly"
-  | "tiquiz_yearly_plus"
-  | "tipote_main"
-  | "tipote_order";
+  | "tiquiz_yearly_plus";
 
 export type LinkDestinationRow = {
   slug: LinkDestinationSlug;
@@ -30,6 +28,8 @@ export type LinkDestinationRow = {
   enabled: boolean;
 };
 
+// Tipote n'est PAS en vente (Bene 8 juin 2026) : on ne propose AUCUN
+// lien Tipote aux affilies. Uniquement les destinations Tiquiz.
 const FALLBACK: LinkDestinationRow[] = [
   { slug: "tiquiz_main",         path: "/part-tiquiz",               sort_order: 10, enabled: true },
   { slug: "tiquiz_free",         path: "/part-tiquiz-gratuit",       sort_order: 20, enabled: true },
@@ -37,8 +37,6 @@ const FALLBACK: LinkDestinationRow[] = [
   { slug: "tiquiz_monthly_plus", path: "/tiquiz-mensuel-plus-part",  sort_order: 40, enabled: true },
   { slug: "tiquiz_yearly",       path: "/part-tiquiz-annuel",        sort_order: 50, enabled: true },
   { slug: "tiquiz_yearly_plus",  path: "/tiquiz-annuel-plus-part",   sort_order: 60, enabled: true },
-  { slug: "tipote_main",         path: "/affiliation",               sort_order: 70, enabled: true },
-  { slug: "tipote_order",        path: "/commande",                  sort_order: 80, enabled: true },
 ];
 
 /** Lit toutes les destinations (toutes lignes, y compris désactivées —

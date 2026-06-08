@@ -207,7 +207,7 @@ export const FR: AffiliateDict = {
     main_link_title: "Lien principal d'affiliation",
     main_link_description: "Ton lien tracké universel. Plus loin tu trouveras des variantes par destination.",
     warning_naked_url_title: "Attention : ne partage JAMAIS tipote.fr/tiquiz tel quel",
-    warning_naked_url_body: "Cette URL n'est PAS taggée affiliation côté Systeme.io. Si tu la partages sans ?sa=, tu ne touches AUCUNE commission. Utilise toujours un des liens ci-dessous (ils contiennent ton identifiant).",
+    warning_naked_url_body: "Cette page n'est PAS paramétrée affiliation côté Systeme.io. Même en ajoutant ton ?sa=, le lien ne traque RIEN et tu ne touches AUCUNE commission. Ne l'utilise jamais : prends toujours un des liens ci-dessous (eux sont bien tagués).",
     tab_links: "Liens",
     tab_emails: "Emails",
     tab_posts: "Réseaux",

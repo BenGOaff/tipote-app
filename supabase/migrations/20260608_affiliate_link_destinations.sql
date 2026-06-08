@@ -25,6 +25,9 @@ ALTER TABLE public.affiliate_link_destinations ENABLE ROW LEVEL SECURITY;
 -- (tiquiz-mensuel-plus-part au lieu de part-tiquiz-mensuel-plus). On
 -- copie la convention exacte du back-office sales, sinon le tag ne
 -- pointe pas et l'affilié perd sa commission.
+--
+-- Tipote n'est PAS en vente : AUCUN lien Tipote ici. On ne propose que
+-- les destinations Tiquiz aux affiliés.
 INSERT INTO public.affiliate_link_destinations (slug, path, sort_order, enabled)
 VALUES
   ('tiquiz_main',         '/part-tiquiz',                10, true),
@@ -32,9 +35,13 @@ VALUES
   ('tiquiz_monthly',      '/part-tiquiz-mensuel',        30, true),
   ('tiquiz_monthly_plus', '/tiquiz-mensuel-plus-part',   40, true),
   ('tiquiz_yearly',       '/part-tiquiz-annuel',         50, true),
-  ('tiquiz_yearly_plus',  '/tiquiz-annuel-plus-part',    60, true),
-  ('tipote_main',         '/affiliation',                70, true),
-  ('tipote_order',        '/commande',                   80, true)
+  ('tiquiz_yearly_plus',  '/tiquiz-annuel-plus-part',    60, true)
 ON CONFLICT (slug) DO NOTHING;
+
+-- Garde-fou : si une version anterieure de ce seed avait insere les
+-- liens Tipote (tipote_main / tipote_order), on les retire. Tipote
+-- n'est pas en vente, ces destinations ne doivent jamais apparaitre.
+DELETE FROM public.affiliate_link_destinations
+WHERE slug IN ('tipote_main', 'tipote_order');
 
 NOTIFY pgrst, 'reload schema';

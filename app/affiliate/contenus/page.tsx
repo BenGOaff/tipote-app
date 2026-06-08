@@ -28,6 +28,7 @@ import { VISUELS_FR } from "../promouvoir/content/visuels-fr";
 import { getDict, interpolate, normaliseLocale } from "../i18n";
 import { localeLabel, AFFILIATE_LIVE_LOCALES, resolveAffiliateMarket } from "@/lib/affiliate/contentLocales";
 import { buildAffiliateLink } from "@/lib/affiliate/links";
+import { getLinkPath } from "@/lib/affiliate/linkDestinations";
 import { ContentLocalePicker } from "../components/ContentLocalePicker";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +56,12 @@ export default async function ContenusPage({
   const contentLocale = resolveAffiliateMarket(sp.locale, session.locale);
   const isFrLocale = contentLocale === "fr";
   // Les liens injectés dans le matériel suivent le marché choisi (domaine).
-  const baseLink = buildAffiliateLink(contentLocale, "/tiquiz/affiliation", session.sa);
+  // Path = destination principale admin-editable (defaut /part-tiquiz).
+  // Avant le 8 juin 2026 c'etait "/tiquiz/affiliation" code en dur, qui
+  // n'existe pas chez Systeme.io -> commission perdue dans TOUT le
+  // materiel emails/posts copie par les affilies.
+  const mainPath = await getLinkPath("tiquiz_main");
+  const baseLink = buildAffiliateLink(contentLocale, mainPath, session.sa);
 
   const { data: ov } = await supabaseAdmin
     .from("affiliates")
