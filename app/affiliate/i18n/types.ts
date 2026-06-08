@@ -198,8 +198,12 @@ export type AffiliateDict = {
     tiquiz_free_description: string;
     tiquiz_monthly_label: string;
     tiquiz_monthly_description: string;
+    tiquiz_monthly_plus_label: string;
+    tiquiz_monthly_plus_description: string;
     tiquiz_yearly_label: string;
     tiquiz_yearly_description: string;
+    tiquiz_yearly_plus_label: string;
+    tiquiz_yearly_plus_description: string;
     tipote_main_label: string;
     tipote_main_description: string;
     tipote_order_label: string;
@@ -214,6 +218,8 @@ export type AffiliateDict = {
     market_hint: string; // "Liens et contenus adaptés au marché {market}."
     main_link_title: string;
     main_link_description: string;
+    warning_naked_url_title: string;
+    warning_naked_url_body: string;
     tab_links: string;
     tab_emails: string;
     tab_posts: string;

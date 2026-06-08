@@ -5,7 +5,7 @@
 // désormais dans /contenus.
 
 import { redirect } from "next/navigation";
-import { Link2, FileText, ExternalLink } from "lucide-react";
+import { Link2, FileText, ExternalLink, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -19,44 +19,38 @@ import { buildAffiliateLink } from "@/lib/affiliate/links";
 import { fetchBlogArticles } from "@/lib/affiliate/blogFeed";
 import { resolveAffiliateMarket, localeLabel, AFFILIATE_LIVE_LOCALES } from "@/lib/affiliate/contentLocales";
 import { ContentLocalePicker } from "../components/ContentLocalePicker";
+import {
+  getActiveLinkDestinations,
+  getLinkPath,
+  type LinkDestinationSlug,
+} from "@/lib/affiliate/linkDestinations";
 
 export const dynamic = "force-dynamic";
 
 function buildLinkDestinations(
   ld: ReturnType<typeof getDict>["link_destinations"],
+  pathBySlug: Map<LinkDestinationSlug, string>,
 ): LinkItem[] {
-  return [
-    {
-      label: ld.tiquiz_main_label,
-      description: ld.tiquiz_main_description,
-      path: "/tiquiz/affiliation",
-    },
-    {
-      label: ld.tiquiz_free_label,
-      description: ld.tiquiz_free_description,
-      path: "/part-tiquiz-gratuit",
-    },
-    {
-      label: ld.tiquiz_monthly_label,
-      description: ld.tiquiz_monthly_description,
-      path: "/part-tiquiz-mensuel",
-    },
-    {
-      label: ld.tiquiz_yearly_label,
-      description: ld.tiquiz_yearly_description,
-      path: "/part-tiquiz-annuel",
-    },
-    {
-      label: ld.tipote_main_label,
-      description: ld.tipote_main_description,
-      path: "/affiliation",
-    },
-    {
-      label: ld.tipote_order_label,
-      description: ld.tipote_order_description,
-      path: "/commande",
-    },
-  ];
+  // Le slug est la source de verite (stable), le path est admin-editable
+  // (DB), le label/description vient de l'i18n locale par locale.
+  // Ordre = sort_order de la table (cf. getActiveLinkDestinations).
+  const I18N: Record<LinkDestinationSlug, { label: string; description: string }> = {
+    tiquiz_main:         { label: ld.tiquiz_main_label,         description: ld.tiquiz_main_description },
+    tiquiz_free:         { label: ld.tiquiz_free_label,         description: ld.tiquiz_free_description },
+    tiquiz_monthly:      { label: ld.tiquiz_monthly_label,      description: ld.tiquiz_monthly_description },
+    tiquiz_monthly_plus: { label: ld.tiquiz_monthly_plus_label, description: ld.tiquiz_monthly_plus_description },
+    tiquiz_yearly:       { label: ld.tiquiz_yearly_label,       description: ld.tiquiz_yearly_description },
+    tiquiz_yearly_plus:  { label: ld.tiquiz_yearly_plus_label,  description: ld.tiquiz_yearly_plus_description },
+    tipote_main:         { label: ld.tipote_main_label,         description: ld.tipote_main_description },
+    tipote_order:        { label: ld.tipote_order_label,        description: ld.tipote_order_description },
+  };
+  const out: LinkItem[] = [];
+  for (const [slug, path] of pathBySlug) {
+    const meta = I18N[slug];
+    if (!meta) continue;
+    out.push({ label: meta.label, description: meta.description, path });
+  }
+  return out;
 }
 
 export default async function PromouvoirPage({
@@ -68,12 +62,25 @@ export default async function PromouvoirPage({
   if (!session) redirect("/login");
 
   const t = getDict(normaliseLocale(session.locale));
-  const LINK_DESTINATIONS = buildLinkDestinations(t.link_destinations);
+  // Source admin-editable des destinations (cf. /affiliate/admin/links).
+  // L'ordre respecte sort_order de la table. Si la table est absente
+  // (avant migration), getActiveLinkDestinations retombe sur le seed
+  // hard-code dans lib/affiliate/linkDestinations.ts.
+  const activeDestinations = await getActiveLinkDestinations();
+  const pathBySlug = new Map<LinkDestinationSlug, string>(
+    activeDestinations.map((d) => [d.slug, d.path]),
+  );
+  const LINK_DESTINATIONS = buildLinkDestinations(t.link_destinations, pathBySlug);
   // MARCHÉ de diffusion choisi (≠ langue d'interface) : pilote le domaine des
   // liens (FR → tipote.fr, EN → tipote.blog). Défaut = langue de l'affilié.
   const sp = await searchParams;
   const market = resolveAffiliateMarket(sp.locale, session.locale);
-  const baseLink = buildAffiliateLink(market, "/tiquiz/affiliation", session.sa);
+  // Lien principal = slug tiquiz_main (path admin-editable). Avant le 8 juin
+  // 2026 c'etait code en dur "/tiquiz/affiliation" qui n'existe pas chez
+  // Systeme.io -> les affilies perdaient leur commission. Maintenant lu
+  // depuis la table (defaut /part-tiquiz).
+  const mainPath = await getLinkPath("tiquiz_main");
+  const baseLink = buildAffiliateLink(market, mainPath, session.sa);
   // Articles de blog du marché courant — 20 derniers, antéchrono. Best-effort :
   // si le feed est down, on retourne tableau vide et la section n'affiche rien.
   const blogMarket: "fr" | "en" = market === "en" ? "en" : "fr";
@@ -127,6 +134,20 @@ export default async function PromouvoirPage({
         </CardHeader>
         <CardContent>
           <AffiliateLinkCopy url={baseLink} />
+        </CardContent>
+      </Card>
+
+      {/* Garde-fou Bene 8 juin 2026 : l'URL "nue" tipote.fr/tiquiz n'est
+          PAS taggee affiliation cote Systeme.io, donc un affilie qui la
+          partage par habitude perd sa commission. On previent ici car
+          plusieurs ont remonte le piege. */}
+      <Card className="border-destructive/40 bg-destructive/5">
+        <CardContent className="pt-5 flex gap-3">
+          <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-destructive">{t.promouvoir.warning_naked_url_title}</p>
+            <p className="text-muted-foreground mt-1">{t.promouvoir.warning_naked_url_body}</p>
+          </div>
         </CardContent>
       </Card>
 

@@ -188,6 +188,10 @@ export const IT: AffiliateDict = {
     tiquiz_monthly_description: "Quiz e risposte illimitati, senza impegno.",
     tiquiz_yearly_label: "Tiquiz annuale (90 €/anno)",
     tiquiz_yearly_description: "2 mesi gratis vs mensile.",
+    tiquiz_monthly_plus_label: "Tiquiz mensile Plus",
+    tiquiz_monthly_plus_description: "Multi-profili, analisi IA, multi-chiavi API.",
+    tiquiz_yearly_plus_label: "Tiquiz annuale Plus",
+    tiquiz_yearly_plus_description: "Il livello Plus, fatturazione annuale con mesi gratis.",
     tipote_main_label: "Pagina principale Tipote",
     tipote_main_description: "Affiliazione Tipote (l'estensione di pod di engagement LinkedIn).",
     tipote_order_label: "Ordine Tipote",
@@ -201,6 +205,8 @@ export const IT: AffiliateDict = {
     market_hint: "I tuoi link puntano al sito del mercato {market}. Cambia mercato se ti rivolgi a un altro pubblico.",
     main_link_title: "Link affiliato principale",
     main_link_description: "Il tuo link tracciato universale. Più sotto trovi le varianti per destinazione.",
+    warning_naked_url_title: "Attenzione: NON condividere mai tipote.fr/tiquiz così com'è",
+    warning_naked_url_body: "Questo URL NON è taggato come affiliazione su Systeme.io. Se lo condividi senza ?sa=, NON guadagni commissioni. Usa sempre uno dei link qui sotto (contengono il tuo ID di tracking).",
     tab_links: "Link",
     tab_emails: "Email",
     tab_posts: "Social",
@@ -405,7 +411,7 @@ export const IT: AffiliateDict = {
     step1_body_2: "Ecco i 5 passi da sapere per partire forte.",
     step2_title: "Il tuo link affiliato tracciato",
     step2_subtitle: "L'unica cosa da ricordare per guadagnare commissioni.",
-    step2_body_intro: "Nella scheda Promuovere trovi il link principale: tipote.fr/tiquiz/affiliation?sa=tuo_id",
+    step2_body_intro: "Nella scheda Promuovere trovi il link principale: tipote.fr/part-tiquiz?sa=tuo_id",
     step2_bullet_cookie:
       "Cookie di 90 giorni - anche se il cliente acquista 3 mesi dopo il clic, guadagni tu.",
     step2_bullet_lasttouch:

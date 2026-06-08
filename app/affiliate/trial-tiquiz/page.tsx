@@ -216,8 +216,12 @@ function TrialExpired({ expiresAt, t, locale }: { expiresAt: Date; t: AffiliateD
         <p className="text-sm text-muted-foreground leading-relaxed">{t.trial.expired_body_2}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button asChild>
+            {/* /part-tiquiz au lieu de /tiquiz : meme contenu, mais
+                /tiquiz nu n'est PAS tagge affiliation cote SIO (drame
+                Bene 8 juin 2026). Coherence avec ce qu'on demande aux
+                affilies de partager. */}
             <a
-              href="https://www.tipote.fr/tiquiz"
+              href="https://www.tipote.fr/part-tiquiz"
               target="_blank"
               rel="noopener noreferrer"
             >

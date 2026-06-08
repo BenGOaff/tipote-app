@@ -188,6 +188,10 @@ export const ES: AffiliateDict = {
     tiquiz_monthly_description: "Quizzes y respuestas ilimitados, sin compromiso.",
     tiquiz_yearly_label: "Tiquiz anual (90 €/año)",
     tiquiz_yearly_description: "2 meses gratis frente al mensual.",
+    tiquiz_monthly_plus_label: "Tiquiz mensual Plus",
+    tiquiz_monthly_plus_description: "Multi-perfiles, análisis IA, multi-claves API.",
+    tiquiz_yearly_plus_label: "Tiquiz anual Plus",
+    tiquiz_yearly_plus_description: "El nivel Plus, facturación anual con meses gratis.",
     tipote_main_label: "Página principal Tipote",
     tipote_main_description: "Afiliación Tipote (la extensión de pod de engagement de LinkedIn).",
     tipote_order_label: "Pedido Tipote",
@@ -201,6 +205,8 @@ export const ES: AffiliateDict = {
     market_hint: "Tus enlaces apuntan al sitio del mercado {market}. Cambia de mercado si te diriges a otra audiencia.",
     main_link_title: "Enlace de afiliado principal",
     main_link_description: "Tu enlace de seguimiento universal. Más abajo hay variantes por destino.",
+    warning_naked_url_title: "Atención: NUNCA compartas tipote.fr/tiquiz tal cual",
+    warning_naked_url_body: "Esta URL NO está etiquetada con afiliación en Systeme.io. Si la compartes sin ?sa=, NO ganas comisión. Usa siempre uno de los enlaces de abajo (incluyen tu ID de seguimiento).",
     tab_links: "Enlaces",
     tab_emails: "Emails",
     tab_posts: "Redes",
@@ -405,7 +411,7 @@ export const ES: AffiliateDict = {
     step1_body_2: "Estos son los 5 pasos que debes saber para empezar con fuerza.",
     step2_title: "Tu enlace de afiliado con seguimiento",
     step2_subtitle: "Lo único que recordar para ganar comisiones.",
-    step2_body_intro: "En la pestaña Promocionar encontrarás tu enlace principal: tipote.fr/tiquiz/affiliation?sa=tu_id",
+    step2_body_intro: "En la pestaña Promocionar encontrarás tu enlace principal: tipote.fr/part-tiquiz?sa=tu_id",
     step2_bullet_cookie:
       "Cookie de 90 días - aunque el cliente compre 3 meses tras su clic, ganas tú.",
     step2_bullet_lasttouch:
