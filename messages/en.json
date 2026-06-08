@@ -126,7 +126,7 @@
     "useBrandingLogoLabel": "Use my branding logo",
     "useBrandingLogoDesc": "Display the logo defined in Settings → Project Branding instead of the emoji.",
     "logoPreview": "Branding logo preview",
-    "noBrandingLogoDefined": "No logo defined in the project branding — add one first.",
+    "noBrandingLogoDefined": "No logo defined in the project branding - add one first.",
     "noBrandingLogoConfigured": "No branding logo configured for this project yet."
   },
   "richTextEditor": {
@@ -249,13 +249,13 @@
     "noApiKeyLink": "Settings",
     "noApiKeyAfter": " to see your tags, courses and communities here.",
     "tagLabel": "Systeme.io tag",
-    "noTag": "— No tag —",
+    "noTag": "- No tag -",
     "tagPlaceholder": "Tag name",
     "courseLabel": "Systeme.io course",
-    "noCourse": "— No course —",
+    "noCourse": "- No course -",
     "coursePlaceholder": "Course ID",
     "communityLabel": "Systeme.io community",
-    "noCommunity": "— No community —",
+    "noCommunity": "- No community -",
     "communityPlaceholder": "Community ID"
   },
   "offerForm": {
@@ -449,7 +449,7 @@
     "shareSiteNameDesc": "Replaces \"Tipote\" under the share preview on iMessage / WhatsApp / social networks.",
     "shareSiteNameHint": "Leave empty → we'll show your domain ({fallback}).",
     "faviconTitle": "Favicon",
-    "faviconDesc": "Shown in the browser tab on this domain. PNG, JPG, SVG or ICO — auto-resized to 256×256 px.",
+    "faviconDesc": "Shown in the browser tab on this domain. PNG, JPG, SVG or ICO - auto-resized to 256×256 px.",
     "faviconUploadBtn": "Upload favicon",
     "faviconRemoveBtn": "Remove",
     "faviconUploaded": "Favicon uploaded",
@@ -458,7 +458,7 @@
     "saved": "Saved",
     "salesArgsNeedOffer": "First fill in the promise or the description of the offer",
     "salesArgsRegenerated": "Arguments regenerated",
-    "salesArgsGenerated": "Arguments generated — review and adjust if needed",
+    "salesArgsGenerated": "Arguments generated - review and adjust if needed",
     "salesArgsGenerationFailed": "Generation failed",
     "salesArgsSaved": "Arguments saved",
     "salesArgsSaveFailed": "Save failed",
@@ -496,7 +496,7 @@
     "sioNewTagPlaceholder": "New tag name",
     "sioTagsLoading": "Loading…",
     "sioLoadTags": "Load my tags",
-    "sioNoTag": "— No tag —",
+    "sioNoTag": "- No tag -",
     "sioCreateTag": "Create a new tag",
     "atTime": "at",
     "errorSending": "Send error",
@@ -522,7 +522,7 @@
     "unknown": "Unknown",
     "open": "Open",
     "renderError": "HTML render error",
-    "noDataShort": "—",
+    "noDataShort": "-",
     "serverError": "Server error",
     "noSSEStream": "No SSE stream",
     "cannotSave": "Could not save",
@@ -675,7 +675,7 @@
     "welcomeA11y": "Guided tour to get started with the app",
     "welcomeHeading": "Welcome{name, select, other { {name}} }!",
     "welcomeSubtitle": "I'm Tipote, your business partner.",
-    "welcomeBody": "In 2 minutes, I'll show you how everything works. But before creating anything, make sure to complete your settings — it's the key to truly personalised content!",
+    "welcomeBody": "In 2 minutes, I'll show you how everything works. But before creating anything, make sure to complete your settings - it's the key to truly personalised content!",
     "welcomeStep1": "Discover each tool at a glance",
     "welcomeStep2": "Complete your settings BEFORE creating (essential!)",
     "welcomeStep3": "Understand your personalised strategy",
@@ -689,9 +689,9 @@
     "completeBody": "You've seen all the tools. Now the most important step before creating anything: complete your settings so Tipote generates truly personalised content.",
     "completeTip": "Set up your essentials",
     "completeTipDesc": "Before creating, fill in your offers, refine your positioning and check your persona. Click your profile photo (top right) to access settings. The more complete, the better your content!",
-    "completeTipOffers": "Your offers — describe them so Tipote can weave them into your content",
-    "completeTipPositioning": "Your positioning — refine your target and message after onboarding",
-    "completeTipPersona": "Your persona — check that the ideal client profile matches your reality",
+    "completeTipOffers": "Your offers - describe them so Tipote can weave them into your content",
+    "completeTipPositioning": "Your positioning - refine your target and message after onboarding",
+    "completeTipPersona": "Your persona - check that the ideal client profile matches your reality",
     "completeGoSettings": "Complete my settings",
     "completeExplore": "Explore on my own",
     "completeOptOut": "Don't show me this guide again",
@@ -702,22 +702,22 @@
     "helpRestart": "Restart the guided tour",
     "skipTour": "Exit tour",
     "next": "Next",
-    "tooltipToday": "Today — your daily home page. Find your priority tasks, key stats and a summary of your progress.",
-    "tooltipStrategy": "Strategy — your personalised roadmap. 3-phase action plan, offer pyramid and target persona. You can adjust everything.",
-    "tooltipCreate": "Create — generate posts, emails, articles, video scripts, offers, pages, quizzes and editorial strategy. Each generation uses AI credits.",
-    "tooltipContents": "My Content — everything you've created, organised by type. Editorial calendar, publication scheduling, quiz and page tracking.",
-    "tooltipTemplates": "Templates — ready-to-use Systeme.io models, downloadable in one click. Included in your plan!",
-    "tooltipCredits": "AI Credits — your counter in the top right. Click it to see details or recharge.",
-    "tooltipAnalytics": "Analytics — enter your stats regularly so Tipote can refine your strategy and give you a personalised AI diagnosis.",
-    "tooltipPepites": "Gems — business tips that appear over time. The red badge means something new!",
-    "tooltipSettingsProfile": "Profile — your info, storytelling, offers and links. Access settings via your profile photo in the top right.",
-    "tooltipSettingsConnections": "Connections — connect your social networks to publish directly. Also set up your Systeme.io API key here.",
-    "tooltipSettingsReglages": "Settings — content language and key info about your business. The more complete, the better Tipote understands you!",
-    "tooltipSettingsPositioning": "Positioning — THE most important setting! Refine your target, message and positioning after onboarding. This powers all your content.",
-    "tooltipSettingsBranding": "Branding — your colours, fonts and logo so generated pages instantly match your brand.",
-    "tooltipSettingsAi": "AI & Credits — track your usage and customise the style of your auto-comments.",
-    "tooltipSettingsPricing": "Subscription — manage your plan: upgrade, downgrade or cancel independently.",
-    "tooltipCoach": "AI Coach — your personal adviser (PRO and ELITE plans). It knows your project and helps you make the right decisions.",
+    "tooltipToday": "Today - your daily home page. Find your priority tasks, key stats and a summary of your progress.",
+    "tooltipStrategy": "Strategy - your personalised roadmap. 3-phase action plan, offer pyramid and target persona. You can adjust everything.",
+    "tooltipCreate": "Create - generate posts, emails, articles, video scripts, offers, pages, quizzes and editorial strategy. Each generation uses AI credits.",
+    "tooltipContents": "My Content - everything you've created, organised by type. Editorial calendar, publication scheduling, quiz and page tracking.",
+    "tooltipTemplates": "Templates - ready-to-use Systeme.io models, downloadable in one click. Included in your plan!",
+    "tooltipCredits": "AI Credits - your counter in the top right. Click it to see details or recharge.",
+    "tooltipAnalytics": "Analytics - enter your stats regularly so Tipote can refine your strategy and give you a personalised AI diagnosis.",
+    "tooltipPepites": "Gems - business tips that appear over time. The red badge means something new!",
+    "tooltipSettingsProfile": "Profile - your info, storytelling, offers and links. Access settings via your profile photo in the top right.",
+    "tooltipSettingsConnections": "Connections - connect your social networks to publish directly. Also set up your Systeme.io API key here.",
+    "tooltipSettingsReglages": "Settings - content language and key info about your business. The more complete, the better Tipote understands you!",
+    "tooltipSettingsPositioning": "Positioning - THE most important setting! Refine your target, message and positioning after onboarding. This powers all your content.",
+    "tooltipSettingsBranding": "Branding - your colours, fonts and logo so generated pages instantly match your brand.",
+    "tooltipSettingsAi": "AI & Credits - track your usage and customise the style of your auto-comments.",
+    "tooltipSettingsPricing": "Subscription - manage your plan: upgrade, downgrade or cancel independently.",
+    "tooltipCoach": "AI Coach - your personal adviser (PRO and ELITE plans). It knows your project and helps you make the right decisions.",
     "tooltipComplete": "Tour complete! Before creating, go complete your settings: offers, positioning and persona. Click your profile photo in the top right."
   },
   "errors": {
@@ -748,7 +748,7 @@
       "1": "Shall we craft content that converts?",
       "2": "A new day, a new opportunity ✨",
       "3": "What are we launching today?",
-      "4": "Your audience is waiting — let's go?"
+      "4": "Your audience is waiting - let's go?"
     },
     "weeklyGoal": {
       "objectiveLabel": "Goal of the week",
@@ -764,7 +764,7 @@
       },
       "shareAgain": {
         "title": "Share again this week",
-        "desc": "No new response this week — re-sharing often restarts the flow.",
+        "desc": "No new response this week - re-sharing often restarts the flow.",
         "cta": "View my projects"
       },
       "firstSurvey": {
@@ -799,7 +799,7 @@
       },
       "topPerformer": {
         "title": "\"{name}\" is converting hard",
-        "body": "Capture rate {rate}% — above average. Push it on your channels to amplify.",
+        "body": "Capture rate {rate}% - above average. Push it on your channels to amplify.",
         "cta": "Share the project"
       },
       "shipDrafts": {
@@ -884,7 +884,7 @@
       "videos": "Videos"
     },
     "empty": "No content yet",
-    "emptyDesc": "Kick off your first idea — the AI turns a quick brief into a post, email, article or video script in seconds.",
+    "emptyDesc": "Kick off your first idea - the AI turns a quick brief into a post, email, article or video script in seconds.",
     "emptyCta": "Create my first content",
     "status": {
       "published": "Published",
@@ -945,7 +945,7 @@
     "bannerSubtitle": "Actionable tips to boost your business.",
     "title": "Your gem collection",
     "subtitle": "A new one arrives from time to time… and you never know exactly when 😄",
-    "inspiredBy": "Inspired by Jean Rivière — thanks for the inspiration 🙏",
+    "inspiredBy": "Inspired by Jean Rivière - thanks for the inspiration 🙏",
     "refresh": "Refresh",
     "add": "Add",
     "addTitle": "Add a gem",
@@ -1061,7 +1061,7 @@
     "successTitle": "Published on {platform}!",
     "successDesc": "Your post is live on {platform}.",
     "successAutoAfter": "Your post is live on {platform}. Tipote continues commenting in the background.",
-    "automationLinked": "Automation linked to this post — DMs will trigger on comments of this post only.",
+    "automationLinked": "Automation linked to this post - DMs will trigger on comments of this post only.",
     "viewOnPlatform": "View on {platform}",
     "errorTitle": "Publishing error",
     "retry": "Retry",
@@ -1135,7 +1135,7 @@
     "upsell": {
       "title": "Boost your engagement automatically",
       "body": "Auto-commenting allows Tipote to automatically comment on posts similar to yours to increase your visibility and attract new followers. Comments are AI-generated using your tone and style.",
-      "bullet1": "2–5 comments before and after each publication",
+      "bullet1": "2-5 comments before and after each publication",
       "bullet2": "Style and tone personalised to your profile",
       "bullet3": "Varied angles: agreement, debate, question, elaboration",
       "bullet4": "Built-in anti-spam protection",
@@ -1244,7 +1244,7 @@
       "title": "Connections",
       "description": "Manage your integrations and connected accounts.",
       "autoTitle": "Automate what happens after capture",
-      "autoDesc": "Once a visitor converts (quiz, page, survey…), Tipote tags the contact in Systeme.io. That tag can trigger an automation — adding to a campaign, granting course access, adding to a community, etc. Everything is configured in Systeme.io, no code required.",
+      "autoDesc": "Once a visitor converts (quiz, page, survey…), Tipote tags the contact in Systeme.io. That tag can trigger an automation - adding to a campaign, granting course access, adding to a community, etc. Everything is configured in Systeme.io, no code required.",
       "autoStep1Title": "Create your tags in Systeme.io before building your content",
       "autoStep1P1": "In Systeme.io > Contacts > Tags, create one tag per scenario you want to automate. Examples: quiz-visionary, capture-ebook, webinar-X-capture, quiz-share (for visitors who shared).",
       "autoStep1P2": "Then, when creating your quiz / page / survey in Tipote, attach those tags to the matching result or conversion (Systeme.io tag field).",
@@ -1260,13 +1260,13 @@
       "autoStep3Title": "What happens when a visitor converts",
       "autoStep3P": "The visitor enters their email → Tipote creates (or updates) the contact in Systeme.io and applies the matching tag. Systeme.io detects the tag and runs every action in your rule. Zero clicks on your end.",
       "autoTestTitle": "Important when testing",
-      "autoTestP": "Systeme.io will NOT re-fire an automation if the tag is already on your test email. Before every new test, go to Contacts, open your test contact, and remove the tag manually — otherwise you'll see the contact in Systeme.io but the rule won't trigger, and you'll think it's broken.",
-      "autoLinkSio": "Official Systeme.io guide — workflows & automations"
+      "autoTestP": "Systeme.io will NOT re-fire an automation if the tag is already on your test email. Before every new test, go to Contacts, open your test contact, and remove the tag manually - otherwise you'll see the contact in Systeme.io but the rule won't trigger, and you'll think it's broken.",
+      "autoLinkSio": "Official Systeme.io guide - workflows & automations"
     },
     "reglages": {
       "langTitle": "Language and content",
       "uiLangLabel": "Interface language",
-      "uiLangDesc": "Tipote display language — the change applies immediately.",
+      "uiLangDesc": "Tipote display language - the change applies immediately.",
       "contentLangLabel": "Generated content language",
       "contentLangHint": "Default language for AI-generated quizzes and content. You can still override it on any specific quiz.",
       "contentLangPlaceholder": "Pick a language",
@@ -1307,7 +1307,7 @@
       "offerTarget": "Target audience",
       "offerTargetPlaceholder": "e.g. Entrepreneurs and freelancers who want to sell online",
       "offerDesc": "Short description",
-      "offerDescPlaceholder": "In 2–3 sentences, describe what your offer includes and the expected outcome",
+      "offerDescPlaceholder": "In 2-3 sentences, describe what your offer includes and the expected outcome",
       "offerFormat": "Format",
       "offerFormatPlaceholder": "e.g. Video, PDF, coaching, ebook...",
       "offerLink": "Sales / payment link",
@@ -1348,14 +1348,14 @@
       "generatedOfferSaved": "Generated offer updated",
       "priceMin": "Min price (€)",
       "priceMax": "Max price (€)",
-      "trackingDefaultsTitle": "Tracking & Ads — defaults",
+      "trackingDefaultsTitle": "Tracking & Ads - defaults",
       "trackingDefaultsDesc": "These IDs are automatically applied to your new quizzes. You can override them in the quiz editor.",
       "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
       "trackingDefaultsMetaHelp": "Find my Pixel ID in Meta Events Manager",
-      "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+      "trackingDefaultsGa4Label": "Google Analytics 4 - Measurement ID",
       "trackingDefaultsGa4Help": "Find my ID in Google Analytics",
-      "trackingDefaultsAdsIdLabel": "Google Ads — Conversion ID",
-      "trackingDefaultsAdsLabelLabel": "Google Ads — Conversion Label",
+      "trackingDefaultsAdsIdLabel": "Google Ads - Conversion ID",
+      "trackingDefaultsAdsLabelLabel": "Google Ads - Conversion Label",
       "trackingDefaultsAdsHelp": "Find my Google Ads IDs"
     },
     "positioningTab": {
@@ -1422,7 +1422,7 @@
     "nextStep": "Next step",
     "thisWeek": "This week",
     "encourageSummary": {
-      "started": "You worked on \"{actions}\" — great start!",
+      "started": "You worked on \"{actions}\" - great start!",
       "momentum": "You've completed {done}/{total} steps, including \"{actions}\". Keep it up!",
       "halfWay": "Already {pct}% done, including \"{actions}\". You're on a roll!",
       "almostDone": "Almost there! {pct}% complete, including \"{actions}\". The finish line is close!"
@@ -1465,9 +1465,9 @@
       "email": "prepared your emails",
       "contenu": "planned your content",
       "other": "made progress on {label}",
-      "one": "You've {item} — great!",
-      "two": "You've {item1} and {item2} — great!",
-      "many": "You've {items} and {last} — amazing!"
+      "one": "You've {item} - great!",
+      "two": "You've {item1} and {item2} - great!",
+      "many": "You've {items} and {last} - amazing!"
     },
     "coaching": {
       "noStrategy": {
@@ -1480,7 +1480,7 @@
       },
       "allDone": {
         "recommendation": "you created new content to keep this momentum",
-        "why": "— your foundation is solid, it's time to step it up"
+        "why": "- your foundation is solid, it's time to step it up"
       },
       "autre": {
         "recommendation": "you need to keep making progress on your ongoing tasks",
@@ -1820,7 +1820,7 @@
     "offerRangeLabel": "Range / tier",
     "savingOffers": "Saving...",
     "saveOffers": "Save offers",
-    "scenariosAvailable": "{n} scenarios available — choice on /strategy/pyramids."
+    "scenariosAvailable": "{n} scenarios available - choice on /strategy/pyramids."
   },
   "onboarding": {
     "title": "Welcome to Tipote",
@@ -1851,10 +1851,10 @@
         "question": "What's your monthly revenue goal?",
         "options": {
           "lt500": "Less than €500",
-          "500_1k": "€500 – €1,000",
-          "1k_3k": "€1,000 – €3,000",
-          "3k_5k": "€3,000 – €5,000",
-          "5k_10k": "€5,000 – €10,000",
+          "500_1k": "€500 - €1,000",
+          "1k_3k": "€1,000 - €3,000",
+          "3k_5k": "€3,000 - €5,000",
+          "5k_10k": "€5,000 - €10,000",
           "gt10k": "More than €10,000"
         }
       },
@@ -1906,9 +1906,9 @@
         "question": "How many hours per week can you dedicate to your business?",
         "options": {
           "lt5": "Less than 5h",
-          "5_10": "5 – 10h",
-          "10_20": "10 – 20h",
-          "20_30": "20 – 30h",
+          "5_10": "5 - 10h",
+          "10_20": "10 - 20h",
+          "20_30": "20 - 30h",
           "gt30": "More than 30h"
         }
       },
@@ -1999,15 +1999,15 @@
         "options": {
           "0": "€0 (no sales yet)",
           "lt500": "Less than €500",
-          "500_1k": "€500 – €1,000",
-          "1k_3k": "€1,000 – €3,000",
-          "3k_5k": "€3,000 – €5,000",
+          "500_1k": "€500 - €1,000",
+          "1k_3k": "€1,000 - €3,000",
+          "3k_5k": "€3,000 - €5,000",
           "gt5k": "More than €5,000"
         }
       },
       "clientTestimonials": {
         "question": "Share 2-3 client testimonials (what they said or felt).",
-        "placeholder": "e.g. \"Thanks to you I finally launched my course!\" — Marie"
+        "placeholder": "e.g. \"Thanks to you I finally launched my course!\" - Marie"
       },
       "offers": {
         "question": "What are your current offers?",
@@ -2142,8 +2142,8 @@
     "statsTriggers": "{count} triggers",
     "statsDms": "{count} DMs sent",
     "hero": {
-      "title": "Social Automations — ManyChat Style",
-      "description": "Detect keywords in comments and automatically send a personalized DM on Instagram and Facebook. Capture emails, send free resources — on autopilot."
+      "title": "Social Automations - ManyChat Style",
+      "description": "Detect keywords in comments and automatically send a personalized DM on Instagram and Facebook. Capture emails, send free resources - on autopilot."
     },
     "platformsTitle": "Platform availability",
     "status": {
@@ -2151,9 +2151,9 @@
       "soon": "Coming soon",
       "unavailable": "Not available"
     },
-    "xNote": "X/Twitter: DM API requires a Pro plan at $5,000/month — not viable. Threads: DM API is not yet available for developers.",
+    "xNote": "X/Twitter: DM API requires a Pro plan at $5,000/month - not viable. Threads: DM API is not yet available for developers.",
     "setup": {
-      "title": "Setup required — Missing Supabase table",
+      "title": "Setup required - Missing Supabase table",
       "description": "Copy this SQL and run it in the Supabase SQL editor to create the automations table.",
       "instructions": "Supabase → SQL Editor → New Query → Paste → Run"
     },
@@ -2178,7 +2178,7 @@
       }
     },
     "rgpd": {
-      "title": "GDPR compliance — what we do",
+      "title": "GDPR compliance - what we do",
       "description": "The user initiates contact by commenting → implicit consent. Every DM automatically includes 'Reply STOP to unsubscribe'. Meta's 24h window naturally limits unsolicited messages."
     },
     "listTitle": "My automations",
@@ -2221,7 +2221,7 @@
       "platforms": "Platforms",
       "keyword": "Trigger keyword",
       "keywordPlaceholder": "E.g.: PDF",
-      "keywordHint": "Case-insensitive — any comment containing this word will trigger the automation.",
+      "keywordHint": "Case-insensitive - any comment containing this word will trigger the automation.",
       "dmMessage": "DM message",
       "firstDmMessage": "First DM message",
       "dmMessagePlaceholder": "Hey {{firstname}}! Here's your guide: [link]\n\nReply STOP to unsubscribe.",
@@ -2233,7 +2233,7 @@
       "systemeioTag": "systeme.io tag",
       "systemeioTagPlaceholder": "E.g.: lead-pdf-guide",
       "systemeioTagHint": "This tag will be assigned to the contact in systeme.io to trigger your email automations.",
-      "rgpdNote": "Every DM will automatically include a STOP mention. The user initiated contact by commenting — this is the implicit consent compliant with GDPR and Meta policies.",
+      "rgpdNote": "Every DM will automatically include a STOP mention. The user initiated contact by commenting - this is the implicit consent compliant with GDPR and Meta policies.",
       "cancel": "Cancel",
       "save": "Save",
       "saving": "Saving…",
@@ -2307,7 +2307,7 @@
       "run": "Test",
       "simulateHint": "Simulate a comment containing your keyword to check that everything works.",
       "placeholder": "e.g. {keyword}",
-      "webhookMissingHint": "Your Instagram account is not subscribed to the Meta webhook (POST /{ig-user-id}/subscribed_apps missing). Without this, no realtime events fire — so even if the test passes, real comments won't trigger anything.",
+      "webhookMissingHint": "Your Instagram account is not subscribed to the Meta webhook (POST /{ig-user-id}/subscribed_apps missing). Without this, no realtime events fire - so even if the test passes, real comments won't trigger anything.",
       "resubscribeAction": "Re-subscribe Instagram webhook",
       "resubscribing": "Subscribing…",
       "resubscribeOk": "✓ Webhook re-subscribed (fields: {fields}). Retry the test or post a real comment.",
@@ -2341,7 +2341,7 @@
     "creditPerComment": "0.25 credit per comment",
     "upsellTitle": "Boost your engagement with auto-comments",
     "upsellBody": "Tipote automatically comments on posts similar to yours to increase your visibility. Available with Pro (€49/month) and Elite (€99/month) plans.",
-    "unsupportedLinkedin": "LinkedIn requires partner approval (MDP) — auto-comments are not available at this time.",
+    "unsupportedLinkedin": "LinkedIn requires partner approval (MDP) - auto-comments are not available at this time.",
     "unsupportedGeneric": "This platform does not support auto-comments at this time.",
     "policyWarning": "Auto-comments on Instagram use the official API. Comments are posted on public posts related to your niche to increase your visibility."
   },
@@ -2404,7 +2404,7 @@
     "videoAddedDesc": "{name} ({size}) uploaded.",
     "uploading": "Uploading...",
     "dropText": "Drag your video here or click to browse",
-    "videoStorageHint": "The video will be stored in Supabase Storage — the URL remains valid even for scheduled posts.",
+    "videoStorageHint": "The video will be stored in Supabase Storage - the URL remains valid even for scheduled posts.",
     "deleteLabel": "Delete {name}",
     "uploadNetworkError": "Network error during upload",
     "gifReelNotice": "The animated GIF will be published as a video on Facebook (Reel) to preserve the animation."
@@ -2502,7 +2502,7 @@
     "placeholderEmail": "Email goal, context, offer, target, tone…\nEx: follow-up email after discovery call, direct tone, CTA to book a call.",
     "placeholderBlog": "Topic, angle, target, keywords (if any), length…\nEx: \"How to find your first 10 B2B clients\", pedagogical tone, H2/H3 outline.",
     "placeholderScript": "Topic, format (Reel/TikTok/YouTube), duration, target, tone…\nEx: 45s, strong hook, 3 points, CTA to lead magnet.",
-    "placeholderPost": "Topic, angle, target, goal, style…\nEx: LinkedIn storytelling post, 180–240 words, direct tone, 1 CTA."
+    "placeholderPost": "Topic, angle, target, goal, style…\nEx: LinkedIn storytelling post, 180-240 words, direct tone, 1 CTA."
   },
   "createHub": {
     "title": "Create content",
@@ -2531,7 +2531,7 @@
       "1": "Digging into the angle that hits your audience…",
       "2": "Shaping the hook so it lands on line one…",
       "3": "Polishing the voice so it sounds like you…",
-      "4": "Just a few seconds more — promise it's worth it ✨"
+      "4": "Just a few seconds more - promise it's worth it ✨"
     },
     "titleLabel": "Title *",
     "titlePlaceholder": "E.g.: LinkedIn post about productivity",
@@ -2569,13 +2569,13 @@
   },
   "executionFeedback": {
     "softStart": "Smooth start",
-    "softStartBody": "Add 1–2 simple tasks and complete the first one today. Small steps, big impact.",
+    "softStartBody": "Add 1-2 simple tasks and complete the first one today. Small steps, big impact.",
     "excellentPace": "Excellent pace",
     "excellentPaceBody": "You're in a great groove. Keep this level and just avoid overloading your day.",
     "goodCourse": "Good track",
     "goodCourseBody": "You're progressing well. To level up, lock in a quick easy task first, then tackle the core work.",
     "relaunch": "Let's get back on track",
-    "relaunchBody": "Pick ONE ultra-simple action right now (5–10 min) to regain momentum.",
+    "relaunchBody": "Pick ONE ultra-simple action right now (5-10 min) to regain momentum.",
     "oneStep": "One step, right now",
     "oneStepBody": "Start with the smallest possible task. The goal: a first check mark today."
   },
@@ -2667,7 +2667,7 @@
     "premiumNote": "Premium coach = Pro/Elite. 3 tips/month for free. Upgrade for unlimited coaching + actions.",
     "networkError": "Network error. Try again.",
     "fallbackResponse": "Ok. Give me 1 detail and we'll move forward.",
-    "errorRetry": "Oops — I had an issue. Try again in 10 seconds.",
+    "errorRetry": "Oops - I had an issue. Try again in 10 seconds.",
     "writePlaceholder": "Write like to a buddy…",
     "rejectPrompt": "Why do you refuse? (optional)",
     "copied": "Copied!",
@@ -2775,7 +2775,7 @@
     "yes": "Yes",
     "no": "No",
     "noLeads": "No leads yet",
-    "showing": "{from}–{to} of {total}",
+    "showing": "{from}-{to} of {total}",
     "leadDetail": "Lead detail",
     "firstName": "First name",
     "lastName": "Last name",
@@ -2839,7 +2839,7 @@
     "embedCodesHelp": "Copy these codes and paste them into your Systeme.io page settings or your website HTML.",
     "displayCode": "Capture / sales page (recommended)",
     "displayCodeHelp": "Paste this code on your capture page. It displays notifications AND automatically captures the first name when a visitor signs up.",
-    "signupPixel": "Signup pixel (thank-you page — optional)",
+    "signupPixel": "Signup pixel (thank-you page - optional)",
     "signupPixelHelp": "Optional: paste on the thank-you page if you also want to show notifications there.",
     "purchasePixel": "Purchase pixel (order confirmation page)",
     "purchasePixelHelp": "Paste this code on the confirmation page after a payment.",
@@ -3572,7 +3572,7 @@
     "directChangesConfirm": "Continue anyway?",
     "publishFailed": "Publish failed: {err}",
     "networkError": "network error",
-    "missingColumnsHint": " (a column may be missing — the latest Supabase migrations must be applied)",
+    "missingColumnsHint": " (a column may be missing - the latest Supabase migrations must be applied)",
     "thankYouSaveFailed": "Unable to save the thank-you page: {err}",
     "liveChanges": "Live changes",
     "linkDialog": {
@@ -3998,7 +3998,7 @@
     "aiCtaPlaceholder": "E.g.: Book a discovery call…",
     "aiIntentionLabel": "Why are you creating this quiz?",
     "aiIntentionPlaceholder": "E.g.: Invite to try Tiquiz, offer a free audit, propose training matched to profile, guide to my community…",
-    "aiIntentionHint": "Your concrete business goal — the AI generates a CTA specific to each result so visitors move toward it naturally.",
+    "aiIntentionHint": "Your concrete business goal - the AI generates a CTA specific to each result so visitors move toward it naturally.",
     "aiBonusLabel": "Bonus to offer",
     "aiBonusPlaceholder": "E.g.: Free PDF guide…",
     "aiGenerateError": "Generation failed. Check your connection and try again.",
@@ -4007,13 +4007,13 @@
     "aiGenerate": "Generate quiz",
     "aiGenerating": "Generating…",
     "aiGenerated": "Quiz generated! You can edit it before saving.",
-    "aiObjectivePick": "— Pick an objective —",
+    "aiObjectivePick": "- Pick an objective -",
     "aiObjectiveMulti": "Select one or more objectives for your quiz",
     "aiFormatLabel": "Quiz format",
     "aiFormatShort": "Short",
-    "aiFormatShortDesc": "3-5 questions — quick conversions",
+    "aiFormatShortDesc": "3-5 questions - quick conversions",
     "aiFormatLong": "Long",
-    "aiFormatLongDesc": "8-12 questions — more value",
+    "aiFormatLongDesc": "8-12 questions - more value",
     "aiSegmentationLabel": "Segmentation type",
     "aiSegProfile": "By profile",
     "aiSegProfileDesc": "Personality types, archetypes…",
@@ -4021,7 +4021,7 @@
     "aiSegLevelDesc": "Beginner, intermediate, expert…",
     "aiChatEntryLabel": "No idea? Brainstorm with AI →",
     "aiChatTitle": "Brainstorm your quiz idea",
-    "aiChatDescription": "Answer in a few sentences — I'll suggest angles matched to your business.",
+    "aiChatDescription": "Answer in a few sentences - I'll suggest angles matched to your business.",
     "aiChatKickoff": "Help me find a good quiz idea for my business.",
     "aiChatPlaceholder": "Your answer…",
     "aiChatError": "Something went wrong. Try again or use the direct form.",
@@ -4043,7 +4043,7 @@
     "errImportPrefix": "Import error: {msg}",
     "importSuccess": "Quiz imported successfully!",
     "importIntro": "Import a .txt, .docx or .pdf file with your questions and answers (or a survey). The AI will structure the content into a quiz or survey (questions, options, results).",
-    "importFormatsAccepted": ".txt · .docx · .pdf — up to 10 MB / 50,000 characters",
+    "importFormatsAccepted": ".txt · .docx · .pdf - up to 10 MB / 50,000 characters",
     "importPdfDocxHint": "Tip: a scanned PDF (image only) won't work. Export your document to .docx or .txt if extraction fails.",
     "stepGeneral": "General info",
     "stepQuestions": "Questions",
@@ -4087,7 +4087,7 @@
     "importHow1": "Write your numbered questions (1. Question, 2. Question…)",
     "importHow2": "Under each question, list the possible answers (A. Answer, B. Answer…)",
     "importHow3": "Add a “Results” or “Profiles” section with a title and description for each profile",
-    "importHow4": "AI adapts to most formats — keep it simple!",
+    "importHow4": "AI adapts to most formats - keep it simple!",
     "aiConfigDesc": "AI will generate a complete quiz from your settings",
     "toneInspiring": "Inspiring",
     "toneProfessional": "Professional",
@@ -4132,7 +4132,7 @@
     "bonus": "bonus",
     "sioShareTagHintQF": "This tag will be added when a visitor shares the quiz. Create an automation in Systeme.io to deliver the bonus.",
     "tagsAssignedCount": "{current}/{total} profiles have a tag",
-    "noTagsConfigured": "No tag set — leads won't be sent to Systeme.io (you can do it later)",
+    "noTagsConfigured": "No tag set - leads won't be sent to Systeme.io (you can do it later)",
     "mainCtaLabel": "Main CTA (button text)",
     "ctaPerResultNote": "CTAs are configured individually on each result profile in the Results tab.",
     "capturePageTitle": "Email capture page",
@@ -4145,7 +4145,7 @@
     "shareBonusDesc": "Enable to encourage viral sharing",
     "bonusDescriptionLabel": "Bonus description",
     "creatingQuiz": "Creating your quiz…",
-    "importTxtOnly": ".txt only — max 50,000 characters",
+    "importTxtOnly": ".txt only - max 50,000 characters",
     "defaultConsentText": "By entering your email, you accept our privacy policy.",
     "toastNoApiKeyTitle": "Missing API key",
     "toastNoApiKeyDesc": "Set up your Systeme.io API key in Settings > Systeme.io.",
@@ -4154,7 +4154,7 @@
     "newTagPlaceholder": "New tag name",
     "loadingTags": "Loading...",
     "loadMyTags": "Load my tags",
-    "noTagOption": "— No tag —",
+    "noTagOption": "- No tag -",
     "toastRequiredFieldsTitle": "Required fields",
     "toastRequiredFieldsDesc": "Fill in at least the goal and the target.",
     "toastNoCreditsTitle": "Not enough credits",
@@ -4178,7 +4178,7 @@
     "bonusUnlockedHint": "Shown instead of the default message once the bonus is unlocked. Handy to deliver a promo code directly, with no email.",
     "previewModeTitle": "Open in preview mode (no lead recorded)",
     "previewModeTitleSurvey": "Open in preview mode (no response recorded)",
-    "readinessTitle": "{passed}/{total} steps — {percent}% ready",
+    "readinessTitle": "{passed}/{total} steps - {percent}% ready",
     "backToList": "Back to quizzes",
     "tabEdit": "Edit",
     "tabLeads": "Leads",
@@ -4361,7 +4361,7 @@
     "tieWarningTitle": "{count} possible ties between your results",
     "tieWarningHint": "Some answer combinations produce identical scores across 2 results. Detected pairs:",
     "tieWarningFallback": "In case of a tie, the visitor will always see the first result in order. Adjust points on an option to break the tie.",
-    "tieWarningTruncated": "(large quiz, partial analysis — there may be other ties not listed).",
+    "tieWarningTruncated": "(large quiz, partial analysis - there may be other ties not listed).",
     "optionShowOtherResults": "Show other profiles to the visitor",
     "optionShowOtherResultsHint": "Adds an accordion below the result with all the other possible profiles, in a neutral version (no first name or gender variants). Lets curious visitors discover what they missed.",
     "trackingPixelsTitle": "Tracking & Ads",
@@ -4369,10 +4369,10 @@
     "trackingApplyDefaults": "↺ Apply my defaults",
     "trackingMetaLabel": "Meta (Facebook) Pixel ID",
     "trackingMetaHelp": "Find my Pixel ID in Meta Events Manager →",
-    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Label": "Google Analytics 4 - Measurement ID",
     "trackingGa4Help": "Find my ID in Google Analytics →",
-    "trackingAdsIdLabel": "Google Ads — Conversion ID",
-    "trackingAdsLabelLabel": "Google Ads — Conversion Label",
+    "trackingAdsIdLabel": "Google Ads - Conversion ID",
+    "trackingAdsLabelLabel": "Google Ads - Conversion Label",
     "trackingAdsHelp": "Find my Google Ads IDs →",
     "trackingInvalidFormat": "Invalid format",
     "introImageAi": "Generate (AI)",
@@ -4402,7 +4402,7 @@
     "analyticsLeadsLabel": "Leads",
     "analyticsCaptureRateLabel": "Capture rate",
     "analyticsCaptureRateHint": "Leads / views (cumulative)",
-    "analyticsCaptureRateUnreliable": "Views partially tracked (embedded quiz or predates tracking) — rate reliable on new views",
+    "analyticsCaptureRateUnreliable": "Views partially tracked (embedded quiz or predates tracking) - rate reliable on new views",
     "analyticsExportSioLabel": "Systeme.io export",
     "analyticsExportSioHint": "% of leads tagged in SIO",
     "analyticsLeadsEvolution": "Leads evolution",
@@ -4423,7 +4423,7 @@
     "sidebarShareRequest": "Share prompt",
     "sidebarResultDanger": "No question leads to this result ({total} questions in total)",
     "sidebarResultWarn": "Only {leading}/{total} questions lead there",
-    "sidebarResultOk": "{leading}/{total} questions lead there — good balance",
+    "sidebarResultOk": "{leading}/{total} questions lead there - good balance",
     "designFontLabel": "Font",
     "designFontHint": "Live preview in the right panel.",
     "designColorsLabel": "Colors",
@@ -4463,7 +4463,7 @@
     "shuffleAnswers": "Shuffle answers",
     "optionClickAutoNext": "Clicking an option moves to the next question.",
     "resultUnreachable": "This result can never be assigned",
-    "resultLowChance": "Low chance of being assigned — {leading}/{total} questions lead there",
+    "resultLowChance": "Low chance of being assigned - {leading}/{total} questions lead there",
     "resultCoverageHint": "For a result to be chosen, several questions must lead there. Consider adjusting your question options or asking AI to rebalance.",
     "resultRebalanceAi": "Rebalance with AI",
     "resultSioTagTitle": "Systeme.io tag for this result",
@@ -4511,7 +4511,7 @@
       "d30": "30 days"
     },
     "platformsLabel": "Platforms",
-    "platformsHint": "You can pick several — content will be generated for each platform every day",
+    "platformsHint": "You can pick several - content will be generated for each platform every day",
     "goalsLabel": "Goals",
     "goals": {
       "visibility": "Visibility & awareness",
@@ -4526,7 +4526,7 @@
     "contextPlaceholder": "Product launch, event to promote, specific theme...",
     "generatingPlan": "Creating plan...",
     "generatePlanCta": "Generate strategic plan",
-    "planSummary": "{uniqueDays} days — {posts} posts across {platforms, plural, one {# platform} other {# platforms}}",
+    "planSummary": "{uniqueDays} days - {posts} posts across {platforms, plural, one {# platform} other {# platforms}}",
     "planEditHint": "Click the pencil to edit an idea before generating the content.",
     "generateAllCta": "Generate {count} {count, plural, one {piece} other {pieces}} ({count} {count, plural, one {credit} other {credits}})",
     "editPlan": "Edit",
@@ -4542,7 +4542,7 @@
     "viewAction": "View / Schedule / Publish",
     "editAction": "Edit",
     "scheduleOrPublish": "Schedule / Publish",
-    "editDialogTitle": "Edit — {day} ({platform}): {theme}",
+    "editDialogTitle": "Edit - {day} ({platform}): {theme}",
     "editGeneric": "Edit",
     "themeLabel": "Theme",
     "hookLabel": "Hook",
@@ -4600,7 +4600,7 @@
     "strengthsLabel": "Strengths",
     "weaknessesLabel": "Weaknesses",
     "addCompetitor": "Add a competitor",
-    "documentLoaded": "Document imported — context loaded ✓",
+    "documentLoaded": "Document imported - context loaded ✓",
     "documentLoadedHint": "AI analysis will use your document content on top of the info entered above.",
     "launchAi": "Launch AI analysis",
     "analysisInProgress": "Analysis in progress...",
@@ -4701,7 +4701,7 @@
       "preview": "Preview"
     },
     "dialogTitle": "Generate: {doc}",
-    "stepIndicator": "Step {step}/{total} — {label}",
+    "stepIndicator": "Step {step}/{total} - {label}",
     "alertTitle": "Important notice",
     "alertBody": "This generator produces template documents covering the most common cases. It does not replace advice from a qualified legal professional. For specific situations (health, finance, minors, regulated activities...), we strongly recommend having your documents reviewed by a lawyer.",
     "countryQuestion": "In which country is your business registered?",
@@ -4772,7 +4772,7 @@
     "selectOffer": "Select an offer",
     "noOffer": "No offer available",
     "offerLabel": "Your offer *",
-    "offerPlaceholder": "Ex: Instagram training for sports coaches – €297 – Includes 6 video modules, templates, and a private group…",
+    "offerPlaceholder": "Ex: Instagram training for sports coaches - €297 - Includes 6 video modules, templates, and a private group…",
     "offerHelp": "Describe your offer or paste an existing description. The more details, the better the result.",
     "offerName": "Offer name",
     "offerNamePlaceholder": "ex: 90-day action plan",
@@ -4844,7 +4844,7 @@
     "bonusImgHint": "Shown on the \"Share to unlock\" step when virality is active.",
     "shareTitle": "Allowed share networks",
     "shareHint": "If no box is checked, all default networks are offered to visitors.",
-    "sioTitle": "Systeme.io — Capture tag",
+    "sioTitle": "Systeme.io - Capture tag",
     "sioTag": "Tag applied to every captured lead",
     "sioTagHint": "Separate from result tags: this tag is applied to every email (regardless of result)."
   },
@@ -4868,7 +4868,7 @@
       },
       "video_script": {
         "label": "Video script",
-        "hint": "E.g. 45–60s script (hook, tension, value, CTA)."
+        "hint": "E.g. 45-60s script (hook, tension, value, CTA)."
       },
       "sales_page": {
         "label": "Sales page",
@@ -4948,7 +4948,7 @@
     "addSource": "Add the source",
     "fileTitle": "Title",
     "fileTitlePh": "Title (auto-filled from file)",
-    "fileUpload": "File (PDF, DOCX, TXT — max 5 MB)",
+    "fileUpload": "File (PDF, DOCX, TXT - max 5 MB)",
     "fileDrop": "Click or drop a file here",
     "fileImport": "Import the file",
     "toast": {
@@ -5144,7 +5144,7 @@
       "pageDeleted": "Page deleted"
     },
     "ui": {
-      "subtitle": "Posts, emails, articles, scripts and pages — all in one place.",
+      "subtitle": "Posts, emails, articles, scripts and pages - all in one place.",
       "search": "Search...",
       "elementOne": "item",
       "elementMany": "items",
@@ -5237,7 +5237,7 @@
         "Professional design that reflects your brand",
         "A capture page optimized for conversions"
       ],
-      "howToCreate": "Start by identifying your audience's #1 problem. Create actionable content they can apply immediately. Keep it essential — quick to consume but impactful.",
+      "howToCreate": "Start by identifying your audience's #1 problem. Create actionable content they can apply immediately. Keep it essential - quick to consume but impactful.",
       "howToPromote": [
         "Organic social posts with a clear CTA",
         "Targeted Facebook/Instagram ads to your capture page",
@@ -5247,7 +5247,7 @@
     },
     "low_ticket": {
       "why": "This offer converts leads into customers. It proves the value of your products and builds a purchase habit while generating early revenue.",
-      "whyPrice": "An accessible price (€47–€197) reduces purchase friction. High enough to attract serious buyers, low enough to be an impulse decision.",
+      "whyPrice": "An accessible price (€47-€197) reduces purchase friction. High enough to attract serious buyers, low enough to be an impulse decision.",
       "whatToCreate": [
         "A training or resource that builds on the lead magnet",
         "Templates, scripts or practical tools",
@@ -5431,11 +5431,11 @@
       "email": "Legal contact email",
       "telephone": "Phone",
       "siteUrl": "Website URL",
-      "registersFr": "Registers — France",
-      "registersBe": "Registers — Belgium",
-      "registersLu": "Registers — Luxembourg",
-      "registersCh": "Registers — Switzerland",
-      "registersCa": "Registers — Canada",
+      "registersFr": "Registers - France",
+      "registersBe": "Registers - Belgium",
+      "registersLu": "Registers - Luxembourg",
+      "registersCh": "Registers - Switzerland",
+      "registersCa": "Registers - Canada",
       "siren": "SIREN/SIRET number",
       "rcsVille": "RCS city",
       "rcsNumero": "RCS registration number",
@@ -5490,7 +5490,7 @@
       "zones": "Shipping zones",
       "zonesPh": "Metropolitan France, EU...",
       "delays": "Average delivery times",
-      "delaysPh": "3–5 business days",
+      "delaysPh": "3-5 business days",
       "fees": "Shipping fees",
       "feesPh": "Free from €50, otherwise €4.90",
       "refundHeader": "Withdrawal & refund",
@@ -5519,10 +5519,10 @@
   },
   "meta": {
     "rootTitle": "Tipote",
-    "rootDescription": "Tipote – strategic planning & business automations",
-    "supportTitle": "Tipote — Help Center",
+    "rootDescription": "Tipote - strategic planning & business automations",
+    "supportTitle": "Tipote - Help Center",
     "supportDescription": "Find answers to all your questions about Tipote",
-    "dataDeletionTitle": "Data deletion — Request received",
+    "dataDeletionTitle": "Data deletion - Request received",
     "dataDeletionIntro": "Your request to delete the data associated with Meta has been recorded.",
     "dataDeletionCodeLabel": "Confirmation code",
     "dataDeletionHelp": "If you need to speed things up or check the processing status, contact support with this code.",
@@ -5617,7 +5617,7 @@
     "aiCreditsCol": "AI credits",
     "modifiedBadge": "modified",
     "okBadge": "ok",
-    "deleteUserConfirm": "Permanently DELETE {who}?\n\nCascade: profile, projects, hosted pages, social connections, accounting data — everything will be destroyed. Irreversible."
+    "deleteUserConfirm": "Permanently DELETE {who}?\n\nCascade: profile, projects, hosted pages, social connections, accounting data - everything will be destroyed. Irreversible."
   },
   "adminTickets": {
     "statusOpen": "Open",
@@ -5648,7 +5648,7 @@
   },
   "quizVars": {
     "insertNameTitle": "Insert visitor's first name ({name})",
-    "insertGenderTitle": "Insert a gender-aware variant — masculine | feminine | non-binary (e.g. dear | dear | dear)"
+    "insertGenderTitle": "Insert a gender-aware variant - masculine | feminine | non-binary (e.g. dear | dear | dear)"
   },
   "survey": {
     "createTitle": "New survey",
@@ -5679,7 +5679,7 @@
     "importHint": "Upload your file (.txt, .docx, .pdf) OR paste your text below. AI will structure it as a survey.",
     "importPlaceholder": "Paste your survey questions here…",
     "importDropHint": "Drop your file here or click to select",
-    "importFormatsAccepted": ".txt · .docx · .pdf — up to 10 MB / 50,000 characters",
+    "importFormatsAccepted": ".txt · .docx · .pdf - up to 10 MB / 50,000 characters",
     "importFormatsNotice": "Format not supported. Accepted: .txt, .docx, .pdf (up to 10 MB).",
     "importFileTooLarge": "File exceeds 10 MB.",
     "importSelectFile": "Select a file",
@@ -5773,7 +5773,7 @@
       "reachedBadge": "Reached",
       "noObjective": {
         "title": "You haven't set a monthly goal",
-        "body": "Set a revenue target so Tipote can help you track it — just how much you want to earn per month. You can change it anytime.",
+        "body": "Set a revenue target so Tipote can help you track it - just how much you want to earn per month. You can change it anytime.",
         "cta": "Set my goal"
       },
       "noTransactions": {
@@ -5782,8 +5782,8 @@
       },
       "status": {
         "reached": "🎯 Goal reached! You earned {current} of the {target} planned.",
-        "closeOne": "Just {remaining} to go in {days} day — you've got this.",
-        "closeMany": "Just {remaining} to go in {days} days — you've got this.",
+        "closeOne": "Just {remaining} to go in {days} day - you've got this.",
+        "closeMany": "Just {remaining} to go in {days} days - you've got this.",
         "behindOne": "You have {remaining} left and only {days} day. Time for a push.",
         "behindMany": "You have {remaining} left and only {days} days. Time for a push.",
         "onTrackOne": "You have {remaining} left to earn in {days} day.",
@@ -5816,7 +5816,7 @@
     },
     "unsupported": {
       "title": "Coming soon for {country}",
-      "body": "Tipote's accounting help is currently available for: <strong>{countries}</strong>. We're rolling out other countries one by one — Belgium, Switzerland, Quebec, Portugal, Spain… are on the way.",
+      "body": "Tipote's accounting help is currently available for: <strong>{countries}</strong>. We're rolling out other countries one by one - Belgium, Switzerland, Quebec, Portugal, Spain… are on the way.",
       "noList": "<strong>No need to sign up to a waitlist</strong>: you'll be notified by email as soon as your country is opened, we identify you automatically.",
       "wrongCountry": "Wrong country? Fix it"
     },
@@ -5845,11 +5845,11 @@
         "vatSimplifie": "Simplified",
         "eurlIsOption": "Corporate tax (opt-in)",
         "eurlIrDefault": "Personal income tax (default)",
-        "sarlMajoritaire": "Majority shareholder (TNS — no DSN)",
+        "sarlMajoritaire": "Majority shareholder (TNS - no DSN)",
         "sarlMinoritaire": "Minority / equal (employee-assimilated)",
         "execYesUrssaf": "Yes (URSSAF + DSN)",
         "execNoDividends": "No (dividends only)",
-        "tnsUrssaf": "Self-employed — URSSAF contributions"
+        "tnsUrssaf": "Self-employed - URSSAF contributions"
       },
       "links": {
         "annuaireEntreprises": "View on annuaire-entreprises"
@@ -5871,7 +5871,7 @@
     },
     "connections": {
       "title": "My connections",
-      "subtitle": "Connect your payment tools so Tipote can automatically track your incoming payments. <strong>Only connect what you use</strong> — Stripe alone, PayPal alone, or both if you sell on both platforms. <strong>We sync once a day</strong>; click the button below to force an immediate update.",
+      "subtitle": "Connect your payment tools so Tipote can automatically track your incoming payments. <strong>Only connect what you use</strong> - Stripe alone, PayPal alone, or both if you sell on both platforms. <strong>We sync once a day</strong>; click the button below to force an immediate update.",
       "loading": "Loading your connections…",
       "syncNow": "Sync now",
       "connecting": "Connecting…",
@@ -5899,7 +5899,7 @@
       },
       "status": {
         "initialSyncing": "Initial sync in progress…",
-        "error": "Error — see details below",
+        "error": "Error - see details below",
         "syncedAt": "Synced {when}"
       },
       "relative": {
@@ -5912,7 +5912,7 @@
       "syncToast": {
         "upToDate": "{count} connection(s) up to date",
         "noNew": "No new transactions",
-        "failed": "{count} connection(s) failed — check below",
+        "failed": "{count} connection(s) failed - check below",
         "error": "Sync error"
       },
       "errors": {
@@ -5934,7 +5934,7 @@
       },
       "stripeForm": {
         "heading": "Connect Stripe",
-        "intro": "We need a read-only <strong>Restricted Key</strong>. You stay in full control — you can revoke it any time from your Stripe dashboard.",
+        "intro": "We need a read-only <strong>Restricted Key</strong>. You stay in full control - you can revoke it any time from your Stripe dashboard.",
         "guideTitle": "How to create the key in 30 seconds:",
         "step1Prefix": "Open",
         "step1Link": "dashboard.stripe.com → Restricted keys → Create",
@@ -5952,16 +5952,16 @@
       },
       "paypalForm": {
         "heading": "Connect PayPal",
-        "intro": "PayPal requires a <strong>developer app</strong> with a (Client ID, Secret) pair. You stay in control — you can revoke the app any time from your developer.paypal.com dashboard.",
+        "intro": "PayPal requires a <strong>developer app</strong> with a (Client ID, Secret) pair. You stay in control - you can revoke the app any time from your developer.paypal.com dashboard.",
         "guideTitle": "How to create the app in 1 minute:",
         "step1Prefix": "Open",
         "step1Link": "developer.paypal.com → Apps & Credentials → Create App",
-        "step2": "Name: <code1>Tipote Compta</code1> (PayPal doesn't accept dashes or parentheses) — Type: <code2>Merchant</code2>",
+        "step2": "Name: <code1>Tipote Compta</code1> (PayPal doesn't accept dashes or parentheses) - Type: <code2>Merchant</code2>",
         "step3": "On the app page: <strong>scroll down</strong> to <em1>Live API features</em1>, and <strong>enable</strong> the <code>Transaction Search</code> checkbox. Without it, we can't read your history. Click <em2>Save</em2>.",
         "step4": "Copy the <strong1>Client ID</strong1> and the <strong2>Secret</strong2> (you have to click <em>Show</em> to reveal the secret) and paste them below.",
         "modeLabel": "Mode",
-        "modeLive": "Live (production — real sales)",
-        "modeSandbox": "Sandbox (test — to validate the integration)",
+        "modeLive": "Live (production - real sales)",
+        "modeSandbox": "Sandbox (test - to validate the integration)",
         "modeLiveHelp": "Production mode: Tipote will sync your real sales.",
         "modeSandboxHelp": "Test mode: sales won't be real, useful to validate the connection.",
         "clientIdLabel": "Client ID",
@@ -5979,7 +5979,7 @@
         "step2": "Find the <strong>Live API key</strong> section. Click the eye icon to reveal it, then copy it.",
         "step3": "Paste it into the field below. The key starts with <code1>live_</code1> in production, <code2>test_</code2> if you're testing in sandbox.",
         "noticeTitle": "Good to know",
-        "noticeBody": "Unlike Stripe, Mollie doesn't offer a read-only key — the key gives full API access to your Mollie account. Tipote uses it <strong>read-only</strong> to fetch your payments. You can revoke it instantly from your Mollie dashboard to cut access.",
+        "noticeBody": "Unlike Stripe, Mollie doesn't offer a read-only key - the key gives full API access to your Mollie account. Tipote uses it <strong>read-only</strong> to fetch your payments. You can revoke it instantly from your Mollie dashboard to cut access.",
         "label": "Mollie API key",
         "hideKey": "Hide key",
         "showKey": "Show key",
@@ -6033,8 +6033,8 @@
         "churnHint": "{pct}% of subscribers",
         "totalOne": "<strong>{count}</strong> customer in total this month.",
         "totalMany": "<strong>{count}</strong> customers in total this month.",
-        "churnedOne": "<strong>{count} subscriber has cancelled</strong> since last month — think about figuring out why (follow-up, message?).",
-        "churnedMany": "<strong>{count} subscribers have cancelled</strong> since last month — think about figuring out why (follow-up, message?)."
+        "churnedOne": "<strong>{count} subscriber has cancelled</strong> since last month - think about figuring out why (follow-up, message?).",
+        "churnedMany": "<strong>{count} subscribers have cancelled</strong> since last month - think about figuring out why (follow-up, message?)."
       },
       "topProducts": {
         "title": "My best sellers this month",
@@ -6047,17 +6047,17 @@
       "refunds": {
         "label": "Refunds (since January)",
         "refundedThisYear": "{amount} refunded this year",
-        "refundedThisMonthSuffix": " — including <strong>{amount}</strong> this month",
-        "highRateWarning": "High rate — check your sales pages or your delivery quality."
+        "refundedThisMonthSuffix": " - including <strong>{amount}</strong> this month",
+        "highRateWarning": "High rate - check your sales pages or your delivery quality."
       },
       "vat": {
-        "title": "VAT exemption — where do you stand?",
+        "title": "VAT exemption - where do you stand?",
         "description": "Calculated over your last 12 months ({activity}). As long as you're below the threshold, you don't charge VAT to your customers.",
         "thresholdLabel": "threshold: {value}",
         "helpLink": "How does the VAT exemption work?",
-        "statusOverThresholdCH": "Threshold exceeded — VAT registration mandatory",
-        "statusOverMajor": "Upper threshold exceeded — immediate exit from the exemption",
-        "statusOverBase": "Base threshold exceeded — switching to VAT in the coming weeks",
+        "statusOverThresholdCH": "Threshold exceeded - VAT registration mandatory",
+        "statusOverMajor": "Upper threshold exceeded - immediate exit from the exemption",
+        "statusOverBase": "Base threshold exceeded - switching to VAT in the coming weeks",
         "statusApproaching": "Heads up, you're getting close to the threshold",
         "statusUnder": "You're below the threshold"
       }
@@ -6115,7 +6115,7 @@
       "noDeadlines": "No deadlines in the next 12 months for your status.",
       "header": {
         "title": "Fiscal calendar",
-        "subtitle": "Your tax deadlines computed from your status. Tipote doesn't file for you — click a deadline to go to the official site."
+        "subtitle": "Your tax deadlines computed from your status. Tipote doesn't file for you - click a deadline to go to the official site."
       },
       "toggleShowOne": "Show the completed deadline",
       "toggleShowMany": "Show the {count} completed deadlines",
@@ -6131,10 +6131,10 @@
     },
     "fecTitle": "FEC export for your accountant",
     "fecDescription": "Accounting Records File in the legal format (article A47 A-1 of the LPF). It's what the tax authorities can request in case of an audit.",
-    "fecScopeWarning": "Tipote only has half of your accounting: your sales & incoming payments (PSP + manual entries). Not your purchases, expenses, depreciation or payroll. Give this file to your accountant as a base — they'll aggregate the rest before any official filing.",
+    "fecScopeWarning": "Tipote only has half of your accounting: your sales & incoming payments (PSP + manual entries). Not your purchases, expenses, depreciation or payroll. Give this file to your accountant as a base - they'll aggregate the rest before any official filing.",
     "fecDateFrom": "Start date",
     "fecDateTo": "End date",
-    "fecSirenRequired": "Fill in your SIREN in the SASU config below — it's required in the FEC file name (tax standard).",
+    "fecSirenRequired": "Fill in your SIREN in the SASU config below - it's required in the FEC file name (tax standard).",
     "fecPreparing": "Preparing…",
     "fecDownload": "Download FEC",
     "fecMissingSiren": "Fill in your SIREN in the SASU config first.",
@@ -6169,36 +6169,36 @@
     "discardBtn": "Start from my last save"
   },
   "helpSeo": {
-    "metaTitle": "Index my quizzes on Google — Tipote Help",
+    "metaTitle": "Index my quizzes on Google - Tipote Help",
     "metaDescription": "How to make your quizzes visible on Google Search, ChatGPT, Perplexity and other search engines / AI tools. Step-by-step guide.",
     "title": "Index my quizzes on Google and AI tools",
-    "subtitle": "Make your quizzes appear in Google Search, ChatGPT, Perplexity and Claude search — 5 to 10 minutes of setup, then it's automatic.",
+    "subtitle": "Make your quizzes appear in Google Search, ChatGPT, Perplexity and Claude search - 5 to 10 minutes of setup, then it's automatic.",
     "s1": {
       "heading": "Why index?",
       "body1": "When Google or an AI indexes your quiz, anyone can find it by searching your topic. Three concrete benefits:",
-      "li1": "Free recurring traffic from Google Search — every relevant search is a chance to capture a lead.",
+      "li1": "Free recurring traffic from Google Search - every relevant search is a chance to capture a lead.",
       "li2": "When someone asks ChatGPT, Perplexity or Claude \"recommend me a quiz about X\", your quiz can be surfaced.",
       "li3": "More social shares: visitors who find you through search often share to their network."
     },
     "s2": {
-      "heading": "Step 1 — Submit your sitemap to Google",
+      "heading": "Step 1 - Submit your sitemap to Google",
       "body1": "Google needs a \"sitemap\" (list of your quizzes) to index them. Tipote generates it automatically.",
       "li1": "Go to Google Search Console: https://search.google.com/search-console",
       "li2": "Click \"Add a property\" and enter your domain (e.g. tipote.com OR your custom domain if you have one).",
-      "li3": "Verify ownership (via DNS TXT record — Google walks you through).",
+      "li3": "Verify ownership (via DNS TXT record - Google walks you through).",
       "li4": "In the left menu, go to \"Sitemaps\" and enter: sitemap.xml",
       "li5": "Click \"Submit\". Google will crawl your quizzes within 1 to 7 days.",
-      "note": "You don't need to re-submit for each new quiz — the sitemap is regenerated automatically every hour."
+      "note": "You don't need to re-submit for each new quiz - the sitemap is regenerated automatically every hour."
     },
     "s3": {
-      "heading": "Step 2 — With a custom domain",
+      "heading": "Step 2 - With a custom domain",
       "body1": "If you have a custom domain (e.g. quiz.yoursite.com), you can index your quizzes on YOUR domain instead of tipote.com. More powerful for your SEO.",
       "li1": "Add your custom domain to Google Search Console as a \"domain property\".",
       "li2": "Verify ownership via a DNS TXT record (Google gives you the value to paste).",
-      "li3": "Submit the sitemap: https://your-domain.com/sitemap.xml — it will list ONLY your quizzes, on YOUR URL."
+      "li3": "Submit the sitemap: https://your-domain.com/sitemap.xml - it will list ONLY your quizzes, on YOUR URL."
     },
     "s4": {
-      "heading": "Step 3 — Optimize each quiz for SEO",
+      "heading": "Step 3 - Optimize each quiz for SEO",
       "body1": "The better your quiz is titled and described, the more Google and AI will surface it. Best practices:",
       "li1Title": "Clear title (≤60 characters)",
       "li1Body": "It's the text Google shows in results. Include your main keyword.",
@@ -6210,12 +6210,12 @@
       "li4Body": "Appears on Google Images and iMessage / WhatsApp previews. A great image = +20-30% clicks."
     },
     "s5": {
-      "heading": "Step 4 — Visibility on AI (ChatGPT, Perplexity, Claude)",
+      "heading": "Step 4 - Visibility on AI (ChatGPT, Perplexity, Claude)",
       "body1": "You have nothing extra to set up. AIs automatically crawl sites via our `llms.txt` file (a manifest we generate for you) which lists your quizzes, their description and URL in a format optimized for LLMs.",
       "note": "The more you fill in the title, description and OG image in the editor, the more precisely an AI can recommend your quiz to the right users."
     },
     "s6": {
-      "heading": "Step 5 — Hide a quiz from search engines",
+      "heading": "Step 5 - Hide a quiz from search engines",
       "body1": "If you want to keep a quiz private (link-only, no risk of it appearing in Google), check the box \"Hide this quiz from search engines\" in the SEO tab of the quiz editor.",
       "body2": "The quiz stays active and shareable via its direct link, but is excluded from your sitemap and AI manifest. Ideal for internal content or public drafts shared with a limited circle."
     }
@@ -6223,8 +6223,8 @@
   "popquiz": {
     "pipEnter": "Picture-in-picture mode",
     "pipExit": "Exit picture-in-picture",
-    "toastPublished": "Popquiz published — share the link with your audience",
-    "toastUnpublished": "Popquiz unpublished — it's no longer publicly visible",
+    "toastPublished": "Popquiz published - share the link with your audience",
+    "toastUnpublished": "Popquiz unpublished - it's no longer publicly visible",
     "toastSaved": "Changes saved",
     "toastLinkCopied": "Link copied",
     "toastCodeCopied": "Code copied",
@@ -6252,7 +6252,7 @@
     "listTitle": "My Popquiz",
     "listSubtitle": "Video + quiz that pop up at the right time.",
     "freeLimitTitle": "The free plan is limited to 1 popquiz. Delete the existing one or upgrade.",
-    "freeLimitBtn": "Free plan — 1 max",
+    "freeLimitBtn": "Free plan - 1 max",
     "newBtn": "New Popquiz",
     "filterAll": "All",
     "filterPublished": "Published",
@@ -6292,7 +6292,7 @@
     "timelineHintInactive": "Start playback to enable the bar",
     "timelineAddMarkerAria": "Click to add a marker",
     "timelineDurationNotDetected": "Play for a second so the video duration can be detected.",
-    "markerTitle": "Marker at {time} — click to delete",
+    "markerTitle": "Marker at {time} - click to delete",
     "markerAria": "Marker at {time}, click to delete",
     "errorCreateQuizFirst": "Create a quiz in My projects first.",
     "errorTitleEmpty": "The title cannot be empty.",
@@ -6319,7 +6319,7 @@
     "previewModeIframe": "Iframe",
     "inlineTitlePlaceholder": "Click to add a title",
     "inlineSubtitlePlaceholder": "Click to add a subtitle",
-    "overlayMarkerHeader": "Marker at {time} — {title}",
+    "overlayMarkerHeader": "Marker at {time} - {title}",
     "overlayUnknownQuiz": "Unknown quiz",
     "overlayQuizPlaceholder": "When played live, the quiz will appear here.",
     "overlaySkip": "Skip",
@@ -6367,7 +6367,7 @@
     "videoPreparing": "Preparing (extracting thumbnail…)",
     "videoFinalizing": "Finalizing…",
     "videoDropZone": "Drop a video here or click to choose",
-    "videoFormats": "MP4, WebM, MOV — up to 20 GB."
+    "videoFormats": "MP4, WebM, MOV - up to 20 GB."
   },
   "popquizAppearance": {
     "sectionTitle": "Public page appearance",
@@ -6575,7 +6575,7 @@
     "csvHint12": "Comma-separated. Max 12.",
     "dangerZone": "Danger zone",
     "resetTitle": "Reset this Tipote",
-    "resetDesc": "Changed paths or got lost along the way? Want to restart this Tipote from scratch in a new direction? Click this button. Warning: all content, tasks and personalisations created since you started will be erased, you'll start over. <strong>If you have multiple Tipote, only the one you're using now will be reset — the others are untouched.</strong> This is permanent, no going back.",
+    "resetDesc": "Changed paths or got lost along the way? Want to restart this Tipote from scratch in a new direction? Click this button. Warning: all content, tasks and personalisations created since you started will be erased, you'll start over. <strong>If you have multiple Tipote, only the one you're using now will be reset - the others are untouched.</strong> This is permanent, no going back.",
     "resetting": "Resetting…",
     "resetBtn": "Reset my Tipote",
     "deleteAccountTitle": "Delete my account",
@@ -6599,16 +6599,16 @@
   "highlightBadge": {
     "topPerformer": "Top performer",
     "top": "Top",
-    "trendingTitle": "On fire — lots of recent activity",
+    "trendingTitle": "On fire - lots of recent activity",
     "trending": "Trending",
     "newTitle": "New",
     "newLabel": "New",
-    "needsAttentionTitle": "Needs attention — low activity",
+    "needsAttentionTitle": "Needs attention - low activity",
     "needsAttention": "Needs attention"
   },
   "boost": {
     "pageTitle": "Tipote Boost",
-    "bannerTitle": "Tipote Boost — LinkedIn Pod + AI Commenter",
+    "bannerTitle": "Tipote Boost - LinkedIn Pod + AI Commenter",
     "bannerSubtitle": "Two tools in one extension. Mutual engagement pod on LinkedIn (boost + karma) and AI commenter on 7 networks (LinkedIn, Facebook, Threads, Instagram, X, TikTok, Reddit).",
     "loading": "Loading…",
     "extInstalled": "Chrome extension installed",
@@ -6620,7 +6620,7 @@
     "sync": "Sync",
     "podTitle": "Engagement pod",
     "linkedInOnly": "LinkedIn only",
-    "podDesc": "When you publish on LinkedIn, the other members of your pod get a like and an AI comment to validate — your post gains reach in the first few minutes, exactly when the algorithm decides. You return the favor on their posts. Karma system: no free-riders.",
+    "podDesc": "When you publish on LinkedIn, the other members of your pod get a like and an AI comment to validate - your post gains reach in the first few minutes, exactly when the algorithm decides. You return the favor on their posts. Karma system: no free-riders.",
     "linkedInLinked": "LinkedIn account linked",
     "linkedInNotLinked": "LinkedIn account not linked yet",
     "connectionSuccess": "Connection successful.",
@@ -6638,7 +6638,7 @@
     "quotaSuffix": " · quota {quota}",
     "aiCommenterTitle": "AI Commenter",
     "sevenNetworks": "7 networks",
-    "aiCommenterDesc": "On any post you visit, a Tipote badge appears next to the comment area with 4 proposed tones (\"I agree\", \"I disagree\", \"add value\", \"ask a question\"). You choose, edit if needed, publish in 1 click. No pod, no karma — it's your solo productivity tool.",
+    "aiCommenterDesc": "On any post you visit, a Tipote badge appears next to the comment area with 4 proposed tones (\"I agree\", \"I disagree\", \"add value\", \"ask a question\"). You choose, edit if needed, publish in 1 click. No pod, no karma - it's your solo productivity tool.",
     "availableOn": "Available on",
     "howItWorks": "How it works",
     "step1": "Open a feed and visit a post",
@@ -6672,8 +6672,8 @@
     "categoryCodeKey": "Category (code key)",
     "categoryHint": "Keys currently used by the code:",
     "baseValue": "Base value (€)",
-    "majorThreshold": "Major threshold (€) — leave blank if not applicable",
-    "majorThresholdOptional": "Major threshold (€) — optional",
+    "majorThreshold": "Major threshold (€) - leave blank if not applicable",
+    "majorThresholdOptional": "Major threshold (€) - optional",
     "majorThresholdInline": "major threshold",
     "sourceUrl": "Official source URL",
     "effectiveFrom": "In effect since",
@@ -6681,10 +6681,10 @@
     "officialSource": "Official source",
     "notes": "Notes",
     "notesOptional": "Notes (optional)",
-    "notesPlaceholder": "E.g. Finance Bill 2026 — voted on 28/12/2025",
-    "catVatFranchiseVente": "VAT franchise — Sale of goods",
-    "catVatFranchiseServicesBic": "VAT franchise — BIC services",
-    "catVatFranchiseServicesBnc": "VAT franchise — BNC services"
+    "notesPlaceholder": "E.g. Finance Bill 2026 - voted on 28/12/2025",
+    "catVatFranchiseVente": "VAT franchise - Sale of goods",
+    "catVatFranchiseServicesBic": "VAT franchise - BIC services",
+    "catVatFranchiseServicesBnc": "VAT franchise - BNC services"
   },
   "onboardingForm": {
     "stepOf": "Step {step} of {total}",
@@ -6819,9 +6819,9 @@
     "eniTitle": "ENI",
     "eniDesc": "Empresário em Nome Individual. Commercial activity under your name, organized accounting possible.",
     "ldaUniTitle": "LDA Unipessoal",
-    "ldaUniDesc": "Sociedade Unipessoal por Quotas — single shareholder. IRC 21%, annual accounts, Modelo 22, e-fatura.",
+    "ldaUniDesc": "Sociedade Unipessoal por Quotas - single shareholder. IRC 21%, annual accounts, Modelo 22, e-fatura.",
     "ldaTitle": "LDA",
-    "ldaDesc": "Sociedade por Quotas — 2 or more shareholders. Same obligations as an LDA Unipessoal.",
+    "ldaDesc": "Sociedade por Quotas - 2 or more shareholders. Same obligations as an LDA Unipessoal.",
     "saPTTitle": "SA",
     "saPTDesc": "Sociedade Anónima. Min. capital €50,000, more formal structure. Same IRC obligations as an LDA.",
     "ptDisclaimer": "Tipote covers Portuguese federal obligations (IVA, IRS, IRC, Modelo 22, Segurança Social, e-fatura). Regional specifics (Madeira / Açores have different IVA rates) are handled via the region selector below. For exact tax calculations, your contabilista certificado remains the reference.",
@@ -6834,14 +6834,14 @@
     "srlBEDesc": "Limited Liability Company (formerly SPRL, 2019 reform). Corporate tax 25% (or 20% SME 1st bracket), BNB annual accounts, Biztax.",
     "saBETitle": "SA",
     "saBEDesc": "Public Limited Company. Min. capital €61,500. Same ISoc/annual accounts obligations as an SRL, more formal structure.",
-    "beDisclaimer": "Tipote covers Belgian federal obligations (VAT via Intervat, IPP/ISoc, INASTI, BNB annual accounts, client + intra-EU listings). Regional specifics (Walloon/Flemish/Brussels SME grants, vehicle VAT) are not detailed — your accountant remains the reference.",
+    "beDisclaimer": "Tipote covers Belgian federal obligations (VAT via Intervat, IPP/ISoc, INASTI, BNB annual accounts, client + intra-EU listings). Regional specifics (Walloon/Flemish/Brussels SME grants, vehicle VAT) are not detailed - your accountant remains the reference.",
     "particulierDescES": "Side income (in addition to salaried employment or no other activity). Everything goes through your annual IRPF declaration (Modelo 100).",
     "autonomoESTitle": "Autónomo",
     "autonomoESDesc": "Self-employed worker, registered with RETA. Monthly social contributions via TGSS, quarterly IRPF Modelos 130/131, quarterly VAT Modelo 303.",
     "sluESTitle": "SLU",
-    "sluESDesc": "Sociedad Limitada Unipessoal — single shareholder. Corporate tax 25% (or 23% small companies), annual accounts Registro Mercantil, Modelo 200.",
+    "sluESDesc": "Sociedad Limitada Unipessoal - single shareholder. Corporate tax 25% (or 23% small companies), annual accounts Registro Mercantil, Modelo 200.",
     "slESTitle": "SL",
-    "slESDesc": "Sociedad Limitada — 2 or more shareholders. Same IS/annual accounts obligations as an SLU.",
+    "slESDesc": "Sociedad Limitada - 2 or more shareholders. Same IS/annual accounts obligations as an SLU.",
     "saESTitle": "SA",
     "saESDesc": "Sociedad Anónima. Min. capital €60,000, more formal structure. Same IS obligations as an SL.",
     "esDisclaimer": "Tipote covers Spanish federal obligations (IVA via Modelo 303/390/349, IRPF Modelos 100/130, IS Modelo 200/202, monthly RETA via TGSS, annual accounts Registro Mercantil). Régimen Foral (País Vasco, Navarra): Hacienda Foral replaces AEAT. Canarias: IGIC instead of IVA. Ceuta/Melilla: IPSI. For exact tax calculations and regional specifics (IRPF deductions per CCAA), your asesor fiscal remains the reference.",
@@ -6866,7 +6866,7 @@
     "cCorpDesc": "Federal Form 1120, flat 21% rate since TCJA 2017. Double taxation: the corp pays tax, then shareholders pay again on dividends. Default choice for VC-backed startups.",
     "sCorpTitle": "S-Corp",
     "sCorpDesc": "Form 1120-S + K-1. Pass-through (no federal tax at corp level). Saves on self-employment tax via \"reasonable salary + distributions\". Max 100 shareholders, US citizens/residents only.",
-    "usDisclaimer": "Tipote covers the federal tax calendar (Forms 1040, 1120, 1120-S, 1065, 1040-ES, 1099-NEC) + state income tax for the 41 states that collect one (9 don't: AK, FL, NV, NH, SD, TN, TX, WA, WY). Sales tax modeled by state of registration (monthly reminder on the 20th). No automatic sales tax rate calculation (45+ states × ~10,000 local jurisdictions) — use Stripe Tax / TaxJar / Avalara for accuracy. Your CPA remains the reference for precise calculations and elections (Form 2553 S-election, Form 8832 entity classification).",
+    "usDisclaimer": "Tipote covers the federal tax calendar (Forms 1040, 1120, 1120-S, 1065, 1040-ES, 1099-NEC) + state income tax for the 41 states that collect one (9 don't: AK, FL, NV, NH, SD, TN, TX, WA, WY). Sales tax modeled by state of registration (monthly reminder on the 20th). No automatic sales tax rate calculation (45+ states × ~10,000 local jurisdictions) - use Stripe Tax / TaxJar / Avalara for accuracy. Your CPA remains the reference for precise calculations and elections (Form 2553 S-election, Form 8832 entity classification).",
     "particulierQuestion": "What is the nature of your income?",
     "particulierQuestionHint": "This determines which box to fill on your income tax return (form 2042 + 2042-C-PRO).",
     "bncAccessLabel": "Side professional activities",
@@ -6877,7 +6877,7 @@
     "bicScheme": "(BIC scheme)",
     "otherLabel": "Other",
     "otherHint": "Rental income, royalties, other special cases.",
-    "particulierHelpLabel": "Official help impots.gouv.fr — declaring side income",
+    "particulierHelpLabel": "Official help impots.gouv.fr - declaring side income",
     "aeActivityLabel": "Activity type",
     "aeActivityHint": "Determines the VAT thresholds and URSSAF rates that apply to you.",
     "aeActivityPlaceholder": "Choose your activity",
@@ -6955,10 +6955,10 @@
     "sasuDirigeantTitle": "Do you pay yourself a salary as director?",
     "sasuDirigeantDesc": "If yes, you contribute to URSSAF (employee-like scheme) and file a DSN. If you pay yourself only via dividends, uncheck.",
     "sasuDirigeantHelpLabel": "Social status of the SASU president",
-    "chImportantBox": "Important Switzerland: Tipote calculates your deadlines based on your canton (tax filing deadline + portal). Tax rates (IBO, IRPP) vary across the 26 cantons and their municipalities — your accountant remains the reference for exact calculations.",
+    "chImportantBox": "Important Switzerland: Tipote calculates your deadlines based on your canton (tax filing deadline + portal). Tax rates (IBO, IRPP) vary across the 26 cantons and their municipalities - your accountant remains the reference for exact calculations.",
     "chCantonLabel": "Your canton",
     "chCantonHint": "Determines your tax return deadline and the portal you'll be directed to.",
-    "chCantonPlaceholder": "— Choose your canton —",
+    "chCantonPlaceholder": "- Choose your canton -",
     "startedAtLabel": "Activity start date",
     "optional": "(optional)",
     "chIdeLabel": "IDE number (Business identification number)",
@@ -6985,7 +6985,7 @@
     "chMethodEffective": "Effective",
     "chMethodTDFN": "TDFN",
     "chTDFNHint": "flat by branch",
-    "ptImportantBox": "Portugal: Tipote calculates your IVA, IRS/IRC and Segurança Social deadlines from official AT (Autoridade Tributária) dates. Tax rates and municipal derrama vary — your contabilista certificado remains the reference for calculations.",
+    "ptImportantBox": "Portugal: Tipote calculates your IVA, IRS/IRC and Segurança Social deadlines from official AT (Autoridade Tributária) dates. Tax rates and municipal derrama vary - your contabilista certificado remains the reference for calculations.",
     "ptNifLabel": "NIF (Tax Identification Number)",
     "ptNifHintBefore": "9 digits. You can find it on the portal",
     "ptRegionLabel": "Your region",
@@ -7032,7 +7032,7 @@
     "esCommunityPlaceholder": "Choose your CCAA",
     "esForalNote": "Régimen Foral detected → you file via Hacienda Foral (euskadi.eus for País Vasco, navarra.es for Navarra), not AEAT. Same calendar but foral modelos.",
     "esCanariasNote": "Canarias → IGIC instead of IVA. General rate 7%. Modelo 420 (quarterly) / 425 (annual) instead of 303/390. No intra-EU operations.",
-    "esIpsiNote": "Ceuta/Melilla → IPSI (Tax on Production, Services and Imports) instead of IVA. Out of Tipote MVP scope — the accounting module will show your IRPF / IS / RETA deadlines but not IPSI. Check with your ciudad autónoma.",
+    "esIpsiNote": "Ceuta/Melilla → IPSI (Tax on Production, Services and Imports) instead of IVA. Out of Tipote MVP scope - the accounting module will show your IRPF / IS / RETA deadlines but not IPSI. Check with your ciudad autónoma.",
     "esCifLabelAutonomo": "NIF / DNI / NIE",
     "esCifLabelSLU": "CIF of your SLU",
     "esCifLabelSL": "CIF of your SL",
@@ -7053,7 +7053,7 @@
     "esRedemeDesc": "The Registro de Devolución Mensual allows you to recover VAT each month (instead of waiting for the annual balance). Voluntary registration via Modelo 036/039. Involves monthly returns.",
     "esRedemeHelpLabel": "More info on REDEME",
     "esIrpfMethodLabel": "IRPF method",
-    "esIrpfMethodHint": "Estimación directa = full accounting (quarterly Modelo 130). Módulos = flat-rate by sector (quarterly Modelo 131) — limited to certain activities listed by AEAT.",
+    "esIrpfMethodHint": "Estimación directa = full accounting (quarterly Modelo 130). Módulos = flat-rate by sector (quarterly Modelo 131) - limited to certain activities listed by AEAT.",
     "esIrpfDirecta": "Estimación directa",
     "esIrpfObjetiva": "Módulos",
     "esRetaBox": "RETA (Special Self-Employed Workers Scheme): monthly contributions via TGSS, based on your real income (2023 reform). Bank direct debit on the last working day of the month.",
@@ -7084,10 +7084,10 @@
     "caGstPeriodAnnuelle": "Annual",
     "caHintAnnuelle": "revenue < $1.5M (default)",
     "caGstPeriodTrim": "Quarterly",
-    "caHintTrim": "revenue $1.5–6M",
+    "caHintTrim": "revenue $1.5-6M",
     "caGstPeriodMens": "Monthly",
     "caHintMens": "revenue > $6M",
-    "caGstPeriodFootnote": "The frequency is assigned by the CRA based on your volume — the option here matches what you've been notified. You can request a change (to more frequent always possible, to less frequent if revenue decreasing).",
+    "caGstPeriodFootnote": "The frequency is assigned by the CRA based on your volume - the option here matches what you've been notified. You can request a change (to more frequent always possible, to less frequent if revenue decreasing).",
     "caReqBox": "REQ reminder: as an individual enterprise registered with the Quebec Enterprise Registrar, you must file an annual update declaration (on the anniversary of registration).",
     "caReqPortalLabel": "REQ Portal",
     "caT2Footnote": "Federal T2 is due 6 months after fiscal year-end. The balance is due at 2 months (3 months for SPCC eligible for the small business deduction).",
@@ -7097,14 +7097,14 @@
     "usImportantBox": "United States: Tipote calculates your federal deadlines (Forms 1040 / 1120 / 1120-S / 1065 / 1040-ES / 1099-NEC), your state income tax (except 9 states without), and a monthly reminder per state where you collect sales tax. For exact tax calculations, tax elections (S-election, entity classification) and sales tax rate calculations (~10,000 local jurisdictions), your CPA and a dedicated tool (Stripe Tax / TaxJar / Avalara) remain the reference.",
     "usStateLabel": "State (residence / entity formation)",
     "usStatePlaceholder": "Choose your state",
-    "usStateNoIncomeTax": "does not collect state income tax on business income — you only have federal to file. Typical savings: 4 to 9% of net income.",
-    "usStateHasIncomeTax": "collects state income tax — you file a return parallel to federal, generally on the same date (April 15).",
+    "usStateNoIncomeTax": "does not collect state income tax on business income - you only have federal to file. Typical savings: 4 to 9% of net income.",
+    "usStateHasIncomeTax": "collects state income tax - you file a return parallel to federal, generally on the same date (April 15).",
     "usNoSalesTaxNote": "No state-level sales tax (NH, OR, MT, DE).",
     "usEinLabel": "EIN",
     "usEinSuffix": "(Employer Identification Number)",
     "usEinHintPrefix": "Format",
     "usEinHintDigits": "(9 digits).",
-    "usEinOptional": "Optional — a sole prop / single-member LLC without employees can use its SSN.",
+    "usEinOptional": "Optional - a sole prop / single-member LLC without employees can use its SSN.",
     "usEinRequired": "Required for multi-member LLC, C-Corp, S-Corp and any entity with employees.",
     "usStartedLabel": "Activity start date (optional)",
     "usLlcElectionLabel": "LLC tax election",
@@ -7116,7 +7116,7 @@
     "usSalesTaxStatesLabel": "States where you collect sales tax",
     "usSalesTaxStatesHint": "Check each state where you're registered to collect and remit sales tax (economic nexus if you exceed revenue or transaction thresholds). Tipote issues a monthly reminder per state (the 20th of the following month). If you use Stripe Tax / TaxJar, still indicate the states here to get your filing reminders.",
     "usStatesSelected": "{n} state{plural} selected: {list}.",
-    "usStatesNone": "No state selected — no sales tax to collect.",
+    "usStatesNone": "No state selected - no sales tax to collect.",
     "usMultiLlcBox": "Multi-member LLC: by default, your LLC files a Form 1065 (partnership return) and issues K-1s to each member. Deadline: March 15 (calendar year), automatic 6-month extension (Sep 15). If you made an S/C election, the calendar changes.",
     "usSCorpBox": "S-Corp: Form 1120-S due March 15 (calendar year). Pass-through, no federal tax at entity level. Reasonable salary required for owner-employees (otherwise risk of IRS reclassification).",
     "usFiscalYearLabel": "Fiscal year",
@@ -7228,7 +7228,7 @@
     "nicheObjective": "[objective]",
     "nicheMarker": "[time marker]",
     "linkSioProduct": "Link to a Systeme.io product (optional)",
-    "linkSioProductHint": "Choose your product from the list — Tipote will attribute each sale to the correct offer in your analytics. If you don't link it, we try to match automatically by name or price.",
+    "linkSioProductHint": "Choose your product from the list - Tipote will attribute each sale to the correct offer in your analytics. If you don't link it, we try to match automatically by name or price.",
     "personaPainsMain": "Main pain points",
     "personaPains": "Pain points",
     "personaPainPoints": "Pain points",
@@ -7247,12 +7247,12 @@
     "nicheMechanismSuffix": "through {mechanism}",
     "nicheMarkerSuffix": "in {marker}",
     "tipoteAffiliateTitle": "Earn commissions on your popquizzes",
-    "tipoteAffiliateDesc": "On every published popquiz, a discreet <em>\"This video is brought to you via Tiquiz\"</em> redirects to the Tiquiz presentation page. Paste your Systeme.io affiliate ID below and every signup that follows earns you a commission — automatically.",
+    "tipoteAffiliateDesc": "On every published popquiz, a discreet <em>\"This video is brought to you via Tiquiz\"</em> redirects to the Tiquiz presentation page. Paste your Systeme.io affiliate ID below and every signup that follows earns you a commission - automatically.",
     "tipoteAffiliateIdLabel": "My Tipote affiliate ID",
     "tipoteAffiliateWhereToFind": "<strong>Where do I find my ID?</strong> Log in to Systeme.io → <em>Affiliate dashboard</em> → in the top right you'll see your <em>affiliate ID</em> (starts with <code>sa</code>). Copy it, paste it here, that's it.",
     "tipoteAffiliateNotRegistered": "Not registered to the program yet?",
     "tipoteAffiliateDiscoverProgram": "Discover the Tipote affiliate program",
     "tipoteAffiliateTerms": "Terms and conditions",
-    "tipoteAffiliateEmptyHint": "If you leave this field empty, the footer stays visible but without tracking — signups won't earn you anything."
+    "tipoteAffiliateEmptyHint": "If you leave this field empty, the footer stays visible but without tracking - signups won't earn you anything."
   }
 }
