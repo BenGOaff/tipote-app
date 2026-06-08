@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { CAROUSEL_ROLES, CAROUSEL_SLIDE_COUNT, type CarouselRole } from "@/lib/visualStudio/carousel";
 import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
 
@@ -112,6 +113,18 @@ export async function POST(req: NextRequest) {
     } catch {
       parsed = {};
     }
+    // Bene 7 juin 2026 : aucun em-dash dans le contenu user-visible.
+    const sanitizeNode = (node: unknown): unknown => {
+      if (typeof node === "string") return sanitizeAiText(node);
+      if (Array.isArray(node)) return node.map(sanitizeNode);
+      if (node && typeof node === "object") {
+        const o: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(node)) o[k] = sanitizeNode(v);
+        return o;
+      }
+      return node;
+    };
+    parsed = sanitizeNode(parsed) as Record<string, unknown>;
 
     const rawSlides = Array.isArray(parsed.slides) ? parsed.slides : [];
     // On reconstruit dans l'ORDRE des rôles attendus : on prend la i-ème slide

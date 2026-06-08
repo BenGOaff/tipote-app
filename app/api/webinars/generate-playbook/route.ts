@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 
 export const runtime = "nodejs";
@@ -282,6 +283,17 @@ ${responseFormat}`;
     } catch {
       result = { error: "Réponse IA invalide", raw: raw.slice(0, 500) };
     }
+    const deepSanitize = (node: unknown): unknown => {
+      if (typeof node === "string") return sanitizeAiText(node);
+      if (Array.isArray(node)) return node.map(deepSanitize);
+      if (node && typeof node === "object") {
+        const o: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(node)) o[k] = deepSanitize(v);
+        return o;
+      }
+      return node;
+    };
+    result = deepSanitize(result) as Record<string, unknown>;
 
     // Consume 1 credit
     await consumeCredits(user.id, 1).catch(() => {});

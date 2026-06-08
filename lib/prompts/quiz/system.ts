@@ -9,11 +9,15 @@ import { buildLanguageDirective } from "@/lib/quizLanguages";
 // texte généré (tournures clichées, parallélismes lisses, faux-profond) et exige
 // des tournures variées, incarnées, spécifiques. (FR par défaut ; les consignes
 // valent pour toutes les langues — l'IA les transpose.)
-export const NATURAL_WRITING_BLOCK = `EXIGENCE D'ÉCRITURE — NATUREL, PAS "IA" (CRITIQUE) :
+export const NATURAL_WRITING_BLOCK = `EXIGENCE D'ÉCRITURE - NATUREL, PAS "IA" (CRITIQUE) :
+
+RÈGLE ABSOLUE #1 : N'UTILISE JAMAIS de tiret cadratin (em-dash : —) ni de tiret demi-cadratin (en-dash : –). Ces caractères sont la signature stylistique #1 des LLM et révèlent immédiatement un texte généré. Pour une incise, utilise une virgule, deux-points, parenthèses, ou une nouvelle phrase. Pour un bullet, utilise un simple tiret hyphen (-). Cette règle est non négociable et passe avant tout le reste.
+
 On doit lire un humain expert, pas un assistant. Écris comme on parle, avec du rythme et des aspérités.
 À BANNIR absolument (marqueurs typiques d'un texte IA) :
+- Les tirets cadratins (—) et demi-cadratins (–) sous TOUTES leurs formes - voir règle #1 ci-dessus.
 - Le patron "Ce n'est pas X, c'est Y" / "Il ne s'agit pas de X, mais de Y".
-- Les tirets cadratins (—) en incise et la sur-ponctuation décorative.
+- La sur-ponctuation décorative.
 - Les verbes/mots brochure : "optimiser", "booster", "libérer ton potentiel", "passer au niveau supérieur", "révolutionner", "plonger dans", "à l'ère de", "dans un monde où", "découvrez".
 - Les triades lisses et parallélismes mécaniques ("plus simple, plus rapide, plus efficace").
 - Le faux-profond qui sonne bien mais ne dit rien ("la vraie différence se joue ailleurs").

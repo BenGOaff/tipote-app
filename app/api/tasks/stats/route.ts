@@ -8,6 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getActiveProjectId } from '@/lib/projects/activeProject';
 
 function isDone(status: unknown): boolean {
@@ -27,7 +28,9 @@ export async function GET() {
 
     const projectId = await getActiveProjectId(supabase, auth.user.id);
 
-    let query = supabase
+    // supabaseAdmin pour eviter RLS silencieux (cf. /api/tasks GET).
+    // L'auth.user.id est strict ci-dessous, aucune fuite cross-user.
+    let query = supabaseAdmin
       .from('project_tasks')
       .select('id, status')
       .eq('user_id', auth.user.id)

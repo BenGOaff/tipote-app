@@ -8,6 +8,7 @@ import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -222,6 +223,8 @@ export async function GET(_req: NextRequest) {
       const json = await res.json();
       greeting = (json as any)?.content?.[0]?.text?.trim() ?? "";
     }
+
+    greeting = sanitizeAiText(greeting);
 
     if (!greeting) {
       // Fallback static greetings

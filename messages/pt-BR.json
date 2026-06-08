@@ -188,7 +188,7 @@
     "useBrandingLogoLabel": "Usar o logo do meu branding",
     "useBrandingLogoDesc": "Exibe o logo definido em Settings → Branding do projeto em vez do emoji.",
     "logoPreview": "Pré-visualização do logo de branding",
-    "noBrandingLogoDefined": "Nenhum logo definido no branding do projeto — adicione-o primeiro.",
+    "noBrandingLogoDefined": "Nenhum logo definido no branding do projeto - adicione-o primeiro.",
     "noBrandingLogoConfigured": "Ainda não há logo de branding configurado para este projeto."
   },
   "richTextEditor": {
@@ -342,13 +342,13 @@
     "noApiKeyLink": "Configurações",
     "noApiKeyAfter": " para ver suas tags, cursos e comunidades aqui.",
     "tagLabel": "Tag Systeme.io",
-    "noTag": "— Sem tag —",
+    "noTag": "- Sem tag -",
     "tagPlaceholder": "Nome da tag",
     "courseLabel": "Curso Systeme.io",
-    "noCourse": "— Sem curso —",
+    "noCourse": "- Sem curso -",
     "coursePlaceholder": "ID do curso",
     "communityLabel": "Comunidade Systeme.io",
-    "noCommunity": "— Sem comunidade —",
+    "noCommunity": "- Sem comunidade -",
     "communityPlaceholder": "ID da comunidade"
   },
   "offerForm": {
@@ -557,7 +557,7 @@
     "shareSiteNameHint": "Vazio → mostraremos seu domínio ({fallback}).",
     "salesArgsNeedOffer": "Preencha primeiro a promessa ou a descrição da oferta",
     "salesArgsRegenerated": "Argumentos regenerados",
-    "salesArgsGenerated": "Argumentos gerados — revise e ajuste se necessário",
+    "salesArgsGenerated": "Argumentos gerados - revise e ajuste se necessário",
     "salesArgsGenerationFailed": "Geração impossível",
     "salesArgsSaved": "Argumentos salvos",
     "salesArgsSaveFailed": "Não foi possível salvar",
@@ -594,7 +594,7 @@
     "sioNewTagPlaceholder": "Nome da nova tag",
     "sioTagsLoading": "Carregando…",
     "sioLoadTags": "Carregar minhas tags",
-    "sioNoTag": "— Sem tag —",
+    "sioNoTag": "- Sem tag -",
     "sioCreateTag": "Criar uma nova tag",
     "atTime": "às",
     "errorSending": "Erro de envio",
@@ -620,7 +620,7 @@
     "unknown": "Desconhecido",
     "open": "Abrir",
     "renderError": "Erro de render HTML",
-    "noDataShort": "—",
+    "noDataShort": "-",
     "serverError": "Erro de servidor",
     "noSSEStream": "Sem stream SSE",
     "cannotSave": "Não foi possível salvar",
@@ -847,9 +847,9 @@
     "completeBody": "Você fez o tour do Tipote. Agora parta para a ação!",
     "completeTip": "Seus próximos passos",
     "completeTipDesc": "Aqui está o que recomendamos para começar:",
-    "completeTipOffers": "Suas ofertas — descreva-as para que o Tipote as integre nos seus conteúdos",
-    "completeTipPositioning": "Seu posicionamento — afine seu alvo e mensagem após o onboarding",
-    "completeTipPersona": "Seu persona — verifique se o perfil de cliente ideal combina com sua realidade",
+    "completeTipOffers": "Suas ofertas - descreva-as para que o Tipote as integre nos seus conteúdos",
+    "completeTipPositioning": "Seu posicionamento - afine seu alvo e mensagem após o onboarding",
+    "completeTipPersona": "Seu persona - verifique se o perfil de cliente ideal combina com sua realidade",
     "completeGoSettings": "Completar minhas configurações",
     "completeExplore": "Explorar sozinho",
     "completeOptOut": "Não mostrar mais este guia",
@@ -860,22 +860,22 @@
     "helpRestart": "Refazer o tour guiado",
     "skipTour": "Sair do tour",
     "next": "Próximo",
-    "tooltipToday": "Hoje — sua página inicial diária. Encontre suas tarefas prioritárias, os indicadores-chave e um resumo dos seus avanços.",
-    "tooltipStrategy": "Estratégia — seu roadmap personalizado. Plano de ação em 3 fases, pirâmide de ofertas e persona-alvo. Você pode ajustar tudo.",
-    "tooltipCreate": "Criar — gere posts, emails, artigos, scripts de vídeo, ofertas, páginas, quizzes e estratégia editorial. Cada geração consome créditos IA.",
-    "tooltipContents": "Meus conteúdos — tudo o que você criou, organizado por tipo. Calendário editorial, agendamento de publicações, acompanhamento de quizzes e páginas.",
-    "tooltipTemplates": "Templates — modelos Systeme.io prontos para usar, baixáveis em um clique. Incluso no seu plano!",
-    "tooltipCredits": "Créditos IA — seu contador no canto superior direito. Clique para ver o detalhe ou recarregar.",
-    "tooltipAnalytics": "Analytics — preencha suas estatísticas regularmente para que o Tipote afine sua estratégia e te dê um diagnóstico IA personalizado.",
-    "tooltipPepites": "Pepitas — conselhos de negócio que aparecem ao longo do tempo. O ponto vermelho sinaliza novidades!",
-    "tooltipSettingsProfile": "Perfil — suas informações, storytelling, ofertas e links. Acesse as configurações pela sua foto de perfil no canto superior direito.",
-    "tooltipSettingsConnections": "Conexões — conecte suas redes sociais para publicar diretamente. Configure também sua chave API Systeme.io aqui.",
-    "tooltipSettingsReglages": "Configurações — idioma dos conteúdos e informações-chave sobre sua atividade. Quanto mais completo, melhor o Tipote te entende!",
-    "tooltipSettingsPositioning": "Posicionamento — A configuração mais importante! Afine seu alvo, sua mensagem e seu posicionamento após o onboarding. É o motor de todo o seu conteúdo.",
-    "tooltipSettingsBranding": "Branding — suas cores, fontes e logo para que as páginas geradas saiam direto com a sua identidade.",
-    "tooltipSettingsAi": "IA e créditos — acompanhe seu consumo e personalize o estilo dos seus auto-comentários.",
-    "tooltipSettingsPricing": "Assinatura — gerencie seu plano: upgrade, downgrade ou cancelamento com total autonomia.",
-    "tooltipCoach": "Coach IA — seu conselheiro pessoal (planos PRO e ELITE). Conhece seu projeto e te ajuda a tomar as boas decisões.",
+    "tooltipToday": "Hoje - sua página inicial diária. Encontre suas tarefas prioritárias, os indicadores-chave e um resumo dos seus avanços.",
+    "tooltipStrategy": "Estratégia - seu roadmap personalizado. Plano de ação em 3 fases, pirâmide de ofertas e persona-alvo. Você pode ajustar tudo.",
+    "tooltipCreate": "Criar - gere posts, emails, artigos, scripts de vídeo, ofertas, páginas, quizzes e estratégia editorial. Cada geração consome créditos IA.",
+    "tooltipContents": "Meus conteúdos - tudo o que você criou, organizado por tipo. Calendário editorial, agendamento de publicações, acompanhamento de quizzes e páginas.",
+    "tooltipTemplates": "Templates - modelos Systeme.io prontos para usar, baixáveis em um clique. Incluso no seu plano!",
+    "tooltipCredits": "Créditos IA - seu contador no canto superior direito. Clique para ver o detalhe ou recarregar.",
+    "tooltipAnalytics": "Analytics - preencha suas estatísticas regularmente para que o Tipote afine sua estratégia e te dê um diagnóstico IA personalizado.",
+    "tooltipPepites": "Pepitas - conselhos de negócio que aparecem ao longo do tempo. O ponto vermelho sinaliza novidades!",
+    "tooltipSettingsProfile": "Perfil - suas informações, storytelling, ofertas e links. Acesse as configurações pela sua foto de perfil no canto superior direito.",
+    "tooltipSettingsConnections": "Conexões - conecte suas redes sociais para publicar diretamente. Configure também sua chave API Systeme.io aqui.",
+    "tooltipSettingsReglages": "Configurações - idioma dos conteúdos e informações-chave sobre sua atividade. Quanto mais completo, melhor o Tipote te entende!",
+    "tooltipSettingsPositioning": "Posicionamento - A configuração mais importante! Afine seu alvo, sua mensagem e seu posicionamento após o onboarding. É o motor de todo o seu conteúdo.",
+    "tooltipSettingsBranding": "Branding - suas cores, fontes e logo para que as páginas geradas saiam direto com a sua identidade.",
+    "tooltipSettingsAi": "IA e créditos - acompanhe seu consumo e personalize o estilo dos seus auto-comentários.",
+    "tooltipSettingsPricing": "Assinatura - gerencie seu plano: upgrade, downgrade ou cancelamento com total autonomia.",
+    "tooltipCoach": "Coach IA - seu conselheiro pessoal (planos PRO e ELITE). Conhece seu projeto e te ajuda a tomar as boas decisões.",
     "tooltipComplete": "Tour finalizado! Antes de criar, vá completar suas configurações: ofertas, posicionamento e persona. Clique na sua foto de perfil no canto superior direito.",
     "previous": "Anterior",
     "skip": "Pular",
@@ -918,7 +918,7 @@
       "1": "Vamos criar conteúdo que converte?",
       "2": "Um novo dia, uma nova oportunidade ✨",
       "3": "O que vamos lançar hoje?",
-      "4": "Sua audiência espera — vamos lá?"
+      "4": "Sua audiência espera - vamos lá?"
     },
     "weeklyGoal": {
       "objectiveLabel": "Objetivo da semana",
@@ -934,7 +934,7 @@
       },
       "shareAgain": {
         "title": "Compartilhe novamente esta semana",
-        "desc": "Nenhuma nova resposta esta semana — recompartilhar costuma reativar o fluxo.",
+        "desc": "Nenhuma nova resposta esta semana - recompartilhar costuma reativar o fluxo.",
         "cta": "Ver meus projetos"
       },
       "firstSurvey": {
@@ -969,7 +969,7 @@
       },
       "topPerformer": {
         "title": "\"{name}\" está convertendo muito",
-        "body": "Taxa de captura {rate}% — acima da média. Promova nos seus canais para amplificar.",
+        "body": "Taxa de captura {rate}% - acima da média. Promova nos seus canais para amplificar.",
         "cta": "Compartilhar o projeto"
       },
       "shipDrafts": {
@@ -1054,7 +1054,7 @@
       "videos": "Vídeos"
     },
     "empty": "Ainda sem conteúdos",
-    "emptyDesc": "Lance sua primeira ideia — a IA transforma um briefing em post, email, artigo ou roteiro de vídeo em segundos.",
+    "emptyDesc": "Lance sua primeira ideia - a IA transforma um briefing em post, email, artigo ou roteiro de vídeo em segundos.",
     "emptyCta": "Criar meu primeiro conteúdo",
     "status": {
       "published": "Publicado",
@@ -1115,7 +1115,7 @@
     "bannerSubtitle": "Conselhos acionáveis para impulsionar seu negócio.",
     "title": "Sua coleção de pepitas",
     "subtitle": "Uma nova chega de vez em quando… e você nunca sabe exatamente quando 😄",
-    "inspiredBy": "Inspirado em Jean Rivière — obrigado pela inspiração 🙏",
+    "inspiredBy": "Inspirado em Jean Rivière - obrigado pela inspiração 🙏",
     "refresh": "Atualizar",
     "add": "Adicionar",
     "addTitle": "Adicionar uma pepita",
@@ -1231,7 +1231,7 @@
     "successTitle": "Publicado em {platform}!",
     "successDesc": "Seu post está no ar em {platform}.",
     "successAutoAfter": "Seu post está no ar em {platform}. O Tipote continua comentando em segundo plano.",
-    "automationLinked": "Automação vinculada a este post — o DM dispara apenas nos comentários deste post.",
+    "automationLinked": "Automação vinculada a este post - o DM dispara apenas nos comentários deste post.",
     "viewOnPlatform": "Ver em {platform}",
     "errorTitle": "Erro de publicação",
     "retry": "Tentar novamente",
@@ -1414,7 +1414,7 @@
       "title": "Conexões",
       "description": "Gerencie suas integrações e contas conectadas.",
       "autoTitle": "Automatize o que acontece após a captura",
-      "autoDesc": "Quando um visitante converte (quiz, página, pesquisa…), o Tipote aplica uma tag ao contato no Systeme.io. Essa tag pode disparar uma automação — inscrever em uma campanha, dar acesso a um curso, adicionar a uma comunidade, etc. Tudo se configura no Systeme.io, sem código.",
+      "autoDesc": "Quando um visitante converte (quiz, página, pesquisa…), o Tipote aplica uma tag ao contato no Systeme.io. Essa tag pode disparar uma automação - inscrever em uma campanha, dar acesso a um curso, adicionar a uma comunidade, etc. Tudo se configura no Systeme.io, sem código.",
       "autoStep1Title": "Crie suas tags no Systeme.io antes de construir o conteúdo",
       "autoStep1P1": "No Systeme.io > Contatos > Tags, crie uma tag por cenário a automatizar. Exemplos: quiz-visionario, captura-ebook, captura-webinar-X, quiz-compartilhamento.",
       "autoStep1P2": "Depois, ao criar seu quiz / página / pesquisa no Tipote, associe essas tags ao resultado ou conversão correspondente (campo «tag Systeme.io»).",
@@ -1430,13 +1430,13 @@
       "autoStep3Title": "O que acontece quando um visitante converte",
       "autoStep3P": "O visitante insere seu email → o Tipote cria (ou atualiza) o contato no Systeme.io e aplica a tag correspondente. O Systeme.io detecta a tag e executa todas as ações da sua regra. Zero cliques do seu lado.",
       "autoTestTitle": "Importante ao testar",
-      "autoTestP": "O Systeme.io NÃO redispara uma automação se a tag já estiver no seu email de teste. Antes de cada novo teste, vá em Contatos, abra seu contato de teste e remova a tag manualmente — caso contrário você verá o contato no Systeme.io mas a regra não disparará e pensará que está quebrado.",
-      "autoLinkSio": "Guia oficial Systeme.io — workflows e automações"
+      "autoTestP": "O Systeme.io NÃO redispara uma automação se a tag já estiver no seu email de teste. Antes de cada novo teste, vá em Contatos, abra seu contato de teste e remova a tag manualmente - caso contrário você verá o contato no Systeme.io mas a regra não disparará e pensará que está quebrado.",
+      "autoLinkSio": "Guia oficial Systeme.io - workflows e automações"
     },
     "reglages": {
       "langTitle": "Idioma e conteúdo",
       "uiLangLabel": "Idioma da interface",
-      "uiLangDesc": "Idioma de exibição do Tipote — a mudança se aplica imediatamente.",
+      "uiLangDesc": "Idioma de exibição do Tipote - a mudança se aplica imediatamente.",
       "contentLangLabel": "Idioma do conteúdo gerado",
       "contentLangHint": "Idioma padrão dos quizzes e conteúdos gerados pela IA. Você pode alterá-lo em um quiz específico a qualquer momento.",
       "contentLangPlaceholder": "Escolha um idioma",
@@ -1518,14 +1518,14 @@
       "generatedOfferSaved": "Oferta gerada atualizada",
       "priceMin": "Preço mín (€)",
       "priceMax": "Preço máx (€)",
-      "trackingDefaultsTitle": "Tracking e Anúncios — padrões",
+      "trackingDefaultsTitle": "Tracking e Anúncios - padrões",
       "trackingDefaultsDesc": "Estes IDs são aplicados automaticamente aos seus novos quizzes. Você pode substituí-los no editor.",
       "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
       "trackingDefaultsMetaHelp": "Encontrar meu Pixel ID no Meta Events Manager",
-      "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+      "trackingDefaultsGa4Label": "Google Analytics 4 - Measurement ID",
       "trackingDefaultsGa4Help": "Encontrar meu ID no Google Analytics",
-      "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversão",
-      "trackingDefaultsAdsLabelLabel": "Google Ads — Etiqueta de conversão",
+      "trackingDefaultsAdsIdLabel": "Google Ads - ID de conversão",
+      "trackingDefaultsAdsLabelLabel": "Google Ads - Etiqueta de conversão",
       "trackingDefaultsAdsHelp": "Encontrar meus IDs Google Ads"
     },
     "positioningTab": {
@@ -1650,7 +1650,7 @@
       },
       "allDone": {
         "recommendation": "crie novo conteúdo para manter essa dinâmica",
-        "why": "— sua base é sólida, é hora de subir de nível"
+        "why": "- sua base é sólida, é hora de subir de nível"
       },
       "autre": {
         "recommendation": "você deve continuar avançando nas tarefas em andamento",
@@ -2078,7 +2078,7 @@
     "offerRangeLabel": "Faixa / gama",
     "savingOffers": "Salvando...",
     "saveOffers": "Salvar as ofertas",
-    "scenariosAvailable": "{n} cenários disponíveis — escolha em /strategy/pyramids."
+    "scenariosAvailable": "{n} cenários disponíveis - escolha em /strategy/pyramids."
   },
   "onboarding": {
     "title": "Bem-vindo ao Tipote",
@@ -2109,10 +2109,10 @@
         "question": "Qual é sua meta de faturamento mensal?",
         "options": {
           "lt500": "Menos de R$ 500",
-          "500_1k": "R$ 500 – R$ 1.000",
-          "1k_3k": "R$ 1.000 – R$ 3.000",
-          "3k_5k": "R$ 3.000 – R$ 5.000",
-          "5k_10k": "R$ 5.000 – R$ 10.000",
+          "500_1k": "R$ 500 - R$ 1.000",
+          "1k_3k": "R$ 1.000 - R$ 3.000",
+          "3k_5k": "R$ 3.000 - R$ 5.000",
+          "5k_10k": "R$ 5.000 - R$ 10.000",
           "gt10k": "Mais de R$ 10.000"
         }
       },
@@ -2164,9 +2164,9 @@
         "question": "Quanto tempo você pode dedicar ao seu negócio por semana?",
         "options": {
           "lt5": "Menos de 5h",
-          "5_10": "5 – 10h",
-          "10_20": "10 – 20h",
-          "20_30": "20 – 30h",
+          "5_10": "5 - 10h",
+          "10_20": "10 - 20h",
+          "20_30": "20 - 30h",
           "gt30": "Mais de 30h"
         }
       },
@@ -2257,15 +2257,15 @@
         "options": {
           "0": "R$ 0 (ainda sem vendas)",
           "lt500": "Menos de R$ 500",
-          "500_1k": "R$ 500 – R$ 1.000",
-          "1k_3k": "R$ 1.000 – R$ 3.000",
-          "3k_5k": "R$ 3.000 – R$ 5.000",
+          "500_1k": "R$ 500 - R$ 1.000",
+          "1k_3k": "R$ 1.000 - R$ 3.000",
+          "3k_5k": "R$ 3.000 - R$ 5.000",
           "gt5k": "Mais de R$ 5.000"
         }
       },
       "clientTestimonials": {
         "question": "Compartilhe 2-3 depoimentos de clientes (o que disseram ou sentiram).",
-        "placeholder": "ex.: «Graças a você finalmente lancei meu curso!» — Maria"
+        "placeholder": "ex.: «Graças a você finalmente lancei meu curso!» - Maria"
       },
       "offers": {
         "question": "Quais são suas ofertas atuais?",
@@ -2409,9 +2409,9 @@
       "soon": "Em breve",
       "unavailable": "Não disponível"
     },
-    "xNote": "X/Twitter: a API de DM exige uma assinatura Pro de US$ 5.000/mês — inviável. Threads: a API de DM ainda não está aberta para desenvolvedores.",
+    "xNote": "X/Twitter: a API de DM exige uma assinatura Pro de US$ 5.000/mês - inviável. Threads: a API de DM ainda não está aberta para desenvolvedores.",
     "setup": {
-      "title": "Configuração necessária — tabela Supabase ausente",
+      "title": "Configuração necessária - tabela Supabase ausente",
       "description": "Copie este SQL e execute no editor SQL do Supabase para criar a tabela das automações.",
       "instructions": "Supabase → SQL Editor → New Query → Colar → Run"
     },
@@ -2436,7 +2436,7 @@
       }
     },
     "rgpd": {
-      "title": "Conformidade LGPD — o que fazemos",
+      "title": "Conformidade LGPD - o que fazemos",
       "description": "O usuário inicia o contato ao comentar → consentimento implícito. Cada DM inclui automaticamente «Responda STOP para parar de receber mensagens». A janela de 24h da Meta limita naturalmente os envios não solicitados."
     },
     "listTitle": "Minhas automações",
@@ -2479,7 +2479,7 @@
       "platforms": "Plataformas",
       "keyword": "Palavra-chave gatilho",
       "keywordPlaceholder": "Ex.: PDF",
-      "keywordHint": "Insensível a maiúsculas/minúsculas — qualquer comentário com essa palavra dispara a automação.",
+      "keywordHint": "Insensível a maiúsculas/minúsculas - qualquer comentário com essa palavra dispara a automação.",
       "dmMessage": "Mensagem DM",
       "firstDmMessage": "Primeira mensagem DM",
       "dmMessagePlaceholder": "Oi {{prenom}}! Aqui está seu guia: [link]\n\nResponda STOP para parar de receber mensagens.",
@@ -2491,7 +2491,7 @@
       "systemeioTag": "Tag systeme.io",
       "systemeioTagPlaceholder": "Ex.: lead-guia-pdf",
       "systemeioTagHint": "Essa tag será atribuída ao contato criado no systeme.io para disparar suas automações de email.",
-      "rgpdNote": "Cada DM incluirá automaticamente uma menção STOP. O usuário iniciou o contato ao comentar — é o consentimento implícito conforme a LGPD e as políticas Meta.",
+      "rgpdNote": "Cada DM incluirá automaticamente uma menção STOP. O usuário iniciou o contato ao comentar - é o consentimento implícito conforme a LGPD e as políticas Meta.",
       "cancel": "Cancelar",
       "save": "Salvar",
       "saving": "Salvando…",
@@ -2565,7 +2565,7 @@
       "run": "Testar",
       "simulateHint": "Simule um comentário com sua palavra-chave para verificar se tudo funciona.",
       "placeholder": "ex: {keyword}",
-      "webhookMissingHint": "Sua conta do Instagram não está inscrita no webhook do Meta (POST /{ig-user-id}/subscribed_apps faltando). Sem isso, nenhum evento em tempo real chega — mesmo se o teste passar, os comentários reais não disparam nada.",
+      "webhookMissingHint": "Sua conta do Instagram não está inscrita no webhook do Meta (POST /{ig-user-id}/subscribed_apps faltando). Sem isso, nenhum evento em tempo real chega - mesmo se o teste passar, os comentários reais não disparam nada.",
       "resubscribeAction": "Re-inscrever webhook do Instagram",
       "resubscribing": "Inscrevendo…",
       "resubscribeOk": "✓ Webhook re-inscrito (fields: {fields}). Tente o teste novamente ou publique um comentário real.",
@@ -2599,7 +2599,7 @@
     "creditPerComment": "0,25 crédito por comentário",
     "upsellTitle": "Impulsione seu engajamento com o auto-comentário",
     "upsellBody": "O Tipote comenta automaticamente posts similares aos seus para aumentar sua visibilidade. Disponível nos planos Pro (49€/mês) e Elite (99€/mês).",
-    "unsupportedLinkedin": "O LinkedIn exige aprovação de parceiro (MDP) — os auto-comentários não estão disponíveis no momento.",
+    "unsupportedLinkedin": "O LinkedIn exige aprovação de parceiro (MDP) - os auto-comentários não estão disponíveis no momento.",
     "unsupportedGeneric": "Esta plataforma não suporta auto-comentários no momento.",
     "policyWarning": "Os auto-comentários no Instagram usam a API oficial. Os comentários são publicados em posts públicos ligados ao seu nicho para aumentar sua visibilidade."
   },
@@ -2662,7 +2662,7 @@
     "videoAddedDesc": "{name} ({size}) enviado.",
     "uploading": "Enviando...",
     "dropText": "Arraste seu vídeo aqui ou clique para escolher",
-    "videoStorageHint": "O vídeo será mantido no Supabase Storage — a URL fica válida mesmo para posts agendados.",
+    "videoStorageHint": "O vídeo será mantido no Supabase Storage - a URL fica válida mesmo para posts agendados.",
     "deleteLabel": "Excluir {name}",
     "uploadNetworkError": "Erro de rede durante o upload",
     "gifReelNotice": "O GIF animado será publicado como vídeo no Facebook (Reel) para preservar a animação."
@@ -2760,7 +2760,7 @@
     "placeholderEmail": "Objetivo do email, contexto, oferta, alvo, tom…\nEx.: email de follow-up depois da descoberta, tom direto, CTA agendamento de call.",
     "placeholderBlog": "Assunto, ângulo, alvo, palavras-chave (se tiver), comprimento…\nEx.: «Como conseguir seus 10 primeiros clientes em B2B», tom pedagógico, plano H2/H3.",
     "placeholderScript": "Assunto, formato (Reel/TikTok/YouTube), duração, alvo, tom…\nEx.: 45s, gancho forte, 3 pontos, CTA para lead magnet.",
-    "placeholderPost": "Assunto, ângulo, alvo, objetivo, estilo…\nEx.: post LinkedIn em storytelling, 180–240 palavras, tom direto, 1 CTA."
+    "placeholderPost": "Assunto, ângulo, alvo, objetivo, estilo…\nEx.: post LinkedIn em storytelling, 180-240 palavras, tom direto, 1 CTA."
   },
   "createHub": {
     "title": "Por onde você quer começar?",
@@ -2789,7 +2789,7 @@
       "1": "Cavando o ângulo que fala com seu público…",
       "2": "Modelando a abertura pra prender já na primeira linha…",
       "3": "Polindo o tom pra soar como você…",
-      "4": "Mais alguns segundos — vale a pena ✨"
+      "4": "Mais alguns segundos - vale a pena ✨"
     },
     "titleLabel": "Título *",
     "titlePlaceholder": "Ex.: Post LinkedIn sobre produtividade",
@@ -2849,7 +2849,7 @@
     "upgradeBtn": "Fazer upgrade",
     "startBtn": "Começar",
     "heroTitle": "Crie o que precisa",
-    "heroSubtitle": "Escolha um formato — a IA acompanha você"
+    "heroSubtitle": "Escolha um formato - a IA acompanha você"
   },
   "strategyDetails": {
     "addTask": "Adicionar uma tarefa",
@@ -2867,13 +2867,13 @@
   },
   "executionFeedback": {
     "softStart": "Início suave",
-    "softStartBody": "Adicione 1–2 tarefas simples e execute a primeira hoje. Pouco ritmo, grande efeito.",
+    "softStartBody": "Adicione 1-2 tarefas simples e execute a primeira hoje. Pouco ritmo, grande efeito.",
     "excellentPace": "Excelente ritmo",
     "excellentPaceBody": "Você está em uma ótima dinâmica. Mantenha esse nível e evite só sobrecarregar seu dia.",
     "goodCourse": "Bom rumo",
     "goodCourseBody": "Você está avançando bem. Para subir um nível, feche primeiro uma tarefa pequena e fácil, depois ataque o essencial.",
     "relaunch": "Vamos religar a máquina",
-    "relaunchBody": "Escolha UMA ação ultra-simples agora (5–10 min) para retomar o impulso.",
+    "relaunchBody": "Escolha UMA ação ultra-simples agora (5-10 min) para retomar o impulso.",
     "oneStep": "Um passo, já",
     "oneStepBody": "Comece pela tarefa mais simples possível. O objetivo: um 1º ✅ hoje."
   },
@@ -2965,7 +2965,7 @@
     "premiumNote": "Coach premium = Pro/Elite. 3 conselhos/mês no gratuito. Faça upgrade para acompanhamento ilimitado + ações.",
     "networkError": "Erro de rede. Tente novamente.",
     "fallbackResponse": "Ok. Me dê 1 precisão e seguimos.",
-    "errorRetry": "Ops — tive um problema. Tente novamente em 10 segundos.",
+    "errorRetry": "Ops - tive um problema. Tente novamente em 10 segundos.",
     "writePlaceholder": "Escreva aqui…",
     "rejectPrompt": "Por que recusa? (opcional)",
     "copied": "Copiado!",
@@ -3072,7 +3072,7 @@
     "yes": "Sim",
     "no": "Não",
     "noLeads": "Sem leads no momento",
-    "showing": "{from}–{to} de {total}",
+    "showing": "{from}-{to} de {total}",
     "leadDetail": "Detalhe do lead",
     "firstName": "Nome",
     "lastName": "Sobrenome",
@@ -3136,7 +3136,7 @@
     "embedCodesHelp": "Copie esses códigos e cole nas configurações da sua página Systeme.io ou no HTML do seu site.",
     "displayCode": "Página de captura / vendas (recomendado)",
     "displayCodeHelp": "Cole esse código na sua página de captura. Mostra as notificações E captura automaticamente o nome quando um visitante se inscreve.",
-    "signupPixel": "Pixel de inscrição (página de obrigado — opcional)",
+    "signupPixel": "Pixel de inscrição (página de obrigado - opcional)",
     "signupPixelHelp": "Opcional: cole na página de obrigado se também quiser exibir notificações lá.",
     "purchasePixel": "Pixel de compra (página de confirmação do pedido)",
     "purchasePixelHelp": "Cole esse código na página de confirmação após um pagamento.",
@@ -3869,7 +3869,7 @@
     "directChangesConfirm": "Continuar mesmo assim?",
     "publishFailed": "Publicação falhou: {err}",
     "networkError": "erro de rede",
-    "missingColumnsHint": " (pode faltar uma coluna — as últimas migrações Supabase devem ser aplicadas)",
+    "missingColumnsHint": " (pode faltar uma coluna - as últimas migrações Supabase devem ser aplicadas)",
     "thankYouSaveFailed": "Não foi possível salvar a página de obrigado: {err}",
     "liveChanges": "Alterações em tempo real",
     "linkDialog": {
@@ -4295,7 +4295,7 @@
     "aiCtaPlaceholder": "Ex.: Agendar uma call de descoberta…",
     "aiIntentionLabel": "Por que você está criando este quiz?",
     "aiIntentionPlaceholder": "Ex.: Levar a testar o Tiquiz, oferecer uma auditoria gratuita, propor uma formação adaptada ao perfil, direcionar para minha comunidade…",
-    "aiIntentionHint": "Seu objetivo de negócio concreto — a IA gera um CTA específico para cada resultado para conduzir seus visitantes naturalmente.",
+    "aiIntentionHint": "Seu objetivo de negócio concreto - a IA gera um CTA específico para cada resultado para conduzir seus visitantes naturalmente.",
     "aiBonusLabel": "Bônus a oferecer",
     "aiBonusPlaceholder": "Ex.: Guia PDF gratuito…",
     "aiGenerateError": "A geração falhou. Verifique sua conexão e tente novamente.",
@@ -4304,13 +4304,13 @@
     "aiGenerate": "Gerar o quiz",
     "aiGenerating": "Geração em andamento…",
     "aiGenerated": "Quiz gerado! Você pode editá-lo antes de salvar.",
-    "aiObjectivePick": "— Escolha um objetivo —",
+    "aiObjectivePick": "- Escolha um objetivo -",
     "aiObjectiveMulti": "Selecione um ou mais objetivos para seu quiz",
     "aiFormatLabel": "Formato do quiz",
     "aiFormatShort": "Curto",
-    "aiFormatShortDesc": "3 a 5 perguntas — conversões rápidas",
+    "aiFormatShortDesc": "3 a 5 perguntas - conversões rápidas",
     "aiFormatLong": "Longo",
-    "aiFormatLongDesc": "6 a 10 perguntas — mais valor",
+    "aiFormatLongDesc": "6 a 10 perguntas - mais valor",
     "aiSegmentationLabel": "Tipo de segmentação",
     "aiSegProfile": "Por perfil",
     "aiSegProfileDesc": "Tipos de personalidade, arquétipos…",
@@ -4340,7 +4340,7 @@
     "errImportPrefix": "Erro durante a importação: {msg}",
     "importSuccess": "Quiz importado com sucesso!",
     "importIntro": "Importe um arquivo .txt, .docx ou .pdf com suas perguntas e respostas (ou uma pesquisa). A IA vai estruturar o conteúdo em um quiz ou pesquisa (perguntas, opções, resultados).",
-    "importFormatsAccepted": ".txt · .docx · .pdf — até 10 MB / 50.000 caracteres",
+    "importFormatsAccepted": ".txt · .docx · .pdf - até 10 MB / 50.000 caracteres",
     "importPdfDocxHint": "Dica: um PDF escaneado (apenas imagem) não funciona. Exporte seu documento em .docx ou .txt se a extração falhar.",
     "stepGeneral": "Informações gerais",
     "stepQuestions": "Perguntas",
@@ -4384,7 +4384,7 @@
     "importHow1": "Escreva suas perguntas numeradas (1. Pergunta, 2. Pergunta…)",
     "importHow2": "Sob cada pergunta, liste as respostas possíveis (A. Resposta, B. Resposta…)",
     "importHow3": "Adicione uma seção «Resultados» ou «Perfis» com um título e uma descrição para cada perfil",
-    "importHow4": "A IA se adapta à maioria dos formatos — faça simples!",
+    "importHow4": "A IA se adapta à maioria dos formatos - faça simples!",
     "aiConfigDesc": "A IA vai gerar um quiz completo a partir das suas configurações",
     "toneInspiring": "Inspirador",
     "toneProfessional": "Profissional",
@@ -4429,7 +4429,7 @@
     "bonus": "bônus",
     "sioShareTagHintQF": "Esta tag será adicionada quando um visitante compartilhar o quiz. Crie uma automação no Systeme.io para entregar o bônus.",
     "tagsAssignedCount": "{current}/{total} perfis têm tag",
-    "noTagsConfigured": "Sem tags configuradas — os leads não serão enviados para o Systeme.io (você pode fazer depois)",
+    "noTagsConfigured": "Sem tags configuradas - os leads não serão enviados para o Systeme.io (você pode fazer depois)",
     "mainCtaLabel": "CTA principal (texto do botão)",
     "ctaPerResultNote": "Os CTA são configurados individualmente em cada perfil de resultado, na aba Resultados.",
     "capturePageTitle": "Página de captura de e-mail",
@@ -4442,7 +4442,7 @@
     "shareBonusDesc": "Ative para incentivar o compartilhamento viral",
     "bonusDescriptionLabel": "Descrição do bônus",
     "creatingQuiz": "Criando seu quiz…",
-    "importTxtOnly": "apenas .txt — máx. 50.000 caracteres",
+    "importTxtOnly": "apenas .txt - máx. 50.000 caracteres",
     "defaultConsentText": "Ao informar seu email, você aceita nossa política de privacidade.",
     "toastNoApiKeyTitle": "Chave de API ausente",
     "toastNoApiKeyDesc": "Configure sua chave de API Systeme.io em Configurações > Systeme.io.",
@@ -4451,7 +4451,7 @@
     "newTagPlaceholder": "Nome da nova tag",
     "loadingTags": "Carregando...",
     "loadMyTags": "Carregar minhas tags",
-    "noTagOption": "— Sem tag —",
+    "noTagOption": "- Sem tag -",
     "toastRequiredFieldsTitle": "Campos obrigatórios",
     "toastRequiredFieldsDesc": "Preencha pelo menos o objetivo e o público-alvo.",
     "toastNoCreditsTitle": "Créditos insuficientes",
@@ -4475,7 +4475,7 @@
     "bonusUnlockedHint": "Exibida em vez da mensagem padrão assim que o bônus é desbloqueado. Útil para entregar um código promocional diretamente, sem e-mail.",
     "previewModeTitle": "Abrir em modo de pré-visualização (nenhum lead registrado)",
     "previewModeTitleSurvey": "Abrir em modo de pré-visualização (nenhuma resposta registrada)",
-    "readinessTitle": "{passed}/{total} etapas — {percent}% pronto",
+    "readinessTitle": "{passed}/{total} etapas - {percent}% pronto",
     "backToList": "Voltar aos quizzes",
     "tabEdit": "Edição",
     "tabLeads": "Leads",
@@ -4658,7 +4658,7 @@
     "tieWarningTitle": "{count} empates possíveis entre seus resultados",
     "tieWarningHint": "Algumas combinações de respostas produzem a mesma pontuação para 2 resultados. Pares detectados:",
     "tieWarningFallback": "Em caso de empate, o visitante sempre verá o primeiro resultado pela ordem. Ajuste os pontos de uma opção para desfazer o empate.",
-    "tieWarningTruncated": "(quiz extenso, análise parcial — pode haver outros empates não listados).",
+    "tieWarningTruncated": "(quiz extenso, análise parcial - pode haver outros empates não listados).",
     "optionShowOtherResults": "Mostrar outros perfis ao visitante",
     "optionShowOtherResultsHint": "Adiciona um acordeão abaixo do resultado com todos os outros perfis possíveis, em versão neutra (sem nome ou variantes de gênero).",
     "trackingPixelsTitle": "Tracking e Anúncios",
@@ -4666,10 +4666,10 @@
     "trackingApplyDefaults": "↺ Aplicar meus padrões",
     "trackingMetaLabel": "Meta (Facebook) Pixel ID",
     "trackingMetaHelp": "Encontrar meu Pixel ID no Meta Events Manager →",
-    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Label": "Google Analytics 4 - Measurement ID",
     "trackingGa4Help": "Encontrar meu ID no Google Analytics →",
-    "trackingAdsIdLabel": "Google Ads — ID de conversão",
-    "trackingAdsLabelLabel": "Google Ads — Etiqueta de conversão",
+    "trackingAdsIdLabel": "Google Ads - ID de conversão",
+    "trackingAdsLabelLabel": "Google Ads - Etiqueta de conversão",
     "trackingAdsHelp": "Encontrar meus IDs Google Ads →",
     "trackingInvalidFormat": "Formato inválido",
     "introImageAi": "Gerar (IA)",
@@ -4699,7 +4699,7 @@
     "analyticsLeadsLabel": "Leads",
     "analyticsCaptureRateLabel": "Taxa de captação",
     "analyticsCaptureRateHint": "Leads / visualizações (acumulado)",
-    "analyticsCaptureRateUnreliable": "Visualizações parcialmente registradas (quiz incorporado ou anterior ao rastreamento) — taxa confiável nas novas visualizações",
+    "analyticsCaptureRateUnreliable": "Visualizações parcialmente registradas (quiz incorporado ou anterior ao rastreamento) - taxa confiável nas novas visualizações",
     "analyticsExportSioLabel": "Exportação Systeme.io",
     "analyticsExportSioHint": "% de leads marcados no SIO",
     "analyticsLeadsEvolution": "Evolução dos leads",
@@ -4720,7 +4720,7 @@
     "sidebarShareRequest": "Pedido de compartilhamento",
     "sidebarResultDanger": "Nenhuma pergunta leva a este resultado ({total} perguntas no total)",
     "sidebarResultWarn": "Apenas {leading}/{total} perguntas levam até lá",
-    "sidebarResultOk": "{leading}/{total} perguntas levam até lá — bom equilíbrio",
+    "sidebarResultOk": "{leading}/{total} perguntas levam até lá - bom equilíbrio",
     "designFontLabel": "Fonte",
     "designFontHint": "Pré-visualização ao vivo no painel à direita.",
     "designColorsLabel": "Cores",
@@ -4760,7 +4760,7 @@
     "shuffleAnswers": "Embaralhar as respostas",
     "optionClickAutoNext": "Um clique em uma opção passa para a próxima pergunta.",
     "resultUnreachable": "Este resultado nunca pode ser atribuído",
-    "resultLowChance": "Baixa chance de ser atribuído — {leading}/{total} perguntas levam até lá",
+    "resultLowChance": "Baixa chance de ser atribuído - {leading}/{total} perguntas levam até lá",
     "resultCoverageHint": "Para que um resultado seja escolhido, várias perguntas devem levar até ele. Considere ajustar as opções de suas perguntas ou pedir à IA para reequilibrar.",
     "resultRebalanceAi": "Reequilibrar com IA",
     "resultSioTagTitle": "Tag Systeme.io para este resultado",
@@ -4808,7 +4808,7 @@
       "d30": "30 dias"
     },
     "platformsLabel": "Plataformas",
-    "platformsHint": "Você pode selecionar várias — será gerado conteúdo para cada plataforma a cada dia",
+    "platformsHint": "Você pode selecionar várias - será gerado conteúdo para cada plataforma a cada dia",
     "goalsLabel": "Objetivos",
     "goals": {
       "visibility": "Visibilidade & notoriedade",
@@ -4823,7 +4823,7 @@
     "contextPlaceholder": "Lançamento de oferta previsto, evento a promover, temática específica...",
     "generatingPlan": "Criando o plano...",
     "generatePlanCta": "Gerar o plano estratégico",
-    "planSummary": "{uniqueDays} dias — {posts} conteúdos em {platforms, plural, one {# plataforma} other {# plataformas}}",
+    "planSummary": "{uniqueDays} dias - {posts} conteúdos em {platforms, plural, one {# plataforma} other {# plataformas}}",
     "planEditHint": "Clique no lápis para editar uma ideia antes de gerar os conteúdos.",
     "generateAllCta": "Gerar {count} {count, plural, one {conteúdo} other {conteúdos}} ({count} {count, plural, one {crédito} other {créditos}})",
     "editPlan": "Editar",
@@ -4839,7 +4839,7 @@
     "viewAction": "Ver / Agendar / Publicar",
     "editAction": "Editar",
     "scheduleOrPublish": "Agendar / Publicar",
-    "editDialogTitle": "Editar — {day} ({platform}): {theme}",
+    "editDialogTitle": "Editar - {day} ({platform}): {theme}",
     "editGeneric": "Editar",
     "themeLabel": "Tema",
     "hookLabel": "Gancho",
@@ -4897,7 +4897,7 @@
     "strengthsLabel": "Pontos fortes",
     "weaknessesLabel": "Pontos fracos",
     "addCompetitor": "Adicionar um concorrente",
-    "documentLoaded": "Documento importado — contexto carregado ✓",
+    "documentLoaded": "Documento importado - contexto carregado ✓",
     "documentLoadedHint": "A análise IA usará o conteúdo do seu documento além das informações inseridas acima.",
     "launchAi": "Iniciar a análise IA",
     "analysisInProgress": "Análise em andamento...",
@@ -4998,7 +4998,7 @@
       "preview": "Visualização"
     },
     "dialogTitle": "Gerar: {doc}",
-    "stepIndicator": "Passo {step}/{total} — {label}",
+    "stepIndicator": "Passo {step}/{total} - {label}",
     "alertTitle": "Informação importante",
     "alertBody": "Este gerador produz documentos-tipo que cobrem os casos mais comuns. Não substitui o parecer de um jurista qualificado. Para situações específicas (saúde, finanças, menores, atividades regulamentadas...), recomendamos fortemente que você faça revisar seus documentos por um profissional do direito.",
     "countryQuestion": "Em que país sua empresa está registrada?",
@@ -5069,7 +5069,7 @@
     "selectOffer": "Selecione uma oferta",
     "noOffer": "Nenhuma oferta disponível",
     "offerLabel": "Sua oferta *",
-    "offerPlaceholder": "Ex.: Curso Instagram para coaches esportivos – R$ 297 – Inclui 6 módulos em vídeo, templates e um grupo privado…",
+    "offerPlaceholder": "Ex.: Curso Instagram para coaches esportivos - R$ 297 - Inclui 6 módulos em vídeo, templates e um grupo privado…",
     "offerHelp": "Descreva sua oferta ou cole uma descrição existente. Quanto mais detalhes você der, melhor o resultado.",
     "offerName": "Nome da oferta",
     "offerNamePlaceholder": "ex.: Plano de ação 90 dias",
@@ -5141,7 +5141,7 @@
     "bonusImgHint": "Exibida na etapa «Compartilhar para desbloquear» quando a viralidade está ativa.",
     "shareTitle": "Redes de compartilhamento autorizadas",
     "shareHint": "Se nenhuma caixa estiver marcada, todas as redes padrão são propostas ao visitante.",
-    "sioTitle": "Systeme.io — Tag de captura",
+    "sioTitle": "Systeme.io - Tag de captura",
     "sioTag": "Tag aplicada a cada lead capturado",
     "sioTagHint": "Separada das tags de resultado: essa tag é aplicada a cada email (qualquer que seja o resultado)."
   },
@@ -5165,7 +5165,7 @@
       },
       "video_script": {
         "label": "Script de vídeo",
-        "hint": "Ex.: script 45–60s (gancho, tensão, valor, CTA)."
+        "hint": "Ex.: script 45-60s (gancho, tensão, valor, CTA)."
       },
       "sales_page": {
         "label": "Página de vendas",
@@ -5245,7 +5245,7 @@
     "addSource": "Adicionar a fonte",
     "fileTitle": "Título",
     "fileTitlePh": "Título (preenchido automaticamente a partir do arquivo)",
-    "fileUpload": "Arquivo (PDF, DOCX, TXT — máx 5 MB)",
+    "fileUpload": "Arquivo (PDF, DOCX, TXT - máx 5 MB)",
     "fileDrop": "Clique ou arraste um arquivo aqui",
     "fileImport": "Importar o arquivo",
     "toast": {
@@ -5441,7 +5441,7 @@
       "pageDeleted": "Página excluída"
     },
     "ui": {
-      "subtitle": "Posts, emails, artigos, scripts e páginas — tudo no mesmo lugar.",
+      "subtitle": "Posts, emails, artigos, scripts e páginas - tudo no mesmo lugar.",
       "search": "Buscar...",
       "elementOne": "elemento",
       "elementMany": "elementos",
@@ -5728,11 +5728,11 @@
       "email": "Email de contato legal",
       "telephone": "Telefone",
       "siteUrl": "URL do site",
-      "registersFr": "Registros — França",
-      "registersBe": "Registros — Bélgica",
-      "registersLu": "Registros — Luxemburgo",
-      "registersCh": "Registros — Suíça",
-      "registersCa": "Registros — Canadá",
+      "registersFr": "Registros - França",
+      "registersBe": "Registros - Bélgica",
+      "registersLu": "Registros - Luxemburgo",
+      "registersCh": "Registros - Suíça",
+      "registersCa": "Registros - Canadá",
       "siren": "N.º SIREN/SIRET",
       "rcsVille": "Cidade do RCS",
       "rcsNumero": "N.º de matrícula no RCS",
@@ -5816,10 +5816,10 @@
   },
   "meta": {
     "rootTitle": "Tipote",
-    "rootDescription": "Tipote – planejamento estratégico & automações para seu negócio",
-    "supportTitle": "Tipote — Central de ajuda",
+    "rootDescription": "Tipote - planejamento estratégico & automações para seu negócio",
+    "supportTitle": "Tipote - Central de ajuda",
     "supportDescription": "Encontre respostas a todas as suas perguntas sobre o Tipote",
-    "dataDeletionTitle": "Exclusão de dados — Pedido recebido",
+    "dataDeletionTitle": "Exclusão de dados - Pedido recebido",
     "dataDeletionIntro": "Seu pedido de exclusão dos dados associados ao Meta foi registrado.",
     "dataDeletionCodeLabel": "Código de confirmação",
     "dataDeletionHelp": "Se precisar acelerar ou verificar o status do processamento, entre em contato com o suporte informando este código.",
@@ -5914,7 +5914,7 @@
     "aiCreditsCol": "Créditos de IA",
     "modifiedBadge": "modificado",
     "okBadge": "ok",
-    "deleteUserConfirm": "APAGAR DEFINITIVAMENTE {who}?\n\nEm cascata: perfil, projetos, páginas hospedadas, conexões sociais, dados contábeis — tudo será destruído. Irreversível."
+    "deleteUserConfirm": "APAGAR DEFINITIVAMENTE {who}?\n\nEm cascata: perfil, projetos, páginas hospedadas, conexões sociais, dados contábeis - tudo será destruído. Irreversível."
   },
   "adminTickets": {
     "statusOpen": "Aberto",
@@ -5945,7 +5945,7 @@
   },
   "quizVars": {
     "insertNameTitle": "Inserir o nome do visitante ({name})",
-    "insertGenderTitle": "Inserir uma variante conforme o gênero — masculino | feminino | não binário (ex.: querido | querida | querid*)"
+    "insertGenderTitle": "Inserir uma variante conforme o gênero - masculino | feminino | não binário (ex.: querido | querida | querid*)"
   },
   "survey": {
     "createTitle": "Nova pesquisa",
@@ -5976,7 +5976,7 @@
     "importHint": "Faça upload do seu arquivo (.txt, .docx, .pdf) OU cole seu texto abaixo. A IA estrutura como pesquisa.",
     "importPlaceholder": "Cole aqui as perguntas da sua pesquisa…",
     "importDropHint": "Arraste seu arquivo aqui ou clique para selecionar",
-    "importFormatsAccepted": ".txt · .docx · .pdf — até 10 MB / 50.000 caracteres",
+    "importFormatsAccepted": ".txt · .docx · .pdf - até 10 MB / 50.000 caracteres",
     "importFormatsNotice": "Formato não suportado. Aceitos: .txt, .docx, .pdf (até 10 MB).",
     "importFileTooLarge": "O arquivo excede 10 MB.",
     "importSelectFile": "Selecionar um arquivo",
@@ -6070,7 +6070,7 @@
       "reachedBadge": "Atingida",
       "noObjective": {
         "title": "Você não tem uma meta mensal",
-        "body": "Defina uma meta de receita para o Tipote te ajudar a acompanhar — quanto você quer ganhar por mês, é só isso. Você pode mudar a qualquer momento.",
+        "body": "Defina uma meta de receita para o Tipote te ajudar a acompanhar - quanto você quer ganhar por mês, é só isso. Você pode mudar a qualquer momento.",
         "cta": "Definir minha meta"
       },
       "noTransactions": {
@@ -6079,8 +6079,8 @@
       },
       "status": {
         "reached": "🎯 Meta atingida! Você fez {current} dos {target} previstos.",
-        "closeOne": "Faltam apenas {remaining} em {days} dia — é viável.",
-        "closeMany": "Faltam apenas {remaining} em {days} dias — é viável.",
+        "closeOne": "Faltam apenas {remaining} em {days} dia - é viável.",
+        "closeMany": "Faltam apenas {remaining} em {days} dias - é viável.",
         "behindOne": "Faltam {remaining} e só {days} dia. Hora de dar um gás.",
         "behindMany": "Faltam {remaining} e só {days} dias. Hora de dar um gás.",
         "onTrackOne": "Faltam {remaining} a fazer em {days} dia.",
@@ -6113,7 +6113,7 @@
     },
     "unsupported": {
       "title": "Em breve para {country}",
-      "body": "A ajuda contábil do Tipote está hoje disponível apenas para: <strong>{countries}</strong>. Abrimos os outros países um por um — Bélgica, Suíça, Quebec, Portugal, Espanha… estão a caminho.",
+      "body": "A ajuda contábil do Tipote está hoje disponível apenas para: <strong>{countries}</strong>. Abrimos os outros países um por um - Bélgica, Suíça, Quebec, Portugal, Espanha… estão a caminho.",
       "noList": "<strong>Não precisa entrar em uma lista de espera</strong>: você será avisado·a por email assim que seu país for aberto, identificamos automaticamente.",
       "wrongCountry": "País errado? Corrigir"
     },
@@ -6142,11 +6142,11 @@
         "vatSimplifie": "Simplificado",
         "eurlIsOption": "IS (por opção)",
         "eurlIrDefault": "IR (padrão)",
-        "sarlMajoritaire": "Majoritário (TNS — sem DSN)",
+        "sarlMajoritaire": "Majoritário (TNS - sem DSN)",
         "sarlMinoritaire": "Minoritário / igualitário (equiparado a empregado)",
         "execYesUrssaf": "Sim (URSSAF + DSN)",
         "execNoDividends": "Não (somente dividendos)",
-        "tnsUrssaf": "TNS — contribuições URSSAF autônomo"
+        "tnsUrssaf": "TNS - contribuições URSSAF autônomo"
       },
       "links": {
         "annuaireEntreprises": "Ver no annuaire-entreprises"
@@ -6168,7 +6168,7 @@
     },
     "connections": {
       "title": "Minhas conexões",
-      "subtitle": "Conecte suas ferramentas de pagamento para que o Tipote acompanhe automaticamente seus recebimentos. <strong>Conecte apenas o que você usa</strong> — só o Stripe, só o PayPal, ou os dois se você vende nas duas plataformas. <strong>Sincronizamos uma vez por dia</strong>; clique no botão abaixo para forçar uma atualização imediata.",
+      "subtitle": "Conecte suas ferramentas de pagamento para que o Tipote acompanhe automaticamente seus recebimentos. <strong>Conecte apenas o que você usa</strong> - só o Stripe, só o PayPal, ou os dois se você vende nas duas plataformas. <strong>Sincronizamos uma vez por dia</strong>; clique no botão abaixo para forçar uma atualização imediata.",
       "loading": "Carregando suas conexões…",
       "syncNow": "Sincronizar agora",
       "connecting": "Conectando…",
@@ -6196,7 +6196,7 @@
       },
       "status": {
         "initialSyncing": "Sincronização inicial em andamento…",
-        "error": "Erro — veja os detalhes abaixo",
+        "error": "Erro - veja os detalhes abaixo",
         "syncedAt": "Sincronizado {when}"
       },
       "relative": {
@@ -6209,7 +6209,7 @@
       "syncToast": {
         "upToDate": "{count} conexão(ões) atualizada(s)",
         "noNew": "Nenhuma nova transação",
-        "failed": "{count} conexão(ões) com erro — verifique abaixo",
+        "failed": "{count} conexão(ões) com erro - verifique abaixo",
         "error": "Erro de sincronização"
       },
       "errors": {
@@ -6231,7 +6231,7 @@
       },
       "stripeForm": {
         "heading": "Conectar Stripe",
-        "intro": "Precisamos de uma <strong>Restricted Key</strong> somente leitura. Você mantém o controle total — pode revogá-la a qualquer momento pelo seu dashboard Stripe.",
+        "intro": "Precisamos de uma <strong>Restricted Key</strong> somente leitura. Você mantém o controle total - pode revogá-la a qualquer momento pelo seu dashboard Stripe.",
         "guideTitle": "Como criar a chave em 30 segundos:",
         "step1Prefix": "Abra",
         "step1Link": "dashboard.stripe.com → Restricted keys → Create",
@@ -6249,16 +6249,16 @@
       },
       "paypalForm": {
         "heading": "Conectar PayPal",
-        "intro": "O PayPal exige um <strong>app de desenvolvedor</strong> com um par (Client ID, Secret). Você mantém o controle — pode revogar o app a qualquer momento pelo seu dashboard developer.paypal.com.",
+        "intro": "O PayPal exige um <strong>app de desenvolvedor</strong> com um par (Client ID, Secret). Você mantém o controle - pode revogar o app a qualquer momento pelo seu dashboard developer.paypal.com.",
         "guideTitle": "Como criar o app em 1 minuto:",
         "step1Prefix": "Abra",
         "step1Link": "developer.paypal.com → Apps & Credentials → Create App",
-        "step2": "Nome: <code1>Tipote Compta</code1> (o PayPal não aceita hífens nem parênteses) — Tipo: <code2>Merchant</code2>",
+        "step2": "Nome: <code1>Tipote Compta</code1> (o PayPal não aceita hífens nem parênteses) - Tipo: <code2>Merchant</code2>",
         "step3": "Na página do app: <strong>role até o final</strong> em <em1>Live API features</em1> e <strong>ative</strong> a opção <code>Transaction Search</code>. Sem isso, não conseguimos ler o histórico. Clique em <em2>Save</em2>.",
         "step4": "Copie o <strong1>Client ID</strong1> e o <strong2>Secret</strong2> (você precisa clicar em <em>Show</em> para revelar o secret) e cole abaixo.",
         "modeLabel": "Modo",
-        "modeLive": "Live (produção — vendas reais)",
-        "modeSandbox": "Sandbox (teste — para validar a integração)",
+        "modeLive": "Live (produção - vendas reais)",
+        "modeSandbox": "Sandbox (teste - para validar a integração)",
         "modeLiveHelp": "Modo produção: o Tipote vai sincronizar suas vendas reais.",
         "modeSandboxHelp": "Modo teste: as vendas não serão reais, útil para validar a conexão.",
         "clientIdLabel": "Client ID",
@@ -6276,7 +6276,7 @@
         "step2": "Localize a seção <strong>Live API key</strong>. Clique no ícone de olho para revelá-la e copie.",
         "step3": "Cole no campo abaixo. A chave começa com <code1>live_</code1> em produção, <code2>test_</code2> se você estiver testando em sandbox.",
         "noticeTitle": "Importante saber",
-        "noticeBody": "Diferente do Stripe, o Mollie não oferece chave somente leitura — a chave dá acesso completo à sua conta Mollie pela API. O Tipote a usa <strong>apenas para leitura</strong> para recuperar seus pagamentos. Você pode revogá-la instantaneamente pelo seu dashboard Mollie para cortar o acesso.",
+        "noticeBody": "Diferente do Stripe, o Mollie não oferece chave somente leitura - a chave dá acesso completo à sua conta Mollie pela API. O Tipote a usa <strong>apenas para leitura</strong> para recuperar seus pagamentos. Você pode revogá-la instantaneamente pelo seu dashboard Mollie para cortar o acesso.",
         "label": "API key Mollie",
         "hideKey": "Ocultar a chave",
         "showKey": "Mostrar a chave",
@@ -6330,8 +6330,8 @@
         "churnHint": "{pct} % dos assinantes",
         "totalOne": "<strong>{count}</strong> cliente no total este mês.",
         "totalMany": "<strong>{count}</strong> clientes no total este mês.",
-        "churnedOne": "<strong>{count} assinante cancelou</strong> desde o mês passado — vale a pena entender o motivo (retomada de contato, mensagem?).",
-        "churnedMany": "<strong>{count} assinantes cancelaram</strong> desde o mês passado — vale a pena entender o motivo (retomada de contato, mensagem?)."
+        "churnedOne": "<strong>{count} assinante cancelou</strong> desde o mês passado - vale a pena entender o motivo (retomada de contato, mensagem?).",
+        "churnedMany": "<strong>{count} assinantes cancelaram</strong> desde o mês passado - vale a pena entender o motivo (retomada de contato, mensagem?)."
       },
       "topProducts": {
         "title": "Meus campeões de venda este mês",
@@ -6344,17 +6344,17 @@
       "refunds": {
         "label": "Reembolsos (desde janeiro)",
         "refundedThisYear": "{amount} reembolsados este ano",
-        "refundedThisMonthSuffix": " — sendo <strong>{amount}</strong> este mês",
-        "highRateWarning": "Taxa alta — verifique suas páginas de venda ou a qualidade da entrega."
+        "refundedThisMonthSuffix": " - sendo <strong>{amount}</strong> este mês",
+        "highRateWarning": "Taxa alta - verifique suas páginas de venda ou a qualidade da entrega."
       },
       "vat": {
-        "title": "Franquia de IVA — em que pé você está?",
+        "title": "Franquia de IVA - em que pé você está?",
         "description": "Cálculo sobre seus últimos 12 meses ({activity}). Enquanto você estiver abaixo do limite, não cobra IVA dos seus clientes.",
         "thresholdLabel": "limite: {value}",
         "helpLink": "Como funciona a franquia de IVA?",
-        "statusOverThresholdCH": "Limite ultrapassado — obrigação de recolhimento de IVA",
-        "statusOverMajor": "Limite majorado ultrapassado — saída imediata da franquia",
-        "statusOverBase": "Limite base ultrapassado — passagem ao IVA nas próximas semanas",
+        "statusOverThresholdCH": "Limite ultrapassado - obrigação de recolhimento de IVA",
+        "statusOverMajor": "Limite majorado ultrapassado - saída imediata da franquia",
+        "statusOverBase": "Limite base ultrapassado - passagem ao IVA nas próximas semanas",
         "statusApproaching": "Atenção, você está se aproximando do limite",
         "statusUnder": "Você está abaixo do limite"
       }
@@ -6412,7 +6412,7 @@
       "noDeadlines": "Nenhum prazo nos próximos 12 meses para o seu status.",
       "header": {
         "title": "Calendário fiscal",
-        "subtitle": "Seus prazos fiscais calculados conforme seu status. O Tipote não declara por você — clique no prazo para ir ao site oficial."
+        "subtitle": "Seus prazos fiscais calculados conforme seu status. O Tipote não declara por você - clique no prazo para ir ao site oficial."
       },
       "toggleShowOne": "Mostrar o prazo cumprido",
       "toggleShowMany": "Mostrar os {count} prazos cumpridos",
@@ -6428,10 +6428,10 @@
     },
     "fecTitle": "Exportação FEC para o seu contador",
     "fecDescription": "Arquivo de Lançamentos Contábeis no formato legal (artigo A47 A-1 do LPF). É o que a administração fiscal pode pedir em caso de fiscalização.",
-    "fecScopeWarning": "O Tipote tem apenas metade da sua contabilidade: suas vendas e recebimentos (PSP + lançamentos manuais). Não suas compras, despesas, amortizações ou folha. Dê este arquivo ao seu contador como base — ele agregará o resto antes de qualquer entrega oficial.",
+    "fecScopeWarning": "O Tipote tem apenas metade da sua contabilidade: suas vendas e recebimentos (PSP + lançamentos manuais). Não suas compras, despesas, amortizações ou folha. Dê este arquivo ao seu contador como base - ele agregará o resto antes de qualquer entrega oficial.",
     "fecDateFrom": "Data de início",
     "fecDateTo": "Data de fim",
-    "fecSirenRequired": "Preencha seu SIREN na configuração SASU abaixo — é obrigatório no nome do arquivo FEC (norma fiscal).",
+    "fecSirenRequired": "Preencha seu SIREN na configuração SASU abaixo - é obrigatório no nome do arquivo FEC (norma fiscal).",
     "fecPreparing": "Preparando…",
     "fecDownload": "Baixar o FEC",
     "fecMissingSiren": "Preencha seu SIREN na configuração SASU primeiro.",
@@ -6466,36 +6466,36 @@
     "discardBtn": "Partir do meu último salvamento"
   },
   "helpSeo": {
-    "metaTitle": "Indexar os meus quizzes no Google — Ajuda Tipote",
+    "metaTitle": "Indexar os meus quizzes no Google - Ajuda Tipote",
     "metaDescription": "Como tornar os teus quizzes visíveis no Google Search, ChatGPT, Perplexity e outros motores de busca / IA. Guia passo a passo.",
     "title": "Indexar os meus quizzes no Google e nas IA",
-    "subtitle": "Faz com que os teus quizzes apareçam no Google Search, ChatGPT, Perplexity e Claude search — 5 a 10 minutos de configuração, depois é automático.",
+    "subtitle": "Faz com que os teus quizzes apareçam no Google Search, ChatGPT, Perplexity e Claude search - 5 a 10 minutos de configuração, depois é automático.",
     "s1": {
       "heading": "Porquê indexar?",
       "body1": "Quando o Google ou uma IA indexa o teu quiz, qualquer pessoa pode encontrá-lo procurando o teu tema. Três benefícios concretos:",
-      "li1": "Tráfego gratuito recorrente do Google Search — cada pesquisa relevante é uma oportunidade de captar um lead.",
+      "li1": "Tráfego gratuito recorrente do Google Search - cada pesquisa relevante é uma oportunidade de captar um lead.",
       "li2": "Quando alguém pergunta ao ChatGPT, Perplexity ou Claude «recomenda-me um quiz sobre X», o teu quiz pode aparecer.",
       "li3": "Mais partilhas sociais: os visitantes que te encontram via pesquisa partilham frequentemente à sua rede."
     },
     "s2": {
-      "heading": "Passo 1 — Submeter o teu sitemap ao Google",
+      "heading": "Passo 1 - Submeter o teu sitemap ao Google",
       "body1": "O Google precisa de um «sitemap» (lista dos teus quizzes) para os indexar. O Tipote gera-o automaticamente.",
       "li1": "Vai ao Google Search Console: https://search.google.com/search-console",
       "li2": "Clica em «Adicionar propriedade» e insere o teu domínio (ex. tipote.com OU o teu domínio personalizado).",
-      "li3": "Verifica a propriedade (via registo DNS TXT — o Google orienta-te).",
+      "li3": "Verifica a propriedade (via registo DNS TXT - o Google orienta-te).",
       "li4": "No menu à esquerda, vai a «Sitemaps» e insere: sitemap.xml",
       "li5": "Clica em «Enviar». O Google rastreará os teus quizzes em 1 a 7 dias.",
-      "note": "Não precisas reenviar a cada novo quiz — o sitemap é regenerado automaticamente a cada hora."
+      "note": "Não precisas reenviar a cada novo quiz - o sitemap é regenerado automaticamente a cada hora."
     },
     "s3": {
-      "heading": "Passo 2 — Com um domínio personalizado",
+      "heading": "Passo 2 - Com um domínio personalizado",
       "body1": "Se tens um domínio próprio (ex. quiz.teusite.com), podes indexar os teus quizzes no TEU domínio em vez de tipote.com. Mais poderoso para o teu SEO.",
       "li1": "Adiciona o teu domínio personalizado ao Google Search Console como «propriedade de domínio».",
       "li2": "Verifica a propriedade via um registo DNS TXT (o Google dá-te o valor a colar).",
-      "li3": "Submete o sitemap: https://teu-dominio.com/sitemap.xml — listará APENAS os teus quizzes, no TEU URL."
+      "li3": "Submete o sitemap: https://teu-dominio.com/sitemap.xml - listará APENAS os teus quizzes, no TEU URL."
     },
     "s4": {
-      "heading": "Passo 3 — Otimizar cada quiz para SEO",
+      "heading": "Passo 3 - Otimizar cada quiz para SEO",
       "body1": "Quanto melhor for o título e a descrição do teu quiz, mais o Google e as IA o destacam. Boas práticas:",
       "li1Title": "Título claro (≤60 caracteres)",
       "li1Body": "É o texto que o Google mostra nos resultados. Inclui a tua palavra-chave principal.",
@@ -6507,12 +6507,12 @@
       "li4Body": "Aparece no Google Images e nas pré-visualizações iMessage / WhatsApp. Uma boa imagem = +20-30% cliques."
     },
     "s5": {
-      "heading": "Passo 4 — Visibilidade nas IA (ChatGPT, Perplexity, Claude)",
+      "heading": "Passo 4 - Visibilidade nas IA (ChatGPT, Perplexity, Claude)",
       "body1": "Não precisas configurar nada extra. As IA rastreiam os sites automaticamente via o nosso ficheiro `llms.txt` (um manifesto que geramos por ti) que lista os teus quizzes, a sua descrição e URL num formato otimizado para LLMs.",
       "note": "Quanto mais preencheres o título, a descrição e a imagem OG no editor, mais precisamente uma IA poderá recomendar o teu quiz aos utilizadores certos."
     },
     "s6": {
-      "heading": "Passo 5 — Ocultar um quiz dos motores",
+      "heading": "Passo 5 - Ocultar um quiz dos motores",
       "body1": "Se queres manter um quiz privado (apenas via link, sem risco de aparecer no Google), seleciona a caixa «Ocultar este quiz dos motores de busca» na aba SEO do editor do quiz.",
       "body2": "O quiz mantém-se ativo e partilhável via link direto, mas é excluído do teu sitemap e do ficheiro IA. Ideal para conteúdo interno ou drafts públicos partilhados a um círculo limitado."
     }
@@ -6520,8 +6520,8 @@
   "popquiz": {
     "pipEnter": "Modo picture-in-picture",
     "pipExit": "Sair do modo picture-in-picture",
-    "toastPublished": "Popquiz publicado — compartilhe o link com seu público",
-    "toastUnpublished": "Popquiz despublicado — não está mais visível publicamente",
+    "toastPublished": "Popquiz publicado - compartilhe o link com seu público",
+    "toastUnpublished": "Popquiz despublicado - não está mais visível publicamente",
     "toastSaved": "Alterações salvas",
     "toastLinkCopied": "Link copiado",
     "toastCodeCopied": "Código copiado",
@@ -6549,7 +6549,7 @@
     "listTitle": "Meus Popquiz",
     "listSubtitle": "Vídeo + quiz que aparecem em momentos precisos.",
     "freeLimitTitle": "O plano gratuito está limitado a 1 popquiz. Apague o existente ou passe para um plano pago.",
-    "freeLimitBtn": "Plano gratuito — 1 máx.",
+    "freeLimitBtn": "Plano gratuito - 1 máx.",
     "newBtn": "Novo Popquiz",
     "filterAll": "Todos",
     "filterPublished": "Publicados",
@@ -6589,7 +6589,7 @@
     "timelineHintInactive": "Inicie a reprodução para ativar a barra",
     "timelineAddMarkerAria": "Clique para adicionar um marcador",
     "timelineDurationNotDetected": "Reproduza um segundo para que a duração do vídeo seja detectada.",
-    "markerTitle": "Marcador em {time} — clique para excluir",
+    "markerTitle": "Marcador em {time} - clique para excluir",
     "markerAria": "Marcador em {time}, clique para excluir",
     "errorCreateQuizFirst": "Crie primeiro um quiz em Meus projetos.",
     "errorTitleEmpty": "O título não pode estar vazio.",
@@ -6616,7 +6616,7 @@
     "previewModeIframe": "Iframe",
     "inlineTitlePlaceholder": "Clique para adicionar um título",
     "inlineSubtitlePlaceholder": "Clique para adicionar um subtítulo",
-    "overlayMarkerHeader": "Marcador em {time} — {title}",
+    "overlayMarkerHeader": "Marcador em {time} - {title}",
     "overlayUnknownQuiz": "Quiz desconhecido",
     "overlayQuizPlaceholder": "Na reprodução final, o quiz aparecerá aqui.",
     "overlaySkip": "Pular",
@@ -6664,7 +6664,7 @@
     "videoPreparing": "Preparando (extraindo miniatura…)",
     "videoFinalizing": "Finalizando…",
     "videoDropZone": "Arraste um vídeo aqui ou clique para escolher",
-    "videoFormats": "MP4, WebM, MOV — até 20 GB."
+    "videoFormats": "MP4, WebM, MOV - até 20 GB."
   },
   "popquizAppearance": {
     "sectionTitle": "Aparência da página pública",
@@ -6872,7 +6872,7 @@
     "csvHint12": "Separar por vírgulas. Máx. 12.",
     "dangerZone": "Zona de perigo",
     "resetTitle": "Reiniciar este Tipote",
-    "resetDesc": "Mudou de rumo ou se perdeu pelo caminho? Quer recomeçar este Tipote do zero em outra direção? Clique neste botão. Atenção: todos os conteúdos, todas as tarefas e todas as personalizações criadas desde sua chegada serão apagados, você começará do zero. <strong>Se tem vários Tipote, só o que está usando agora é reiniciado — os outros não são tocados.</strong> É definitivo, não poderá voltar atrás.",
+    "resetDesc": "Mudou de rumo ou se perdeu pelo caminho? Quer recomeçar este Tipote do zero em outra direção? Clique neste botão. Atenção: todos os conteúdos, todas as tarefas e todas as personalizações criadas desde sua chegada serão apagados, você começará do zero. <strong>Se tem vários Tipote, só o que está usando agora é reiniciado - os outros não são tocados.</strong> É definitivo, não poderá voltar atrás.",
     "resetting": "Reiniciando…",
     "resetBtn": "Reiniciar meu Tipote",
     "deleteAccountTitle": "Apagar minha conta",
@@ -6896,16 +6896,16 @@
   "highlightBadge": {
     "topPerformer": "Top performer",
     "top": "Top",
-    "trendingTitle": "Em alta — muita atividade recente",
+    "trendingTitle": "Em alta - muita atividade recente",
     "trending": "Em alta",
     "newTitle": "Novo",
     "newLabel": "Novo",
-    "needsAttentionTitle": "Verificar — pouca atividade",
+    "needsAttentionTitle": "Verificar - pouca atividade",
     "needsAttention": "Verificar"
   },
   "boost": {
     "pageTitle": "Tipote Boost",
-    "bannerTitle": "Tipote Boost — Pod LinkedIn + Comentador IA",
+    "bannerTitle": "Tipote Boost - Pod LinkedIn + Comentador IA",
     "bannerSubtitle": "Duas ferramentas numa extensão. Pod de engagement mútuo no LinkedIn (boost + karma) e comentador IA em 7 redes (LinkedIn, Facebook, Threads, Instagram, X, TikTok, Reddit).",
     "loading": "Carregando…",
     "extInstalled": "Extensão Chrome instalada",
@@ -6916,7 +6916,7 @@
     "sync": "Sincronizar",
     "podTitle": "Pod de engagement",
     "linkedInOnly": "Apenas LinkedIn",
-    "podDesc": "Quando você publica no LinkedIn, os outros membros do seu pod recebem um like e um comentário IA para validar — seu post ganha alcance nos primeiros minutos, exatamente quando o algoritmo decide. Você retribui nos posts deles. Sistema de karma: sem aproveitadores.",
+    "podDesc": "Quando você publica no LinkedIn, os outros membros do seu pod recebem um like e um comentário IA para validar - seu post ganha alcance nos primeiros minutos, exatamente quando o algoritmo decide. Você retribui nos posts deles. Sistema de karma: sem aproveitadores.",
     "linkedInLinked": "Conta LinkedIn vinculada",
     "linkedInNotLinked": "Conta LinkedIn ainda não vinculada",
     "connectionSuccess": "Conexão bem-sucedida.",
@@ -6934,7 +6934,7 @@
     "quotaSuffix": " · cota {quota}",
     "aiCommenterTitle": "Comentador IA",
     "sevenNetworks": "7 redes",
-    "aiCommenterDesc": "Em qualquer post que você visitar, um badge Tipote aparece ao lado da área de comentários com 4 tons sugeridos (\"concordo\", \"não concordo\", \"agregar valor\", \"fazer uma pergunta\"). Você escolhe, edita se precisar, publica em 1 clique. Sem pod, sem karma — é sua ferramenta de produtividade solo.",
+    "aiCommenterDesc": "Em qualquer post que você visitar, um badge Tipote aparece ao lado da área de comentários com 4 tons sugeridos (\"concordo\", \"não concordo\", \"agregar valor\", \"fazer uma pergunta\"). Você escolhe, edita se precisar, publica em 1 clique. Sem pod, sem karma - é sua ferramenta de produtividade solo.",
     "availableOn": "Disponível em",
     "howItWorks": "Como funciona",
     "step1": "Abra um feed e visite um post",
@@ -6968,8 +6968,8 @@
     "categoryCodeKey": "Categoria (chave código)",
     "categoryHint": "Chaves atualmente usadas pelo código:",
     "baseValue": "Valor base (€)",
-    "majorThreshold": "Limite majorado (€) — deixar vazio se não aplicável",
-    "majorThresholdOptional": "Limite majorado (€) — opcional",
+    "majorThreshold": "Limite majorado (€) - deixar vazio se não aplicável",
+    "majorThresholdOptional": "Limite majorado (€) - opcional",
     "majorThresholdInline": "limite majorado",
     "sourceUrl": "URL fonte oficial",
     "effectiveFrom": "Em vigor desde",
@@ -6977,10 +6977,10 @@
     "officialSource": "Fonte oficial",
     "notes": "Notas",
     "notesOptional": "Notas (opcional)",
-    "notesPlaceholder": "Ex.: Lei de Finanças 2026 — votada em 28/12/2025",
-    "catVatFranchiseVente": "Isenção IVA — Venda de mercadorias",
-    "catVatFranchiseServicesBic": "Isenção IVA — Prestações BIC",
-    "catVatFranchiseServicesBnc": "Isenção IVA — Prestações BNC"
+    "notesPlaceholder": "Ex.: Lei de Finanças 2026 - votada em 28/12/2025",
+    "catVatFranchiseVente": "Isenção IVA - Venda de mercadorias",
+    "catVatFranchiseServicesBic": "Isenção IVA - Prestações BIC",
+    "catVatFranchiseServicesBnc": "Isenção IVA - Prestações BNC"
   },
   "onboardingForm": {
     "stepOf": "Etapa {step} de {total}",
@@ -7115,9 +7115,9 @@
     "eniTitle": "ENI",
     "eniDesc": "Empresário em Nome Individual. Atividade comercial em seu nome, contabilidade organizada possível.",
     "ldaUniTitle": "LDA Unipessoal",
-    "ldaUniDesc": "Sociedade Unipessoal por Quotas — único sócio. IRC 21%, contas anuais, Modelo 22, e-fatura.",
+    "ldaUniDesc": "Sociedade Unipessoal por Quotas - único sócio. IRC 21%, contas anuais, Modelo 22, e-fatura.",
     "ldaTitle": "LDA",
-    "ldaDesc": "Sociedade por Quotas — 2 ou mais sócios. Mesmas obrigações que uma LDA Unipessoal.",
+    "ldaDesc": "Sociedade por Quotas - 2 ou mais sócios. Mesmas obrigações que uma LDA Unipessoal.",
     "saPTTitle": "SA",
     "saPTDesc": "Sociedade Anónima. Capital mín. 50.000 €, estrutura mais formal. Mesmas obrigações IRC que uma LDA.",
     "ptDisclaimer": "O Tipote cobre as obrigações federais portuguesas (IVA, IRS, IRC, Modelo 22, Segurança Social, e-fatura). As particularidades regionais (Madeira / Açores têm taxas IVA diferentes) são gerenciadas pelo seletor de região abaixo. Para cálculos exatos, seu contabilista certificado continua sendo a referência.",
@@ -7130,14 +7130,14 @@
     "srlBEDesc": "Sociedade Limitada (ex-SPRL, reforma 2019). ISoc 25% (ou 20% PME 1ª faixa), contas anuais BNB, Biztax.",
     "saBETitle": "SA",
     "saBEDesc": "Sociedade Anônima. Capital mín. 61.500 €. Mesmas obrigações ISoc/contas anuais que uma SRL, estrutura mais formal.",
-    "beDisclaimer": "O Tipote cobre as obrigações federais belgas (IVA via Intervat, IPP/ISoc, INASTI, contas anuais BNB, listagens clientes + intra-UE). As particularidades regionais (subsídios PME valões/flamengos/bruxelenses, IVA veículos) não são detalhadas — seu contador continua sendo a referência.",
+    "beDisclaimer": "O Tipote cobre as obrigações federais belgas (IVA via Intervat, IPP/ISoc, INASTI, contas anuais BNB, listagens clientes + intra-UE). As particularidades regionais (subsídios PME valões/flamengos/bruxelenses, IVA veículos) não são detalhadas - seu contador continua sendo a referência.",
     "particulierDescES": "Renda acessória (além de um emprego assalariado ou sem outra atividade). Tudo passa pela sua declaração IRPF (Modelo 100) anual.",
     "autonomoESTitle": "Autónomo",
     "autonomoESDesc": "Trabalhador autônomo, inscrito no RETA. Contribuições sociais mensais via TGSS, IRPF Modelos 130/131 trimestrais, IVA Modelo 303 trimestral.",
     "sluESTitle": "SLU",
-    "sluESDesc": "Sociedad Limitada Unipessoal — único sócio. IS 25% (ou 23% empresas reducidas), contas anuais Registro Mercantil, Modelo 200.",
+    "sluESDesc": "Sociedad Limitada Unipessoal - único sócio. IS 25% (ou 23% empresas reducidas), contas anuais Registro Mercantil, Modelo 200.",
     "slESTitle": "SL",
-    "slESDesc": "Sociedad Limitada — 2 ou mais sócios. Mesmas obrigações IS/contas anuais que uma SLU.",
+    "slESDesc": "Sociedad Limitada - 2 ou mais sócios. Mesmas obrigações IS/contas anuais que uma SLU.",
     "saESTitle": "SA",
     "saESDesc": "Sociedad Anónima. Capital mín. 60.000 €, estrutura mais formal. Mesmas obrigações IS que uma SL.",
     "esDisclaimer": "O Tipote cobre as obrigações federais espanholas (IVA via Modelo 303/390/349, IRPF Modelos 100/130, IS Modelo 200/202, RETA mensal via TGSS, contas anuais Registro Mercantil). Régimen Foral (País Vasco, Navarra): Hacienda Foral substitui a AEAT. Canarias: IGIC em vez de IVA. Ceuta/Melilla: IPSI. Para cálculos exatos e particularidades regionais (deduções IRPF por CCAA), seu asesor fiscal continua sendo a referência.",
@@ -7162,7 +7162,7 @@
     "cCorpDesc": "Form 1120 federal, taxa fixa de 21% desde TCJA 2017. Dupla tributação: a corp paga imposto, depois os acionistas pagam novamente sobre os dividendos. Escolha padrão para startups com VC.",
     "sCorpTitle": "S-Corp",
     "sCorpDesc": "Form 1120-S + K-1. Pass-through (sem imposto federal no nível da corp). Economiza em self-employment tax via «reasonable salary + distributions». Máx 100 acionistas, apenas cidadãos/residentes EUA.",
-    "usDisclaimer": "O Tipote cobre o calendário fiscal federal (Forms 1040, 1120, 1120-S, 1065, 1040-ES, 1099-NEC) + state income tax para os 41 estados que o cobram (9 sem: AK, FL, NV, NH, SD, TN, TX, WA, WY). Sales tax modelado por estado de inscrição (lembrete mensal no dia 20). Sem cálculo automático do sales tax rate (45+ estados × ~10.000 jurisdições locais) — use Stripe Tax / TaxJar / Avalara para precisão. Seu CPA continua sendo a referência para cálculos precisos e eleições (Form 2553 S-election, Form 8832 entity classification).",
+    "usDisclaimer": "O Tipote cobre o calendário fiscal federal (Forms 1040, 1120, 1120-S, 1065, 1040-ES, 1099-NEC) + state income tax para os 41 estados que o cobram (9 sem: AK, FL, NV, NH, SD, TN, TX, WA, WY). Sales tax modelado por estado de inscrição (lembrete mensal no dia 20). Sem cálculo automático do sales tax rate (45+ estados × ~10.000 jurisdições locais) - use Stripe Tax / TaxJar / Avalara para precisão. Seu CPA continua sendo a referência para cálculos precisos e eleições (Form 2553 S-election, Form 8832 entity classification).",
     "particulierQuestion": "Qual é a natureza da sua renda?",
     "particulierQuestionHint": "Isto determina a caixa a preencher na sua declaração de renda (formulário 2042 + 2042-C-PRO).",
     "bncAccessLabel": "Atividades profissionais acessórias",
@@ -7173,7 +7173,7 @@
     "bicScheme": "(regime BIC)",
     "otherLabel": "Outro",
     "otherHint": "Renda de aluguel, direitos autorais, outro caso particular.",
-    "particulierHelpLabel": "Ajuda oficial impots.gouv.fr — declarar renda acessória",
+    "particulierHelpLabel": "Ajuda oficial impots.gouv.fr - declarar renda acessória",
     "aeActivityLabel": "Tipo de atividade",
     "aeActivityHint": "Determina os limiares de IVA e as taxas URSSAF que se aplicam a você.",
     "aeActivityPlaceholder": "Escolha sua atividade",
@@ -7251,10 +7251,10 @@
     "sasuDirigeantTitle": "Você se paga uma remuneração como dirigente?",
     "sasuDirigeantDesc": "Se sim, você contribui para a URSSAF (regime equiparado a empregado) e apresenta uma DSN. Se você se remunera apenas em dividendos, desmarque.",
     "sasuDirigeantHelpLabel": "Status social do presidente de SASU",
-    "chImportantBox": "Importante Suíça: o Tipote calcula seus prazos conforme seu cantão (prazo de declaração + portal). As taxas (IBO, IRPP) variam entre os 26 cantões e seus municípios — seu fiduciário continua sendo a referência para os cálculos exatos.",
+    "chImportantBox": "Importante Suíça: o Tipote calcula seus prazos conforme seu cantão (prazo de declaração + portal). As taxas (IBO, IRPP) variam entre os 26 cantões e seus municípios - seu fiduciário continua sendo a referência para os cálculos exatos.",
     "chCantonLabel": "Seu cantão",
     "chCantonHint": "Determina o prazo da sua declaração e o portal para o qual você é direcionado.",
-    "chCantonPlaceholder": "— Escolha seu cantão —",
+    "chCantonPlaceholder": "- Escolha seu cantão -",
     "startedAtLabel": "Data de início da atividade",
     "optional": "(opcional)",
     "chIdeLabel": "Número IDE (Número de identificação empresarial)",
@@ -7281,7 +7281,7 @@
     "chMethodEffective": "Efetiva",
     "chMethodTDFN": "TDFN",
     "chTDFNHint": "forfetária por setor",
-    "ptImportantBox": "Portugal: o Tipote calcula seus prazos IVA, IRS/IRC e Segurança Social a partir das datas oficiais da AT (Autoridade Tributária). As taxas e a derrama municipal variam — seu contabilista certificado continua sendo a referência para os cálculos.",
+    "ptImportantBox": "Portugal: o Tipote calcula seus prazos IVA, IRS/IRC e Segurança Social a partir das datas oficiais da AT (Autoridade Tributária). As taxas e a derrama municipal variam - seu contabilista certificado continua sendo a referência para os cálculos.",
     "ptNifLabel": "NIF (Número de Identificação Fiscal)",
     "ptNifHintBefore": "9 dígitos. Você pode encontrá-lo no portal",
     "ptRegionLabel": "Sua região",
@@ -7328,7 +7328,7 @@
     "esCommunityPlaceholder": "Escolha sua CCAA",
     "esForalNote": "Régimen Foral detectado → você declara via Hacienda Foral (euskadi.eus para País Vasco, navarra.es para Navarra), não AEAT. Calendário idêntico mas modelos forales.",
     "esCanariasNote": "Canarias → IGIC em vez de IVA. Taxa geral 7%. Modelo 420 (trimestral) / 425 (anual) em vez de 303/390. Sem operações intra-UE.",
-    "esIpsiNote": "Ceuta/Melilla → IPSI (Impuesto sobre la Producción, los Servicios y la Importación) em vez de IVA. Fora do escopo MVP do Tipote — o módulo de contabilidade mostrará seus prazos IRPF/IS/RETA mas não IPSI. Informe-se em sua ciudad autónoma.",
+    "esIpsiNote": "Ceuta/Melilla → IPSI (Impuesto sobre la Producción, los Servicios y la Importación) em vez de IVA. Fora do escopo MVP do Tipote - o módulo de contabilidade mostrará seus prazos IRPF/IS/RETA mas não IPSI. Informe-se em sua ciudad autónoma.",
     "esCifLabelAutonomo": "NIF / DNI / NIE",
     "esCifLabelSLU": "CIF da sua SLU",
     "esCifLabelSL": "CIF da sua SL",
@@ -7349,7 +7349,7 @@
     "esRedemeDesc": "O Registro de Devolución Mensual permite recuperar o IVA todos os meses (em vez de esperar pelo saldo anual). Inscrição voluntária via Modelo 036/039. Implica declarações mensais.",
     "esRedemeHelpLabel": "Mais informações sobre o REDEME",
     "esIrpfMethodLabel": "Método IRPF",
-    "esIrpfMethodHint": "Estimación directa = contabilidade real (Modelo 130 trimestral). Módulos = forfetário por setor de atividade (Modelo 131 trimestral) — limitado a certas atividades listadas pela AEAT.",
+    "esIrpfMethodHint": "Estimación directa = contabilidade real (Modelo 130 trimestral). Módulos = forfetário por setor de atividade (Modelo 131 trimestral) - limitado a certas atividades listadas pela AEAT.",
     "esIrpfDirecta": "Estimación directa",
     "esIrpfObjetiva": "Módulos",
     "esRetaBox": "RETA (Régimen Especial de Trabajadores Autónomos): contribuições mensais via TGSS, baseadas em sua renda real (reforma 2023). Débito automático no último dia útil do mês.",
@@ -7380,10 +7380,10 @@
     "caGstPeriodAnnuelle": "Anual",
     "caHintAnnuelle": "faturamento < 1,5 M$ (padrão)",
     "caGstPeriodTrim": "Trimestral",
-    "caHintTrim": "faturamento 1,5–6 M$",
+    "caHintTrim": "faturamento 1,5-6 M$",
     "caGstPeriodMens": "Mensal",
     "caHintMens": "faturamento > 6 M$",
-    "caGstPeriodFootnote": "A periodicidade é atribuída pelo ARC conforme seu volume — a opção aqui corresponde ao que foi notificado. Você pode pedir uma alteração (para mais frequente sempre é possível, para menos frequente se faturamento em queda).",
+    "caGstPeriodFootnote": "A periodicidade é atribuída pelo ARC conforme seu volume - a opção aqui corresponde ao que foi notificado. Você pode pedir uma alteração (para mais frequente sempre é possível, para menos frequente se faturamento em queda).",
     "caReqBox": "Lembrete REQ: como empresa individual registrada no Registraire des entreprises du Québec, você deve apresentar uma declaração de atualização anual (na data de aniversário do registro).",
     "caReqPortalLabel": "Portal REQ",
     "caT2Footnote": "O T2 federal vence 6 meses após o fim do exercício. O saldo vence em 2 meses (3 meses para SPCC com direito à dedução para pequenas empresas).",
@@ -7393,14 +7393,14 @@
     "usImportantBox": "Estados Unidos: o Tipote calcula seus prazos federais (Forms 1040/1120/1120-S/1065/1040-ES/1099-NEC), seu state income tax (exceto 9 estados sem), e um lembrete mensal por estado onde você recolhe sales tax. Para cálculos exatos, eleições fiscais (S-election, entity classification) e cálculo das taxas de sales tax (~10.000 jurisdições locais), seu CPA e uma ferramenta dedicada (Stripe Tax / TaxJar / Avalara) continuam sendo a referência.",
     "usStateLabel": "State (residência / formação da entidade)",
     "usStatePlaceholder": "Choose your state",
-    "usStateNoIncomeTax": "não cobra state income tax sobre a renda business — você só tem o federal a apresentar. Economia típica: 4 a 9% da renda líquida.",
-    "usStateHasIncomeTax": "cobra um state income tax — você apresenta uma declaração paralela ao federal, geralmente na mesma data (15 abril).",
+    "usStateNoIncomeTax": "não cobra state income tax sobre a renda business - você só tem o federal a apresentar. Economia típica: 4 a 9% da renda líquida.",
+    "usStateHasIncomeTax": "cobra um state income tax - você apresenta uma declaração paralela ao federal, geralmente na mesma data (15 abril).",
     "usNoSalesTaxNote": "Sem sales tax no nível state (NH, OR, MT, DE).",
     "usEinLabel": "EIN",
     "usEinSuffix": "(Employer Identification Number)",
     "usEinHintPrefix": "Formato",
     "usEinHintDigits": "(9 dígitos).",
-    "usEinOptional": "Opcional — um sole prop / single-member LLC sem funcionários pode usar seu SSN.",
+    "usEinOptional": "Opcional - um sole prop / single-member LLC sem funcionários pode usar seu SSN.",
     "usEinRequired": "Obrigatório para multi-member LLC, C-Corp, S-Corp e qualquer entidade com funcionários.",
     "usStartedLabel": "Data de início da atividade (opcional)",
     "usLlcElectionLabel": "Eleição fiscal LLC",
@@ -7412,7 +7412,7 @@
     "usSalesTaxStatesLabel": "Estados onde você recolhe sales tax",
     "usSalesTaxStatesHint": "Marque cada estado onde você está registrado para coletar e remeter o sales tax (economic nexus se ultrapassar os limiares de receita ou transações). O Tipote emite um lembrete mensal por estado (dia 20 do mês seguinte). Se você usa Stripe Tax / TaxJar, indique mesmo assim os estados aqui para ter seus lembretes de filing.",
     "usStatesSelected": "{n} estado{plural} selecionado{plural}: {list}.",
-    "usStatesNone": "Nenhum estado selecionado — sem sales tax a recolher.",
+    "usStatesNone": "Nenhum estado selecionado - sem sales tax a recolher.",
     "usMultiLlcBox": "Multi-member LLC: por padrão, sua LLC apresenta um Form 1065 (partnership return) e emite K-1 a cada membro. Prazo: 15 março (calendar year), extensão automática de 6 meses (15 set). Se você fez uma eleição S/C, o calendário muda.",
     "usSCorpBox": "S-Corp: Form 1120-S devido em 15 março (calendar year). Pass-through, sem imposto federal no nível da entidade. Reasonable salary necessário para os owner-employees (caso contrário risco de reclassificação IRS).",
     "usFiscalYearLabel": "Exercício fiscal",
@@ -7524,7 +7524,7 @@
     "nicheObjective": "[objetivo]",
     "nicheMarker": "[marcador temporal]",
     "linkSioProduct": "Vincular a um produto Systeme.io (opcional)",
-    "linkSioProductHint": "Escolha seu produto na lista — o Tipote atribuirá cada venda à oferta certa em seus analytics. Se você não vincular, tentamos correspondê-lo automaticamente por nome ou preço.",
+    "linkSioProductHint": "Escolha seu produto na lista - o Tipote atribuirá cada venda à oferta certa em seus analytics. Se você não vincular, tentamos correspondê-lo automaticamente por nome ou preço.",
     "personaPainsMain": "Principais dores",
     "personaPains": "Dores",
     "personaPainPoints": "Pontos de dor",
@@ -7543,12 +7543,12 @@
     "nicheMechanismSuffix": "graças a {mechanism}",
     "nicheMarkerSuffix": "em {marker}",
     "tipoteAffiliateTitle": "Ganhe comissões nos seus popquizzes",
-    "tipoteAffiliateDesc": "Em cada popquiz publicado, um discreto <em>«Este vídeo é trazido a você via Tiquiz»</em> redireciona para a página de apresentação do Tiquiz. Se você colar seu identificador de afiliado Systeme.io aqui embaixo, cada inscrição resultante lhe rende uma comissão — automaticamente.",
+    "tipoteAffiliateDesc": "Em cada popquiz publicado, um discreto <em>«Este vídeo é trazido a você via Tiquiz»</em> redireciona para a página de apresentação do Tiquiz. Se você colar seu identificador de afiliado Systeme.io aqui embaixo, cada inscrição resultante lhe rende uma comissão - automaticamente.",
     "tipoteAffiliateIdLabel": "Meu ID de afiliado Tipote",
     "tipoteAffiliateWhereToFind": "<strong>Onde encontro meu ID?</strong> Faça login em Systeme.io → <em>Painel de afiliado</em> → no canto superior direito você vê seu <em>identificador de afiliado</em> (começa com <code>sa</code>). Copie, cole aqui, pronto.",
     "tipoteAffiliateNotRegistered": "Ainda não se inscreveu no programa?",
     "tipoteAffiliateDiscoverProgram": "Descobrir o programa de afiliação Tipote",
     "tipoteAffiliateTerms": "Condições gerais",
-    "tipoteAffiliateEmptyHint": "Se você deixar este campo vazio, o footer continua visível mas sem tracking — as inscrições não vão lhe render nada."
+    "tipoteAffiliateEmptyHint": "Se você deixar este campo vazio, o footer continua visível mas sem tracking - as inscrições não vão lhe render nada."
   }
 }

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { buildSupportKnowledgeBase } from "@/lib/support/knowledgeBase";
 
 export const runtime = "nodejs";
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
       ...cachingParams("support-chat"),
     } as any);
 
-    const reply = completion.choices?.[0]?.message?.content?.trim() || "";
+    const reply = sanitizeAiText(completion.choices?.[0]?.message?.content?.trim() || "");
 
     return NextResponse.json({ ok: true, message: reply });
   } catch (err: any) {

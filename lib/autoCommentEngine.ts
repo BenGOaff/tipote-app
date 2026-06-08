@@ -3,6 +3,7 @@
 // Searches for relevant posts, generates varied comments, and posts them.
 
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -130,7 +131,7 @@ Angle du commentaire : ${angleObj.instruction}
     return ""; // Caller will skip this post
   }
 
-  return text.slice(0, maxChars);
+  return sanitizeAiText(text.slice(0, maxChars));
 }
 
 // ─── Twitter API Functions ───────────────────────────────────────────────────

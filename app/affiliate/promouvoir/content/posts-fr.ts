@@ -1,6 +1,6 @@
 // app/affiliate/promouvoir/content/posts-fr.ts
 //
-// Posts réseaux sociaux pour la promo Tiquiz — séquence 8 jours.
+// Posts réseaux sociaux pour la promo Tiquiz - séquence 8 jours.
 // Pour chaque jour, un visuel + 3 versions (Instagram, LinkedIn, X).
 // Tonalité Béné : tutoiement, phrases sèches, chiffres concrets.
 //
@@ -25,8 +25,8 @@ export type PostDay = {
 export const POSTS_FR: PostDay[] = [
   {
     id: "j1-annonce",
-    dayLabel: "J1 — Annonce de Tiquiz",
-    theme: "Annonce — présenter l'outil",
+    dayLabel: "J1 - Annonce de Tiquiz",
+    theme: "Annonce - présenter l'outil",
     hook: "C'est live.",
     visualPath: "/affiliate-assets/visuels/singles/single-01-annonce.png",
     posts: [
@@ -40,9 +40,9 @@ Tu génères ton quiz en 3-4 minutes avec l'IA.
 Tu connectes ton Systeme io.
 Tes leads tombent, déjà segmentés, déjà tagués.
 
-— Compte gratuit : 1 quiz, 10 réponses/mois
-— Mensuel : 9 €/mois sans engagement
-— Annuel : 90 €/an
+- Compte gratuit : 1 quiz, 10 réponses/mois
+- Mensuel : 9 €/mois sans engagement
+- Annuel : 90 €/an
 
 Pas de carte bancaire pour le gratuit. Tu testes vraiment.
 
@@ -57,10 +57,10 @@ Lien en bio 👆
 C'est un créateur de quiz marketing avec IA et synchronisation native Systeme io. Tu rentres ton objectif (qualifier ta liste, vendre une offre, ouvrir un onboarding...), l'IA génère un quiz complet, tu ajustes, tu partages.
 
 Ce qui change vs un Typeform :
-— Chaque réponse tague automatiquement le lead dans ton Systeme io
-— Chaque profil de résultat a sa propre mini page de vente avec CTA personnalisé
-— Tu peux inscrire en formation ou en communauté selon le profil
-— 9 €/mois ou 90 €/an (vs Typeform Plus à 50 €/mois + Zapier 20 €/mois)
+- Chaque réponse tague automatiquement le lead dans ton Systeme io
+- Chaque profil de résultat a sa propre mini page de vente avec CTA personnalisé
+- Tu peux inscrire en formation ou en communauté selon le profil
+- 9 €/mois ou 90 €/an (vs Typeform Plus à 50 €/mois + Zapier 20 €/mois)
 
 Compte gratuit pour tester (1 quiz, 10 réponses/mois, sans CB) : {AFFILIATE_LINK}`,
       },
@@ -81,7 +81,7 @@ Sans CB pour le gratuit : {AFFILIATE_LINK}`,
   },
   {
     id: "j2-benefices",
-    dayLabel: "J2 — 3 bénéfices clés",
+    dayLabel: "J2 - 3 bénéfices clés",
     theme: "Ce que ton Typeform ne fera jamais",
     hook: "Ce que ton Typeform ne fera jamais.",
     visualPath: "/affiliate-assets/visuels/singles/single-02-benefices.png",
@@ -109,9 +109,9 @@ Lien en bio 👆
 Mais ce sont des formulaires. Ils collectent, ils t'envoient un CSV, fin de l'histoire.
 
 Quand tu veux :
-— Taguer automatiquement le lead dans ton CRM selon ses réponses
-— L'inscrire en formation ou en communauté selon son profil
-— Lui afficher une page de résultat unique par profil, avec CTA personnalisé
+- Taguer automatiquement le lead dans ton CRM selon ses réponses
+- L'inscrire en formation ou en communauté selon son profil
+- Lui afficher une page de résultat unique par profil, avec CTA personnalisé
 
 ...il faut empiler Zapier, Make, et écrire ta propre logique.
 
@@ -132,7 +132,7 @@ Compte gratuit ici : {AFFILIATE_LINK}`,
   },
   {
     id: "j3-linda",
-    dayLabel: "J3 — Cas Linda",
+    dayLabel: "J3 - Cas Linda",
     theme: "Cas client (persona) Linda",
     hook: "Elle est passée de 0,6 % à 4,2 %.",
     visualPath: "/affiliate-assets/visuels/singles/single-03-linda.png",
@@ -181,7 +181,7 @@ Compte gratuit : {AFFILIATE_LINK}`,
   },
   {
     id: "j4-demo",
-    dayLabel: "J4 — Démo en 4 minutes",
+    dayLabel: "J4 - Démo en 4 minutes",
     theme: "Démo complète (carrousel 10 slides)",
     hook: "Segmente ta liste en 4 minutes.",
     visualPath: "/affiliate-assets/visuels/carrousel/slide-01-cover.png",
@@ -204,7 +204,7 @@ Compte gratuit pour tester : lien en bio 👆
 
 #tiquiz #leadgeneration #systemeio #marketingautomation #howto
 
-— Carrousel de 10 slides : poste-les dans l'ordre slide-01 → slide-10.`,
+- Carrousel de 10 slides : poste-les dans l'ordre slide-01 → slide-10.`,
       },
       {
         network: "linkedin",
@@ -212,11 +212,11 @@ Compte gratuit pour tester : lien en bio 👆
 
 Le process :
 
-1. Brief IA (2 min) — objectif, audience, ton, CTA, bonus viral.
-2. L'IA écrit ton quiz (1 min) — questions, options, profils de résultat.
-3. Tu personnalises (2-3 min) — reformule, ajoute ton logo, tes couleurs.
-4. Tu connectes Systeme io (1 min par profil) — tag, formation, communauté.
-5. Tu publies (instantané) — lien public ou code embed.
+1. Brief IA (2 min) - objectif, audience, ton, CTA, bonus viral.
+2. L'IA écrit ton quiz (1 min) - questions, options, profils de résultat.
+3. Tu personnalises (2-3 min) - reformule, ajoute ton logo, tes couleurs.
+4. Tu connectes Systeme io (1 min par profil) - tag, formation, communauté.
+5. Tu publies (instantané) - lien public ou code embed.
 
 Pas de Zapier. Pas de Make. Pas de middleware. Connexion native avec Systeme io.
 
@@ -240,7 +240,7 @@ Compte gratuit : {AFFILIATE_LINK}`,
   },
   {
     id: "j5-faq",
-    dayLabel: "J5 — FAQ",
+    dayLabel: "J5 - FAQ",
     theme: "Les vraies questions",
     hook: "Les 4 trucs qu'on me redemande.",
     visualPath: "/affiliate-assets/visuels/singles/single-05-faq.png",
@@ -275,7 +275,7 @@ Typeform et Tally sont d'excellents formulaires. Tiquiz est pensé pour la quali
 Tu peux sans (les leads arrivent dans ton dashboard Tiquiz, tu exportes). Mais la vraie puissance c'est la connexion SIO. Compte gratuit SIO suffit pour démarrer.
 
 4. Y a-t-il une garantie / remboursement ?
-Non. Pas de garantie, pas de remboursement. Béné assume — le compte gratuit (1 quiz, 10 réponses/mois) te permet déjà de tester en conditions réelles. Si tu hésites encore après ça, ce n'est pas l'outil pour toi.
+Non. Pas de garantie, pas de remboursement. Béné assume - le compte gratuit (1 quiz, 10 réponses/mois) te permet déjà de tester en conditions réelles. Si tu hésites encore après ça, ce n'est pas l'outil pour toi.
 
 Compte gratuit : {AFFILIATE_LINK}`,
       },
@@ -283,10 +283,10 @@ Compte gratuit : {AFFILIATE_LINK}`,
         network: "x",
         caption: `FAQ Tiquiz, 4 réponses :
 
-— Technique ? Non, si tu sais SIO tu sais Tiquiz.
-— Diff Typeform ? Tag SIO auto, page résultat par profil, 9 € vs 50 €.
-— SIO requis ? Pas obligé, mais c'est là que ça brille.
-— Garantie ? Non. Le gratuit est là pour ça.
+- Technique ? Non, si tu sais SIO tu sais Tiquiz.
+- Diff Typeform ? Tag SIO auto, page résultat par profil, 9 € vs 50 €.
+- SIO requis ? Pas obligé, mais c'est là que ça brille.
+- Garantie ? Non. Le gratuit est là pour ça.
 
 Compte gratuit : {AFFILIATE_LINK}`,
       },
@@ -294,7 +294,7 @@ Compte gratuit : {AFFILIATE_LINK}`,
   },
   {
     id: "j6-prix",
-    dayLabel: "J6 — Le vrai coût",
+    dayLabel: "J6 - Le vrai coût",
     theme: "Comparaison de prix sur 5 ans",
     hook: "Pour 5 ans, fais le calcul.",
     visualPath: "/affiliate-assets/visuels/singles/single-06-prix.png",
@@ -322,9 +322,9 @@ J'ai fait le calcul sur 5 ans.
 Pour reproduire ce que fait Tiquiz nativement (tagging Systeme io, segmentation, page résultat par profil), il faut Typeform + Zapier ou Tally + Zapier.
 
 Sur 5 ans :
-— Typeform Plus + Zapier : environ 4 200 €
-— Tally Pro + Zapier : environ 2 800 €
-— Tiquiz Annuel : 450 €
+- Typeform Plus + Zapier : environ 4 200 €
+- Tally Pro + Zapier : environ 2 800 €
+- Tiquiz Annuel : 450 €
 
 La différence vient du fait que Béné a codé Tiquiz avec l'IA, sans dev externe. Les économies de structure passent dans le prix utilisateur.
 
@@ -346,7 +346,7 @@ Gratuit pour tester : {AFFILIATE_LINK}`,
   },
   {
     id: "j7-jmoins1",
-    dayLabel: "J7 — J-1 (urgence)",
+    dayLabel: "J7 - J-1 (urgence)",
     theme: "Dernière chance",
     hook: "J-1. 3 mai · minuit.",
     visualPath: "/affiliate-assets/visuels/singles/single-07-jmoins1.png",
@@ -387,7 +387,7 @@ Compte gratuit : 0 €, sans CB. 1 quiz, 10 réponses/mois. Tu lances ton 1er qu
   },
   {
     id: "j8-dernier-jour",
-    dayLabel: "J8 — Dernier jour",
+    dayLabel: "J8 - Dernier jour",
     theme: "Fermeture du focus (mais pas du gratuit)",
     hook: "À minuit, c'est terminé.",
     visualPath: "/affiliate-assets/visuels/singles/single-08-dernier-jour.png",
@@ -412,11 +412,11 @@ Lien en bio 👆`,
 
 Je te résume les 3 chemins possibles :
 
-Chemin 1 — Compte gratuit. 0 €, sans CB, 1 quiz, 10 réponses/mois. Tu testes sur ton audience, tu décides ensuite.
+Chemin 1 - Compte gratuit. 0 €, sans CB, 1 quiz, 10 réponses/mois. Tu testes sur ton audience, tu décides ensuite.
 
-Chemin 2 — Mensuel à 9 €. Quiz illimités, sans engagement. Tu arrêtes quand tu veux.
+Chemin 2 - Mensuel à 9 €. Quiz illimités, sans engagement. Tu arrêtes quand tu veux.
 
-Chemin 3 — Annuel à 90 €. Tu économises 2 mois.
+Chemin 3 - Annuel à 90 €. Tu économises 2 mois.
 
 Si tu décides de ne rien prendre, pas de souci. Je continue à partager les outils que je trouve solides.
 

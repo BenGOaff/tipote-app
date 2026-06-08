@@ -27,6 +27,7 @@ import { buildVideoScriptPrompt, type VideoDurationId, type VideoPlatform } from
 import { buildEmailPrompt } from "@/lib/prompts/content/email";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { buildArticlePrompt } from "@/lib/prompts/content/article";
 import { buildOfferPrompt } from "@/lib/prompts/content/offer";
 import { buildFunnelPrompt } from "@/lib/prompts/content/funnel";
@@ -1524,7 +1525,7 @@ async function callClaude(args: {
       .join("\n")
       .trim();
 
-    return text || "";
+    return sanitizeAiText(text);
   }
 
   // Should not reach here, but safety net

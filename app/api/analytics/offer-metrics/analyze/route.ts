@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { getPlanLimits } from "@/lib/planLimits";
@@ -247,7 +248,7 @@ Les 3-4 chiffres clés à surveiller le mois prochain.${isCurrentMonth ? `
           max_completion_tokens: 4000,
         } as any);
 
-        analysis = completion.choices?.[0]?.message?.content?.trim() || "Analyse indisponible.";
+        analysis = sanitizeAiText(completion.choices?.[0]?.message?.content?.trim() || "") || "Analyse indisponible.";
       } catch (aiErr) {
         const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error("[offer-metrics/analyze] OpenAI error:", errMsg);

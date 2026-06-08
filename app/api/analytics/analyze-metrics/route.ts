@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 const BodySchema = z.object({
@@ -146,7 +147,7 @@ Ta mission :
           max_completion_tokens: 4000,
         } as any);
 
-        analysis = completion.choices?.[0]?.message?.content?.trim() || "Analyse indisponible.";
+        analysis = sanitizeAiText(completion.choices?.[0]?.message?.content?.trim() || "") || "Analyse indisponible.";
       } catch (aiErr) {
         console.error("[analyze-metrics] OpenAI error:", aiErr instanceof Error ? aiErr.message : aiErr);
         analysis = FALLBACK_ANALYSIS;

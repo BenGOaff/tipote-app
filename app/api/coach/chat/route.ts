@@ -19,6 +19,7 @@ import { searchResourceChunks, type ResourceChunkMatch } from "@/lib/resources";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildBusinessContext } from "@/lib/compta/businessContext";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -1403,8 +1404,14 @@ TONE & STYLE:
       }
     }
 
-    const rawMessage = String(out?.message ?? "").trim() || "Ok. Donne-moi 1 précision et on avance.";
-    const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser, appliedTitles, rejectedTitles });
+    const rawMessage = sanitizeAiText(String(out?.message ?? "").trim()) || "Ok. Donne-moi 1 précision et on avance.";
+    const suggestions = sanitizeSuggestions(out?.suggestions, { isTeaser, appliedTitles, rejectedTitles }).map(
+      (s) => ({
+        ...s,
+        title: sanitizeAiText(s.title),
+        ...(s.description ? { description: sanitizeAiText(s.description) } : {}),
+      }),
+    );
 
     const maxLines = isTeaser ? 8 : goDeeper ? 18 : 10;
     const message = enforceLineLimit(rawMessage, maxLines) || rawMessage;

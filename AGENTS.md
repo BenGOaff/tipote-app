@@ -2,6 +2,30 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+## Anti-IA writing — JAMAIS de tiret long (drame 7 juin 2026)
+
+Béné a une règle absolue dans tout le contenu user-visible (emails
+affiliés, posts, i18n messages, copy UI) : **aucun em-dash `—` ni
+en-dash `–`**. Ces caractères sont une signature stylistique des LLM
+qui trahit immédiatement le texte généré par IA et casse la crédibilité
+de la communication "rédigée par Béné".
+
+À utiliser à la place :
+- En remplacement de listes/bullets : `-` (hyphen simple)
+- En remplacement d'une parenthèse stylistique : `,` ou `:` ou `(...)`
+- En remplacement d'une pause forte : `.` (nouvelle phrase)
+- En remplacement d'une plage de valeurs : `à` ou `-` simple
+
+Scan rapide avant tout commit qui touche au contenu user-visible :
+```bash
+grep -rn "—\|–" messages app/affiliate/promouvoir/content app/affiliate/i18n
+```
+Doit retourner ZÉRO ligne. Sinon, `sed -i 's/—/-/g; s/–/-/g' fichier`.
+
+Cette règle s'applique aux contenus USER-VISIBLE uniquement. Les
+commentaires de code (`//`, `/* */`) peuvent contenir des em-dash sans
+souci - le user ne les voit jamais.
+
 ## Distribution par résultat — RÈGLE UNIQUE (drame Gwenn 7 juin 2026)
 
 Tout endroit qui affiche la distribution des leads par résultat de quiz

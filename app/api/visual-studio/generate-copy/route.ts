@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai, OPENAI_MODEL, cachingParams } from "@/lib/openaiClient";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { copyStyleHint } from "@/lib/visualStudio/copyPatterns";
 
 export const runtime = "nodejs";
@@ -100,6 +101,19 @@ export async function POST(req: NextRequest) {
     } catch {
       parsed = {};
     }
+    // Strip em-dash + leading decorative emojis sur tous les champs string
+    // (Bene 7 juin 2026 : aucun tiret long ne doit survivre cote user).
+    const sanitizeNode = (node: unknown): unknown => {
+      if (typeof node === "string") return sanitizeAiText(node);
+      if (Array.isArray(node)) return node.map(sanitizeNode);
+      if (node && typeof node === "object") {
+        const o: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(node)) o[k] = sanitizeNode(v);
+        return o;
+      }
+      return node;
+    };
+    parsed = sanitizeNode(parsed) as Record<string, unknown>;
 
     let kicker = String(parsed.kicker ?? "").trim().slice(0, 40);
     // Garde-fou : on jette les rubriques plates et sans valeur (Béné : "prix

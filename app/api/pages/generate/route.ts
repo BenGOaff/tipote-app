@@ -11,6 +11,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { ensureUserCredits, consumeCredits } from "@/lib/credits";
 import { buildPage } from "@/lib/pageBuilder";
 import { searchResourceChunks } from "@/lib/resources";
@@ -107,11 +108,12 @@ async function callClaude(args: {
 
   const json = (await res.json()) as any;
   const parts = Array.isArray(json?.content) ? json.content : [];
-  return parts
+  const text = parts
     .map((p: any) => (p?.type === "text" ? String(p?.text ?? "") : ""))
     .filter(Boolean)
     .join("\n")
     .trim();
+  return sanitizeAiText(text);
 }
 
 // ---------- Types ----------
