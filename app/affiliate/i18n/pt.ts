@@ -119,7 +119,7 @@ export const PT: AffiliateDict = {
     subtitle: "A tua visão geral do programa de afiliados Tipote × Tiquiz.",
     link_card_title: "O teu link de afiliado",
     link_card_help:
-      "Podes substituir o destino por qualquer URL tipote.fr, tipote.com ou tipote.blog - basta adicionar ?sa={sa} no final.",
+      "O teu link principal para a página de venda Tiquiz. Mais abaixo encontras variantes por plano (gratuito, mensal, anual). Todos os links contêm o teu ID de rastreio ?sa={sa}.",
     stat_clicks: "Cliques",
     stat_signups: "Inscrições",
     stat_sales: "Vendas",
@@ -212,7 +212,7 @@ export const PT: AffiliateDict = {
     tab_posts: "Redes",
     tab_visuels: "Visuais",
     links_info:
-      "💡 Também podes adicionar ?sa={sa} no final de qualquer URL tipote.fr, tipote.com ou tipote.blog. Por exemplo, promove um artigo do blog - a comissão é tua se o visitante comprar em 90 dias.",
+      "💡 Também podes adicionar ?sa={sa} no final de qualquer URL tipote.fr ou tipote.blog (exceto tipote.fr/tiquiz nu que NÃO está marcado para afiliação). Por exemplo, promove um artigo do blog - a comissão é tua se o visitante comprar em 90 dias.",
     emails_info_title: "📧 Sequência de emails evergreen - 8 emails",
     emails_info_body:
       "Cadência recomendada: 1 email a cada 2 dias, ou 1 por semana durante 2 meses. A variável {first_name} é a do Systeme.io (deixa-a tal como está para a personalização no envio). O teu link rastreado e o teu nome já estão inseridos.",

@@ -61,15 +61,23 @@
   function post(payload) {
     try {
       var json = JSON.stringify(payload);
-      var blob = new Blob([json], { type: "application/json" });
+      // IMPORTANT : on envoie en text/plain (pas application/json) pour
+      // que la requete soit "simple" cote CORS = AUCUN preflight OPTIONS,
+      // AUCUNE verification d'Access-Control-Allow-Origin sur la response.
+      // Avec application/json le browser declenche un preflight ; meme si
+      // le serveur repond bien, sendBeacon en POST avec content-type
+      // non-simple voit le response check CORS echouer et logue "CORS
+      // error" dans la console (drame Gwenn / Bene 8 juin 2026 :
+      // "j'ai rien sur mon tableau de bord, ping CORS error"). L'endpoint
+      // /api/affiliate/track parse deja le body brut en JSON.parse
+      // (try-catch), donc text/plain est compatible cote serveur.
+      var blob = new Blob([json], { type: "text/plain;charset=UTF-8" });
       if (navigator.sendBeacon && navigator.sendBeacon(ENDPOINT, blob)) return;
-      // sendBeacon a renvoyé false (queue pleine) ou n'existe pas :
-      // fallback fetch keepalive. Both no-cors-safe : l'endpoint répond
-      // toujours 200/4xx sans bloquer la nav cote SIO.
+      // Fallback fetch : meme content-type pour eviter le preflight.
       fetch(ENDPOINT, {
         method: "POST",
         keepalive: true,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
         body: json,
       }).catch(function () {});
     } catch (_) {}

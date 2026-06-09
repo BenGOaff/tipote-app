@@ -119,7 +119,7 @@ export const EN: AffiliateDict = {
     subtitle: "Your overview of the Tipote × Tiquiz affiliate program.",
     link_card_title: "Your affiliate link",
     link_card_help:
-      "You can replace the destination with any tipote.fr, tipote.com or tipote.blog URL - just add ?sa={sa} at the end.",
+      "Your main link to the Tiquiz sales page. Below you'll find plan-specific variants (free, monthly, yearly). All these links are tagged with your tracking ID ?sa={sa}.",
     stat_clicks: "Clicks",
     stat_signups: "Sign-ups",
     stat_sales: "Sales",
@@ -212,7 +212,7 @@ export const EN: AffiliateDict = {
     tab_posts: "Social",
     tab_visuels: "Visuals",
     links_info:
-      "💡 You can also add ?sa={sa} to the end of any tipote.fr, tipote.com or tipote.blog URL. For example, promote a specific blog post - the commission goes to you if the visitor buys within 90 days.",
+      "💡 You can also add ?sa={sa} to the end of any tipote.fr or tipote.blog URL (except bare tipote.fr/tiquiz which is NOT affiliate-tagged). For example, promote a specific blog post - the commission goes to you if the visitor buys within 90 days.",
     emails_info_title: "📧 Evergreen email sequence - 8 emails",
     emails_info_body:
       "Recommended cadence: 1 email every 2 days, or 1 per week over 2 months. The {first_name} variable is Systeme.io's (leave it as-is for personalization at send time). Your tracked link and name are already injected.",

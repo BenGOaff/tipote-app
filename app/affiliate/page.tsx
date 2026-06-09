@@ -9,6 +9,7 @@ import { getAffiliateSession } from "@/lib/affiliate/session";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDict, interpolate, normaliseLocale } from "./i18n";
 import { buildAffiliateLink } from "@/lib/affiliate/links";
+import { getLinkPath } from "@/lib/affiliate/linkDestinations";
 import type { AffiliateDict } from "./i18n/types";
 import { TrendingUp, MousePointerClick, Users, ShoppingCart, Sparkles, Award, ArrowRight, Gift } from "lucide-react";
 
@@ -130,7 +131,13 @@ export default async function AffiliateOverviewPage() {
 
   const tier = currentTier(stats.total_sales);
   // Lien principal du marché de l'affilié (FR → tipote.fr, EN → tipote.blog).
-  const linkUrl = buildAffiliateLink(session.locale, "/", session.sa);
+  // Drame Bene 8 juin 2026 : avant ce fix on construisait "/" (racine =
+  // page d'accueil Tipote) -> Tipote n'est PAS en vente, on n'en parle
+  // NULLE PART en affiliation. Maintenant on prend le path "tiquiz_main"
+  // depuis la table affiliate_link_destinations (admin-editable, defaut
+  // /part-tiquiz).
+  const mainPath = await getLinkPath("tiquiz_main");
+  const linkUrl = buildAffiliateLink(session.locale, mainPath, session.sa);
   const conversionRate =
     stats.total_clicks > 0
       ? `${((stats.total_sales / stats.total_clicks) * 100).toFixed(1)}%`
