@@ -101,6 +101,18 @@ export function AffiliateSidebar({ displayName, isAdmin = false }: { displayName
             <ShieldCheck className="w-5 h-5 shrink-0" />
             <span>Admin - Liens</span>
           </Link>
+          <Link
+            href="/admin/diagnostic"
+            onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              isActive("/admin/diagnostic")
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <ShieldCheck className="w-5 h-5 shrink-0" />
+            <span>Admin - Diagnostic</span>
+          </Link>
         </>
       )}
     </nav>

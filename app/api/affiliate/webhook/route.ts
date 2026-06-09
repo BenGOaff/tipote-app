@@ -7,6 +7,10 @@
 //   - tipote.fr/affiliation (Tipote)
 //   - Toute autre page d'inscription au programme
 //
+// POUR ENREGISTRER UNE CONVERSION AFFILIEE (drame Gwenn 8 juin 2026),
+// utiliser plutôt l'endpoint dédié /api/affiliate/sio-conversion. Cette
+// route-ci ne fait QUE l'envoi de magic link (inscription au programme).
+//
 // Différent de /api/systeme-io/webhook (qui gère les ventes/refunds)
 // pour ne pas mélanger les concerns. Cet endpoint a UNE seule mission :
 // recevoir un signal "nouvel affilié inscrit côté SIO" et envoyer un
@@ -88,7 +92,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const firstName = extractFirstName(body);
 
   // Envoi du magic link via notre helper custom (Resend + template
-  // bi-marque Tipote × Tiquiz, multilang FR/EN/ES/IT/PT/AR). Évite le
+  // bi-marque Tipote x Tiquiz, multilang FR/EN/ES/IT/PT/AR). Évite le
   // template Supabase par défaut qui est hardcodé pour le dashboard
   // Tipote principal (et redirige vers app.tipote.com au lieu de
   // affiliate.tipote.com).

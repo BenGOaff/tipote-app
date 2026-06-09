@@ -26,8 +26,18 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const ids = Array.isArray(body?.ids) ? (body.ids as unknown[]) : [];
-  const validIds = ids.filter((id): id is string => typeof id === "string" && id.length > 0);
+  const rawIds = Array.isArray(body?.ids) ? (body.ids as unknown[]) : [];
+  // BUG drame Gwenn 8 juin 2026 : user_milestones.id est un BIGSERIAL ->
+  // serialise en JSON NUMBER cote client. Si on filtre uniquement les
+  // string, validIds finit vide -> aucun UPDATE -> seen_at reste NULL
+  // -> les memes notifs reapparaissent a chaque fresh session.
+  const validIds = rawIds
+    .filter((id): id is string | number => {
+      if (typeof id === "string") return id.length > 0;
+      if (typeof id === "number") return Number.isFinite(id);
+      return false;
+    })
+    .map((id) => String(id));
 
   if (validIds.length === 0) {
     return NextResponse.json({ ok: true, updated: 0 });
