@@ -21,7 +21,40 @@ import {
   type MilestoneDefinition,
 } from "@/lib/milestones/catalog";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").replace(/\/$/, "");
+// Base URL des liens dans les EMAILS milestone. Tipote vit sur
+// app.tipote.com. Drame Monique 8 juin 2026 : son mail "premier quiz
+// complete" pointait sur quiz.tipote.com/quizzes (404) - c'est le
+// domaine de TIQUIZ, pas Tipote. Cause : NEXT_PUBLIC_APP_URL mal
+// configure en prod (ou herite d'un env partage). On betonne ici :
+//   1. priorite a un env dedie MILESTONE_EMAIL_BASE_URL si fourni
+//   2. sinon NEXT_PUBLIC_APP_URL
+//   3. sinon default app.tipote.com
+//   4. GARDE-FOU : si l'URL resolue pointe sur un domaine Tiquiz
+//      (quiz.tipote.com) ou quoi que ce soit qui n'est pas l'app Tipote,
+//      on FORCE app.tipote.com. Un mail Tipote ne doit JAMAIS lier vers
+//      Tiquiz - ces routes n'existent pas la-bas.
+function resolveMilestoneEmailBase(): string {
+  const raw = (
+    process.env.MILESTONE_EMAIL_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://app.tipote.com"
+  ).trim().replace(/\/$/, "");
+  try {
+    const host = new URL(raw).host.toLowerCase();
+    // Tout host qui n'est pas l'app Tipote -> on corrige. Couvre
+    // quiz.tipote.com (Tiquiz), www.tipote.fr (sales), localhost mal
+    // configure en prod, etc. En dev, app.tipote.com est inoffensif
+    // (les emails ne partent pas vraiment).
+    if (host !== "app.tipote.com") {
+      return "https://app.tipote.com";
+    }
+    return raw;
+  } catch {
+    return "https://app.tipote.com";
+  }
+}
+
+const APP_URL = resolveMilestoneEmailBase();
 
 export interface EvaluateMilestonesArgs {
   userId: string;
