@@ -157,18 +157,48 @@ export async function POST(req: NextRequest) {
   }
 
   const email = extractEmail(body);
+  const sa = extractSaFromPayload(body);
+  const pageUrl = extractSourcePageUrl(body);
+
+  // Audit : on log CHAQUE webhook recu, meme ceux qui ne matchent pas
+  // (no_email, no_sa). Permet a Bene de diagnostiquer "pourquoi ma
+  // conversion n'arrive pas" en regardant webhook_logs / Vercel logs
+  // au lieu de tatonner. Best-effort, ne bloque pas si la table n'existe
+  // pas.
+  try {
+    await supabaseAdmin.from("webhook_logs").insert({
+      source: "systeme_io",
+      event_type: "AFFILIATE_CONVERSION_ATTEMPT",
+      payload: {
+        extracted_email: email,
+        extracted_sa: sa,
+        extracted_page_url: pageUrl,
+        raw_keys: body && typeof body === "object" ? Object.keys(body) : [],
+        raw_body: body,
+      },
+      status: !email ? "skipped_no_email" : !sa ? "skipped_no_sa" : "received",
+      received_at: new Date().toISOString(),
+    } as Record<string, unknown>);
+  } catch {
+    // table peut etre absente sur certains envs (Tipote vs Tiquiz),
+    // on continue silencieusement.
+  }
+
   if (!email) {
+    console.warn(
+      `[affiliate/sio-conversion] skipped no_email - keys=${Object.keys(body ?? {}).join(",")}`,
+    );
     return NextResponse.json({ ok: false, reason: "no_email" }, { status: 200 });
   }
 
-  const sa = extractSaFromPayload(body);
   if (!sa) {
-    // Pas d'affilié sur cette conversion (opt-in direct sans affilié).
-    // Statut 200 pour que SIO ne retry pas inutilement.
+    // Pas d'affilié exploitable. Cas typique : opt-in direct sans
+    // referrer affilié. Statut 200 pour que SIO ne retry pas.
+    console.warn(
+      `[affiliate/sio-conversion] skipped no_sa email=${email} keys=${Object.keys(body ?? {}).join(",")}`,
+    );
     return NextResponse.json({ ok: false, reason: "no_sa", email }, { status: 200 });
   }
-
-  const pageUrl = extractSourcePageUrl(body);
 
   // Idempotence soft : on cherche une conversion (email, sa) deja
   // enregistree dans les dernieres 24h (snippet JS + webhook retry +
