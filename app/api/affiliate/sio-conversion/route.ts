@@ -160,43 +160,57 @@ export async function POST(req: NextRequest) {
   const sa = extractSaFromPayload(body);
   const pageUrl = extractSourcePageUrl(body);
 
+  // Console.log inconditionnel : visible dans les logs Vercel meme si
+  // l'insert DB ci-dessous echoue. Permet de verifier "le webhook
+  // arrive-t-il a notre endpoint ?" sans avoir besoin d'ouvrir Supabase.
+  console.log(
+    `[affiliate/sio-conversion] received email=${email ?? "(none)"} sa=${sa ?? "(none)"} keys=${Object.keys(body ?? {}).join(",")}`,
+  );
+
   // Audit : on log CHAQUE webhook recu, meme ceux qui ne matchent pas
   // (no_email, no_sa). Permet a Bene de diagnostiquer "pourquoi ma
-  // conversion n'arrive pas" en regardant webhook_logs / Vercel logs
-  // au lieu de tatonner. Best-effort, ne bloque pas si la table n'existe
-  // pas.
+  // conversion n'arrive pas" en regardant webhook_logs (apres
+  // migration 20260608_webhook_logs_status_event_id) ou Vercel logs.
+  // Best-effort, double-try : (1) avec status pour la nouvelle schema,
+  // (2) fallback sans status pour les envs ou la migration n'a pas
+  // tourne. Garantit qu'on log toujours quelque chose.
+  const auditPayload = {
+    extracted_email: email,
+    extracted_sa: sa,
+    extracted_page_url: pageUrl,
+    raw_keys: body && typeof body === "object" ? Object.keys(body) : [],
+    raw_body: body,
+  };
+  const auditStatus = !email ? "skipped_no_email" : !sa ? "skipped_no_sa" : "received";
   try {
-    await supabaseAdmin.from("webhook_logs").insert({
+    const { error } = await supabaseAdmin.from("webhook_logs").insert({
       source: "systeme_io",
       event_type: "AFFILIATE_CONVERSION_ATTEMPT",
-      payload: {
-        extracted_email: email,
-        extracted_sa: sa,
-        extracted_page_url: pageUrl,
-        raw_keys: body && typeof body === "object" ? Object.keys(body) : [],
-        raw_body: body,
-      },
-      status: !email ? "skipped_no_email" : !sa ? "skipped_no_sa" : "received",
+      payload: auditPayload,
+      status: auditStatus,
       received_at: new Date().toISOString(),
     } as Record<string, unknown>);
+    if (error) {
+      // Probable : colonne status absente (migration pas encore appliquee).
+      // Fallback sans status, on encode le status dans event_type.
+      await supabaseAdmin.from("webhook_logs").insert({
+        source: "systeme_io",
+        event_type: `AFFILIATE_CONVERSION_ATTEMPT:${auditStatus}`,
+        payload: auditPayload,
+        received_at: new Date().toISOString(),
+      });
+    }
   } catch {
-    // table peut etre absente sur certains envs (Tipote vs Tiquiz),
-    // on continue silencieusement.
+    // En dernier recours, on a deja console.log au-dessus.
   }
 
   if (!email) {
-    console.warn(
-      `[affiliate/sio-conversion] skipped no_email - keys=${Object.keys(body ?? {}).join(",")}`,
-    );
     return NextResponse.json({ ok: false, reason: "no_email" }, { status: 200 });
   }
 
   if (!sa) {
     // Pas d'affilié exploitable. Cas typique : opt-in direct sans
     // referrer affilié. Statut 200 pour que SIO ne retry pas.
-    console.warn(
-      `[affiliate/sio-conversion] skipped no_sa email=${email} keys=${Object.keys(body ?? {}).join(",")}`,
-    );
     return NextResponse.json({ ok: false, reason: "no_sa", email }, { status: 200 });
   }
 

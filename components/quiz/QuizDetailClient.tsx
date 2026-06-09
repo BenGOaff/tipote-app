@@ -2357,7 +2357,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
           {/* RIGHT: LIVE PREVIEW — all sections stacked, exactly as visitor sees it */}
           <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, fontFamily }}>
-            <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
+            <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
               <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
