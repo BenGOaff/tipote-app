@@ -4,12 +4,12 @@
 // ROADMAP_RETENTION.md).
 //
 // Une `milestoneKey` est l'identifiant STABLE en DB (`user_milestones`).
-// Le libellé peut évoluer, la clé non — sinon on re-débloque le milestone
+// Le libellé peut évoluer, la clé non, sinon on re-débloque le milestone
 // chez les users qui l'avaient déjà eu.
 //
 // V1 (1er juin 2026) : 7 milestones tractables sans le branchement `sale`
 // (qui arrivera début phase 2). Les milestones "first_sale", "first_1k",
-// "streak_7days" sont déclarés mais commentés — à activer dès que les
+// "streak_7days" sont déclarés mais commentés, à activer dès que les
 // events `sale` et `post_published` couvrent toute la timeline du user.
 //
 // Convention textuelle FR par défaut. Tipote a 5 langues UI mais pour
@@ -25,7 +25,7 @@ export type MilestoneScope = "total" | "per_project";
  *   - `kind` : kind d'event à compter (ex "lead_captured").
  *   - `threshold` : seuil à franchir (premier event = 1, 10e = 10, etc.).
  *   - `scope` : "total" compte sur tous les events du user (default).
- *               "per_project" compte par (user_id, project_id) — utile
+ *               "per_project" compte par (user_id, project_id), utile
  *               pour les milestones par-projet Elite.
  */
 export interface MilestoneCountTrigger {
@@ -37,7 +37,7 @@ export interface MilestoneCountTrigger {
 
 /**
  * Palier de CA cumulé (en centimes, monnaie ORIGINALE de la transaction
- * — pas de conversion devise V1). Trigger appelé quand le kind `sale`
+ *, pas de conversion devise V1). Trigger appelé quand le kind `sale`
  * est observé : engine somme `transactions.amount_cents - refunded_cents`
  * via `sumSalesForUser` et débloque si cumul ≥ threshold.
  */
@@ -95,7 +95,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   {
     key: "leads_100",
     emoji: "🚀",
-    title: "100 leads — ton audience décolle",
+    title: "100 leads, ton audience décolle",
     body: "100 prospects taggés dans Systeme.io. Ta machine à leads tourne.",
     emailSubject: "🚀 100 leads via Tipote",
     emailHtmlBody:
@@ -108,7 +108,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   {
     key: "leads_1000",
     emoji: "🏆",
-    title: "1000 leads — palier de pro",
+    title: "1000 leads, palier de pro",
     body: "Tu fais partie des créateurs qui ont vraiment construit une audience. Bravo.",
     emailSubject: "🏆 Tu as franchi les 1000 leads",
     emailHtmlBody:
@@ -141,7 +141,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
     emailSubject: "🔥 10 posts publiés via Tipote",
     emailHtmlBody:
       "10 posts publiés. C'est plus que la plupart des solos en 6 mois. Continue, c'est ce rythme-là qui crée de l'engagement.<br/><br/>" +
-      "Ouvre ton analytics pour voir lequel a le mieux marché — et duplique l'angle.",
+      "Ouvre ton analytics pour voir lequel a le mieux marché, et duplique l'angle.",
     ctaLabel: "Voir mon analytics",
     ctaUrl: "/analytics",
     trigger: { type: "count", kind: "post_published", threshold: 10 },
@@ -149,12 +149,12 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   {
     key: "posts_100",
     emoji: "👑",
-    title: "100 posts publiés — couronne créateur",
+    title: "100 posts publiés, couronne créateur",
     body: "Tu as publié 100 fois avec Tipote. Tu es un vrai créateur régulier.",
     emailSubject: "👑 100 posts via Tipote",
     emailHtmlBody:
       "100 posts publiés. Tu es passé du statut de \"solo qui essaie de publier\" à celui de \"créateur régulier\". C'est le palier où les algorithmes commencent vraiment à pousser tes contenus.<br/><br/>" +
-      "Si tu n'as pas encore activé les auto-commentaires, c'est le moment — ton audience est assez large maintenant pour que ça valle la peine.",
+      "Si tu n'as pas encore activé les auto-commentaires, c'est le moment, ton audience est assez large maintenant pour que ça valle la peine.",
     ctaLabel: "Activer les auto-commentaires",
     ctaUrl: "/automations",
     trigger: { type: "count", kind: "post_published", threshold: 100 },
@@ -165,7 +165,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   // conversion V1). Les paliers monétaires assument que la grande
   // majorité des users Tipote vendent en EUR ; pour un user en USD/CHF
   // exclusif, le palier "1k€" se déclenchera quand son cumul brut atteint
-  // 100 000 centimes — soit ~1k USD ou ~1k CHF. Acceptable V1.
+  // 100 000 centimes, soit ~1k USD ou ~1k CHF. Acceptable V1.
   {
     key: "first_sale",
     emoji: "💶",
@@ -182,12 +182,12 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   {
     key: "sales_10",
     emoji: "💼",
-    title: "10 ventes — c'est une vraie activité",
+    title: "10 ventes, c'est une vraie activité",
     body: "Tipote a trackée tes 10 premières ventes. Le moteur tourne.",
     emailSubject: "💼 10 ventes trackées",
     emailHtmlBody:
       "10 ventes synchronisées. Tu as une vraie activité régulière maintenant. Bonne nouvelle : Tipote sait isoler tes ventes directes de tes commissions d'affiliation, et calculer ton seuil franchise TVA si tu es auto-entrepreneur.<br/><br/>" +
-      "Profite de ce moment pour vérifier ton statut fiscal côté Compta — c'est aussi à 10 ventes qu'on commence à oublier les bons réglages au début.",
+      "Profite de ce moment pour vérifier ton statut fiscal côté Compta, c'est aussi à 10 ventes qu'on commence à oublier les bons réglages au début.",
     ctaLabel: "Voir ma compta",
     ctaUrl: "/settings?tab=compta",
     trigger: { type: "count", kind: "sale", threshold: 10 },
@@ -195,7 +195,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   {
     key: "sales_100",
     emoji: "🏗️",
-    title: "100 ventes — solo qui scale",
+    title: "100 ventes, solo qui scale",
     body: "100 transactions synchronisées. Tu as construit quelque chose de vrai.",
     emailSubject: "🏗️ 100 ventes via tes outils",
     emailHtmlBody:
@@ -215,7 +215,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
     emailSubject: "🥉 1 000 € de CA tracké",
     emailHtmlBody:
       "1 000 € de CA cumulé, c'est le premier vrai palier psychologique pour un solopreneur. Tu n'es plus en \"je teste\", tu es en \"j'opère\".<br/><br/>" +
-      "Prochain palier ciblé par Tipote : 5 000 €. Si tu n'as pas encore fixé d'objectif de revenu mensuel dans tes paramètres, c'est le moment — la jauge sur le dashboard te rendra l'effort beaucoup plus motivant.",
+      "Prochain palier ciblé par Tipote : 5 000 €. Si tu n'as pas encore fixé d'objectif de revenu mensuel dans tes paramètres, c'est le moment, la jauge sur le dashboard te rendra l'effort beaucoup plus motivant.",
     ctaLabel: "Configurer mon objectif",
     ctaUrl: "/strategy",
     trigger: { type: "monetary_threshold", kind: "sale", thresholdCents: 100_000 },
@@ -223,11 +223,11 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   {
     key: "sales_first_5k_eur",
     emoji: "🥈",
-    title: "5 000 € de CA — palier d'un vrai business",
+    title: "5 000 € de CA, palier d'un vrai business",
     body: "Tu as cumulé 5 000 € de ventes synchronisées via Tipote.",
     emailSubject: "🥈 5 000 € de CA cumulé",
     emailHtmlBody:
-      "5 000 € de CA cumulé. Tu es au-dessus du seuil de la franchise TVA pour beaucoup d'activités — si tu es auto-entrepreneur, la jauge dans Compta te dira où tu en es exactement.<br/><br/>" +
+      "5 000 € de CA cumulé. Tu es au-dessus du seuil de la franchise TVA pour beaucoup d'activités, si tu es auto-entrepreneur, la jauge dans Compta te dira où tu en es exactement.<br/><br/>" +
       "Continue, le palier 10 000 € est dans la même mécanique : tes contenus tournent, tu publies régulièrement, tu factures.",
     ctaLabel: "Voir ma compta",
     ctaUrl: "/settings?tab=compta",
@@ -240,7 +240,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
     body: "Cinq chiffres en CA cumulé via Tipote. Sérieusement, bravo.",
     emailSubject: "🥇 10 000 € de CA",
     emailHtmlBody:
-      "10 000 € de CA cumulé via tes outils Tipote. C'est le palier où la majorité des solos abandonnent — toi tu l'as passé.<br/><br/>" +
+      "10 000 € de CA cumulé via tes outils Tipote. C'est le palier où la majorité des solos abandonnent, toi tu l'as passé.<br/><br/>" +
       "Si tu es seul et que tu commences à plafonner sur le temps, c'est aussi le moment de penser à un palier d'offre supérieur (high ticket, abonnement, communauté). Le coach IA peut t'aider à dessiner ça.",
     ctaLabel: "Ouvrir le coach IA",
     ctaUrl: "/coach",
@@ -255,7 +255,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
     body: "Un visiteur vient de terminer un de tes quiz jusqu'au bout.",
     emailSubject: "✅ Ton premier quiz complété",
     emailHtmlBody:
-      "Un visiteur a finis l'un de tes quiz jusqu'au résultat. Ce n'est pas juste une vue — c'est quelqu'un qui s'est engagé du début à la fin.<br/><br/>" +
+      "Un visiteur a fini l'un de tes quiz jusqu'au résultat. Ce n'est pas juste une vue, c'est quelqu'un qui s'est engagé du début à la fin.<br/><br/>" +
       "Si tu n'as pas encore activé la capture email avant le résultat, c'est le moment : tu transformes ces complétions en leads.",
     ctaLabel: "Voir mes quiz",
     ctaUrl: "/quizzes",
@@ -268,7 +268,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
     body: "Tes quiz ont été finis 100 fois. Ton lead magnet fonctionne.",
     emailSubject: "🎓 100 complétions de quiz",
     emailHtmlBody:
-      "100 visiteurs ont fini l'un de tes quiz jusqu'au bout. C'est un vrai signal de qualité — tu retiens l'attention.<br/><br/>" +
+      "100 visiteurs ont fini l'un de tes quiz jusqu'au bout. C'est un vrai signal de qualité, tu retiens l'attention.<br/><br/>" +
       "Ouvre tes analytics pour voir lequel performe le mieux et duplique l'angle dans tes prochains contenus.",
     ctaLabel: "Voir mon analytics",
     ctaUrl: "/analytics",
@@ -281,8 +281,8 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
     body: "Mille visiteurs sont allés jusqu'au bout. Tu as une mécanique qui scale.",
     emailSubject: "🏟️ 1000 complétions de quiz",
     emailHtmlBody:
-      "1000 complétions de quiz. C'est très rare. Tu as construit une mécanique de capture qui fonctionne vraiment — la plupart des créateurs ne dépassent pas 100.<br/><br/>" +
-      "Profite de ce palier pour vendre une offre à partir du résultat le plus populaire — la conversion est généralement excellente sur les visiteurs qui finissent un quiz.",
+      "1000 complétions de quiz. C'est très rare. Tu as construit une mécanique de capture qui fonctionne vraiment, la plupart des créateurs ne dépassent pas 100.<br/><br/>" +
+      "Profite de ce palier pour vendre une offre à partir du résultat le plus populaire, la conversion est généralement excellente sur les visiteurs qui finissent un quiz.",
     ctaLabel: "Voir mes quiz",
     ctaUrl: "/quizzes",
     trigger: { type: "count", kind: "quiz_complete", threshold: 1000 },
@@ -297,7 +297,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
     emailSubject: "📤 Ton premier partage de quiz",
     emailHtmlBody:
       "Un visiteur a partagé son résultat de quiz. C'est la mécanique de viralité Tiquiz/Tipote qui se déclenche : son réseau peut maintenant cliquer et finir le quiz à son tour, sans que tu aies rien à faire.<br/><br/>" +
-      "Astuce : configure un \"bonus de partage\" si ce n'est pas déjà fait — ça multiplie les partages.",
+      "Astuce : configure un \"bonus de partage\" si ce n'est pas déjà fait, ça multiplie les partages.",
     ctaLabel: "Configurer le bonus de partage",
     ctaUrl: "/quizzes",
     trigger: { type: "count", kind: "quiz_share", threshold: 1 },
@@ -310,7 +310,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
     emailSubject: "📣 100 partages de quiz",
     emailHtmlBody:
       "100 partages de quiz. Tes contenus se propagent dans des réseaux que tu ne contrôles pas. C'est la définition même d'un lead magnet qui marche.<br/><br/>" +
-      "Si tu as branché un tag Systeme.io spécifique sur l'étape de partage, c'est le moment de vérifier que ta séquence d'email post-partage est bien calibrée — ces leads sont chauds.",
+      "Si tu as branché un tag Systeme.io spécifique sur l'étape de partage, c'est le moment de vérifier que ta séquence d'email post-partage est bien calibrée, ces leads sont chauds.",
     ctaLabel: "Voir mes leads",
     ctaUrl: "/leads",
     trigger: { type: "count", kind: "quiz_share", threshold: 100 },
