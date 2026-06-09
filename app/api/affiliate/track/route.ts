@@ -117,6 +117,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const ipHash = hashIp(getClientIp(req));
 
   if (type === "click") {
+    // Dedup (drame Bene 8 juin 2026 : "les clics sont doubles, 1 visite
+    // = 2 clics"). Le snippet propage le ?sa= sur les liens internes, donc
+    // chaque pageview d'un meme parcours (sales page -> page inscription)
+    // refire un click. On compte donc 1 SEUL click par (ip_hash, sa) dans
+    // une fenetre de 30 min = 1 visiteur unique par session de visite.
+    // Sans ip_hash (header IP absent), on n'arrive pas a deduper -> on
+    // insere quand meme (mieux vaut un compteur leger surevalue qu'un
+    // visiteur perdu). La fenetre 30min couvre un parcours complet sans
+    // fusionner deux vraies visites a des heures differentes.
+    if (ipHash) {
+      const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const { data: recent } = await supabaseAdmin
+        .from("affiliate_clicks")
+        .select("id")
+        .eq("sa", sa)
+        .eq("ip_hash", ipHash)
+        .gte("created_at", since)
+        .limit(1)
+        .maybeSingle();
+      if (recent) {
+        // Deja compte ce visiteur recemment -> on ne double pas.
+        return NextResponse.json({ ok: true, deduped: true }, { headers });
+      }
+    }
     const { error } = await supabaseAdmin.from("affiliate_clicks").insert({
       sa,
       page_url: pageUrl,
@@ -136,8 +160,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!isValidEmail(email)) {
       return NextResponse.json({ ok: false, reason: "invalid_email" }, { status: 400, headers });
     }
+    const cleanEmail = email.toLowerCase();
+    // Dedup serveur : le snippet fire la conversion sur PLUSIEURS signaux
+    // (submit + pagehide + thank-you page) pour la fiabilite. On garantit
+    // donc cote serveur qu'un meme (email, sa) ne soit compte qu'une fois
+    // dans une fenetre de 24h. Sans ca, 1 inscription = 2-3 conversions.
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: dup } = await supabaseAdmin
+      .from("affiliate_conversions")
+      .select("id")
+      .eq("email", cleanEmail)
+      .eq("sa", sa)
+      .gte("created_at", since)
+      .limit(1)
+      .maybeSingle();
+    if (dup) {
+      return NextResponse.json({ ok: true, deduped: true }, { headers });
+    }
     const { error } = await supabaseAdmin.from("affiliate_conversions").insert({
-      email: email.toLowerCase(),
+      email: cleanEmail,
       sa,
       page_url: pageUrl,
       user_agent: userAgent,
