@@ -451,6 +451,46 @@
   }
 }
 
+/* ─── Taille de police FIELD-LEVEL DUAL-DEVICE (drame Bene 8 juin 2026) ──
+ * L'editeur enveloppe tout le contenu d'un champ dans un UNIQUE
+ * <div class="rt-field-fs" style="--rt-fs-m: Xpx; --rt-fs-d: Ypx">.
+ * UNE taille par device pour tout le bloc, jamais par mot. Bene peut
+ * editer la taille mobile et la taille PC INDEPENDAMMENT en passant
+ * d'un mode a l'autre via le toggle Monitor/Smartphone de l'editeur.
+ *
+ * CES REGLES DOIVENT VENIR APRES les blocs .tipote-quiz-title/question/
+ * result-title ci-dessus (y compris la media query). Specificite egale
+ * (0,1,0), donc c'est l'ORDRE SOURCE qui departage : etant plus bas,
+ * .rt-field-fs gagne et impose la taille choisie.
+ *
+ * Fallback chain (var(a, b)) :
+ *   - mobile (<640px) : --rt-fs-m, sinon inherit (= defaut responsive)
+ *   - desktop (>=640px) : --rt-fs-d, sinon --rt-fs-m, sinon inherit
+ * Permet a l'user de ne setter qu'un seul device sans casser l'autre. */
+.rt-field-fs,
+.rt-field-fs * {
+  font-size: var(--rt-fs-m, inherit) !important;
+}
+@media (min-width: 640px) {
+  .rt-field-fs,
+  .rt-field-fs * {
+    font-size: var(--rt-fs-d, var(--rt-fs-m, inherit)) !important;
+  }
+}
+/* OVERRIDE EDITEUR : quand l'user toggle Monitor/Smartphone, le preview
+ * doit afficher la VRAIE taille du device choisi, meme sur un ecran qui
+ * n'est pas a cette largeur. data-device-preview est pose par
+ * QuizDetailClient / SurveyDetailClient sur le container preview.
+ * Specificite 0,2,0 bat la media query 0,1,0 -> WYSIWYG fiable. */
+[data-device-preview="mobile"] .rt-field-fs,
+[data-device-preview="mobile"] .rt-field-fs * {
+  font-size: var(--rt-fs-m, inherit) !important;
+}
+[data-device-preview="desktop"] .rt-field-fs,
+[data-device-preview="desktop"] .rt-field-fs * {
+  font-size: var(--rt-fs-d, var(--rt-fs-m, inherit)) !important;
+}
+
 /* ──────────────────────────────────────────────────────────────
  * Quiz en mode COMPACT — affiché dans l'overlay popquiz (iframe
  * /q/[id]?compact=1). Réduit marges / paddings / typo pour tenir

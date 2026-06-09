@@ -35,11 +35,20 @@ import {
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { useUserPalettes } from "@/components/editor/PalettesContext";
+import { useEditorPreviewDevice } from "@/components/editor/EditorPreviewDeviceContext";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+// Tailles de police au niveau du champ (px). Source de verite partagee
+// avec le sanitizer (lib/richText.ts FIELD_ALLOWED_SIZES) et le CSS
+// (.rt-field-fs). Une seule taille par champ et par device, jamais par
+// mot. Drame Bene 8 juin 2026 : tailles mobile/desktop independantes.
+const FIELD_FONT_SIZES = [
+  "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px", "56px", "64px",
+] as const;
 
 interface RichTextEditProps {
   value: string;
@@ -103,6 +112,12 @@ export function RichTextEdit({
   // popquiz). Sinon `[]` → la section "Mes palettes" est masquée, la
   // palette curée seule reste affichée.
   const userPalettes = useUserPalettes();
+  // Device courant choisi par l'user via le toggle Monitor/Smartphone des
+  // editeurs parents (QuizDetailClient / SurveyDetailClient). Pilote a
+  // quelle CSS variable la toolbar font-size ecrit (--rt-fs-m mobile,
+  // --rt-fs-d desktop). Drame Bene 8 juin 2026 : tailles independantes
+  // par device, editables en passant d'un mode a l'autre.
+  const previewDevice = useEditorPreviewDevice();
   // AI rewrite state: a small popover-like list of proposals shown right
   // under the field after the creator clicks ✨. We keep it local to the
   // component so each field manages its own popover independently.
@@ -113,6 +128,11 @@ export function RichTextEdit({
   // contentEditable, and `restoreSelection` puts the caret back exactly
   // where the user left it before applying foreColor.
   const [colorOpen, setColorOpen] = useState(false);
+  const [fontSizeOpen, setFontSizeOpen] = useState(false);
+  // Image selectionnee pour resize. On track le <img> courant dans le
+  // contentEditable et on affiche un popover avec une dropdown de tailles
+  // (drame Christelle 8 juin 2026 : "impossible de redimensionner le GIF").
+  const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
 
   const handleAIRewrite = useCallback(async (e: React.MouseEvent) => {
@@ -251,6 +271,91 @@ export function RichTextEdit({
     { hex: "#ec4899", label: "Rose" },
     { hex: "#0ea5e9", label: "Cyan" },
   ];
+
+  // Applique une largeur (en %) a l'image actuellement selectionnee.
+  // Drame Christelle 8 juin 2026 : impossible de redimensionner le GIF.
+  // Le sanitizer accepte width sur <img> en px ou % (cf. richText.ts).
+  // Le commit du nouveau HTML se fait au prochain onBlur (commit paresseux).
+  const applyImageWidth = useCallback(
+    (widthPct: string | null) => {
+      if (!selectedImg) return;
+      if (widthPct === null) {
+        selectedImg.style.width = "";
+      } else {
+        selectedImg.style.width = widthPct;
+      }
+    },
+    [selectedImg],
+  );
+
+  // Commit IMMEDIAT (live) : sanitize l'innerHTML courant et remonte au
+  // parent sans attendre le blur. Utilise par la taille de police pour
+  // que le changement soit persiste en WYSIWYG des le clic.
+  const commitNow = useCallback(() => {
+    if (!ref.current) return;
+    const clean = sanitizeRichText(ref.current.innerHTML);
+    if (clean !== value) onChange(clean);
+  }, [onChange, value]);
+
+  // ─── Taille de police FIELD-LEVEL, INDEPENDANTE MOBILE/DESKTOP ─────
+  // Drame Bene 8 juin 2026 : "je veux pouvoir editer la taille mobile
+  // et la taille PC separement". On enveloppe l'integralite du contenu
+  // dans un UNIQUE <div class="rt-field-fs" style="--rt-fs-m: Xpx;
+  // --rt-fs-d: Ypx">. Le device courant (du toggle Monitor/Smartphone)
+  // decide a quelle variable on ecrit. Le CSS (globals.css) picke la
+  // bonne variable selon la media query + l'override data-device-preview.
+  const FIELD_FS_CLASS = "rt-field-fs";
+  const FS_VAR = previewDevice === "mobile" ? "--rt-fs-m" : "--rt-fs-d";
+
+  const getCurrentFieldSize = useCallback((): string | null => {
+    const el = ref.current;
+    if (!el) return null;
+    const wrapper = el.querySelector<HTMLElement>(`:scope > .${FIELD_FS_CLASS}`);
+    const v = wrapper?.style.getPropertyValue(FS_VAR).trim();
+    return v || null;
+  }, [FS_VAR]);
+
+  const applyFieldFontSize = useCallback(
+    (sizePx: string | null) => {
+      const el = ref.current;
+      if (!el) {
+        setFontSizeOpen(false);
+        return;
+      }
+      let wrapper = el.querySelector<HTMLElement>(`:scope > .${FIELD_FS_CLASS}`);
+      if (sizePx === null) {
+        // Reset UNIQUEMENT le device courant. Si l'autre device a
+        // toujours une valeur, on garde le wrapper. Sinon, on degage
+        // -> retour au defaut responsive du design system.
+        if (wrapper) {
+          wrapper.style.removeProperty(FS_VAR);
+          const other = previewDevice === "mobile" ? "--rt-fs-d" : "--rt-fs-m";
+          const hasOther = wrapper.style.getPropertyValue(other).trim();
+          if (!hasOther) {
+            while (wrapper.firstChild) el.insertBefore(wrapper.firstChild, wrapper);
+            el.removeChild(wrapper);
+          }
+        }
+      } else {
+        if (!wrapper) {
+          // Premiere taille : on enveloppe TOUT le contenu existant dans
+          // un seul div. Si le champ est vide, on cree un wrapper vide
+          // (la frappe suivante ira dedans).
+          wrapper = document.createElement("div");
+          wrapper.className = FIELD_FS_CLASS;
+          while (el.firstChild) wrapper.appendChild(el.firstChild);
+          el.appendChild(wrapper);
+        }
+        wrapper.style.setProperty(FS_VAR, sizePx);
+      }
+      setFontSizeOpen(false);
+      // Commit live : le parent enregistre le nouveau HTML immediatement
+      // (WYSIWYG + persistance sans attendre le blur).
+      commitNow();
+      ref.current?.focus();
+    },
+    [commitNow, FS_VAR, previewDevice],
+  );
 
   // Bug Adeline (18 mai 2026) : "j'ai du cliquer plusieurs fois pour
   // insérer un lien". Quand Radix Dialog mount, il vole le focus du
@@ -629,6 +734,50 @@ export function RichTextEdit({
             )}
           </div>
           <span className="w-px h-4 bg-border mx-0.5" />
+          {/* Taille de police FIELD-LEVEL, INDEPENDANTE mobile/desktop
+              (drame Bene 8 juin 2026). UNE taille pour tout le bloc par
+              device. Live + WYSIWYG. */}
+          <div className="relative">
+            <ToolbarBtn
+              onMouseDown={(e) => { e.preventDefault(); setFontSizeOpen((v) => !v); }}
+              title={t("rteFontSize")}
+            >
+              <span className="text-[11px] font-bold leading-none">A<span className="text-[8px]">A</span></span>
+            </ToolbarBtn>
+            {fontSizeOpen && (
+              <div
+                className="absolute z-30 top-full left-0 mt-1 w-40 rounded-lg border bg-background shadow-lg py-1 max-h-64 overflow-y-auto"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                {/* Indicateur du device courant. La taille modifiee
+                    s'applique UNIQUEMENT a ce device. Toggle Monitor/
+                    Smartphone (en haut de l'editeur) bascule entre les
+                    deux modes. */}
+                <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b mb-1">
+                  {previewDevice === "mobile" ? t("rteFontSizeForMobile") : t("rteFontSizeForDesktop")}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => applyFieldFontSize(null)}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted ${getCurrentFieldSize() === null ? "font-semibold text-primary" : ""}`}
+                >
+                  {t("rteFontSizeAuto")}
+                </button>
+                <div className="border-t my-1" />
+                {FIELD_FONT_SIZES.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => applyFieldFontSize(size)}
+                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted tabular-nums ${getCurrentFieldSize() === size ? "font-semibold text-primary" : ""}`}
+                  >
+                    {size.replace("px", "")} px
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <span className="w-px h-4 bg-border mx-0.5" />
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("rteAlignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("rteAlignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("rteAlignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
@@ -641,6 +790,35 @@ export function RichTextEdit({
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("rteInsertLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={onImageUpload ? t("rteUploadImage") : t("rteInsertImage")}>{uploadingDrop ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}</ToolbarBtn>}
           <input ref={fileInputRef} type="file" accept="image/*,image/gif" className="sr-only" onChange={onPickedImageFile} />
+          {/* Resize image popover - apparait UNIQUEMENT quand une <img>
+              est selectionnee. 5 tailles curees (25/40/60/80/100%) +
+              reset. Drame Christelle 8 juin 2026 : "impossible de
+              redimensionner le GIF d'intro". */}
+          {selectedImg && !singleLine && (
+            <>
+              <span className="w-px h-4 bg-border mx-0.5" />
+              <span className="text-[10px] text-muted-foreground">{t("rteImageSize")}</span>
+              {["25%", "40%", "60%", "80%", "100%"].map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); applyImageWidth(pct); }}
+                  className="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted border border-border/50"
+                  title={pct}
+                >
+                  {pct}
+                </button>
+              ))}
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); applyImageWidth(null); }}
+                className="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted text-muted-foreground"
+                title={t("rteImageSizeReset")}
+              >
+                {t("rteReset")}
+              </button>
+            </>
+          )}
           {hasVars && (
             <>
               <span className="w-px h-4 bg-border mx-0.5" />
@@ -665,6 +843,16 @@ export function RichTextEdit({
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
+          // Click sur une <img> : track la cible pour afficher le popover
+          // de resize. Click ailleurs : reset. Bubbling natif suffit.
+          onClick={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target && target.tagName === "IMG") {
+              setSelectedImg(target as HTMLImageElement);
+            } else {
+              setSelectedImg(null);
+            }
+          }}
           // Bug récurrent (Béné) : sur les CTA blancs avec backgroundColor
           // sombre passés via className/style (text-white sur fond
           // primaire), le mode édition affichait du blanc-sur-blanc et

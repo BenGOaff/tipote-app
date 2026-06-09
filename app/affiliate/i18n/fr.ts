@@ -148,8 +148,8 @@ export const FR: AffiliateDict = {
     guide_step_profile_body: "Renseigne ton prénom et ta langue préférée pour qu'on te connaisse.",
     guide_step_link_title: "Copier ton lien d'affiliation",
     guide_step_link_body: "Le seul truc à garder sous la main pour toucher tes commissions.",
-    guide_step_payment_title: "Configurer ton paiement",
-    guide_step_payment_body: "PayPal ou virement (RIB), à toi de choisir dans l'onglet Paiement.",
+    guide_step_payment_title: "Configurer ton paiement dans Systeme.io",
+    guide_step_payment_body: "Le paiement est géré par Systeme.io. Va sur systeme.io/dashboard/profile/affiliate-settings, choisis PayPal ou virement (RIB), puis reviens cocher cette étape. Tu seras payé entre le 10 et le 13 de chaque mois (après le délai de rétractation légal qui valide ta commission).",
     guide_step_trial_title: "Activer ton trial Tipote",
     guide_step_trial_body: "1 mois Elite offert pour tester l'outil et créer du contenu de promo authentique.",
     guide_step_email_title: "Envoyer ton 1er email",
@@ -279,34 +279,23 @@ export const FR: AffiliateDict = {
   },
   paiement: {
     page_title: "Paiement",
-    page_subtitle: "Configure ton moyen de paiement pour recevoir tes commissions.",
-    method_title: "Méthode de paiement",
-    method_description:
-      "Tu peux choisir l'une ou l'autre méthode. PayPal est plus rapide, le virement bancaire (RIB) est gratuit pour toi.",
-    tab_paypal: "PayPal",
-    tab_iban: "Virement (RIB)",
-    label_paypal_email: "Email PayPal",
-    placeholder_paypal_email: "ton-email@paypal.com",
-    paypal_hint:
-      "L'email associé à ton compte PayPal. Tes commissions seront virées directement.",
-    label_iban_holder: "Titulaire du compte",
-    placeholder_iban_holder: "Prénom Nom",
-    label_iban_number: "IBAN",
-    placeholder_iban_number: "FR76 1234 5678 9012 3456 7890 123",
-    iban_hint: "Espaces ignorés. Format IBAN international (max 34 caractères).",
-    save_button: "Sauvegarder",
-    saving: "Sauvegarde…",
-    success: "Méthode de paiement enregistrée.",
-    err_invalid_paypal_email: "Email PayPal invalide.",
-    err_invalid_iban: "IBAN invalide.",
-    err_iban_incomplete: "Renseigne titulaire et IBAN.",
-    err_generic: "Erreur lors de la sauvegarde.",
-    conditions_title: "Conditions de paiement",
-    conditions_frequency:
-      "Fréquence : les commissions sont versées le 10 de chaque mois, minimum 30 jours après la vente (délai d'éventuelle annulation client).",
-    conditions_minimum:
-      "Seuil minimum : 50 €. Si ton solde éligible est inférieur le 10, on reporte au mois suivant.",
-    conditions_currency: "Devise : EUR. Pour PayPal, vérifie que ton compte accepte EUR.",
+    page_subtitle_sio:
+      "Le paiement est géré par Systeme.io. Configure ton moyen de paiement directement chez eux, on s'occupe du reste.",
+    sio_config_title: "Configurer ton paiement (PayPal ou virement)",
+    sio_config_body:
+      "Va sur ton profil Systeme.io et choisis PayPal ou virement bancaire (RIB). Tu peux changer à tout moment depuis cette même page.",
+    sio_config_cta: "Configurer dans Systeme.io",
+    schedule_title: "Quand tu es payé",
+    schedule_when:
+      "Les commissions sont virées entre le 10 et le 13 de chaque mois, directement sur la méthode que tu as configurée dans Systeme.io.",
+    schedule_cooloff:
+      "Une commission est validée à la fin du délai de rétractation légal du client (généralement 14 jours après la vente). Une commission encore en attente apparaît dans la colonne « En attente » de ton tableau de bord.",
+    invoices_title: "Tes factures mensuelles",
+    invoices_body:
+      "Le détail de tes commissions et l'historique des paiements se consultent depuis l'onglet Affiliations de ton dashboard Systeme.io.",
+    invoices_cta: "Voir mes factures dans Systeme.io",
+    note_no_action_in_tipote:
+      "Aucune information de paiement n'est stockée dans Tipote. Tout passe par Systeme.io, ce qui te garantit que c'est eux qui font les virements (pas nous).",
   },
   support: {
     page_title: "Support",

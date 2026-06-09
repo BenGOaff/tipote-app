@@ -1,11 +1,16 @@
 // app/affiliate/api/guide/route.ts
 //
 // PATCH /affiliate/api/guide — marque une étape du guide de lancement
-//   body: { step: "link_copied" | "first_email" | "first_post", done?: boolean }
+//   body: { step: "link_copied" | "first_email" | "first_post" | "payment_set", done?: boolean }
 //   done défaut true. false retire l'étape de la map.
 //
-// Les autres étapes (profile, payment, trial) sont auto-détectées
-// depuis les colonnes natives et ne passent pas par cette route.
+// Les autres étapes (profile, trial) sont auto-détectées depuis les
+// colonnes natives et ne passent pas par cette route.
+//
+// payment_set est self-attestée (drame Bene 8 juin 2026) parce que le
+// paiement n'est PAS configuré dans Tipote : il vit dans Systeme.io
+// (https://systeme.io/dashboard/profile/affiliate-settings). L'user
+// configure son PayPal / RIB la-bas, puis clique "fait" dans le guide.
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAffiliateSession } from "@/lib/affiliate/session";
@@ -14,7 +19,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SELF_ATTEST_STEPS = new Set(["link_copied", "first_email", "first_post"]);
+const SELF_ATTEST_STEPS = new Set(["link_copied", "first_email", "first_post", "payment_set"]);
 
 export async function PATCH(req: NextRequest): Promise<NextResponse> {
   const session = await getAffiliateSession();

@@ -64,6 +64,7 @@ function titleForVisual(text: string | null | undefined): string {
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
+import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { stripHtml } from "@/lib/richText";
@@ -1322,6 +1323,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   return (
    <SioTagsProvider>
     <UserPalettesProvider palettes={savedPalettes}>
+    <EditorPreviewDeviceProvider device={device}>
       <RestoreDraftDialog
         open={!!pendingDraft}
         draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
@@ -1690,7 +1692,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
           {/* RIGHT: LIVE PREVIEW — all sections stacked, exactly as visitor sees it */}
           <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, fontFamily }}>
-            <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
+            <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
               <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
@@ -2398,6 +2400,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       )}
         </main>
       </div>
+    </EditorPreviewDeviceProvider>
     </UserPalettesProvider>
    </SioTagsProvider>
   );

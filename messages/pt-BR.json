@@ -700,7 +700,14 @@
     "rteDialogCancel": "Cancelar",
     "customColor": "Cor personalizada",
     "genderizeTitle": "Gerar variantes de gênero (ele / ela / elu)",
-    "noPostsFound": "Nenhum post encontrado."
+    "noPostsFound": "Nenhum post encontrado.",
+    "rteReset": "Redefinir",
+    "rteFontSize": "Tamanho do texto",
+    "rteFontSizeAuto": "Auto (responsivo)",
+    "rteFontSizeForMobile": "📱 Para mobile",
+    "rteFontSizeForDesktop": "💻 Para PC",
+    "rteImageSize": "Tamanho da imagem:",
+    "rteImageSizeReset": "100%"
   },
   "auth": {
     "login": "Entrar",

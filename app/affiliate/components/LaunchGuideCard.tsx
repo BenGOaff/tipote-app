@@ -18,8 +18,6 @@ import { LaunchGuideToggle } from "./LaunchGuideToggle";
 type AffiliateRow = {
   display_name: string | null;
   locale: string | null;
-  paypal_email: string | null;
-  iban_number: string | null;
   trial_activated_at: string | null;
   launch_guide_completed: Record<string, string> | null;
 };
@@ -29,7 +27,7 @@ type Step = {
   title: string;
   body: string;
   done: boolean;
-  selfAttest: "link_copied" | "first_email" | "first_post" | null;
+  selfAttest: "link_copied" | "first_email" | "first_post" | "payment_set" | null;
 };
 
 export async function LaunchGuideCard({
@@ -41,7 +39,7 @@ export async function LaunchGuideCard({
 }) {
   const { data } = await supabaseAdmin
     .from("affiliates")
-    .select("display_name, locale, paypal_email, iban_number, trial_activated_at, launch_guide_completed")
+    .select("display_name, locale, trial_activated_at, launch_guide_completed")
     .eq("sa", sa)
     .maybeSingle();
   const row = data as AffiliateRow | null;
@@ -66,11 +64,17 @@ export async function LaunchGuideCard({
       selfAttest: "link_copied",
     },
     {
+      // Drame Bene 8 juin 2026 : le paiement est config dans Systeme.io
+      // (https://systeme.io/dashboard/profile/affiliate-settings), JAMAIS
+      // dans Tipote. L'user clique le lien SIO, configure PayPal/RIB
+      // la-bas, puis marque l'etape fait (self-attestation). Plus de
+      // dependance sur les colonnes affiliates.paypal_email/iban_number
+      // qui suggeraient a tort que la config etait cote Tipote.
       key: "payment",
       title: t.overview.guide_step_payment_title,
       body: t.overview.guide_step_payment_body,
-      done: !!(row.paypal_email || row.iban_number),
-      selfAttest: null,
+      done: !!self.payment_set,
+      selfAttest: "payment_set",
     },
     {
       key: "trial",
