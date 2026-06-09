@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useDict } from "../i18n/context";
 
 type Props = {
-  step: "link_copied" | "first_email" | "first_post";
+  step: "link_copied" | "first_email" | "first_post" | "payment_set";
   done: boolean;
 };
 

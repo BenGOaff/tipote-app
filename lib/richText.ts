@@ -20,18 +20,35 @@ const ALLOWED_ATTR = [
   "class",
 ];
 
-// Propriétés CSS qu'on RETIRE des `style="..."` collés par l'user
-// (typiquement quand il copie/colle depuis Notion ou Google Docs). Le
-// design system Tipote contrôle ces propriétés au niveau du composant —
-// laisser passer un `font-size: 14px` inline fait sauter le titre
-// responsive du visiteur mobile (cf. report Adeline 21 mai 2026 :
-// titre minuscule en mobile alors que le composant a `text-4xl sm:text-5xl`).
+// Propriétés CSS qu'on RETIRE inconditionnellement des `style="..."`.
+// Drame Bene 8 juin 2026 : la taille de police PAR MOT (spans avec
+// font-size / --fs-m / --fs-d inseres par une ancienne version de la
+// toolbar) cassait le rendu - mots a tailles aleatoires. Decision : la
+// taille par mot dans un titre rich-text est non fiable (les SaaS
+// premium ne le font jamais). On STRIP toute taille inline ici, ce qui
+// nettoie aussi les contenus deja sauvegardes au moment du rendu.
 //
-// On garde par contre : color, background, text-align, font-weight,
-// text-decoration — propriétés que l'user veut légitimement personnaliser.
+// La taille FIELD-LEVEL (1 taille par device pour TOUT le champ) est
+// portee par un wrapper dedie .rt-field-fs avec --rt-fs-m / --rt-fs-d
+// (cf. plus bas).
 const STRIPPED_CSS_PROPS = new Set([
   "font-size", "font-family", "line-height", "letter-spacing",
   "word-spacing", "font-stretch",
+]);
+
+// Sur les <img>, on autorise une largeur en % ou en px (drame Christelle
+// 8 juin 2026 : le GIF d'intro n'avait aucun contrôle de taille). Les
+// autres elements gardent leur comportement responsive du design system.
+const IMG_WIDTH_RE = /^\d{1,3}(?:\.\d+)?%$|^\d{1,4}px$/i;
+
+// Taille de police FIELD-LEVEL, INDEPENDANTE mobile/desktop (drame Bene
+// 8 juin 2026). Un seul wrapper <div class="rt-field-fs"
+// style="--rt-fs-m: Xpx; --rt-fs-d: Ypx"> par champ, UNE taille par
+// device pour tout le bloc (jamais par mot -> rendu fiable). On
+// whiteliste la classe `rt-field-fs` et les valeurs --rt-fs-m/--rt-fs-d.
+const FIELD_FS_CLASS = "rt-field-fs";
+const FIELD_ALLOWED_SIZES = new Set([
+  "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px", "56px", "64px",
 ]);
 
 // Hook DOMPurify enregistré une seule fois au load du module. S'applique
@@ -40,8 +57,24 @@ let _hookInstalled = false;
 function installStyleStripperHook(): void {
   if (_hookInstalled) return;
   _hookInstalled = true;
+
+  // Hook 1 : nettoie la classe legacy de l'ancien systeme font-size par
+  // mot (`rt-fs`, sans le suffixe `-field`). Garde `rt-field-fs` (nouveau
+  // systeme) et toute autre classe legitime.
   DOMPurify.addHook("uponSanitizeAttribute", (_node: Element, data: { attrName: string; attrValue: string }) => {
+    if (data.attrName !== "class" || typeof data.attrValue !== "string") return;
+    const kept = data.attrValue
+      .split(/\s+/)
+      .filter((c) => c && c !== "rt-fs");
+    data.attrValue = kept.join(" ");
+  });
+
+  // Hook 2 : filtre les declarations `style`. Strip les proprietes
+  // interdites + toutes les CSS custom properties EXCEPT --rt-fs-m /
+  // --rt-fs-d sur le wrapper .rt-field-fs.
+  DOMPurify.addHook("uponSanitizeAttribute", (node: Element, data: { attrName: string; attrValue: string }) => {
     if (data.attrName !== "style" || typeof data.attrValue !== "string") return;
+    const isImg = node?.tagName?.toLowerCase?.() === "img";
     const filtered = data.attrValue
       .split(";")
       .map((decl) => decl.trim())
@@ -50,7 +83,32 @@ function installStyleStripperHook(): void {
         const colonIdx = decl.indexOf(":");
         if (colonIdx < 0) return false;
         const prop = decl.slice(0, colonIdx).trim().toLowerCase();
-        return !STRIPPED_CSS_PROPS.has(prop);
+        const value = decl.slice(colonIdx + 1).trim().toLowerCase();
+        if (STRIPPED_CSS_PROPS.has(prop)) return false;
+        // --rt-fs-m / --rt-fs-d : tailles FIELD-LEVEL mobile/desktop.
+        // Acceptees UNIQUEMENT sur le wrapper .rt-field-fs et UNIQUEMENT
+        // pour les tailles curees.
+        if (prop === "--rt-fs-m" || prop === "--rt-fs-d") {
+          const onWrapper = (node as Element)?.classList?.contains?.(FIELD_FS_CLASS);
+          return onWrapper && FIELD_ALLOWED_SIZES.has(value);
+        }
+        // Toute autre CSS custom property strippee (--fs-m, --fs-d de
+        // l'ancien systeme par mot + noise de paste Notion/Docs).
+        if (prop.startsWith("--")) return false;
+        // width / height sur <img> : on tolere des unites explicites
+        // (px / %) pour permettre le redimensionnement utilisateur du
+        // GIF d'intro. Sur les autres elements on strip pour preserver
+        // le responsive.
+        if ((prop === "width" || prop === "height") && isImg) {
+          return value === "auto" || IMG_WIDTH_RE.test(value);
+        }
+        if (prop === "width" || prop === "height") return false;
+        // max-width / max-height : on garde la valeur "100%" classique
+        // (sans elle, les images sortent du container responsive).
+        if (prop === "max-width" || prop === "max-height") {
+          return value === "100%" || value === "none" || IMG_WIDTH_RE.test(value);
+        }
+        return true;
       })
       .join("; ");
     data.attrValue = filtered;

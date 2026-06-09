@@ -559,6 +559,13 @@
     "rteImageDialogHint": "Colle l'URL de l'image à intégrer.",
     "rteDialogConfirm": "Insérer",
     "rteDialogCancel": "Annuler",
+    "rteReset": "Réinitialiser",
+    "rteFontSize": "Taille du texte",
+    "rteFontSizeAuto": "Auto (responsive)",
+    "rteFontSizeForMobile": "📱 Pour mobile",
+    "rteFontSizeForDesktop": "💻 Pour PC",
+    "rteImageSize": "Taille image :",
+    "rteImageSizeReset": "100%",
     "customColor": "Couleur personnalisée",
     "genderizeTitle": "Générer les variantes de genre (Il / Elle / Iel)",
     "noPostsFound": "Aucun post trouvé."

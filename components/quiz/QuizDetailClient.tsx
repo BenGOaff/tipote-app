@@ -70,6 +70,7 @@ import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
+import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { stripHtml } from "@/lib/richText";
@@ -1762,6 +1763,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   return (
    <SioTagsProvider>
     <UserPalettesProvider palettes={savedPalettes}>
+    <EditorPreviewDeviceProvider device={device}>
       <RestoreDraftDialog
         open={!!pendingDraft}
         draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
@@ -3511,6 +3513,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       )}
         </main>
       </div>
+    </EditorPreviewDeviceProvider>
     </UserPalettesProvider>
    </SioTagsProvider>
   );

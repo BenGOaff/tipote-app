@@ -282,33 +282,20 @@ export type AffiliateDict = {
     calculator_disclaimer: string;
   };
 
-  // ─── Paiement ────────────────────────────────────────────────────
+  // ─── Paiement (info-only : tout passe par Systeme.io) ────────────
   paiement: {
     page_title: string;
-    page_subtitle: string;
-    method_title: string;
-    method_description: string;
-    tab_paypal: string;
-    tab_iban: string;
-    label_paypal_email: string;
-    placeholder_paypal_email: string;
-    paypal_hint: string;
-    label_iban_holder: string;
-    placeholder_iban_holder: string;
-    label_iban_number: string;
-    placeholder_iban_number: string;
-    iban_hint: string;
-    save_button: string;
-    saving: string;
-    success: string;
-    err_invalid_paypal_email: string;
-    err_invalid_iban: string;
-    err_iban_incomplete: string;
-    err_generic: string;
-    conditions_title: string;
-    conditions_frequency: string;
-    conditions_minimum: string;
-    conditions_currency: string;
+    page_subtitle_sio: string;
+    sio_config_title: string;
+    sio_config_body: string;
+    sio_config_cta: string;
+    schedule_title: string;
+    schedule_when: string;
+    schedule_cooloff: string;
+    invoices_title: string;
+    invoices_body: string;
+    invoices_cta: string;
+    note_no_action_in_tipote: string;
   };
 
   // ─── Support ─────────────────────────────────────────────────────

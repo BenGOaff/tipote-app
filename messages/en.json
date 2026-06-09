@@ -561,7 +561,14 @@
     "rteDialogCancel": "Cancel",
     "customColor": "Custom color",
     "genderizeTitle": "Generate gender variants (he / she / they)",
-    "noPostsFound": "No posts found."
+    "noPostsFound": "No posts found.",
+    "rteReset": "Reset",
+    "rteFontSize": "Font size",
+    "rteFontSizeAuto": "Auto (responsive)",
+    "rteFontSizeForMobile": "📱 For mobile",
+    "rteFontSizeForDesktop": "💻 For desktop",
+    "rteImageSize": "Image size:",
+    "rteImageSizeReset": "100%"
   },
   "auth": {
     "login": "Sign in",

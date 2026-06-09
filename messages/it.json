@@ -554,7 +554,14 @@
     "rteDialogCancel": "Annulla",
     "customColor": "Colore personalizzato",
     "genderizeTitle": "Genera varianti di genere (lui / lei / loro)",
-    "noPostsFound": "Nessun post trovato."
+    "noPostsFound": "Nessun post trovato.",
+    "rteReset": "Reimposta",
+    "rteFontSize": "Dimensione testo",
+    "rteFontSizeAuto": "Auto (responsive)",
+    "rteFontSizeForMobile": "📱 Per mobile",
+    "rteFontSizeForDesktop": "💻 Per PC",
+    "rteImageSize": "Dimensione immagine:",
+    "rteImageSizeReset": "100%"
   },
   "auth": {
     "login": "Accedi",
