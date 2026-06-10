@@ -16,19 +16,26 @@
 // dashboard (refresh, navigation, etc.).
 //
 // Race fixée (Gwenn 3 juin 2026, Tiquiz, port miroir) : si l'user
-// navigue entre 2 pages avant que /seen ait commit en DB, le 2ᵉ mount
-// re-affichait le même milestone. Fix : tracking sessionStorage des IDs
-// déjà montrés dans cet onglet — défense en profondeur en plus du /seen.
+// navigue entre 2 pages avant que le marquage seen ait commit en DB,
+// le 2ᵉ mount re-affichait le même milestone.
+//
+// Retour Gwenn 10 juin 2026 ("popups à chaque connexion") : passage de
+// sessionStorage à localStorage. sessionStorage est vidé à chaque nouvel
+// onglet/session, donc ne protégeait pas entre deux connexions si le
+// marquage serveur échouait. localStorage persiste sur le navigateur :
+// un milestone affiché une fois sur ce device ne re-pop jamais, même si
+// le serveur a raté le marquage. Liste cappée à 200 ids.
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
-const SHOWN_KEY = "tipote.milestones.shown.v1";
+const SHOWN_KEY = "tipote.milestones.shown.v2";
+const SHOWN_CAP = 200;
 
 function readShown(): Set<string> {
   if (typeof window === "undefined") return new Set();
   try {
-    const raw = window.sessionStorage.getItem(SHOWN_KEY);
+    const raw = window.localStorage.getItem(SHOWN_KEY);
     return new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
   } catch {
     return new Set();
@@ -40,9 +47,10 @@ function addShown(ids: string[]): void {
   try {
     const set = readShown();
     for (const id of ids) set.add(id);
-    window.sessionStorage.setItem(SHOWN_KEY, JSON.stringify(Array.from(set)));
+    const arr = Array.from(set).slice(-SHOWN_CAP);
+    window.localStorage.setItem(SHOWN_KEY, JSON.stringify(arr));
   } catch {
-    /* sessionStorage indispo : on tolère, /seen serveur reste le filet */
+    /* localStorage indispo : on tolère, le marquage serveur reste le filet */
   }
 }
 

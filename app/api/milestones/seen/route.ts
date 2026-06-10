@@ -4,12 +4,18 @@
 // pour l'user connecté. Appelé par <MilestoneToastListener /> après
 // affichage des toasts dans le dashboard.
 //
-// RLS : la policy UPDATE sur user_milestones force auth.uid() = user_id,
-// donc même si un user envoie des IDs qui ne lui appartiennent pas, ils
-// ne seront pas updated (silencieusement filtrés par RLS).
+// Depuis le retour Gwenn 10 juin 2026, /unseen marque déjà seen_at au
+// moment où il sert le batch (at-most-once). Cette route reste comme
+// filet idempotent. Elle utilise le client SERVICE-ROLE scopé sur
+// user_id = auth.uid() : avant, l'UPDATE passait par le client RLS et
+// échouait en silence (0 ligne) si la policy UPDATE manquait en prod
+// → seen_at restait NULL → mêmes toasts à chaque connexion. Même avec
+// le service-role, un user ne peut pas marquer les milestones d'autrui
+// (filtre .eq("user_id", user.id) explicite).
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +50,7 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date();
-  const { error, count } = await supabase
+  const { error, count } = await supabaseAdmin
     .from("user_milestones")
     .update({ seen_at: now.toISOString() }, { count: "exact" })
     .eq("user_id", user.id)
@@ -59,11 +65,16 @@ export async function POST(req: NextRequest) {
   // Rate-limit serveur (Béné 3 juin 2026) : programme le prochain batch
   // de toasts dans 7 jours. La route /unseen filtre dessus et retourne
   // vide tant que cette date n'est pas dépassée. Donc max 1×/semaine.
+  // Best-effort : colonne absente tant que la migration 20260611 n'est
+  // pas appliquée, on log sans bloquer.
   const nextAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
-  await supabase
+  const { error: rlErr } = await supabaseAdmin
     .from("profiles")
     .update({ next_milestone_toast_at: nextAt.toISOString() })
     .eq("id", user.id);
+  if (rlErr) {
+    console.error("[milestones/seen] rate-limit update failed", rlErr.message);
+  }
 
   return NextResponse.json({ ok: true, updated: count ?? 0 });
 }

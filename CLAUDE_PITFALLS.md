@@ -1417,3 +1417,34 @@ Quand on attaque la phase 0 de `ROADMAP_RETENTION.md`, respecter :
 - **Index obligatoires** : `(user_id, occurred_at DESC)`, `(user_id,
   kind, occurred_at DESC)`, `(user_id, project_id, occurred_at DESC)`.
   Sans ça les agrégats Wall of Wins traînent dès 1000 events / user.
+
+## AU) Milestones toasts : marquage seen AT-MOST-ONCE côté serveur (10 juin 2026)
+
+Retour Gwenn 10 juin : les toasts milestones re-poppaient à CHAQUE
+connexion. 3ᵉ occurrence du même bug (3 juin, 8 juin, 10 juin) → la
+cause profonde était structurelle : le marquage `seen_at` dépendait
+d'une chaîne fragile client → POST /seen → client Supabase RLS. Si UN
+maillon casse (POST perdu, policy UPDATE absente en prod, ids filtrés),
+`seen_at` reste NULL et tout re-pop à la session suivante.
+
+**Architecture verrouillée (NE PAS revenir en arrière), miroir Tiquiz :**
+- `GET /api/milestones/unseen` marque `seen_at = now()` via
+  **supabaseAdmin** (service-role) AU MOMENT où il sert le batch,
+  y compris les lignes dont la clé a été retirée du catalog (sinon
+  elles saturent le limit(20) à vie). At-most-once : un toast servi ne
+  peut plus JAMAIS re-popper, même si le client crashe. Le toast perdu
+  si l'user quitte avant affichage est un trade-off accepté (sous-
+  notifier > sur-notifier).
+- `POST /api/milestones/seen` = simple filet idempotent, lui aussi en
+  service-role scopé `.eq("user_id", user.id)`.
+- Client `MilestoneToastListener` : **localStorage** (PAS sessionStorage,
+  vidé à chaque nouvel onglet → ne protège pas entre connexions), clé
+  `tipote.milestones.shown.v2`, cap 200 ids.
+- Rate-limit 1 batch/semaine : `profiles.next_milestone_toast_at`
+  (migration `20260611_profiles_milestone_rate_limit.sql`, best-effort
+  tant que pas appliquée). Tipote : `.eq("id", user.id)` (profiles.id
+  = auth uid ici, ≠ Tiquiz qui utilise user_id).
+
+**Règle générale :** tout flag "déjà montré / déjà envoyé" qui
+conditionne une notification user DOIT être écrit en service-role par
+la route qui SERT le contenu, jamais en différé par le client.
