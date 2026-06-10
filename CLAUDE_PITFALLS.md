@@ -1448,3 +1448,29 @@ maillon casse (POST perdu, policy UPDATE absente en prod, ids filtrés),
 **Règle générale :** tout flag "déjà montré / déjà envoyé" qui
 conditionne une notification user DOIT être écrit en service-role par
 la route qui SERT le contenu, jamais en différé par le client.
+
+## AV) Tour guidé : chaque phase tour_* DOIT avoir une ancre VIVANTE (10 juin 2026)
+
+Même famille que le drame Gwenn 10 juin sur Tiquiz (page grisée sans
+popup pendant le tour). Sur Tipote le tour était bloqué encore plus
+tôt : les phases `tour_templates`, `tour_credits` et les 7 phases
+`tour_settings*` n'avaient PLUS d'ancre TutorialSpotlight (items
+retirés de la sidebar, settings déplacé dans le menu avatar). Le tour
+mourait silencieusement après "contents" : personne ne voyait jamais
+analytics, pépites, coach ni l'écran de fin.
+
+Fix : phases orphelines retirées de PHASE_ORDER + migration
+localStorage (templates/credits → tour_analytics, settings* →
+tour_coach) pour que les users en cours reprennent à la prochaine
+étape encore ancrée.
+
+**Règle structurelle :** ancres = `spotlightId` dans AppSidebar +
+elementId "analytics"/"pepites" (footer sidebar) + "coach"
+(Providers). TOUTE modif de ces ancres DOIT être répercutée dans
+`hooks/useTutorial.ts` (PHASE_ORDER, PHASE_TO_URL, shouldHighlight,
+currentTooltip) + phaseMap de handleItemClick (AppSidebar) +
+migration localStorage si une phase disparaît.
+
+Note assumée : les items automations, leads, clients, webinars,
+widgets ne font pas (encore) partie du tour Tipote. Si Béné veut les
+ajouter, suivre la checklist ci-dessus + tooltips i18n toutes locales.

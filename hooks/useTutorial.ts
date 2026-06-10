@@ -23,17 +23,8 @@ export type TutorialPhase =
   | "tour_strategy"
   | "tour_create"
   | "tour_contents"
-  | "tour_templates"
-  | "tour_credits"
   | "tour_analytics"
   | "tour_pepites"
-  | "tour_settings"
-  | "tour_settings_connections"
-  | "tour_settings_reglages"
-  | "tour_settings_positioning"
-  | "tour_settings_branding"
-  | "tour_settings_ai"
-  | "tour_settings_pricing"
   | "tour_coach"
   | "tour_complete"
   | "completed";
@@ -96,23 +87,22 @@ const CONTEXT_STORAGE_KEY = "tipote_tutorial_contexts_v1";
 const FIRST_DAYS_WINDOW = 7;
 
 // ordre du tour principal
+//
+// Drame Gwenn 10 juin 2026 (Tiquiz, même famille ici) : chaque étape
+// tour_* DOIT avoir une ancre TutorialSpotlight vivante (spotlightId
+// dans AppSidebar / Providers), sinon le tour se bloque sans popup.
+// Les étapes templates, credits et settings* ont été retirées : leurs
+// ancres ont disparu de la sidebar (settings vit dans le menu avatar).
+// Règle : toute modif des spotlightId doit être répercutée ici
+// (PHASE_ORDER + shouldHighlight + migration dans load()).
 const PHASE_ORDER: TutorialPhase[] = [
   "welcome",
   "tour_today",
   "tour_strategy",
   "tour_create",
   "tour_contents",
-  "tour_templates",
-  "tour_credits",
   "tour_analytics",
   "tour_pepites",
-  "tour_settings",
-  "tour_settings_connections",
-  "tour_settings_reglages",
-  "tour_settings_positioning",
-  "tour_settings_branding",
-  "tour_settings_ai",
-  "tour_settings_pricing",
   "tour_coach",
   "tour_complete",
   "completed",
@@ -125,17 +115,8 @@ export const PHASE_TO_URL: Partial<Record<TutorialPhase, string>> = {
   tour_strategy: "/strategy",
   tour_create: "/create",
   tour_contents: "/contents",
-  tour_templates: "/templates",
-  tour_credits: "/app",
   tour_analytics: "/analytics",
   tour_pepites: "/pepites",
-  tour_settings: "/settings?tab=profile",
-  tour_settings_connections: "/settings?tab=connections",
-  tour_settings_reglages: "/settings?tab=settings",
-  tour_settings_positioning: "/settings?tab=positioning",
-  tour_settings_branding: "/settings?tab=branding",
-  tour_settings_ai: "/settings?tab=ai",
-  tour_settings_pricing: "/settings?tab=billing",
   tour_coach: "/app",
   tour_complete: "/app",
 };
@@ -243,10 +224,29 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
           false,
         );
 
-        const savedPhase = safeParseJson<TutorialPhase | null>(
+        const savedPhaseRaw = safeParseJson<string | null>(
           localStorage.getItem(userKey(user.id, "phase")),
           null,
         );
+        // Migration : étapes retirées du tour (ancres disparues de la
+        // sidebar). Un user resté bloqué dessus reprend le tour à
+        // l'étape suivante encore ancrée.
+        let savedPhase = savedPhaseRaw as TutorialPhase | null;
+        if (savedPhaseRaw === "tour_templates" || savedPhaseRaw === "tour_credits") {
+          savedPhase = "tour_analytics";
+        } else if (savedPhaseRaw && savedPhaseRaw.startsWith("tour_settings")) {
+          savedPhase = "tour_coach";
+        }
+        if (savedPhase !== savedPhaseRaw && savedPhase) {
+          try {
+            localStorage.setItem(
+              userKey(user.id, "phase"),
+              JSON.stringify(savedPhase),
+            );
+          } catch {
+            // ignore
+          }
+        }
 
         const storedFirstSeen = localStorage.getItem(
           userKey(user.id, "first_seen_at"),
@@ -436,20 +436,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       if (phase === "tour_strategy") return element === "strategy";
       if (phase === "tour_create") return element === "create";
       if (phase === "tour_contents") return element === "contents";
-      if (phase === "tour_templates") return element === "templates";
-      if (phase === "tour_credits") return element === "credits";
       if (phase === "tour_analytics") return element === "analytics";
       if (phase === "tour_pepites") return element === "pepites";
-      // Toutes les phases settings highlighting le nav item "settings" dans la sidebar
-      if (
-        phase === "tour_settings" ||
-        phase === "tour_settings_connections" ||
-        phase === "tour_settings_reglages" ||
-        phase === "tour_settings_positioning" ||
-        phase === "tour_settings_branding" ||
-        phase === "tour_settings_ai" ||
-        phase === "tour_settings_pricing"
-      ) return element === "settings";
       if (phase === "tour_coach") return element === "coach";
 
       return false;
@@ -465,17 +453,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       case "tour_strategy":               return tTutorial("tooltipStrategy");
       case "tour_create":                 return tTutorial("tooltipCreate");
       case "tour_contents":               return tTutorial("tooltipContents");
-      case "tour_templates":              return tTutorial("tooltipTemplates");
-      case "tour_credits":                return tTutorial("tooltipCredits");
       case "tour_analytics":              return tTutorial("tooltipAnalytics");
       case "tour_pepites":                return tTutorial("tooltipPepites");
-      case "tour_settings":               return tTutorial("tooltipSettingsProfile");
-      case "tour_settings_connections":   return tTutorial("tooltipSettingsConnections");
-      case "tour_settings_reglages":      return tTutorial("tooltipSettingsReglages");
-      case "tour_settings_positioning":   return tTutorial("tooltipSettingsPositioning");
-      case "tour_settings_branding":      return tTutorial("tooltipSettingsBranding");
-      case "tour_settings_ai":            return tTutorial("tooltipSettingsAi");
-      case "tour_settings_pricing":       return tTutorial("tooltipSettingsPricing");
       case "tour_coach":                  return tTutorial("tooltipCoach");
       case "tour_complete":               return tTutorial("tooltipComplete");
       default:                            return null;

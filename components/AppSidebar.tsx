@@ -149,13 +149,13 @@ export function AppSidebar() {
   }));
 
   const handleItemClick = (spotlightId: string | null) => {
+    // Doit rester aligné sur PHASE_ORDER (useTutorial) : une entrée qui
+    // pointe vers une phase retirée du tour est du code mort.
     const phaseMap: Record<string, string> = {
       today: "tour_today",
       strategy: "tour_strategy",
       create: "tour_create",
       contents: "tour_contents",
-      templates: "tour_templates",
-      automations: "tour_automations",
       analytics: "tour_analytics",
       pepites: "tour_pepites",
     };
