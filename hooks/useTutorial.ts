@@ -23,6 +23,11 @@ export type TutorialPhase =
   | "tour_strategy"
   | "tour_create"
   | "tour_contents"
+  | "tour_automations"
+  | "tour_leads"
+  | "tour_clients"
+  | "tour_webinars"
+  | "tour_widgets"
   | "tour_analytics"
   | "tour_pepites"
   | "tour_coach"
@@ -101,6 +106,11 @@ const PHASE_ORDER: TutorialPhase[] = [
   "tour_strategy",
   "tour_create",
   "tour_contents",
+  "tour_automations",
+  "tour_leads",
+  "tour_clients",
+  "tour_webinars",
+  "tour_widgets",
   "tour_analytics",
   "tour_pepites",
   "tour_coach",
@@ -115,6 +125,11 @@ export const PHASE_TO_URL: Partial<Record<TutorialPhase, string>> = {
   tour_strategy: "/strategy",
   tour_create: "/create",
   tour_contents: "/contents",
+  tour_automations: "/automations",
+  tour_leads: "/leads",
+  tour_clients: "/clients",
+  tour_webinars: "/webinars",
+  tour_widgets: "/widgets",
   tour_analytics: "/analytics",
   tour_pepites: "/pepites",
   tour_coach: "/app",
@@ -233,7 +248,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
         // l'étape suivante encore ancrée.
         let savedPhase = savedPhaseRaw as TutorialPhase | null;
         if (savedPhaseRaw === "tour_templates" || savedPhaseRaw === "tour_credits") {
-          savedPhase = "tour_analytics";
+          savedPhase = "tour_automations";
         } else if (savedPhaseRaw && savedPhaseRaw.startsWith("tour_settings")) {
           savedPhase = "tour_coach";
         }
@@ -436,6 +451,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       if (phase === "tour_strategy") return element === "strategy";
       if (phase === "tour_create") return element === "create";
       if (phase === "tour_contents") return element === "contents";
+      if (phase === "tour_automations") return element === "automations";
+      if (phase === "tour_leads") return element === "leads";
+      if (phase === "tour_clients") return element === "clients";
+      if (phase === "tour_webinars") return element === "webinars";
+      if (phase === "tour_widgets") return element === "widgets";
       if (phase === "tour_analytics") return element === "analytics";
       if (phase === "tour_pepites") return element === "pepites";
       if (phase === "tour_coach") return element === "coach";
@@ -453,6 +473,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       case "tour_strategy":               return tTutorial("tooltipStrategy");
       case "tour_create":                 return tTutorial("tooltipCreate");
       case "tour_contents":               return tTutorial("tooltipContents");
+      case "tour_automations":            return tTutorial("tooltipAutomations");
+      case "tour_leads":                  return tTutorial("tooltipLeads");
+      case "tour_clients":                return tTutorial("tooltipClients");
+      case "tour_webinars":               return tTutorial("tooltipWebinars");
+      case "tour_widgets":                return tTutorial("tooltipWidgets");
       case "tour_analytics":              return tTutorial("tooltipAnalytics");
       case "tour_pepites":                return tTutorial("tooltipPepites");
       case "tour_coach":                  return tTutorial("tooltipCoach");

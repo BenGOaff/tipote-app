@@ -1471,6 +1471,10 @@ elementId "analytics"/"pepites" (footer sidebar) + "coach"
 currentTooltip) + phaseMap de handleItemClick (AppSidebar) +
 migration localStorage si une phase disparaît.
 
-Note assumée : les items automations, leads, clients, webinars,
-widgets ne font pas (encore) partie du tour Tipote. Si Béné veut les
-ajouter, suivre la checklist ci-dessus + tooltips i18n toutes locales.
+Mise à jour 10 juin (après-midi, demande Béné) : automations, leads,
+clients, webinars et widgets sont maintenant DANS le tour, à leur
+position sidebar (entre contents et analytics). Tour complet, 12
+étapes : today, strategy, create, contents, automations, leads,
+clients, webinars, widgets, analytics, pepites, coach. Tooltips
+tutorial.tooltip* ajoutés dans les 7 locales. La migration des phases
+mortes templates/credits reprend désormais à tour_automations.

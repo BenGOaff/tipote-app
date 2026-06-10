@@ -156,6 +156,11 @@ export function AppSidebar() {
       strategy: "tour_strategy",
       create: "tour_create",
       contents: "tour_contents",
+      automations: "tour_automations",
+      leads: "tour_leads",
+      clients: "tour_clients",
+      webinars: "tour_webinars",
+      widgets: "tour_widgets",
       analytics: "tour_analytics",
       pepites: "tour_pepites",
     };
