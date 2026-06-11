@@ -260,6 +260,12 @@
   html {
     scroll-behavior: smooth;
     height: -webkit-fill-available;
+    /* Comportement tactile Typeform/Tally (Béné 12 juin 2026, miroir
+       Tiquiz) : pas de voile gris natif au tap sur mobile. Le feedback
+       de sélection est rendu par nos propres styles, le highlight
+       navigateur créait un effet "réponse préselectionnée" sur les
+       quiz. */
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
