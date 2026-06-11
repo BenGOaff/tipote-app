@@ -1225,6 +1225,22 @@ export default function PublicQuizClient({
   // the same one-tap flow. Free-text uses commitAnswer with explicit value
   // wired to the "Next" button — auto-advance-on-keystroke would feel
   // hostile while typing.
+  //
+  // Comportement Typeform/Tally (Béné 12 juin 2026, port miroir Tiquiz) :
+  // sur les types à UN tap, la réponse tapée s'affiche sélectionnée un
+  // court instant AVANT de passer à la question suivante. Sans ce délai,
+  // la question suivante se rendait sous le doigt du visiteur et son
+  // bouton récupérait le tap-highlight mobile : effet "réponse
+  // préselectionnée". Re-tap pendant le délai = le dernier choix gagne.
+  // Les commits via bouton "Suivant" restent instantanés.
+  const advanceTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
+    };
+  }, []);
+  const ONE_TAP_ADVANCE_DELAY_MS = 350;
+
   const commitAnswer = (ans: SurveyAnswer) => {
     const newAnswers = [...answers];
     newAnswers[currentQ] = ans;
@@ -1232,17 +1248,32 @@ export default function PublicQuizClient({
     setFreeTextDraft("");
     setMultiOptionsDraft([]);
 
-    // Funnel: record the answer for the question the visitor just
-    // committed, so drop-off analytics can compare views vs answers
-    // per question.
-    trackQuestionEvent("question_answer", currentQ);
+    const advance = () => {
+      // Funnel: record the answer for the question the visitor just
+      // committed, so drop-off analytics can compare views vs answers
+      // per question. Tracké au moment de l'avance (pas du tap) pour ne
+      // compter qu'une fois si le visiteur change d'avis pendant le délai.
+      trackQuestionEvent("question_answer", currentQ);
 
-    if (quiz && currentQ < quiz.questions.length - 1) {
-      setCurrentQ(currentQ + 1);
+      if (quiz && currentQ < quiz.questions.length - 1) {
+        setCurrentQ(currentQ + 1);
+      } else {
+        // Visitor completed all questions → track funnel event
+        trackEvent("complete");
+        setStep("email");
+      }
+    };
+
+    const isOneTap =
+      ans.kind === "option" || ans.kind === "rating" || ans.kind === "star";
+    if (isOneTap) {
+      if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = window.setTimeout(() => {
+        advanceTimerRef.current = null;
+        advance();
+      }, ONE_TAP_ADVANCE_DELAY_MS);
     } else {
-      // Visitor completed all questions → track funnel event
-      trackEvent("complete");
-      setStep("email");
+      advance();
     }
   };
 
@@ -1733,7 +1764,7 @@ export default function PublicQuizClient({
                 <button
                   key={v}
                   onClick={() => commitAnswer({ kind: "rating", value: v })}
-                  className={`h-12 rounded-lg border-2 font-semibold transition-all ${
+                  className={`select-none h-12 rounded-lg border-2 font-semibold transition-all ${
                     isSel
                       ? "border-primary bg-primary text-primary-foreground shadow-md scale-105"
                       : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -1765,7 +1796,7 @@ export default function PublicQuizClient({
               <button
                 key={v}
                 onClick={() => commitAnswer({ kind: "star", value: v })}
-                className="text-5xl sm:text-6xl leading-none transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                className="select-none text-5xl sm:text-6xl leading-none transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                 aria-label={`${v}/${max}`}
                 style={{ color: filled ? "var(--primary)" : "rgba(0,0,0,0.15)" }}
               >
@@ -1782,7 +1813,7 @@ export default function PublicQuizClient({
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <button
             onClick={() => commitAnswer({ kind: "option", optionIndex: 0 })}
-            className={`h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
               selectedYes
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -1792,7 +1823,7 @@ export default function PublicQuizClient({
           </button>
           <button
             onClick={() => commitAnswer({ kind: "option", optionIndex: 1 })}
-            className={`h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
               selectedNo
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -1858,7 +1889,7 @@ export default function PublicQuizClient({
                       ? toggleMultiOption(oi)
                       : commitAnswer({ kind: "option", optionIndex: oi })
                   }
-                  className={`group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
+                  className={`select-none active:scale-[0.98] group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
                     isSelected
                       ? "border-primary shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:shadow-sm"
@@ -1927,7 +1958,7 @@ export default function PublicQuizClient({
                       ? toggleMultiOption(oi)
                       : commitAnswer({ kind: "option", optionIndex: oi })
                   }
-                  className={`text-left rounded-xl border-2 overflow-hidden transition-all duration-200 ${
+                  className={`select-none active:scale-[0.98] text-left rounded-xl border-2 overflow-hidden transition-all duration-200 ${
                     isSelected
                       ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"

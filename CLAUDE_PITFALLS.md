@@ -1478,3 +1478,14 @@ position sidebar (entre contents et analytics). Tour complet, 12
 clients, webinars, widgets, analytics, pepites, coach. Tooltips
 tutorial.tooltip* ajoutés dans les 7 locales. La migration des phases
 mortes templates/credits reprend désormais à tour_automations.
+
+## AW) Quiz public mobile : comportement tactile Typeform/Tally (12 juin 2026)
+
+Miroir Tiquiz (retour Béné : réponses "préselectionnées" sur mobile).
+- Types à UN tap : sélection affichée 350 ms (ONE_TAP_ADVANCE_DELAY_MS)
+  avant l'avance, re-tap = dernier choix gagne, tracking
+  question_answer au moment de l'avance.
+- `html { -webkit-tap-highlight-color: transparent }` dans globals.css.
+- Boutons de réponse : `select-none` + `active:scale-[0.98]`.
+- Le hover collé était déjà réglé (future.hoverOnlyWhenSupported).
+NE PAS revenir en arrière, et porter toute évolution aux deux apps.
