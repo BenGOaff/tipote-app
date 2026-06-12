@@ -36,7 +36,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -473,6 +472,22 @@ export default function CompetitorAnalysisSection() {
           setShowResults(true);
           toast({ title: t("toast.analysisComplete") });
         } else {
+          // Stream SSE coupé avant l'événement result (proxy nginx,
+          // onglet en veille, réseau...) : le serveur a souvent terminé
+          // et sauvegardé l'analyse quand même. On re-fetch AVANT de
+          // déclarer l'échec (retour Béné 12 juin 2026 : "l'analyse n'a
+          // pas marché" alors qu'elle avait peut-être abouti en base).
+          const recheck = await fetch("/api/competitor-analysis", { method: "GET" });
+          const rj = (await recheck.json().catch(() => null)) as any;
+          if (rj?.ok && rj.analysis?.status === "completed") {
+            setAnalysis(rj.analysis);
+            if (Array.isArray(rj.analysis.competitors) && rj.analysis.competitors.length >= 1) {
+              setCompetitors(rj.analysis.competitors);
+            }
+            setShowResults(true);
+            toast({ title: t("toast.analysisComplete") });
+            return;
+          }
           throw new Error(t("toast.noResult"));
         }
       } catch (e: any) {
@@ -905,12 +920,14 @@ export default function CompetitorAnalysisSection() {
           </div>
         )}
 
-        {/* AI generating overlay dialog */}
-        <Dialog open={researching}>
-          <DialogContent className="sm:max-w-md [&>button]:hidden" onInteractOutside={(e) => e.preventDefault()}>
-            <AIGeneratingOverlay />
-          </DialogContent>
-        </Dialog>
+        {/* Overlay IA plein écran. SURTOUT PAS dans un <Dialog> : le
+            panneau DialogContent (petite carte blanche max-w-md)
+            entrait en collision avec le positionnement fixed inset-0
+            de l'overlay -> barre blanche difforme + texte de la page
+            qui traverse + warnings Radix DialogTitle (retour Béné
+            12 juin 2026). L'overlay est déjà modal par lui-même
+            (fixed, z-60, voile opaque, aria-modal). */}
+        {researching && <AIGeneratingOverlay />}
 
         <div className="flex flex-wrap gap-3 mt-6">
           <Button onClick={launchResearch} disabled={!canResearch || researching} className="gap-2">

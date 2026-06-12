@@ -1551,3 +1551,30 @@ automatiques de son pod dès la publication".
 Les posts détectés par l'extension (publication manuelle LinkedIn)
 gardent le comportement historique : like envoyé à la validation du
 commentaire.
+
+## AZ) AIGeneratingOverlay : JAMAIS dans un <Dialog> (12 juin 2026)
+
+Retour Béné (capture overlay cassé sur /settings?tab=positioning) :
+l'overlay IA plein écran était monté DANS un <DialogContent> (petite
+carte blanche max-w-md). Résultat : barre blanche difforme au milieu
+de l'écran (le panneau du Dialog), contenu de l'overlay (fixed
+inset-0) qui s'échappe autour, texte de la page qui traverse, +
+warnings Radix "DialogContent requires a DialogTitle".
+
+**Règle : `{condition && <AIGeneratingOverlay />}` directement.**
+L'overlay est déjà modal par lui-même (fixed inset-0, z-60, voile
+bg-background/95 + blur-md, aria-modal). Corrigé dans
+CompetitorAnalysisSection + SettingsTabsShell (enrichPersona).
+
+Aussi corrigés dans la même passe :
+- /api/automation/settings : `.limit(1).maybeSingle()` (un Elite
+  multi-projets sans projet actif résolu a PLUSIEURS business_profiles
+  -> maybeSingle jetait "multiple rows" -> 400 en boucle).
+- Persona (positioning) : la sauvegarde quitte maintenant le mode
+  édition (textarea markdown brut) et revient à la vue rendue
+  (AIContent markdown). Avant, on restait coincé dans le "mode brut".
+- Analyse concurrents : si le stream SSE est coupé avant l'événement
+  result (nginx, onglet en veille), on re-fetch GET avant de déclarer
+  l'échec : le serveur a souvent terminé et sauvegardé quand même.
+- Les logs console "content-shell-main.js Clipboard lockdown" ne sont
+  PAS du code Tipote : c'est une extension navigateur de l'user.
