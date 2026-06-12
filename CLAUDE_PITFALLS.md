@@ -1518,3 +1518,36 @@ NE PAS revenir en arrière, et porter toute évolution aux deux apps.
 - Toute modif extension = bump version manifest.json + package.json,
   rebuild (npm run build dans apps/extension), zip, re-upload CWS
   (cf. pitfall AC pour la fiche).
+
+## AY) Pod : auto-like à la publication via Tipote (12 juin 2026)
+
+Demande Béné : "si l'user poste depuis Tipote -> il reçoit les likes
+automatiques de son pod dès la publication".
+
+**Chaîne complète :**
+1. `/api/social/publish` (branch linkedin, succès) -> fire-and-forget
+   `signalPostPublished({source: "tipote"})` avec l'URN retourné par
+   l'API LinkedIn (urn:li:share:, accepté par voyagerLike au même titre
+   que activity/ugcPost). Ne bloque JAMAIS la publication. Prérequis
+   silencieux : l'auteur a connecté son extension
+   (pod_linkedin_profiles), sinon refus propre no_linkedin_profile.
+2. fan-out : pod_posts.source ('tipote'|'extension') ; chaque tâche
+   porte `auto_like` figé AU FAN-OUT (source tipote ET
+   pod_linkedin_profiles.auto_like_enabled du membre, défaut true).
+   Migration 20260612_pod_autolike.sql.
+3. Extension (content script LinkedIn, v1.5.0) : runAutoLikes() lit
+   les tâches du storage (le poll background y met auto_like), like
+   automatiquement les pending auto_like via voyagerLike. Garde-fous
+   EN PLUS du throttle global voyager.ts (12 actions/h, humanDelay,
+   pause anti-ban) : cap 20 auto-likes/24h glissants, max 3 par run
+   espacés de 8 à 25 s, lock storage anti double-like multi-onglets
+   (stale 10 min), premier run différé 15-45 s. Nécessite un onglet
+   LinkedIn ouvert (le CSRF Voyager vient de document.cookie).
+4. Le COMMENTAIRE reste toujours validé en 1 clic (jamais auto).
+5. Opt-out : toggle "Likes automatiques du pod" dans /boost onglet Pod
+   (PATCH /api/pod/me { auto_like_enabled }). Ne s'applique qu'aux
+   fan-outs FUTURS (flag figé par tâche).
+
+Les posts détectés par l'extension (publication manuelle LinkedIn)
+gardent le comportement historique : like envoyé à la validation du
+commentaire.

@@ -10,6 +10,7 @@ import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { decrypt } from "@/lib/crypto";
 import { refreshSocialToken } from "@/lib/refreshSocialToken";
 import { publishPost, uploadImageToLinkedIn } from "@/lib/linkedin";
+import { signalPostPublished } from "@/lib/podBoostService";
 import { publishToFacebookPage, publishPhotoToFacebookPage, publishMultiPhotoToFacebookPage, publishVideoToFacebookPage, publishToThreads, publishToInstagram, publishVideoToInstagram } from "@/lib/meta";
 import { publishTweet } from "@/lib/twitter";
 import { createPin } from "@/lib/pinterest";
@@ -687,6 +688,46 @@ export async function POST(req: NextRequest) {
     payload: { contentId, platform, mode: "direct", postId, postUrl },
     dedupeKey: dedupeKeys.postPublished(contentId, platform),
   }).catch(() => {});
+
+  // Pod Boost (Béné 12 juin 2026) : publication LinkedIn via Tipote =
+  // fan-out IMMÉDIAT vers les pod-mates avec auto-like (on connaît
+  // l'URN à la source, pas besoin d'attendre la détection par
+  // l'extension de l'auteur). Fire-and-forget : un échec de fan-out ne
+  // doit jamais faire échouer la publication. Prérequis silencieux :
+  // l'auteur a connecté son extension (pod_linkedin_profiles), sinon
+  // signalPostPublished refuse proprement (no_linkedin_profile).
+  if (platform === "linkedin" && postId) {
+    void (async () => {
+      try {
+        const urn = String(postId).startsWith("urn:")
+          ? String(postId)
+          : `urn:li:share:${postId}`;
+        // Langue du contenu pour le matching de pod (best-effort).
+        let language: string | null = null;
+        if (projectId) {
+          const { data: biz } = await supabaseAdmin
+            .from("business_profiles")
+            .select("content_locale")
+            .eq("user_id", user.id)
+            .eq("project_id", projectId)
+            .maybeSingle();
+          language =
+            (biz as { content_locale?: string | null } | null)?.content_locale ?? null;
+        }
+        const r = await signalPostPublished({
+          authorUserId: user.id,
+          linkedinPostUrn: urn,
+          postUrl,
+          contentExcerpt: contentItem.content ?? null,
+          language,
+          source: "tipote",
+        });
+        console.log("[publish-direct] pod fan-out", r);
+      } catch (err) {
+        console.warn("[publish-direct] pod fan-out failed (non bloquant)", err);
+      }
+    })();
+  }
 
   const responsePayload: Record<string, unknown> = {
     ok: true,

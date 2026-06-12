@@ -18,6 +18,7 @@ import { getCsrfToken, voyagerLike, voyagerComment } from "./voyager";
 import { mountBadge } from "./badge";
 import { startFeedInjector } from "./feedInjector";
 import { detectPlatform } from "./platforms";
+import { STORAGE_KEYS } from "./config";
 
 console.log("[tipote/cs] loaded on", location.href);
 
@@ -369,12 +370,106 @@ function maybeMountBadge() {
   void mountBadge(urn);
 }
 
+// ─── Auto-like des posts du pod publiés via Tipote (Béné 12 juin 2026) ──
+// Les tâches flaggées `auto_like` (post publié depuis Tipote + membre
+// opt-in au fan-out) sont likées AUTOMATIQUEMENT, sans validation
+// manuelle, dès qu'un onglet LinkedIn est ouvert. Garde-fous, en plus
+// du throttle global de voyager.ts (12 actions/h, délais humains,
+// pause anti-ban) :
+//   - cap quotidien dédié (fenêtre glissante 24 h)
+//   - max 3 likes par run, espacés de 8 à 25 s
+//   - lock storage anti double-like quand plusieurs onglets LinkedIn
+//     sont ouverts (stale après 10 min)
+// Le commentaire, lui, reste TOUJOURS validé en 1 clic par le membre.
+
+const AUTO_LIKE_DAILY_CAP = 20;
+const AUTO_LIKE_MAX_PER_RUN = 3;
+const AUTO_LIKE_HISTORY_KEY = "tipote.autolike.history.v1";
+const AUTO_LIKE_INFLIGHT_KEY = "tipote.autolike.inflight.v1";
+
+type AutoLikeTask = {
+  id: string;
+  status: string;
+  auto_like?: boolean;
+  pod_posts: { linkedin_post_urn: string; eligible_until: string | null };
+};
+
+async function runAutoLikes(): Promise<void> {
+  try {
+    const data = await safeStorageGet([
+      STORAGE_KEYS.PENDING_TASKS,
+      AUTO_LIKE_HISTORY_KEY,
+      AUTO_LIKE_INFLIGHT_KEY,
+    ]);
+    const tasks = (data[STORAGE_KEYS.PENDING_TASKS] as AutoLikeTask[] | undefined) ?? [];
+    const now = Date.now();
+
+    const history = ((data[AUTO_LIKE_HISTORY_KEY] as number[] | undefined) ?? []).filter(
+      (ts) => now - ts < 24 * 3600_000,
+    );
+    if (history.length >= AUTO_LIKE_DAILY_CAP) return;
+
+    const inflight =
+      (data[AUTO_LIKE_INFLIGHT_KEY] as Record<string, number> | undefined) ?? {};
+    for (const k of Object.keys(inflight)) {
+      if (now - inflight[k] > 10 * 60_000) delete inflight[k];
+    }
+
+    const candidates = tasks
+      .filter(
+        (t) =>
+          t.auto_like === true &&
+          t.status === "pending" &&
+          !!t.pod_posts?.linkedin_post_urn &&
+          !inflight[t.id] &&
+          (!t.pod_posts.eligible_until ||
+            new Date(t.pod_posts.eligible_until).getTime() > now),
+      )
+      .slice(0, Math.min(AUTO_LIKE_MAX_PER_RUN, AUTO_LIKE_DAILY_CAP - history.length));
+    if (!candidates.length) return;
+
+    for (const task of candidates) inflight[task.id] = now;
+    await safeStorageSet({ [AUTO_LIKE_INFLIGHT_KEY]: inflight });
+
+    for (const task of candidates) {
+      // Espacement humain supplémentaire entre deux auto-likes.
+      await new Promise((r) => setTimeout(r, 8000 + Math.random() * 17000));
+      const result = await voyagerLike(task.pod_posts.linkedin_post_urn);
+      if (result.ok) {
+        history.push(Date.now());
+        await safeStorageSet({ [AUTO_LIKE_HISTORY_KEY]: history });
+        // Confirme au backend (pending → liked) + repoll des tâches.
+        await safeSendMessage({ type: "task/like", payload: { taskId: task.id } });
+        console.log("[tipote/cs] auto-like ok", task.pod_posts.linkedin_post_urn);
+      } else if (result.error?.startsWith("throttled")) {
+        // Cap horaire ou pause anti-ban : on libère le lock et on
+        // réessaiera au prochain run, inutile d'insister maintenant.
+        delete inflight[task.id];
+        await safeStorageSet({ [AUTO_LIKE_INFLIGHT_KEY]: inflight });
+        break;
+      } else {
+        console.warn("[tipote/cs] auto-like failed", task.id, result.error ?? result.status);
+        delete inflight[task.id];
+        await safeStorageSet({ [AUTO_LIKE_INFLIGHT_KEY]: inflight });
+      }
+    }
+  } catch (err) {
+    console.warn("[tipote/cs] runAutoLikes error", err);
+  }
+}
+
 if (IS_LINKEDIN) {
   // Inject le hook réseau dès que possible. document_idle = on est sûr
   // que document.head existe, mais on cap quand même.
   injectPageWorldScript();
 
   maybeMountBadge();
+
+  // Auto-like pod : premier run après 15 à 45 s (le temps que le poll
+  // du background remplisse le storage + délai humain post-chargement),
+  // puis toutes les ~5 min tant que l'onglet est ouvert.
+  window.setTimeout(() => void runAutoLikes(), 15000 + Math.random() * 30000);
+  window.setInterval(() => void runAutoLikes(), 5 * 60_000 + Math.random() * 60_000);
 
   // LinkedIn = SPA, on observe les changements d'URL pour re-monter le
   // badge si l'user change de post via le router interne.
