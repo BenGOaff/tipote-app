@@ -1489,3 +1489,32 @@ Miroir Tiquiz (retour Béné : réponses "préselectionnées" sur mobile).
 - Boutons de réponse : `select-none` + `active:scale-[0.98]`.
 - Le hover collé était déjà réglé (future.hoverOnlyWhenSupported).
 NE PAS revenir en arrière, et porter toute évolution aux deux apps.
+
+## AX) Extension Boost : page /boost en onglets + réglages popup (12 juin 2026)
+
+- Sidebar : item "Extension" -> /boost (spotlightId "boost" inerte,
+  aucune phase de tour ne pointe dessus, c'est voulu).
+- /boost : carte état extension AU-DESSUS des onglets (gating commun),
+  puis Tabs pod / commenter / settings (deep-link ?tab=settings utilisé
+  par le popup de l'extension). L'onglet settings monte
+  AutoCommentSettings (qui reste AUSSI dans Réglages -> tab Boost,
+  cf. pitfall AP : ne pas le retirer de là sans décision Béné).
+- Réglages popup extension (apps/extension/src/popup) : ton, langue de
+  réponse (post|user), tutoiement (auto|tu|vous), domaine. Stockés dans
+  business_profiles.auto_comment_langage (JSONB) sous les clés
+  reply_language_mode / address_form / domain via PATCH
+  /api/automation/settings (messages background settings/get +
+  settings/save, auth cookies).
+- ⚠️ PATCH /api/automation/settings fait maintenant un MERGE de
+  auto_comment_langage avec l'existant : deux surfaces écrivent dans ce
+  JSONB (web: mots_cles/emojis/expressions ; popup: reply_language_mode/
+  address_form/domain). NE PAS revenir au remplacement brut.
+- Bug corrigé au passage : ai-suggest lisait `keywords` alors que le
+  schéma web sauve `mots_cles` -> les mots-clés n'étaient JAMAIS
+  injectés dans le prompt. On lit désormais les deux clés.
+- reply_language_mode "user" -> langue de réponse =
+  business_profiles.content_locale (sinon langue du post détectée par
+  l'extension, défaut historique).
+- Toute modif extension = bump version manifest.json + package.json,
+  rebuild (npm run build dans apps/extension), zip, re-upload CWS
+  (cf. pitfall AC pour la fiche).

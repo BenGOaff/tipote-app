@@ -16,10 +16,12 @@
 // externally_connectable sur ce domaine), on considère extension absente.
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2,
   CheckCircle2,
@@ -27,9 +29,11 @@ import {
   ExternalLink,
   RefreshCw,
   Rocket,
+  Settings2,
   Sparkles,
 } from "lucide-react";
 import { TIPOTE_EXTENSION_ID } from "@/lib/podBoost";
+import { AutoCommentSettings } from "@/components/settings/AutoCommentSettings";
 
 type PodMeResponse = {
   ok?: boolean;
@@ -89,8 +93,19 @@ const AI_NETWORKS = [
   { name: "Reddit", className: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200" },
 ];
 
-export default function BoostClient() {
+// Page organisée en onglets (Béné 12 juin 2026, pattern Réglages) :
+//   pod       → Pod LinkedIn (matching, pods rejoints, karma)
+//   commenter → Commentateur IA (réseaux, mode d'emploi)
+//   settings  → Réglages des réponses (AutoCommentSettings, mêmes
+//               données que le popup de l'extension)
+// L'état de l'extension reste AU-DESSUS des onglets (gating commun).
+// Deep-link : /boost?tab=settings (utilisé par le popup de l'extension).
+export default function BoostClient({ userPlan }: { userPlan: string | null }) {
   const t = useTranslations("boost");
+  const searchParams = useSearchParams();
+  const initialTab = ["pod", "commenter", "settings"].includes(searchParams.get("tab") ?? "")
+    ? (searchParams.get("tab") as string)
+    : "pod";
   const [me, setMe] = useState<PodMeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [extStatus, setExtStatus] = useState<ExtensionStatus>("checking");
@@ -246,6 +261,23 @@ export default function BoostClient() {
         </div>
       </Card>
 
+      <Tabs defaultValue={initialTab} className="space-y-4">
+        <TabsList className="h-auto p-1 gap-1 flex-wrap">
+          <TabsTrigger value="pod" className="gap-1.5 px-4 py-2">
+            <Rocket className="h-4 w-4" />
+            {t("tabs.pod")}
+          </TabsTrigger>
+          <TabsTrigger value="commenter" className="gap-1.5 px-4 py-2">
+            <Sparkles className="h-4 w-4" />
+            {t("tabs.commenter")}
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-1.5 px-4 py-2">
+            <Settings2 className="h-4 w-4" />
+            {t("tabs.settings")}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pod">
       {/* ════════════════════════════════════════════════════════════
           SECTION A — Pod d'engagement LinkedIn
           ════════════════════════════════════════════════════════════ */}
@@ -360,7 +392,9 @@ export default function BoostClient() {
           )}
         </Card>
       </section>
+        </TabsContent>
 
+        <TabsContent value="commenter">
       {/* ════════════════════════════════════════════════════════════
           SECTION B — Commentateur IA (7 réseaux, outil solo)
           ════════════════════════════════════════════════════════════ */}
@@ -414,6 +448,23 @@ export default function BoostClient() {
           </div>
         </Card>
       </section>
+        </TabsContent>
+
+        {/* ════════════════════════════════════════════════════════════
+            ONGLET Réglages — personnalisation des réponses IA. Mêmes
+            données que le popup de l'extension (langue, tutoiement,
+            domaine se règlent dans le popup ; ici : ton, objectifs,
+            mots-clés, expressions, emojis).
+            ════════════════════════════════════════════════════════════ */}
+        <TabsContent value="settings">
+          <section className="space-y-3">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {t("settingsTabDesc")}
+            </p>
+            <AutoCommentSettings userPlan={userPlan} />
+          </section>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

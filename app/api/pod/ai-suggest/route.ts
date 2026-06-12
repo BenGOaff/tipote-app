@@ -24,7 +24,13 @@ import { generateSuggestions, type CommenterContext } from "@/lib/podAiSuggest";
 
 /** Lookup du contexte de personnalisation du commenter. Tous les
  *  champs optionnels — si manquants, le prompt reste générique. */
-async function fetchCommenterContext(userId: string): Promise<CommenterContext> {
+async function fetchCommenterContext(userId: string): Promise<{
+  context: CommenterContext;
+  /** "post" = répondre dans la langue du post (défaut), "user" =
+   *  toujours dans la langue de contenu de l'user. */
+  replyLanguageMode: "post" | "user";
+  contentLocale: string | null;
+}> {
   const supabase = await getSupabaseServerClient();
   const projectId = await getActiveProjectId(supabase, userId);
 
@@ -44,6 +50,7 @@ async function fetchCommenterContext(userId: string): Promise<CommenterContext> 
     auto_comment_style_ton?: string | null;
     auto_comment_objectifs?: string[] | null;
     auto_comment_langage?: Record<string, unknown> | null;
+    content_locale?: string | null;
   };
   let businessProfile: BizProfile | null = null;
 
@@ -51,7 +58,7 @@ async function fetchCommenterContext(userId: string): Promise<CommenterContext> 
     const { data } = await supabaseAdmin
       .from("business_profiles")
       .select(
-        "brand_tone_of_voice, target_audience, auto_comment_style_ton, auto_comment_objectifs, auto_comment_langage",
+        "brand_tone_of_voice, target_audience, auto_comment_style_ton, auto_comment_objectifs, auto_comment_langage, content_locale",
       )
       .eq("user_id", userId)
       .eq("project_id", projectId)
@@ -61,25 +68,51 @@ async function fetchCommenterContext(userId: string): Promise<CommenterContext> 
 
   const langageRaw = (businessProfile?.auto_comment_langage ?? null) as {
     keywords?: unknown;
+    mots_cles?: unknown;
     expressions?: unknown;
     emojis?: unknown;
+    reply_language_mode?: unknown;
+    address_form?: unknown;
+    domain?: unknown;
   } | null;
+  const asStringArray = (v: unknown) =>
+    Array.isArray(v) ? (v.filter((x) => typeof x === "string") as string[]) : undefined;
   const langage = langageRaw
     ? {
-        keywords: Array.isArray(langageRaw.keywords) ? (langageRaw.keywords.filter((v) => typeof v === "string") as string[]) : undefined,
-        expressions: Array.isArray(langageRaw.expressions) ? (langageRaw.expressions.filter((v) => typeof v === "string") as string[]) : undefined,
-        emojis: Array.isArray(langageRaw.emojis) ? (langageRaw.emojis.filter((v) => typeof v === "string") as string[]) : undefined,
+        // ⚠️ AutoCommentSettings sauve sous `mots_cles` (schéma zod),
+        // d'anciens writes utilisaient `keywords`. On lit LES DEUX,
+        // sinon les mots-clés saisis dans Réglages -> Boost ne sont
+        // jamais injectés dans le prompt (bug détecté 12 juin 2026).
+        keywords: asStringArray(langageRaw.keywords) ?? asStringArray(langageRaw.mots_cles),
+        expressions: asStringArray(langageRaw.expressions),
+        emojis: asStringArray(langageRaw.emojis),
       }
     : null;
 
+  const addressForm =
+    langageRaw?.address_form === "tu" || langageRaw?.address_form === "vous"
+      ? (langageRaw.address_form as "tu" | "vous")
+      : "auto";
+  const replyLanguageMode = langageRaw?.reply_language_mode === "user" ? "user" : "post";
+  const domain =
+    typeof langageRaw?.domain === "string" && langageRaw.domain.trim()
+      ? langageRaw.domain.trim()
+      : null;
+
   return {
-    fullName: liProfile?.full_name ?? null,
-    headline: liProfile?.headline ?? null,
-    toneOfVoice: businessProfile?.brand_tone_of_voice ?? null,
-    targetAudience: businessProfile?.target_audience ?? null,
-    styleCategory: businessProfile?.auto_comment_style_ton ?? null,
-    objectives: businessProfile?.auto_comment_objectifs ?? null,
-    langage: langage && (langage.keywords?.length || langage.expressions?.length || langage.emojis?.length) ? langage : null,
+    context: {
+      fullName: liProfile?.full_name ?? null,
+      headline: liProfile?.headline ?? null,
+      toneOfVoice: businessProfile?.brand_tone_of_voice ?? null,
+      targetAudience: businessProfile?.target_audience ?? null,
+      styleCategory: businessProfile?.auto_comment_style_ton ?? null,
+      objectives: businessProfile?.auto_comment_objectifs ?? null,
+      langage: langage && (langage.keywords?.length || langage.expressions?.length || langage.emojis?.length) ? langage : null,
+      addressForm,
+      domain,
+    },
+    replyLanguageMode,
+    contentLocale: businessProfile?.content_locale ?? null,
   };
 }
 
@@ -106,7 +139,7 @@ export async function POST(req: Request) {
 
   // activity_urn pas strictement requis pour le call IA (le contenu
   // suffit) — utile en log pour diag + futur cache par URN.
-  const language = body.language?.trim().toLowerCase() || "fr";
+  let language = body.language?.trim().toLowerCase() || "fr";
   const excerpt = body.content_excerpt?.trim() || null;
   const indications = body.indications?.trim().slice(0, 400) || null;
 
@@ -114,7 +147,14 @@ export async function POST(req: Request) {
   // si la query échoue — on tombe sur du générique).
   let commenter: CommenterContext | undefined;
   try {
-    commenter = await fetchCommenterContext(user.id);
+    const lookup = await fetchCommenterContext(user.id);
+    commenter = lookup.context;
+    // Mode "ma langue" (popup extension) : on répond TOUJOURS dans la
+    // langue de contenu de l'user, même si le post est dans une autre
+    // langue. Défaut historique : langue du post détectée par l'extension.
+    if (lookup.replyLanguageMode === "user" && lookup.contentLocale) {
+      language = lookup.contentLocale.trim().toLowerCase();
+    }
   } catch (err) {
     console.warn("[ai-suggest] fetchCommenterContext failed, fallback generic", err);
   }

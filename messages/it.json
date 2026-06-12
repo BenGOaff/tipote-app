@@ -1,5 +1,6 @@
 {
   "nav": {
+    "boost": "Estensione",
     "today": "Oggi",
     "strategy": "La Mia Strategia",
     "create": "Crea",
@@ -6612,6 +6613,12 @@
     "needsAttention": "Da controllare"
   },
   "boost": {
+    "tabs": {
+      "pod": "Pod LinkedIn",
+      "commenter": "Commentatore IA",
+      "settings": "Impostazioni"
+    },
+    "settingsTabDesc": "Personalizza i commenti generati dall'estensione: tono, obiettivi, parole chiave, espressioni ed emoji. La lingua di risposta, il registro e il tuo settore si regolano anche direttamente nel menu dell'estensione (icona ingranaggio).",
     "pageTitle": "Tipote Boost",
     "bannerTitle": "Tipote Boost - Pod LinkedIn + Commentatore IA",
     "bannerSubtitle": "Due strumenti in un'estensione. Pod di engagement reciproco su LinkedIn (boost + karma) e commentatore IA su 7 reti (LinkedIn, Facebook, Threads, Instagram, X, TikTok, Reddit).",

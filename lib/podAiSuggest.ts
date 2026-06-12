@@ -51,6 +51,13 @@ export type CommenterContext = {
     expressions?: string[];
     emojis?: string[];
   } | null;
+  /** Tutoiement / vouvoiement (Béné 12 juin 2026, réglable depuis le
+   *  popup de l'extension). "auto" ou absent = on laisse le modèle
+   *  suivre le registre du post. */
+  addressForm?: "auto" | "tu" | "vous" | null;
+  /** Domaine d'expertise déclaré (ex: "marketing digital", "yoga
+   *  prénatal") : ancre la crédibilité des commentaires. */
+  domain?: string | null;
 };
 
 const FALLBACK_SUGGESTIONS: CommentSuggestions = {
@@ -84,6 +91,16 @@ function formatCommenterContext(ctx: CommenterContext | undefined): string {
     // "professionnel" = défaut, on l'omet pour éviter de redire des
     // banalités au modèle.
     lines.push(`Style général : ${ctx.styleCategory.trim()}.`);
+  }
+
+  if (ctx.domain?.trim()) {
+    lines.push(`Domaine d'expertise du commenter : ${ctx.domain.trim()}. Les commentaires doivent sonner crédibles venant de ce domaine.`);
+  }
+
+  if (ctx.addressForm === "tu") {
+    lines.push(`Adresse-toi à l'auteur du post en le TUTOYANT (ou registre informel équivalent dans la langue du post).`);
+  } else if (ctx.addressForm === "vous") {
+    lines.push(`Adresse-toi à l'auteur du post en le VOUVOYANT (ou registre formel équivalent dans la langue du post).`);
   }
 
   if (ctx.objectives && ctx.objectives.length > 0) {

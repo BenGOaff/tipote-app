@@ -73,6 +73,56 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     fr: "Découvrir Tipote",
     en: "Discover Tipote",
   },
+  // ─── Réglages popup (Béné 12 juin 2026) ─────────────────────────
+  "settings.open": { fr: "Réglages", en: "Settings" },
+  "settings.back": { fr: "Retour", en: "Back" },
+  "settings.title": {
+    fr: "Réglages des commentaires",
+    en: "Comment settings",
+  },
+  "settings.tone": { fr: "Ton des commentaires", en: "Comment tone" },
+  "settings.replyLang": { fr: "Langue des réponses", en: "Reply language" },
+  "settings.replyLangPost": {
+    fr: "Langue du post (automatique)",
+    en: "Post language (automatic)",
+  },
+  "settings.replyLangUser": {
+    fr: "Toujours ma langue",
+    en: "Always my language",
+  },
+  "settings.addressForm": { fr: "Tutoiement", en: "Form of address" },
+  "settings.addressAuto": {
+    fr: "Automatique (suit le post)",
+    en: "Automatic (follows the post)",
+  },
+  "settings.addressTu": { fr: "Tutoyer", en: "Informal (tu)" },
+  "settings.addressVous": { fr: "Vouvoyer", en: "Formal (vous)" },
+  "settings.domain": {
+    fr: "Ton domaine d'expertise",
+    en: "Your domain of expertise",
+  },
+  "settings.domainPlaceholder": {
+    fr: "ex. marketing digital",
+    en: "e.g. digital marketing",
+  },
+  "settings.save": { fr: "Enregistrer", en: "Save" },
+  "settings.saved": { fr: "Enregistré", en: "Saved" },
+  "settings.error": {
+    fr: "Erreur de sauvegarde, réessaie.",
+    en: "Save failed, try again.",
+  },
+  "settings.needLogin": {
+    fr: "Connecte-toi à Tipote dans Chrome (app.tipote.com) pour gérer tes réglages.",
+    en: "Sign in to Tipote in Chrome (app.tipote.com) to manage your settings.",
+  },
+  "settings.needPlan": {
+    fr: "Les réglages du commentateur IA sont disponibles avec les plans PRO et ELITE.",
+    en: "AI commenter settings are available on PRO and ELITE plans.",
+  },
+  "settings.moreLink": {
+    fr: "Plus d'options (mots-clés, expressions, emojis) sur Tipote",
+    en: "More options (keywords, expressions, emojis) on Tipote",
+  },
   "popup.privacy": {
     fr: "Politique de confidentialité",
     en: "Privacy policy",

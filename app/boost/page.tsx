@@ -31,6 +31,14 @@ export default async function BoostPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Plan pour le gating de l'onglet Réglages (AutoCommentSettings).
+  const { data: planRow } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", user.id)
+    .maybeSingle();
+  const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+
   const t = await getTranslations("boost");
 
   return (
@@ -49,7 +57,7 @@ export default async function BoostPage() {
                 title={t("bannerTitle")}
                 subtitle={t("bannerSubtitle")}
               />
-              <BoostClient />
+              <BoostClient userPlan={plan} />
             </div>
           </div>
         </main>
