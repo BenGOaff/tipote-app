@@ -849,6 +849,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         const row = (json.profile ?? null) as ProfileRow | null;
         setInitialProfile(row);
 
+        // Retour à la vue rendue du résumé persona après sauvegarde
+        // (retour Béné 12 juin 2026, cf. savePersonaMarkdown).
+        setSummaryEditMode(false);
+
         toast({ title: tSP("toast.positioningSaved") });
       } catch (e: any) {
         toast({
@@ -1000,6 +1004,11 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
         setInitialPersonaDetailedMarkdown(personaDetailedMarkdown);
         setInitialNarrativeSynthesisMarkdown(narrativeSynthesisMarkdown);
         setInitialCompetitorInsightsMarkdown(competitorInsightsMarkdown);
+        // Retour automatique à la vue RENDUE après sauvegarde (retour
+        // Béné 12 juin 2026) : rester dans le textarea markdown brut
+        // donnait l'impression d'un "éditeur éclaté" permanent.
+        setDetailedEditMode(false);
+        setSynthesisEditMode(false);
         toast({ title: tSP("toast.personaSaved") });
       } catch (e: any) {
         toast({ title: tc("cannotSave"), description: e?.message ?? tc("errorUnknown"), variant: "destructive" });
@@ -3139,12 +3148,10 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
             </Button>
           </div>
 
-          {/* AI generating overlay dialog */}
-          <Dialog open={enriching}>
-            <DialogContent className="sm:max-w-md [&>button]:hidden" onInteractOutside={(e) => e.preventDefault()}>
-              <AIGeneratingOverlay />
-            </DialogContent>
-          </Dialog>
+          {/* Overlay IA plein écran. SURTOUT PAS dans un <Dialog> :
+              cf. CompetitorAnalysisSection, même anti-pattern corrigé
+              (retour Béné 12 juin 2026). */}
+          {enriching && <AIGeneratingOverlay />}
           <p className="text-xs text-muted-foreground mt-2">
             {tSP("positioningTab.enrichDesc")}
           </p>

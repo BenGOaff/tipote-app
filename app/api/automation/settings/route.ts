@@ -63,7 +63,11 @@ export async function GET() {
 
     if (projectId) query = query.eq("project_id", projectId);
 
-    const { data, error } = await query.maybeSingle();
+    // limit(1) : un user Elite multi-projets sans projet actif résolu a
+    // PLUSIEURS business_profiles -> maybeSingle() sans limit jette
+    // "multiple rows returned" -> 400 en boucle dans la console (retour
+    // Béné 12 juin 2026).
+    const { data, error } = await query.limit(1).maybeSingle();
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
@@ -145,7 +149,8 @@ export async function PATCH(req: NextRequest) {
         .select("auto_comment_langage")
         .eq("user_id", user.id);
       if (projectId) q = q.eq("project_id", projectId);
-      const { data: existingRow } = await q.maybeSingle();
+      // limit(1) : même garde multi-projets que le GET ci-dessus.
+      const { data: existingRow } = await q.limit(1).maybeSingle();
       const existing =
         (existingRow?.auto_comment_langage as Record<string, unknown> | null) ?? {};
       patch.auto_comment_langage = {
