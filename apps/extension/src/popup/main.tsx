@@ -83,10 +83,178 @@ const styles = {
   },
 };
 
+// ─── Vue Réglages (Béné 12 juin 2026) ────────────────────────────────
+// Réglages du commentateur IA éditables directement depuis le popup :
+// ton, langue de réponse (langue du post vs langue de l'user),
+// tutoiement/vouvoiement, domaine d'expertise. Source de vérité =
+// backend (/api/automation/settings via le background), donc synchro
+// automatique avec l'onglet Réglages de la page /boost de Tipote.
+
+type SettingsState = {
+  hasAccess: boolean;
+  styleTon: string;
+  availableStyles: string[];
+  replyLanguageMode: "post" | "user";
+  addressForm: "auto" | "tu" | "vous";
+  domain: string;
+};
+
+const fieldStyles = {
+  label: { display: "block", fontSize: 11, fontWeight: 600 as const, margin: "10px 0 3px", color: "#374151" },
+  control: {
+    width: "100%",
+    boxSizing: "border-box" as const,
+    padding: "6px 8px",
+    fontSize: 12,
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    color: "#111",
+  },
+};
+
+function SettingsView({ onBack }: { onBack: () => void }) {
+  const [state, setState] = useState<SettingsState | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "saving" | "saved" | "error" | "unauthorized">("loading");
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: "settings/get" }, (resp) => {
+      if (!resp?.ok || !resp.settings) {
+        setStatus("unauthorized");
+        return;
+      }
+      const langage = (resp.settings.auto_comment_langage ?? {}) as Record<string, unknown>;
+      setState({
+        hasAccess: resp.hasAccess !== false,
+        styleTon: String(resp.settings.auto_comment_style_ton ?? "professionnel"),
+        availableStyles: Array.isArray(resp.available_styles)
+          ? (resp.available_styles as string[])
+          : ["amical", "professionnel"],
+        replyLanguageMode: langage.reply_language_mode === "user" ? "user" : "post",
+        addressForm:
+          langage.address_form === "tu" || langage.address_form === "vous"
+            ? (langage.address_form as "tu" | "vous")
+            : "auto",
+        domain: typeof langage.domain === "string" ? langage.domain : "",
+      });
+      setStatus("ready");
+    });
+  }, []);
+
+  const save = () => {
+    if (!state) return;
+    setStatus("saving");
+    chrome.runtime.sendMessage(
+      {
+        type: "settings/save",
+        payload: {
+          auto_comment_style_ton: state.styleTon,
+          auto_comment_langage: {
+            reply_language_mode: state.replyLanguageMode,
+            address_form: state.addressForm,
+            domain: state.domain.trim(),
+          },
+        },
+      },
+      (resp) => {
+        setStatus(resp?.ok ? "saved" : "error");
+        if (resp?.ok) setTimeout(() => setStatus("ready"), 1800);
+      },
+    );
+  };
+
+  return (
+    <div>
+      <button
+        onClick={onBack}
+        style={{ background: "none", border: "none", color: "#5d6cdb", fontSize: 12, cursor: "pointer", padding: 0, marginBottom: 8 }}
+      >
+        ← {t("settings.back")}
+      </button>
+      <h2 style={{ fontSize: 14, margin: "0 0 4px", fontWeight: 600 }}>{t("settings.title")}</h2>
+
+      {status === "loading" ? (
+        <p style={{ fontSize: 12, color: "#666" }}>{t("popup.loading")}</p>
+      ) : status === "unauthorized" || !state ? (
+        <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5 }}>{t("settings.needLogin")}</p>
+      ) : !state.hasAccess ? (
+        <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5 }}>{t("settings.needPlan")}</p>
+      ) : (
+        <>
+          <label style={fieldStyles.label}>{t("settings.tone")}</label>
+          <select
+            style={fieldStyles.control}
+            value={state.styleTon}
+            onChange={(e) => setState({ ...state, styleTon: (e.target as HTMLSelectElement).value })}
+          >
+            {state.availableStyles.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+
+          <label style={fieldStyles.label}>{t("settings.replyLang")}</label>
+          <select
+            style={fieldStyles.control}
+            value={state.replyLanguageMode}
+            onChange={(e) =>
+              setState({ ...state, replyLanguageMode: (e.target as HTMLSelectElement).value as "post" | "user" })
+            }
+          >
+            <option value="post">{t("settings.replyLangPost")}</option>
+            <option value="user">{t("settings.replyLangUser")}</option>
+          </select>
+
+          <label style={fieldStyles.label}>{t("settings.addressForm")}</label>
+          <select
+            style={fieldStyles.control}
+            value={state.addressForm}
+            onChange={(e) =>
+              setState({ ...state, addressForm: (e.target as HTMLSelectElement).value as "auto" | "tu" | "vous" })
+            }
+          >
+            <option value="auto">{t("settings.addressAuto")}</option>
+            <option value="tu">{t("settings.addressTu")}</option>
+            <option value="vous">{t("settings.addressVous")}</option>
+          </select>
+
+          <label style={fieldStyles.label}>{t("settings.domain")}</label>
+          <input
+            style={fieldStyles.control}
+            value={state.domain}
+            placeholder={t("settings.domainPlaceholder")}
+            onInput={(e) => setState({ ...state, domain: (e.target as HTMLInputElement).value })}
+          />
+
+          <button
+            onClick={save}
+            disabled={status === "saving"}
+            style={{ ...styles.primaryBtn, border: "none", cursor: "pointer", width: "100%", marginTop: 14, opacity: status === "saving" ? 0.6 : 1 }}
+          >
+            {status === "saving" ? "…" : status === "saved" ? `✓ ${t("settings.saved")}` : t("settings.save")}
+          </button>
+          {status === "error" && (
+            <p style={{ fontSize: 11, color: "#b91c1c", marginTop: 6 }}>{t("settings.error")}</p>
+          )}
+
+          <a
+            href={`${TIPOTE_API_BASE}/boost?tab=settings`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "block", fontSize: 11, color: "#5d6cdb", marginTop: 10, textDecoration: "underline" }}
+          >
+            {t("settings.moreLink")}
+          </a>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Popup() {
   const [stored, setStored] = useState<StoredUser>(null);
   const [tasks, setTasks] = useState<PendingTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"home" | "settings">("home");
 
   useEffect(() => {
     chrome.storage.local.get(
@@ -109,9 +277,24 @@ function Popup() {
     ? t("popup.noTasksTitle")
     : `${tasks.length} ${tasks.length > 1 ? t("popup.taskCountPlural") : t("popup.taskCountSingular")}`;
 
+  if (view === "settings") {
+    return <SettingsView onBack={() => setView("home")} />;
+  }
+
   return (
     <div>
-      <h1 style={{ fontSize: 16, margin: "0 0 8px", fontWeight: 600 }}>Tipote Boost</h1>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <h1 style={{ fontSize: 16, margin: 0, fontWeight: 600 }}>Tipote Boost</h1>
+        {isConnected && (
+          <button
+            onClick={() => setView("settings")}
+            title={t("settings.open")}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, padding: 2, lineHeight: 1 }}
+          >
+            ⚙️
+          </button>
+        )}
+      </div>
       <p style={{ fontSize: 13, color: "#666", margin: "0 0 12px" }}>
         {t("popup.tagline")}
       </p>

@@ -238,6 +238,43 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
+  if (msg?.type === "settings/get") {
+    // Réglages du commentateur IA, édités depuis le popup (Béné 12 juin
+    // 2026). Source de vérité = backend (/api/automation/settings,
+    // mêmes données que l'onglet Réglages de la page /boost).
+    void (async () => {
+      try {
+        const res = await fetch(`${TIPOTE_API_BASE}/api/automation/settings`, {
+          credentials: "include",
+        });
+        sendResponse(res.ok ? await res.json() : { ok: false, status: res.status });
+      } catch (err) {
+        console.warn("[tipote/bg] settings/get error", err);
+        sendResponse({ ok: false });
+      }
+    })();
+    return true;
+  }
+
+  if (msg?.type === "settings/save") {
+    void (async () => {
+      try {
+        const res = await fetch(`${TIPOTE_API_BASE}/api/automation/settings`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(msg.payload ?? {}),
+        });
+        const data = await res.json().catch(() => null);
+        sendResponse(res.ok ? (data ?? { ok: true }) : { ok: false, status: res.status, ...(data ?? {}) });
+      } catch (err) {
+        console.warn("[tipote/bg] settings/save error", err);
+        sendResponse({ ok: false });
+      }
+    })();
+    return true;
+  }
+
   if (msg?.type === "ai/suggest") {
     // Mode "quick comment Kawaak-style" : l'extension est sur un post
     // hors-pod (pas de task pré-générée) et demande au backend de

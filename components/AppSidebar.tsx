@@ -18,6 +18,7 @@ import {
   PanelLeftClose,
   HelpCircle,
   HandCoins,
+  Rocket,
 } from "lucide-react";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -82,6 +83,9 @@ const MAIN_ITEM_CONFIG = [
   { key: "create" as const, url: "/create", icon: Sparkles, spotlightId: "create" },
   { key: "contents" as const, url: "/contents", icon: FolderOpen, spotlightId: "contents" },
 { key: "automations" as const, url: "/automations", icon: Zap, spotlightId: "automations" },
+  // Extension Chrome (Boost) : page dédiée /boost (Béné 12 juin 2026).
+  // spotlightId inerte tant qu'aucune phase de tour ne pointe dessus.
+  { key: "boost" as const, url: "/boost", icon: Rocket, spotlightId: "boost" },
   { key: "leads" as const, url: "/leads", icon: Users, spotlightId: "leads" },
   { key: "clients" as const, url: "/clients", icon: Briefcase, spotlightId: "clients" },
   { key: "webinars" as const, url: "/webinars", icon: Video, spotlightId: "webinars" },

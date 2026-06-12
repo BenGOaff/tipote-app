@@ -22,6 +22,15 @@ const UpdateSchema = z.object({
       mots_cles: z.array(z.string().max(80)).max(20).optional(),
       emojis: z.array(z.string().max(10)).max(20).optional(),
       expressions: z.array(z.string().max(200)).max(20).optional(),
+      // Réglages extension (Béné 12 juin 2026, éditables depuis le popup) :
+      // - reply_language_mode : "post" = répondre dans la langue du post
+      //   (défaut historique), "user" = toujours dans la langue de
+      //   contenu de l'user (business_profiles.content_locale).
+      // - address_form : tutoiement / vouvoiement des commentaires.
+      // - domain : domaine d'expertise injecté dans le prompt.
+      reply_language_mode: z.enum(["post", "user"]).optional(),
+      address_form: z.enum(["auto", "tu", "vous"]).optional(),
+      domain: z.string().trim().max(120).optional(),
     })
     .optional(),
   auto_comment_objectifs: z
@@ -118,12 +127,32 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const patch = parsed.data;
+    const patch: Record<string, unknown> = { ...parsed.data };
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ ok: true });
     }
 
     const projectId = await getActiveProjectId(supabase, user.id);
+
+    // MERGE de auto_comment_langage avec l'existant : deux surfaces
+    // écrivent dans ce JSONB (Réglages web -> mots_cles/emojis/
+    // expressions ; popup extension -> reply_language_mode/address_form/
+    // domain). Un remplacement brut ferait perdre les clés de l'autre
+    // surface à chaque sauvegarde (Béné 12 juin 2026).
+    if (parsed.data.auto_comment_langage) {
+      let q = supabase
+        .from("business_profiles")
+        .select("auto_comment_langage")
+        .eq("user_id", user.id);
+      if (projectId) q = q.eq("project_id", projectId);
+      const { data: existingRow } = await q.maybeSingle();
+      const existing =
+        (existingRow?.auto_comment_langage as Record<string, unknown> | null) ?? {};
+      patch.auto_comment_langage = {
+        ...existing,
+        ...parsed.data.auto_comment_langage,
+      };
+    }
 
     if (projectId) {
       const { error } = await supabase
