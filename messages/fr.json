@@ -6620,6 +6620,9 @@
     "needsAttention": "À regarder"
   },
   "boost": {
+    "autoLikeTitle": "Likes automatiques du pod",
+    "autoLikeDesc": "Quand un membre de ton pod publie sur LinkedIn depuis Tipote, ton extension like son post automatiquement (et le tien reçoit les likes des autres dès ta publication). Le commentaire, lui, reste toujours validé par toi en 1 clic.",
+    "autoLikeLimits": "Garde-fous intégrés : maximum 20 likes automatiques par jour, 12 actions par heure tous types confondus, délais aléatoires entre chaque action et pause automatique si LinkedIn montre des signes de méfiance. Nécessite un onglet LinkedIn ouvert.",
     "tabs": {
       "pod": "Pod LinkedIn",
       "commenter": "Commentateur IA",

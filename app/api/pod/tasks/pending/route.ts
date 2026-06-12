@@ -22,7 +22,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("pod_engagement_tasks")
     .select(
-      "id, status, ai_comment_suggestions, created_at, " +
+      "id, status, auto_like, ai_comment_suggestions, created_at, " +
       "pod_posts!inner(id, linkedin_post_urn, post_url, content_excerpt, language, eligible_until, author_user_id)"
     )
     .eq("assigned_user_id", user.id)

@@ -86,8 +86,15 @@ export async function signalPostPublished(params: {
   postUrl: string | null;
   contentExcerpt: string | null;
   language: string | null;
+  /** Origine du post : "extension" (détection DOM, historique) ou
+   *  "tipote" (publié via /api/social/publish). Les posts "tipote"
+   *  déclenchent l'AUTO-like chez les pod-mates opt-in (Béné 12 juin
+   *  2026) ; les posts "extension" gardent le like à la validation du
+   *  commentaire. */
+  source?: "extension" | "tipote";
 }): Promise<SignalPostResult> {
   const { authorUserId, linkedinPostUrn, postUrl, contentExcerpt, language } = params;
+  const source = params.source ?? "extension";
 
   // 1. Vérifier que l'auteur a un profil LinkedIn lié (sinon pas de fan-out
   //    possible — il faut d'abord qu'il connecte son extension).
@@ -122,6 +129,7 @@ export async function signalPostPublished(params: {
       content_excerpt: contentExcerpt?.slice(0, 500) ?? null,
       language,
       eligible_until: eligibleUntil,
+      source,
     })
     .select("id")
     .maybeSingle();
@@ -173,6 +181,7 @@ export async function signalPostPublished(params: {
       authorUserId,
       postLanguage: language,
       suggestions,
+      source,
     });
   }
 
@@ -193,14 +202,15 @@ async function fanOutForPod(params: {
   authorUserId: string;
   postLanguage: string | null;
   suggestions: CommentSuggestions;
+  source: "extension" | "tipote";
 }): Promise<number> {
-  const { podPostId, podId, authorUserId, postLanguage, suggestions } = params;
+  const { podPostId, podId, authorUserId, postLanguage, suggestions, source } = params;
 
   // Jointure : memberships actives du pod + profil LinkedIn de chacun.
   // Foreign-key implicite : pod_memberships.user_id → pod_linkedin_profiles.user_id.
   const { data: candidates } = await supabaseAdmin
     .from("pod_memberships")
-    .select("user_id, pod_linkedin_profiles!inner(user_id, language_detected)")
+    .select("user_id, pod_linkedin_profiles!inner(user_id, language_detected, auto_like_enabled)")
     .eq("pod_id", podId)
     .eq("status", "active")
     .neq("user_id", authorUserId);
@@ -210,9 +220,13 @@ async function fanOutForPod(params: {
   // Filtre langue. Supabase typegen renvoie pod_linkedin_profiles comme
   // un array (FK 1-N a priori) — en pratique 1-1 via user_id PK donc
   // on prend la 1ère row.
+  type CandidateProfile = {
+    language_detected: string | null;
+    auto_like_enabled?: boolean | null;
+  };
   type Candidate = {
     user_id: string;
-    pod_linkedin_profiles: { language_detected: string | null }[] | { language_detected: string | null } | null;
+    pod_linkedin_profiles: CandidateProfile[] | CandidateProfile | null;
   };
   const matched = (candidates as unknown as Candidate[]).filter((c) => {
     if (!postLanguage) return true;
@@ -237,13 +251,21 @@ async function fanOutForPod(params: {
   // NOTHING n'existe pas en standard sans contrainte unique — on accepte
   // les doublons éventuels (notre fan-out est déjà gated par alreadyExisted,
   // donc on n'y arrivera pas en pratique).
-  const rows = shuffled.map((c) => ({
-    pod_post_id: podPostId,
-    pod_id: podId,
-    assigned_user_id: c.user_id,
-    status: "pending" as const,
-    ai_comment_suggestions: suggestions,
-  }));
+  const rows = shuffled.map((c) => {
+    const profile = Array.isArray(c.pod_linkedin_profiles)
+      ? c.pod_linkedin_profiles[0]
+      : c.pod_linkedin_profiles;
+    return {
+      pod_post_id: podPostId,
+      pod_id: podId,
+      assigned_user_id: c.user_id,
+      status: "pending" as const,
+      ai_comment_suggestions: suggestions,
+      // Auto-like figé au fan-out : post publié via Tipote ET membre
+      // opt-in à ce moment-là. Le commentaire reste validé en 1 clic.
+      auto_like: source === "tipote" && profile?.auto_like_enabled !== false,
+    };
+  });
   const { error, count } = await supabaseAdmin
     .from("pod_engagement_tasks")
     .insert(rows, { count: "exact" });

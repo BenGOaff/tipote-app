@@ -22,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Loader2,
   CheckCircle2,
@@ -44,6 +45,7 @@ type PodMeResponse = {
     profile_url: string | null;
     language_detected: string | null;
     connected_at: string;
+    auto_like_enabled?: boolean | null;
   } | null;
   memberships: Array<{
     pod_id: string;
@@ -110,6 +112,34 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
   const [loading, setLoading] = useState(true);
   const [extStatus, setExtStatus] = useState<ExtensionStatus>("checking");
   const [syncing, setSyncing] = useState(false);
+  const [savingAutoLike, setSavingAutoLike] = useState(false);
+
+  const toggleAutoLike = useCallback(
+    async (next: boolean) => {
+      setSavingAutoLike(true);
+      try {
+        const res = await fetch("/api/pod/me", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ auto_like_enabled: next }),
+        });
+        const json = await res.json();
+        if (json?.ok) {
+          setMe((prev) =>
+            prev?.linkedin_profile
+              ? {
+                  ...prev,
+                  linkedin_profile: { ...prev.linkedin_profile, auto_like_enabled: next },
+                }
+              : prev,
+          );
+        }
+      } finally {
+        setSavingAutoLike(false);
+      }
+    },
+    [],
+  );
 
   const fetchMe = useCallback(async () => {
     setLoading(true);
@@ -337,6 +367,29 @@ export default function BoostClient({ userPlan }: { userPlan: string | null }) {
             </div>
           </div>
         </Card>
+
+        {/* Likes automatiques (publication via Tipote) */}
+        {linkedin ? (
+          <Card className="p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-sm">{t("autoLikeTitle")}</h3>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  {t("autoLikeDesc")}
+                </p>
+              </div>
+              <Switch
+                checked={linkedin.auto_like_enabled !== false}
+                disabled={savingAutoLike}
+                onCheckedChange={(v) => void toggleAutoLike(v)}
+                aria-label={t("autoLikeTitle")}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+              {t("autoLikeLimits")}
+            </p>
+          </Card>
+        ) : null}
 
         {/* Pods */}
         <Card className="p-5">
