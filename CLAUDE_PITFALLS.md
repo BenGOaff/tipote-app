@@ -1619,3 +1619,19 @@ Extension v1.6.0. Rebuild + zip + re-upload CWS obligatoire pour que
 les users aient les nouveaux réglages popup. Les fixes prompt/langue/
 domaine sont CÔTÉ SERVEUR -> actifs dès le déploiement Tipote, même
 sans MAJ extension (sauf le champ indication feed + langues popup).
+
+## BB) Titres de blocs résultat personnalisables par profil (Gwenn 13 juin 2026)
+
+Miroir Tiquiz. Override nullable par résultat (quiz_results.
+insight_heading / projection_heading, migration
+20260613_quiz_results_heading_overrides). NULL/vide = titre commun du
+quiz (quizzes.result_insight_heading / result_projection_heading). Mode
+"personnalisé" dérivé (un override non-null sur le bloc). Toggle sous
+chaque titre dans l'éditeur. Rendu public override ?? commun ?? défaut
+aux 2 emplacements de PublicQuizClient.
+
+⚠️ Tipote utilise InlineEdit (pas RichTextEdit singleLine) + libellés
+FR EN DUR pour ces titres (convention locale de ce bloc) + classes
+tipote-quiz-rich. Endroits : migration, QuizDetailClient (type +
+handlers + booleans + 2 blocs + payload), api route save + sanitize,
+public route select + FR, PublicQuizClient type + 4 renders.

@@ -480,6 +480,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         description: string | null;
         insight: string | null;
         projection: string | null;
+        insight_heading: string | null;
+        projection_heading: string | null;
         cta_text: string | null;
         cta_url: string | null;
         sio_tag_name: string | null;
@@ -520,6 +522,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
                   sanitizeRichText(r.projection),
                   effectiveLocale,
                 )
+              : null,
+          // Overrides de titres de blocs par profil (Gwenn 13 juin 2026,
+          // miroir Tiquiz). Vide apres trim = NULL (titre commun).
+          insight_heading:
+            typeof r.insight_heading === "string" && r.insight_heading.trim()
+              ? applyFrenchTypographyToHtml(sanitizeRichText(r.insight_heading), effectiveLocale)
+              : null,
+          projection_heading:
+            typeof r.projection_heading === "string" && r.projection_heading.trim()
+              ? applyFrenchTypographyToHtml(sanitizeRichText(r.projection_heading), effectiveLocale)
               : null,
           cta_text:
             r.cta_text == null
