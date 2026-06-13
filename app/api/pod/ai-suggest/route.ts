@@ -22,6 +22,52 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { generateSuggestions, type CommenterContext } from "@/lib/podAiSuggest";
 
+// Buffer (base64 image) + fetch d'image externe => runtime Node requis.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// Vision : récupération de l'image du post pour que Claude la commente.
+// Garde anti-SSRF : on n'accepte QUE des URLs https des CDN sociaux
+// connus (l'extension n'envoie de toute façon que des src d'<img> de
+// la page). Cap de taille pour éviter les abus.
+const ALLOWED_IMAGE_HOST_RE =
+  /(?:^|\.)(fbcdn\.net|cdninstagram\.com|licdn\.com|twimg\.com|cdn-images-1\.medium\.com|redditmedia\.com|redd\.it|tiktokcdn\.com|tiktokcdn-us\.com|fna\.fbcdn\.net)$/i;
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 Mo
+const SUPPORTED_MEDIA = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+async function fetchPostImage(
+  rawUrl: string,
+): Promise<{ media_type: string; data: string } | null> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  if (!ALLOWED_IMAGE_HOST_RE.test(url.hostname)) {
+    console.warn("[ai-suggest] image host not allowed:", url.hostname);
+    return null;
+  }
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(url.toString(), {
+      signal: ctrl.signal,
+      headers: { Accept: "image/*" },
+    }).finally(() => clearTimeout(timer));
+    if (!res.ok) return null;
+    const ct = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!SUPPORTED_MEDIA.has(ct)) return null;
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength === 0 || buf.byteLength > MAX_IMAGE_BYTES) return null;
+    return { media_type: ct, data: Buffer.from(buf).toString("base64") };
+  } catch (err) {
+    console.warn("[ai-suggest] fetchPostImage failed", (err as Error).message);
+    return null;
+  }
+}
+
 /** Lookup du contexte de personnalisation du commenter. Tous les
  *  champs optionnels — si manquants, le prompt reste générique. */
 async function fetchCommenterContext(userId: string): Promise<{
@@ -158,6 +204,9 @@ export async function POST(req: Request) {
     language?: string;
     /** Réseau social d'où vient le post (facebook, instagram...). */
     network?: string;
+    /** URL de l'image principale du post (vision). L'extension
+     *  l'extrait du DOM. Récupérée + base64 ici (garde anti-SSRF). */
+    image_url?: string;
     /** Free-form hint from the user when they hit "Regenerate" in the
      *  badge (ex: "plus court", "moins formel", "parle de ton expé"). */
     indications?: string;
@@ -205,6 +254,18 @@ export async function POST(req: Request) {
     console.warn("[ai-suggest] fetchCommenterContext failed, fallback generic", err);
   }
 
+  // Vision : on récupère l'image SURTOUT quand le texte seul est faible
+  // (réseaux visuels FB/IG, peu/pas de légende). Best-effort, ne bloque
+  // jamais : si l'image échoue, on génère en texte seul. Sur LinkedIn
+  // (texte riche), on évite l'image pour rester rapide et économe sauf
+  // si le post n'a quasiment pas de texte.
+  let image: { media_type: string; data: string } | null = null;
+  const thinText = !excerpt || excerpt.length < 220;
+  const wantImage = !!body.image_url && (network !== "linkedin" || thinText);
+  if (wantImage && body.image_url) {
+    image = await fetchPostImage(body.image_url);
+  }
+
   const suggestions = await generateSuggestions({
     contentExcerpt: excerpt,
     language,
@@ -212,6 +273,7 @@ export async function POST(req: Request) {
     indications,
     matchPostLanguage,
     network,
+    image,
   });
 
   return NextResponse.json({ ok: true, suggestions });

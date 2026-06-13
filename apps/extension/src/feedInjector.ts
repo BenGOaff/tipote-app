@@ -19,6 +19,7 @@
 
 import { t } from "./i18n";
 import { detectPlatform, type PlatformAdapter } from "./platforms";
+import { extractPostContext } from "./postContext";
 
 const INJECTED_ATTR = "data-tipote-injected";
 
@@ -334,10 +335,13 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
         if (!cachedSuggestions || indications !== lastUsedIndications) {
           loading = true;
           const post = adapter.findParentPost(composer);
-          const content = post ? (post.innerText || "").trim().slice(0, 1500) : "";
+          // Extraction propre : texte sans bruit UI + image principale
+          // (vision). Cf. postContext.ts (drame FB/IG, Béné 13 juin 2026).
+          const ctx = extractPostContext(post, composer);
+          const content = ctx.text.slice(0, 1500);
           const language = detectLanguage();
-          console.log(`[tipote/feed] fetching suggestions for ${adapter.id}, content length = ${content.length}, hint = ${JSON.stringify(indications)}`);
-          cachedSuggestions = await fetchSuggestions(content, language, adapter.id, indications);
+          console.log(`[tipote/feed] fetching suggestions for ${adapter.id}, content length = ${content.length}, image = ${ctx.imageUrl ? "yes" : "no"}, hint = ${JSON.stringify(indications)}`);
+          cachedSuggestions = await fetchSuggestions(content, language, adapter.id, indications, ctx.imageUrl);
           lastUsedIndications = indications;
           loading = false;
         }
@@ -508,6 +512,7 @@ async function fetchSuggestions(
   language: string,
   network: string,
   indications: string,
+  imageUrl: string | null,
 ): Promise<Record<ToneKey, string>> {
   return new Promise((resolve, reject) => {
     try {
@@ -519,6 +524,7 @@ async function fetchSuggestions(
             language,
             network,
             ...(indications ? { indications } : {}),
+            ...(imageUrl ? { image_url: imageUrl } : {}),
           },
         },
         (resp: unknown) => {

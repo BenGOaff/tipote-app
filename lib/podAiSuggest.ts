@@ -145,6 +145,10 @@ function buildPrompt(args: {
    *  adapter le registre. Les posts FB/IG sont souvent visuels et
    *  personnels, pas pro/B2B comme LinkedIn. */
   network?: string | null;
+  /** true si une image du post est jointe au message (vision). Sur les
+   *  réseaux visuels, le commentaire doit réagir à CE QUE MONTRE
+   *  l'image, pas inventer (Béné 13 juin 2026). */
+  hasImage?: boolean;
 }): { system: string; user: string } {
   // Langue par nom complet — Claude écrit naturellement dans la bonne
   // langue quand on lui passe le nom (vs un code ISO qu'il interprète
@@ -242,15 +246,30 @@ Tu réponds UNIQUEMENT par un JSON strict de cette forme exacte (pas de markdown
   "ask_question": "…"
 }`;
 
-  const userMsg = hasContent
-    ? `Voici le post à commenter :
+  // Construction du message user selon ce qu'on a : image (vision),
+  // texte (légende), les deux, ou rien.
+  let userMsg: string;
+  if (args.hasImage && hasContent) {
+    userMsg = `Une image du post est jointe ci-dessus. Légende / texte du post :
 
 """
 ${args.contentExcerpt!.slice(0, 1500)}
 """
 
-Génère les 4 commentaires maintenant, EN RÉAGISSANT À CE POST PRÉCIS (son sujet, pas un autre).`
-    : `Le post ne contient pas de texte lisible (c'est probablement une image ou une vidéo, ex: une photo). Génère 4 réactions COURTES, chaleureuses et universelles qui conviennent à un post visuel, dans la langue ${language}. Reste léger et bienveillant. NE invente PAS de sujet, et SURTOUT PAS de contenu business/marketing/vente. Une réaction d'appréciation sincère, une réaction qui apporte une touche perso, un petit complément, une question légère et ouverte sur ce que montre le post.`;
+Génère les 4 commentaires en réagissant À CE QUE MONTRE L'IMAGE et à la légende ensemble. Reste ancré dans ce post précis, ne pars pas sur un autre sujet.`;
+  } else if (args.hasImage) {
+    userMsg = `Une image du post est jointe ci-dessus (le post n'a pas de texte, c'est une publication visuelle). Génère 4 commentaires qui réagissent SINCÈREMENT À CE QUE MONTRE L'IMAGE (ce qu'on y voit : la scène, l'ambiance, un détail). Reste naturel, chaleureux, jamais business/marketing. Décris ou rebondis sur un élément concret de l'image, pas une généralité.`;
+  } else if (hasContent) {
+    userMsg = `Voici le post à commenter :
+
+"""
+${args.contentExcerpt!.slice(0, 1500)}
+"""
+
+Génère les 4 commentaires maintenant, EN RÉAGISSANT À CE POST PRÉCIS (son sujet, pas un autre).`;
+  } else {
+    userMsg = `Le post ne contient pas de texte lisible (c'est probablement une image ou une vidéo, ex: une photo). Génère 4 réactions COURTES, chaleureuses et universelles qui conviennent à un post visuel, dans la langue ${language}. Reste léger et bienveillant. NE invente PAS de sujet, et SURTOUT PAS de contenu business/marketing/vente. Une réaction d'appréciation sincère, une réaction qui apporte une touche perso, un petit complément, une question légère et ouverte.`;
+  }
 
   return { system, user: userMsg };
 }
@@ -307,6 +326,9 @@ export async function generateSuggestions(args: {
   matchPostLanguage?: boolean;
   /** Réseau (linkedin, facebook, instagram...) pour adapter le registre. */
   network?: string | null;
+  /** Image du post (base64) pour la vision : Claude commente ce qu'elle
+   *  montre. Crucial sur les réseaux visuels (FB/IG). */
+  image?: { media_type: string; data: string } | null;
 }): Promise<CommentSuggestions> {
   let apiKey: string;
   try {
@@ -316,18 +338,19 @@ export async function generateSuggestions(args: {
     return FALLBACK_SUGGESTIONS;
   }
 
-  const { system, user } = buildPrompt(args);
+  const { system, user } = buildPrompt({ ...args, hasImage: !!args.image });
 
   try {
     const text = await callClaude({
       apiKey,
       system,
       user,
+      images: args.image ? [args.image] : undefined,
       // Suggestions = 4 × ~280 chars max, donc 1500 tokens largement
       // assez. On garde une marge pour le JSON wrapper.
       maxTokens: 2000,
       temperature: 0.8, // un peu créatif pour éviter les commentaires plats
-      idleTimeoutMs: 20_000,
+      idleTimeoutMs: args.image ? 30_000 : 20_000,
     });
     const parsed = parseSuggestions(text);
     if (parsed) return parsed;
