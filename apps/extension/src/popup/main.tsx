@@ -94,7 +94,9 @@ type SettingsState = {
   hasAccess: boolean;
   styleTon: string;
   availableStyles: string[];
-  replyLanguageMode: "post" | "user";
+  // "post" (langue du post) | "user" (ma langue de contenu) | code ISO
+  // 2 lettres pour forcer une langue précise (fr, en, es...).
+  replyLanguageMode: string;
   addressForm: "auto" | "tu" | "vous";
   domain: string;
 };
@@ -130,7 +132,12 @@ function SettingsView({ onBack }: { onBack: () => void }) {
         availableStyles: Array.isArray(resp.available_styles)
           ? (resp.available_styles as string[])
           : ["amical", "professionnel"],
-        replyLanguageMode: langage.reply_language_mode === "user" ? "user" : "post",
+        replyLanguageMode:
+          typeof langage.reply_language_mode === "string" &&
+          (langage.reply_language_mode === "user" ||
+            /^[a-z]{2}$/.test(langage.reply_language_mode))
+            ? langage.reply_language_mode
+            : "post",
         addressForm:
           langage.address_form === "tu" || langage.address_form === "vous"
             ? (langage.address_form as "tu" | "vous")
@@ -197,11 +204,18 @@ function SettingsView({ onBack }: { onBack: () => void }) {
             style={fieldStyles.control}
             value={state.replyLanguageMode}
             onChange={(e) =>
-              setState({ ...state, replyLanguageMode: (e.target as HTMLSelectElement).value as "post" | "user" })
+              setState({ ...state, replyLanguageMode: (e.target as HTMLSelectElement).value })
             }
           >
             <option value="post">{t("settings.replyLangPost")}</option>
             <option value="user">{t("settings.replyLangUser")}</option>
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="it">Italiano</option>
+            <option value="pt">Português</option>
+            <option value="de">Deutsch</option>
+            <option value="nl">Nederlands</option>
           </select>
 
           <label style={fieldStyles.label}>{t("settings.addressForm")}</label>
@@ -224,6 +238,9 @@ function SettingsView({ onBack }: { onBack: () => void }) {
             placeholder={t("settings.domainPlaceholder")}
             onInput={(e) => setState({ ...state, domain: (e.target as HTMLInputElement).value })}
           />
+          <p style={{ fontSize: 10, color: "#888", margin: "3px 0 0", lineHeight: 1.4 }}>
+            {t("settings.domainHint")}
+          </p>
 
           <button
             onClick={save}

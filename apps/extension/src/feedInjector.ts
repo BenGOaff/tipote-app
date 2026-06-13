@@ -177,6 +177,11 @@ function* walkShadowRoots(root: Element): Generator<HTMLElement> {
 
 function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   let cachedSuggestions: Record<ToneKey, string> | null = null;
+  // Indication libre (ce que l'user veut, ex: "parle de la lumière",
+  // "en anglais", "plus court"). Demandée par Monique le 13 juin 2026 :
+  // sur FB/IG elle n'avait aucun moyen d'orienter les commentaires.
+  // Quand elle change, on invalide le cache pour régénérer.
+  let lastUsedIndications = "";
   let loading = false;
   let menuOpen = false;
   const useFixed = adapter.useFixedTrigger === true;
@@ -271,6 +276,26 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   `;
 
+  // Champ "indication" en tête du menu : oriente le commentaire.
+  const hintWrap = document.createElement("div");
+  hintWrap.style.cssText = `padding: 6px 8px 8px; border-bottom: 1px solid #f0f0f0; margin-bottom: 2px;`;
+  const hintInput = document.createElement("input");
+  hintInput.type = "text";
+  hintInput.placeholder = t("dropdown.hintPlaceholder");
+  hintInput.setAttribute("data-tipote-hint", "true");
+  hintInput.style.cssText = `
+    width: 100%; box-sizing: border-box;
+    padding: 6px 8px; font-size: 12px;
+    border: 1px solid #e5e7eb; border-radius: 6px;
+    color: #111; outline: none;
+    font-family: inherit;
+  `;
+  // Empêche la fermeture du menu / le vol de focus du composer.
+  hintInput.addEventListener("mousedown", (e) => e.stopPropagation());
+  hintInput.addEventListener("click", (e) => e.stopPropagation());
+  hintWrap.appendChild(hintInput);
+  menu.appendChild(hintWrap);
+
   for (const tone of TONES) {
     const label = toneLabel(tone.key);
     const item = document.createElement("button");
@@ -303,13 +328,17 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
       trigger.style.cursor = "wait";
       trigger.innerHTML = `<span>${tone.emoji} ${t("dropdown.generating")}</span>`;
       try {
-        if (!cachedSuggestions) {
+        const indications = hintInput.value.trim().slice(0, 400);
+        // Régénère si pas de cache OU si l'indication a changé depuis
+        // la dernière génération.
+        if (!cachedSuggestions || indications !== lastUsedIndications) {
           loading = true;
           const post = adapter.findParentPost(composer);
           const content = post ? (post.innerText || "").trim().slice(0, 1500) : "";
           const language = detectLanguage();
-          console.log(`[tipote/feed] fetching suggestions for ${adapter.id}, content length = ${content.length}`);
-          cachedSuggestions = await fetchSuggestions(content, language);
+          console.log(`[tipote/feed] fetching suggestions for ${adapter.id}, content length = ${content.length}, hint = ${JSON.stringify(indications)}`);
+          cachedSuggestions = await fetchSuggestions(content, language, adapter.id, indications);
+          lastUsedIndications = indications;
           loading = false;
         }
         adapter.fillEditor(composer, cachedSuggestions[tone.key]);
@@ -474,11 +503,24 @@ function detectLanguage(): string {
   return (navigator.language || "fr").slice(0, 2).toLowerCase();
 }
 
-async function fetchSuggestions(content: string, language: string): Promise<Record<ToneKey, string>> {
+async function fetchSuggestions(
+  content: string,
+  language: string,
+  network: string,
+  indications: string,
+): Promise<Record<ToneKey, string>> {
   return new Promise((resolve, reject) => {
     try {
       chrome.runtime.sendMessage(
-        { type: "ai/suggest", payload: { content_excerpt: content, language } },
+        {
+          type: "ai/suggest",
+          payload: {
+            content_excerpt: content,
+            language,
+            network,
+            ...(indications ? { indications } : {}),
+          },
+        },
         (resp: unknown) => {
           if (chrome.runtime.lastError) {
             reject(new Error(`extension_unreachable:${chrome.runtime.lastError.message ?? "unknown"}`));
