@@ -114,7 +114,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 // titre du bonus) | "after_heading" | "after_intro" | "bottom".
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
 const RESULT_IMAGE_POSITIONS: ResultImagePosition[] = ["top", "after_title", "after_description", "after_insight", "bottom"];
-type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null };
+type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
@@ -1552,7 +1552,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             // any plain object and DB column is JSONB.
             config: q.config ?? {},
           })),
-          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top" })),
+          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top" })),
         }),
       });
       const json = await res.json();
@@ -1734,6 +1734,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const addQuestion = () => setEditQuestions(p => [...p, { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }], sort_order: p.length }]);
   const removeQuestion = (i: number) => setEditQuestions(p => p.filter((_, qi) => qi !== i));
   const updateR = (i: number, field: string, v: unknown) => setEditResults(p => p.map((r, ri) => ri === i ? { ...r, [field]: v } : r));
+
+  // Titres de blocs personnalisables par profil (Gwenn 13 juin 2026,
+  // miroir Tiquiz). Mode derive : au moins un override non-null.
+  const setInsightHeadingPersonalized = (on: boolean) => {
+    setEditResults(p => p.map(r => ({ ...r, insight_heading: on ? (r.insight_heading ?? (resultInsightHeading.trim() || "Prise de conscience")) : null })));
+  };
+  const setProjectionHeadingPersonalized = (on: boolean) => {
+    setEditResults(p => p.map(r => ({ ...r, projection_heading: on ? (r.projection_heading ?? (resultProjectionHeading.trim() || "Et si...")) : null })));
+  };
   const addResult = () => setEditResults(p => [...p, { title: "", description: null, insight: null, projection: null, cta_text: null, cta_url: null, sio_tag_name: null, sio_course_id: null, sio_community_id: null, sort_order: p.length }]);
   const removeResult = (i: number) => { setEditResults(p => p.filter((_, ri) => ri !== i)); setEditQuestions(p => p.map(q => ({ ...q, options: q.options.map(o => ({ ...o, result_index: o.result_index > i ? o.result_index - 1 : o.result_index === i ? 0 : o.result_index })) }))); };
   const handleExportCSV = () => {
@@ -2922,6 +2931,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
               {/* ── RESULTS ── */}
               {editResults.map((r, ri) => {
+                const insightPersonalized = editResults.some(rr => rr.insight_heading != null);
+                const projectionPersonalized = editResults.some(rr => rr.projection_heading != null);
                 const cov = resultCoverage[ri] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
                 // Show the coverage warning above each result block when the
                 // result is unreachable (severity=danger) or under-covered
@@ -3046,11 +3057,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <InlineEdit
-                          value={resultInsightHeading || "Prise de conscience"}
-                          onChange={setResultInsightHeading}
+                          value={insightPersonalized ? (r.insight_heading ?? "") : (resultInsightHeading || "Prise de conscience")}
+                          onChange={insightPersonalized ? (v: string) => updateR(ri, "insight_heading", v ?? "") : setResultInsightHeading}
                           className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-                          placeholder="Titre du bloc insight…"
+                          placeholder={insightPersonalized ? (resultInsightHeading.trim() || "Prise de conscience") : "Titre du bloc insight…"}
                         />
+                        <button type="button"
+                          onClick={() => setInsightHeadingPersonalized(!insightPersonalized)}
+                          className="mt-1 text-[10px] text-muted-foreground/70 hover:text-primary underline underline-offset-2">
+                          {insightPersonalized ? "Revenir au titre commun" : "Titre différent pour ce profil"}
+                        </button>
                       </div>
                       <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder="Insight…" />
                     </div>
@@ -3068,12 +3084,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
                         <InlineEdit
-                          value={resultProjectionHeading || "Et si..."}
-                          onChange={setResultProjectionHeading}
+                          value={projectionPersonalized ? (r.projection_heading ?? "") : (resultProjectionHeading || "Et si...")}
+                          onChange={projectionPersonalized ? (v: string) => updateR(ri, "projection_heading", v ?? "") : setResultProjectionHeading}
                           className="text-xs font-bold uppercase tracking-widest"
                           style={{ color: `${pc}99` }}
-                          placeholder="Titre du bloc projection…"
+                          placeholder={projectionPersonalized ? (resultProjectionHeading.trim() || "Et si...") : "Titre du bloc projection…"}
                         />
+                        <button type="button"
+                          onClick={() => setProjectionHeadingPersonalized(!projectionPersonalized)}
+                          className="mt-1 text-[10px] underline underline-offset-2 hover:opacity-80"
+                          style={{ color: `${pc}99` }}>
+                          {projectionPersonalized ? "Revenir au titre commun" : "Titre différent pour ce profil"}
+                        </button>
                       </div>
                       <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder="Projection…" />
                     </div>
