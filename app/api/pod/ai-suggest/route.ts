@@ -246,9 +246,14 @@ export async function POST(req: Request) {
       language = mode;
       matchPostLanguage = false;
     } else {
-      // "post" : on suit la langue du post. `language` reste comme
-      // fallback (utilisé seulement si le post n'a pas de texte).
+      // "post" : on suit la langue du post (détectée par le modèle
+      // depuis le contenu). Le fallback `language` ne sert QUE si le
+      // post n'a aucun texte (photo pure) : dans ce cas on répond dans
+      // la langue de CONTENU de l'user, PAS celle du navigateur (drame
+      // JB : navigateur FR -> commentaires FR sur posts EN, Béné 13 juin
+      // 2026). navigator.language n'est plus jamais utilisé pour décider.
       matchPostLanguage = true;
+      if (lookup.contentLocale) language = lookup.contentLocale.trim().toLowerCase();
     }
   } catch (err) {
     console.warn("[ai-suggest] fetchCommenterContext failed, fallback generic", err);

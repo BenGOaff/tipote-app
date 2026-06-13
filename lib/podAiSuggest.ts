@@ -179,7 +179,9 @@ function buildPrompt(args: {
   const languageInstruction = args.matchPostLanguage
     ? hasContent
       ? `dans EXACTEMENT la même langue que le post ci-dessous (détecte-la depuis son contenu : post en anglais -> commentaires en anglais, en espagnol -> en espagnol, etc.)`
-      : `dans la langue ${language}`
+      : args.hasImage
+        ? `dans la langue du texte visible sur l'image si elle en contient ; sinon en ${language}`
+        : `dans la langue ${language}`
     : `en ${language} (langue imposée par le commenter, même si le post est dans une autre langue)`;
 
   // Few-shot DOMAINE-NEUTRE : ils illustrent la STRUCTURE et le ton
