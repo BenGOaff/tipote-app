@@ -50,6 +50,10 @@ export interface CallClaudeArgs {
   idleTimeoutMs?: number;
   /** Forwarded each time Anthropic streams a text delta. */
   onDelta?: (chunk: string, totalLen: number) => void;
+  /** Images jointes au message user (vision). Base64 + media_type
+   *  (image/jpeg, image/png, image/webp, image/gif). Permet à Claude de
+   *  COMMENTER une photo de post (réseaux visuels FB/IG). */
+  images?: Array<{ media_type: string; data: string }>;
 }
 
 export async function callClaude(args: CallClaudeArgs): Promise<string> {
@@ -87,11 +91,26 @@ export async function callClaude(args: CallClaudeArgs): Promise<string> {
   const resolvedModel = args.model?.trim() || resolveClaudeModel();
   const isOpus47Plus = /^claude-opus-4-(?:[7-9]|\d{2,})\b/i.test(resolvedModel);
 
+  // Vision : si des images sont fournies, le content user devient un
+  // tableau de blocs [image..., texte]. L'image AVANT le texte aide le
+  // modèle à ancrer sa réponse sur ce qu'elle montre (recommandation
+  // Anthropic). Sinon, content reste une simple string (rétrocompat).
+  const userContent =
+    args.images && args.images.length > 0
+      ? [
+          ...args.images.map((img) => ({
+            type: "image",
+            source: { type: "base64", media_type: img.media_type, data: img.data },
+          })),
+          { type: "text", text: args.user },
+        ]
+      : args.user;
+
   const requestBody: Record<string, unknown> = {
     model: resolvedModel,
     max_tokens: typeof args.maxTokens === "number" ? args.maxTokens : 4000,
     system: args.system,
-    messages: [{ role: "user", content: args.user }],
+    messages: [{ role: "user", content: userContent }],
     stream: true,
   };
   if (!isOpus47Plus && typeof args.temperature === "number") {

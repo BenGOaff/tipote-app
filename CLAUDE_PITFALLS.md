@@ -1635,3 +1635,41 @@ FR EN DUR pour ces titres (convention locale de ce bloc) + classes
 tipote-quiz-rich. Endroits : migration, QuizDetailClient (type +
 handlers + booleans + 2 blocs + payload), api route save + sanitize,
 public route select + FR, PublicQuizClient type + 4 renders.
+
+## BC) Extension : audit qualité commentaires FB/IG (drame Béné 13 juin 2026)
+
+LinkedIn = bon, Facebook/Instagram = plats ou hors-sujet. Cause racine :
+**l'extraction du contexte du post est noyée dans le bruit sur FB/IG**.
+`adapter.findParentPost` remonte jusqu'à un `<article>`/ancêtre >80 chars
+et le caller prenait `post.innerText` ENTIER -> incluait tous les
+commentaires existants, barres de réactions (J'aime/Répondre/Partager),
+timestamps, compteurs, "Voir plus de commentaires", "Tipote"... La
+légende (souvent une photo sans texte) était noyée -> le modèle
+recevait de la soupe. LinkedIn marche car posts text-rich + DOM plus
+propre.
+
+**Correctifs (extension v1.7.0 + backend) :**
+1. `apps/extension/src/postContext.ts` : `cleanPostText` (retire lignes
+   UI exactes, timestamps, compteurs, dédoublonne, cappe 800 chars pour
+   rester sur la légende) + `extractMainImageUrl` (plus grande image de
+   contenu, exclut avatars/emojis/icônes). `extractPostContext` combine.
+   feedInjector l'utilise au lieu de innerText brut.
+2. **VISION** : l'image principale du post est envoyée au backend
+   (`image_url` dans le payload ai/suggest). La route ai-suggest la
+   FETCH côté serveur (garde anti-SSRF : https + hosts CDN sociaux
+   connus uniquement, cap 4 Mo, content-type image), base64, et la passe
+   à Claude (callClaude.images -> bloc image dans messages[].content).
+   Claude COMMENTE ce que montre la photo. Gate : image utilisée si
+   network != linkedin OU texte < 220 chars (LinkedIn reste texte seul,
+   rapide/économe).
+3. Prompt adapté : image+texte / image seule / texte seul / rien, avec
+   instruction "réagis À CE QUE MONTRE L'IMAGE".
+
+callClaude accepte désormais `images: [{media_type, data(base64)}]` ->
+content user devient un tableau [image..., texte]. Rétrocompat : sans
+images, content reste une string.
+
+⚠️ Le fetch image est SERVEUR (route ai-suggest, runtime nodejs), pas
+dans l'extension -> aucune nouvelle permission manifest. Les CDN
+sociaux (fbcdn, cdninstagram, licdn, twimg...) servent des URLs
+publiques, OK pour le fetch immédiat.
