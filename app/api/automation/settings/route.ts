@@ -28,7 +28,14 @@ const UpdateSchema = z.object({
       //   contenu de l'user (business_profiles.content_locale).
       // - address_form : tutoiement / vouvoiement des commentaires.
       // - domain : domaine d'expertise injecté dans le prompt.
-      reply_language_mode: z.enum(["post", "user"]).optional(),
+      // "post" | "user" | code ISO 2 lettres (force une langue précise).
+      reply_language_mode: z
+        .string()
+        .trim()
+        .refine((v) => v === "post" || v === "user" || /^[a-z]{2}$/.test(v), {
+          message: "reply_language_mode invalide",
+        })
+        .optional(),
       address_form: z.enum(["auto", "tu", "vous"]).optional(),
       domain: z.string().trim().max(120).optional(),
     })

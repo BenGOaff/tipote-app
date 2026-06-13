@@ -1578,3 +1578,44 @@ Aussi corrigés dans la même passe :
   l'échec : le serveur a souvent terminé et sauvegardé quand même.
 - Les logs console "content-shell-main.js Clipboard lockdown" ne sont
   PAS du code Tipote : c'est une extension navigateur de l'user.
+
+## BA) Extension : commentaires hors-sujet / mauvaise langue (drame Béné 13 juin 2026)
+
+JB (photographe) recevait des commentaires sur la GÉNÉRATION DE LEADS
+(le domaine de Béné !) sur une photo sans texte, en français alors qu'il
+voulait l'anglais. 4 bugs cumulés dans la chaîne ai-suggest :
+
+1. **Few-shot 100% B2B SaaS/vente** dans buildPrompt (lib/podAiSuggest)
+   -> contaminaient TOUS les commentaires vers le jargon business, même
+   marqués "ne pas recopier". Remplacés par des exemples DOMAINE-NEUTRES
+   (structure + ton, zéro vocabulaire métier).
+2. **Domaine de l'user jamais injecté** : ai-suggest ne lisait pas
+   business_profiles.niche/mission. Le modèle ignorait que JB fait de
+   la photo. Désormais domain = popup.domain || niche || mission,
+   injecté + select("*") tolérant aux colonnes manquantes.
+3. **Fallback post sans texte = faux commentaire business** : le user
+   message forçait "expérience pro / leçon apprise" -> commentaire
+   lead-gen sur une photo. Désormais : réactions courtes/chaleureuses/
+   universelles adaptées à un post visuel, INTERDICTION d'inventer un
+   sujet business.
+4. **"Langue du post" = navigator.language** (langue du navigateur, PAS
+   du post) -> commentaires FR sur posts EN. Désormais mode "post" =
+   matchPostLanguage : le modèle détecte la langue DU POST et répond
+   dedans. + le popup permet de FORCER une langue (fr/en/es/it/pt/de/nl)
+   ou "ma langue" (content_locale). reply_language_mode accepte
+   maintenant "post"|"user"|code ISO (zod + ai-suggest).
+
+Ajouts UX :
+- RÈGLE ABSOLUE dans le system prompt : le commentaire porte sur le
+  sujet DU POST, le métier de l'user n'est qu'un angle SI le sujet s'y
+  prête, jamais ramené de force au business.
+- `network` passé au prompt (FB/IG = registre perso, pas LinkedIn pro).
+- Champ "indication" dans le menu du feed injector (FB/IG/X/Threads) :
+  Monique peut enfin orienter le commentaire avant génération (le champ
+  existait déjà côté badge LinkedIn, pas côté feed). Change le cache
+  quand l'indication change.
+
+Extension v1.6.0. Rebuild + zip + re-upload CWS obligatoire pour que
+les users aient les nouveaux réglages popup. Les fixes prompt/langue/
+domaine sont CÔTÉ SERVEUR -> actifs dès le déploiement Tipote, même
+sans MAJ extension (sauf le champ indication feed + langues popup).

@@ -94,7 +94,7 @@ function formatCommenterContext(ctx: CommenterContext | undefined): string {
   }
 
   if (ctx.domain?.trim()) {
-    lines.push(`Domaine d'expertise du commenter : ${ctx.domain.trim()}. Les commentaires doivent sonner crédibles venant de ce domaine.`);
+    lines.push(`Domaine / métier du commenter : ${ctx.domain.trim()}. C'est SON expertise, à utiliser UNIQUEMENT comme angle crédible quand le sujet du post s'y prête. Ne ramène jamais de force le post à ce métier.`);
   }
 
   if (ctx.addressForm === "tu") {
@@ -135,6 +135,16 @@ function buildPrompt(args: {
    *  Ex: "plus court", "moins formel", "parle de mon expérience en B2B".
    *  Injectée en fin de system prompt avec un poids fort. */
   indications?: string | null;
+  /** true = répondre dans la MÊME langue que le post (Claude la détecte
+   *  depuis le contenu). false = forcer la langue `language`. Béné
+   *  13 juin 2026 : avant, l'extension envoyait navigator.language
+   *  comme "langue du post", ce qui sortait des commentaires FR sur des
+   *  posts EN. On laisse maintenant le modèle suivre le post. */
+  matchPostLanguage?: boolean;
+  /** Réseau social (linkedin, facebook, instagram, threads, x...) pour
+   *  adapter le registre. Les posts FB/IG sont souvent visuels et
+   *  personnels, pas pro/B2B comme LinkedIn. */
+  network?: string | null;
 }): { system: string; user: string } {
   // Langue par nom complet — Claude écrit naturellement dans la bonne
   // langue quand on lui passe le nom (vs un code ISO qu'il interprète
@@ -153,53 +163,75 @@ function buildPrompt(args: {
   const contextBlock = formatCommenterContext(args.commenter);
   const allowEmojis = !!args.commenter?.langage?.emojis?.length;
   const indications = args.indications?.trim();
+  const hasContent = !!args.contentExcerpt?.trim();
 
   const indicationsBlock = indications
     ? `\n### Indication EXPRESSE du commenter (priorité haute, à respecter)\n\n"${indications.slice(0, 400)}"\n`
     : "";
 
-  // Few-shot examples ground the 4 tons in concrete, "human" patterns.
-  // Choisis volontairement courts + spécifiques (un détail, un chiffre,
-  // une situation) pour rompre avec le style "assistant générique" que
-  // Claude produit par défaut.
-  const fewShotBlock = `\n### Exemples de tonalité attendue (à NE PAS recopier, juste pour le ton)
+  // Consigne de langue. matchPostLanguage = on suit la langue du post
+  // (la plus sûre, évite les commentaires FR sur post EN). Sinon langue
+  // forcée par nom.
+  const languageInstruction = args.matchPostLanguage
+    ? hasContent
+      ? `dans EXACTEMENT la même langue que le post ci-dessous (détecte-la depuis son contenu : post en anglais -> commentaires en anglais, en espagnol -> en espagnol, etc.)`
+      : `dans la langue ${language}`
+    : `en ${language} (langue imposée par le commenter, même si le post est dans une autre langue)`;
+
+  // Few-shot DOMAINE-NEUTRE : ils illustrent la STRUCTURE et le ton
+  // humain (un détail concret, une posture, une nuance, une question
+  // précise) SANS vocabulaire business. Les anciens exemples 100% SaaS/
+  // vente contaminaient tous les commentaires vers le jargon B2B, même
+  // pour un photographe (drame Béné 13 juin 2026).
+  const fewShotBlock = `\n### Exemples de TON et de STRUCTURE (à NE PAS recopier ni transposer le sujet, juste pour le style)
 
 agree (appui personnel, concret) :
-- "Vu pareil chez nos clients SaaS — dès qu'on coupe le call de découverte, le NPS dérape. Pas une coïncidence."
-- "100% — j'ai testé l'inverse 6 mois, on a perdu 2 deals high-ticket avant de revenir au format long."
+- "Pareil de mon côté, j'ai mis du temps à m'y mettre mais une fois pris le pli ça change vraiment tout."
+- "Tellement vrai. C'est souvent le détail qui paraît anodin qui fait toute la différence au final."
 
-disagree (débat ouvert, posture nette) :
-- "Pas si sûr — on a vu l'inverse sur l'audit Q3 : les équipes les + structurées sont aussi celles qui sortent le moins de prod. Le cadre tue parfois la traction."
-- "Pas convaincu que le canal soit la cause. Chez nous c'est le brief avant le canal qui change tout."
+disagree (posture nette, sans arrogance) :
+- "Je le vis différemment honnêtement : chez moi c'est l'inverse qui s'est produit, et ça m'a surpris."
+- "Pas convaincu sur ce point précis, j'ai souvent constaté le contraire dans la pratique."
 
 add_value (apport spécifique non-redondant) :
-- "Un point qu'on rate souvent : la qualif passe AUSSI par les objections sur le pricing. Si elles arrivent tard, le funnel est cassé en amont."
-- "Petite nuance qui a tout changé pour moi : faire la review d'offre AVANT la review produit, sinon on optimise un truc que personne veut acheter."
+- "Un truc qu'on oublie souvent : ça marche bien mieux quand on le prépare en amont plutôt qu'à chaud."
+- "Petite nuance qui a tout changé pour moi : commencer par le plus simple avant d'ajouter de la complexité."
 
 ask_question (question précise ancrée dans le post) :
-- "Quand tu dis "petit comité", ça représente combien de personnes dans tes process ?"
-- "Tu mesures comment l'impact de ce changement de cadence sur le revenu net, hors signal vanity ?"
+- "Quand tu dis ça, tu penses à quel cas précisément ?"
+- "Curieux de savoir comment tu gères ça quand le contexte change en cours de route."
 `;
 
-  const system = `Tu es un assistant qui aide à commenter rapidement des posts LinkedIn — comme si TU étais le commenter.
+  const network = (args.network ?? "").toLowerCase();
+  const networkLine =
+    network && network !== "linkedin"
+      ? `\n- Réseau : ${network}. Le registre est plus personnel et spontané que LinkedIn (souvent des posts photo, perso, lifestyle). Pas de jargon pro, pas de posture "expert".`
+      : "";
 
-Génère 4 suggestions de commentaire courtes (max 280 caractères chacune, sans hashtag${allowEmojis ? "" : ", sans emoji"}) dans la langue du post (${language}), une pour chacun des tons :
+  const system = `Tu es un assistant qui aide à commenter rapidement un post sur les réseaux sociaux — comme si TU étais le commenter.
 
-- "agree": appuie le propos avec UN détail concret tiré de l'expérience (chiffre, situation, contre-exemple raté). Jamais lèche-bottes, jamais "excellent article".
-- "disagree": ouvre un débat constructif. Tu prends position nettement mais sans arrogance ni condescendance. Apporte UN angle ou UN fait qui complique le propos.
-- "add_value": complète le propos avec UNE nuance utile que l'auteur n'a pas évoquée. Pas de redite déguisée.
-- "ask_question": question précise et ancrée dans LE contenu du post (cite ou paraphrase un élément). Pas de question vague "et toi tu fais comment ?".
+Génère 4 suggestions de commentaire courtes (max 280 caractères chacune, sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, une pour chacun des tons :
+
+- "agree": appuie le propos avec UN détail concret. Jamais lèche-bottes, jamais "excellent post".
+- "disagree": ouvre un échange. Tu prends position sans arrogance ni condescendance. Apporte UN angle qui nuance.
+- "add_value": complète avec UNE remarque utile que l'auteur n'a pas évoquée. Pas de redite déguisée.
+- "ask_question": question précise et ancrée dans LE contenu du post. Pas de question vague.
+
+### RÈGLE ABSOLUE — le sujet du commentaire = le sujet DU POST
+
+- Le commentaire porte sur CE QUE RACONTE LE POST, rien d'autre. Tu réagis à SON sujet, pas au tien.
+- Le métier / domaine du commenter (ci-dessous s'il est renseigné) sert UNIQUEMENT à choisir un angle crédible QUAND le sujet du post s'y prête. Si le post n'a aucun rapport avec ce métier, tu n'en parles PAS.
+- INTERDICTION ABSOLUE de ramener le post à un sujet business/marketing/vente/génération de leads si le post ne parle pas de ça. Un post photo se commente comme un post photo, un post cuisine comme un post cuisine.${networkLine}
 ${contextBlock}${indicationsBlock}
 ${NATURAL_WRITING_BLOCK}
 
-### Règles spécifiques aux commentaires LinkedIn
+### Règles de style
 
-- Le commentaire doit sonner comme écrit PAR le commenter à la première personne, pas par un assistant IA.
-- Pas de "En effet", "Tout à fait", "Effectivement", "Article très intéressant", "Merci pour le partage", "Belle réflexion" — formules creuses à bannir.
+- Le commentaire sonne comme écrit PAR le commenter à la première personne, pas par une IA.
+- Pas de "En effet", "Tout à fait", "Effectivement", "Très intéressant", "Merci pour le partage", "Belle réflexion" — formules creuses à bannir.
 - Pas d'introduction inutile : on attaque DIRECTEMENT le fond.
-- Si le commenter a un métier / une audience listés ci-dessus, place UN détail concret ancré dans son expérience (ex: "chez nos clients SaaS B2B", "en accompagnement coaching") quand c'est naturel — jamais forcé.
-- Pour "ask_question" : ta question doit montrer que tu as LU le post. Cite un élément spécifique ou paraphrase une phrase clé.
-- Varie la longueur des 4 commentaires (pas tous au même format).
+- Pour "ask_question" : ta question doit montrer que tu as LU le post. Cite ou paraphrase un élément précis.
+- Varie la longueur des 4 commentaires.
 ${fewShotBlock}
 Tu réponds UNIQUEMENT par un JSON strict de cette forme exacte (pas de markdown, pas de \`\`\`, pas de texte avant ni après) :
 
@@ -210,15 +242,15 @@ Tu réponds UNIQUEMENT par un JSON strict de cette forme exacte (pas de markdown
   "ask_question": "…"
 }`;
 
-  const userMsg = args.contentExcerpt
+  const userMsg = hasContent
     ? `Voici le post à commenter :
 
 """
-${args.contentExcerpt.slice(0, 1500)}
+${args.contentExcerpt!.slice(0, 1500)}
 """
 
-Génère les 4 commentaires maintenant.`
-    : `Tu n'as pas le contenu du post — génère 4 commentaires génériques mais crédibles dans la langue ${language}, qui marcheraient sur un post LinkedIn standard de type expérience pro / leçon apprise.`;
+Génère les 4 commentaires maintenant, EN RÉAGISSANT À CE POST PRÉCIS (son sujet, pas un autre).`
+    : `Le post ne contient pas de texte lisible (c'est probablement une image ou une vidéo, ex: une photo). Génère 4 réactions COURTES, chaleureuses et universelles qui conviennent à un post visuel, dans la langue ${language}. Reste léger et bienveillant. NE invente PAS de sujet, et SURTOUT PAS de contenu business/marketing/vente. Une réaction d'appréciation sincère, une réaction qui apporte une touche perso, un petit complément, une question légère et ouverte sur ce que montre le post.`;
 
   return { system, user: userMsg };
 }
@@ -271,6 +303,10 @@ export async function generateSuggestions(args: {
   commenter?: CommenterContext;
   /** Free-form user-supplied hint for this generation (regenerate flow). */
   indications?: string | null;
+  /** true = suivre la langue du post ; false = forcer `language`. */
+  matchPostLanguage?: boolean;
+  /** Réseau (linkedin, facebook, instagram...) pour adapter le registre. */
+  network?: string | null;
 }): Promise<CommentSuggestions> {
   let apiKey: string;
   try {

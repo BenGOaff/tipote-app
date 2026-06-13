@@ -101,9 +101,13 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     fr: "Ton domaine d'expertise",
     en: "Your domain of expertise",
   },
+  "settings.domainHint": {
+    fr: "Vide = on utilise ta niche définie à l'inscription. Remplis seulement pour forcer un autre domaine.",
+    en: "Empty = we use the niche from your onboarding. Fill in only to force a different domain.",
+  },
   "settings.domainPlaceholder": {
-    fr: "ex. marketing digital",
-    en: "e.g. digital marketing",
+    fr: "ex. photographe, retouche photo",
+    en: "e.g. photographer, photo retouching",
   },
   "settings.save": { fr: "Enregistrer", en: "Save" },
   "settings.saved": { fr: "Enregistré", en: "Saved" },
@@ -147,6 +151,10 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
   "dropdown.aria": {
     fr: "Générer un commentaire avec Tipote",
     en: "Generate a comment with Tipote",
+  },
+  "dropdown.hintPlaceholder": {
+    fr: "Optionnel : oriente le commentaire…",
+    en: "Optional: steer the comment…",
   },
   "dropdown.generating": {
     fr: "Génération…",

@@ -26,9 +26,9 @@ import { generateSuggestions, type CommenterContext } from "@/lib/podAiSuggest";
  *  champs optionnels — si manquants, le prompt reste générique. */
 async function fetchCommenterContext(userId: string): Promise<{
   context: CommenterContext;
-  /** "post" = répondre dans la langue du post (défaut), "user" =
-   *  toujours dans la langue de contenu de l'user. */
-  replyLanguageMode: "post" | "user";
+  /** "post" = suivre la langue du post (défaut), "user" = langue de
+   *  contenu de l'user, ou un code ISO 2 lettres pour forcer une langue. */
+  replyLanguageMode: string;
   contentLocale: string | null;
 }> {
   const supabase = await getSupabaseServerClient();
@@ -42,8 +42,10 @@ async function fetchCommenterContext(userId: string): Promise<{
     .maybeSingle();
 
   // Business profile (côté project) — pour ton de voix, audience,
-  // langage perso. Scopé par project_id : Béné peut avoir des projets
-  // distincts avec des tons distincts.
+  // DOMAINE/MÉTIER (niche + mission), langage perso. Scopé par project_id.
+  // ⚠️ niche/mission = le domaine réel de l'user issu de l'onboarding.
+  // Sans ça, le modèle ignorait que JB fait de la photo et sortait des
+  // commentaires business hors-sujet (drame Béné 13 juin 2026).
   type BizProfile = {
     brand_tone_of_voice?: string | null;
     target_audience?: string | null;
@@ -51,17 +53,30 @@ async function fetchCommenterContext(userId: string): Promise<{
     auto_comment_objectifs?: string[] | null;
     auto_comment_langage?: Record<string, unknown> | null;
     content_locale?: string | null;
+    niche?: string | null;
+    mission?: string | null;
   };
   let businessProfile: BizProfile | null = null;
 
+  // select("*") best-effort : si une colonne manque en prod (niche,
+  // mission...), un select nominatif planterait toute la perso. select *
+  // est tolérant. Fallback any-project si pas de projet actif résolu.
   if (projectId) {
     const { data } = await supabaseAdmin
       .from("business_profiles")
-      .select(
-        "brand_tone_of_voice, target_audience, auto_comment_style_ton, auto_comment_objectifs, auto_comment_langage, content_locale",
-      )
+      .select("*")
       .eq("user_id", userId)
       .eq("project_id", projectId)
+      .maybeSingle();
+    businessProfile = (data ?? null) as BizProfile | null;
+  }
+  if (!businessProfile) {
+    const { data } = await supabaseAdmin
+      .from("business_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     businessProfile = (data ?? null) as BizProfile | null;
   }
@@ -93,11 +108,23 @@ async function fetchCommenterContext(userId: string): Promise<{
     langageRaw?.address_form === "tu" || langageRaw?.address_form === "vous"
       ? (langageRaw.address_form as "tu" | "vous")
       : "auto";
-  const replyLanguageMode = langageRaw?.reply_language_mode === "user" ? "user" : "post";
-  const domain =
+  // reply_language_mode : "post" | "user" | code ISO 2 lettres.
+  const rlmRaw = typeof langageRaw?.reply_language_mode === "string"
+    ? langageRaw.reply_language_mode.trim().toLowerCase()
+    : "post";
+  const replyLanguageMode = /^[a-z]{2}$/.test(rlmRaw) || rlmRaw === "user" ? rlmRaw : "post";
+
+  // DOMAINE injecté dans le prompt, par ordre de priorité :
+  // 1. domaine explicite saisi dans le popup (override manuel)
+  // 2. niche de l'onboarding (la source de vérité du métier de l'user)
+  // 3. mission (fallback)
+  const explicitDomain =
     typeof langageRaw?.domain === "string" && langageRaw.domain.trim()
       ? langageRaw.domain.trim()
       : null;
+  const niche = businessProfile?.niche?.trim() || null;
+  const mission = businessProfile?.mission?.trim() || null;
+  const domain = explicitDomain ?? niche ?? mission;
 
   return {
     context: {
@@ -109,7 +136,9 @@ async function fetchCommenterContext(userId: string): Promise<{
       objectives: businessProfile?.auto_comment_objectifs ?? null,
       langage: langage && (langage.keywords?.length || langage.expressions?.length || langage.emojis?.length) ? langage : null,
       addressForm,
-      domain,
+      // Domaine tronqué : la niche peut être longue (positionnement
+      // complet), on garde l'essentiel pour ne pas noyer le prompt.
+      domain: domain ? domain.slice(0, 300) : null,
     },
     replyLanguageMode,
     contentLocale: businessProfile?.content_locale ?? null,
@@ -127,6 +156,8 @@ export async function POST(req: Request) {
     activity_urn?: string;
     content_excerpt?: string;
     language?: string;
+    /** Réseau social d'où vient le post (facebook, instagram...). */
+    network?: string;
     /** Free-form hint from the user when they hit "Regenerate" in the
      *  badge (ex: "plus court", "moins formel", "parle de ton expé"). */
     indications?: string;
@@ -139,21 +170,36 @@ export async function POST(req: Request) {
 
   // activity_urn pas strictement requis pour le call IA (le contenu
   // suffit) — utile en log pour diag + futur cache par URN.
+  // `language` envoyé par l'extension = langue du navigateur, PAS celle
+  // du post. On ne s'en sert plus que comme fallback quand le post n'a
+  // pas de texte (image) ET qu'aucune langue n'est forcée.
   let language = body.language?.trim().toLowerCase() || "fr";
+  const network = body.network?.trim().toLowerCase() || null;
   const excerpt = body.content_excerpt?.trim() || null;
   const indications = body.indications?.trim().slice(0, 400) || null;
 
-  // Lookup contexte commenter (best-effort, ne bloque pas la suggestion
-  // si la query échoue — on tombe sur du générique).
+  // Résolution de la langue (Béné 13 juin 2026) :
+  //   - "user"  -> on force la langue de contenu de l'user
+  //   - code    -> on force cette langue (l'user a choisi explicitement)
+  //   - "post"  -> matchPostLanguage : le modèle répond dans la langue
+  //                du post (le plus robuste, fini les commentaires FR sur
+  //                des posts EN).
+  let matchPostLanguage = true;
   let commenter: CommenterContext | undefined;
   try {
     const lookup = await fetchCommenterContext(user.id);
     commenter = lookup.context;
-    // Mode "ma langue" (popup extension) : on répond TOUJOURS dans la
-    // langue de contenu de l'user, même si le post est dans une autre
-    // langue. Défaut historique : langue du post détectée par l'extension.
-    if (lookup.replyLanguageMode === "user" && lookup.contentLocale) {
+    const mode = lookup.replyLanguageMode;
+    if (mode === "user" && lookup.contentLocale) {
       language = lookup.contentLocale.trim().toLowerCase();
+      matchPostLanguage = false;
+    } else if (/^[a-z]{2}$/.test(mode)) {
+      language = mode;
+      matchPostLanguage = false;
+    } else {
+      // "post" : on suit la langue du post. `language` reste comme
+      // fallback (utilisé seulement si le post n'a pas de texte).
+      matchPostLanguage = true;
     }
   } catch (err) {
     console.warn("[ai-suggest] fetchCommenterContext failed, fallback generic", err);
@@ -164,6 +210,8 @@ export async function POST(req: Request) {
     language,
     commenter,
     indications,
+    matchPostLanguage,
+    network,
   });
 
   return NextResponse.json({ ok: true, suggestions });
