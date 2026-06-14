@@ -20,24 +20,31 @@ const COMMENT_ARIA_PATTERNS = [
   // FR
   "écrire un commentaire",
   "commenter",
+  "répondre", // vue modale / groupes : "Répondre en tant que X" (drame Béné 14 juin 2026)
   // EN
   "write a comment",
   "comment",
+  "reply",
   // ES
   "escribe un comentario",
   "comentar",
+  "responder",
   // PT
   "escrever um comentário",
   "comentário",
+  "responder",
   // DE
   "kommentar schreiben",
   "kommentar",
+  "antworten",
   // IT
   "scrivi un commento",
   "commenta",
+  "rispondi",
   // AR
   "اكتب تعليقًا",
   "تعليق",
+  "رد",
 ];
 
 const POST_ARIA_PATTERNS = [
