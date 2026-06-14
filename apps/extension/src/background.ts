@@ -15,6 +15,12 @@ import { STORAGE_KEYS, TASK_POLL_INTERVAL_SECONDS, TIPOTE_API_BASE } from "./con
 
 const ALARM_POLL = "tipote.poll";
 
+// Version de l'extension, envoyée au backend dans X-Tipote-Ext-Version
+// sur chaque appel. Permet à Béné de vérifier dans l'admin quelle
+// version un user fait tourner (support : "il a bien la dernière MAJ ?").
+const EXT_VERSION = chrome.runtime.getManifest().version;
+const VERSION_HEADER = { "X-Tipote-Ext-Version": EXT_VERSION };
+
 // ─── Lifecycle ────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener((details) => {
@@ -60,7 +66,7 @@ async function syncMe(): Promise<PodMeState | null> {
   try {
     const res = await fetch(`${TIPOTE_API_BASE}/api/pod/me`, {
       credentials: "include",
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", ...VERSION_HEADER },
     });
     if (!res.ok) {
       if (res.status === 401) {
@@ -109,7 +115,7 @@ async function pollTasks(): Promise<PendingTask[]> {
   try {
     const res = await fetch(`${TIPOTE_API_BASE}/api/pod/tasks/pending`, {
       credentials: "include",
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", ...VERSION_HEADER },
     });
     if (!res.ok) {
       console.warn("[tipote/bg] pollTasks failed", res.status);
@@ -153,7 +159,7 @@ async function tipotePost<T>(
     const res = await fetch(`${TIPOTE_API_BASE}${path}`, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json", ...VERSION_HEADER },
       body: JSON.stringify(body),
     });
     const data = (await res.json().catch(() => null)) as T | null;
@@ -246,6 +252,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       try {
         const res = await fetch(`${TIPOTE_API_BASE}/api/automation/settings`, {
           credentials: "include",
+          headers: { ...VERSION_HEADER },
         });
         sendResponse(res.ok ? await res.json() : { ok: false, status: res.status });
       } catch (err) {
@@ -262,7 +269,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         const res = await fetch(`${TIPOTE_API_BASE}/api/automation/settings`, {
           method: "PATCH",
           credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...VERSION_HEADER },
           body: JSON.stringify(msg.payload ?? {}),
         });
         const data = await res.json().catch(() => null);

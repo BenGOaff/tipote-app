@@ -18,6 +18,8 @@ type UserRow = {
   created_at: string | null;
   updated_at: string | null;
   last_sign_in_at: string | null;
+  ext_version: string | null;
+  ext_version_at: string | null;
 };
 
 const VALID_PLANS = ["free", "basic", "pro", "elite", "beta"] as const;
@@ -65,7 +67,7 @@ export async function GET(req: NextRequest) {
     // Load all profiles in one query to merge
     const { data: profilesData } = await supabaseAdmin
       .from("profiles")
-      .select("id,email,plan,created_at,updated_at");
+      .select("id,email,plan,created_at,updated_at,ext_version,ext_version_at");
 
     const profileById = new Map<string, any>();
     for (const p of profilesData ?? []) {
@@ -83,6 +85,8 @@ export async function GET(req: NextRequest) {
         created_at: au.created_at ?? profile?.created_at ?? null,
         updated_at: profile?.updated_at ?? au.updated_at ?? null,
         last_sign_in_at: au.last_sign_in_at ?? null,
+        ext_version: profile?.ext_version ?? null,
+        ext_version_at: profile?.ext_version_at ?? null,
       };
     });
 

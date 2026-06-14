@@ -21,6 +21,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { generateSuggestions, type CommenterContext } from "@/lib/podAiSuggest";
+import { recordExtVersion } from "@/lib/extVersion";
 
 // Buffer (base64 image) + fetch d'image externe => runtime Node requis.
 export const runtime = "nodejs";
@@ -197,6 +198,8 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
+  // Télémétrie version extension (support : "il a la dernière MAJ ?").
+  recordExtVersion(req, user.id);
 
   let body: {
     activity_urn?: string;
