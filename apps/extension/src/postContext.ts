@@ -85,6 +85,24 @@ export interface PostContext {
   imageUrl: string | null;
 }
 
+/** Conteneur du post via closest() : remonte SANS limite de profondeur.
+ *  Sur FB/IG/Threads/X chaque post est dans un [role="article"] ou
+ *  <article> (X : data-testid="tweet"), la vue permalink/modal dans un
+ *  [role="dialog"]. Le walk-up à profondeur fixe (12-15) ECHOUAIT sur
+ *  Facebook : le composer y est enfoui 20-30 niveaux sous le post ->
+ *  findParentPost renvoyait null -> content length 0 -> commentaires
+ *  hors-sujet (drame Béné 14 juin 2026, confirmé par les logs FB
+ *  "content length = 0"). closest() n'a pas de limite de profondeur. */
+export function closestPostContainer(composer: HTMLElement): HTMLElement | null {
+  const article = composer.closest(
+    '[role="article"], article, [data-testid="tweet"]',
+  ) as HTMLElement | null;
+  if (article && (article.innerText || "").trim().length > 0) return article;
+  const dialog = composer.closest('[role="dialog"]') as HTMLElement | null;
+  if (dialog && (dialog.innerText || "").trim().length > 0) return dialog;
+  return null;
+}
+
 export function extractPostContext(
   post: HTMLElement | null,
   composer: HTMLElement,

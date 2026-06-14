@@ -6,6 +6,7 @@
 // PAS de auto-action — aide à la rédaction uniquement.
 
 import type { PlatformAdapter } from "./types";
+import { closestPostContainer } from "../postContext";
 
 const REPLY_ARIA_PATTERNS = [
   // EN
@@ -88,9 +89,11 @@ function isPostComposerEl(el: HTMLElement): boolean {
 }
 
 function findParentPost(composer: HTMLElement): HTMLElement | null {
+  const container = closestPostContainer(composer);
+  if (container) return container;
   let node: HTMLElement | null = composer.parentElement;
   let depth = 0;
-  while (node && depth < 12) {
+  while (node && depth < 25) {
     const text = (node.innerText || "").trim();
     const editorText = (composer.innerText || "").trim();
     if (text.length - editorText.length > 60) return node;

@@ -12,6 +12,7 @@
 // PAS d'auto-action sur IG : ban risk élevé. Aide rédaction only.
 
 import type { PlatformAdapter } from "./types";
+import { closestPostContainer } from "../postContext";
 
 const COMMENT_ARIA_PATTERNS = [
   // EN
@@ -49,19 +50,21 @@ function isComposerEl(el: HTMLElement): boolean {
 }
 
 function findParentPost(composer: HTMLElement): HTMLElement | null {
+  // closest() d'abord (remonte sans limite) — cf. facebook.ts.
+  const container = closestPostContainer(composer);
+  if (container) return container;
   let node: HTMLElement | null = composer.parentElement;
   let depth = 0;
-  while (node && depth < 15) {
+  while (node && depth < 25) {
+    if (node.tagName === "ARTICLE" || node.getAttribute("role") === "article") {
+      return node;
+    }
     const text = (node.innerText || "").trim();
     const editorText = (composer instanceof HTMLTextAreaElement
       ? composer.value
       : composer.innerText || ""
     ).trim();
     if (text.length - editorText.length > 60) return node;
-    // <article> = signal fort sur IG (chaque post du feed est dedans)
-    if (node.tagName === "ARTICLE" || node.getAttribute("role") === "article") {
-      return node;
-    }
     node = node.parentElement;
     depth++;
   }

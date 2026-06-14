@@ -14,6 +14,7 @@
 // PAS d'auto-action — aide rédaction only.
 
 import type { PlatformAdapter } from "./types";
+import { closestPostContainer } from "../postContext";
 
 // data-testid identifie les composers natifs X. tweetTextarea_0 = nouveau
 // tweet ; tweetTextarea_N = reply en thread ; tweetTextarea_N_label =
@@ -60,9 +61,11 @@ function isComposerEl(el: HTMLElement): boolean {
 }
 
 function findParentPost(composer: HTMLElement): HTMLElement | null {
+  const container = closestPostContainer(composer);
+  if (container) return container;
   let node: HTMLElement | null = composer.parentElement;
   let depth = 0;
-  while (node && depth < 15) {
+  while (node && depth < 25) {
     // X = chaque tweet a `data-testid="tweet"` ou `[role="article"]`.
     if (node.getAttribute("data-testid") === "tweet" || node.getAttribute("role") === "article") {
       return node;

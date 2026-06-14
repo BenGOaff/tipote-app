@@ -1691,3 +1691,31 @@ AUCUNE version au backend -> impossible à vérifier. Ajout :
 ⚠️ RÉTROACTIF IMPOSSIBLE : ne se remplit qu'à partir de la version qui
 ENVOIE l'en-tête (v1.8.0). NULL = vieille version OU pas d'extension.
 Pour un user AUJOURD'HUI : chrome://extensions montre la version.
+
+## BD) Extension : findParentPost échouait sur FB (content length 0) (14 juin 2026)
+
+Logs Béné FB : `[tipote/feed] fetching suggestions for facebook,
+content length = 0, image = no` pour CHAQUE post (même météo/Netflix
+pleins de texte) -> le modèle recevait du VIDE -> commentaires
+totalement hors-sujet ("J'adore cette photo" sur un texte Netflix EN).
+
+Cause : `adapter.findParentPost` remontait le DOM sur 12-15 niveaux
+seulement. Sur FB le composer de commentaire est enfoui 20-30 niveaux
+sous le post -> la boucle abandonnait -> renvoyait null -> texte ""
+ET image null.
+
+Fix : `closestPostContainer(composer)` dans postContext.ts : utilise
+`composer.closest('[role="article"], article, [data-testid="tweet"]')`
+(+ fallback `[role="dialog"]` pour les permalinks/modals). closest()
+n'a PAS de limite de profondeur. Branché en PRIMARY dans les adapters
+facebook/instagram/threads/x (fallback walk-up conservé, cap relevé à
+25, article prioritaire). LinkedIn inchangé (marchait déjà). Extension
+v1.9.0.
+
+⚠️ Diagnostic clé : si commentaires hors-sujet sur un réseau, regarder
+le log `content length = X` du content script. Si 0 -> extraction DOM
+cassée sur ce réseau (findParentPost), PAS le prompt.
+
+Note : les erreurs console `chrome-extension://invalid/` = contexte
+extension invalidé (reload pendant dev), bénin. Le `unload is not
+allowed` + `selfxss` = warnings natifs FB, sans rapport.

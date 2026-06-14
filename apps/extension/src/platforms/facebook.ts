@@ -14,6 +14,7 @@
 // l'user publie via le bouton natif FB. Aucun risque de ban.
 
 import type { PlatformAdapter } from "./types";
+import { closestPostContainer } from "../postContext";
 
 const COMMENT_ARIA_PATTERNS = [
   // FR
@@ -78,19 +79,21 @@ function isPostComposerEl(el: HTMLElement): boolean {
  *  identique à LinkedIn mais avec un cap plus large (FB a tendance à
  *  enrouler les posts dans plus de wrappers). */
 function findParentPost(composer: HTMLElement): HTMLElement | null {
+  // 1. closest() : remonte au post (role="article") sans limite de
+  //    profondeur. Le walk-up cappé renvoyait null sur FB (composer trop
+  //    profond) -> content length 0 (Béné 14 juin 2026).
+  const container = closestPostContainer(composer);
+  if (container) return container;
+  // 2. Fallback walk-up (cap relevé à 25, article prioritaire).
   let node: HTMLElement | null = composer.parentElement;
   let depth = 0;
-  while (node && depth < 15) {
-    const text = (node.innerText || "").trim();
-    const editorText = (composer.innerText || "").trim();
-    const otherText = text.length - editorText.length;
-    if (otherText > 80) return node;
-    // Article = signal fort sur FB (chaque post est dans un <article>
-    // ou un div avec role="article"). Bonus: on accepte aussi un
-    // div role="article" avec moins de texte (en cas de partage seul).
+  while (node && depth < 25) {
     if (node.tagName === "ARTICLE" || node.getAttribute("role") === "article") {
       return node;
     }
+    const text = (node.innerText || "").trim();
+    const editorText = (composer.innerText || "").trim();
+    if (text.length - editorText.length > 80) return node;
     node = node.parentElement;
     depth++;
   }
