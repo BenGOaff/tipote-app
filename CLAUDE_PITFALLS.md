@@ -1673,3 +1673,21 @@ images, content reste une string.
 dans l'extension -> aucune nouvelle permission manifest. Les CDN
 sociaux (fbcdn, cdninstagram, licdn, twimg...) servent des URLs
 publiques, OK pour le fetch immédiat.
+
+## AZ2) Télémétrie version extension (support Béné 14 juin 2026)
+
+"Ce user a-t-il bien la dernière MAJ ?" : l'extension n'envoyait
+AUCUNE version au backend -> impossible à vérifier. Ajout :
+- Extension (v1.8.0+) : en-tête `X-Tipote-Ext-Version` (manifest
+  version) sur TOUS les appels backend (background.ts : syncMe,
+  pollTasks, tipotePost donc ai/suggest, settings get/save).
+- Backend : `lib/extVersion.ts recordExtVersion(req, userId)`
+  (fire-and-forget) lu sur /api/pod/ai-suggest (users FB) + /api/pod/me.
+  Stocke profiles.ext_version + ext_version_at (migration
+  20260614_profiles_ext_version). ⚠️ Tipote : profiles.id = auth uid.
+- Admin : colonne "Extension" dans AdminUsersPageClient (vXxX + date au
+  hover). select profiles ext_version dans /api/admin/users.
+
+⚠️ RÉTROACTIF IMPOSSIBLE : ne se remplit qu'à partir de la version qui
+ENVOIE l'en-tête (v1.8.0). NULL = vieille version OU pas d'extension.
+Pour un user AUJOURD'HUI : chrome://extensions montre la version.

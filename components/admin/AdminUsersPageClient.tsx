@@ -41,6 +41,8 @@ type AdminUser = {
   created_at: string | null;
   updated_at: string | null;
   last_sign_in_at: string | null;
+  ext_version: string | null;
+  ext_version_at: string | null;
 };
 
 type CreditsSnapshot = {
@@ -994,6 +996,9 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                 >
                   Dernière co.{sortIndicator("last_sign_in_at")}
                 </TableHead>
+                <TableHead className="min-w-[90px] hidden lg:table-cell">
+                  Extension
+                </TableHead>
                 <TableHead
                   className="min-w-[110px] cursor-pointer select-none hidden md:table-cell"
                   onClick={() => handleSort("updated_at")}
@@ -1095,6 +1100,19 @@ export default function AdminUsersPageClient({ adminEmail }: { adminEmail: strin
                       <span title={fmtDate(u.last_sign_in_at, locale)}>
                         {fmtDateShort(u.last_sign_in_at, locale, t)}
                       </span>
+                    </TableCell>
+
+                    <TableCell className="text-sm hidden lg:table-cell">
+                      {u.ext_version ? (
+                        <span
+                          className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted"
+                          title={u.ext_version_at ? `Vue le ${fmtDate(u.ext_version_at, locale)}` : undefined}
+                        >
+                          v{u.ext_version}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </TableCell>
 
                     <TableCell className="text-sm text-muted-foreground hidden md:table-cell">

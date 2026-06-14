@@ -12,14 +12,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { recordExtVersion } from "@/lib/extVersion";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
+  recordExtVersion(req, user.id);
 
   const [profileRes, membershipsRes, karmaRes] = await Promise.all([
     supabaseAdmin
