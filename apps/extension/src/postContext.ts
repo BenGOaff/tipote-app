@@ -85,19 +85,41 @@ export interface PostContext {
   imageUrl: string | null;
 }
 
-/** Conteneur du post via closest() : remonte SANS limite de profondeur.
- *  Sur FB/IG/Threads/X chaque post est dans un [role="article"] ou
- *  <article> (X : data-testid="tweet"), la vue permalink/modal dans un
- *  [role="dialog"]. Le walk-up à profondeur fixe (12-15) ECHOUAIT sur
- *  Facebook : le composer y est enfoui 20-30 niveaux sous le post ->
- *  findParentPost renvoyait null -> content length 0 -> commentaires
- *  hors-sujet (drame Béné 14 juin 2026, confirmé par les logs FB
- *  "content length = 0"). closest() n'a pas de limite de profondeur. */
+/** Conteneur du POST en remontant le DOM SANS limite de profondeur.
+ *
+ *  Deux pièges réglés ici :
+ *
+ *  1. PROFONDEUR. Le walk-up à profondeur fixe (12-15) ECHOUAIT sur
+ *     Facebook : le composer y est enfoui 20-30 niveaux sous le post ->
+ *     findParentPost renvoyait null -> content length 0 -> commentaires
+ *     hors-sujet (drame Béné 14 juin 2026, confirmé par les logs FB
+ *     "content length = 0"). On remonte ici jusqu'à la racine.
+ *
+ *  2. IMBRICATION. Sur FB/IG, chaque COMMENTAIRE est lui aussi un
+ *     [role="article"], IMBRIQUE dans l'article du post. Un simple
+ *     closest() renverrait l'article le plus PROCHE = le commentaire
+ *     quand on repond sous un commentaire -> on commenterait le mauvais
+ *     texte. On garde donc le PLUS EXTERNE des articles : le post
+ *     enveloppe toujours ses commentaires, donc l'article le plus haut
+ *     dans la chaine d'ancetres = le post (la colonne du feed est
+ *     role="feed", jamais "article", donc pas de sur-capture).
+ *
+ *  X : un tweet n'imbrique pas ses reponses (siblings), le plus externe
+ *  reste donc le tweet pertinent ; le modal de reponse tombe sur le
+ *  fallback [role="dialog"] (qui contient le tweet d'origine). */
 export function closestPostContainer(composer: HTMLElement): HTMLElement | null {
-  const article = composer.closest(
-    '[role="article"], article, [data-testid="tweet"]',
-  ) as HTMLElement | null;
-  if (article && (article.innerText || "").trim().length > 0) return article;
+  let node: HTMLElement | null = composer.parentElement;
+  let outermost: HTMLElement | null = null;
+  while (node) {
+    if (
+      node.matches('[role="article"], article, [data-testid="tweet"]') &&
+      (node.innerText || "").trim().length > 0
+    ) {
+      outermost = node; // on continue : on veut le plus haut
+    }
+    node = node.parentElement;
+  }
+  if (outermost) return outermost;
   const dialog = composer.closest('[role="dialog"]') as HTMLElement | null;
   if (dialog && (dialog.innerText || "").trim().length > 0) return dialog;
   return null;
