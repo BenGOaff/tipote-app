@@ -30,6 +30,13 @@ export type CommentSuggestions = Record<CommentTone, string>;
  *  pas une troncature de confort. */
 const MAX_POST_CHARS = 8000;
 
+/** Garde-fou anti-abus sur la longueur d'UN commentaire généré. Ce n'est
+ *  PAS une troncature de confort (Béné 18 juin 2026 : "un commentaire peut
+ *  faire 3 mots comme 400 mots selon la valeur à apporter, on n'impose
+ *  rien"). 3000 caractères couvrent largement un paragraphe développé sans
+ *  jamais couper un commentaire naturel. */
+const MAX_COMMENT_CHARS = 3000;
+
 /** Profil du commenter (NOT l'auteur du post). Injecté dans le prompt
  *  pour que les suggestions matchent SA voix. Tous les champs sont
  *  optionnels : si absent on le saute simplement dans le prompt. */
@@ -152,8 +159,8 @@ const TONE_BRIEFS: Record<CommentTone, string> = {
  *  croire qu'on exerce le même métier que l'auteur, et pour rester
  *  simples (retours Béné 18 juin 2026). */
 const TONE_FEWSHOT: Record<CommentTone, string> = {
-  agree: `agree (appui personnel, concret) :
-- "Pareil de mon côté, j'ai mis du temps à m'y mettre mais une fois pris le pli ça change vraiment tout."
+  agree: `agree (appui personnel, concret, ton parlé) :
+- "Pareil pour moi, c'est pas évident au début mais une fois l'habitude prise on voit que ça marche."
 - "Tellement vrai. C'est souvent le détail qui paraît anodin qui fait toute la différence au final."`,
   disagree: `disagree (posture nette, sans arrogance, sans prétendre faire le même métier) :
 - "Je le vis différemment honnêtement, et ça m'a surpris la première fois."
@@ -264,8 +271,8 @@ ${wanted.map((tone) => TONE_FEWSHOT[tone]).join("\n\n")}
   // QUE les tons demandés : si l'user a cliqué "je suis d'accord", on ne
   // génère pas les 3 autres (économie de tokens, Béné 18 juin 2026).
   const generateLine = multi
-    ? `Génère ${wanted.length} suggestions de commentaire courtes (max 280 caractères chacune, sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, une pour chacun des tons suivants :`
-    : `Génère UN SEUL commentaire court (max 280 caractères, sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, pour le ton suivant :`;
+    ? `Génère ${wanted.length} suggestions de commentaire (sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, une pour chacun des tons suivants :`
+    : `Génère UN SEUL commentaire (sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, pour le ton suivant :`;
 
   const jsonShape = `{\n${wanted.map((tone) => `  "${tone}": "…"`).join(",\n")}\n}`;
 
@@ -289,6 +296,12 @@ ${NATURAL_WRITING_BLOCK}
 
 - Mets-toi VRAIMENT à la place de la personne : reconnais son effort, son émotion ou sa situation avant de réagir.
 - Tu peux t'appuyer sur UN ressort humain qui sonne vrai (curiosité sincère, expérience partagée, sentiment d'appartenance, une émotion). JAMAIS de ressort commercial (rareté, urgence, promo, peur de rater, prix).
+
+### Longueur (libre, tu t'adaptes, tu n'imposes rien)
+
+- AUCUNE longueur imposée. Ça peut aller de 3 mots à un vrai paragraphe (plusieurs phrases), selon la valeur que tu as réellement à apporter.
+- Court quand une réaction brève et sincère suffit. Plus développé seulement quand tu as un vrai apport (un exemple, une nuance, un retour d'expérience utile) qui mérite d'être détaillé.
+- Jamais de remplissage pour faire long, jamais de coupe artificielle pour faire court. La longueur doit sembler naturelle, comme un humain qui écrit ce qu'il a à dire, ni plus ni moins.
 
 ### Règles de style
 
@@ -363,8 +376,9 @@ function parseSuggestions(
         // sanitizeAiText : strip em-dash, decorative emojis, double spaces.
         // Bene 7 juin 2026 : aucun em-dash ne doit survivre dans les
         // commentaires generes (signature LLM #1 qui ruine la credibilite).
-        // Trim + cap à 280 chars (limite LinkedIn confortable)
-        out[k] = sanitizeAiText(v).slice(0, 280);
+        // Cap = garde-fou anti-abus seulement (PAS une troncature de
+        // confort) : la longueur est libre et adaptative (Béné 18 juin 2026).
+        out[k] = sanitizeAiText(v).slice(0, MAX_COMMENT_CHARS);
       } else {
         return null;
       }
@@ -435,8 +449,10 @@ export async function generateSuggestions(args: {
       system,
       user,
       images: args.image ? [args.image] : undefined,
-      // Cap large : 1 à 4 × ~280 chars + wrapper JSON. 2000 tokens suffisent.
-      maxTokens: 2000,
+      // Longueur de commentaire libre (jusqu'à un paragraphe développé) :
+      // on laisse de la marge pour ne jamais couper une sortie longue,
+      // surtout en fan-out (4 commentaires d'un coup).
+      maxTokens: 3000,
       // NB : Opus 4.7+ a retiré `temperature` de l'API Messages — callClaude
       // ne l'envoie pas pour ces modèles. Cette valeur ne s'applique donc
       // QUE si TIPOTE_COMMENT_MODEL pointe un modèle plus ancien (Sonnet…).
