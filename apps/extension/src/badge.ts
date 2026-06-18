@@ -324,6 +324,16 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
       // uniquement ce ton-là, maintenant.
       let text = suggestions?.[tone];
       if (!text) {
+        // GARDE-FOU : on ne génère/insère RIEN si le post est illisible
+        // (texte introuvable). On guide l'user plutôt que d'insérer un
+        // commentaire hors-sol (drame Béné 18 juin 2026).
+        const available = isTask
+          ? mode.task.pod_posts.content_excerpt ?? scrapePostContent()
+          : scrapePostContent();
+        if (!available || available.trim().length < 15) {
+          showStatus(statusEl, "err", "Post illisible. Recharge la page, ou commente à la main.");
+          return;
+        }
         toneButtons.forEach((b) => (b.disabled = true));
         showStatus(statusEl, "loading", "<span class='loader'></span>Rédaction du commentaire…");
         text = await generateTone(tone, regenInput.value.trim());

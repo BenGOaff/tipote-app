@@ -20,9 +20,24 @@
 import { t } from "./i18n";
 import { COMMENT_LANG_OPTIONS } from "./config";
 import { detectPlatform, type PlatformAdapter } from "./platforms";
-import { extractPostContext } from "./postContext";
+import { extractPostContext, MIN_USABLE_TEXT } from "./postContext";
 
 const INJECTED_ATTR = "data-tipote-injected";
+
+// Conteneurs d'AUTRES extensions (ex. Novalya, prospection FB) dans
+// lesquels on ne doit JAMAIS aller chercher un composer : ce ne sont pas
+// les champs natifs du réseau, et s'y greffer crée des conflits (drame
+// Béné 18 juin 2026 : user sous Novalya). On reste sur le DOM natif.
+const THIRD_PARTY_HOST_SELECTOR =
+  '[class*="novalya" i], [id*="novalya" i], [data-novalya], [class*="nvl-" i], [class*="nvl_" i]';
+
+function isThirdPartyNode(el: HTMLElement): boolean {
+  try {
+    return !!el.closest(THIRD_PARTY_HOST_SELECTOR);
+  } catch {
+    return false;
+  }
+}
 
 const TONES = [
   { key: "agree", emoji: "✅" },
@@ -111,6 +126,8 @@ function scanForComposers(root: HTMLElement, adapter: PlatformAdapter): void {
 
   for (const composer of candidates) {
     if (composer.hasAttribute(INJECTED_ATTR)) continue;
+    // Ne jamais se greffer sur un champ injecté par une autre extension.
+    if (isThirdPartyNode(composer)) continue;
     composer.setAttribute(INJECTED_ATTR, "true");
     detectedAny = true;
     console.log(`[tipote/feed] composer detected (${adapter.id})`, composer);
@@ -385,6 +402,22 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
           // Cap large (8000) : on n'ampute plus les longs posts de leur
           // contexte (retour Béné 18 juin 2026).
           const content = ctx.text.slice(0, 8000);
+          // GARDE-FOU : si on n'a NI texte exploitable NI image, on ne
+          // génère RIEN et on n'insère RIEN dans le composer. On demande
+          // à l'user de recharger / commenter à la main (drame Béné 18 juin
+          // 2026 : un méta-commentaire avait été inséré sur un post de deuil
+          // dont le texte n'avait pas été capté).
+          const hasText = content.trim().length >= MIN_USABLE_TEXT;
+          if (!hasText && !ctx.imageUrl) {
+            loading = false;
+            console.warn(`[tipote/feed] post illisible (text=${content.trim().length}, image=no) — abort, pas d'insertion`);
+            trigger.innerHTML = `<span>${t("dropdown.noContent")}</span>`;
+            trigger.disabled = false;
+            trigger.style.opacity = "1";
+            trigger.style.cursor = "pointer";
+            setTimeout(() => { trigger.innerHTML = originalTrigger; }, 6000);
+            return;
+          }
           const language = detectLanguage();
           // Si le réseau auto-traduit le post (ex. EN affiché en FR), on
           // récupère la langue d'origine pour répondre dans CETTE langue.
