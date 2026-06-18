@@ -217,6 +217,10 @@ export async function POST(req: Request) {
     /** Ton unique demandé par l'extension (l'user a cliqué UN bouton).
      *  Si absent ou invalide, on génère les 4 (rétro-compat / fan-out). */
     tone?: string;
+    /** Langue d'origine quand le réseau auto-traduit le post affiché
+     *  (ex. post EN affiché en FR -> "en"). Détectée par l'extension via
+     *  le marqueur "Traduit de X". Force la réponse dans cette langue. */
+    post_language_hint?: string;
   };
   try {
     body = await req.json();
@@ -245,6 +249,16 @@ export async function POST(req: Request) {
       : null;
   const tones = requestedTone ? [requestedTone] : undefined;
 
+  // Langue d'origine si le réseau auto-traduit le post (Béné 18 juin 2026).
+  // Le texte scrapé est la TRADUCTION affichée (ex. FR) alors que le post
+  // est en EN : sans ça, le modèle répondrait en FR. On force donc la
+  // langue d'origine quand l'extension l'a détectée via le marqueur réseau.
+  const postLanguageHint =
+    typeof body.post_language_hint === "string" &&
+    /^[a-z]{2}$/.test(body.post_language_hint.trim().toLowerCase())
+      ? body.post_language_hint.trim().toLowerCase()
+      : null;
+
   // Résolution de la langue (Béné 13 juin 2026) :
   //   - "user"  -> on force la langue de contenu de l'user
   //   - code    -> on force cette langue (l'user a choisi explicitement)
@@ -272,9 +286,23 @@ export async function POST(req: Request) {
       // 2026). navigator.language n'est plus jamais utilisé pour décider.
       matchPostLanguage = true;
       if (lookup.contentLocale) language = lookup.contentLocale.trim().toLowerCase();
+      // Post auto-traduit par le réseau : le texte visible (donc scrapé)
+      // est dans une autre langue que l'original. On force la langue
+      // d'origine détectée plutôt que de suivre la traduction affichée.
+      if (postLanguageHint) {
+        language = postLanguageHint;
+        matchPostLanguage = false;
+      }
     }
   } catch (err) {
     console.warn("[ai-suggest] fetchCommenterContext failed, fallback generic", err);
+  }
+
+  // Si le lookup a échoué (catch) mais qu'on a un hint de traduction, on
+  // l'applique quand même : la langue d'origine prime sur la détection.
+  if (postLanguageHint && matchPostLanguage) {
+    language = postLanguageHint;
+    matchPostLanguage = false;
   }
 
   // Vision : on récupère l'image SURTOUT quand le texte seul est faible

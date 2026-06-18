@@ -17,6 +17,7 @@
 // interférence avec le CSS LinkedIn (qui change régulièrement).
 
 import { voyagerLike, voyagerComment } from "./voyager";
+import { detectTranslatedFromLang } from "./postContext";
 
 type Task = {
   id: string;
@@ -110,6 +111,13 @@ function detectLanguageFromCookie(): string {
   const m = document.cookie.match(/li_lang=([^;]+)/);
   if (m) return decodeURIComponent(m[1]).slice(0, 2).toLowerCase();
   return (navigator.language || "fr").slice(0, 2).toLowerCase();
+}
+
+/** Langue d'origine si LinkedIn auto-traduit le post affiché (ex. EN ->
+ *  FR). Permet de répondre dans la langue d'origine, pas la traduction. */
+function detectPostSourceLang(): string | null {
+  const article = document.querySelector('article, [role="article"]');
+  return detectTranslatedFromLang(article as HTMLElement | null);
 }
 
 function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
@@ -263,6 +271,7 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
         ? mode.task.pod_posts.content_excerpt ?? scrapePostContent()
         : scrapePostContent();
       const language = detectLanguageFromCookie();
+      const postLang = detectPostSourceLang();
       chrome.runtime.sendMessage(
         {
           type: "ai/suggest",
@@ -272,6 +281,7 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
             language,
             tone,
             ...(indications ? { indications } : {}),
+            ...(postLang ? { post_language_hint: postLang } : {}),
           },
         },
         (resp: unknown) => {
@@ -332,6 +342,7 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
       ? mode.task.pod_posts.content_excerpt ?? scrapePostContent()
       : scrapePostContent();
     const language = detectLanguageFromCookie();
+    const postLang = detectPostSourceLang();
     // On ne regénère QUE le ton sélectionné s'il y en a un (économie de
     // tokens). Tant qu'aucun ton n'est choisi, on régénère les 4.
     const tone = selectedTone;
@@ -343,6 +354,7 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
           content_excerpt: content,
           language,
           ...(tone ? { tone } : {}),
+          ...(postLang ? { post_language_hint: postLang } : {}),
           indications: indications || undefined,
         },
       },

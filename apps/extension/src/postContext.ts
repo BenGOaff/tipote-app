@@ -40,6 +40,65 @@ const TIMESTAMP_RE = /^(il y a\s*)?\d+\s*(s|sec|min|m|h|hr|hrs|hours?|j|d|day|da
 // Compteur seul (réactions/vues) : "1,2 k", "324", "12 K", "5.4M"...
 const COUNT_RE = /^[\d\s.,]+\s*[kKmM]?$/;
 
+// ─── Traduction automatique réseau (Béné 18 juin 2026) ────────────────
+// FB/LinkedIn/X/IG affichent souvent une traduction auto du post (ex. un
+// post EN affiché en FR). On scrape le texte VISIBLE = la traduction, donc
+// sans garde-fou le modèle répond dans la langue de la traduction, pas
+// celle d'origine. La plupart des réseaux affichent un marqueur du type
+// "Traduit de l'anglais" / "Translated from English" : on en déduit la
+// langue d'origine pour forcer la réponse dans CETTE langue.
+
+/** Nom de langue (dans les UI FR/EN/ES/IT/PT/DE) -> code ISO 2 lettres. */
+const LANG_NAME_TO_CODE: Record<string, string> = {
+  anglais: "en", english: "en", "inglés": "en", ingles: "en", inglese: "en", "inglês": "en", englisch: "en", englischen: "en",
+  "français": "fr", francais: "fr", french: "fr", "francés": "fr", frances: "fr", francese: "fr", "francês": "fr", "französisch": "fr", "französischen": "fr",
+  espagnol: "es", spanish: "es", "español": "es", espanol: "es", spagnolo: "es", espanhol: "es", spanisch: "es", spanischen: "es",
+  allemand: "de", german: "de", "alemán": "de", aleman: "de", tedesco: "de", "alemão": "de", deutsch: "de", deutschen: "de",
+  italien: "it", italian: "it", italiano: "it", italienisch: "it", italienischen: "it",
+  portugais: "pt", portuguese: "pt", "portugués": "pt", portugues: "pt", portoghese: "pt", "português": "pt", portugiesisch: "pt",
+  "néerlandais": "nl", neerlandais: "nl", dutch: "nl", nederlands: "nl", "holandés": "nl",
+  arabe: "ar", arabic: "ar", "árabe": "ar", arabo: "ar",
+  chinois: "zh", chinese: "zh", chino: "zh", cinese: "zh", "chinês": "zh", chinesisch: "zh",
+  russe: "ru", russian: "ru", ruso: "ru", russo: "ru",
+  japonais: "ja", japanese: "ja", "japonés": "ja", giapponese: "ja",
+};
+
+// "Traduit de l'anglais", "Translated from English", "Traducido del inglés",
+// "Tradotto dall'inglese", "Traduzido do inglês", "Aus dem Englischen übersetzt".
+const TRANSLATED_FROM_RE =
+  /(?:traduit\s+(?:de\s+l['’]|du\s+|de\s+)|translated\s+from\s+|traducido\s+del?\s+|tradotto\s+dall['’]?\s*|traduzido\s+do\s+|aus\s+dem\s+)([\p{L}]+)/iu;
+
+// Marqueurs "il y a une traduction" SANS langue source explicite (on ne
+// peut alors pas déduire l'origine, mais on nettoie la ligne du contenu).
+const TRANSLATION_MARKER_RE = new RegExp(
+  "^(" +
+    [
+      "voir l['’]original", "see original", "ver original", "mostra(?:r)? originale?", "original anzeigen", "ver o original",
+      "traduit automatiquement", "translated automatically", "traduction automatique", "automatically translated",
+      "traduit de .*", "translated from .*", "traducido del? .*", "tradotto dall.*", "traduzido do .*", "aus dem .* übersetzt",
+      "vu que vous préférez le .*", "because you prefer .*",
+    ].join("|") +
+    ")\\s*$",
+  "i",
+);
+
+/** Déduit la langue d'origine d'un post auto-traduit par le réseau, à
+ *  partir du marqueur "Traduit de X". Retourne un code ISO 2 lettres ou
+ *  null si aucun marqueur exploitable n'est trouvé. */
+export function detectTranslatedFromLang(post: HTMLElement | null): string | null {
+  if (!post) return null;
+  const txt = (post.innerText || "").slice(0, 4000);
+  const m = txt.match(TRANSLATED_FROM_RE);
+  if (!m) return null;
+  const word = m[1].toLowerCase();
+  return (
+    LANG_NAME_TO_CODE[word] ??
+    // Fallback : retire une flexion finale (DE "Englischen" -> "englisch").
+    LANG_NAME_TO_CODE[word.replace(/(?:en|e|n)$/u, "")] ??
+    null
+  );
+}
+
 export function cleanPostText(raw: string): string {
   const lines = (raw || "")
     .split("\n")
@@ -50,6 +109,7 @@ export function cleanPostText(raw: string): string {
   const out: string[] = [];
   for (const line of lines) {
     if (NOISE_LINE_RE.test(line)) continue;
+    if (TRANSLATION_MARKER_RE.test(line)) continue;
     if (TIMESTAMP_RE.test(line)) continue;
     if (COUNT_RE.test(line) && line.length <= 8) continue;
     const key = line.toLowerCase();
@@ -83,13 +143,16 @@ export function extractMainImageUrl(post: HTMLElement): string | null {
 export interface PostContext {
   text: string;
   imageUrl: string | null;
+  /** Langue d'origine si le réseau affiche une traduction auto du post
+   *  (ex. post EN affiché en FR -> "en"). null sinon. */
+  translatedFromLang: string | null;
 }
 
 export function extractPostContext(
   post: HTMLElement | null,
   composer: HTMLElement,
 ): PostContext {
-  if (!post) return { text: "", imageUrl: null };
+  if (!post) return { text: "", imageUrl: null, translatedFromLang: null };
   const editorText =
     composer instanceof HTMLTextAreaElement
       ? composer.value
@@ -102,5 +165,6 @@ export function extractPostContext(
   return {
     text: cleanPostText(raw),
     imageUrl: extractMainImageUrl(post),
+    translatedFromLang: detectTranslatedFromLang(post),
   };
 }

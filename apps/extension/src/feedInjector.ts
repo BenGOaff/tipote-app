@@ -353,8 +353,11 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
           // contexte (retour Béné 18 juin 2026).
           const content = ctx.text.slice(0, 8000);
           const language = detectLanguage();
-          console.log(`[tipote/feed] fetching "${tone.key}" for ${adapter.id}, content length = ${content.length}, image = ${ctx.imageUrl ? "yes" : "no"}, hint = ${JSON.stringify(indications)}`);
-          cache[tone.key] = await fetchSuggestions(content, language, adapter.id, indications, ctx.imageUrl, tone.key);
+          // Si le réseau auto-traduit le post (ex. EN affiché en FR), on
+          // récupère la langue d'origine pour répondre dans CETTE langue.
+          const postLang = ctx.translatedFromLang;
+          console.log(`[tipote/feed] fetching "${tone.key}" for ${adapter.id}, content length = ${content.length}, image = ${ctx.imageUrl ? "yes" : "no"}, translatedFrom = ${postLang ?? "no"}, hint = ${JSON.stringify(indications)}`);
+          cache[tone.key] = await fetchSuggestions(content, language, adapter.id, indications, ctx.imageUrl, tone.key, postLang);
           loading = false;
         }
         adapter.fillEditor(composer, cache[tone.key]!);
@@ -526,6 +529,7 @@ async function fetchSuggestions(
   indications: string,
   imageUrl: string | null,
   tone: ToneKey,
+  postLanguageHint: string | null,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
@@ -539,6 +543,7 @@ async function fetchSuggestions(
             tone,
             ...(indications ? { indications } : {}),
             ...(imageUrl ? { image_url: imageUrl } : {}),
+            ...(postLanguageHint ? { post_language_hint: postLanguageHint } : {}),
           },
         },
         (resp: unknown) => {
