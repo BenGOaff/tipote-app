@@ -284,8 +284,15 @@ ${generateLine}
 
 ${wanted.map((tone) => `- ${TONE_BRIEFS[tone]}`).join("\n")}
 
+### RÈGLE DE SENSIBILITÉ (PRIORITAIRE, passe AVANT le ton demandé)
+
+- Si le post évoque un sujet douloureux ou grave (décès, deuil, hommage à un défunt, maladie, accident, perte d'un proche, drame, détresse, échec difficile), tu IGNORES la mécanique du ton demandé et tu écris UNIQUEMENT un message de condoléances ou de soutien, sincère, court et sobre.
+- Dans ce cas : aucune "valeur ajoutée", aucune question intrusive, aucun désaccord, aucun angle business, aucune positivité forcée, aucun ton désinvolte ou familier déplacé. Juste de l'empathie humaine et respectueuse.
+- En cas de doute sur la gravité du sujet, choisis TOUJOURS la retenue et l'empathie plutôt que la légèreté.
+
 ### RÈGLE ABSOLUE : le sujet du commentaire = le sujet DU POST
 
+- INTERDICTION ABSOLUE de tout méta-commentaire : ne parle JAMAIS du fait que le post serait vide, "en cours de chargement" ou "un texte en cours de génération", ni de toi en tant qu'outil/IA, ni du processus de génération. Tu écris UNIQUEMENT le commentaire destiné au post. Si tu n'as pas de contenu lisible, écris une réaction humaine brève adaptée à ce qui est visible, jamais une remarque sur l'absence de contenu.
 - Le commentaire porte sur CE QUE RACONTE LE POST, rien d'autre. Tu réagis à SON sujet, pas au tien.
 - Le métier / domaine du commenter (ci-dessous s'il est renseigné) sert UNIQUEMENT à choisir un angle crédible QUAND le sujet du post s'y prête. Si le post n'a aucun rapport avec ce métier, tu n'en parles PAS.
 - Tu peux t'appuyer sur TON expérience, ta niche ou ton persona pour réagir, mais sans JAMAIS laisser croire que tu exerces le même métier que l'auteur, ni inventer une clientèle ou une activité que tu n'as pas. Reste honnête sur qui tu es : un freelance ne dit pas "les freelances que j'accompagne" s'il n'accompagne personne.
@@ -335,7 +342,7 @@ ${genVerb} en réagissant À CE QUE MONTRE L'IMAGE et à la légende ensemble. R
 
 Rappel langue : rédige ${cmt} ${languageInstruction} (la langue du post ci-dessus).`;
   } else if (args.hasImage) {
-    userMsg = `Une image du post est jointe ci-dessus (le post n'a pas de texte, c'est une publication visuelle). ${genVerb} en réagissant SINCÈREMENT À CE QUE MONTRE L'IMAGE (la scène, l'ambiance, un détail). Reste naturel, chaleureux, jamais business/marketing. Rebondis sur un élément concret de l'image, pas une généralité.`;
+    userMsg = `Une image du post est jointe ci-dessus (le post n'a pas de texte, c'est une publication visuelle). ${genVerb} en réagissant SINCÈREMENT À CE QUE MONTRE L'IMAGE (la scène, l'ambiance, un détail). Adapte le registre à ce que montre l'image : si la scène est grave, triste ou évoque un deuil/un hommage, reste sobre et empathique (condoléances), sinon naturel et chaleureux. Jamais business/marketing, jamais de méta-commentaire. Rebondis sur un élément concret de l'image, pas une généralité.`;
   } else if (hasContent) {
     userMsg = `Voici le post à commenter :
 
@@ -347,7 +354,7 @@ ${genVerb} maintenant, EN RÉAGISSANT À CE POST PRÉCIS (son sujet, pas un autr
 
 Rappel langue : rédige ${cmt} ${languageInstruction} (la langue du post ci-dessus).`;
   } else {
-    userMsg = `Le post ne contient pas de texte lisible (c'est probablement une image ou une vidéo, ex: une photo). ${genVerb} : ${multi ? "des réactions courtes" : "une réaction courte"}, chaleureuse${multi ? "s" : ""} et universelle${multi ? "s" : ""} qui conviennent à un post visuel, dans la langue ${language}. Reste léger et bienveillant. N'invente PAS de sujet, et SURTOUT PAS de contenu business/marketing/vente.`;
+    userMsg = `Le post ne contient pas de texte lisible (c'est probablement une image ou une vidéo, ex: une photo). ${genVerb} : ${multi ? "des réactions courtes" : "une réaction courte"} et bienveillante${multi ? "s" : ""} qui conviennent à un post visuel, dans la langue ${language}. N'invente PAS de sujet, et SURTOUT PAS de contenu business/marketing/vente. INTERDICTION de tout méta-commentaire (ne dis jamais que le post est vide, en cours de chargement ou en cours de génération). Si le moindre indice évoque un sujet grave ou triste, reste sobre et empathique plutôt que léger.`;
   }
 
   return { system, user: userMsg };
