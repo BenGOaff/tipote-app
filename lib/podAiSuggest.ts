@@ -16,6 +16,7 @@
 // comme un GPT-4 générique. Cf. business_profiles + pod_linkedin_profiles.
 
 import { callClaude, getClaudeApiKey } from "@/lib/claude";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import type { CommentTone } from "@/lib/podBoost";
 import { NATURAL_WRITING_BLOCK } from "@/lib/prompts/quiz/system";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
@@ -62,7 +63,7 @@ export type CommenterContext = {
 
 const FALLBACK_SUGGESTIONS: CommentSuggestions = {
   agree: "Très juste, c'est exactement ce qu'on observe sur le terrain.",
-  disagree: "Intéressant, mais je vois les choses différemment — le contexte joue beaucoup ici.",
+  disagree: "Intéressant, mais je vois les choses différemment : le contexte joue beaucoup ici.",
   add_value: "À compléter : ça fonctionne particulièrement bien quand on l'applique en amont.",
   ask_question: "Question : comment tu adaptes ça quand l'équipe n'est pas encore alignée ?",
 };
@@ -178,18 +179,33 @@ function buildPrompt(args: {
   // forcée par nom.
   const languageInstruction = args.matchPostLanguage
     ? hasContent
-      ? `dans EXACTEMENT la même langue que le post ci-dessous (détecte-la depuis son contenu : post en anglais -> commentaires en anglais, en espagnol -> en espagnol, etc.)`
+      ? `dans EXACTEMENT la même langue que le post ci-dessous (détecte-la depuis son contenu : post en anglais -> commentaires en anglais, en espagnol -> en espagnol, en chinois -> en chinois, etc.)`
       : args.hasImage
         ? `dans la langue du texte visible sur l'image si elle en contient ; sinon en ${language}`
         : `dans la langue ${language}`
     : `en ${language} (langue imposée par le commenter, même si le post est dans une autre langue)`;
+
+  // Bloc langue DÉDIÉ et prioritaire. La consigne inline ne suffisait pas :
+  // tout le system prompt + les few-shot étant rédigés en français, le
+  // modèle retombait en français même sur un post EN/ZH/ES (retour Béné
+  // 18 juin 2026 : "elle ne s'adapte pas à la langue du post"). On hisse
+  // la règle de langue au rang de contrainte absolue et on précise
+  // explicitement que le français qui l'entoure n'est QUE du style.
+  const languageRuleBlock = `### RÈGLE DE LANGUE (ABSOLUE, PRIORITAIRE SUR TOUT LE RESTE)
+
+- Tu rédiges les 4 commentaires ${languageInstruction}.
+- Détecte la langue depuis le CONTENU RÉEL du post, jamais depuis cette consigne (elle est en français par convention interne).
+- Les règles, exemples et libellés ci-dessous sont rédigés en français UNIQUEMENT pour illustrer le style et la structure : ils ne doivent JAMAIS influencer la langue de ta sortie.
+- Post en anglais -> 4 commentaires 100% en anglais. Post en chinois -> 100% en chinois. Espagnol -> espagnol. Allemand -> allemand. Et ainsi de suite pour TOUTE langue.
+- Un commentaire ne mélange jamais deux langues.
+`;
 
   // Few-shot DOMAINE-NEUTRE : ils illustrent la STRUCTURE et le ton
   // humain (un détail concret, une posture, une nuance, une question
   // précise) SANS vocabulaire business. Les anciens exemples 100% SaaS/
   // vente contaminaient tous les commentaires vers le jargon B2B, même
   // pour un photographe (drame Béné 13 juin 2026).
-  const fewShotBlock = `\n### Exemples de TON et de STRUCTURE (à NE PAS recopier ni transposer le sujet, juste pour le style)
+  const fewShotBlock = `\n### Exemples de TON et de STRUCTURE (français pour l'exemple uniquement : NE PAS recopier, NE PAS transposer le sujet, et SURTOUT ne pas en hériter la langue : tu réponds dans la langue du post)
 
 agree (appui personnel, concret) :
 - "Pareil de mon côté, j'ai mis du temps à m'y mettre mais une fois pris le pli ça change vraiment tout."
@@ -216,6 +232,7 @@ ask_question (question précise ancrée dans le post) :
 
   const system = `Tu es un assistant qui aide à commenter rapidement un post sur les réseaux sociaux — comme si TU étais le commenter.
 
+${languageRuleBlock}
 Génère 4 suggestions de commentaire courtes (max 280 caractères chacune, sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, une pour chacun des tons :
 
 - "agree": appuie le propos avec UN détail concret. Jamais lèche-bottes, jamais "excellent post".
@@ -258,7 +275,9 @@ Tu réponds UNIQUEMENT par un JSON strict de cette forme exacte (pas de markdown
 ${args.contentExcerpt!.slice(0, 1500)}
 """
 
-Génère les 4 commentaires en réagissant À CE QUE MONTRE L'IMAGE et à la légende ensemble. Reste ancré dans ce post précis, ne pars pas sur un autre sujet.`;
+Génère les 4 commentaires en réagissant À CE QUE MONTRE L'IMAGE et à la légende ensemble. Reste ancré dans ce post précis, ne pars pas sur un autre sujet.
+
+Rappel langue : rédige les 4 commentaires ${languageInstruction}.`;
   } else if (args.hasImage) {
     userMsg = `Une image du post est jointe ci-dessus (le post n'a pas de texte, c'est une publication visuelle). Génère 4 commentaires qui réagissent SINCÈREMENT À CE QUE MONTRE L'IMAGE (ce qu'on y voit : la scène, l'ambiance, un détail). Reste naturel, chaleureux, jamais business/marketing. Décris ou rebondis sur un élément concret de l'image, pas une généralité.`;
   } else if (hasContent) {
@@ -268,7 +287,9 @@ Génère les 4 commentaires en réagissant À CE QUE MONTRE L'IMAGE et à la lé
 ${args.contentExcerpt!.slice(0, 1500)}
 """
 
-Génère les 4 commentaires maintenant, EN RÉAGISSANT À CE POST PRÉCIS (son sujet, pas un autre).`;
+Génère les 4 commentaires maintenant, EN RÉAGISSANT À CE POST PRÉCIS (son sujet, pas un autre).
+
+Rappel langue : rédige les 4 commentaires ${languageInstruction}.`;
   } else {
     userMsg = `Le post ne contient pas de texte lisible (c'est probablement une image ou une vidéo, ex: une photo). Génère 4 réactions COURTES, chaleureuses et universelles qui conviennent à un post visuel, dans la langue ${language}. Reste léger et bienveillant. NE invente PAS de sujet, et SURTOUT PAS de contenu business/marketing/vente. Une réaction d'appréciation sincère, une réaction qui apporte une touche perso, un petit complément, une question légère et ouverte.`;
   }
@@ -345,14 +366,24 @@ export async function generateSuggestions(args: {
   try {
     const text = await callClaude({
       apiKey,
+      // Rédaction de commentaires = "contenu" : on prend TOUJOURS le
+      // meilleur modèle Claude dispo (Opus 4.8), pas le Sonnet par défaut
+      // (Béné 18 juin 2026 : "Claude dernier modèle pour la rédaction,
+      // toujours"). Override possible via TIPOTE_COMMENT_MODEL.
+      model: resolveAnthropicModel(process.env.TIPOTE_COMMENT_MODEL, "opus"),
       system,
       user,
       images: args.image ? [args.image] : undefined,
       // Suggestions = 4 × ~280 chars max, donc 1500 tokens largement
       // assez. On garde une marge pour le JSON wrapper.
       maxTokens: 2000,
-      temperature: 0.8, // un peu créatif pour éviter les commentaires plats
-      idleTimeoutMs: args.image ? 30_000 : 20_000,
+      // NB : Opus 4.7+ a retiré `temperature` de l'API Messages — callClaude
+      // ne l'envoie pas pour ces modèles. Cette valeur ne s'applique donc
+      // QUE si TIPOTE_COMMENT_MODEL pointe un modèle plus ancien (Sonnet…).
+      temperature: 0.8,
+      // Opus est un peu plus lent à streamer le 1er token : on laisse une
+      // marge d'idle un peu plus large que sur Sonnet.
+      idleTimeoutMs: args.image ? 40_000 : 30_000,
     });
     const parsed = parseSuggestions(text);
     if (parsed) return parsed;
