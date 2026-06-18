@@ -201,7 +201,10 @@ async function fanOutForPod(params: {
   podId: string;
   authorUserId: string;
   postLanguage: string | null;
-  suggestions: CommentSuggestions;
+  // Partial : generateSuggestions peut ne renvoyer qu'un sous-ensemble de
+  // tons. Au fan-out on demande les 4 (pas de `tones`), donc en pratique
+  // c'est complet, mais le type reste honnête.
+  suggestions: Partial<CommentSuggestions>;
   source: "extension" | "tipote";
 }): Promise<number> {
   const { podPostId, podId, authorUserId, postLanguage, suggestions, source } = params;

@@ -156,6 +156,14 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     fr: "Optionnel : oriente le commentaire…",
     en: "Optional: steer the comment…",
   },
+  "dropdown.langTitle": {
+    fr: "Langue du commentaire",
+    en: "Comment language",
+  },
+  "dropdown.langAuto": {
+    fr: "Auto (langue du post)",
+    en: "Auto (post language)",
+  },
   "dropdown.generating": {
     fr: "Génération…",
     en: "Generating…",
@@ -165,8 +173,8 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     en: "Inserted ✓",
   },
   "dropdown.copied": {
-    fr: "Copié — collez (Ctrl+V)",
-    en: "Copied — paste (Ctrl+V)",
+    fr: "Copié : collez (Ctrl+V)",
+    en: "Copied: paste (Ctrl+V)",
   },
   "dropdown.reloadLinkedIn": {
     fr: "↻ Recharger la page",

@@ -20,3 +20,24 @@ export const STORAGE_KEYS = {
   LAST_POLL_AT: "tipote.tasks.lastPollAt",
   THROTTLE_ACTIONS: "tipote.throttle.actions",
 } as const;
+
+/** Langues proposées dans le sélecteur par commentaire (dropdown inline +
+ *  badge). "auto" = on laisse la détection (langue du post / langue
+ *  d'origine si le réseau a auto-traduit). Les autres forcent la langue
+ *  pour CE commentaire, utile quand le réseau a traduit sans marqueur
+ *  exploitable (Béné 18 juin 2026). Endonymes pour rester lisibles quelle
+ *  que soit la langue de l'UI. */
+export const COMMENT_LANG_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "auto", label: "" }, // libellé rempli via i18n (dropdown.langAuto)
+  { value: "fr", label: "Français" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Español" },
+  { value: "it", label: "Italiano" },
+  { value: "pt", label: "Português" },
+  { value: "de", label: "Deutsch" },
+  { value: "nl", label: "Nederlands" },
+  { value: "zh", label: "中文" },
+  { value: "ar", label: "العربية" },
+  { value: "ja", label: "日本語" },
+] as const;
+

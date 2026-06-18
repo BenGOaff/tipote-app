@@ -21,6 +21,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { generateSuggestions, type CommenterContext } from "@/lib/podAiSuggest";
+import { COMMENT_TONES, type CommentTone } from "@/lib/podBoost";
 import { recordExtVersion } from "@/lib/extVersion";
 
 // Buffer (base64 image) + fetch d'image externe => runtime Node requis.
@@ -213,6 +214,17 @@ export async function POST(req: Request) {
     /** Free-form hint from the user when they hit "Regenerate" in the
      *  badge (ex: "plus court", "moins formel", "parle de ton expé"). */
     indications?: string;
+    /** Ton unique demandé par l'extension (l'user a cliqué UN bouton).
+     *  Si absent ou invalide, on génère les 4 (rétro-compat / fan-out). */
+    tone?: string;
+    /** Langue d'origine quand le réseau auto-traduit le post affiché
+     *  (ex. post EN affiché en FR -> "en"). Détectée par l'extension via
+     *  le marqueur "Traduit de X". Force la réponse dans cette langue. */
+    post_language_hint?: string;
+    /** Langue choisie EXPLICITEMENT par l'user pour CE commentaire via le
+     *  sélecteur du menu (priorité maximale). Couvre les traductions réseau
+     *  sans marqueur, où l'auto-détection ne peut pas trancher. */
+    force_language?: string;
   };
   try {
     body = await req.json();
@@ -229,6 +241,35 @@ export async function POST(req: Request) {
   const network = body.network?.trim().toLowerCase() || null;
   const excerpt = body.content_excerpt?.trim() || null;
   const indications = body.indications?.trim().slice(0, 400) || null;
+
+  // Ton unique : l'extension demande UN seul commentaire (celui sur lequel
+  // l'user a cliqué) pour ne pas générer 4 commentaires dont 3 inutiles
+  // (Béné 18 juin 2026). Validé contre la liste blanche ; si absent/invalide
+  // on retombe sur les 4 (fan-out / vieilles versions de l'extension).
+  const requestedTone =
+    typeof body.tone === "string" &&
+    (COMMENT_TONES as readonly string[]).includes(body.tone)
+      ? (body.tone as CommentTone)
+      : null;
+  const tones = requestedTone ? [requestedTone] : undefined;
+
+  // Langue d'origine si le réseau auto-traduit le post (Béné 18 juin 2026).
+  // Le texte scrapé est la TRADUCTION affichée (ex. FR) alors que le post
+  // est en EN : sans ça, le modèle répondrait en FR. On force donc la
+  // langue d'origine quand l'extension l'a détectée via le marqueur réseau.
+  const postLanguageHint =
+    typeof body.post_language_hint === "string" &&
+    /^[a-z]{2}$/.test(body.post_language_hint.trim().toLowerCase())
+      ? body.post_language_hint.trim().toLowerCase()
+      : null;
+
+  // Langue forcée explicitement par l'user pour ce commentaire (sélecteur
+  // du menu) : priorité maximale, au-dessus de tout le reste.
+  const forceLanguage =
+    typeof body.force_language === "string" &&
+    /^[a-z]{2}$/.test(body.force_language.trim().toLowerCase())
+      ? body.force_language.trim().toLowerCase()
+      : null;
 
   // Résolution de la langue (Béné 13 juin 2026) :
   //   - "user"  -> on force la langue de contenu de l'user
@@ -257,9 +298,30 @@ export async function POST(req: Request) {
       // 2026). navigator.language n'est plus jamais utilisé pour décider.
       matchPostLanguage = true;
       if (lookup.contentLocale) language = lookup.contentLocale.trim().toLowerCase();
+      // Post auto-traduit par le réseau : le texte visible (donc scrapé)
+      // est dans une autre langue que l'original. On force la langue
+      // d'origine détectée plutôt que de suivre la traduction affichée.
+      if (postLanguageHint) {
+        language = postLanguageHint;
+        matchPostLanguage = false;
+      }
     }
   } catch (err) {
     console.warn("[ai-suggest] fetchCommenterContext failed, fallback generic", err);
+  }
+
+  // Si le lookup a échoué (catch) mais qu'on a un hint de traduction, on
+  // l'applique quand même : la langue d'origine prime sur la détection.
+  if (postLanguageHint && matchPostLanguage) {
+    language = postLanguageHint;
+    matchPostLanguage = false;
+  }
+
+  // Langue forcée par l'user pour ce commentaire : priorité absolue, elle
+  // écrase la détection, le hint de traduction ET le réglage global.
+  if (forceLanguage) {
+    language = forceLanguage;
+    matchPostLanguage = false;
   }
 
   // Vision : on récupère l'image SURTOUT quand le texte seul est faible
@@ -278,6 +340,7 @@ export async function POST(req: Request) {
     contentExcerpt: excerpt,
     language,
     commenter,
+    tones,
     indications,
     matchPostLanguage,
     network,

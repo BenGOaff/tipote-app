@@ -18,6 +18,7 @@
 //     textarea — d'où la sandbox par adapter).
 
 import { t } from "./i18n";
+import { COMMENT_LANG_OPTIONS } from "./config";
 import { detectPlatform, type PlatformAdapter } from "./platforms";
 import { extractPostContext } from "./postContext";
 
@@ -177,7 +178,15 @@ function* walkShadowRoots(root: Element): Generator<HTMLElement> {
 }
 
 function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
-  let cachedSuggestions: Record<ToneKey, string> | null = null;
+  // Cache PAR TON : on ne génère que le commentaire du ton cliqué (Béné
+  // 18 juin 2026 : générer les 4 d'un coup était un gaspillage de tokens).
+  // Re-cliquer le même ton ré-utilise le cache ; changer l'indication vide
+  // le cache.
+  let cache: Partial<Record<ToneKey, string>> = {};
+  // Langue forcée pour CE commentaire ("auto" = détection : langue du
+  // post, ou langue d'origine si le réseau a auto-traduit). Couvre les
+  // cas où la traduction réseau n'a pas de marqueur exploitable.
+  let forcedLang = "auto";
   // Indication libre (ce que l'user veut, ex: "parle de la lumière",
   // "en anglais", "plus court"). Demandée par Monique le 13 juin 2026 :
   // sur FB/IG elle n'avait aucun moyen d'orienter les commentaires.
@@ -297,6 +306,34 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
   hintWrap.appendChild(hintInput);
   menu.appendChild(hintWrap);
 
+  // Sélecteur de langue (par commentaire). Défaut "auto" = détection
+  // (langue du post, ou langue d'origine si le réseau a auto-traduit).
+  // Forcer une langue couvre les cas de traduction réseau sans marqueur.
+  const langWrap = document.createElement("div");
+  langWrap.style.cssText = `padding: 0 8px 8px; border-bottom: 1px solid #f0f0f0; margin-bottom: 2px; display: flex; align-items: center; gap: 6px;`;
+  const langIcon = document.createElement("span");
+  langIcon.textContent = "🌐";
+  langIcon.title = t("dropdown.langTitle");
+  langIcon.style.cssText = `font-size: 13px;`;
+  const langSelect = document.createElement("select");
+  langSelect.setAttribute("aria-label", t("dropdown.langTitle"));
+  langSelect.style.cssText = `flex: 1; padding: 5px 6px; font-size: 12px; border: 1px solid #e5e7eb; border-radius: 6px; color: #111; background: #fff; outline: none; font-family: inherit;`;
+  for (const opt of COMMENT_LANG_OPTIONS) {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.value === "auto" ? t("dropdown.langAuto") : opt.label;
+    langSelect.appendChild(o);
+  }
+  langSelect.addEventListener("mousedown", (e) => e.stopPropagation());
+  langSelect.addEventListener("click", (e) => e.stopPropagation());
+  langSelect.addEventListener("change", () => {
+    forcedLang = langSelect.value || "auto";
+    cache = {}; // langue changée -> régénération au prochain clic de ton
+  });
+  langWrap.appendChild(langIcon);
+  langWrap.appendChild(langSelect);
+  menu.appendChild(langWrap);
+
   for (const tone of TONES) {
     const label = toneLabel(tone.key);
     const item = document.createElement("button");
@@ -330,22 +367,34 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
       trigger.innerHTML = `<span>${tone.emoji} ${t("dropdown.generating")}</span>`;
       try {
         const indications = hintInput.value.trim().slice(0, 400);
-        // Régénère si pas de cache OU si l'indication a changé depuis
-        // la dernière génération.
-        if (!cachedSuggestions || indications !== lastUsedIndications) {
+        // L'indication a changé depuis la dernière génération -> on vide le
+        // cache (les anciens commentaires ne respectent plus la consigne).
+        if (indications !== lastUsedIndications) {
+          cache = {};
+          lastUsedIndications = indications;
+        }
+        // On ne génère QUE le ton cliqué, et seulement s'il n'est pas déjà
+        // en cache. Cliquer "Je suis d'accord" ne génère plus que ce
+        // commentaire-là, pas les 3 autres (économie de tokens).
+        if (!cache[tone.key]) {
           loading = true;
           const post = adapter.findParentPost(composer);
           // Extraction propre : texte sans bruit UI + image principale
           // (vision). Cf. postContext.ts (drame FB/IG, Béné 13 juin 2026).
           const ctx = extractPostContext(post, composer);
-          const content = ctx.text.slice(0, 1500);
+          // Cap large (8000) : on n'ampute plus les longs posts de leur
+          // contexte (retour Béné 18 juin 2026).
+          const content = ctx.text.slice(0, 8000);
           const language = detectLanguage();
-          console.log(`[tipote/feed] fetching suggestions for ${adapter.id}, content length = ${content.length}, image = ${ctx.imageUrl ? "yes" : "no"}, hint = ${JSON.stringify(indications)}`);
-          cachedSuggestions = await fetchSuggestions(content, language, adapter.id, indications, ctx.imageUrl);
-          lastUsedIndications = indications;
+          // Si le réseau auto-traduit le post (ex. EN affiché en FR), on
+          // récupère la langue d'origine pour répondre dans CETTE langue.
+          const postLang = ctx.translatedFromLang;
+          const forceLang = forcedLang !== "auto" ? forcedLang : null;
+          console.log(`[tipote/feed] fetching "${tone.key}" for ${adapter.id}, content length = ${content.length}, image = ${ctx.imageUrl ? "yes" : "no"}, translatedFrom = ${postLang ?? "no"}, forceLang = ${forceLang ?? "auto"}, hint = ${JSON.stringify(indications)}`);
+          cache[tone.key] = await fetchSuggestions(content, language, adapter.id, indications, ctx.imageUrl, tone.key, postLang, forceLang);
           loading = false;
         }
-        adapter.fillEditor(composer, cachedSuggestions[tone.key]);
+        adapter.fillEditor(composer, cache[tone.key]!);
         const doneLabel = adapter.clipboardMode ? t("dropdown.copied") : t("dropdown.inserted");
         trigger.innerHTML = `<span>${tone.emoji} ${doneLabel}</span>`;
         // Clipboard mode reste affiché plus longtemps : l'user doit
@@ -513,7 +562,10 @@ async function fetchSuggestions(
   network: string,
   indications: string,
   imageUrl: string | null,
-): Promise<Record<ToneKey, string>> {
+  tone: ToneKey,
+  postLanguageHint: string | null,
+  forceLanguage: string | null,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       chrome.runtime.sendMessage(
@@ -523,8 +575,11 @@ async function fetchSuggestions(
             content_excerpt: content,
             language,
             network,
+            tone,
             ...(indications ? { indications } : {}),
             ...(imageUrl ? { image_url: imageUrl } : {}),
+            ...(postLanguageHint ? { post_language_hint: postLanguageHint } : {}),
+            ...(forceLanguage ? { force_language: forceLanguage } : {}),
           },
         },
         (resp: unknown) => {
@@ -533,7 +588,8 @@ async function fetchSuggestions(
             return;
           }
           const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
-          if (r?.ok && r.suggestions) resolve(r.suggestions as Record<ToneKey, string>);
+          const text = r?.ok && r.suggestions ? r.suggestions[tone] : undefined;
+          if (typeof text === "string" && text.trim()) resolve(text);
           else reject(new Error("ai_suggest_failed"));
         },
       );

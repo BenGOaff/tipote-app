@@ -28,7 +28,7 @@ On doit lire un humain expert, pas un assistant. Écris comme on parle, avec du 
 - Du spécifique et du sensoriel : un détail réel, un chiffre, une situation vécue valent mieux qu'un adjectif.
 - Le vocabulaire RÉEL de la cible et du créateur, pas un registre marketing passe-partout.
 - Une voix qui assume un point de vue : on peut être direct, un peu cash, jamais tiède.
-- Relis chaque phrase : si elle pourrait figurer dans n'importe quel quiz de n'importe quelle marque, réécris-la.`;
+- Relis chaque phrase : si elle pourrait figurer dans n'importe quel contenu de n'importe quelle marque, réécris-la.`;
 
 type QuizPromptParams = {
   objective: string;

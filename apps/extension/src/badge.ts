@@ -17,6 +17,8 @@
 // interférence avec le CSS LinkedIn (qui change régulièrement).
 
 import { voyagerLike, voyagerComment } from "./voyager";
+import { detectTranslatedFromLang } from "./postContext";
+import { COMMENT_LANG_OPTIONS } from "./config";
 
 type Task = {
   id: string;
@@ -46,7 +48,7 @@ const TONE_LABELS: Record<Tone, { label: string; emoji: string }> = {
 // dispo via la task. Identique côté serveur dans podAiSuggest.ts.
 const FALLBACK_SUGGESTIONS: Record<Tone, string> = {
   agree: "Très juste, c'est exactement ce qu'on observe sur le terrain.",
-  disagree: "Intéressant, mais je vois les choses différemment — le contexte joue beaucoup ici.",
+  disagree: "Intéressant, mais je vois les choses différemment : le contexte joue beaucoup ici.",
   add_value: "À compléter : ça fonctionne particulièrement bien quand on l'applique en amont.",
   ask_question: "Question : comment tu adaptes ça quand l'équipe n'est pas encore alignée ?",
 };
@@ -97,7 +99,8 @@ function scrapePostContent(): string | null {
   const article = document.querySelector('article, [role="article"]');
   if (article) {
     const text = (article.textContent ?? "").trim();
-    if (text.length > 50) return text.slice(0, 1500);
+    // Cap large (8000) : on n'ampute plus les longs posts (Béné 18 juin 2026).
+    if (text.length > 50) return text.slice(0, 8000);
   }
   // Fallback sur le <title> (LinkedIn y met l'auteur + un excerpt).
   const title = document.title;
@@ -109,6 +112,13 @@ function detectLanguageFromCookie(): string {
   const m = document.cookie.match(/li_lang=([^;]+)/);
   if (m) return decodeURIComponent(m[1]).slice(0, 2).toLowerCase();
   return (navigator.language || "fr").slice(0, 2).toLowerCase();
+}
+
+/** Langue d'origine si LinkedIn auto-traduit le post affiché (ex. EN ->
+ *  FR). Permet de répondre dans la langue d'origine, pas la traduction. */
+function detectPostSourceLang(): string | null {
+  const article = document.querySelector('article, [role="article"]');
+  return detectTranslatedFromLang(article as HTMLElement | null);
 }
 
 function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
@@ -146,6 +156,8 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
     .mode-badge.quick { background: #f0f9ff; color: #0369a1; }
     .close { background: transparent; border: 0; cursor: pointer; color: #888; font-size: 18px; padding: 0 4px; }
     .lead { color: #6b7280; font-size: 12px; margin-bottom: 10px; }
+    .langrow { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .langrow select { flex: 1; padding: 5px 6px; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; font-size: 12px; color: #111; background: #fff; box-sizing: border-box; }
     .tones { display: flex; flex-direction: column; gap: 6px; }
     .tone-btn { display: flex; align-items: center; gap: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; cursor: pointer; text-align: left; font-size: 13px; color: #111; transition: background 0.1s; }
     .tone-btn:hover { background: #eef2ff; border-color: #c7d2fe; }
@@ -190,10 +202,18 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
       <div class="lead" id="lead">
         ${
           isTask
-            ? `${liked ? "✓ Like envoyé. " : ""}Choisis un ton — tu pourras éditer avant publication.`
-            : "L'IA suggère 4 angles dans 4 tons différents pour commenter rapidement ce post."
+            ? `${liked ? "✓ Like envoyé. " : ""}Choisis un ton : tu pourras éditer avant publication.`
+            : "Choisis un ton, l'IA rédige le commentaire adapté à ce post."
         }
         ${excerpt ? `<div style="margin-top:6px;font-style:italic;color:#6b7280;">"${escapeHtml(excerpt)}…"</div>` : ""}
+      </div>
+      <div class="langrow">
+        <span title="Langue du commentaire" aria-hidden="true">🌐</span>
+        <select id="lang-select" aria-label="Langue du commentaire">
+          ${COMMENT_LANG_OPTIONS.map(
+            (o) => `<option value="${o.value}">${o.value === "auto" ? "Auto (langue du post)" : escapeHtml(o.label)}</option>`,
+          ).join("")}
+        </select>
       </div>
       <div class="tones" id="tones-container">
         ${(Object.keys(TONE_LABELS) as Tone[]).map((tone) => `
@@ -236,6 +256,16 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
   let suggestions: Record<Tone, string> | null =
     initialSuggestions as Record<Tone, string> | null;
 
+  // Langue forcée pour CE commentaire ("auto" = détection). Couvre les
+  // posts auto-traduits par le réseau sans marqueur exploitable. Changer
+  // la langue vide le cache pour régénérer dans la langue choisie.
+  const langSelect = root.getElementById("lang-select") as HTMLSelectElement;
+  let forcedLang = "auto";
+  langSelect?.addEventListener("change", () => {
+    forcedLang = langSelect.value || "auto";
+    suggestions = {} as Record<Tone, string>;
+  });
+
   root.querySelector(".close")?.addEventListener("click", removeBadge);
 
   // Active les boutons une fois les suggestions chargées.
@@ -243,43 +273,63 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
     toneButtons.forEach((b) => (b.disabled = false));
   };
 
+  // Mode task : suggestions pré-générées au fan-out, on active direct.
+  // Mode quick : on ne génère RIEN au montage. On génère uniquement le ton
+  // sur lequel l'user clique (économie de tokens, Béné 18 juin 2026). Les
+  // boutons sont donc actifs tout de suite.
   if (suggestions) {
     enableTones();
   } else {
-    // Mode quick : on charge les suggestions à la volée.
-    showStatus(statusEl, "loading", "<span class='loader'></span>Génération des suggestions IA…");
-    const content = scrapePostContent();
-    const language = detectLanguageFromCookie();
-    chrome.runtime.sendMessage(
-      {
-        type: "ai/suggest",
-        payload: {
-          activity_urn: activityUrn,
-          content_excerpt: content,
-          language,
-        },
-      },
-      (resp: unknown) => {
-        const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
-        if (r?.ok && r.suggestions) {
-          suggestions = r.suggestions as Record<Tone, string>;
-          showStatus(statusEl, "ok", "Choisis un ton ci-dessus.");
-          setTimeout(() => (statusEl.textContent = ""), 1500);
-        } else {
-          // Fallback statique côté badge si l'API a échoué côté SW.
-          suggestions = FALLBACK_SUGGESTIONS;
-          showStatus(statusEl, "err", "IA indisponible — suggestions génériques.");
-        }
-        enableTones();
-      },
-    );
+    suggestions = {} as Record<Tone, string>;
+    enableTones();
   }
 
+  /** Génère (à la demande) le commentaire d'UN ton et le met en cache
+   *  dans `suggestions`. Utilisé en mode quick + regénération ciblée. */
+  const generateTone = (tone: Tone, indications: string): Promise<string> =>
+    new Promise((resolve) => {
+      const content = isTask
+        ? mode.task.pod_posts.content_excerpt ?? scrapePostContent()
+        : scrapePostContent();
+      const language = detectLanguageFromCookie();
+      const postLang = detectPostSourceLang();
+      chrome.runtime.sendMessage(
+        {
+          type: "ai/suggest",
+          payload: {
+            activity_urn: activityUrn,
+            content_excerpt: content,
+            language,
+            tone,
+            ...(indications ? { indications } : {}),
+            ...(postLang ? { post_language_hint: postLang } : {}),
+            ...(forcedLang !== "auto" ? { force_language: forcedLang } : {}),
+          },
+        },
+        (resp: unknown) => {
+          const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
+          const text =
+            r?.ok && r.suggestions?.[tone] ? r.suggestions[tone] : FALLBACK_SUGGESTIONS[tone];
+          suggestions = { ...(suggestions ?? {}), [tone]: text } as Record<Tone, string>;
+          resolve(text);
+        },
+      );
+    });
+
   toneButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const tone = btn.dataset.tone as Tone;
       selectedTone = tone;
-      const text = suggestions?.[tone] ?? FALLBACK_SUGGESTIONS[tone];
+      // Déjà dispo (mode task, ou ton déjà cliqué) ? Sinon on génère
+      // uniquement ce ton-là, maintenant.
+      let text = suggestions?.[tone];
+      if (!text) {
+        toneButtons.forEach((b) => (b.disabled = true));
+        showStatus(statusEl, "loading", "<span class='loader'></span>Rédaction du commentaire…");
+        text = await generateTone(tone, regenInput.value.trim());
+        toneButtons.forEach((b) => (b.disabled = false));
+        statusEl.textContent = "";
+      }
       editorText.value = text;
       tonesContainer.style.display = "none";
       editor.classList.add("show");
@@ -314,6 +364,10 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
       ? mode.task.pod_posts.content_excerpt ?? scrapePostContent()
       : scrapePostContent();
     const language = detectLanguageFromCookie();
+    const postLang = detectPostSourceLang();
+    // On ne regénère QUE le ton sélectionné s'il y en a un (économie de
+    // tokens). Tant qu'aucun ton n'est choisi, on régénère les 4.
+    const tone = selectedTone;
     chrome.runtime.sendMessage(
       {
         type: "ai/suggest",
@@ -321,17 +375,27 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
           activity_urn: activityUrn,
           content_excerpt: content,
           language,
+          ...(tone ? { tone } : {}),
+          ...(postLang ? { post_language_hint: postLang } : {}),
+          ...(forcedLang !== "auto" ? { force_language: forcedLang } : {}),
           indications: indications || undefined,
         },
       },
       (resp: unknown) => {
         const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
         if (r?.ok && r.suggestions) {
-          suggestions = r.suggestions as Record<Tone, string>;
+          if (tone) {
+            const text = r.suggestions[tone] ?? editorText.value;
+            suggestions = { ...(suggestions ?? {}), [tone]: text } as Record<Tone, string>;
+            // Éditeur ouvert sur ce ton : on rafraîchit le texte affiché.
+            if (editor.classList.contains("show")) editorText.value = text;
+          } else {
+            suggestions = r.suggestions as Record<Tone, string>;
+          }
           showStatus(statusEl, "ok", "✓ Suggestions mises à jour.");
           setTimeout(() => (statusEl.textContent = ""), 1500);
         } else {
-          showStatus(statusEl, "err", "IA indisponible — anciennes suggestions conservées.");
+          showStatus(statusEl, "err", "IA indisponible, anciennes suggestions conservées.");
         }
         regenBtn.disabled = false;
         toneButtons.forEach((b) => (b.disabled = false));
