@@ -180,6 +180,10 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     fr: "↻ Recharger la page",
     en: "↻ Reload the page",
   },
+  "dropdown.noContent": {
+    fr: "Post illisible. Recharge la page, ou commente à la main.",
+    en: "Post unreadable. Reload the page, or comment manually.",
+  },
 };
 
 let _cachedLocale: Locale | null = null;

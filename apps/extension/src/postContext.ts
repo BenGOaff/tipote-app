@@ -148,6 +148,19 @@ export interface PostContext {
   translatedFromLang: string | null;
 }
 
+/** Sélecteur des noeuds à EXCLURE du texte du post : notre propre UI
+ *  injectée + celle d'autres extensions FB (Novalya & co). Sans ça, leur
+ *  texte (boutons de prospection, panneaux) pollue l'extrait envoyé à l'IA
+ *  et peut faire croire au modèle que le "post" est autre chose (drame
+ *  Béné 18 juin 2026 : commentaire de deuil parti en méta-commentaire). */
+const THIRD_PARTY_SELECTOR =
+  '[data-tipote-bar], [data-tipote-trigger], [data-tipote-menu], [class*="novalya" i], [id*="novalya" i], [data-novalya], [class*="nvl-" i], [class*="nvl_" i]';
+
+/** Longueur minimale de texte pour considérer qu'on a VRAIMENT capté le
+ *  post. En dessous, on ne génère pas à partir du texte (on tentera
+ *  l'image, sinon on demande à l'user de recharger / commenter à la main). */
+export const MIN_USABLE_TEXT = 15;
+
 export function extractPostContext(
   post: HTMLElement | null,
   composer: HTMLElement,
@@ -161,6 +174,16 @@ export function extractPostContext(
   let raw = post.innerText || "";
   if (editorText.trim() && raw.includes(editorText)) {
     raw = raw.replace(editorText, " ");
+  }
+  // On retire le texte injecté par notre UI + par d'autres extensions
+  // (Novalya) présent DANS le post, pour ne pas le confondre avec le post.
+  try {
+    for (const el of post.querySelectorAll<HTMLElement>(THIRD_PARTY_SELECTOR)) {
+      const t = (el.innerText || "").trim();
+      if (t.length > 2 && raw.includes(t)) raw = raw.split(t).join(" ");
+    }
+  } catch {
+    // selecteur :i non supporté sur un vieux moteur -> on ignore.
   }
   return {
     text: cleanPostText(raw),
