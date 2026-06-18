@@ -21,6 +21,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { generateSuggestions, type CommenterContext } from "@/lib/podAiSuggest";
+import { COMMENT_TONES, type CommentTone } from "@/lib/podBoost";
 import { recordExtVersion } from "@/lib/extVersion";
 
 // Buffer (base64 image) + fetch d'image externe => runtime Node requis.
@@ -213,6 +214,9 @@ export async function POST(req: Request) {
     /** Free-form hint from the user when they hit "Regenerate" in the
      *  badge (ex: "plus court", "moins formel", "parle de ton expé"). */
     indications?: string;
+    /** Ton unique demandé par l'extension (l'user a cliqué UN bouton).
+     *  Si absent ou invalide, on génère les 4 (rétro-compat / fan-out). */
+    tone?: string;
   };
   try {
     body = await req.json();
@@ -229,6 +233,17 @@ export async function POST(req: Request) {
   const network = body.network?.trim().toLowerCase() || null;
   const excerpt = body.content_excerpt?.trim() || null;
   const indications = body.indications?.trim().slice(0, 400) || null;
+
+  // Ton unique : l'extension demande UN seul commentaire (celui sur lequel
+  // l'user a cliqué) pour ne pas générer 4 commentaires dont 3 inutiles
+  // (Béné 18 juin 2026). Validé contre la liste blanche ; si absent/invalide
+  // on retombe sur les 4 (fan-out / vieilles versions de l'extension).
+  const requestedTone =
+    typeof body.tone === "string" &&
+    (COMMENT_TONES as readonly string[]).includes(body.tone)
+      ? (body.tone as CommentTone)
+      : null;
+  const tones = requestedTone ? [requestedTone] : undefined;
 
   // Résolution de la langue (Béné 13 juin 2026) :
   //   - "user"  -> on force la langue de contenu de l'user
@@ -278,6 +293,7 @@ export async function POST(req: Request) {
     contentExcerpt: excerpt,
     language,
     commenter,
+    tones,
     indications,
     matchPostLanguage,
     network,

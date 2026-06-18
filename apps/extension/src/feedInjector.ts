@@ -177,7 +177,11 @@ function* walkShadowRoots(root: Element): Generator<HTMLElement> {
 }
 
 function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
-  let cachedSuggestions: Record<ToneKey, string> | null = null;
+  // Cache PAR TON : on ne génère que le commentaire du ton cliqué (Béné
+  // 18 juin 2026 : générer les 4 d'un coup était un gaspillage de tokens).
+  // Re-cliquer le même ton ré-utilise le cache ; changer l'indication vide
+  // le cache.
+  let cache: Partial<Record<ToneKey, string>> = {};
   // Indication libre (ce que l'user veut, ex: "parle de la lumière",
   // "en anglais", "plus court"). Demandée par Monique le 13 juin 2026 :
   // sur FB/IG elle n'avait aucun moyen d'orienter les commentaires.
@@ -330,22 +334,30 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
       trigger.innerHTML = `<span>${tone.emoji} ${t("dropdown.generating")}</span>`;
       try {
         const indications = hintInput.value.trim().slice(0, 400);
-        // Régénère si pas de cache OU si l'indication a changé depuis
-        // la dernière génération.
-        if (!cachedSuggestions || indications !== lastUsedIndications) {
+        // L'indication a changé depuis la dernière génération -> on vide le
+        // cache (les anciens commentaires ne respectent plus la consigne).
+        if (indications !== lastUsedIndications) {
+          cache = {};
+          lastUsedIndications = indications;
+        }
+        // On ne génère QUE le ton cliqué, et seulement s'il n'est pas déjà
+        // en cache. Cliquer "Je suis d'accord" ne génère plus que ce
+        // commentaire-là, pas les 3 autres (économie de tokens).
+        if (!cache[tone.key]) {
           loading = true;
           const post = adapter.findParentPost(composer);
           // Extraction propre : texte sans bruit UI + image principale
           // (vision). Cf. postContext.ts (drame FB/IG, Béné 13 juin 2026).
           const ctx = extractPostContext(post, composer);
-          const content = ctx.text.slice(0, 1500);
+          // Cap large (8000) : on n'ampute plus les longs posts de leur
+          // contexte (retour Béné 18 juin 2026).
+          const content = ctx.text.slice(0, 8000);
           const language = detectLanguage();
-          console.log(`[tipote/feed] fetching suggestions for ${adapter.id}, content length = ${content.length}, image = ${ctx.imageUrl ? "yes" : "no"}, hint = ${JSON.stringify(indications)}`);
-          cachedSuggestions = await fetchSuggestions(content, language, adapter.id, indications, ctx.imageUrl);
-          lastUsedIndications = indications;
+          console.log(`[tipote/feed] fetching "${tone.key}" for ${adapter.id}, content length = ${content.length}, image = ${ctx.imageUrl ? "yes" : "no"}, hint = ${JSON.stringify(indications)}`);
+          cache[tone.key] = await fetchSuggestions(content, language, adapter.id, indications, ctx.imageUrl, tone.key);
           loading = false;
         }
-        adapter.fillEditor(composer, cachedSuggestions[tone.key]);
+        adapter.fillEditor(composer, cache[tone.key]!);
         const doneLabel = adapter.clipboardMode ? t("dropdown.copied") : t("dropdown.inserted");
         trigger.innerHTML = `<span>${tone.emoji} ${doneLabel}</span>`;
         // Clipboard mode reste affiché plus longtemps : l'user doit
@@ -513,7 +525,8 @@ async function fetchSuggestions(
   network: string,
   indications: string,
   imageUrl: string | null,
-): Promise<Record<ToneKey, string>> {
+  tone: ToneKey,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       chrome.runtime.sendMessage(
@@ -523,6 +536,7 @@ async function fetchSuggestions(
             content_excerpt: content,
             language,
             network,
+            tone,
             ...(indications ? { indications } : {}),
             ...(imageUrl ? { image_url: imageUrl } : {}),
           },
@@ -533,7 +547,8 @@ async function fetchSuggestions(
             return;
           }
           const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
-          if (r?.ok && r.suggestions) resolve(r.suggestions as Record<ToneKey, string>);
+          const text = r?.ok && r.suggestions ? r.suggestions[tone] : undefined;
+          if (typeof text === "string" && text.trim()) resolve(text);
           else reject(new Error("ai_suggest_failed"));
         },
       );

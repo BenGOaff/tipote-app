@@ -17,11 +17,18 @@
 
 import { callClaude, getClaudeApiKey } from "@/lib/claude";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
-import type { CommentTone } from "@/lib/podBoost";
+import { COMMENT_TONES, type CommentTone } from "@/lib/podBoost";
 import { NATURAL_WRITING_BLOCK } from "@/lib/prompts/quiz/system";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 export type CommentSuggestions = Record<CommentTone, string>;
+
+/** Cap de longueur du post envoyé au modèle. On ne "tronque" plus à
+ *  1500 (un post LinkedIn riche dépasse souvent ça et perdait son
+ *  contexte, retour Béné 18 juin 2026) : 8000 caractères couvrent la
+ *  quasi-totalité des posts réels. C'est un simple garde-fou anti-abus,
+ *  pas une troncature de confort. */
+const MAX_POST_CHARS = 8000;
 
 /** Profil du commenter (NOT l'auteur du post). Injecté dans le prompt
  *  pour que les suggestions matchent SA voix. Tous les champs sont
@@ -128,10 +135,44 @@ function formatCommenterContext(ctx: CommenterContext | undefined): string {
   return `\n### Contexte du commenter (à respecter scrupuleusement)\n\n${lines.join("\n")}\n`;
 }
 
+/** Brief par ton, injecté dans la consigne "Génère…". On ne décrit QUE
+ *  les tons demandés (cf. `tones`) pour ne pas gaspiller de tokens à
+ *  générer des commentaires que l'user n'a pas demandés (Béné 18 juin
+ *  2026 : "si l'user clique 'je suis d'accord' on ne génère QUE celui-là"). */
+const TONE_BRIEFS: Record<CommentTone, string> = {
+  agree: `"agree" : tu appuies sincèrement le propos avec UN détail concret ou un ressenti vrai. Jamais lèche-bottes, jamais "excellent post".`,
+  disagree: `"disagree" : tu ouvres l'échange en nuançant, sans arrogance ni condescendance. Tu prends position depuis TON vécu, sans laisser croire que tu fais le même métier que l'auteur.`,
+  add_value: `"add_value" : tu complètes avec UNE remarque utile que l'auteur n'a pas évoquée. Pas de redite déguisée.`,
+  ask_question: `"ask_question" : UNE question simple et sincère, celle qu'un vrai humain curieux poserait après avoir lu le post. Ancrée dans le post, sans jargon, jamais une question d'interview trop pointue.`,
+};
+
+/** Few-shot par ton : illustrent le TON et la STRUCTURE, domaine-neutre.
+ *  On n'injecte que les exemples des tons demandés. Les exemples
+ *  disagree/ask_question sont volontairement formulés pour NE PAS laisser
+ *  croire qu'on exerce le même métier que l'auteur, et pour rester
+ *  simples (retours Béné 18 juin 2026). */
+const TONE_FEWSHOT: Record<CommentTone, string> = {
+  agree: `agree (appui personnel, concret) :
+- "Pareil de mon côté, j'ai mis du temps à m'y mettre mais une fois pris le pli ça change vraiment tout."
+- "Tellement vrai. C'est souvent le détail qui paraît anodin qui fait toute la différence au final."`,
+  disagree: `disagree (posture nette, sans arrogance, sans prétendre faire le même métier) :
+- "Je le vis différemment honnêtement, et ça m'a surpris la première fois."
+- "Pas tout à fait convaincu sur ce point : de mon côté j'ai souvent observé l'inverse."`,
+  add_value: `add_value (apport spécifique non-redondant) :
+- "Un truc qu'on oublie souvent : ça marche bien mieux quand on le prépare en amont plutôt qu'à chaud."
+- "Petite nuance qui a tout changé pour moi : commencer par le plus simple avant d'ajouter de la complexité."`,
+  ask_question: `ask_question (question simple, sincère, ancrée dans le post) :
+- "Ça t'a pris combien de temps avant de voir une vraie différence ?"
+- "Curieux de savoir : qu'est-ce qui a été le plus dur au début ?"`,
+};
+
 function buildPrompt(args: {
   contentExcerpt: string | null;
   language: string;
   commenter?: CommenterContext;
+  /** Tons à générer. Défaut : les 4 (fan-out pod). En on-demand,
+   *  l'extension n'en demande qu'UN (celui sur lequel l'user a cliqué). */
+  tones?: CommentTone[];
   /** Indication libre saisie par l'user au moment de la regénération.
    *  Ex: "plus court", "moins formel", "parle de mon expérience en B2B".
    *  Injectée en fin de system prompt avec un poids fort. */
@@ -170,6 +211,11 @@ function buildPrompt(args: {
   const indications = args.indications?.trim();
   const hasContent = !!args.contentExcerpt?.trim();
 
+  // Tons demandés (validés en amont). Défaut = les 4 (fan-out pod).
+  const wanted = args.tones && args.tones.length ? args.tones : [...COMMENT_TONES];
+  const multi = wanted.length > 1;
+  const cmt = multi ? "les commentaires" : "le commentaire";
+
   const indicationsBlock = indications
     ? `\n### Indication EXPRESSE du commenter (priorité haute, à respecter)\n\n"${indications.slice(0, 400)}"\n`
     : "";
@@ -179,7 +225,7 @@ function buildPrompt(args: {
   // forcée par nom.
   const languageInstruction = args.matchPostLanguage
     ? hasContent
-      ? `dans EXACTEMENT la même langue que le post ci-dessous (détecte-la depuis son contenu : post en anglais -> commentaires en anglais, en espagnol -> en espagnol, en chinois -> en chinois, etc.)`
+      ? `dans EXACTEMENT la même langue que le post (détecte-la depuis son contenu : post en anglais -> en anglais, en espagnol -> en espagnol, en chinois -> en chinois, etc.)`
       : args.hasImage
         ? `dans la langue du texte visible sur l'image si elle en contient ; sinon en ${language}`
         : `dans la langue ${language}`
@@ -193,35 +239,19 @@ function buildPrompt(args: {
   // explicitement que le français qui l'entoure n'est QUE du style.
   const languageRuleBlock = `### RÈGLE DE LANGUE (ABSOLUE, PRIORITAIRE SUR TOUT LE RESTE)
 
-- Tu rédiges les 4 commentaires ${languageInstruction}.
+- Tu rédiges ${cmt} ${languageInstruction}.
 - Détecte la langue depuis le CONTENU RÉEL du post, jamais depuis cette consigne (elle est en français par convention interne).
-- Les règles, exemples et libellés ci-dessous sont rédigés en français UNIQUEMENT pour illustrer le style et la structure : ils ne doivent JAMAIS influencer la langue de ta sortie.
-- Post en anglais -> 4 commentaires 100% en anglais. Post en chinois -> 100% en chinois. Espagnol -> espagnol. Allemand -> allemand. Et ainsi de suite pour TOUTE langue.
-- Un commentaire ne mélange jamais deux langues.
+- Les règles, exemples et libellés ci-dessous sont en français UNIQUEMENT pour illustrer le style : ils ne doivent JAMAIS influencer la langue de ta sortie.
+- Post en anglais -> réponse 100% en anglais. Post en chinois -> 100% en chinois. Espagnol -> espagnol. Et ainsi de suite pour TOUTE langue.
+- Ne mélange jamais deux langues.
 `;
 
-  // Few-shot DOMAINE-NEUTRE : ils illustrent la STRUCTURE et le ton
-  // humain (un détail concret, une posture, une nuance, une question
-  // précise) SANS vocabulaire business. Les anciens exemples 100% SaaS/
-  // vente contaminaient tous les commentaires vers le jargon B2B, même
-  // pour un photographe (drame Béné 13 juin 2026).
-  const fewShotBlock = `\n### Exemples de TON et de STRUCTURE (français pour l'exemple uniquement : NE PAS recopier, NE PAS transposer le sujet, et SURTOUT ne pas en hériter la langue : tu réponds dans la langue du post)
+  // Few-shot : on n'injecte que les exemples des tons demandés (cf.
+  // TONE_FEWSHOT). Domaine-neutre pour ne pas contaminer vers le jargon
+  // B2B (drame Béné 13 juin 2026).
+  const fewShotBlock = `\n### Exemples de TON et de STRUCTURE (français pour l'exemple uniquement : NE PAS recopier, NE PAS transposer le sujet, ne pas en hériter la langue)
 
-agree (appui personnel, concret) :
-- "Pareil de mon côté, j'ai mis du temps à m'y mettre mais une fois pris le pli ça change vraiment tout."
-- "Tellement vrai. C'est souvent le détail qui paraît anodin qui fait toute la différence au final."
-
-disagree (posture nette, sans arrogance) :
-- "Je le vis différemment honnêtement : chez moi c'est l'inverse qui s'est produit, et ça m'a surpris."
-- "Pas convaincu sur ce point précis, j'ai souvent constaté le contraire dans la pratique."
-
-add_value (apport spécifique non-redondant) :
-- "Un truc qu'on oublie souvent : ça marche bien mieux quand on le prépare en amont plutôt qu'à chaud."
-- "Petite nuance qui a tout changé pour moi : commencer par le plus simple avant d'ajouter de la complexité."
-
-ask_question (question précise ancrée dans le post) :
-- "Quand tu dis ça, tu penses à quel cas précisément ?"
-- "Curieux de savoir comment tu gères ça quand le contexte change en cours de route."
+${wanted.map((tone) => TONE_FEWSHOT[tone]).join("\n\n")}
 `;
 
   const network = (args.network ?? "").toLowerCase();
@@ -230,40 +260,51 @@ ask_question (question précise ancrée dans le post) :
       ? `\n- Réseau : ${network}. Le registre est plus personnel et spontané que LinkedIn (souvent des posts photo, perso, lifestyle). Pas de jargon pro, pas de posture "expert".`
       : "";
 
-  const system = `Tu es un assistant qui aide à commenter rapidement un post sur les réseaux sociaux — comme si TU étais le commenter.
+  // Consigne "Génère…" adaptée au nombre de tons demandés. On ne décrit
+  // QUE les tons demandés : si l'user a cliqué "je suis d'accord", on ne
+  // génère pas les 3 autres (économie de tokens, Béné 18 juin 2026).
+  const generateLine = multi
+    ? `Génère ${wanted.length} suggestions de commentaire courtes (max 280 caractères chacune, sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, une pour chacun des tons suivants :`
+    : `Génère UN SEUL commentaire court (max 280 caractères, sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, pour le ton suivant :`;
+
+  const jsonShape = `{\n${wanted.map((tone) => `  "${tone}": "…"`).join(",\n")}\n}`;
+
+  const system = `Tu es un assistant qui aide à commenter rapidement un post sur les réseaux sociaux, comme si TU étais le commenter.
 
 ${languageRuleBlock}
-Génère 4 suggestions de commentaire courtes (max 280 caractères chacune, sans hashtag${allowEmojis ? "" : ", sans emoji"}) ${languageInstruction}, une pour chacun des tons :
+${generateLine}
 
-- "agree": appuie le propos avec UN détail concret. Jamais lèche-bottes, jamais "excellent post".
-- "disagree": ouvre un échange. Tu prends position sans arrogance ni condescendance. Apporte UN angle qui nuance.
-- "add_value": complète avec UNE remarque utile que l'auteur n'a pas évoquée. Pas de redite déguisée.
-- "ask_question": question précise et ancrée dans LE contenu du post. Pas de question vague.
+${wanted.map((tone) => `- ${TONE_BRIEFS[tone]}`).join("\n")}
 
-### RÈGLE ABSOLUE — le sujet du commentaire = le sujet DU POST
+### RÈGLE ABSOLUE : le sujet du commentaire = le sujet DU POST
 
 - Le commentaire porte sur CE QUE RACONTE LE POST, rien d'autre. Tu réagis à SON sujet, pas au tien.
 - Le métier / domaine du commenter (ci-dessous s'il est renseigné) sert UNIQUEMENT à choisir un angle crédible QUAND le sujet du post s'y prête. Si le post n'a aucun rapport avec ce métier, tu n'en parles PAS.
-- INTERDICTION ABSOLUE de ramener le post à un sujet business/marketing/vente/génération de leads si le post ne parle pas de ça. Un post photo se commente comme un post photo, un post cuisine comme un post cuisine.${networkLine}
+- Tu peux t'appuyer sur TON expérience, ta niche ou ton persona pour réagir, mais sans JAMAIS laisser croire que tu exerces le même métier que l'auteur, ni inventer une clientèle ou une activité que tu n'as pas. Reste honnête sur qui tu es : un freelance ne dit pas "les freelances que j'accompagne" s'il n'accompagne personne.
+- INTERDICTION ABSOLUE de ramener le post à un sujet business/marketing/vente/génération de leads s'il ne parle pas de ça. Un post photo se commente comme un post photo, un post cuisine comme un post cuisine.${networkLine}
 ${contextBlock}${indicationsBlock}
 ${NATURAL_WRITING_BLOCK}
 
+### Empathie + ressort humain (léger, jamais vendeur)
+
+- Mets-toi VRAIMENT à la place de la personne : reconnais son effort, son émotion ou sa situation avant de réagir.
+- Tu peux t'appuyer sur UN ressort humain qui sonne vrai (curiosité sincère, expérience partagée, sentiment d'appartenance, une émotion). JAMAIS de ressort commercial (rareté, urgence, promo, peur de rater, prix).
+
 ### Règles de style
 
-- Le commentaire sonne comme écrit PAR le commenter à la première personne, pas par une IA.
-- Pas de "En effet", "Tout à fait", "Effectivement", "Très intéressant", "Merci pour le partage", "Belle réflexion" — formules creuses à bannir.
-- Pas d'introduction inutile : on attaque DIRECTEMENT le fond.
-- Pour "ask_question" : ta question doit montrer que tu as LU le post. Cite ou paraphrase un élément précis.
-- Varie la longueur des 4 commentaires.
+- Le commentaire sonne comme écrit PAR le commenter à la première personne, jamais comme une IA.
+- Pas de "En effet", "Tout à fait", "Effectivement", "Très intéressant", "Merci pour le partage", "Belle réflexion" : formules creuses à bannir.
+- Pas d'introduction inutile : on attaque DIRECTEMENT le fond.${multi ? "\n- Varie la longueur et l'angle des commentaires." : ""}
 ${fewShotBlock}
 Tu réponds UNIQUEMENT par un JSON strict de cette forme exacte (pas de markdown, pas de \`\`\`, pas de texte avant ni après) :
 
-{
-  "agree": "…",
-  "disagree": "…",
-  "add_value": "…",
-  "ask_question": "…"
-}`;
+${jsonShape}`;
+
+  // Verbe d'action du message user, calé sur les tons demandés.
+  const genVerb = multi
+    ? `Génère les ${wanted.length} commentaires`
+    : `Génère uniquement le commentaire de type "${wanted[0]}"`;
+  const post = args.contentExcerpt?.slice(0, MAX_POST_CHARS) ?? "";
 
   // Construction du message user selon ce qu'on a : image (vision),
   // texte (légende), les deux, ou rien.
@@ -272,34 +313,38 @@ Tu réponds UNIQUEMENT par un JSON strict de cette forme exacte (pas de markdown
     userMsg = `Une image du post est jointe ci-dessus. Légende / texte du post :
 
 """
-${args.contentExcerpt!.slice(0, 1500)}
+${post}
 """
 
-Génère les 4 commentaires en réagissant À CE QUE MONTRE L'IMAGE et à la légende ensemble. Reste ancré dans ce post précis, ne pars pas sur un autre sujet.
+${genVerb} en réagissant À CE QUE MONTRE L'IMAGE et à la légende ensemble. Reste ancré dans ce post précis.
 
-Rappel langue : rédige les 4 commentaires ${languageInstruction}.`;
+Rappel langue : rédige ${cmt} ${languageInstruction} (la langue du post ci-dessus).`;
   } else if (args.hasImage) {
-    userMsg = `Une image du post est jointe ci-dessus (le post n'a pas de texte, c'est une publication visuelle). Génère 4 commentaires qui réagissent SINCÈREMENT À CE QUE MONTRE L'IMAGE (ce qu'on y voit : la scène, l'ambiance, un détail). Reste naturel, chaleureux, jamais business/marketing. Décris ou rebondis sur un élément concret de l'image, pas une généralité.`;
+    userMsg = `Une image du post est jointe ci-dessus (le post n'a pas de texte, c'est une publication visuelle). ${genVerb} en réagissant SINCÈREMENT À CE QUE MONTRE L'IMAGE (la scène, l'ambiance, un détail). Reste naturel, chaleureux, jamais business/marketing. Rebondis sur un élément concret de l'image, pas une généralité.`;
   } else if (hasContent) {
     userMsg = `Voici le post à commenter :
 
 """
-${args.contentExcerpt!.slice(0, 1500)}
+${post}
 """
 
-Génère les 4 commentaires maintenant, EN RÉAGISSANT À CE POST PRÉCIS (son sujet, pas un autre).
+${genVerb} maintenant, EN RÉAGISSANT À CE POST PRÉCIS (son sujet, pas un autre).
 
-Rappel langue : rédige les 4 commentaires ${languageInstruction}.`;
+Rappel langue : rédige ${cmt} ${languageInstruction} (la langue du post ci-dessus).`;
   } else {
-    userMsg = `Le post ne contient pas de texte lisible (c'est probablement une image ou une vidéo, ex: une photo). Génère 4 réactions COURTES, chaleureuses et universelles qui conviennent à un post visuel, dans la langue ${language}. Reste léger et bienveillant. NE invente PAS de sujet, et SURTOUT PAS de contenu business/marketing/vente. Une réaction d'appréciation sincère, une réaction qui apporte une touche perso, un petit complément, une question légère et ouverte.`;
+    userMsg = `Le post ne contient pas de texte lisible (c'est probablement une image ou une vidéo, ex: une photo). ${genVerb} : ${multi ? "des réactions courtes" : "une réaction courte"}, chaleureuse${multi ? "s" : ""} et universelle${multi ? "s" : ""} qui conviennent à un post visuel, dans la langue ${language}. Reste léger et bienveillant. N'invente PAS de sujet, et SURTOUT PAS de contenu business/marketing/vente.`;
   }
 
   return { system, user: userMsg };
 }
 
 /** Parse la réponse Claude (JSON strict normalement). Robuste aux
- *  cas où Claude wrap quand même en markdown malgré la consigne. */
-function parseSuggestions(rawResponse: string): CommentSuggestions | null {
+ *  cas où Claude wrap quand même en markdown malgré la consigne.
+ *  `wanted` = les tons attendus (on ne valide QUE ceux-là). */
+function parseSuggestions(
+  rawResponse: string,
+  wanted: CommentTone[],
+): Partial<CommentSuggestions> | null {
   let cleaned = rawResponse.trim();
   // Strip markdown fences si Claude en a ajouté.
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
@@ -311,9 +356,8 @@ function parseSuggestions(rawResponse: string): CommentSuggestions | null {
 
   try {
     const parsed = JSON.parse(json) as Record<string, unknown>;
-    const keys: CommentTone[] = ["agree", "disagree", "add_value", "ask_question"];
     const out: Partial<CommentSuggestions> = {};
-    for (const k of keys) {
+    for (const k of wanted) {
       const v = parsed[k];
       if (typeof v === "string" && v.trim().length > 0) {
         // sanitizeAiText : strip em-dash, decorative emojis, double spaces.
@@ -325,10 +369,17 @@ function parseSuggestions(rawResponse: string): CommentSuggestions | null {
         return null;
       }
     }
-    return out as CommentSuggestions;
+    return out;
   } catch {
     return null;
   }
+}
+
+/** Fallback statique restreint aux tons demandés. */
+function fallbackFor(wanted: CommentTone[]): Partial<CommentSuggestions> {
+  const out: Partial<CommentSuggestions> = {};
+  for (const t of wanted) out[t] = FALLBACK_SUGGESTIONS[t];
+  return out;
 }
 
 /** Génère les 4 suggestions pour un post LinkedIn donné. Retourne
@@ -343,6 +394,9 @@ export async function generateSuggestions(args: {
   contentExcerpt: string | null;
   language: string;
   commenter?: CommenterContext;
+  /** Tons à générer. Défaut = les 4 (fan-out pod). En on-demand,
+   *  l'extension n'en demande qu'UN (économie de tokens). */
+  tones?: CommentTone[];
   /** Free-form user-supplied hint for this generation (regenerate flow). */
   indications?: string | null;
   /** true = suivre la langue du post ; false = forcer `language`. */
@@ -352,16 +406,23 @@ export async function generateSuggestions(args: {
   /** Image du post (base64) pour la vision : Claude commente ce qu'elle
    *  montre. Crucial sur les réseaux visuels (FB/IG). */
   image?: { media_type: string; data: string } | null;
-}): Promise<CommentSuggestions> {
+}): Promise<Partial<CommentSuggestions>> {
+  // Tons validés : on ignore les valeurs inconnues, et on retombe sur les
+  // 4 si rien de valide n'est demandé.
+  const wanted = (args.tones ?? []).filter((t): t is CommentTone =>
+    (COMMENT_TONES as readonly string[]).includes(t),
+  );
+  const tones = wanted.length ? wanted : [...COMMENT_TONES];
+
   let apiKey: string;
   try {
     apiKey = getClaudeApiKey();
   } catch (err) {
     console.warn("[podAiSuggest] no API key, returning fallback", err);
-    return FALLBACK_SUGGESTIONS;
+    return fallbackFor(tones);
   }
 
-  const { system, user } = buildPrompt({ ...args, hasImage: !!args.image });
+  const { system, user } = buildPrompt({ ...args, tones, hasImage: !!args.image });
 
   try {
     const text = await callClaude({
@@ -374,8 +435,7 @@ export async function generateSuggestions(args: {
       system,
       user,
       images: args.image ? [args.image] : undefined,
-      // Suggestions = 4 × ~280 chars max, donc 1500 tokens largement
-      // assez. On garde une marge pour le JSON wrapper.
+      // Cap large : 1 à 4 × ~280 chars + wrapper JSON. 2000 tokens suffisent.
       maxTokens: 2000,
       // NB : Opus 4.7+ a retiré `temperature` de l'API Messages — callClaude
       // ne l'envoie pas pour ces modèles. Cette valeur ne s'applique donc
@@ -385,12 +445,12 @@ export async function generateSuggestions(args: {
       // marge d'idle un peu plus large que sur Sonnet.
       idleTimeoutMs: args.image ? 40_000 : 30_000,
     });
-    const parsed = parseSuggestions(text);
+    const parsed = parseSuggestions(text, tones);
     if (parsed) return parsed;
     console.warn("[podAiSuggest] failed to parse Claude response, fallback", text.slice(0, 200));
-    return FALLBACK_SUGGESTIONS;
+    return fallbackFor(tones);
   } catch (err) {
     console.warn("[podAiSuggest] Claude call failed, fallback", err);
-    return FALLBACK_SUGGESTIONS;
+    return fallbackFor(tones);
   }
 }
