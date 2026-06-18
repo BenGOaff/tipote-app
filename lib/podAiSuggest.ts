@@ -154,23 +154,24 @@ const TONE_BRIEFS: Record<CommentTone, string> = {
 };
 
 /** Few-shot par ton : illustrent le TON et la STRUCTURE, domaine-neutre.
- *  On n'injecte que les exemples des tons demandés. Les exemples
- *  disagree/ask_question sont volontairement formulés pour NE PAS laisser
- *  croire qu'on exerce le même métier que l'auteur, et pour rester
- *  simples (retours Béné 18 juin 2026). */
+ *  On n'injecte que les exemples des tons demandés. Ils sont volontairement
+ *  SPONTANÉS, écrits vite, comme un vrai commentaire tapé sur le pouce :
+ *  jamais construits comme un article, un email ou un post (Béné 18 juin
+ *  2026). disagree/ask_question évitent aussi de laisser croire qu'on
+ *  exerce le même métier que l'auteur. */
 const TONE_FEWSHOT: Record<CommentTone, string> = {
-  agree: `agree (appui personnel, concret, ton parlé) :
-- "Pareil pour moi, c'est pas évident au début mais une fois l'habitude prise on voit que ça marche."
-- "Tellement vrai. C'est souvent le détail qui paraît anodin qui fait toute la différence au final."`,
-  disagree: `disagree (posture nette, sans arrogance, sans prétendre faire le même métier) :
-- "Je le vis différemment honnêtement, et ça m'a surpris la première fois."
-- "Pas tout à fait convaincu sur ce point : de mon côté j'ai souvent observé l'inverse."`,
-  add_value: `add_value (apport spécifique non-redondant) :
-- "Un truc qu'on oublie souvent : ça marche bien mieux quand on le prépare en amont plutôt qu'à chaud."
-- "Petite nuance qui a tout changé pour moi : commencer par le plus simple avant d'ajouter de la complexité."`,
-  ask_question: `ask_question (question simple, sincère, ancrée dans le post) :
+  agree: `agree (appui spontané, ton parlé) :
+- "Ah ouais, complètement. C'est souvent le petit truc qu'on néglige qui change tout en fait."
+- "Pareil pour moi, c'est pas évident au début mais une fois l'habitude prise on voit que ça marche."`,
+  disagree: `disagree (désaccord posé, spontané, sans prétendre faire le même métier) :
+- "Mmh, perso je le vis pas comme ça, chez moi c'est plutôt l'inverse qui s'est passé."
+- "Pas convaincu sur ce point honnêtement, j'ai souvent vu le contraire. Après ça dépend peut-être du contexte."`,
+  add_value: `add_value (apport spontané, balancé comme à l'oral, jamais en mode article) :
+- "Un truc qui m'a aidé : commencer par le plus simple avant d'ajouter du compliqué. Bizarrement ça marche mieux."
+- "J'ajoute juste un truc, ça marche carrément mieux quand c'est préparé en amont plutôt qu'à chaud. Je m'en suis rendu compte un peu tard mais ça change tout."`,
+  ask_question: `ask_question (question simple et sincère, comme à l'oral) :
 - "Ça t'a pris combien de temps avant de voir une vraie différence ?"
-- "Curieux de savoir : qu'est-ce qui a été le plus dur au début ?"`,
+- "Curieux, c'était quoi le plus dur au début ?"`,
 };
 
 function buildPrompt(args: {
@@ -306,6 +307,7 @@ ${NATURAL_WRITING_BLOCK}
 ### Règles de style
 
 - Le commentaire sonne comme écrit PAR le commenter à la première personne, jamais comme une IA.
+- Ça doit sonner SPONTANÉ, tapé vite, comme un commentaire qu'on laisse sur le pouce. Jamais construit comme un article de blog, un email ou même un post. Apporter de la valeur, oui, mais sans jamais perdre ce côté écrit sur le moment.
 - Pas de "En effet", "Tout à fait", "Effectivement", "Très intéressant", "Merci pour le partage", "Belle réflexion" : formules creuses à bannir.
 - Pas d'introduction inutile : on attaque DIRECTEMENT le fond.${multi ? "\n- Varie la longueur et l'angle des commentaires." : ""}
 ${fewShotBlock}
