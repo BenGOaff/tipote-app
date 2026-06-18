@@ -18,6 +18,7 @@
 
 import { voyagerLike, voyagerComment } from "./voyager";
 import { detectTranslatedFromLang } from "./postContext";
+import { COMMENT_LANG_OPTIONS } from "./config";
 
 type Task = {
   id: string;
@@ -155,6 +156,8 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
     .mode-badge.quick { background: #f0f9ff; color: #0369a1; }
     .close { background: transparent; border: 0; cursor: pointer; color: #888; font-size: 18px; padding: 0 4px; }
     .lead { color: #6b7280; font-size: 12px; margin-bottom: 10px; }
+    .langrow { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .langrow select { flex: 1; padding: 5px 6px; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; font-size: 12px; color: #111; background: #fff; box-sizing: border-box; }
     .tones { display: flex; flex-direction: column; gap: 6px; }
     .tone-btn { display: flex; align-items: center; gap: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; cursor: pointer; text-align: left; font-size: 13px; color: #111; transition: background 0.1s; }
     .tone-btn:hover { background: #eef2ff; border-color: #c7d2fe; }
@@ -204,6 +207,14 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
         }
         ${excerpt ? `<div style="margin-top:6px;font-style:italic;color:#6b7280;">"${escapeHtml(excerpt)}…"</div>` : ""}
       </div>
+      <div class="langrow">
+        <span title="Langue du commentaire" aria-hidden="true">🌐</span>
+        <select id="lang-select" aria-label="Langue du commentaire">
+          ${COMMENT_LANG_OPTIONS.map(
+            (o) => `<option value="${o.value}">${o.value === "auto" ? "Auto (langue du post)" : escapeHtml(o.label)}</option>`,
+          ).join("")}
+        </select>
+      </div>
       <div class="tones" id="tones-container">
         ${(Object.keys(TONE_LABELS) as Tone[]).map((tone) => `
           <button class="tone-btn" data-tone="${tone}" disabled>
@@ -245,6 +256,16 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
   let suggestions: Record<Tone, string> | null =
     initialSuggestions as Record<Tone, string> | null;
 
+  // Langue forcée pour CE commentaire ("auto" = détection). Couvre les
+  // posts auto-traduits par le réseau sans marqueur exploitable. Changer
+  // la langue vide le cache pour régénérer dans la langue choisie.
+  const langSelect = root.getElementById("lang-select") as HTMLSelectElement;
+  let forcedLang = "auto";
+  langSelect?.addEventListener("change", () => {
+    forcedLang = langSelect.value || "auto";
+    suggestions = {} as Record<Tone, string>;
+  });
+
   root.querySelector(".close")?.addEventListener("click", removeBadge);
 
   // Active les boutons une fois les suggestions chargées.
@@ -282,6 +303,7 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
             tone,
             ...(indications ? { indications } : {}),
             ...(postLang ? { post_language_hint: postLang } : {}),
+            ...(forcedLang !== "auto" ? { force_language: forcedLang } : {}),
           },
         },
         (resp: unknown) => {
@@ -355,6 +377,7 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
           language,
           ...(tone ? { tone } : {}),
           ...(postLang ? { post_language_hint: postLang } : {}),
+          ...(forcedLang !== "auto" ? { force_language: forcedLang } : {}),
           indications: indications || undefined,
         },
       },

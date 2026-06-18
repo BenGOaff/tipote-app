@@ -221,6 +221,10 @@ export async function POST(req: Request) {
      *  (ex. post EN affiché en FR -> "en"). Détectée par l'extension via
      *  le marqueur "Traduit de X". Force la réponse dans cette langue. */
     post_language_hint?: string;
+    /** Langue choisie EXPLICITEMENT par l'user pour CE commentaire via le
+     *  sélecteur du menu (priorité maximale). Couvre les traductions réseau
+     *  sans marqueur, où l'auto-détection ne peut pas trancher. */
+    force_language?: string;
   };
   try {
     body = await req.json();
@@ -257,6 +261,14 @@ export async function POST(req: Request) {
     typeof body.post_language_hint === "string" &&
     /^[a-z]{2}$/.test(body.post_language_hint.trim().toLowerCase())
       ? body.post_language_hint.trim().toLowerCase()
+      : null;
+
+  // Langue forcée explicitement par l'user pour ce commentaire (sélecteur
+  // du menu) : priorité maximale, au-dessus de tout le reste.
+  const forceLanguage =
+    typeof body.force_language === "string" &&
+    /^[a-z]{2}$/.test(body.force_language.trim().toLowerCase())
+      ? body.force_language.trim().toLowerCase()
       : null;
 
   // Résolution de la langue (Béné 13 juin 2026) :
@@ -302,6 +314,13 @@ export async function POST(req: Request) {
   // l'applique quand même : la langue d'origine prime sur la détection.
   if (postLanguageHint && matchPostLanguage) {
     language = postLanguageHint;
+    matchPostLanguage = false;
+  }
+
+  // Langue forcée par l'user pour ce commentaire : priorité absolue, elle
+  // écrase la détection, le hint de traduction ET le réglage global.
+  if (forceLanguage) {
+    language = forceLanguage;
     matchPostLanguage = false;
   }
 
