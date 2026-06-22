@@ -737,6 +737,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
           .upsert(
             {
               user_id: quiz.user_id,
+              project_id: quiz.project_id ?? null,
               email,
               first_name: firstName || null,
               last_name: lastName || null,

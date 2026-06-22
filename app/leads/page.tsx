@@ -30,7 +30,9 @@ export default async function LeadsPage() {
     .eq("user_id", session.user.id)
     .order("created_at", { ascending: false });
 
-  if (projectId) query = query.eq("project_id", projectId);
+  // Inclut les leads legacy sans project_id (captures avant l'assignation
+  // projet) pour ne JAMAIS les masquer une fois un projet par defaut cree.
+  if (projectId) query = query.or(`project_id.eq.${projectId},project_id.is.null`);
 
   const { data, error } = await query;
 
