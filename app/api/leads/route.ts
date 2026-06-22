@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
       .select("*", { count: "exact" })
       .eq("user_id", user.id);
 
-    if (projectId) query = query.eq("project_id", projectId);
+    // Inclut les leads legacy sans project_id (jamais masquer un lead).
+    if (projectId) query = query.or(`project_id.eq.${projectId},project_id.is.null`);
     if (source) query = query.eq("source", source);
 
     // Search uses blind index for email, or falls back to plaintext cols for name
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
         .from("leads")
         .select("id, created_at")
         .eq("user_id", user.id);
-      if (projectId) timelineQuery = timelineQuery.eq("project_id", projectId);
+      if (projectId) timelineQuery = timelineQuery.or(`project_id.eq.${projectId},project_id.is.null`);
       if (source) timelineQuery = timelineQuery.eq("source", source);
       const { data: timeline } = await timelineQuery;
       lockedIds = computeLockedLeadIds(timeline ?? [], plan);

@@ -42,7 +42,8 @@ export async function GET(req: NextRequest) {
       .select("*")
       .eq("user_id", user.id);
 
-    if (projectId) query = query.eq("project_id", projectId);
+    // Inclut les leads legacy sans project_id (jamais masquer un lead).
+    if (projectId) query = query.or(`project_id.eq.${projectId},project_id.is.null`);
     if (idList && idList.length > 0) query = query.in("id", idList);
 
     const { data, error } = await query.order("created_at", { ascending: false });
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
         .from("leads")
         .select("id, created_at")
         .eq("user_id", user.id);
-      if (projectId) timelineQuery = timelineQuery.eq("project_id", projectId);
+      if (projectId) timelineQuery = timelineQuery.or(`project_id.eq.${projectId},project_id.is.null`);
       const { data: timeline } = await timelineQuery;
       lockedIds = computeLockedLeadIds(timeline ?? [], plan);
     }
