@@ -1149,6 +1149,34 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       options: q.options.map((o, j) => j === oi ? { ...o, image_url: null } : o),
     }));
   }
+  // Image de la question (au-dessus de l'enonce), stockee dans config JSONB.
+  const setQuestionImage = (qi: number, url: string | null) =>
+    setEditQuestions((p) => p.map((q, i) => i !== qi ? q : { ...q, config: { ...(q.config ?? {}), image_url: url } }));
+  const setQuestionImageWidth = (qi: number, w: number | null) =>
+    setEditQuestions((p) => p.map((q, i) => i !== qi ? q : { ...q, config: { ...(q.config ?? {}), image_width: w } }));
+  const [uploadingQuestionKey, setUploadingQuestionKey] = useState<number | null>(null);
+  async function handleQuestionImageUpload(file: File, qi: number) {
+    if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("toastImageTooHeavy", { max: 10 })); return; }
+    setUploadingQuestionKey(qi);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("toastNotLoggedIn")); return; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `quiz-questions/${user.id}/${quizId}-q${qi}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setQuestionImage(qi, urlData.publicUrl);
+    } catch (err) {
+      console.error("Question image upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(t("toastImageUploadError", { msg }));
+    } finally {
+      setUploadingQuestionKey(null);
+    }
+  }
 
   // Save
   const handleSave = async () => {
@@ -1881,6 +1909,35 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         </div>
 
                         <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} previewTransform={previewInterpolate} availableVars={personalizationVars} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
+                        {/* Image de la question (au-dessus de l'enonce) + resize. */}
+                        {(() => {
+                          const cfg = (q.config ?? {}) as Record<string, unknown>;
+                          const imgUrl = typeof cfg.image_url === "string" ? cfg.image_url : null;
+                          const w = typeof cfg.image_width === "number" ? cfg.image_width : null;
+                          return imgUrl ? (
+                            <div className="mt-2 space-y-1.5">
+                              <div className="relative inline-block w-full">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={imgUrl} alt="" className={`h-auto rounded-lg ${w ? "mx-auto block" : "w-full"}`} style={w ? { width: `${w}%` } : undefined} />
+                                <button type="button" onClick={() => setQuestionImage(qi, null)} className="absolute top-1.5 right-1.5 bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1 shadow" aria-label="Retirer l'image"><X className="w-3.5 h-3.5" /></button>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>Taille</span>
+                                <input type="range" min={25} max={100} step={5} value={w ?? 100} onChange={(e) => { const v = Number(e.target.value); setQuestionImageWidth(qi, v >= 100 ? null : v); }} className="w-32 cursor-pointer accent-primary" />
+                                <span className="w-9 text-right tabular-nums">{w ?? 100}%</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <label className="text-xs inline-flex items-center gap-1.5 px-2 py-1 rounded border border-dashed cursor-pointer hover:bg-muted text-muted-foreground">
+                                <input type="file" accept="image/*" className="hidden" disabled={uploadingQuestionKey === qi} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void handleQuestionImageUpload(f, qi); }} />
+                                {uploadingQuestionKey === qi ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
+                                Image de la question
+                              </label>
+                              <GifPickerButton label="GIF" onPick={(url) => setQuestionImage(qi, url)} />
+                            </div>
+                          );
+                        })()}
 
                         {qType === "rating_scale" && (() => {
                           const min = typeof cfg.min === "number" ? cfg.min : 0;

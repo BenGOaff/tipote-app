@@ -73,26 +73,75 @@ function isPostComposerEl(el: HTMLElement): boolean {
   return matchesAria(el, POST_ARIA_PATTERNS);
 }
 
+/** Texte "utile" d'un noeud = son innerText moins celui du composer
+ *  (le commentaire en cours de saisie ne fait pas partie du post). */
+function usefulTextLen(node: HTMLElement, composer: HTMLElement): number {
+  const text = (node.innerText || "").trim();
+  const editorText = (composer.innerText || "").trim();
+  return text.length - editorText.length;
+}
+
+/** Page "post unique" (permalink, photo, story, groupe/posts) : le
+ *  composer de commentaire n'est PAS imbrique dans l'article du post,
+ *  donc la remontee DOM ne le trouve pas. Sur ces pages il n'y a qu'un
+ *  post principal, on peut donc le retrouver par un scan global sans
+ *  risque de se tromper de post (contrairement au fil). */
+function isSinglePostPage(): boolean {
+  const u = location.href;
+  return /\/permalink\/|\/posts\/|\/photo|\/photos\/|story_fbid=|[?&]fbid=|\/groups\/[^/]+\/(permalink|posts)\//i.test(u);
+}
+
 /** Sur FB, le post est plus haut dans le DOM (~5-10 niveaux). On
- *  remonte jusqu'à un ancêtre avec un texte conséquent. Heuristique
- *  identique à LinkedIn mais avec un cap plus large (FB a tendance à
- *  enrouler les posts dans plus de wrappers). */
+ *  remonte jusqu'a un ancetre avec un texte consequent. Heuristique
+ *  identique a LinkedIn mais avec un cap plus large (FB a tendance a
+ *  enrouler les posts dans plus de wrappers).
+ *
+ *  Drame Bene (permalink / groupes, juin 2026) : "post illisible" alors
+ *  qu'il y a du texte. Deux causes corrigees ici :
+ *   1. On retournait le 1er [role=article] rencontre MEME vide (= le
+ *      wrapper du commentaire), d'ou text=0. On ne s'arrete plus sur un
+ *      article sans texte, on continue de remonter.
+ *   2. Sur les pages "post unique" (permalink/photo/story), le composer
+ *      n'est pas un descendant de l'article du post -> la remontee
+ *      echoue. Repli : on prend l'article le plus riche de la page. */
 function findParentPost(composer: HTMLElement): HTMLElement | null {
   let node: HTMLElement | null = composer.parentElement;
   let depth = 0;
-  while (node && depth < 15) {
-    const text = (node.innerText || "").trim();
-    const editorText = (composer.innerText || "").trim();
-    const otherText = text.length - editorText.length;
+  let articleFallback: HTMLElement | null = null;
+  while (node && depth < 20) {
+    const otherText = usefulTextLen(node, composer);
     if (otherText > 80) return node;
-    // Article = signal fort sur FB (chaque post est dans un <article>
-    // ou un div avec role="article"). Bonus: on accepte aussi un
-    // div role="article" avec moins de texte (en cas de partage seul).
+    // Article = signal fort sur FB. Mais un article SANS texte utile est
+    // un wrapper de commentaire (pas le post) : on le garde en repli mais
+    // on continue de remonter pour trouver le vrai post.
     if (node.tagName === "ARTICLE" || node.getAttribute("role") === "article") {
-      return node;
+      if (otherText > 0 && !articleFallback) articleFallback = node;
     }
     node = node.parentElement;
     depth++;
+  }
+  if (articleFallback) return articleFallback;
+
+  // Repli page "post unique" : aucun ancetre lisible trouve. On prend le
+  // [role=article] (ou <article>) le plus riche en texte = le post
+  // principal. Volontairement limite a ces pages pour ne JAMAIS prendre
+  // le mauvais post dans un fil.
+  if (isSinglePostPage()) {
+    const articles = Array.from(
+      document.querySelectorAll<HTMLElement>('[role="article"], article'),
+    );
+    let best: HTMLElement | null = null;
+    let bestLen = 0;
+    for (const art of articles) {
+      if (art.contains(composer)) continue; // jamais la zone du composer
+      const len = (art.innerText || "").trim().length;
+      if (len > bestLen) { bestLen = len; best = art; }
+    }
+    if (best && bestLen > 30) return best;
+    // Dernier repli : conteneur principal de la page (contient le post +
+    // les commentaires) ; extractPostContext nettoiera le bruit.
+    const main = document.querySelector<HTMLElement>('[role="main"]');
+    if (main && (main.innerText || "").trim().length > 30) return main;
   }
   return null;
 }
