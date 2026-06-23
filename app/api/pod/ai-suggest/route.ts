@@ -22,7 +22,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { generateSuggestions, type CommenterContext } from "@/lib/podAiSuggest";
 import { COMMENT_TONES, type CommentTone } from "@/lib/podBoost";
-import { consumeCredits } from "@/lib/credits";
+import { consumeCredits, ensureUserCredits } from "@/lib/credits";
 import { recordExtVersion } from "@/lib/extVersion";
 
 // Buffer (base64 image) + fetch d'image externe => runtime Node requis.
@@ -333,6 +333,14 @@ export async function POST(req: Request) {
   const CREDIT_PER_COMMENT = 0.5;
   const numComments = tones?.length ?? COMMENT_TONES.length;
   try {
+    // IMPORTANT : on s'assure que la ligne de credits existe (creation +
+    // reset mensuel) AVANT de decompter, comme TOUS les autres endpoints IA
+    // (content/generate, content/refine, quiz/generate...). Le commit du
+    // 22 juin avait oublie ce ensureUserCredits -> consume_ai_credits
+    // echouait (pas de ligne) -> 500 -> "ai_suggest_failed" cote extension.
+    // C'EST la vraie cause de la panne, pas le montant fractionnaire 0,5
+    // (utilise aussi par content/refine sans souci).
+    await ensureUserCredits(user.id);
     await consumeCredits(user.id, CREDIT_PER_COMMENT * numComments, {
       feature: "ext_comment_suggest",
       network,
@@ -342,14 +350,11 @@ export async function POST(req: Request) {
     if ((err as { code?: string }).code === "NO_CREDITS") {
       return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
     }
-    // RESILIENCE (Bene 23 juin 2026) : une erreur d'INFRA du sous-systeme
-    // credits (RPC indispo, montant fractionnaire rejete, lock, etc.) ne
-    // doit JAMAIS casser la generation de commentaires, qui est le coeur
-    // du produit. On loggue pour diag et on continue : seul un vrai
-    // NO_CREDITS (geste metier) bloque l'utilisateur. Sans ce garde-fou,
-    // le 22 juin l'ajout du decompte 0,5 credit a coupe toute generation
-    // sur Facebook (erreur 500 -> "ai_suggest_failed" cote extension).
-    console.error("[ai-suggest] consumeCredits infra error, generating anyway", err);
+    // Defense en profondeur : si malgre tout le sous-systeme credits a un
+    // pepin d'INFRA (RPC indispo, lock...), on ne casse pas le coeur du
+    // produit (generation de commentaires). On loggue et on continue ;
+    // seul un vrai NO_CREDITS bloque l'utilisateur.
+    console.error("[ai-suggest] credits infra error, generating anyway", err);
   }
 
   // Vision : on récupère l'image SURTOUT quand le texte seul est faible
