@@ -996,12 +996,15 @@ export default function PublicQuizClient({
       // "view" : l'init script du pixel (server-rendered) fire déjà
       // PageView au load, re-fire ici causerait un doublon dans les
       // rapports Meta/GA.
-      if (quiz && event !== "view") {
-        // Lead : on fige un event_id partagé avec l'appel CAPI serveur
-        // (capture email) pour que Meta fusionne les 2 sources en 1 event.
-        if (event === "complete" && !leadEventIdRef.current) {
-          leadEventIdRef.current = newEventId();
-        }
+      // complete = Lead (+ GA4 generate_lead + conversion Google Ads) :
+      // ON NE LE FIRE PLUS ICI. "complete" = le visiteur a fini les
+      // questions et ARRIVE sur l'etape email -> ce n'est PAS encore un
+      // prospect. Le fire ici comptait comme Lead TOUS ceux qui n'ont
+      // jamais laisse leur email (+ re-fire au refresh/retour) -> Meta
+      // sur-comptait ~3x les prospects (drame Gwenn 23 juin 2026). Le Lead
+      // est desormais fired a la CAPTURE EMAIL reelle (handleSubmitEmail),
+      // une seule fois, avec dedup CAPI. Seuls start / share restent ici.
+      if (quiz && (event === "start" || event === "share")) {
         fireQuizPixel(event, {
           meta_pixel_id: quiz.meta_pixel_id,
           ga4_measurement_id: quiz.ga4_measurement_id,
@@ -1009,7 +1012,6 @@ export default function PublicQuizClient({
           google_ads_conversion_label: quiz.google_ads_conversion_label,
         }, {
           contentName: stripHtml(quiz.title),
-          eventId: event === "complete" ? leadEventIdRef.current : undefined,
         });
       }
     },
@@ -1374,6 +1376,16 @@ export default function PublicQuizClient({
       // skip the actual lead submission so the creator can walk through the
       // flow without polluting their lead list.
       if (!isPreviewMode) {
+        // event_id stable + persiste : partage entre le pixel navigateur
+        // (Lead, fired apres succes ci-dessous) et l'appel CAPI serveur
+        // (meta_event_id) -> Meta fusionne les 2 sources en 1 (dedup).
+        if (!leadEventIdRef.current) {
+          try {
+            const k = `tpote_lead_eid_${quizId}`;
+            leadEventIdRef.current = sessionStorage.getItem(k) || newEventId();
+            sessionStorage.setItem(k, leadEventIdRef.current);
+          } catch { leadEventIdRef.current = newEventId(); }
+        }
         // Build per-question answers for analytics / export. Each shape is
         // small but distinct so Tendances (survey) and lead-export (quiz)
         // can render the right widget without re-deriving the type.
@@ -1417,6 +1429,26 @@ export default function PublicQuizClient({
           setSubmitError(t.saveError);
           setSubmitting(false);
           return;
+        }
+
+        // Lead / conversion (Meta Pixel + GA4 generate_lead + Google Ads) :
+        // fired ICI, a la CAPTURE EMAIL reelle (pas a l'arrivee sur l'etape),
+        // UNE seule fois par visiteur (garde sessionStorage anti refresh /
+        // retour), avec le MEME event_id que la CAPI serveur -> Meta dedup
+        // en 1 seul Lead. Correctif du sur-comptage (Gwenn, 23 juin 2026).
+        let leadAlreadyFired = false;
+        try { leadAlreadyFired = sessionStorage.getItem(`tpote_lead_fired_${quizId}`) === "1"; } catch {}
+        if (quiz && !leadAlreadyFired) {
+          try { sessionStorage.setItem(`tpote_lead_fired_${quizId}`, "1"); } catch {}
+          fireQuizPixel("complete", {
+            meta_pixel_id: quiz.meta_pixel_id,
+            ga4_measurement_id: quiz.ga4_measurement_id,
+            google_ads_conversion_id: quiz.google_ads_conversion_id,
+            google_ads_conversion_label: quiz.google_ads_conversion_label,
+          }, {
+            contentName: stripHtml(quiz.title),
+            eventId: leadEventIdRef.current,
+          });
         }
       }
 

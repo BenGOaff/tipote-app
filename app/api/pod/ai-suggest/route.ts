@@ -342,8 +342,14 @@ export async function POST(req: Request) {
     if ((err as { code?: string }).code === "NO_CREDITS") {
       return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
     }
-    console.error("[ai-suggest] consumeCredits failed", err);
-    return NextResponse.json({ ok: false, error: "credits_error" }, { status: 500 });
+    // RESILIENCE (Bene 23 juin 2026) : une erreur d'INFRA du sous-systeme
+    // credits (RPC indispo, montant fractionnaire rejete, lock, etc.) ne
+    // doit JAMAIS casser la generation de commentaires, qui est le coeur
+    // du produit. On loggue pour diag et on continue : seul un vrai
+    // NO_CREDITS (geste metier) bloque l'utilisateur. Sans ce garde-fou,
+    // le 22 juin l'ajout du decompte 0,5 credit a coupe toute generation
+    // sur Facebook (erreur 500 -> "ai_suggest_failed" cote extension).
+    console.error("[ai-suggest] consumeCredits infra error, generating anyway", err);
   }
 
   // Vision : on récupère l'image SURTOUT quand le texte seul est faible
