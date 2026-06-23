@@ -95,7 +95,7 @@ type QuestionType =
   | "free_text"
   | "image_choice"
   | "yes_no";
-type QuizOption = { text: string; result_index: number; image_url?: string | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; image_width?: number | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
@@ -1154,6 +1154,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     setEditQuestions((p) => p.map((q, i) => i !== qi ? q : { ...q, config: { ...(q.config ?? {}), image_url: url } }));
   const setQuestionImageWidth = (qi: number, w: number | null) =>
     setEditQuestions((p) => p.map((q, i) => i !== qi ? q : { ...q, config: { ...(q.config ?? {}), image_width: w } }));
+  const setOptionImageWidth = (qi: number, oi: number, w: number | null) =>
+    setEditQuestions((p) => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, image_width: w } : o) }));
   const [uploadingQuestionKey, setUploadingQuestionKey] = useState<number | null>(null);
   async function handleQuestionImageUpload(file: File, qi: number) {
     if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
@@ -1227,6 +1229,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               text: o.text,
               result_index: o.result_index,
               ...(o.image_url ? { image_url: o.image_url } : {}),
+              ...(o.image_width != null ? { image_width: o.image_width } : {}),
             })),
             sort_order: i,
             question_type: q.question_type,
@@ -2064,6 +2067,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                         >
                                           <X className="w-3.5 h-3.5" />
                                         </button>
+                                      </div>
+                                      <div className="absolute bottom-1 inset-x-1 flex items-center gap-1.5 bg-background/85 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                        <input type="range" min={25} max={100} step={5} value={typeof opt.image_width === "number" ? opt.image_width : 100} onChange={(e) => { const v = Number(e.target.value); setOptionImageWidth(qi, oi, v >= 100 ? null : v); }} className="flex-1 cursor-pointer accent-primary" />
+                                        <span className="tabular-nums">{typeof opt.image_width === "number" ? opt.image_width : 100}%</span>
                                       </div>
                                     </div>
                                   ) : null}
