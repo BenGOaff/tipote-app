@@ -9,6 +9,10 @@ import {
   decryptLeadPII,
   blindIndex,
 } from "@/lib/piiCrypto";
+import { resolveLeadAnswers } from "@/lib/leadAnswers";
+import { resolveSioApiKey } from "@/lib/sio/resolveApiKey";
+import { sioUserRequest } from "@/lib/sio/userApiClient";
+import { getActiveProjectId } from "@/lib/projects/activeProject";
 
 export const dynamic = "force-dynamic";
 
@@ -43,15 +47,33 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const dek = await getUserDEK(supabase, user.id);
     const pii = decryptLeadPII(data, dek);
 
+    // Resout les reponses brutes (indices) en texte lisible (question +
+    // reponse) pour la fiche lead. Ne concerne que les leads quiz/sondage.
+    const quizId = data.source === "quiz" ? (data.source_id as string | null) : null;
+    const quiz_answers = await resolveLeadAnswers(supabase, quizId, pii.quiz_answers);
+
+    // Titre du resultat LIVE (suit les renames) via quiz_result_id, sinon
+    // le snapshot stocke a la capture (cf. regle distribution par resultat).
+    let resultTitle: string | null = data.quiz_result_title ?? null;
+    if (data.quiz_result_id) {
+      const { data: rr } = await supabase
+        .from("quiz_results")
+        .select("title")
+        .eq("id", data.quiz_result_id)
+        .maybeSingle();
+      if (rr?.title) resultTitle = rr.title;
+    }
+
     return NextResponse.json({
       ok: true,
       lead: {
         id: data.id,
         ...pii,
+        quiz_answers,
         source: data.source,
         source_id: data.source_id,
         source_name: data.source_name,
-        quiz_result_title: data.quiz_result_title,
+        quiz_result_title: resultTitle,
         exported_sio: data.exported_sio,
         meta: data.meta,
         created_at: data.created_at,
@@ -76,6 +98,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const body = await req.json();
     const dek = await getUserDEK(supabase, user.id);
+
+    // Etat actuel du lead (email d'origine pour retrouver le contact SIO,
+    // valeurs courantes pour completer la sync).
+    const { data: current } = await supabase
+      .from("leads")
+      .select("email, first_name, last_name, phone, project_id")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!current) {
+      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    }
 
     const updates: Record<string, any> = { updated_at: new Date().toISOString() };
 
@@ -112,7 +146,53 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true });
+    // Sync Systeme.io (optionnel, best-effort) : on met a jour le contact
+    // correspondant. On le retrouve par l'email D'ORIGINE (avant edition),
+    // puis on pousse les nouvelles valeurs (nom, prenom, telephone, email).
+    let sioSync: "ok" | "not_found" | "no_key" | "error" | "skipped" = "skipped";
+    if (body.sync_sio === true) {
+      try {
+        const projectId = await getActiveProjectId(supabase, user.id);
+        const apiKey = await resolveSioApiKey(supabase, user.id, projectId ?? current.project_id);
+        if (!apiKey) {
+          sioSync = "no_key";
+        } else {
+          const lookupEmail = String(current.email ?? "").trim().toLowerCase();
+          const finalEmail = updates.email ?? lookupEmail;
+          const finalFirst = body.first_name !== undefined ? updates.first_name : current.first_name;
+          const finalLast = body.last_name !== undefined ? updates.last_name : current.last_name;
+          const finalPhone = body.phone !== undefined ? updates.phone : current.phone;
+
+          const search = await sioUserRequest<{ items?: Array<{ id: number }> }>(
+            apiKey,
+            `/contacts?email=${encodeURIComponent(lookupEmail)}&limit=10`,
+          );
+          const contactId = search.ok ? search.data?.items?.[0]?.id ?? null : null;
+          if (!contactId) {
+            sioSync = "not_found";
+          } else {
+            const fields: Array<{ slug: string; value: string }> = [];
+            if (finalFirst) fields.push({ slug: "first_name", value: String(finalFirst) });
+            if (finalLast) fields.push({ slug: "surname", value: String(finalLast) });
+            if (finalPhone) fields.push({ slug: "phone_number", value: String(finalPhone) });
+            const patchBody: Record<string, unknown> = {};
+            if (fields.length > 0) patchBody.fields = fields;
+            // Changement d'email : best-effort (SIO peut refuser selon le compte).
+            if (updates.email && updates.email !== lookupEmail) patchBody.email = updates.email;
+            const res = await sioUserRequest(apiKey, `/contacts/${contactId}`, {
+              method: "PATCH",
+              body: patchBody,
+            });
+            sioSync = res.ok ? "ok" : "error";
+          }
+        }
+      } catch (e) {
+        console.warn("[leads PATCH] SIO sync failed", (e as Error).message);
+        sioSync = "error";
+      }
+    }
+
+    return NextResponse.json({ ok: true, sio_sync: sioSync });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Server error" }, { status: 500 });
   }

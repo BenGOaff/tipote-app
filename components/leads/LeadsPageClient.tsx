@@ -121,6 +121,7 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
   const [editForm, setEditForm] = useState({ first_name: "", last_name: "", email: "", phone: "" });
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [syncSio, setSyncSio] = useState(false);
 
   // Filter leads
   const filtered = useMemo(() => {
@@ -197,15 +198,28 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
     }
   }
 
-  function openDetail(lead: Lead) {
+  async function openDetail(lead: Lead) {
     setDetailLead(lead);
     setEditMode(false);
+    setSyncSio(false);
     setEditForm({
       first_name: lead.first_name ?? "",
       last_name: lead.last_name ?? "",
       email: lead.email,
       phone: lead.phone ?? "",
     });
+    // Les reponses sont stockees en INDICES : on recharge la fiche complete
+    // (GET /api/leads/[id]) qui les resout en texte lisible + titre resultat
+    // LIVE. La liste, elle, ne porte pas les reponses lisibles.
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`);
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok && data.lead) {
+        setDetailLead((prev) => (prev && prev.id === lead.id ? { ...prev, ...data.lead } : prev));
+      }
+    } catch {
+      /* on garde les donnees de la liste si le detail echoue */
+    }
   }
 
   async function handleSaveLead() {
@@ -215,7 +229,7 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
       const res = await fetch(`/api/leads/${detailLead.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({ ...editForm, sync_sio: syncSio }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "Save failed");
@@ -230,7 +244,19 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
       );
       setDetailLead((prev) => (prev ? { ...prev, ...editForm } : prev));
       setEditMode(false);
-      toast({ title: t("saveSuccess") });
+      // Retour clair sur la synchro Systeme.io demandee.
+      if (syncSio && data?.sio_sync && data.sio_sync !== "ok") {
+        const reason =
+          data.sio_sync === "not_found"
+            ? t("sioSyncNotFound")
+            : data.sio_sync === "no_key"
+              ? t("sioSyncNoKey")
+              : t("sioSyncError");
+        toast({ title: t("saveSuccess"), description: reason });
+      } else {
+        toast({ title: syncSio && data?.sio_sync === "ok" ? t("saveSuccessSio") : t("saveSuccess") });
+      }
+      setSyncSio(false);
     } catch (e) {
       toast({
         title: t("saveError"),
@@ -446,7 +472,7 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                               </div>
                             </td>
                             <td className={`p-3 hidden sm:table-cell text-muted-foreground ${blur}`}>
-                              {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                              {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "-"}
                             </td>
                             <td className="p-3 hidden md:table-cell">
                               <Badge variant="secondary" className="text-xs capitalize">
@@ -542,7 +568,7 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                           <td className="p-3"></td>
                           <td className="p-3 font-medium">{lead.email}</td>
                           <td className="p-3 hidden sm:table-cell text-muted-foreground">
-                            {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                            {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "-"}
                           </td>
                           <td className="p-3 hidden md:table-cell">
                             <Badge variant="secondary" className="text-xs capitalize">
@@ -645,6 +671,15 @@ export default function LeadsPageClient({ leads: initialLeads, error, plan = "fr
                         onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
                       />
                     </div>
+                    <label className="flex items-start gap-2 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 accent-primary"
+                        checked={syncSio}
+                        onChange={(e) => setSyncSio(e.target.checked)}
+                      />
+                      <span className="text-sm text-muted-foreground">{t("syncSioLabel")}</span>
+                    </label>
                     <div className="flex gap-2">
                       <Button onClick={handleSaveLead} disabled={isSaving} size="sm">
                         {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
