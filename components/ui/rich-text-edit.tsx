@@ -33,6 +33,7 @@ import {
   Palette, Eraser, Wand2,
 } from "lucide-react";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
+import { HexColorPicker } from "react-colorful";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { useUserPalettes } from "@/components/editor/PalettesContext";
 import { useEditorPreviewDevice } from "@/components/editor/EditorPreviewDeviceContext";
@@ -128,6 +129,12 @@ export function RichTextEdit({
   // contentEditable, and `restoreSelection` puts the caret back exactly
   // where the user left it before applying foreColor.
   const [colorOpen, setColorOpen] = useState(false);
+  // Couleur perso (HSV in-app). On NE PASSE PLUS par <input type="color">
+  // natif : ouvrir le dialog OS faisait blur du contentEditable -> onBlur
+  // -> commit() -> setEditing(false) -> le popover etait demonte AVANT que
+  // la couleur choisie soit appliquee. Bug couleur recurrent. react-colorful
+  // reste dans le DOM (aucune fenetre OS), donc plus de blur, plus de bug.
+  const [customColor, setCustomColor] = useState("#000000");
   const [fontSizeOpen, setFontSizeOpen] = useState(false);
   // Image selectionnee pour resize. On track le <img> courant dans le
   // contentEditable et on affiche un popover avec une dropdown de tailles
@@ -710,26 +717,34 @@ export function RichTextEdit({
                     />
                   ))}
                 </div>
-                <div className="flex items-center gap-2 pt-1 border-t">
-                  <label className="flex-1 text-xs text-muted-foreground flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="color"
-                      onChange={(e) => applyColor(e.target.value)}
-                      className="w-7 h-7 rounded cursor-pointer border-0"
-                      aria-label={t("customColor")}
-                    />
-                    <span>Custom</span>
-                  </label>
+                {/* Couleur perso : carre HSV in-app (react-colorful).
+                    On applique au RELACHEMENT du pointeur (pointerUp) pour
+                    eviter un foreColor a chaque pixel de drag. La selection
+                    du contentEditable est preservee (le popover preventDefault
+                    le mousedown) puis restauree par applyColor. */}
+                <div className="pt-1 border-t space-y-2">
+                  <div
+                    className="rcw"
+                    aria-label={t("customColor")}
+                    onPointerUp={() => applyColor(customColor)}
+                  >
+                    <HexColorPicker color={customColor} onChange={setCustomColor} />
+                  </div>
                   <button
                     type="button"
                     onClick={() => applyColor(null)}
-                    className="text-xs px-2 py-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                    className="w-full text-xs px-2 py-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1"
                     title="Retirer la couleur"
                   >
                     <Eraser className="w-3 h-3" />
                     Reset
                   </button>
                 </div>
+                <style jsx global>{`
+                  .rcw .react-colorful { width: 100%; height: 140px; }
+                  .rcw .react-colorful__saturation { border-radius: 6px 6px 0 0; }
+                  .rcw .react-colorful__hue { height: 14px; border-radius: 0 0 6px 6px; }
+                `}</style>
               </div>
             )}
           </div>
