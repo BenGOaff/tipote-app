@@ -19,6 +19,7 @@
 import { voyagerLike, voyagerComment } from "./voyager";
 import { detectTranslatedFromLang } from "./postContext";
 import { COMMENT_LANG_OPTIONS } from "./config";
+import { t } from "./i18n";
 
 type Task = {
   id: string;
@@ -287,7 +288,7 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
   /** Génère (à la demande) le commentaire d'UN ton et le met en cache
    *  dans `suggestions`. Utilisé en mode quick + regénération ciblée. */
   const generateTone = (tone: Tone, indications: string): Promise<string> =>
-    new Promise((resolve) => {
+    new Promise((resolve, reject) => {
       const content = isTask
         ? mode.task.pod_posts.content_excerpt ?? scrapePostContent()
         : scrapePostContent();
@@ -307,7 +308,15 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
           },
         },
         (resp: unknown) => {
-          const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
+          const r = resp as
+            | { ok?: boolean; error?: string; suggestions?: Record<string, string> }
+            | undefined;
+          // Plus de crédits IA : on NE met PAS de fallback, on remonte
+          // l'erreur pour afficher un message clair (Béné 22 juin 2026).
+          if (r?.error === "NO_CREDITS") {
+            reject(new Error("no_credits"));
+            return;
+          }
           const text =
             r?.ok && r.suggestions?.[tone] ? r.suggestions[tone] : FALLBACK_SUGGESTIONS[tone];
           suggestions = { ...(suggestions ?? {}), [tone]: text } as Record<Tone, string>;
@@ -336,7 +345,17 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
         }
         toneButtons.forEach((b) => (b.disabled = true));
         showStatus(statusEl, "loading", "<span class='loader'></span>Rédaction du commentaire…");
-        text = await generateTone(tone, regenInput.value.trim());
+        try {
+          text = await generateTone(tone, regenInput.value.trim());
+        } catch (err) {
+          toneButtons.forEach((b) => (b.disabled = false));
+          if (err instanceof Error && err.message === "no_credits") {
+            showStatus(statusEl, "err", t("dropdown.noCredits"));
+          } else {
+            showStatus(statusEl, "err", "Génération impossible. Réessaie dans un instant.");
+          }
+          return;
+        }
         toneButtons.forEach((b) => (b.disabled = false));
         statusEl.textContent = "";
       }
@@ -392,7 +411,9 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
         },
       },
       (resp: unknown) => {
-        const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
+        const r = resp as
+          | { ok?: boolean; error?: string; suggestions?: Record<string, string> }
+          | undefined;
         if (r?.ok && r.suggestions) {
           if (tone) {
             const text = r.suggestions[tone] ?? editorText.value;
@@ -404,6 +425,8 @@ function renderBadge(root: ShadowRoot, mode: Mode, activityUrn: string) {
           }
           showStatus(statusEl, "ok", "✓ Suggestions mises à jour.");
           setTimeout(() => (statusEl.textContent = ""), 1500);
+        } else if (r?.error === "NO_CREDITS") {
+          showStatus(statusEl, "err", t("dropdown.noCredits"));
         } else {
           showStatus(statusEl, "err", "IA indisponible, anciennes suggestions conservées.");
         }

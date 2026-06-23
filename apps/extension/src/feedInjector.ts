@@ -441,7 +441,11 @@ function injectToneBar(composer: HTMLElement, adapter: PlatformAdapter): void {
         }, resetDelay);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (msg.startsWith("extension_unreachable")) {
+        if (msg === "no_credits") {
+          // Plus de crédits IA : message clair, pas d'insertion (Béné 22 juin 2026).
+          trigger.innerHTML = `<span>${t("dropdown.noCredits")}</span>`;
+          setTimeout(() => { trigger.innerHTML = originalTrigger; }, 6000);
+        } else if (msg.startsWith("extension_unreachable")) {
           console.log(`[tipote/feed] extension reloaded — hard-refresh ${adapter.id} (Ctrl+Shift+R) pour reconnecter`);
           trigger.innerHTML = `<span>${t("dropdown.reloadLinkedIn")}</span>`;
         } else {
@@ -620,7 +624,13 @@ async function fetchSuggestions(
             reject(new Error(`extension_unreachable:${chrome.runtime.lastError.message ?? "unknown"}`));
             return;
           }
-          const r = resp as { ok?: boolean; suggestions?: Record<string, string> } | undefined;
+          const r = resp as
+            | { ok?: boolean; error?: string; suggestions?: Record<string, string> }
+            | undefined;
+          if (r?.error === "NO_CREDITS") {
+            reject(new Error("no_credits"));
+            return;
+          }
           const text = r?.ok && r.suggestions ? r.suggestions[tone] : undefined;
           if (typeof text === "string" && text.trim()) resolve(text);
           else reject(new Error("ai_suggest_failed"));
