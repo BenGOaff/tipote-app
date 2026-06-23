@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
     // creation API + permission cascade keep working unchanged. Surveys
     // force virality_enabled = false because the public renderer doesn't
     // gate sharing behind a bonus for them ("no viral but share at end").
-    const mode = body.mode === "survey" ? "survey" : "quiz";
+    const mode =
+      body.mode === "survey" ? "survey" : body.mode === "scoring" ? "scoring" : "quiz";
     const isSurvey = mode === "survey";
 
     // Free-tier creation gate: 1 quiz + 1 sondage per active project.
@@ -244,6 +245,9 @@ export async function POST(req: NextRequest) {
           sio_course_id: r.sio_course_id ?? null,
           sio_community_id: r.sio_community_id ?? null,
           sort_order: i,
+          // Mode scoring : tranche de score (NULL en mode profil).
+          min_score: Number.isFinite(r.min_score) ? Math.trunc(r.min_score) : null,
+          max_score: Number.isFinite(r.max_score) ? Math.trunc(r.max_score) : null,
         })),
       );
       if (rErr) {
