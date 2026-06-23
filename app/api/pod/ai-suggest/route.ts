@@ -22,6 +22,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { generateSuggestions, type CommenterContext } from "@/lib/podAiSuggest";
 import { COMMENT_TONES, type CommentTone } from "@/lib/podBoost";
+import { consumeCredits } from "@/lib/credits";
 import { recordExtVersion } from "@/lib/extVersion";
 
 // Buffer (base64 image) + fetch d'image externe => runtime Node requis.
@@ -322,6 +323,27 @@ export async function POST(req: Request) {
   if (forceLanguage) {
     language = forceLanguage;
     matchPostLanguage = false;
+  }
+
+  // Crédits IA : 0,5 crédit par commentaire généré (Béné 22 juin 2026).
+  // L'extension on-demand demande 1 ton -> 0,5. Les vieilles versions sans
+  // ton demandent les 4 -> 2. On décompte AVANT de générer (fail-fast +
+  // blocage à 0) ; NO_CREDITS -> 402 pour que l'extension affiche un
+  // message clair plutôt que d'insérer un commentaire.
+  const CREDIT_PER_COMMENT = 0.5;
+  const numComments = tones?.length ?? COMMENT_TONES.length;
+  try {
+    await consumeCredits(user.id, CREDIT_PER_COMMENT * numComments, {
+      feature: "ext_comment_suggest",
+      network,
+      comments: numComments,
+    });
+  } catch (err) {
+    if ((err as { code?: string }).code === "NO_CREDITS") {
+      return NextResponse.json({ ok: false, error: "NO_CREDITS" }, { status: 402 });
+    }
+    console.error("[ai-suggest] consumeCredits failed", err);
+    return NextResponse.json({ ok: false, error: "credits_error" }, { status: 500 });
   }
 
   // Vision : on récupère l'image SURTOUT quand le texte seul est faible

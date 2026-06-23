@@ -184,6 +184,10 @@ const STRINGS: Record<string, { fr: string; en: string }> = {
     fr: "Post illisible. Recharge la page, ou commente à la main.",
     en: "Post unreadable. Reload the page, or comment manually.",
   },
+  "dropdown.noCredits": {
+    fr: "Plus de crédits IA. Recharge tes crédits pour continuer.",
+    en: "Out of AI credits. Top up to keep going.",
+  },
 };
 
 let _cachedLocale: Locale | null = null;

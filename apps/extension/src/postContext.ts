@@ -122,22 +122,54 @@ export function cleanPostText(raw: string): string {
 }
 
 /** URL de l'image de contenu la plus grande du post (exclut
- *  avatars/emojis/icônes/réactions). Renvoyée pour la vision IA. */
+ *  avatars/emojis/icônes/réactions). Renvoyée pour la vision IA.
+ *
+ *  Robustesse (Béné 22 juin 2026) : sur Facebook, les cartes de lien
+ *  partagé ET beaucoup de photos de feed sont rendues en CSS
+ *  `background-image` sur un <div>, PAS en <img>. L'ancienne version ne
+ *  regardait que les <img> -> imageUrl null -> le garde-fou "post
+ *  illisible" coupait la génération sur les posts à texte court (retours
+ *  Monique + JB). On scanne maintenant <img> ET background-image, et on
+ *  mesure la taille RENDUE (getBoundingClientRect), fiable même quand
+ *  l'image est lazy-load (naturalWidth peut être 0). */
 export function extractMainImageUrl(post: HTMLElement): string | null {
-  let best: { url: string; area: number } | null = null;
-  const imgs = Array.from(post.querySelectorAll<HTMLImageElement>("img"));
-  for (const img of imgs) {
+  const candidates: { url: string; area: number }[] = [];
+
+  const EXCLUDE_RE =
+    /emoji|sticker|reaction|\/rsrc\.php|\.svg(\?|$)|static\.xx\.fbcdn|spacer|blank\.gif|1x1|data:image/i;
+
+  const consider = (rawUrl: string, w: number, h: number) => {
+    const url = (rawUrl || "").trim();
+    if (!/^https:\/\//i.test(url)) return;
+    if (EXCLUDE_RE.test(url)) return;
+    // Seuil un peu plus permissif (150) : certaines vignettes de carte de
+    // lien font ~160px de haut. On reste au-dessus des avatars (~40-48px).
+    if (w < 150 || h < 150) return;
+    candidates.push({ url, area: w * h });
+  };
+
+  // 1) Balises <img> : on prend la plus grande taille connue entre
+  //    naturalWidth, clientWidth et la taille rendue (rect).
+  for (const img of Array.from(post.querySelectorAll<HTMLImageElement>("img"))) {
     const src = img.currentSrc || img.src || "";
-    if (!/^https:\/\//i.test(src)) continue;
-    // Exclut emojis, stickers, icônes de réaction, SVG, sprites.
-    if (/emoji|sticker|reaction|\/rsrc\.php|\.svg(\?|$)|static\.xx\.fbcdn/i.test(src)) continue;
-    const w = img.naturalWidth || img.clientWidth || 0;
-    const h = img.naturalHeight || img.clientHeight || 0;
-    if (w < 200 || h < 200) continue; // skip avatars / vignettes
-    const area = w * h;
-    if (!best || area > best.area) best = { url: src, area };
+    const rect = img.getBoundingClientRect();
+    const w = Math.max(img.naturalWidth || 0, img.clientWidth || 0, Math.round(rect.width));
+    const h = Math.max(img.naturalHeight || 0, img.clientHeight || 0, Math.round(rect.height));
+    consider(src, w, h);
   }
-  return best?.url ?? null;
+
+  // 2) CSS background-image (cartes de lien FB/IG, certaines photos feed).
+  for (const el of Array.from(post.querySelectorAll<HTMLElement>('[style*="background-image"]'))) {
+    const bg = el.style.backgroundImage || "";
+    const m = bg.match(/url\(\s*["']?(https:\/\/[^"')]+)["']?\s*\)/i);
+    if (!m) continue;
+    const rect = el.getBoundingClientRect();
+    consider(m[1], Math.round(rect.width), Math.round(rect.height));
+  }
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.area - a.area);
+  return candidates[0].url;
 }
 
 export interface PostContext {
