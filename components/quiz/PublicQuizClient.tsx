@@ -2072,6 +2072,17 @@ export default function PublicQuizClient({
                 {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
               </p>
 
+              {/* Image de la question (au-dessus de l'enonce). Stockee dans
+                  quiz_questions.config.image_url. */}
+              {(() => {
+                const cfg = (q.config ?? {}) as Record<string, unknown>;
+                const imgUrl = cfg.image_url;
+                const w = typeof cfg.image_width === "number" ? cfg.image_width : null;
+                return typeof imgUrl === "string" && imgUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={imgUrl} alt="" className={`h-auto rounded-xl mb-4 ${w ? "mx-auto block" : "w-full"}`} style={w ? { width: `${w}%` } : undefined} />
+                ) : null;
+              })()}
               {/* Question = rich-text (RichTextEdit) → rendu HTML sanitisé
                   + `tipote-quiz-rich-inline` pour neutraliser les block
                   parasites (sinon la taille saute au milieu de la phrase). */}
