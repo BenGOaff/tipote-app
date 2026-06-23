@@ -31,7 +31,7 @@ const isHtml = (s: string | null | undefined) => !!s && HTML_TAG_RE.test(s);
 
 
 
-type QuizOption = { text: string; result_index: number; image_url?: string | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null };
 type QuestionType =
   | "multiple_choice"
   | "rating_scale"
@@ -74,6 +74,10 @@ type QuizResult = {
   sort_order: number;
   image_url?: string | null;
   image_position?: ResultImagePosition | null;
+  // Mode "scoring" : tranche de score [min_score, max_score] (bornes
+  // incluses, NULL = ouverte) qui declenche ce resultat.
+  min_score?: number | null;
+  max_score?: number | null;
 };
 
 type PublicQuizData = {
@@ -81,9 +85,9 @@ type PublicQuizData = {
   title: string;
   // mode === "survey" disables result-profile computation, the bonus-on-share
   // step, and the typical "your profile" reveal — surveys end on a thank-you
-  // step instead. Falls back to "quiz" for any quiz row created before the
-  // survey-mode migration.
-  mode?: "quiz" | "survey" | null;
+  // step instead. mode === "scoring" is a graded quiz (score X/Y + ranged
+  // results). Falls back to "quiz" for rows created before these migrations.
+  mode?: "quiz" | "survey" | "scoring" | null;
   introduction: string | null;
   cta_text: string | null;
   cta_url: string | null;
@@ -849,6 +853,8 @@ export default function PublicQuizClient({
   // survives a refresh of the result page. Stays empty while the visitor
   // is still answering questions.
   const [resultScores, setResultScores] = useState<number[]>([]);
+  // Mode "scoring" : score obtenu / max, affiche en tete du resultat (X/Y).
+  const [resultScore, setResultScore] = useState<{ value: number; max: number } | null>(null);
   const [hasShared, setHasShared] = useState(false);
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
   // Surfaced to the visitor when the lead POST fails so they know their
@@ -1186,9 +1192,51 @@ export default function PublicQuizClient({
   // Returns the winning profile + the per-profile scores array so the
   // optional "Répartition complète" card can be rendered alongside the
   // primary result. Surveys still short-circuit (no result page).
-  const computeResult = useCallback((): { profile: QuizResult | null; scores: number[] } => {
+  const computeResult = useCallback((): {
+    profile: QuizResult | null;
+    scores: number[];
+    scoreValue?: number;
+    scoreMax?: number;
+  } => {
     if (!quiz) return { profile: null, scores: [] };
     if (quiz.mode === "survey") return { profile: null, scores: [] };
+
+    // ── Mode "scoring" (vrai quiz note) ──────────────────────────────
+    // Chaque option porte des `points` (bonne reponse = 1 par defaut,
+    // valeurs perso possibles). Score = somme des points choisis ;
+    // max = total atteignable. Le resultat affiche est la 1ere tranche
+    // [min_score, max_score] qui contient le score.
+    if (quiz.mode === "scoring") {
+      let scoreValue = 0;
+      let scoreMax = 0;
+      quiz.questions.forEach((q, qIdx) => {
+        const opts = q.options ?? [];
+        const pts = opts.map((o) => (typeof o.points === "number" ? o.points : 0));
+        // Max atteignable pour la question : meilleure option (choix unique)
+        // ou somme des points positifs (multi-select).
+        const isMulti = answers[qIdx]?.kind === "options";
+        const qMax = isMulti
+          ? pts.reduce((a, p) => a + (p > 0 ? p : 0), 0)
+          : pts.reduce((a, p) => Math.max(a, p), 0);
+        if (qMax > 0) scoreMax += qMax;
+        const ans = answers[qIdx];
+        if (!ans) return;
+        const picked: number[] =
+          ans.kind === "option" ? [ans.optionIndex] : ans.kind === "options" ? ans.optionIndices : [];
+        for (const oi of picked) scoreValue += pts[oi] ?? 0;
+      });
+      // Tranche correspondante : bornes incluses, NULL = ouverte.
+      const ranges = [...quiz.results]
+        .filter((r) => r.min_score != null || r.max_score != null)
+        .sort((a, b) => (a.min_score ?? -Infinity) - (b.min_score ?? -Infinity));
+      const profile =
+        ranges.find(
+          (r) =>
+            scoreValue >= (r.min_score ?? -Infinity) && scoreValue <= (r.max_score ?? Infinity),
+        ) ?? null;
+      return { profile, scores: [], scoreValue, scoreMax };
+    }
+
     const scores: number[] = new Array(quiz.results.length).fill(0);
     answers.forEach((ans, qIdx) => {
       if (!ans) return;
@@ -1313,7 +1361,10 @@ export default function PublicQuizClient({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const { profile, scores } = computeResult();
+      const { profile, scores, scoreValue, scoreMax } = computeResult();
+      if (quiz?.mode === "scoring") {
+        setResultScore({ value: scoreValue ?? 0, max: scoreMax ?? 0 });
+      }
 
       // In preview mode (props-data preview OR ?preview_name=<x> URL preview),
       // skip the actual lead submission so the creator can walk through the
@@ -2573,6 +2624,17 @@ export default function PublicQuizClient({
         {shareOverlay}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
+            {/* Score (mode scoring) : "Tu as obtenu X / Y" + pourcentage. */}
+            {quiz.mode === "scoring" && resultScore && resultScore.max > 0 && (
+              <div className="text-center space-y-2">
+                <div className="text-5xl sm:text-6xl font-black text-primary">
+                  {resultScore.value} <span className="text-muted-foreground">/ {resultScore.max}</span>
+                </div>
+                <div className="text-sm font-semibold text-muted-foreground">
+                  {Math.round((resultScore.value / resultScore.max) * 100)}%
+                </div>
+              </div>
+            )}
             {/* Hero image du résultat (Adeline, mai 2026). Bloc séparé
                 du texte, rendu à la position choisie par le créateur
                 via image_position. */}

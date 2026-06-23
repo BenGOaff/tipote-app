@@ -490,6 +490,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         sort_order: number;
         image_url: string | null;
         image_position: string;
+        min_score: number | null;
+        max_score: number | null;
       }
 
       const toUpdate: Array<{ id: string; data: SanitizedResult }> = [];
@@ -552,6 +554,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             const v = typeof r.image_position === "string" ? r.image_position : "top";
             return allowed.includes(v) ? v : "top";
           })(),
+          // Mode scoring : tranche de score (NULL en mode profil).
+          min_score: Number.isFinite(r.min_score) ? Math.trunc(r.min_score) : null,
+          max_score: Number.isFinite(r.max_score) ? Math.trunc(r.max_score) : null,
         };
 
         const incomingId =
