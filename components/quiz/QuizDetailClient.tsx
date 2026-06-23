@@ -93,7 +93,7 @@ import {
 } from "@/lib/quizBranding";
 
 // Types
-type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
@@ -1500,6 +1500,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     setEditQuestions((p) => p.map((q, i) => i !== qi ? q : { ...q, config: { ...(q.config ?? {}), image_url: url } }));
   const setQuestionImageWidth = (qi: number, w: number | null) =>
     setEditQuestions((p) => p.map((q, i) => i !== qi ? q : { ...q, config: { ...(q.config ?? {}), image_width: w } }));
+  // Largeur d'affichage d'une image de reponse (%) ; null = pleine largeur.
+  const setOptionImageWidth = (qi: number, oi: number, w: number | null) =>
+    setEditQuestions((p) => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, image_width: w } : o) }));
   const [uploadingQuestionKey, setUploadingQuestionKey] = useState<number | null>(null);
   async function handleQuestionImageUpload(file: File, qi: number) {
     if (!file.type.startsWith("image/")) { toast.error(t("toastImageOnly")); return; }
@@ -1591,6 +1594,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               ...(o.image_url ? { image_url: o.image_url } : {}),
               // Mode scoring : points de l'option (bonne reponse = 1).
               ...(o.points != null ? { points: o.points } : {}),
+              // Largeur d'affichage de l'image de reponse (%).
+              ...(o.image_width != null ? { image_width: o.image_width } : {}),
             })),
             sort_order: i,
             // Per-question config (multi_select, future knobs). API accepts
@@ -2642,6 +2647,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   >
                                     <X className="w-3.5 h-3.5" />
                                   </button>
+                                  <div className="absolute bottom-1 inset-x-1 flex items-center gap-1.5 bg-background/85 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                    <input type="range" min={25} max={100} step={5} value={typeof opt.image_width === "number" ? opt.image_width : 100} onChange={(e) => { const v = Number(e.target.value); setOptionImageWidth(qi, oi, v >= 100 ? null : v); }} className="flex-1 cursor-pointer accent-primary" />
+                                    <span className="tabular-nums">{typeof opt.image_width === "number" ? opt.image_width : 100}%</span>
+                                  </div>
                                 </div>
                               ) : (
                                 <label className="mb-3 inline-flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors">

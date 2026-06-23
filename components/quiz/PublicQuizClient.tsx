@@ -31,7 +31,7 @@ const isHtml = (s: string | null | undefined) => !!s && HTML_TAG_RE.test(s);
 
 
 
-type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null };
 type QuestionType =
   | "multiple_choice"
   | "rating_scale"
@@ -1955,7 +1955,8 @@ export default function PublicQuizClient({
                     <img
                       src={opt.image_url}
                       alt={stripHtml(opt.text)}
-                      className="w-full aspect-video object-cover"
+                      className={`aspect-video object-cover ${typeof opt.image_width === "number" ? "mx-auto block" : "w-full"}`}
+                      style={typeof opt.image_width === "number" ? { width: `${opt.image_width}%` } : undefined}
                     />
                   ) : (
                     <div className="w-full aspect-video bg-muted/40" aria-hidden />
@@ -2030,7 +2031,8 @@ export default function PublicQuizClient({
                     <img
                       src={opt.image_url}
                       alt={stripHtml(opt.text)}
-                      className="w-full aspect-video object-cover"
+                      className={`aspect-video object-cover ${typeof opt.image_width === "number" ? "mx-auto block" : "w-full"}`}
+                      style={typeof opt.image_width === "number" ? { width: `${opt.image_width}%` } : undefined}
                     />
                   )}
                   <span
