@@ -133,7 +133,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 
 type QuizData = {
   id: string; title: string; slug: string | null;
-  intro_image_url: string | null; intro_image_position: IntroImagePosition | null;
+  intro_image_url: string | null; intro_image_position: IntroImagePosition | null; intro_image_width?: number | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
@@ -366,12 +366,14 @@ function SettingsToggle({ label, hint, checked, onChange, disabled }: {
 // Image draggable + dropzones pour le repositionnement de l'image
 // d'intro entre les 4 slots de la page intro. Mirror des composants
 // ResultDraggableImage / ResultPositionDropZone dans QuizDetailClient.
-function IntroImageDraggable({ url, onDragStart, onDragEnd, onRemove, onCrop }: {
+function IntroImageDraggable({ url, onDragStart, onDragEnd, onRemove, onCrop, widthPct }: {
   url: string;
   onDragStart: () => void;
   onDragEnd: () => void;
   onRemove: () => void;
   onCrop?: () => void;
+  // Largeur d'affichage en % (resize). undefined = pleine largeur.
+  widthPct?: number | null;
 }) {
   return (
     <div className="relative group">
@@ -386,7 +388,8 @@ function IntroImageDraggable({ url, onDragStart, onDragEnd, onRemove, onCrop }: 
           onDragStart();
         }}
         onDragEnd={onDragEnd}
-        className="w-full h-auto rounded-xl cursor-grab active:cursor-grabbing select-none"
+        className={`h-auto rounded-xl cursor-grab active:cursor-grabbing select-none ${widthPct ? "mx-auto block" : "w-full"}`}
+        style={widthPct ? { width: `${widthPct}%` } : undefined}
       />
       <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {onCrop && (
@@ -544,6 +547,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Image dédiée à la page d'INTRO du sondage. Même pattern que côté
   // QuizDetailClient — 1 image + 1 position parmi 4 slots, DnD natif.
   const [introImageUrl, setIntroImageUrl] = useState<string | null>(null);
+  // Largeur d'affichage de l'image d'intro en % (null = pleine largeur).
+  const [introImageWidth, setIntroImageWidth] = useState<number | null>(null);
   const [cropTarget, setCropTarget] = useState<{ url: string; apply: (u: string) => void } | null>(null);
   const [introImagePosition, setIntroImagePosition] = useState<IntroImagePosition>("top");
   const [introImageUploading, setIntroImageUploading] = useState(false);
@@ -643,6 +648,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     og_image_url: ogImageUrl,
     intro_image_url: introImageUrl,
     intro_image_position: introImagePosition,
+    intro_image_width: introImageWidth,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
     share_networks: shareNetworks,
@@ -659,7 +665,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
-    ogImageUrl, introImageUrl, introImagePosition,
+    ogImageUrl, introImageUrl, introImagePosition, introImageWidth,
     selectedToastWidget, selectedShareWidget,
     editQuestions,
   ]);
@@ -708,6 +714,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
     if (s.intro_image_url === null || typeof s.intro_image_url === "string") setIntroImageUrl(s.intro_image_url);
+    if (s.intro_image_width === null || typeof s.intro_image_width === "number") setIntroImageWidth(s.intro_image_width as number | null);
     if (s.intro_image_position === "top" || s.intro_image_position === "after_title" || s.intro_image_position === "after_intro" || s.intro_image_position === "bottom") {
       setIntroImagePosition(s.intro_image_position);
     }
@@ -830,6 +837,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setOgDescription(q.og_description ?? "");
       setOgImageUrl(q.og_image_url ?? null);
       setIntroImageUrl(q.intro_image_url ?? null);
+      setIntroImageWidth(q.intro_image_width ?? null);
       setIntroImagePosition((q.intro_image_position as IntroImagePosition | null) ?? "top");
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
@@ -1156,6 +1164,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           start_button_text: startButtonText || null,
           intro_image_url: introImageUrl,
           intro_image_position: introImageUrl ? introImagePosition : null,
+          intro_image_width: introImageUrl ? introImageWidth : null,
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
@@ -1744,6 +1753,22 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       />
                     </div>
                   )}
+                  {/* Largeur de l'image d'intro (agrandir / retrecir). */}
+                  {introImageUrl && (
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <span>Taille de l&apos;image</span>
+                      <input
+                        type="range"
+                        min={25}
+                        max={100}
+                        step={5}
+                        value={introImageWidth ?? 100}
+                        onChange={(e) => { const v = Number(e.target.value); setIntroImageWidth(v >= 100 ? null : v); }}
+                        className="w-40 cursor-pointer accent-primary"
+                      />
+                      <span className="w-9 text-right tabular-nums">{introImageWidth ?? 100}%</span>
+                    </div>
+                  )}
 
                   {brandLogoUrl && (
                     <div className="flex justify-center">
@@ -1758,7 +1783,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
                       onRemove={clearIntroImage}
-                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} widthPct={introImageWidth} />
                   )}
                   {draggingIntroImage && (introImagePosition ?? "top") !== "top" && (
                     <IntroImageDropZone label={t("introImagePos_top")}
@@ -1773,7 +1798,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
                       onRemove={clearIntroImage}
-                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} widthPct={introImageWidth} />
                   )}
                   {draggingIntroImage && introImagePosition !== "after_title" && (
                     <IntroImageDropZone label={t("introImagePos_after_title")}
@@ -1788,7 +1813,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
                       onRemove={clearIntroImage}
-                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} widthPct={introImageWidth} />
                   )}
                   {draggingIntroImage && introImagePosition !== "after_intro" && (
                     <IntroImageDropZone label={t("introImagePos_after_intro")}
@@ -1812,7 +1837,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
                       onRemove={clearIntroImage}
-                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} widthPct={introImageWidth} />
                   )}
                   {draggingIntroImage && introImagePosition !== "bottom" && (
                     <IntroImageDropZone label={t("introImagePos_bottom")}

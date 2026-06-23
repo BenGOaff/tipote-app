@@ -102,6 +102,8 @@ type PublicQuizData = {
   // top / after_title / after_intro / bottom.
   intro_image_url?: string | null;
   intro_image_position?: "top" | "after_title" | "after_intro" | "bottom" | null;
+  // Largeur d'affichage en % (NULL = pleine largeur). Resize image/GIF intro.
+  intro_image_width?: number | null;
   bonus_intro_text?: string | null;
   // Override for the "Bonus unlocked!" message shown after the share
   // step. NULL = use t.bonusUnlocked (locale default). Lets a creator
@@ -1658,7 +1660,7 @@ export default function PublicQuizClient({
                 pour préserver le ratio (CLAUDE_PITFALLS B). */}
             {quiz.intro_image_url && (quiz.intro_image_position ?? "top") === "top" && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={quiz.intro_image_url} alt="" className="w-full h-auto rounded-xl" />
+              <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
             )}
             {/* Le titre supporte le rich-text (RichTextEdit dans l'éditeur)
                 — on rend en HTML sanitisé pour que les `<span style="color:…">`
@@ -1671,7 +1673,7 @@ export default function PublicQuizClient({
             {/* Image d'intro — slot AFTER_TITLE */}
             {quiz.intro_image_url && quiz.intro_image_position === "after_title" && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={quiz.intro_image_url} alt="" className="w-full h-auto rounded-xl" />
+              <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
             )}
 
             {introRich ? (
@@ -1703,7 +1705,7 @@ export default function PublicQuizClient({
             {/* Image d'intro — slot AFTER_INTRO */}
             {quiz.intro_image_url && quiz.intro_image_position === "after_intro" && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={quiz.intro_image_url} alt="" className="w-full h-auto rounded-xl" />
+              <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
             )}
 
             <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => {
@@ -1719,7 +1721,7 @@ export default function PublicQuizClient({
             {/* Image d'intro — slot BOTTOM */}
             {quiz.intro_image_url && quiz.intro_image_position === "bottom" && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={quiz.intro_image_url} alt="" className="w-full h-auto rounded-xl" />
+              <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
             )}
         </div>
         </div>
