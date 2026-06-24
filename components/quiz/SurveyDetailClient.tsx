@@ -146,7 +146,7 @@ type QuizData = {
   phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   share_message: string | null; locale: string | null;
-  sio_share_tag_name: string | null;
+  sio_share_tag_name: string | null; sio_capture_tag?: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
@@ -518,6 +518,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [shareMessage, setShareMessage] = useState("");
   const [locale, setLocale] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
+  // Sondage : pas de resultat, donc pas de tag par profil comme les quiz.
+  // On applique un tag de capture unique a chaque lead du sondage.
+  const [sioCaptureTag, setSioCaptureTag] = useState("");
   const [status, setStatus] = useState("draft");
   const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
   // editResults stays declared so the rest of the QuizDetailClient logic
@@ -639,6 +642,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     share_message: shareMessage,
     locale,
     sio_share_tag_name: sioShareTagName,
+    sio_capture_tag: sioCaptureTag,
     status,
     brand_font: fontFamily,
     brand_color_primary: primaryColor,
@@ -662,7 +666,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, askFirstName, askGender,
-    shareMessage, locale, sioShareTagName, status,
+    shareMessage, locale, sioShareTagName, sioCaptureTag, status,
     fontFamily, primaryColor, bgColor,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
     ogImageUrl, introImageUrl, introImagePosition, introImageWidth,
@@ -704,6 +708,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.share_message === "string") setShareMessage(s.share_message);
     if (typeof s.locale === "string") setLocale(s.locale);
     if (typeof s.sio_share_tag_name === "string") setSioShareTagName(s.sio_share_tag_name);
+    if (typeof s.sio_capture_tag === "string") setSioCaptureTag(s.sio_capture_tag);
     if (typeof s.status === "string") setStatus(s.status);
     if (typeof s.brand_font === "string" && (BRAND_FONT_CHOICES as readonly string[]).includes(s.brand_font)) {
       setFontFamily(s.brand_font as BrandFontChoice);
@@ -824,7 +829,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       // Surveys ignore virality / bonus.
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
-      setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
+      setSioShareTagName(q.sio_share_tag_name ?? ""); setSioCaptureTag((q as unknown as Record<string, unknown>).sio_capture_tag as string ?? ""); setStatus(q.status);
       // Hydrate question_type + config defaults so older multiple_choice
       // rows (created before the survey migration) stay valid.
       setEditQuestions(q.questions.map((qq) => ({
@@ -1209,7 +1214,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           ask_first_name: askFirstName, ask_gender: askGender,
           // Surveys never gate on virality / bonus — keep server-side defaults.
           share_message: shareMessage, locale: locale || null,
-          sio_share_tag_name: sioShareTagName || null, status,
+          sio_share_tag_name: sioShareTagName || null, sio_capture_tag: sioCaptureTag || null, status,
           // Branding
           brand_font: fontFamily, brand_color_primary: primaryColor, brand_color_background: bgColor,
           // Share + SEO
@@ -1637,6 +1642,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <Plus className="w-3.5 h-3.5" /> {t("addElement")}
                     </button>
                   )}
+                  {/* Tag Systeme.io applique a chaque lead du sondage. Les
+                      sondages n'ont pas de resultat, donc pas de tag par
+                      profil comme les quiz : ce tag unique remplace cette
+                      logique pour declencher une automatisation SIO. */}
+                  <div className="space-y-1.5 pt-1">
+                    <Label className="text-xs font-semibold">{t("surveyLeadTagLabel")}</Label>
+                    <SioTagPicker value={sioCaptureTag} onChange={setSioCaptureTag} />
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("surveyLeadTagHint")}</p>
+                  </div>
                   {/* Consent checkbox is opt-out — most creators want it for
                       RGPD safety, but some manage consent upstream (CRM,
                       separate landing page) and don't want a redundant

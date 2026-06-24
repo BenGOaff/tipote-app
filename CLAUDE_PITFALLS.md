@@ -1691,3 +1691,35 @@ AUCUNE version au backend -> impossible à vérifier. Ajout :
 ⚠️ RÉTROACTIF IMPOSSIBLE : ne se remplit qu'à partir de la version qui
 ENVOIE l'en-tête (v1.8.0). NULL = vieille version OU pas d'extension.
 Pour un user AUJOURD'HUI : chrome://extensions montre la version.
+
+---
+
+## Tags sondages — parité quiz + risque 404 du SELECT chain (24 juin 2026)
+
+**Contexte** : un user galérait à comprendre le tag des sondages. Audit :
+- Quiz = 1 tag par RÉSULTAT (`quiz_results.sio_tag_name`).
+- Sondage = pas de résultat → 1 tag UNIQUE de capture
+  (`quizzes.sio_capture_tag`), appliqué à chaque lead.
+
+**Trou trouvé (Tipote)** : les sondages capturaient des leads mais
+AUCUN tag n'était appliqué. L'application SIO était gated sur
+`if (resultId)` dans `public/route.ts` → sondage (sans résultat) = jamais
+taggé. Seul le tag de partage existait. Tiquiz avait déjà la colonne
+(migration `20260616`), pas Tipote.
+
+**Fix** : migration `20260624_survey_lead_capture_tag.sql` +
+`public/route.ts` (gate `resultId || surveyCaptureTag`) + UI
+`SurveyDetailClient` (SioTagPicker dans le formulaire de contact) +
+PATCH allowedFields + i18n `surveyLeadTag*` / `autoSurveyNote`.
+
+**⚠️ PIÈGE DÉPLOIEMENT (cf. section A bis)** : j'ai ajouté
+`sio_capture_tag` à la SELECT chain de `public/route.ts`. Tant que la
+migration n'est PAS appliquée en prod, Postgres rejette la requête
+(`42703 column does not exist`) → `quiz` null → **404 sur TOUS les quiz
+ET sondages publics**. La migration doit être appliquée AVANT/avec ce
+déploiement. Vérif : `npm run check:migrations-pending`.
+
+**Convention figée** : tout endroit qui affiche/configure un tag de
+résultat de quiz doit avoir son pendant sondage (tag de capture unique).
+Ne jamais gater l'application SIO uniquement sur `resultId`.
+
