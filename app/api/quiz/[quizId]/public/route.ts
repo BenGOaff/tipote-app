@@ -635,7 +635,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // Verify quiz is active
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, project_id, title, meta_pixel_id")
+      .select("id, user_id, project_id, title, meta_pixel_id, mode, sio_capture_tag")
       .eq("id", quizId)
       .eq("status", "active")
       .maybeSingle();
@@ -762,7 +762,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     })();
 
     // ── Auto-send to Systeme.io: tag + enrich + course + community (non-blocking) ──
-    if (resultId) {
+    // Quiz : le tag vient du RESULTAT (quiz_results.sio_tag_name). Sondage :
+    // pas de resultat, on applique le tag de capture defini au niveau du
+    // sondage (quizzes.sio_capture_tag) a chaque lead. Parite avec Tiquiz.
+    const isSurveyLead = (quiz as { mode?: string | null }).mode === "survey";
+    const surveyCaptureTag = isSurveyLead
+      ? String((quiz as { sio_capture_tag?: string | null }).sio_capture_tag ?? "").trim()
+      : "";
+    if (resultId || surveyCaptureTag) {
       // Fire & forget: don't await so the response is fast
       (async () => {
         try {
@@ -793,21 +800,28 @@ export async function POST(req: NextRequest, context: RouteContext) {
             }
           }
 
-          // Get the result's SIO config (tag, course, community)
-          const { data: result } = await admin
-            .from("quiz_results")
-            .select("sio_tag_name, sio_course_id, sio_community_id, title")
-            .eq("id", resultId)
-            .maybeSingle();
+          // Quiz : config SIO portee par le resultat. Sondage : pas de
+          // resultat, seul le tag de capture du sondage s'applique (pas de
+          // course/community/enrich par profil, qui n'existent pas ici).
+          let tagName = surveyCaptureTag;
+          let courseId = "";
+          let communityId = "";
+          let resultTitle = "";
+          if (resultId) {
+            const { data: result } = await admin
+              .from("quiz_results")
+              .select("sio_tag_name, sio_course_id, sio_community_id, title")
+              .eq("id", resultId)
+              .maybeSingle();
+            tagName = String(result?.sio_tag_name ?? "").trim();
+            courseId = String(result?.sio_course_id ?? "").trim();
+            communityId = String(result?.sio_community_id ?? "").trim();
+            resultTitle = String(result?.title ?? "").trim();
+          }
 
           // Get the quiz owner's API key (scoped by project, decrypted)
           const apiKey = (await resolveSioApiKey(admin, quiz.user_id, quiz.project_id)) ?? "";
           if (!apiKey) return;
-
-          const tagName = String(result?.sio_tag_name ?? "").trim();
-          const courseId = String(result?.sio_course_id ?? "").trim();
-          const communityId = String(result?.sio_community_id ?? "").trim();
-          const resultTitle = String(result?.title ?? "").trim();
 
           // 1. Tag the contact (and get the SIO contact ID back)
           let sioContactId: number | null = null;

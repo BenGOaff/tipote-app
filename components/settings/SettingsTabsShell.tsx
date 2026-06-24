@@ -1819,6 +1819,7 @@ export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
                 </div>
                 <p className="text-muted-foreground">{tSP("connections.autoStep1P1")}</p>
                 <p className="text-muted-foreground">{tSP("connections.autoStep1P2")}</p>
+                <p className="text-muted-foreground rounded-lg bg-muted/50 border border-dashed px-2.5 py-2">{tSP("connections.autoSurveyNote")}</p>
               </div>
             </div>
 
