@@ -15,10 +15,27 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Download, FileText, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Sparkles, Loader2, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  formatSurveyAnswer,
+  indexAnswers,
+  type SurveyAnswerLike,
+  type SurveyQuestionLike,
+} from "@/lib/survey/format";
+import { stripHtml } from "@/lib/richText";
+
+type ResultsLead = {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  flagged?: boolean | null;
+  answers: SurveyAnswerLike[] | null;
+  created_at: string;
+};
 
 interface AnalysisResult {
   summary: string;
@@ -38,9 +55,16 @@ interface AnalysisState {
 export default function SurveyResultsPanel({
   quizId,
   surveyTitle,
+  leads,
+  questions,
+  locale,
 }: {
   quizId: string;
   surveyTitle: string;
+  /** Réponses brutes par répondant : alimentent le détail du PDF. */
+  leads?: ResultsLead[];
+  questions?: SurveyQuestionLike[];
+  locale?: string | null;
 }) {
   const [state, setState] = useState<AnalysisState | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -72,6 +96,32 @@ export default function SurveyResultsPanel({
     window.location.href = `/api/quiz/${quizId}/survey-results?format=csv`;
   }, [quizId]);
 
+  const handleExportExcel = useCallback(() => {
+    window.location.href = `/api/quiz/${quizId}/survey-results?format=xlsx`;
+  }, [quizId]);
+
+  // Détail par répondant pour le PDF (qui a répondu quoi), construit depuis
+  // les réponses brutes via le helper partagé. Vide si les props ne sont pas
+  // passées (rétro-compat).
+  const buildRespondents = useCallback(() => {
+    if (!leads || !questions) return [];
+    return leads.map((l) => ({
+      name: [l.first_name, l.last_name].filter(Boolean).join(" ").trim(),
+      email: l.email ?? "",
+      date: l.created_at ? new Date(l.created_at).toLocaleDateString("fr-FR") : "",
+      flagged: !!l.flagged,
+      answers: (() => {
+        const byQ = indexAnswers(l.answers);
+        return questions
+          .map((q, qi) => ({
+            q: stripHtml(String(q.question_text ?? "")).trim() || `Q${qi + 1}`,
+            a: formatSurveyAnswer(q, byQ.get(qi), locale),
+          }))
+          .filter((x) => x.a);
+      })(),
+    }));
+  }, [leads, questions, locale]);
+
   const handleExportPdf = useCallback(async () => {
     setExportingPdf(true);
     try {
@@ -100,6 +150,7 @@ export default function SurveyResultsPanel({
           // On embarque l'analyse IA déjà chargée dans l'état (zéro
           // round-trip supplémentaire ; absente si jamais générée).
           analysis: state?.analysis ?? null,
+          respondents: buildRespondents(),
         },
         BRAND_TIPOTE,
       );
@@ -112,7 +163,7 @@ export default function SurveyResultsPanel({
     } finally {
       setExportingPdf(false);
     }
-  }, [quizId, surveyTitle, state?.analysis]);
+  }, [quizId, surveyTitle, state?.analysis, buildRespondents]);
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
@@ -151,13 +202,18 @@ export default function SurveyResultsPanel({
           <h3 className="text-sm font-semibold">Exporter les résultats</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Au choix : CSV (réponses brutes, une ligne par participant) ou PDF
-          (rapport agrégé prêt à présenter).
+          Au choix : CSV ou Excel (une ligne par répondant, colonnes prêtes :
+          identité + réponses), ou PDF (rapport agrégé + détail des répondants,
+          prêt à présenter).
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={handleExportCsv}>
             <Download className="w-4 h-4 mr-1.5" />
             Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel}>
+            <FileSpreadsheet className="w-4 h-4 mr-1.5" />
+            Export Excel
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={exportingPdf}>
             {exportingPdf ? (
