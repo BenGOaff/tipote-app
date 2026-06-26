@@ -5785,7 +5785,11 @@
     "responsesAnonymous": "مجهول",
     "colRespondent": "المشارك",
     "colDate": "التاريخ",
-    "exportCsv": "تصدير CSV"
+    "exportCsv": "تصدير CSV",
+    "responsesFlaggedOnly": "المعلّمة",
+    "exportExcel": "تصدير Excel",
+    "flagAction": "تعليم هذا المشارك",
+    "unflagAction": "إزالة العلامة"
   },
   "compta": {
     "revenueGoal": {

@@ -34,6 +34,15 @@ export interface AggregatedQuestion {
   average?: number | null;
 }
 
+export interface SurveyPdfRespondent {
+  name: string;
+  email: string;
+  date: string;
+  flagged?: boolean;
+  /** Réponses formatées { question, réponse }, déjà résolues côté appelant. */
+  answers: Array<{ q: string; a: string }>;
+}
+
 export interface SurveyPdfPayload {
   title: string;
   totalResponses: number;
@@ -43,6 +52,8 @@ export interface SurveyPdfPayload {
     takeaways?: string[];
     actions?: string[];
   } | null;
+  /** Détail par répondant (optionnel). Rendu en fin de rapport. */
+  respondents?: SurveyPdfRespondent[];
 }
 
 export interface BrandTheme {
@@ -146,6 +157,11 @@ export function renderSurveyPdf(
   drawQuestionsHeader(doc, brand, margin, contentW, pageH, cursor);
   for (const q of payload.questions) {
     drawQuestion(doc, q, brand, margin, contentW, pageH, cursor);
+  }
+
+  // Détail par répondant (qui a répondu quoi), si fourni.
+  if (payload.respondents && payload.respondents.length > 0) {
+    drawRespondents(doc, payload.respondents, brand, margin, contentW, pageH, cursor);
   }
 
   // Footer sur chaque page.
@@ -375,6 +391,78 @@ function drawNumbered(
     cursor.y += 13;
   }
   cursor.y += 1;
+}
+
+// ---------------------------------------------------------------------------
+// Détail par répondant
+// ---------------------------------------------------------------------------
+
+function drawRespondents(
+  doc: jsPDF,
+  respondents: SurveyPdfRespondent[],
+  brand: BrandTheme,
+  margin: number,
+  contentW: number,
+  pageH: number,
+  cursor: Cursor,
+): void {
+  // Nouvelle page pour la lisibilité du détail.
+  doc.addPage();
+  cursor.y = margin;
+  setText(doc, brand.text);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("Détail des répondants", margin, cursor.y);
+  cursor.y += 6;
+  setDraw(doc, brand.primary);
+  doc.setLineWidth(2);
+  doc.line(margin, cursor.y, margin + 40, cursor.y);
+  cursor.y += 18;
+
+  for (const r of respondents) {
+    ensureSpace(doc, 40, pageH, margin, cursor);
+    // Identité ("* " préfixe si marqué : pas de glyphe étoile pour rester
+    // dans l'encodage helvetica standard de jspdf).
+    setText(doc, brand.text);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    const who = truncate(`${r.flagged ? "* " : ""}${r.name || r.email || "Anonyme"}`, 70);
+    doc.text(who, margin, cursor.y);
+    setText(doc, brand.muted);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(truncate([r.email, r.date].filter(Boolean).join("  -  "), 90), margin, cursor.y + 12);
+    cursor.y += 24;
+
+    for (const a of r.answers) {
+      setText(doc, brand.muted);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      const qLines = doc.splitTextToSize(truncate(a.q, 160), contentW - 12) as string[];
+      ensureSpace(doc, qLines.length * 11 + 4, pageH, margin, cursor);
+      for (const ln of qLines) {
+        doc.text(ln, margin + 8, cursor.y);
+        cursor.y += 11;
+      }
+      setText(doc, brand.text);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const aLines = doc.splitTextToSize(a.a || "-", contentW - 12) as string[];
+      ensureSpace(doc, aLines.length * 12, pageH, margin, cursor);
+      for (const ln of aLines) {
+        doc.text(ln, margin + 8, cursor.y);
+        cursor.y += 12;
+      }
+      cursor.y += 2;
+    }
+
+    cursor.y += 4;
+    ensureSpace(doc, 10, pageH, margin, cursor);
+    setDraw(doc, brand.muted);
+    doc.setLineWidth(0.4);
+    doc.line(margin, cursor.y, margin + contentW, cursor.y);
+    cursor.y += 14;
+  }
 }
 
 // ---------------------------------------------------------------------------

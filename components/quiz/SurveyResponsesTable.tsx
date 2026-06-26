@@ -8,11 +8,14 @@
 // "je veux savoir QUI a donné QUELLE réponse" (drame Béné 26 juin 2026 :
 // impossible de récompenser les bonnes réponses car l'export était anonyme).
 //
+// Marquage (étoile) : pour épingler les répondants à récompenser. Persisté
+// via quiz_leads.flagged, remonté en colonne "Marqué" dans tous les exports.
+//
 // Les libellés de réponse passent par le helper partagé formatSurveyAnswer →
 // fini les "Option 1" au lieu de "Oui".
 
 import { useMemo, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { Download, Search, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +35,7 @@ type ResponsesLead = {
   last_name: string | null;
   phone: string | null;
   country: string | null;
+  flagged?: boolean | null;
   answers: SurveyAnswerLike[] | null;
   created_at: string;
 };
@@ -41,14 +45,17 @@ export function SurveyResponsesTable({
   questions,
   leads,
   locale,
+  onToggleFlag,
 }: {
   quizId: string;
   questions: SurveyQuestionLike[];
   leads: ResponsesLead[];
   locale?: string | null;
+  onToggleFlag?: (leadId: string, flagged: boolean) => void;
 }) {
   const t = useTranslations("survey");
   const [query, setQuery] = useState("");
+  const [onlyFlagged, setOnlyFlagged] = useState(false);
 
   // Pré-calcule chaque ligne (identité + réponses formatées) une seule fois,
   // puis filtre par recherche texte sur l'ensemble (identité + réponses).
@@ -65,14 +72,22 @@ export function SurveyResponsesTable({
     });
   }, [leads, questions, locale]);
 
+  const flaggedCount = useMemo(() => rows.filter((r) => r.lead.flagged).length, [rows]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.haystack.includes(q));
-  }, [rows, query]);
+    return rows.filter((r) => {
+      if (onlyFlagged && !r.lead.flagged) return false;
+      if (q && !r.haystack.includes(q)) return false;
+      return true;
+    });
+  }, [rows, query, onlyFlagged]);
 
   const handleExportCsv = () => {
     window.location.href = `/api/quiz/${quizId}/survey-results?format=csv`;
+  };
+  const handleExportExcel = () => {
+    window.location.href = `/api/quiz/${quizId}/survey-results?format=xlsx`;
   };
 
   if (leads.length === 0) {
@@ -94,12 +109,26 @@ export function SurveyResponsesTable({
             className="w-full h-9 pl-8 pr-3 rounded-lg border bg-background text-sm outline-none focus:border-primary"
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setOnlyFlagged((v) => !v)}
+          aria-pressed={onlyFlagged}
+          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm transition-colors ${onlyFlagged ? "border-amber-400 bg-amber-50 text-amber-700" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <Star className={`w-4 h-4 ${onlyFlagged ? "fill-amber-400 text-amber-400" : ""}`} />
+          {t("responsesFlaggedOnly")}
+          {flaggedCount > 0 ? ` (${flaggedCount})` : ""}
+        </button>
         <span className="text-xs text-muted-foreground tabular-nums">
           {filtered.length}/{rows.length}
         </span>
         <Button variant="outline" size="sm" onClick={handleExportCsv}>
           <Download className="w-4 h-4 mr-1.5" />
           {t("exportCsv")}
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleExportExcel}>
+          <Download className="w-4 h-4 mr-1.5" />
+          {t("exportExcel")}
         </Button>
       </div>
 
@@ -108,6 +137,7 @@ export function SurveyResponsesTable({
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b bg-muted/40 text-left">
+                <th className="px-2 py-2 w-9" aria-label={t("responsesFlaggedOnly")} />
                 <th className="px-3 py-2 font-semibold whitespace-nowrap sticky left-0 bg-muted/40 z-10">
                   {t("colRespondent")}
                 </th>
@@ -122,6 +152,20 @@ export function SurveyResponsesTable({
             <tbody>
               {filtered.map(({ lead, name, cells }) => (
                 <tr key={lead.id} className="border-b last:border-0 align-top hover:bg-muted/20">
+                  <td className="px-2 py-2">
+                    <button
+                      type="button"
+                      onClick={() => onToggleFlag?.(lead.id, !lead.flagged)}
+                      disabled={!onToggleFlag}
+                      aria-pressed={!!lead.flagged}
+                      title={t(lead.flagged ? "unflagAction" : "flagAction")}
+                      className="p-0.5 rounded hover:bg-muted disabled:opacity-40"
+                    >
+                      <Star
+                        className={`w-4 h-4 ${lead.flagged ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"}`}
+                      />
+                    </button>
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap sticky left-0 bg-background z-10">
                     <div className="font-medium">{name || t("responsesAnonymous")}</div>
                     {lead.email && (
@@ -141,7 +185,7 @@ export function SurveyResponsesTable({
               {filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={questions.length + 2}
+                    colSpan={questions.length + 3}
                     className="px-3 py-8 text-center text-muted-foreground"
                   >
                     {t("responsesNoMatch")}

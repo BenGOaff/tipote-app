@@ -126,6 +126,7 @@ type QuizLead = {
     | null;
   has_shared: boolean;
   bonus_unlocked: boolean;
+  flagged?: boolean | null;
   created_at: string;
 };
 // 4 slots logiques sur la page d'intro du sondage (idem quiz). Drag-and-
@@ -535,6 +536,23 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Sous-vue de l'onglet Tendances : agrégat (Synthèse) ou tableau par
   // répondant (Réponses, style Typeform / Tally).
   const [trendsView, setTrendsView] = useState<"summary" | "responses">("summary");
+
+  // Marquage d'un répondant (étoile). Optimiste, revert si l'API échoue.
+  // Met à jour le state `leads` → le tableau ET le PDF reflètent le marquage.
+  const handleToggleFlag = async (leadId: string, flagged: boolean) => {
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, flagged } : l)));
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/survey-flag`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId, flagged }),
+      });
+      if (!res.ok) throw new Error("flag failed");
+    } catch {
+      setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, flagged: !flagged } : l)));
+      toast.error("Le marquage n'a pas pu être enregistré.");
+    }
+  };
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   // Sidebar : ouverte par défaut sur desktop, fermée sur mobile.
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -2519,12 +2537,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 questions={editQuestions}
                 leads={leads}
                 locale={locale}
+                onToggleFlag={handleToggleFlag}
               />
             )}
 
-            {/* Export (CSV/PDF) + analyse IA des résultats du sondage. */}
+            {/* Export (CSV/Excel/PDF) + analyse IA des résultats du sondage. */}
             <div className="mt-6">
-              <SurveyResultsPanel quizId={quizId} surveyTitle={title} />
+              <SurveyResultsPanel
+                quizId={quizId}
+                surveyTitle={title}
+                leads={leads}
+                questions={editQuestions}
+                locale={locale}
+              />
             </div>
           </div>
         </div>

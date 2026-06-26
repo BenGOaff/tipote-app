@@ -6090,7 +6090,11 @@
     "responsesAnonymous": "Anônimo",
     "colRespondent": "Respondente",
     "colDate": "Data",
-    "exportCsv": "Exportar CSV"
+    "exportCsv": "Exportar CSV",
+    "responsesFlaggedOnly": "Marcados",
+    "exportExcel": "Exportar Excel",
+    "flagAction": "Marcar este respondente",
+    "unflagAction": "Remover marca"
   },
   "compta": {
     "revenueGoal": {

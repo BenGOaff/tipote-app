@@ -5786,7 +5786,11 @@
     "responsesAnonymous": "Anónimo",
     "colRespondent": "Encuestado",
     "colDate": "Fecha",
-    "exportCsv": "Exportar CSV"
+    "exportCsv": "Exportar CSV",
+    "responsesFlaggedOnly": "Marcados",
+    "exportExcel": "Exportar Excel",
+    "flagAction": "Marcar este encuestado",
+    "unflagAction": "Quitar marca"
   },
   "compta": {
     "revenueGoal": {

@@ -5793,7 +5793,11 @@
     "responsesAnonymous": "Anonymous",
     "colRespondent": "Respondent",
     "colDate": "Date",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "responsesFlaggedOnly": "Flagged",
+    "exportExcel": "Export Excel",
+    "flagAction": "Flag this respondent",
+    "unflagAction": "Remove flag"
   },
   "compta": {
     "revenueGoal": {

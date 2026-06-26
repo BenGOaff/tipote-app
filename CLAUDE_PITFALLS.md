@@ -1764,3 +1764,19 @@ les `%` sont sur les répondants à CETTE question. Le prompt affiche
 
 **À garder synchrone avec Tiquiz** (mêmes fichiers des deux côtés) :
 format.ts, analysis.ts, survey-results/route.ts, SurveyResponsesTable.tsx.
+
+### Exports sondage + marquage (suite, 26 juin 2026)
+
+- **Marquage** : colonne `quiz_leads.flagged` (migration
+  `20260626_survey_lead_flagged.sql`). Toggle étoile dans
+  SurveyResponsesTable → POST `/api/quiz/[quizId]/survey-flag`
+  {leadId, flagged} (owner-scoped). State `leads` mis à jour côté
+  SurveyDetailClient (optimiste + revert) → tableau ET PDF reflètent.
+  Filtre "Marqués" + colonne "Marqué" dans tous les exports.
+- **Excel** : `?format=xlsx` sur la route survey-results, MÊME matrice que
+  le CSV (lib `xlsx`/SheetJS, déjà présente Tipote). Body NextResponse =
+  `new Uint8Array(buf)` (un Buffer brut n'est PAS un BodyInit valide).
+- **PDF** : `renderSurveyPdf` accepte `respondents` (optionnel) → section
+  "Détail des répondants". Construit côté client dans SurveyResultsPanel
+  via formatSurveyAnswer. pdfReport.ts IDENTIQUE Tiquiz/Tipote.
+- Pas de glyphe étoile dans le PDF (encodage helvetica) : préfixe "* ".

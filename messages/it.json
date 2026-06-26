@@ -5786,7 +5786,11 @@
     "responsesAnonymous": "Anonimo",
     "colRespondent": "Rispondente",
     "colDate": "Data",
-    "exportCsv": "Esporta CSV"
+    "exportCsv": "Esporta CSV",
+    "responsesFlaggedOnly": "Contrassegnati",
+    "exportExcel": "Esporta Excel",
+    "flagAction": "Contrassegna questo rispondente",
+    "unflagAction": "Rimuovi contrassegno"
   },
   "compta": {
     "revenueGoal": {
