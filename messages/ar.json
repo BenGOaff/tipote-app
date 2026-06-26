@@ -5776,7 +5776,16 @@
     "statQuestions": "الأسئلة",
     "untitledQuestion": "سؤال بدون عنوان",
     "trendAverage": "المتوسط",
-    "trendResponseCount": "إجابة"
+    "trendResponseCount": "إجابة",
+    "viewSummary": "ملخص",
+    "viewResponses": "الردود",
+    "responsesEmpty": "لا توجد ردود بعد.",
+    "responsesSearchPlaceholder": "ابحث عن مشارك أو إجابة…",
+    "responsesNoMatch": "لا نتائج لهذا البحث.",
+    "responsesAnonymous": "مجهول",
+    "colRespondent": "المشارك",
+    "colDate": "التاريخ",
+    "exportCsv": "تصدير CSV"
   },
   "compta": {
     "revenueGoal": {

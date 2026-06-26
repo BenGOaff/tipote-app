@@ -5784,7 +5784,16 @@
     "statQuestions": "Questions",
     "untitledQuestion": "Question sans titre",
     "trendAverage": "Moyenne",
-    "trendResponseCount": "réponses"
+    "trendResponseCount": "réponses",
+    "viewSummary": "Synthèse",
+    "viewResponses": "Réponses",
+    "responsesEmpty": "Aucune réponse pour le moment.",
+    "responsesSearchPlaceholder": "Rechercher un répondant ou une réponse…",
+    "responsesNoMatch": "Aucun résultat pour cette recherche.",
+    "responsesAnonymous": "Anonyme",
+    "colRespondent": "Répondant",
+    "colDate": "Date",
+    "exportCsv": "Export CSV"
   },
   "compta": {
     "revenueGoal": {
