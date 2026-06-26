@@ -14,7 +14,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { aggregateSurvey, type SurveyAnswerRaw } from "@/lib/survey/analysis";
+import { aggregateSurvey } from "@/lib/survey/analysis";
+import { formatSurveyAnswer, indexAnswers, type SurveyAnswerLike, type SurveyQuestionLike } from "@/lib/survey/format";
+import { stripHtml } from "@/lib/richText";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -46,7 +48,7 @@ export async function GET(
   // Sécurité : vérifie l'ownership + le titre.
   const { data: quiz } = await supabaseAdmin
     .from("quizzes")
-    .select("id, user_id, title, mode")
+    .select("id, user_id, title, mode, locale")
     .eq("id", quizId)
     .maybeSingle();
   if (!quiz || quiz.user_id !== user.id) {
@@ -62,57 +64,58 @@ export async function GET(
   }
 
   if (format === "csv") {
-    // Export brut : 1 ligne par répondant. On lit les questions pour
-    // les en-têtes + le mapping option_index → libellé.
+    const locale = (quiz as { locale?: string | null }).locale ?? "fr";
+
+    // Export brut : 1 ligne par répondant. Les réponses sont indexées par
+    // question_index = position 0-based dans l'ordre sort_order (même
+    // convention que PublicQuizClient + SurveyTrends). On itère les questions
+    // DANS cet ordre et on aligne sur l'index.
     const { data: questionsRaw } = await supabaseAdmin
       .from("quiz_questions")
-      .select("question_text, options, sort_order")
+      .select("question_text, options, sort_order, question_type, config")
       .eq("quiz_id", quizId)
       .order("sort_order", { ascending: true });
-    const questions = (questionsRaw ?? []) as Array<{
-      question_text: string | null;
-      options: Array<{ text?: string }> | null;
-      sort_order: number;
-    }>;
+    const questions = (questionsRaw ?? []) as Array<SurveyQuestionLike>;
 
     const { data: leads } = await supabaseAdmin
       .from("quiz_leads")
-      .select("created_at, answers")
+      .select("created_at, email, first_name, last_name, phone, country, answers")
       .eq("quiz_id", quizId)
       .order("created_at", { ascending: true });
 
-    const optionLabel = (qIdx: number, oIdx: number): string => {
-      const q = questions.find((qq) => qq.sort_order === qIdx);
-      const opt = Array.isArray(q?.options) ? q?.options[oIdx] : undefined;
-      return String(opt?.text ?? `Option ${oIdx + 1}`);
-    };
-
-    const headers = ["Date", ...questions.map((q) => q.question_text ?? "Question")];
+    // Identité du répondant EN PREMIER (la demande #1 : savoir qui a répondu
+    // quoi), puis une colonne par question avec le VRAI libellé de réponse.
+    const headers = [
+      "Date",
+      "Email",
+      "Prénom",
+      "Nom",
+      "Téléphone",
+      "Pays",
+      ...questions.map((q) => stripHtml(String(q.question_text ?? "")).trim() || "Question"),
+    ];
     const rows: string[][] = [];
 
     for (const lead of leads ?? []) {
-      const answers = (lead as { answers?: SurveyAnswerRaw[] | null }).answers;
-      const date = (lead as { created_at?: string }).created_at;
-      const byQ: Record<number, string> = {};
-      if (Array.isArray(answers)) {
-        for (const ans of answers) {
-          const qi = typeof ans.question_index === "number" ? ans.question_index : null;
-          if (qi === null) continue;
-          if (Array.isArray(ans.option_indices)) {
-            byQ[qi] = ans.option_indices.map((oi) => optionLabel(qi, oi)).join(" | ");
-          } else if (typeof ans.option_index === "number") {
-            byQ[qi] = optionLabel(qi, ans.option_index);
-          } else if (typeof ans.rating === "number") {
-            byQ[qi] = String(ans.rating);
-          } else if (typeof ans.text === "string") {
-            byQ[qi] = ans.text;
-          }
-        }
-      }
+      const l = lead as {
+        created_at?: string;
+        email?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+        phone?: string | null;
+        country?: string | null;
+        answers?: SurveyAnswerLike[] | null;
+      };
+      const byQ = indexAnswers(l.answers);
       rows.push([
-        date ? new Date(date).toLocaleDateString("fr-FR") : "",
-        ...questions.map((q) => escapeCsv(byQ[q.sort_order] ?? "")),
-      ]);
+        l.created_at ? new Date(l.created_at).toLocaleDateString("fr-FR") : "",
+        l.email ?? "",
+        l.first_name ?? "",
+        l.last_name ?? "",
+        l.phone ?? "",
+        l.country ?? "",
+        ...questions.map((q, qi) => formatSurveyAnswer(q, byQ.get(qi), locale)),
+      ].map(escapeCsv));
     }
 
     const csv = [

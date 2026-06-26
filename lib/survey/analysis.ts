@@ -10,6 +10,8 @@
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { callClaude, getClaudeApiKey } from "@/lib/claude";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { stripHtml } from "@/lib/richText";
+import { localizedYesNo, isAnswered } from "@/lib/survey/format";
 
 // Analyse de sondage = CONTENU exploitable (enseignements + actions).
 // Béné (juin 2026) : le contenu utilise toujours le meilleur Claude
@@ -43,8 +45,12 @@ export interface AggregatedQuestion {
   options: AggregatedOption[];
   /** Échantillon de réponses libres (free_text), cappé. */
   textSamples?: string[];
+  /** Nombre TOTAL de réponses libres (les textSamples n'en sont qu'un échantillon). */
+  textCount?: number;
   /** Moyenne pour les questions rating/stars. */
   average?: number | null;
+  /** Nombre de répondants ayant RÉELLEMENT répondu à cette question. */
+  answeredCount: number;
 }
 
 export interface SurveyAggregate {
@@ -79,10 +85,11 @@ export async function aggregateSurvey(
 ): Promise<SurveyAggregate | null> {
   const { data: quiz } = await supabaseAdmin
     .from("quizzes")
-    .select("id, user_id, mode")
+    .select("id, user_id, mode, locale")
     .eq("id", quizId)
     .maybeSingle();
   if (!quiz || quiz.user_id !== userId) return null;
+  const locale = (quiz as { locale?: string | null }).locale ?? "fr";
 
   const { data: questionsRaw } = await supabaseAdmin
     .from("quiz_questions")
@@ -100,6 +107,12 @@ export async function aggregateSurvey(
   const totals: Record<number, Record<number, number>> = {};
   const ratingSums: Record<number, { sum: number; n: number }> = {};
   const textSamples: Record<number, string[]> = {};
+  const textCounts: Record<number, number> = {};
+  // Combien de répondants ont RÉELLEMENT répondu à chaque question. Indispensable
+  // pour que l'IA ne déduise pas "personne n'a répondu" (drame 26 juin 2026 :
+  // une question yes_no à 100% comptée comme vide car ses options ne sont pas
+  // stockées en base).
+  const answeredPerQ: Record<number, number> = {};
   let totalResponses = 0;
 
   for (const lead of leads ?? []) {
@@ -109,6 +122,8 @@ export async function aggregateSurvey(
     for (const ans of answers) {
       const qi = typeof ans.question_index === "number" ? ans.question_index : null;
       if (qi === null) continue;
+      if (!isAnswered(ans)) continue;
+      answeredPerQ[qi] = (answeredPerQ[qi] ?? 0) + 1;
       if (Array.isArray(ans.option_indices)) {
         if (!totals[qi]) totals[qi] = {};
         for (const oi of ans.option_indices) {
@@ -130,32 +145,61 @@ export async function aggregateSurvey(
         ratingSums[qi].n += 1;
       }
       if (typeof ans.text === "string" && ans.text.trim()) {
+        textCounts[qi] = (textCounts[qi] ?? 0) + 1;
         if (!textSamples[qi]) textSamples[qi] = [];
-        if (textSamples[qi].length < 30) textSamples[qi].push(ans.text.trim());
+        if (textSamples[qi].length < 40) textSamples[qi].push(ans.text.trim());
       }
     }
   }
 
+  const yesNo = localizedYesNo(locale);
+
   const aggregatedQuestions: AggregatedQuestion[] = questions.map((q, idx) => {
-    const qi = q.sort_order ?? idx;
-    const optionTexts = Array.isArray(q.options) ? q.options : [];
+    // question_index = position 0-based dans l'ordre sort_order. On aligne sur
+    // l'index du tableau (cohérent avec PublicQuizClient + SurveyTrends).
+    const qi = idx;
+    const type = String(q.question_type ?? "multiple_choice");
     const counts = totals[qi] ?? {};
-    const options: AggregatedOption[] = optionTexts.map((opt, oi) => {
-      const count = counts[oi] ?? 0;
-      return {
-        text: String(opt?.text ?? `Option ${oi + 1}`),
-        count,
-        pct: totalResponses > 0 ? Math.round((count / totalResponses) * 1000) / 10 : 0,
-      };
-    });
+    const answeredCount = answeredPerQ[qi] ?? 0;
+    // Dénominateur = répondants à CETTE question, pour que les % d'une question
+    // à choix unique somment à 100% même si certains l'ont sautée.
+    const denom = answeredCount > 0 ? answeredCount : 1;
+    const pct = (count: number) => Math.round((count / denom) * 1000) / 10;
+
+    let options: AggregatedOption[];
+    if (type === "yes_no") {
+      // Les questions yes_no ne portent PAS d'options en base : on synthétise
+      // Oui/Non depuis la locale + les compteurs option_index 0/1.
+      options = [
+        { text: yesNo.yes, count: counts[0] ?? 0, pct: pct(counts[0] ?? 0) },
+        { text: yesNo.no, count: counts[1] ?? 0, pct: pct(counts[1] ?? 0) },
+      ];
+    } else if (type === "rating_scale" || type === "star_rating" || type === "free_text") {
+      // Pas de distribution par option : la moyenne / les exemples portent
+      // l'information (gérés plus bas).
+      options = [];
+    } else {
+      const optionTexts = Array.isArray(q.options) ? q.options : [];
+      options = optionTexts.map((opt, oi) => {
+        const count = counts[oi] ?? 0;
+        return {
+          text: stripHtml(String(opt?.text ?? `Option ${oi + 1}`)).trim() || `Option ${oi + 1}`,
+          count,
+          pct: pct(count),
+        };
+      });
+    }
+
     const rating = ratingSums[qi];
     return {
       index: qi,
-      text: String(q.question_text ?? `Question ${qi + 1}`),
-      type: String(q.question_type ?? "multiple_choice"),
+      text: stripHtml(String(q.question_text ?? `Question ${qi + 1}`)).trim() || `Question ${qi + 1}`,
+      type,
       options,
       textSamples: textSamples[qi],
+      textCount: textCounts[qi] ?? 0,
       average: rating && rating.n > 0 ? Math.round((rating.sum / rating.n) * 100) / 100 : null,
+      answeredCount,
     };
   });
 
@@ -179,6 +223,10 @@ export async function generateSurveyAnalysis(
     "Tu réponds en français, ton direct et concret, tutoiement.",
     "Tu ne fais JAMAIS de remplissage : chaque phrase doit être actionnable ou révélatrice.",
     "Tu te bases UNIQUEMENT sur les chiffres fournis, sans inventer de données.",
+    "RÈGLE CLÉ sur le comptage :",
+    "- Chaque question affiche '[N/T ont répondu]' : N = personnes ayant répondu à CETTE question, T = total des participants. Si N > 0, la question A des réponses : ne dis JAMAIS qu'elle est vide ou sans données.",
+    "- Pour une question à réponses libres, le nombre total est donné explicitement ('N réponses libres'). Les exemples cités ne sont qu'un ÉCHANTILLON : n'en déduis pas que seules ces réponses existent, ni que les autres participants n'ont pas répondu.",
+    "- Les pourcentages d'une question sont calculés sur les répondants à cette question (pas sur le total), ils somment donc à 100% pour un choix unique.",
     "Tu réponds STRICTEMENT en JSON valide, sans texte autour, au format :",
     '{ "summary": string, "takeaways": string[], "actions": string[] }',
     "- summary : 2-4 phrases sur ce que disent VRAIMENT les résultats (les tendances fortes, les surprises).",
@@ -186,9 +234,9 @@ export async function generateSurveyAnalysis(
     "- actions : 3 à 5 actions concrètes à mettre en place, priorisées, formulées à l'impératif.",
   ].join("\n");
 
-  const lines: string[] = [`Sondage : "${surveyTitle}"`, `Nombre de réponses : ${aggregate.totalResponses}`, ""];
+  const lines: string[] = [`Sondage : "${surveyTitle}"`, `Nombre de participants : ${aggregate.totalResponses}`, ""];
   for (const q of aggregate.questions) {
-    lines.push(`Q${q.index + 1}. ${q.text}`);
+    lines.push(`Q${q.index + 1}. ${q.text}  [${q.answeredCount}/${aggregate.totalResponses} ont répondu]`);
     if (q.options.length > 0) {
       for (const o of q.options) {
         lines.push(`   - ${o.text} : ${o.pct}% (${o.count})`);
@@ -197,8 +245,9 @@ export async function generateSurveyAnalysis(
     if (q.average !== null && q.average !== undefined) {
       lines.push(`   (note moyenne : ${q.average})`);
     }
-    if (q.textSamples && q.textSamples.length > 0) {
-      lines.push(`   réponses libres : ${q.textSamples.slice(0, 10).map((s) => `"${s}"`).join(", ")}`);
+    if (q.textCount && q.textCount > 0) {
+      const samples = (q.textSamples ?? []).slice(0, 15).map((s) => `"${s}"`).join(", ");
+      lines.push(`   ${q.textCount} réponses libres au total. Échantillon : ${samples}`);
     }
     lines.push("");
   }

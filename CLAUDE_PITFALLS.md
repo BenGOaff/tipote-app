@@ -1723,3 +1723,44 @@ déploiement. Vérif : `npm run check:migrations-pending`.
 résultat de quiz doit avoir son pendant sondage (tag de capture unique).
 Ne jamais gater l'application SIO uniquement sur `resultId`.
 
+
+## RÉPONSES SONDAGE — formateur type-aware OBLIGATOIRE (drame Béné 26 juin 2026)
+
+Trois bugs simultanés sur les sondages, tous issus d'une lecture des
+réponses AVEUGLE au `question_type` :
+1. Export CSV anonyme (ne sélectionnait que `created_at, answers`) → Béné
+   ne pouvait pas savoir QUI a donné QUELLE réponse (cas : récompenser les
+   bonnes réponses).
+2. Export affichait `Option 1` au lieu de `Oui`. Les questions `yes_no` ne
+   stockent AUCUNE option en base (Oui/Non rendu depuis la locale dans
+   PublicQuizClient). Lire `options[idx].text` renvoyait vide → fallback
+   `Option N`.
+3. Analyse IA "personne n'a répondu" : `aggregateSurvey` construisait les
+   compteurs depuis `q.options` → `yes_no` (options vides) = AUCUN chiffre
+   envoyé à Claude → question vue comme vide. Et le texte libre n'envoyait
+   que 10 exemples sans le total → "10 sur 25" halluciné.
+
+**Source de vérité unique : `lib/survey/format.ts`**
+- `formatSurveyAnswer(question, answer, locale)` : SEUL endroit qui
+  transforme une réponse brute en libellé. yes_no → Oui/Non localisé,
+  rating/stars → nombre, free_text → texte, choix → `options[i].text`.
+- `localizedYesNo`, `isAnswered`, `indexAnswers`.
+- TOUTE nouvelle UI/export qui affiche des réponses DOIT passer par ce
+  helper. Ne JAMAIS relire `options[idx]` à la main pour un yes_no.
+
+**Modèle** : réponses dans `quiz_leads.answers` (JSONB), sur la MÊME ligne
+que l'identité (email/prénom/nom/téléphone). `question_index` = position
+0-based dans l'ordre `sort_order` (= index tableau). NE PAS keyer sur
+`sort_order` brut.
+
+**Agrégat IA** : `aggregateSurvey` calcule `answeredCount` par question,
+les `%` sont sur les répondants à CETTE question. Le prompt affiche
+`[N/T ont répondu]` + total des réponses libres (garde-fous anti
+"question vide" / anti "X sur Y"). Ne pas retirer.
+
+**Vue "Réponses"** : `components/quiz/SurveyResponsesTable.tsx`, sous-onglet
+`Synthèse | Réponses` dans Tendances. i18n namespace `survey` (PAS
+`quizDetail`) pour ce composant et SurveyTrends.
+
+**À garder synchrone avec Tiquiz** (mêmes fichiers des deux côtés) :
+format.ts, analysis.ts, survey-results/route.ts, SurveyResponsesTable.tsx.
