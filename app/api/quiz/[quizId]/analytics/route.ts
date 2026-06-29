@@ -225,35 +225,59 @@ export async function GET(
     }))
     .sort((a, b) => b.count - a.count);
 
-  // Daily series. Bucketing en jour LOCAL du créateur (tzOffset) — clés
-  // ET leads — pour que "aujourd'hui" ne soit jamais vide à cause d'un
-  // décalage UTC (bug Adeline 24/05). Fill des jours manquants à 0.
-  const dayMap = new Map<string, number>();
+  // ── VUES quotidiennes (demande Gwenn 29 juin 2026) ──
+  // Source FIABLE : quiz_events (event_type='view'), bucketisé au MÊME jour
+  // local que les leads → ligne "vues" alignée sur "inscrits" + conversion
+  // par jour. Desc + cap 50000 : si tronqué, les jours ANCIENS sont affectés
+  // (les récents restent exacts) et on remonte un flag d'honnêteté.
+  let viewEventsQuery = supabaseAdmin
+    .from("quiz_events")
+    .select("created_at")
+    .eq("quiz_id", quizId)
+    .eq("event_type", "view")
+    .order("created_at", { ascending: false })
+    .limit(50000);
+  if (period.sinceISO) viewEventsQuery = viewEventsQuery.gte("created_at", period.sinceISO);
+  const { data: viewEventsRaw } = await viewEventsQuery;
+  const viewEvents = (viewEventsRaw ?? []) as { created_at: string }[];
+  const viewsDailyTruncated = viewEvents.length >= 50000;
+  const viewsDayMap = new Map<string, number>();
+  for (const v of viewEvents) {
+    const k = dateKeyForOffset(new Date(v.created_at), tzOffset);
+    viewsDayMap.set(k, (viewsDayMap.get(k) ?? 0) + 1);
+  }
+
+  // Série quotidienne : leads ET vues. Bucketing en jour LOCAL du créateur
+  // (tzOffset) pour que "aujourd'hui" ne soit jamais vide (bug Adeline 24/05).
+  const leadsDayMap = new Map<string, number>();
   for (const l of leads) {
     const k = dateKeyForOffset(new Date(l.created_at), tzOffset);
-    dayMap.set(k, (dayMap.get(k) ?? 0) + 1);
+    leadsDayMap.set(k, (leadsDayMap.get(k) ?? 0) + 1);
   }
   const leadsByDay = (() => {
-    if (leads.length === 0) return [];
-    const start = period.sinceISO
-      ? new Date(period.sinceISO)
-      : new Date(leads[0]!.created_at);
-    const out: { date: string; count: number }[] = [];
+    if (leads.length === 0 && viewEvents.length === 0) return [];
+    const firstTimes: number[] = [];
+    if (leads.length) firstTimes.push(new Date(leads[0]!.created_at).getTime());
+    if (viewEvents.length) firstTimes.push(new Date(viewEvents[viewEvents.length - 1]!.created_at).getTime());
+    const startMs = period.sinceISO
+      ? new Date(period.sinceISO).getTime()
+      : firstTimes.length
+        ? Math.min(...firstTimes)
+        : Date.now();
+    const out: { date: string; count: number; views: number }[] = [];
     const endKey = dateKeyForOffset(new Date(), tzOffset);
-    let t = start.getTime();
+    let t = startMs;
     let seen = "";
     const guard = Date.now() + 24 * 3600 * 1000;
     while (t <= guard) {
       const k = dateKeyForOffset(new Date(t), tzOffset);
       if (k !== seen) {
-        out.push({ date: k, count: dayMap.get(k) ?? 0 });
+        out.push({ date: k, count: leadsDayMap.get(k) ?? 0, views: viewsDayMap.get(k) ?? 0 });
         seen = k;
       }
       if (k === endKey) break;
       t += 24 * 3600 * 1000;
     }
-    // Cap at 365 days for "all time" with very old quizzes — recharts
-    // would still render but the x-axis would be unreadable.
     return out.slice(-365);
   })();
 
@@ -269,7 +293,7 @@ export async function GET(
   // between Q[n] and Q[n+1] = (views[n] - views[n+1]) / views[n].
   // The ratio is enough to flag the worst-performing question; we
   // expose absolute counts too so the UI can show "47% on Q3".
-  let funnel: {
+  const funnel: {
     questionIndex: number;
     views: number;
     answers: number;
@@ -361,6 +385,7 @@ export async function GET(
     },
     resultDistribution,
     leadsByDay,
+    viewsDailyTruncated,
     funnel,
     totalFunnelSessions: totalSessions,
   });
